@@ -22,11 +22,12 @@ void ParseActEvents(const std::string& act_event_filepath,
 }
 
 size_t MemoryConsuming(const std::list<const RegstDescProto*>& regst_descs,
-                       const HashMap<int64_t, double>& regst_desc_id2num) {
+                       const HashMap<int64_t, double>& regst_desc_id2life_time,
+                       double ii) {
   size_t mem_consuming = 0;
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint32_t regst_num =
-        ceil(regst_desc_id2num.at(regst_desc->regst_desc_id()));
+        ceil(regst_desc_id2life_time.at(regst_desc->regst_desc_id()) / ii);
     regst_num = std::max(regst_num,
                          static_cast<uint32_t>(regst_desc->min_register_num()));
     RtRegstDesc runtime_regst_desc(*regst_desc);
@@ -36,11 +37,10 @@ size_t MemoryConsuming(const std::list<const RegstDescProto*>& regst_descs,
   return mem_consuming;
 }
 
-void ComputeIIAndRegstDescAvgLifeTime(
-    const ActorGraph& graph, double* ii,
+void CalcBaseIIAndRegstDescAvgLifeTime(
+    const ActorGraph& graph, double* base_ii,
     HashMap<int64_t, double>* regst_desc_id2life_time) {
-  *ii = graph.InitiationInterval();
-  LOG(INFO) << "ii = " << *ii;
+  *base_ii = graph.InitiationInterval();
   HashMap<int64_t, double> task_id2avg_duration;
   graph.MakeTaskId2AvgDurationHash(&task_id2avg_duration);
   auto AvgDuration4TaskId = [&](int64_t task_id) -> double {
@@ -54,25 +54,23 @@ void ComputeIIAndRegstDescAvgLifeTime(
                                         AvgDuration4TaskId);
   //	default value for life_time
   for (auto& pair : *regst_desc_id2life_time) {
-    if (pair.second <= 0) { pair.second = *ii; }
-    LOG(INFO) << pair.first << "\t" << pair.second;
+    if (pair.second <= 0) { pair.second = *base_ii; }
+    LOG(INFO) << "default life time" << pair.first << "\t" << pair.second;
   }
 }
 
-double ComputeLeastIIFlationRatio(
-    const std::list<const RegstDescProto*>& regst_descs,
-    const HashMap<int64_t, double>& regst_desc_id2num) {
-  CHECK(regst_desc_id2num.size());
-  double ii_flation_ratio = static_cast<double>(UINT_MAX);
-  for (const RegstDescProto* regst_desc : regst_descs) {
-    double regst_num = regst_desc_id2num.at(regst_desc->regst_desc_id());
-    if (regst_num <= 1) continue;
-    double delta = regst_num - floor(regst_num);
-    delta = (delta <= 0.000001 ? 1 : delta);
-    double ratio = regst_num / (regst_num - delta);
-    if (ii_flation_ratio > ratio) { ii_flation_ratio = ratio; }
+std::vector<double> CalcIISearchSpace(HashMap<int64_t, double> id2life_time,
+                                      double base_ii) {
+  CHECK(base_ii > 0);
+  std::vector<double> search_space;
+  for (const auto& pair : id2life_time) {
+    int max_register_num = ceil(pair.second / base_ii);
+    for (int num = 1; num <= max_register_num; ++num) {
+      search_space.push_back(pair.second / num);
+    }
   }
-  return ii_flation_ratio;
+  std::sort(search_space.begin(), search_space.end());
+  return search_space;
 }
 
 void SetRegstNum(Plan* plan,
@@ -107,10 +105,8 @@ int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
   return JobDesc::Singleton()->resource().device_num_per_machine();
 }
 
-void Improver::MakeMemoryDevice2RegstDescs(
-    const Plan& plan,
-    std::vector<std::vector<std::list<const RegstDescProto*>>>* mz2regst_desc)
-    const {
+void Improver::MakeMemZoneRegstDescs(const Plan& plan,
+                                     MemZoneRegstDescs* mz2regst_desc) const {
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int64_t mem_zone_id = GetMemoryZoneId(pair.second.mem_case());
@@ -119,51 +115,66 @@ void Improver::MakeMemoryDevice2RegstDescs(
   }
 }
 
-bool Improver::IsOutOfMemory(
-    int64_t machine_id, int64_t memory_zone_id,
-    const std::list<const RegstDescProto*>& regst_descs,
-    const HashMap<int64_t, double>& regst_desc_id2num) const {
-  return MemoryConsuming(regst_descs, regst_desc_id2num)
-         >= AvailableMemSize(machine_id, memory_zone_id);
+bool Improver::IsAnyZoneOutOfMemory(
+    const MemZoneRegstDescs& mz_regst_descs,
+    const HashMap<int64_t, double>& regst_desc_id2life_time, double ii) const {
+  FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
+    FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
+      const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
+      if (MemoryConsuming(regst_descs, regst_desc_id2life_time, ii)
+          >= AvailableMemSize(machine_id, mem_zone_id)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
-void Improver::FindMinRegstNumWithLeastPerformanceLoss(
-    int64_t machine_id, int64_t memory_zone_id, double ii,
-    const std::list<const RegstDescProto*>& regst_descs,
-    const HashMap<int64_t, double>& regst_desc_id2life_time,
-    HashMap<int64_t, double>* regst_desc_id2num) const {
-  // shrink memory with least performance loss step by step
-  while (IsOutOfMemory(machine_id, memory_zone_id, regst_descs,
-                       *regst_desc_id2num)) {
-    ii *= ComputeLeastIIFlationRatio(regst_descs, *regst_desc_id2num);
-    double max_regst_num = 0;
-    for (const RegstDescProto* regst_desc : regst_descs) {
-      double rn = regst_desc_id2life_time.at(regst_desc->regst_desc_id()) / ii;
-      if (max_regst_num < rn) { max_regst_num = rn; }
-      (*regst_desc_id2num)[regst_desc->regst_desc_id()] = rn;
+double Improver::CalcII(double base_ii,
+                        HashMap<int64_t, double> regst_desc_id2life_time,
+                        const MemZoneRegstDescs& mz_regst_descs) const {
+  auto search_space = CalcIISearchSpace(regst_desc_id2life_time, base_ii);
+  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, regst_desc_id2life_time,
+                              search_space[search_space.size() - 1]));
+  auto SearchDirection = [&](int index) {
+    bool is_cur_ii_ok = !IsAnyZoneOutOfMemory(
+        mz_regst_descs, regst_desc_id2life_time, search_space[index]);
+    bool is_prev_ii_ok =
+        index > 0
+        && !IsAnyZoneOutOfMemory(mz_regst_descs, regst_desc_id2life_time,
+                                 search_space[index - 1]);
+    if (!is_cur_ii_ok) { return 1; }
+    if (is_prev_ii_ok) { return -1; }
+    return 0;
+  };
+
+  int r = search_space.size() - 1;
+  int l = 0;
+  int mid = 0;
+  while (true) {
+    mid = (l + r) / 2;
+    auto direction = SearchDirection(mid);
+    if (direction == 0) { break; }
+    if (direction > 0) {
+      l = mid;
+    } else {
+      r = mid;
     }
-    if (max_regst_num <= 1) { break; }
   }
+  return search_space[mid];
 }
 
 void Improver::MemoryLimitedAllocate(
     const ActorGraph& graph,
     HashMap<int64_t, double>* regst_desc_id2num) const {
-  double ii = 0;
+  double base_ii = 0;
   HashMap<int64_t, double> regst_desc_id2life_time;
-  ComputeIIAndRegstDescAvgLifeTime(graph, &ii, &regst_desc_id2life_time);
-  CHECK(ii > 0);
+  CalcBaseIIAndRegstDescAvgLifeTime(graph, &base_ii, &regst_desc_id2life_time);
+  MemZoneRegstDescs mz_regst_descs;
+  MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
+  double ii = CalcII(base_ii, regst_desc_id2life_time, mz_regst_descs);
   for (const auto& pair : regst_desc_id2life_time) {
     (*regst_desc_id2num)[pair.first] = pair.second / ii;
-  }
-  std::vector<std::vector<std::list<const RegstDescProto*>>> mz_regst_descs;
-  MakeMemoryDevice2RegstDescs(graph.plan(), &mz_regst_descs);
-  FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
-    FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
-      FindMinRegstNumWithLeastPerformanceLoss(
-          machine_id, mem_zone_id, ii, mz_regst_descs[machine_id][mem_zone_id],
-          regst_desc_id2life_time, regst_desc_id2num);
-    }
   }
 }
 
