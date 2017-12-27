@@ -4,9 +4,8 @@
 
 namespace oneflow {
 
-void RdmaMem::Register(void* mem_ptr, size_t byte_size) {
-  CHECK(pd_);
-  mr_ = ibv_reg_mr(pd_, mem_ptr, byte_size,
+RdmaMem::RdmaMem(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
+  mr_ = ibv_reg_mr(pd, mem_ptr, byte_size,
                    IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE
                        | IBV_ACCESS_REMOTE_READ);
   CHECK(mr_);
@@ -14,17 +13,9 @@ void RdmaMem::Register(void* mem_ptr, size_t byte_size) {
   sge_.addr = reinterpret_cast<uint64_t>(mem_ptr);
   sge_.length = byte_size;
   sge_.lkey = mr_->lkey;
-
-  is_registered_ = true;
-}
-
-void RdmaMem::Unregister() {
-  CHECK_EQ(ibv_dereg_mr(mr_), 0);
-  is_registered_ = false;
 }
 
 RdmaMemDesc RdmaMem::GetRdmaMemDesc() {
-  CHECK_EQ(is_registered_, true);
   RdmaMemDesc rdma_mem_desc;
   rdma_mem_desc.set_mem_ptr(reinterpret_cast<uint64_t>(sge_.addr));
   rdma_mem_desc.set_mr_rkey(mr_->rkey);
