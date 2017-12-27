@@ -199,12 +199,14 @@ message LstmCellOpConf {
 }
 
 message BasicRnnCellOpConf {
-  required string in;
-  optional string hidden_state;
-  required string out;
+  required string in = 1;
+  optional string hidden_state = 2;
+  required string out = 3;
+  required int32 hidden_size = 4;
+  optional bool has_bias_term = 5 [default = true];
   oneof_rnn_type {
-   RnnCellOpConf rnn_cell;
-   LstmCellOpConf lstm_cell;
+   RnnCellOpConf rnn_cell = 6;
+   LstmCellOpConf lstm_cell = 7;
   }
 £ý
 
@@ -233,6 +235,6 @@ message OperatorConf {
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
     SumOpConf sum_conf = 120;
-    BasicRnnCellOpConf basic_rnn_conf = 121; 
+    BasicRnnCellOpConf basic_rnn_cell_conf = 121; 
   }
 }
