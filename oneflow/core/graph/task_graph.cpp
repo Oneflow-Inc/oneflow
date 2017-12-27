@@ -52,7 +52,7 @@ void TaskGraph::BldSubTskGphByBoxing(
   BuildOutBoxingIfNeed(src_chain, sorted_src_comp_tasks, chain2sorted_out_box);
   std::vector<TaskNode*> sorted_in_box_tmp;
   std::vector<TaskNode*>* sorted_in_box = nullptr;
-  if (dst_chain->ForceUnsharedInBoxing()) {
+  if (dst_chain->HasSoleRecurrentOp()) {
     BuildInBoxing(dst_chain, sorted_dst_comp_tasks, &sorted_in_box_tmp);
     sorted_in_box = &sorted_in_box_tmp;
   } else {

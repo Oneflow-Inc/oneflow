@@ -63,7 +63,6 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
-  virtual bool ForceUnsharedInBoxing() const { return false; }
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
@@ -120,7 +119,6 @@ class ForwardChainNode final : public ChainNode {
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
-  bool ForceUnsharedInBoxing() const override { return HasSoleRecurrentOp(); }
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
@@ -144,7 +142,6 @@ class BackwardChainNode final : public ChainNode {
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
-  bool ForceUnsharedInBoxing() const override { return HasSoleRecurrentOp(); }
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
