@@ -46,6 +46,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::shared_ptr<const Operator> SoleOp() const;
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
   std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
+  bool HasSoleRecurrentOp() const;
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
@@ -119,6 +120,7 @@ class ForwardChainNode final : public ChainNode {
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
+  bool ForceUnsharedInBoxing() const override { return HasSoleRecurrentOp(); }
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
@@ -142,6 +144,7 @@ class BackwardChainNode final : public ChainNode {
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
+  bool ForceUnsharedInBoxing() const override { return HasSoleRecurrentOp(); }
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),

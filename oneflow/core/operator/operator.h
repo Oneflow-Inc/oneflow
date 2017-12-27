@@ -32,6 +32,7 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDataLoaderOp() const { return false; }
+  virtual bool IsRecurrentOp() const { return false; }
 
   // bn_in_op <-> lbn
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
