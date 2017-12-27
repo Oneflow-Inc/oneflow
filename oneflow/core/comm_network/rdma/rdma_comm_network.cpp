@@ -35,8 +35,7 @@ RdmaCommNet::~RdmaCommNet() {
 }
 
 const void* RdmaCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
-  RdmaMem* rdma_mem = endpoint_manager_->NewRdmaMem();
-  rdma_mem->Register(mem_ptr, byte_size);
+  RdmaMem* rdma_mem = endpoint_manager_->NewRdmaMem(mem_ptr, byte_size);
   {
     std::unique_lock<std::mutex> lck(mem_mutex_);
     mems_.push_back(rdma_mem);

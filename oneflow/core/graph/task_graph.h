@@ -44,9 +44,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BuildOutBoxingIfNeed(
       const ChainNode*, const std::vector<CompTaskNode*>& sorted_comp_tasks,
       HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
-  void BuildInBoxingIfNeed(
-      const ChainNode*, const std::vector<CompTaskNode*>& sorted_comp_tasks,
-      HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box);
+  void BuildInBoxing(const ChainNode*,
+                     const std::vector<CompTaskNode*>& sorted_comp_tasks,
+                     std::vector<TaskNode*>* chain2sorted_in_box);
 
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

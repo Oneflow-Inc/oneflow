@@ -88,10 +88,8 @@ void EndpointManager::InitRdma() {
   LOG(INFO) << "Finish InitRdma";
 }
 
-RdmaMem* EndpointManager::NewRdmaMem() {
-  RdmaMem* rdma_mem = new RdmaMem(pd_);
-  CHECK(rdma_mem);
-  return rdma_mem;
+RdmaMem* EndpointManager::NewRdmaMem(void* mem_ptr, size_t byte_size) {
+  return new RdmaMem(pd_, mem_ptr, byte_size);
 }
 
 Connection* EndpointManager::NewConnection() {

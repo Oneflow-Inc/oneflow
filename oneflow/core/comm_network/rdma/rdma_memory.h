@@ -12,21 +12,14 @@ namespace oneflow {
 
 class RdmaMem {
  public:
-  RdmaMem(ibv_pd* pd) : is_registered_(false), pd_(pd), mr_(nullptr) {}
-  ~RdmaMem() {
-    if (is_registered_ == true) { Unregister(); }
-  }
+  RdmaMem(ibv_pd* pd, void* mem_ptr, size_t byte_size);
+  ~RdmaMem() { CHECK_EQ(ibv_dereg_mr(mr_), 0); }
 
-  void Register(void* mem_ptr, size_t byte_size);
-  void Unregister();
   RdmaMemDesc GetRdmaMemDesc();
-
   ibv_sge* ibv_sge_ptr() { return &sge_; }
 
  private:
-  bool is_registered_;
   ibv_sge sge_;
-  ibv_pd* pd_;
   ibv_mr* mr_;
 };
 
