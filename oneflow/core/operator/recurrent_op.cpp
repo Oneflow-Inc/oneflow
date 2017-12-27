@@ -85,8 +85,19 @@ void RecurrentOp::InferBlobDescs(
 }
 
 std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
-  if (input_bn == "ht_1") { return obn2lbn("ht"); }
-  return GetStringFromSpecialConf(input_bn);
+  if (input_bn == "ht_1") {
+    return obn2lbn("ht");
+  } else if (input_bn == "h0") {
+    return op_conf().recurrent_conf().init_hidden();
+  } else if (input_bn == "in") {
+    return op_conf().recurrent_conf().in();
+  } else {
+    UNEXPECTED_RUN();
+  }
+}
+
+std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
+  return op_conf().recurrent_conf().out();
 }
 
 REGISTER_OP(OperatorConf::kRecurrentConf, RecurrentOp);

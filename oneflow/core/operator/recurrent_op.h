@@ -25,6 +25,7 @@ class RecurrentOp final : public Operator {
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override;
+  std::string obn2lbn(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow
