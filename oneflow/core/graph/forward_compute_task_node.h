@@ -17,8 +17,6 @@ class ForwardCompTaskNode : public CompTaskNode {
   void LockRegsts() override;
   bool IsReadyForBuild() override;
 
-  TaskType GetTaskType() const override { return TaskType::kForward; }
-
  private:
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();

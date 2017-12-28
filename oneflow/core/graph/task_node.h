@@ -8,6 +8,9 @@
 
 namespace oneflow {
 
+bool IsForwardTaskType(TaskType);
+bool IsBackwardTaskType(TaskType);
+
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
@@ -37,7 +40,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void InferMemCaseOfProducedRegst();
 
   // Others
-  virtual TaskType GetTaskType() const = 0;
+  virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);

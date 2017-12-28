@@ -21,8 +21,8 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", 1, 1);
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
-    if (dst_node->GetTaskType() == TaskType::kForward
-        || dst_node->GetTaskType() == TaskType::kBackward) {
+    if (IsForwardTaskType(dst_node->GetTaskType())
+        || IsBackwardTaskType(dst_node->GetTaskType())) {
       out_edge->AddRegst("model", model_regst);
       out_edge->AddRegst("model_tmp", model_tmp_regst);
     } else {
@@ -62,10 +62,10 @@ void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   task_proto->set_random_seed(random_seed_);
   ForEachNodeOnOutEdge([&](const TaskNode* node) {
-    if (node->GetTaskType() == TaskType::kForward) {
+    if (IsForwardTaskType(node->GetTaskType())) {
       CHECK_EQ(task_proto->related_fw_task_id(), -1);
       task_proto->set_related_fw_task_id(node->task_id());
-    } else if (node->GetTaskType() == TaskType::kBackward) {
+    } else if (IsBackwardTaskType(node->GetTaskType())) {
       // do nothing
     } else {
       CHECK_EQ(task_proto->related_save_task_id(), -1);

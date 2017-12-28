@@ -11,6 +11,8 @@ class RecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
   RecurrentForwardCompTaskNode() = default;
   ~RecurrentForwardCompTaskNode() = default;
 
+  TaskType GetTaskType() const override { return TaskType::kRecurrentForward; }
+
  private:
 };
 

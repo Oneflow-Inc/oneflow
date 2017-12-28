@@ -11,6 +11,10 @@ class NonRecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   NonRecurrentBackwardCompTaskNode() = default;
   ~NonRecurrentBackwardCompTaskNode() = default;
 
+  TaskType GetTaskType() const override {
+    return TaskType::kNonRecurrentBackward;
+  }
+
  private:
 };
 
