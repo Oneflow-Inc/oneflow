@@ -83,7 +83,10 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
 
  protected:
   ChainNode() = default;
-  virtual CompTaskNode* NewCompTaskNode() const = 0;
+  virtual CompTaskNode* NewCompTaskNode() const {
+    return NewCompTaskNodeWithSameName();
+  }
+  virtual CompTaskNode* NewCompTaskNodeWithSameName() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
   void AddDataOutputLbnsTo(const ChainNode*);
@@ -103,7 +106,7 @@ class BackwardChainNode;
   BldBoxingOpConfMthd GetMthdForBldBoxingOpConfTo(const ChainNode*)           \
       const override;                                                         \
   std::vector<std::string> FindLbnsTo(const ChainNode*) const override;       \
-  CompTaskNode* NewCompTaskNode() const override;
+  CompTaskNode* NewCompTaskNodeWithSameName() const override;
 
 #define OVERRIDE_FROM_METHOD(x, y) x##From##y(const ChainNode*) const override;
 
@@ -133,6 +136,8 @@ class ForwardChainNode final : public ChainNode {
   void set_data_output_lbns() override;
 
  private:
+  CompTaskNode* NewCompTaskNode() const override;
+
   BackwardChainNode* bw_node_;
 };
 
@@ -156,6 +161,8 @@ class BackwardChainNode final : public ChainNode {
   void set_data_output_lbns() override;
 
  private:
+  CompTaskNode* NewCompTaskNode() const override;
+
   ForwardChainNode* fw_node_;
 };
 

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class BackwardCompTaskNode final : public CompTaskNode {
+class BackwardCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BackwardCompTaskNode);
   BackwardCompTaskNode() = default;
