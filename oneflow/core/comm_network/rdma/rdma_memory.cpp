@@ -15,7 +15,7 @@ RdmaMem::RdmaMem(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
   sge_.lkey = mr_->lkey;
 }
 
-RdmaMemDesc RdmaMem::GetRdmaMemDesc() {
+RdmaMemDesc RdmaMem::GenRdmaMemDesc() {
   RdmaMemDesc rdma_mem_desc;
   rdma_mem_desc.set_mem_ptr(reinterpret_cast<uint64_t>(sge_.addr));
   rdma_mem_desc.set_mr_rkey(mr_->rkey);

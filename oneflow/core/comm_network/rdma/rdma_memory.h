@@ -15,7 +15,7 @@ class RdmaMem {
   RdmaMem(ibv_pd* pd, void* mem_ptr, size_t byte_size);
   ~RdmaMem() { CHECK_EQ(ibv_dereg_mr(mr_), 0); }
 
-  RdmaMemDesc GetRdmaMemDesc();
+  RdmaMemDesc GenRdmaMemDesc();
   ibv_sge* ibv_sge_ptr() { return &sge_; }
 
  private:
