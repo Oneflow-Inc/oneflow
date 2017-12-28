@@ -46,6 +46,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::shared_ptr<const Operator> SoleOp() const;
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
   std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
+  bool HasSoleRecurrentOp() const;
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
@@ -62,7 +63,6 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
-  virtual bool ForceUnsharedInBoxing() const { return false; }
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;

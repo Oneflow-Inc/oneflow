@@ -33,7 +33,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   void BuildBwStruct();
   void BuildLossPrintStruct();
   void BuildModelStruct(bool is_train);
-  void BuildRnnStruct();
+  void BuildRecurrentStruct();
 };
 
 }  // namespace oneflow

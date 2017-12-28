@@ -60,8 +60,9 @@ message InnerProductOpConf {
 message DataLoaderOpConf {
   required string out = 1;
   required DataType data_type = 2;
-  required ShapeProto shape = 3;
-  required string data_dir = 4;
+  required string data_dir = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+  required ShapeProto shape = 5;
 }
 
 message PoolingOpConf {
@@ -192,6 +193,24 @@ message SumOpConf {
   required int32 axis = 3;
 }
 
+message BasicRnnCellConf {
+}
+
+message BasicLstmCellConf {
+}
+
+message RecurrentOpConf {
+  required string in = 1;
+  optional string init_hidden = 2;
+  required string out = 3;
+  required int32 hidden_size = 4;
+  optional bool has_bias_term = 5 [default = true];
+  oneof rnn_type {
+   BasicRnnCellConf basic_rnn_cell = 6;
+   BasicLstmCellConf basic_lstm_cell = 7;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -217,5 +236,6 @@ message OperatorConf {
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
     SumOpConf sum_conf = 120;
+    RecurrentOpConf recurrent_conf = 121; 
   }
 }

@@ -94,6 +94,7 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
   OF_BARRIER();
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
   CtrlClient::Singleton()->Clear();
+  OF_BARRIER();
   // Runtime
   Runtime::NewSingleton(plan, false);
   Runtime::DeleteSingleton();

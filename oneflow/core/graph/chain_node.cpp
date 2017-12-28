@@ -95,6 +95,10 @@ const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
   return op_vec_;
 }
 
+bool ChainNode::HasSoleRecurrentOp() const {
+  return op_vec_.size() == 1 && op_vec_.front()->IsRecurrentOp();
+}
+
 std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
   return parallel_desc_;
 }
@@ -190,7 +194,11 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
-  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+  }
 }
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
     const ChainNode* node) const {
@@ -198,7 +206,11 @@ BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
 }
 std::vector<std::string> ForwardChainNode::FindLbnsFromForward(
     const ChainNode* node) const {
-  return FindLbnsBetweenFw(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return FindLbnsBetweenFw(node, this);
+  }
 }
 std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
     const ChainNode* node) const {
@@ -220,7 +232,11 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromBackward(
     const ChainNode* node) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+  if (this == node) {
+    TODO();
+  } else {
+    return &TaskGraph::BldSubTskGphByBoxing;
+  }
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
     const ChainNode* node) const {
@@ -232,7 +248,11 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromBackward(
     const ChainNode* node) const {
-  return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
+  }
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
     const ChainNode* node) const {
@@ -240,7 +260,11 @@ BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
 }
 std::vector<std::string> BackwardChainNode::FindLbnsFromBackward(
     const ChainNode* node) const {
-  return FindLbnsBetweenBw(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return FindLbnsBetweenBw(node, this);
+  }
 }
 std::vector<std::string> BackwardChainNode::FindLbnsFromLoss(
     const ChainNode* node) const {

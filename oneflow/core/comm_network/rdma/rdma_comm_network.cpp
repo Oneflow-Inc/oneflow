@@ -60,7 +60,7 @@ void RdmaCommNet::RegisterMemoryDone() {
   HashMap<uint64_t, RdmaMemDesc> this_machine_tokens_msg;
   for (RdmaMem* mem_ptr : mems_) {
     this_machine_tokens_msg.insert(
-        {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GetRdmaMemDesc()});
+        {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GenRdmaMemDesc()});
   }
   RdmaTokensMsg tokens_msg;
   *(tokens_msg.mutable_token2mem_desc()) =
