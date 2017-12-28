@@ -114,7 +114,7 @@ std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
 }
 
 std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
-  return op_conf().recurrent_conf().out();
+  return op_name() + "/" + op_conf().recurrent_conf().out();
 }
 
 REGISTER_OP(OperatorConf::kRecurrentConf, RecurrentOp);
