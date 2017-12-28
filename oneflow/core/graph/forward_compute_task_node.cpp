@@ -15,7 +15,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() == TaskType::kBackward) {
+    if (IsBackwardTaskType(dst_node->GetTaskType())) {
       edge->AddRegst("activation", GetProducedRegst("activation"));
       edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
     }

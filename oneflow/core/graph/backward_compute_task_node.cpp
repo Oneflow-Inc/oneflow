@@ -20,7 +20,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     TaskType src_task_type = src_node->GetTaskType();
-    if (src_task_type == TaskType::kForward) {
+    if (IsForwardTaskType(src_task_type)) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
@@ -154,7 +154,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* fw_node = edge->src_node();
-    if (fw_node->GetTaskType() != TaskType::kForward) { continue; }
+    if (IsForwardTaskType(fw_node->GetTaskType()) == false) { continue; }
     for (TaskEdge* edge : fw_node->in_edges()) {
       TaskNode* pred_fw_node = edge->src_node();
       if (pred_fw_node->GetTaskType() != TaskType::kMdUpdt) {

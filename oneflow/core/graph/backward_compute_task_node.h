@@ -15,8 +15,6 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
-  TaskType GetTaskType() const override { return TaskType::kBackward; }
-
  private:
   void BuildExecGphAndBindOutDiffRegst();
   void BuildActivationDiffRegst();

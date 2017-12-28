@@ -150,7 +150,7 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
   }
 }
 
-REGISTER_ACTOR(TaskType::kForward, ForwardCompActor);
+REGISTER_ACTOR(TaskType::kNonRecurrentForward, ForwardCompActor);
 REGISTER_ACTOR(TaskType::kLoss, ForwardCompActor);
 
 }  // namespace oneflow

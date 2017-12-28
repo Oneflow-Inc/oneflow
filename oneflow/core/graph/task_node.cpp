@@ -2,6 +2,16 @@
 
 namespace oneflow {
 
+bool IsForwardTaskType(TaskType tt) {
+  return tt == TaskType::kNonRecurrentForward
+         || tt == TaskType::kRecurrentForward;
+}
+
+bool IsBackwardTaskType(TaskType tt) {
+  return tt == TaskType::kNonRecurrentBackward
+         || tt == TaskType::kRecurrentBackward;
+}
+
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
@@ -73,8 +83,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
-  exec_gph_.ToExecSequence(GetTaskType() != TaskType::kBackward, parallel_ctx(),
-                           task_proto->mutable_exec_sequence());
+  exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false,
+                           parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
