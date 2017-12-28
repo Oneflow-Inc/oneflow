@@ -22,20 +22,18 @@ class Improver final {
   explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
   void MemoryLimitedAllocate(const ActorGraph& graph,
                              HashMap<int64_t, double>* regst_desc_id2num) const;
-  void FindMinRegstNumWithLeastPerformanceLoss(
-      int64_t machine_id, int64_t memory_zone_id, double ii,
-      const std::list<const RegstDescProto*>& regst_descs,
-      const HashMap<int64_t, double>& regst_desc_id2life_time,
-      HashMap<int64_t, double>* regst_desc_id2num) const;
-  bool IsOutOfMemory(int64_t machine_id, int64_t memory_zone_id,
-                     const std::list<const RegstDescProto*>& regst_descs,
-                     const HashMap<int64_t, double>& regst_desc_id2num) const;
+  using MemZoneRegstDescs =
+      std::vector<std::vector<std::list<const RegstDescProto*>>>;
+  bool IsAnyZoneOutOfMemory(
+      const MemZoneRegstDescs& mz_regst_descs,
+      const HashMap<int64_t, double>& regst_desc_id2life_time, double ii) const;
+  double CalcII(double ii_base,
+                HashMap<int64_t, double> regst_desc_id2life_time,
+                const MemZoneRegstDescs& mz_regst_descs) const;
   size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
   int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
-  void MakeMemoryDevice2RegstDescs(
-      const Plan& plan,
-      std::vector<std::vector<std::list<const RegstDescProto*>>>* mz2regst_desc)
-      const;
+  void MakeMemZoneRegstDescs(const Plan& plan,
+                             MemZoneRegstDescs* mz2regst_desc) const;
   AvailableMemDesc amd_;
 };
 
