@@ -4,9 +4,9 @@
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto loss_regst = ProduceRegst("loss", 1, kMaxRegisterNum);
-  auto in_diff_regst = ProduceRegst("in_diff", 1, kMaxRegisterNum);
-  auto data_tmp_regst = ProduceRegst("data_tmp", 1, 1);
+  auto loss_regst = ProduceRegst("loss");
+  auto in_diff_regst = ProduceRegst("in_diff");
+  auto data_tmp_regst = ProduceRegst("data_tmp");
   for (TaskEdge* edge : out_edges()) {
     TaskType dst_task_node_type = edge->dst_node()->GetTaskType();
     if (dst_task_node_type == TaskType::kLossAcc) {
@@ -27,6 +27,7 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  data_tmp_regst->set_register_num_range(1, 1);
   // op
   std::shared_ptr<const Operator> loss_op = chain_node()->SoleOp();
   CHECK(loss_op->IsLossOp());

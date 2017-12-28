@@ -100,13 +100,9 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
-                                                  int32_t min_register_num,
-                                                  int32_t max_register_num) {
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
-  regst->set_min_register_num(min_register_num);
-  regst->set_max_register_num(max_register_num);
   CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }

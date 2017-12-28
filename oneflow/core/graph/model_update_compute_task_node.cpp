@@ -4,21 +4,9 @@
 namespace oneflow {
 
 void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  int32_t min_model_regst = -1;
-  int32_t max_model_regst = -1;
-  if (JobDesc::Singleton()->IsPredict()) {
-    min_model_regst = 1;
-    max_model_regst = 1;
-  } else if (JobDesc::Singleton()->Staleness() == -1) {
-    min_model_regst = 2;
-    max_model_regst = kMaxRegisterNum;
-  } else {
-    min_model_regst = 1;
-    max_model_regst = JobDesc::Singleton()->Staleness() + 1;
-  }
-  auto model_regst = ProduceRegst("model", min_model_regst, max_model_regst);
-  auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
-  ProduceRegst("data_tmp", 1, 1);
+  auto model_regst = ProduceRegst("model");
+  auto model_tmp_regst = ProduceRegst("model_tmp");
+  ProduceRegst("data_tmp");
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
     if (IsForwardTaskType(dst_node->GetTaskType())
@@ -43,6 +31,7 @@ bool MdUpdtCompTaskNode::IsReadyForBuild() {
 
 void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (JobDesc::Singleton()->IsPredict()) { return; }
+  GetProducedRegst("data_tmp")->set_register_num_range(1, 1);
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   node->BindBnInOpAndRegst(node->op()->SoleIbn(), SoleInEdge()->GetSoleRegst());
