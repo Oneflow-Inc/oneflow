@@ -4,8 +4,8 @@
 namespace oneflow {
 
 void SourceCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("activation", 1, 1);
-  auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
+  ProduceRegst("activation");
+  auto out_regst = ProduceRegst("out");
   SoleOutEdge()->AddRegst("out", out_regst);
 }
 
@@ -14,6 +14,7 @@ void SourceCompTaskNode::ConsumeAllRegsts() {}
 void SourceCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
+  activation_regst->set_register_num_range(1, 1);
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   const auto& data_output_lbns = chain_node()->data_output_lbns();

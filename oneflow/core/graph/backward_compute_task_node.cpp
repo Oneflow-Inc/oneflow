@@ -7,13 +7,12 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
-      edge->AddRegst("in_diff", ProduceRegst("in_diff", 1, kMaxRegisterNum));
+      edge->AddRegst("in_diff", ProduceRegst("in_diff"));
     } else {
-      auto model_diff_regst = ProduceRegst("model_diff", 1, kMaxRegisterNum);
-      edge->AddRegst("model_diff", model_diff_regst);
+      edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     }
   }
-  ProduceRegst("activation_diff", 1, 1);
+  ProduceRegst("activation_diff");
 }
 
 void BackwardCompTaskNode::ConsumeAllRegsts() {
@@ -76,6 +75,7 @@ void BackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
 void BackwardCompTaskNode::BuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
+  activation_diff_regst->set_register_num_range(1, 1);
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
         || edge->dst_node()->op()->NeedOutWhenBackward()) {
@@ -119,8 +119,8 @@ void BackwardCompTaskNode::BuildInDiffRegst() {
 void BackwardCompTaskNode::BuildModelDiffRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetConsumedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
-  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
+  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);

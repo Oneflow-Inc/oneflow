@@ -7,11 +7,27 @@ namespace oneflow {
 
 RegstDesc::RegstDesc() {
   regst_desc_id_ = IDMgr::Singleton()->NewRegstDescId();
+  min_register_num_ = 1;
+  max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
+}
+
+void RegstDesc::set_min_register_num(int32_t val) {
+  CHECK_EQ(is_locked_, false);
+  min_register_num_ = val;
+}
+void RegstDesc::set_max_register_num(int32_t val) {
+  CHECK_EQ(is_locked_, false);
+  max_register_num_ = val;
+}
+
+void RegstDesc::set_register_num_range(int32_t min_val, int32_t max_val) {
+  set_min_register_num(min_val);
+  set_max_register_num(max_val);
 }
 
 void RegstDesc::Lock() {
