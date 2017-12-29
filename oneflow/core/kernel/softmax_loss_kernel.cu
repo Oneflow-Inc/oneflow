@@ -8,9 +8,9 @@ namespace {
 template<typename PredType, typename LabelType>
 __global__ void SoftmaxLossForwardTmp(const int64_t n, const int64_t w,
                                       const LabelType* label,
-                                      const PredType* prob, PredType* tmp) {
+                                      const PredType* prob, PredType* loss) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    tmp[i] = -SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
+    loss[i] = -SAFE_LOG(prob[i * w + static_cast<int64_t>(label[i])]);
   }
 }
 
@@ -33,12 +33,10 @@ class SoftmaxLossKernelUtil<DeviceType::kGPU, PredType, LabelType> final {
 
   static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const LabelType* label, const PredType* prob,
-                          PredType* tmp, PredType* loss) {
+                          PredType* loss) {
     SoftmaxLossForwardTmp<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->cuda_stream()>>>(n, w, label, prob, tmp);
-    KernelUtil<DeviceType::kGPU, PredType>::Sum(ctx, n, tmp, loss, tmp,
-                                                sizeof(PredType) * n);
+           ctx->cuda_stream()>>>(n, w, label, prob, loss);
   }
 
   static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
