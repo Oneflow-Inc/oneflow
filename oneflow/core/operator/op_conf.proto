@@ -57,7 +57,7 @@ message InnerProductOpConf {
   optional FillConf bias_fill = 6; 
 }
 
-message DataLoaderOpConf {
+message BasicDataLoaderOpConf {
   required string out = 1;
   required DataType data_type = 2;
   required string data_dir = 3;
@@ -217,7 +217,7 @@ message OperatorConf {
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;
-    DataLoaderOpConf data_loader_conf = 102;
+    BasicDataLoaderOpConf basic_data_loader_conf = 102;
     PoolingOpConf pooling_conf = 103;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
