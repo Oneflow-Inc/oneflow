@@ -9,7 +9,7 @@ class ForwardCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardCompTaskNode);
   ForwardCompTaskNode() = default;
-  ~ForwardCompTaskNode() = default;
+  virtual ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;

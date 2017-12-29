@@ -9,7 +9,7 @@ class BackwardCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BackwardCompTaskNode);
   BackwardCompTaskNode() = default;
-  ~BackwardCompTaskNode() = default;
+  virtual ~BackwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
