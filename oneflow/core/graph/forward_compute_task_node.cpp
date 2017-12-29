@@ -5,17 +5,16 @@ namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
-    ProduceRegst("activation", 1, kMaxRegisterNum);
-    ProduceRegst("data_tmp", 1, kMaxRegisterNum);
+    ProduceRegst("activation");
+    ProduceRegst("data_tmp");
   } else {
     ProduceRegst("activation", 1, 1);
     ProduceRegst("data_tmp", 1, 1);
   }
-
-  auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
+  auto out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() == TaskType::kBackward) {
+    if (IsBackwardTaskType(dst_node->GetTaskType())) {
       edge->AddRegst("activation", GetProducedRegst("activation"));
       edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
     }

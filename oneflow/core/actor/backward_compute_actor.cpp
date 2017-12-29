@@ -124,6 +124,6 @@ void BackwardCompActor::Act() {
   }
 }
 
-REGISTER_ACTOR(TaskType::kBackward, BackwardCompActor);
+REGISTER_ACTOR(TaskType::kNonRecurrentBackward, BackwardCompActor);
 
 }  // namespace oneflow

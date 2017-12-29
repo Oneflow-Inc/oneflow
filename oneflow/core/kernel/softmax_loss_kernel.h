@@ -28,7 +28,7 @@ class SoftmaxLossKernelUtil final {
 
   static void ComputeLoss(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const LabelType* label, const PredType* prob,
-                          PredType* tmp, PredType* loss);
+                          PredType* loss);
 
   static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const LabelType* label, PredType* in_diff);

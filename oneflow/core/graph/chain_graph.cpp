@@ -83,6 +83,7 @@ void ModelMergeChains(std::list<Chain>* chain_list,
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
     CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()));
+    if (pred_node->op()->IsRecurrentOp()) { continue; }
     // Get chain
     ChainIt pred_chain = logical2chain_it->at(pred_node);
     ChainIt cur_chain = pair.second;
@@ -195,6 +196,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->op()->IsLossOp()) { continue; }
     if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
+    if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
@@ -209,7 +211,7 @@ ChainGraph::ChainGraph(bool is_train) {
     BuildLossPrintStruct();
   }
   BuildModelStruct(is_train);
-  BuildRnnStruct();
+  BuildRecurrentStruct();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
@@ -418,6 +420,12 @@ void ChainGraph::BuildModelStruct(bool is_train) {
   });
 }
 
-void ChainGraph::BuildRnnStruct() {}
+void ChainGraph::BuildRecurrentStruct() {
+  ForEachNode([&](ChainNode* chain_node) {
+    if (chain_node->HasSoleRecurrentOp()) {
+      Connect(chain_node, NewEdge(), chain_node);
+    }
+  });
+}
 
 }  // namespace oneflow
