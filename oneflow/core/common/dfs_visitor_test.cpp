@@ -18,7 +18,7 @@ TEST(DfsVisitor, diamond) {
   DfsVisitor<int> dfs_foreach_node(ForEachNext);
 
   int index = 0;
-  std::vector<int> order{1, 3, 4, 2};
+  std::vector<int> order{1, 2, 4, 3};
 
   dfs_foreach_node({1}, [&](int x) {
     ASSERT_TRUE(x == order[index]);
@@ -54,7 +54,7 @@ TEST(DfsVisitor, multiple_linked_list) {
   DfsVisitor<int> dfs_foreach_node(ForEachNext);
 
   int index = 0;
-  std::vector<int> order{7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6};
+  std::vector<int> order{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
   std::list<int> starts{1, 7};
   dfs_foreach_node(starts, [&](int x) {
@@ -73,7 +73,7 @@ TEST(DfsVisitor, binary_tree) {
   DfsVisitor<int> dfs_foreach_node(ForEachNext);
 
   int index = 0;
-  std::vector<int> order{1, 3, 7, 6, 2, 5, 11, 10, 4, 9, 8};
+  std::vector<int> order{1, 2, 4, 8, 9, 5, 10, 11, 3, 6, 7};
   dfs_foreach_node({1}, [&](int x) {
     ASSERT_TRUE(x == order[index]);
     ++index;

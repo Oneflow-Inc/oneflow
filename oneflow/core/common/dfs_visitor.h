@@ -19,26 +19,41 @@ class DfsVisitor final {
 
   void operator()(const std::list<NodeType>& start_nodes,
                   const NodeHandlerFn& Handler) {
-    HashMap<NodeType, bool> visited_or_visiting_soon;
-    std::stack<NodeType> stack;
-    for (NodeType node : start_nodes) {
-      stack.push(node);
-      visited_or_visiting_soon[node] = true;
-    }
-    while (!stack.empty()) {
-      NodeType node = stack.top();
-      Handler(node);
-      stack.pop();
-      foreach_next_(node, [&](NodeType next) {
-        if (!visited_or_visiting_soon[next]) {
-          stack.push(next);
-          visited_or_visiting_soon[next] = true;
-        }
-      });
-    }
+    Walk(start_nodes, Handler, [](NodeType) {});
+  }
+
+  void operator()(const std::list<NodeType>& start_nodes,
+                  const NodeHandlerFn& OnEnter, const NodeHandlerFn& OnExit) {
+    Walk(start_nodes, OnEnter, OnExit);
   }
 
  private:
+  void Walk(const std::list<NodeType>& start_nodes,
+            const NodeHandlerFn& OnEnter, const NodeHandlerFn& OnExit) {
+    HashMap<NodeType, bool> visited;
+    std::stack<std::list<NodeType>> stack;
+    stack.push(start_nodes);
+    while (true) {
+      if (!stack.top().empty()) {
+        NodeType node = stack.top().front();
+        if (!visited[node]) {
+          OnEnter(node);
+          visited[node] = true;
+          stack.push({});
+          foreach_next_(node,
+                        [&](NodeType next) { stack.top().push_back(next); });
+        } else {
+          stack.top().erase(stack.top().begin());
+        }
+      } else {
+        stack.pop();
+        if (stack.empty()) { break; }
+        OnExit(stack.top().front());
+        stack.top().erase(stack.top().begin());
+      }
+    }
+  }
+
   ForEachNodeFn foreach_next_;
 };
 
