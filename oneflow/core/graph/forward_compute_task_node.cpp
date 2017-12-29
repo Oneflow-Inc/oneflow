@@ -4,9 +4,13 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("activation");
-  ProduceRegst("data_tmp");
-
+  if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
+    ProduceRegst("activation");
+    ProduceRegst("data_tmp");
+  } else {
+    ProduceRegst("activation", 1, 1);
+    ProduceRegst("data_tmp", 1, 1);
+  }
   auto out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
@@ -31,11 +35,6 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
-  if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()
-      == nullptr) {
-    GetProducedRegst("activation")->set_register_num_range(1, 1);
-    GetProducedRegst("data_tmp")->set_register_num_range(1, 1);
-  }
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
   BuildActivationRegst();
@@ -101,21 +100,7 @@ void ForwardCompTaskNode::BuildActivationRegst() {
 void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
-  int32_t min_model_regst = -1;
-  int32_t max_model_regst = -1;
-  if (JobDesc::Singleton()->IsPredict()) {
-    min_model_regst = 1;
-    max_model_regst = 1;
-  } else if (JobDesc::Singleton()->Staleness() == -1) {
-    min_model_regst = 2;
-    max_model_regst = kMaxRegisterNum;
-  } else {
-    min_model_regst = 1;
-    max_model_regst = JobDesc::Singleton()->Staleness() + 1;
-  }
-  model_regst->set_register_num_range(min_model_regst, max_model_regst);
   std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
-  model_tmp_regst->set_register_num_range(1, 1);
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
