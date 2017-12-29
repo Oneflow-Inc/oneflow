@@ -40,6 +40,7 @@ void TaskNode::set_thrd_id(int64_t val) {
 void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
+  FixRegisterNumRange();
 }
 
 void TaskNode::EraseEmptyProducedRegst() {
@@ -101,8 +102,16 @@ void TaskNode::ToProto(TaskProto* task_proto) {
 }
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
+  return ProduceRegst(name, 1, kMaxRegisterNum);
+}
+
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
+                                                  int32_t min_register_num,
+                                                  int32_t max_register_num) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
+  regst->set_min_register_num(min_register_num);
+  regst->set_max_register_num(max_register_num);
   CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
