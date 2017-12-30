@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_BASIC_RNN_FORWARD_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_BASIC_RNN_FORWARD_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_RECURRENT_FORWARD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_RECURRENT_FORWARD_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 
 namespace oneflow {
 
-class BasicRnnForwardCompActor final : public CompActor {
+class RecurrentForwardCompActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BasicRnnForwardCompActor);
-  BasicRnnForwardCompActor() = default;
-  ~BasicRnnForwardCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RecurrentForwardCompActor);
+  RecurrentForwardCompActor() = default;
+  ~RecurrentForwardCompActor() = default;
 
   void VirtualCompActorInit(const TaskProto&) override;
 
@@ -44,4 +44,4 @@ class BasicRnnForwardCompActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_BASIC_RNN_FORWARD_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_RECURRENT_FORWARD_COMPUTE_ACTOR_H_

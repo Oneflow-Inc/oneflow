@@ -1,8 +1,8 @@
-#include "oneflow/core/actor/basic_rnn_forward_compute_actor.h"
+#include "oneflow/core/actor/recurrent_forward_compute_actor.h"
 
 namespace oneflow {
 
-void BasicRnnForwardCompActor::VirtualCompActorInit(
+void RecurrentForwardCompActor::VirtualCompActorInit(
     const TaskProto& task_proto) {
   in_regst_desc_id_ = RegstDescId4Name("in");
   initial_hidden_regst_desc_id_ = RegstDescId4Name("initial_hidden");
@@ -14,10 +14,10 @@ void BasicRnnForwardCompActor::VirtualCompActorInit(
   cur_model_regst_ = nullptr;
   out_regst_ = nullptr;
 
-  OF_SET_MSG_HANDLER(&BasicRnnForwardCompActor::HandlerInitModel);
+  OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerInitModel);
 }
 
-int BasicRnnForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
+int RecurrentForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
   Regst* model_regst = msg.regst();
   CHECK_EQ(model_regst_desc_id_, model_regst->regst_desc_id());
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
@@ -30,11 +30,11 @@ int BasicRnnForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
         });
   }
   AsyncSendRegstMsgToProducer(model_regst);
-  OF_SET_MSG_HANDLER(&BasicRnnForwardCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerNormal);
   return 0;
 }
 
-int BasicRnnForwardCompActor::HandlerNormal(const ActorMsg& msg) {
+int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     if (msg.eord_regst_desc_id() == in_regst_desc_id_) { is_in_eord_ = true; }
     DecreaseRemainingEordCnt();
@@ -52,7 +52,7 @@ int BasicRnnForwardCompActor::HandlerNormal(const ActorMsg& msg) {
         }
         latest_model_regst_ = cur_regst;
       } else if (cur_regst_desc_id == out_regst_desc_id_) {
-        CHECK(out_regst_ == nullptr);
+        CHECK(!out_regst_);
         out_regst_ = cur_regst;
       } else {
         UNEXPECTED_RUN();
@@ -65,7 +65,7 @@ int BasicRnnForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-bool BasicRnnForwardCompActor::IsReadReady() {
+bool RecurrentForwardCompActor::IsReadReady() {
   if (in_regsts_.empty()) { return false; }
   if (!latest_model_regst_) { return false; }
 
@@ -83,11 +83,11 @@ bool BasicRnnForwardCompActor::IsReadReady() {
   }
 }
 
-bool BasicRnnForwardCompActor::IsReadAlwaysUnReadyFromNow() {
+bool RecurrentForwardCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_in_eord_ && in_regsts_.empty();
 }
 
-void BasicRnnForwardCompActor::Act() {
+void RecurrentForwardCompActor::Act() {
   Regst* in_regst = in_regsts_.front();
   in_regsts_.pop();
 
@@ -125,17 +125,17 @@ void BasicRnnForwardCompActor::Act() {
   AsyncSendRegstMsgToProducer(in_regst);
 }
 
-void BasicRnnForwardCompActor::AsyncReturnAllReadableRegst() {
+void RecurrentForwardCompActor::AsyncReturnAllReadableRegst() {
   CHECK(in_regsts_.empty());
   CHECK(initial_hidden_regsts_.empty());
-  CHECK(cur_model_regst_ == nullptr);
-  CHECK(out_regst_ == nullptr);
+  CHECK(!cur_model_regst_);
+  CHECK(!out_regst_);
   if (latest_model_regst_) {
     AsyncSendRegstMsgToProducer(latest_model_regst_);
     latest_model_regst_ = nullptr;
   }
 }
 
-REGISTER_ACTOR(TaskType::kBasicRnnForward, BasicRnnForwardCompActor);
+REGISTER_ACTOR(TaskType::kRecurrentForward, RecurrentForwardCompActor);
 
 }  // namespace oneflow

@@ -7,22 +7,22 @@ import "oneflow/core/job/placement.proto";
 
 enum TaskType {
   kInvalid = 0;
-  kForward = 1;
-  kBackward = 2;
-  kSource = 3;
-  kLoss = 4;
-  kLossAcc = 5;
-  kLossPrint = 6;
-  kMdUpdt = 7;
-  kMdSave = 8;
-  kMdDiffAcc = 9;
-  kCopyHd = 10;
-  kCopyCommNet = 11;
-  kBoxing = 12;
-  kPrint = 13;
-  kRnnSource = 14;
-  kBasicRnnForward = 15;
-  kBasicRnnBackward = 16;
+  kNonRecurrentForward = 1;
+  kRecurrentForward = 2;
+  kNonRecurrentBackward = 3;
+  kRecurrentBackward = 4;
+  kSource = 5;
+  kLoss = 6;
+  kLossAcc = 7;
+  kLossPrint = 8;
+  kMdUpdt = 9;
+  kMdSave = 10;
+  kMdDiffAcc = 11;
+  kCopyHd = 12;
+  kCopyCommNet = 13;
+  kBoxing = 14;
+  kPrint = 15;
+  kRnnSource = 16;
 };
 
 message TaskProto {
