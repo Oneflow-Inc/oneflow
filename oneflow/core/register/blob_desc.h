@@ -17,9 +17,14 @@ class BlobDesc final {
     shape_ = Shape(proto.shape());
     data_type_ = proto.data_type();
     has_data_id_ = proto.has_data_id();
+    max_seq_size_ = proto.max_seq_size();
   }
-  BlobDesc(Shape shape, DataType data_type, bool has_data_id)
-      : shape_(shape), data_type_(data_type), has_data_id_(has_data_id) {}
+  BlobDesc(Shape shape, DataType data_type, bool has_data_id,
+           int32_t max_seq_size)
+      : shape_(shape),
+        data_type_(data_type),
+        has_data_id_(has_data_id),
+        max_seq_size_(max_seq_size) {}
 
   const Shape& shape() const { return shape_; }
   Shape& mut_shape() { return shape_; }
@@ -30,10 +35,14 @@ class BlobDesc final {
   bool has_data_id() const { return has_data_id_; }
   void set_has_data_id(bool val) { has_data_id_ = val; }
 
+  int32_t max_seq_size() const { return max_seq_size_; }
+  void set_max_seq_size(int32_t val) { max_seq_size_ = val; }
+
   void ToProto(BlobDescProto* proto) const {
     shape_.ToProto(proto->mutable_shape());
     proto->set_data_type(data_type_);
     proto->set_has_data_id(has_data_id_);
+    proto->set_max_seq_size(max_seq_size_);
   }
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfDataContentField() const;
@@ -44,6 +53,7 @@ class BlobDesc final {
   Shape shape_;
   DataType data_type_;
   bool has_data_id_;
+  int32_t max_seq_size_;
 };
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);

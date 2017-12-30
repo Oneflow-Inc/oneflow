@@ -7,11 +7,23 @@ namespace oneflow {
 
 RegstDesc::RegstDesc() {
   regst_desc_id_ = IDMgr::Singleton()->NewRegstDescId();
+  producer_ = nullptr;
+  min_register_num_ = -1;
+  max_register_num_ = -1;
   is_locked_ = false;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
+}
+
+void RegstDesc::set_min_register_num(int32_t val) {
+  min_register_num_ = val;
+  max_register_num_ = std::max(min_register_num_, max_register_num_);
+}
+void RegstDesc::set_max_register_num(int32_t val) {
+  max_register_num_ = val;
+  min_register_num_ = std::min(min_register_num_, max_register_num_);
 }
 
 void RegstDesc::Lock() {
@@ -130,18 +142,6 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
-}
-
-BlobDesc RegstDesc::CompPackedBlobDesc() const {
-  auto it = lbn2blob_desc_.begin();
-  return ComputePackedBlobDesc([&]() {
-    const BlobDesc* ret = nullptr;
-    if (it != lbn2blob_desc_.end()) {
-      ret = it->second.get();
-      ++it;
-    }
-    return ret;
-  });
 }
 
 }  // namespace oneflow

@@ -9,15 +9,13 @@ class ForwardCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardCompTaskNode);
   ForwardCompTaskNode() = default;
-  ~ForwardCompTaskNode() = default;
+  virtual ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void LockRegsts() override;
   bool IsReadyForBuild() override;
-
-  TaskType GetTaskType() const override { return TaskType::kForward; }
 
  private:
   void BuildExecGphStructAndBindInRegst();

@@ -7,10 +7,9 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
-      edge->AddRegst("in_diff", ProduceRegst("in_diff", 1, kMaxRegisterNum));
+      edge->AddRegst("in_diff", ProduceRegst("in_diff"));
     } else {
-      auto model_diff_regst = ProduceRegst("model_diff", 1, kMaxRegisterNum);
-      edge->AddRegst("model_diff", model_diff_regst);
+      edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     }
   }
   ProduceRegst("activation_diff", 1, 1);
@@ -20,7 +19,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     TaskType src_task_type = src_node->GetTaskType();
-    if (src_task_type == TaskType::kForward) {
+    if (IsForwardTaskType(src_task_type)) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
@@ -119,8 +118,8 @@ void BackwardCompTaskNode::BuildInDiffRegst() {
 void BackwardCompTaskNode::BuildModelDiffRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetConsumedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
-  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
+  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
@@ -154,7 +153,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* fw_node = edge->src_node();
-    if (fw_node->GetTaskType() != TaskType::kForward) { continue; }
+    if (IsForwardTaskType(fw_node->GetTaskType()) == false) { continue; }
     for (TaskEdge* edge : fw_node->in_edges()) {
       TaskNode* pred_fw_node = edge->src_node();
       if (pred_fw_node->GetTaskType() != TaskType::kMdUpdt) {
