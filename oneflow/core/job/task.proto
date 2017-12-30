@@ -23,6 +23,7 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRnnSource = 16;
+  kRecurrentBoxing = 17;
 };
 
 message TaskProto {
