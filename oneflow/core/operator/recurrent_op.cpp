@@ -39,7 +39,11 @@ void RecurrentOp::InitFromOpConf() {
   const RecurrentOpConf& conf = op_conf().recurrent_conf();
   EnrollInputBn("in");
   EnrollInputBn("ht_1");
-  if (!conf.init_hidden().empty()) { EnrollInputBn("h0"); }
+  if (!conf.init_hidden().empty()) {
+    EnrollInputBn("h0");
+  } else {
+    EnrollDataTmpBn("h0");
+  }
   EnrollOutputBn("ht");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
@@ -72,10 +76,16 @@ void RecurrentOp::InferBlobDescs(
   DataType data_type = JobDesc::Singleton()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
+  Shape h0_shape = Shape({in_blob_desc->shape().At(0), conf.hidden_size()});
   if (!conf.init_hidden().empty()) {
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
-    CHECK_EQ(in_blob_desc->shape(), h0_blob_desc->shape());
+    CHECK_EQ(h0_blob_desc->shape(), h0_shape);
+  } else {
+    BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
+    h0_blob_desc->mut_shape() = h0_shape;
+    h0_blob_desc->set_data_type(data_type);
+    h0_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
   }
   int32_t hidden_size = conf.hidden_size();
   if (parallel_ctx->policy() == kModelParallel) {
