@@ -7,6 +7,39 @@
 
 namespace oneflow {
 
+class PieceStatus final {
+ public:
+  PieceStatus() : piece_id_(0), col_id_(0), max_col_id_(-1) {}
+  ~PieceStatus() = default;
+  PieceStatus(const PieceStatus&) = default;
+  PieceStatus& operator=(const PieceStatus&) = default;
+
+  bool operator==(const PieceStatus& other) const {
+    return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
+           && (max_col_id_ == other.max_col_id_);
+  }
+  bool operator!=(const PieceStatus& other) const { return !(*this == other); }
+
+  int64_t piece_id() const { return piece_id_; }
+  int64_t col_id() const { return col_id_; }
+  int64_t max_col_id() const { return max_col_id_; }
+
+  void set_max_col_id(int64_t max_col_id) {
+    CHECK_EQ(-1, max_col_id_);  //-1 for unset
+    max_col_id_ = max_col_id;
+  }
+
+  int GetIntoNextStatus();
+  bool IsLast() const;
+  bool IsLastCol() const { return col_id_ == max_col_id_; }
+  bool IsNextColOf(const PieceStatus& pre) const;
+
+ private:
+  int64_t piece_id_;
+  int64_t col_id_;
+  int64_t max_col_id_;
+};
+
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
@@ -60,6 +93,9 @@ class Blob final {
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
+  const PieceStatus& piece_status() const { return piece_status_; }
+  void set_piece_status(const PieceStatus& pst) { piece_status_ = pst; }
+
  private:
   template<typename T>
   void CheckDataType() const {
@@ -72,6 +108,7 @@ class Blob final {
 
   char* data_id_ptr_;
   void* dptr_;
+  PieceStatus piece_status_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
 };

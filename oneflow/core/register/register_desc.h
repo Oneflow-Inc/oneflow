@@ -30,7 +30,6 @@ class RegstDesc final {
   void set_min_register_num(int32_t val);
   int32_t max_register_num() const { return max_register_num_; }
   void set_max_register_num(int32_t val);
-  void set_register_num_range(int32_t min_val, int32_t max_val);
 
   // lbn2blob_desc_
   bool IsLocked() const { return is_locked_; }
@@ -44,10 +43,10 @@ class RegstDesc final {
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
   // util
+  int32_t MaxSeqSize() const { return packed_blob_desc_->max_seq_size(); }
   void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
-  BlobDesc CompPackedBlobDesc() const;
 
  private:
   int64_t regst_desc_id_;

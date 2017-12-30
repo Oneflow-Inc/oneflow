@@ -17,7 +17,7 @@ void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
     auto out_regst = ProduceRegst(name);
     out_edge->AddRegst(name, out_regst);
   }
-  ProduceRegst("middle");
+  ProduceRegst("middle", 1, 1);
 }
 
 void BoxingTaskNode::ConsumeAllRegsts() {
@@ -29,7 +29,6 @@ void BoxingTaskNode::ConsumeAllRegsts() {
 }
 
 void BoxingTaskNode::BuildExecGphAndRegst() {
-  GetProducedRegst("middle")->set_register_num_range(1, 1);
   HashMap<const ChainNode*, std::vector<EdgeInfo>> in_chain2edge_info;
   InitChain2SortedEdgeInfo(&TaskNode::in_edges, &TaskNode::SoleInEdge,
                            &TaskEdge::src_node, &in_chain2edge_info);

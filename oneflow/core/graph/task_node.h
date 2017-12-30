@@ -47,6 +47,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,
+                                          int32_t min_register_num,
+                                          int32_t max_register_num);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
@@ -55,6 +58,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
+  virtual void FixRegisterNumRange() {}
 
  private:
   void UpdateTaskId();
