@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class MomentumMdUpdateKernel final : public MdUpdateKernel<device_type> {
+class MomentumMdUpdateKernel final : public MdUpdateKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MomentumMdUpdateKernel);
   MomentumMdUpdateKernel() = default;

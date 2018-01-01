@@ -27,6 +27,9 @@ class JobDesc final {
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   size_t SizeOfOneDataId() const;
   bool use_rdma() const { return job_conf_.use_rdma(); }
+  RegularizationMethod regularization_method() const {
+    return job_conf_.regularization_method();
+  }
   int64_t TotalMachineNum() const { return resource_.machine().size(); }
   DeviceType GetDeviceType() const { return resource_.device_type(); }
   int32_t PersistenceWorkerNum() const;

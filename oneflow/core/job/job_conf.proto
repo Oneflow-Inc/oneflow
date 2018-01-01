@@ -46,7 +46,14 @@ message JobConf {
   optional string model_load_snapshot_path = 7 [default = ""];
   optional int32 max_data_id_length = 8 [default = 0];
   optional bool use_rdma = 9 [default = false];
-  
+
+  enum RegularizationMethod {
+    kNone = 0;
+    kL1 = 1;
+    kL2 = 2;
+  }
+  required RegularizationMethod regulazation_method = 10 [default = kNone];
+
   optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 101 [default = 100];
   oneof JobType {
