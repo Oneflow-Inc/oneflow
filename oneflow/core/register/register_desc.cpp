@@ -100,7 +100,8 @@ void RegstDesc::InferMemCase() {
   int64_t thrd_id = producer_->thrd_id();
   if (auto cp_hd_producer = dynamic_cast<const CopyHdTaskNode*>(producer_)) {
     if (cp_hd_producer->copy_type() == CopyHdOpConf::H2D) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(thrd_id);
+      mem_case_.mutable_device_cuda_mem()->set_device_id(
+          IDMgr::Singleton()->GetGpuDevPhyIdFromThrdId(thrd_id));
     } else {
       mem_case_.mutable_host_pinned_mem()->set_used_by_device(true);
       SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
@@ -110,7 +111,8 @@ void RegstDesc::InferMemCase() {
     SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
   } else {
     if (producer_->device_type() == kGPU) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(thrd_id);
+      mem_case_.mutable_device_cuda_mem()->set_device_id(
+          IDMgr::Singleton()->GetGpuDevPhyIdFromThrdId(thrd_id));
     } else {
       mem_case_.mutable_host_pageable_mem();
       SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
