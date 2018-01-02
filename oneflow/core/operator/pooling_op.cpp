@@ -7,7 +7,9 @@ void PoolingOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  if (op_conf().pooling_conf().pool() == PoolingOpConf::kMax)
+  PoolingOpConf pooling_method = op_conf().pooling_conf().pool();
+  if (pooling_method == PoolingOpConf::kMax ||
+      pooling_method == PoolingOpConf::kStochastic)
     EnrollDataTmpBn("idx");
 }
 
@@ -40,7 +42,8 @@ void PoolingOp::InferBlobDescs(
   out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
 
   // idx
-  if (conf.pool() == PoolingOpConf::kMax) {
+  if (conf.pool() == PoolingOpConf::kMax ||
+      conf.pool() == PoolingOpConf::kStochastic) {
     BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
     idx_blob_desc->mut_shape() = out_blob_desc->shape();
     idx_blob_desc->set_data_type(DataType::kUInt32);
