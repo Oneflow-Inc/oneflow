@@ -128,10 +128,10 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
-    for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
+    for (int64_t thrd_id : parallel_desc_->sorted_thrd_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
-      comp_task_node->set_thrd_id(dev_phy_id);
+      comp_task_node->set_thrd_id(thrd_id);
       comp_task_node->set_chain_node(this);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);

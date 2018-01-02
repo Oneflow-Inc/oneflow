@@ -22,10 +22,8 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 void PushAvailableMemDescOfThisMachine() {
   const JobDesc* job_desc = JobDesc::Singleton();
   AvailableMemDescOfMachine this_machine_mem_desc;
-  if (job_desc->GetDeviceType() == DeviceType::kGPU) {
-    FOR_RANGE(int, i, 0, job_desc->resource().device_num_per_machine()) {
-      this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
-    }
+  FOR_RANGE(int, i, 0, job_desc->GpuDeviceNum()) {
+    this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
   }
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
   CtrlClient::Singleton()->PushKV(
