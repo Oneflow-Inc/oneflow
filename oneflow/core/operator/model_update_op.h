@@ -22,11 +22,11 @@ class ModelUpdtOp : public Operator {
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {
-    if (JobDesc::Singleton()->regularization_method() == kNone) { return; }
     const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
     CHECK_EQ(model_blob_desc->data_type(),
              JobDesc::Singleton()->DefaultDataType());
     CHECK_EQ(model_blob_desc->has_data_id(), false);
+    if (JobDesc::Singleton()->regularization_method() == kNone) { return; }
     *GetBlobDesc4BnInOp("regularized_diff") = *model_blob_desc;
     VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
   }
