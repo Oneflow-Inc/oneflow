@@ -120,9 +120,10 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                   T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
-  static void Sign(DeviceCtx* ctx, const int64_t n, T* x) {
+  static void Sign(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     for (int64_t i = 0; i < n; ++i) {
-      y[i] = static_cast<T>((x[i] > static_cast<T>(0)) - (x[i] < static_cast<T>(0)));
+      y[i] = static_cast<T>((x[i] > static_cast<T>(0))
+                            - (x[i] < static_cast<T>(0)));
     }
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,

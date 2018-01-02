@@ -80,5 +80,13 @@ int32_t JobDesc::PieceNumOfPrintLoss() const {
 int32_t JobDesc::BatchSize() const {
   return NumOfPiecesInBatch() * ParallelPieceSize();
 }
+RegularizationMethod JobDesc::regularization_method() const {
+  CHECK(IsTrain());
+  return job_conf_.train_conf().regularization_method();
+}
+float JobDesc::WeightDecay() const {
+  CHECK(IsTrain());
+  return job_conf_.train_conf().weight_decay();
+}
 
 }  // namespace oneflow

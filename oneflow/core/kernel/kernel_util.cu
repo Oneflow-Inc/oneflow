@@ -25,7 +25,8 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 template<typename T>
 __global__ void SignGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    y[i] = static_cast<T>((x[i] > static_cast<T>(0)) - (x[i] < static_cast<T>(0)));
+    y[i] =
+        static_cast<T>((x[i] > static_cast<T>(0)) - (x[i] < static_cast<T>(0)));
   }
 }
 
@@ -100,7 +101,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
   }
   static void Sign(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     SignGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                ctx->cuda_stream()>>>(n, x, y);
+                 ctx->cuda_stream()>>>(n, x, y);
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,

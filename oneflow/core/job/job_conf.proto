@@ -4,6 +4,12 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 
+enum RegularizationMethod {
+  kNone = 0;
+  kL1 = 1;
+  kL2 = 2;
+}
+
 message TrainConf {
   required string model_save_snapshots_path = 1;
   required int32 num_of_batches_in_snapshot = 2;
@@ -12,6 +18,9 @@ message TrainConf {
   optional FillConf default_fill_conf = 5;
   optional int32 piece_num_of_print_loss = 6 [default = 100];
   required int32 num_of_pieces_in_batch = 7;
+  required RegularizationMethod regularization_method = 8 [default = kNone];
+  required float weight_decay = 9 [default = 0];
+
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
@@ -46,13 +55,6 @@ message JobConf {
   optional string model_load_snapshot_path = 7 [default = ""];
   optional int32 max_data_id_length = 8 [default = 0];
   optional bool use_rdma = 9 [default = false];
-
-  enum RegularizationMethod {
-    kNone = 0;
-    kL1 = 1;
-    kL2 = 2;
-  }
-  required RegularizationMethod regulazation_method = 10 [default = kNone];
 
   optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 101 [default = 100];
