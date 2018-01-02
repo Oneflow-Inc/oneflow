@@ -11,9 +11,11 @@ class RMSPropModelUpdateOp final : public ModelUpdtOp {
   RMSPropModelUpdateOp() = default;
   ~RMSPropModelUpdateOp() = default;
 
-  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
-  void InferBlobDescs(
+
+ protected:
+  void VirtualInitFromOpConf() override;
+  void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
 

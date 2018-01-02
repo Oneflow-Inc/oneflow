@@ -2,8 +2,6 @@
 
 namespace oneflow {
 
-void NormalModelUpdateOp::InitFromOpConf() { ModelUpdtOp::InitFromOpConf(); }
-
 const PbMessage& NormalModelUpdateOp::GetSpecialConf() const {
   return op_conf().normal_mdupdt_conf();
 }
