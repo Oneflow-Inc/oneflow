@@ -42,7 +42,7 @@ void RecurrentOp::InitFromOpConf() {
   if (!conf.init_hidden().empty()) {
     EnrollInputBn("h0");
   } else {
-    EnrollDataTmpBn("h0");
+    EnrollModelBn("h0");
   }
   EnrollOutputBn("ht");
 
@@ -82,10 +82,7 @@ void RecurrentOp::InferBlobDescs(
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
     CHECK_EQ(h0_blob_desc->shape(), h0_shape);
   } else {
-    BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
-    h0_blob_desc->mut_shape() = h0_shape;
-    h0_blob_desc->set_data_type(data_type);
-    h0_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
+    *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape, data_type, false, -1);
   }
   int32_t hidden_size = conf.hidden_size();
   if (parallel_ctx->policy() == kModelParallel) {
