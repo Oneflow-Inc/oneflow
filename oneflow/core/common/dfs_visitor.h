@@ -19,17 +19,17 @@ class DfsVisitor final {
 
   void operator()(const std::list<NodeType>& start_nodes,
                   const NodeHandlerFn& Handler) {
-    Walk(start_nodes, Handler, [](NodeType) {});
+    Walk(start_nodes, [](NodeType) {}, Handler);
   }
 
   void operator()(const std::list<NodeType>& start_nodes,
-                  const NodeHandlerFn& OnEnter, const NodeHandlerFn& OnExit) {
-    Walk(start_nodes, OnEnter, OnExit);
+                  const NodeHandlerFn& OnExit, const NodeHandlerFn& OnEnter) {
+    Walk(start_nodes, OnExit, OnEnter);
   }
 
  private:
-  void Walk(const std::list<NodeType>& start_nodes,
-            const NodeHandlerFn& OnEnter, const NodeHandlerFn& OnExit) {
+  void Walk(const std::list<NodeType>& start_nodes, const NodeHandlerFn& OnExit,
+            const NodeHandlerFn& OnEnter) {
     HashMap<NodeType, bool> visited;
     std::stack<std::list<NodeType>> stack;
     stack.push(start_nodes);
