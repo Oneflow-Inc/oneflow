@@ -1,6 +1,6 @@
 op {
   name: "feature"
-  data_loader_conf {
+  basic_data_loader_conf {
     out: "out"
     data_type: kFloat
     shape {
@@ -14,7 +14,7 @@ op {
 
 op {
   name: "label"
-  data_loader_conf {
+  basic_data_loader_conf {
     out: "out"
     data_type: kInt32
     shape {
