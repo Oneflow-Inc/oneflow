@@ -16,13 +16,13 @@ class BackwardCompTaskNode : public CompTaskNode {
   void BuildExecGphAndRegst() override;
 
  protected:
+  virtual void BuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); };
+  virtual void BuildInDiffRegst() { UNEXPECTED_RUN(); };
   virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
   TaskNode* GetRelatedFwTaskNode();
 
  private:
-  void BuildExecGphAndBindOutDiffRegst();
   void BuildActivationDiffRegst();
-  void BuildInDiffRegst();
   void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
 };

@@ -12,8 +12,11 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   ~RecurrentBackwardCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kRecurrentBackward; }
+  bool IsReadyForBuild() override;
 
  private:
+  void BuildExecGphAndBindOutDiffRegst() override;
+  void BuildInDiffRegst() override;
   void VirtualConsumeInRegst();
 };
 

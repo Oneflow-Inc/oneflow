@@ -16,6 +16,8 @@ class NonRecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   }
 
  private:
+  void BuildExecGphAndBindOutDiffRegst() override;
+  void BuildInDiffRegst() override;
   void VirtualConsumeInRegst() override;
 };
 

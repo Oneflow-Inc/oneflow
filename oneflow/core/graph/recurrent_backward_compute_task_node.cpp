@@ -3,6 +3,30 @@
 
 namespace oneflow {
 
+bool RecurrentBackwardCompTaskNode::IsReadyForBuild() {
+  // TODO
+  return true;
+}
+
+void RecurrentBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
+  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
+  CHECK(op->IsRecurrentOp());
+  ExecNode* exec_node = mut_exec_gph().NewNode();
+  exec_node->mut_op() = op;
+  exec_node->BindBnInOpAndRegst("out", GetConsumedRegst("out"));
+  exec_node->BindBnInOpAndRegst("out_diff", GetConsumedRegst("out_diff"));
+}
+
+void RecurrentBackwardCompTaskNode::BuildInDiffRegst() {
+  ExecNode* exec_node = mut_exec_gph().SoleNode();
+  exec_node->BindBnInOpAndRegst("in", GetConsumedRegst("in"));
+  exec_node->BindBnInOpAndRegst("in_diff", GetProducedRegst("in_diff"));
+  if (GetConsumedRegst("h0")) {
+    exec_node->BindBnInOpAndRegst("h0", GetConsumedRegst("h0"));
+    exec_node->BindBnInOpAndRegst("h0_diff", GetProducedRegst("h0_diff"));
+  }
+}
+
 void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
   CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
   std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
