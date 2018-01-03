@@ -16,6 +16,7 @@ class NonRecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   }
 
  private:
+  void VirtualConsumeInRegst() override;
 };
 
 }  // namespace oneflow

@@ -15,13 +15,16 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
+ protected:
+  virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
+  TaskNode* GetRelatedFwTaskNode();
+
  private:
   void BuildExecGphAndBindOutDiffRegst();
   void BuildActivationDiffRegst();
   void BuildInDiffRegst();
   void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
-  std::shared_ptr<RegstDesc> GetRelatedInRegst();
 };
 
 }  // namespace oneflow

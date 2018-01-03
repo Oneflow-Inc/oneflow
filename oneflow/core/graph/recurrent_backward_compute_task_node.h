@@ -14,6 +14,7 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kRecurrentBackward; }
 
  private:
+  void VirtualConsumeInRegst();
 };
 
 }  // namespace oneflow

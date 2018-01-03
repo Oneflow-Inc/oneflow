@@ -6,13 +6,17 @@ namespace oneflow {
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
+    if (dst_node == this) {
+      edge->AddRegst("recurrent_diff", ProduceRegst("recurrent_diff"));
+    } else if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
       edge->AddRegst("in_diff", ProduceRegst("in_diff"));
     } else {
       edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     }
   }
-  ProduceRegst("activation_diff", 1, 1);
+  if (GetTaskType() == TaskType::kNonRecurrentBackward) {
+    ProduceRegst("activation_diff", 1, 1);
+  }
 }
 
 void BackwardCompTaskNode::ConsumeAllRegsts() {
@@ -20,18 +24,22 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
     TaskNode* src_node = edge->src_node();
     TaskType src_task_type = src_node->GetTaskType();
     if (IsForwardTaskType(src_task_type)) {
-      ConsumeRegst("activation", edge->GetRegst("activation"));
+      if (GetTaskType() == TaskType::kNonRecurrentBackward) {
+        ConsumeRegst("activation", edge->GetRegst("activation"));
+      }
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
     } else if (src_task_type == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
+    } else if (src_node == this) {
+      ConsumeRegst("recurrent_diff", edge->GetSoleRegst());
     } else {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
 
-  ConsumeRegst("in", GetRelatedInRegst());
+  VirtualConsumeInRegst();
 }
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
@@ -150,16 +158,10 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
       GetConsumedRegst("activation").get());
 }
 
-std::shared_ptr<RegstDesc> BackwardCompTaskNode::GetRelatedInRegst() {
+TaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* fw_node = edge->src_node();
-    if (IsForwardTaskType(fw_node->GetTaskType()) == false) { continue; }
-    for (TaskEdge* edge : fw_node->in_edges()) {
-      TaskNode* pred_fw_node = edge->src_node();
-      if (pred_fw_node->GetTaskType() != TaskType::kMdUpdt) {
-        return edge->GetSoleRegst();
-      }
-    }
+    if (IsForwardTaskType(fw_node->GetTaskType())) { return fw_node; }
   }
   return nullptr;
 }
