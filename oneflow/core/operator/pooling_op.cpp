@@ -9,8 +9,9 @@ void PoolingOp::InitFromOpConf() {
   EnrollOutputBn("out");
   PoolingOpConf pooling_method = op_conf().pooling_conf().pool();
   if (pooling_method == PoolingOpConf::kMax ||
-      pooling_method == PoolingOpConf::kStochastic)
+      pooling_method == PoolingOpConf::kStochastic) {
     EnrollDataTmpBn("idx");
+  }
 }
 
 const PbMessage& PoolingOp::GetSpecialConf() const {
