@@ -17,6 +17,9 @@ class ForwardCompTaskNode : public CompTaskNode {
   void LockRegsts() override;
   bool IsReadyForBuild() override;
 
+ protected:
+  virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); };
+
  private:
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();

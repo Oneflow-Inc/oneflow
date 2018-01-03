@@ -4,19 +4,15 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
-    ProduceRegst("activation");
-    ProduceRegst("data_tmp");
-  } else {
-    ProduceRegst("activation", 1, 1);
-    ProduceRegst("data_tmp", 1, 1);
-  }
-  auto out_regst = ProduceRegst("out");
+  // if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {}
+  std::shared_ptr<RegstDesc> activation_regst = ProduceRegst("activation");
+  std::shared_ptr<RegstDesc> data_tmp_regst = ProduceRegst("data_tmp");
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (IsBackwardTaskType(dst_node->GetTaskType())) {
-      edge->AddRegst("activation", GetProducedRegst("activation"));
-      edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
+      edge->AddRegst("activation", activation_regst);
+      edge->AddRegst("data_tmp", data_tmp_regst);
     }
     edge->AddRegst("out", out_regst);
   }
@@ -29,7 +25,7 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      ConsumeRegst("in", edge->GetSoleRegst());
+      VirtualConsumeInRegst(edge);
     }
   }
 }
