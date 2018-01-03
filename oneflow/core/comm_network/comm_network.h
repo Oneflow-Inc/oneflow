@@ -32,7 +32,6 @@ class CommNet {
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
-  virtual void EstablishNetwork() = 0;
 
  protected:
   CommNet() = default;

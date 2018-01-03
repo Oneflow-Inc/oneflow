@@ -28,7 +28,6 @@ class EpollCommNet final : public CommNet {
              const void* dst_token) override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
-  void EstablishNetwork() override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:

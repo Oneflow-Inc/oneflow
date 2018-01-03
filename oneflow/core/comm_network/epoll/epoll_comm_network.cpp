@@ -120,11 +120,6 @@ void EpollCommNet::SendActorMsg(int64_t dst_machine_id,
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-void EpollCommNet::EstablishNetwork() {
-  InitSockets();
-  for (IOEventPoller* poller : pollers_) { poller->Start(); }
-}
-
 void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
@@ -136,6 +131,8 @@ EpollCommNet::EpollCommNet() {
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
   }
+  InitSockets();
+  for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
 
 void EpollCommNet::InitSockets() {

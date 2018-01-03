@@ -84,7 +84,6 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
   RuntimeCtx::NewSingleton(piece_num, is_experiment_phase);
 #ifdef PLATFORM_POSIX
   EpollCommNet::Init();
-  CommNet::Singleton()->EstablishNetwork();
 #endif
   SnapshotMgr::NewSingleton(plan);
   RegstMgr::NewSingleton();
