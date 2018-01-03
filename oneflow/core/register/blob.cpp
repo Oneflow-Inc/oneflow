@@ -36,7 +36,14 @@ bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
   data_id_ptr_ = blob_desc->has_data_id() ? mem_ptr : nullptr;
-  dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField();
+  if (blob_desc->has_offset()) {
+    offset_ptr_ = reinterpret_cast<BlobDesc::OffSetType*>(
+        mem_ptr + blob_desc->ByteSizeOfDataIdField());
+  } else {
+    offset_ptr_ = nullptr;
+  }
+  dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField()
+          + blob_desc->ByteSizeOfOffsetField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
 }
@@ -44,6 +51,16 @@ Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
 const char* Blob::data_id(int32_t no) const {
   CHECK_NOTNULL(data_id_ptr_);
   return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();
+}
+
+BlobDesc::OffSetType Blob::offset(int32_t no) const {
+  CHECK_NOTNULL(offset_ptr_);
+  return *(offset_ptr_ + no);
+}
+
+BlobDesc::OffSetType& Blob::mut_offset(int32_t no) {
+  CHECK_NOTNULL(offset_ptr_);
+  return *(offset_ptr_ + no);
 }
 
 template<DeviceType device_type>
@@ -59,6 +76,12 @@ void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
                       ByteSizeOfDataIdField());
 }
 template<DeviceType device_type>
+void Blob::CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  Memcpy<device_type>(device_ctx, offset_ptr_, rhs->offset_ptr_,
+                      ByteSizeOfOffsetField());
+}
+template<DeviceType device_type>
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   Memcpy<device_type>(device_ctx, mut_memory_ptr(), rhs->memory_ptr(),
@@ -68,6 +91,7 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 #define INSTANTIATE_BLOB_FUNC(dev_t)                                       \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
+  template void Blob::CopyOffSetFrom<dev_t>(DeviceCtx*, const Blob*);      \
   template void Blob::CopyFrom<dev_t>(DeviceCtx*, const Blob*);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BLOB_FUNC, DEVICE_TYPE_SEQ);

@@ -9,6 +9,8 @@ namespace oneflow {
 
 class BlobDesc final {
  public:
+  typedef int64_t OffSetType;
+
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
   BlobDesc();
   ~BlobDesc() = default;
@@ -18,12 +20,14 @@ class BlobDesc final {
     data_type_ = proto.data_type();
     has_data_id_ = proto.has_data_id();
     max_seq_size_ = proto.max_seq_size();
+    has_offset_ = proto.has_offset();
   }
-  BlobDesc(Shape shape, DataType data_type, bool has_data_id,
+  BlobDesc(Shape shape, DataType data_type, bool has_data_id, bool has_offset,
            int32_t max_seq_size)
       : shape_(shape),
         data_type_(data_type),
         has_data_id_(has_data_id),
+        has_offset_(has_offset),
         max_seq_size_(max_seq_size) {}
 
   const Shape& shape() const { return shape_; }
@@ -35,6 +39,9 @@ class BlobDesc final {
   bool has_data_id() const { return has_data_id_; }
   void set_has_data_id(bool val) { has_data_id_ = val; }
 
+  bool has_offset() const { return has_offset_; }
+  void set_has_offset(bool val) { has_offset_ = val; }
+
   int32_t max_seq_size() const { return max_seq_size_; }
   void set_max_seq_size(int32_t val) { max_seq_size_ = val; }
 
@@ -42,9 +49,11 @@ class BlobDesc final {
     shape_.ToProto(proto->mutable_shape());
     proto->set_data_type(data_type_);
     proto->set_has_data_id(has_data_id_);
+    proto->set_has_offset(has_offset_);
     proto->set_max_seq_size(max_seq_size_);
   }
   size_t ByteSizeOfDataIdField() const;
+  size_t ByteSizeOfOffsetField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
   bool operator==(const BlobDesc& rhs) const;
@@ -53,6 +62,7 @@ class BlobDesc final {
   Shape shape_;
   DataType data_type_;
   bool has_data_id_;
+  bool has_offset_;
   int32_t max_seq_size_;
 };
 

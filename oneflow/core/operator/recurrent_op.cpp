@@ -14,21 +14,21 @@ void InferBasicRnnCellBlobDesc(
   int64_t piece_size = in_blob_desc->shape().At(0);
   BlobDesc data_tmp_blob_desc =
       BlobDesc(Shape({embedding_size, hidden_size}), data_type,
-               in_blob_desc->has_data_id(), -1);
+               in_blob_desc->has_data_id(), in_blob_desc->has_offset(), -1);
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("f_op_out") = data_tmp_blob_desc;
 
-  BlobDesc weight_blob_desc =
-      BlobDesc(Shape({hidden_size, embedding_size}), data_type, false, -1);
+  BlobDesc weight_blob_desc = BlobDesc(Shape({hidden_size, embedding_size}),
+                                       data_type, false, false, -1);
   *GetBlobDesc4BnInOp("in_ip_op_weight") = weight_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_weight") = weight_blob_desc;
   if (has_bias_term) {
     *GetBlobDesc4BnInOp("bias") =
-        BlobDesc(Shape({1, hidden_size}), data_type, false, -1);
+        BlobDesc(Shape({1, hidden_size}), data_type, false, false, -1);
     *GetBlobDesc4BnInOp("bias_multiplier") =
-        BlobDesc(Shape({piece_size, 1}), data_type, false, -1);
+        BlobDesc(Shape({piece_size, 1}), data_type, false, false, -1);
   }
 }
 
