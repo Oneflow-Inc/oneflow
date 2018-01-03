@@ -49,12 +49,14 @@ int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
       } else if (cur_regst_desc_id == model_regst_desc_id_) {
         if (cur_model_regst_ != latest_model_regst_) {
           AsyncSendRegstMsgToProducer(latest_model_regst_);
+        } else {
+          latest_model_regst_ = cur_regst;
         }
-        latest_model_regst_ = cur_regst;
       } else if (cur_regst_desc_id == out_regst_desc_id_) {
         CHECK(!out_regst_);
         if (cur_regst->piece_status().IsLastCol()) {
           AsyncSendRegstMsgToProducer(cur_regst);
+          return 0;
         }
         out_regst_ = cur_regst;
       } else {
