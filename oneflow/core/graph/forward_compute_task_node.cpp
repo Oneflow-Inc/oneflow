@@ -4,7 +4,6 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  // if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {}
   std::shared_ptr<RegstDesc> activation_regst = ProduceRegst("activation");
   std::shared_ptr<RegstDesc> data_tmp_regst = ProduceRegst("data_tmp");
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
@@ -83,6 +82,21 @@ void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
   TryLockConsumedRegst("model_tmp");
+}
+
+void ForwardCompTaskNode::FixRegisterNumRange() {
+  std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
+  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  int32_t max_seq_size = GetConsumedRegst("in")->MaxSeqSize();
+  activation_regst->set_min_register_num(max_seq_size);
+  data_tmp_regst->set_min_register_num(max_seq_size);
+  out_regst->set_min_register_num(max_seq_size);
+  if (!static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
+    activation_regst->set_max_register_num(max_seq_size);
+    data_tmp_regst->set_max_register_num(max_seq_size);
+    out_regst->set_max_register_num(max_seq_size);
+  }
 }
 
 }  // namespace oneflow

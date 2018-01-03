@@ -24,6 +24,7 @@ class ForwardCompTaskNode : public CompTaskNode {
  private:
   void BuildOutRegst();
   void BuildModelAndTmpRegsts();
+  void FixRegisterNumRange() override;
 };
 
 }  // namespace oneflow
