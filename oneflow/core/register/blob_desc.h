@@ -4,6 +4,7 @@
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/register/blob_desc.pb.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
@@ -25,6 +26,11 @@ class BlobDesc final {
         data_type_(data_type),
         has_data_id_(has_data_id),
         max_seq_size_(max_seq_size) {}
+  BlobDesc(Shape shape)
+      : shape_(shape),
+        data_type_(JobDesc::Singleton()->DefaultDataType()),
+        has_data_id_(false),
+        max_seq_size_(1) {}
 
   const Shape& shape() const { return shape_; }
   Shape& mut_shape() { return shape_; }
