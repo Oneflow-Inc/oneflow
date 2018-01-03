@@ -8,11 +8,13 @@ void RecurrentForwardCompActor::VirtualCompActorInit(
   initial_hidden_regst_desc_id_ = RegstDescId4Name("initial_hidden");
   model_regst_desc_id_ = RegstDescId4Name("model");
   out_regst_desc_id_ = RegstDescId4Name("out");
+  model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
 
   is_in_eord_ = false;
   latest_model_regst_ = nullptr;
   cur_model_regst_ = nullptr;
   out_regst_ = nullptr;
+  model_tmp_regst_ = nullptr;
 
   OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerInitModel);
 }
@@ -30,6 +32,30 @@ int RecurrentForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
         });
   }
   AsyncSendRegstMsgToProducer(model_regst);
+  SwitchToHandlerInitModelTmpOrNormal();
+  return 0;
+}
+
+void RecurrentForwardCompActor::SwitchToHandlerInitModelTmpOrNormal() {
+  if (model_tmp_regst_desc_id_ != -1) {
+    OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerInitModelTmp);
+  } else {
+    OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerNormal);
+  }
+}
+
+int RecurrentForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
+  Regst* model_tmp_regst = msg.regst();
+  CHECK_EQ(model_tmp_regst->regst_desc_id(), model_tmp_regst_desc_id_);
+  for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
+    exec_kernel.kernel->InitModelTmpBlobs(
+        GenDefaultKernelCtx(), parallel_ctx(),
+        [&](const std::string& bn_in_op) {
+          const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
+          return model_tmp_regst->GetBlobByLbn(lbn);
+        });
+  }
+  AsyncSendRegstMsgToProducer(model_tmp_regst);
   OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerNormal);
   return 0;
 }
@@ -59,6 +85,9 @@ int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
           return 0;
         }
         out_regst_ = cur_regst;
+      } else if (cur_regst_desc_id == model_tmp_regst_desc_id_) {
+        CHECK(!model_tmp_regst_);
+        model_tmp_regst_ = cur_regst;
       } else {
         UNEXPECTED_RUN();
       }
@@ -73,6 +102,7 @@ int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
 bool RecurrentForwardCompActor::IsReadReady() {
   if (in_regsts_.empty()) { return false; }
   if (!latest_model_regst_) { return false; }
+  if (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_) { return false; }
 
   Regst* in_regst = in_regsts_.front();
   if (in_regst->piece_status().col_id() == 0) {
@@ -134,6 +164,10 @@ void RecurrentForwardCompActor::AsyncReturnAllReadableRegst() {
   CHECK(initial_hidden_regsts_.empty());
   CHECK(!cur_model_regst_);
   CHECK(!out_regst_);
+  if (model_tmp_regst_) {
+    AsyncSendRegstMsgToProducer(model_tmp_regst_);
+    model_tmp_regst_ = nullptr;
+  }
   if (latest_model_regst_) {
     AsyncSendRegstMsgToProducer(latest_model_regst_);
     latest_model_regst_ = nullptr;

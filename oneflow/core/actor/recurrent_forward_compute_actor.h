@@ -40,6 +40,9 @@ class RecurrentForwardCompActor final : public CompActor {
 
   int64_t out_regst_desc_id_;
   Regst* out_regst_;
+
+  int64_t model_tmp_regst_desc_id_;
+  Regst* model_tmp_regst_;
 };
 
 }  // namespace oneflow
