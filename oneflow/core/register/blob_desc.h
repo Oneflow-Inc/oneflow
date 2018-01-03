@@ -26,11 +26,7 @@ class BlobDesc final {
         data_type_(data_type),
         has_data_id_(has_data_id),
         max_seq_size_(max_seq_size) {}
-  BlobDesc(Shape shape)
-      : shape_(shape),
-        data_type_(JobDesc::Singleton()->DefaultDataType()),
-        has_data_id_(false),
-        max_seq_size_(1) {}
+  BlobDesc(Shape shape) : BlobDesc() { shape_ = shape; }
 
   const Shape& shape() const { return shape_; }
   Shape& mut_shape() { return shape_; }
