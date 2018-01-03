@@ -122,8 +122,4 @@ void ForwardCompTaskNode::LockRegsts() {
   TryLockConsumedRegst("model_tmp");
 }
 
-bool ForwardCompTaskNode::IsReadyForBuild() {
-  return GetConsumedRegst("in")->IsLocked();
-}
-
 }  // namespace oneflow

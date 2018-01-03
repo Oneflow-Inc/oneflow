@@ -15,6 +15,7 @@ class NonRecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
     return TaskType::kNonRecurrentForward;
   }
   void VirtualConsumeInRegst(TaskEdge* edge) override;
+  bool IsReadyForBuild() override;
 
  private:
 };

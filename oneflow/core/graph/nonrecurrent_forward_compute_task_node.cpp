@@ -8,4 +8,8 @@ void NonRecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   ConsumeRegst("in", edge->GetSoleRegst());
 }
 
+bool NonRecurrentForwardCompTaskNode::IsReadyForBuild() {
+  return GetConsumedRegst("in")->IsLocked();
+}
+
 }  // namespace oneflow

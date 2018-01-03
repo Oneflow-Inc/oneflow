@@ -13,6 +13,7 @@ class RecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kRecurrentForward; }
   void VirtualConsumeInRegst(TaskEdge* edge) override;
+  bool IsReadyForBuild() override;
 
  private:
 };
