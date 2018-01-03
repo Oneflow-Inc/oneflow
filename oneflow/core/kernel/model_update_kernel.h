@@ -37,8 +37,9 @@ class MdUpdateKernel : public KernelIf<device_type> {
   void L1Regularization(DeviceCtx* ctx, float weight_decay,
                         const Blob* model_blob, const Blob* model_diff_acc_blob,
                         Blob* regularized_diff_blob) const {
-    regularized_diff_blob->CopyDataContentFrom<device_type>(
-        ctx, model_diff_acc_blob);
+    KernelUtil<device_type, T>::Sign(
+        ctx, model_diff_acc_blob->shape().elem_cnt(),
+        model_diff_acc_blob->dptr<T>(), regularized_diff_blob->mut_dptr<T>());
     KernelUtil<device_type, T>::Axpy(
         ctx, model_diff_acc_blob->shape().elem_cnt(),
         static_cast<T>(weight_decay), model_blob->dptr<T>(), 1,
@@ -47,12 +48,22 @@ class MdUpdateKernel : public KernelIf<device_type> {
   void L2Regularization(DeviceCtx* ctx, float weight_decay,
                         const Blob* model_blob, const Blob* model_diff_acc_blob,
                         Blob* regularized_diff_blob) const {
-    KernelUtil<device_type, T>::Sign(
-        ctx, model_diff_acc_blob->shape().elem_cnt(),
-        model_diff_acc_blob->dptr<T>(), regularized_diff_blob->mut_dptr<T>());
+    KernelUtil<device_type, T>::Copy(
+        ctx, model_diff_acc_blob->shape().elem_cnt(), model_diff_acc_blob->dptr<T>(),
+        1, regularized_diff_blob->mut_dptr<T>(), 1);
     KernelUtil<device_type, T>::Axpy(
         ctx, model_diff_acc_blob->shape().elem_cnt(),
         static_cast<T>(weight_decay), model_blob->dptr<T>(), 1,
+        regularized_diff_blob->mut_dptr<T>(), 1);
+  }
+  void L1L2Regularization(DeviceCtx* ctx, float l1_weight_decay, float l2_weight_decay,
+                          const Blob* model_diff_acc_blob, const Blob* model_blob,
+                          Blob* regularized_diff_blob) {
+    L1Regularization(ctx, l1_weight_decay, model_diff_acc_blob, model_blob,
+                     regularized_diff_blob);
+    KernelUtil<device_type, T>::Axpy(
+        ctx, model_diff_acc_blob->shape().elem_cnt(),
+        static_cast<T>(l2_weight_decay), model_blob->dptr<T>(), 1,
         regularized_diff_blob->mut_dptr<T>(), 1);
   }
   void Regularization(
@@ -63,13 +74,17 @@ class MdUpdateKernel : public KernelIf<device_type> {
     Blob* regularized_diff_blob = BnInOp2Blob("regularized_diff");
     const Blob* model_diff_acc_blob = BnInOp2Blob("model_diff_acc");
     const Blob* model_blob = BnInOp2Blob("model");
-    float weight_decay = JobDesc::Singleton()->WeightDecay();
+    float l1_weight_decay = JobDesc::Singleton()->L0WeightDecay();
+    float l2_weight_decay = JobDesc::Singleton()->L1WeightDecay();
     if (regularization_method == kL1) {
-      L1Regularization(ctx, weight_decay, model_diff_acc_blob, model_blob,
+      L1Regularization(ctx, l1_weight_decay, model_diff_acc_blob, model_blob,
                        regularized_diff_blob);
     } else if (regularization_method == kL2) {
-      L2Regularization(ctx, weight_decay, model_diff_acc_blob, model_blob,
+      L2Regularization(ctx, l2_weight_decay, model_diff_acc_blob, model_blob,
                        regularized_diff_blob);
+    } else if (regularization_method = kL1L2) {
+      L1L2Regularization(ctx, l1_weight_decay, l2_weight_decay, model_diff_acc_blob,
+                         model_blob, regularized_diff_blob);
     } else {
       UNEXPECTED_RUN();
     }

@@ -84,9 +84,14 @@ RegularizationMethod JobDesc::regularization_method() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().regularization_method();
 }
-float JobDesc::WeightDecay() const {
+float JobDesc::L1WeightDecay() const {
   CHECK(IsTrain());
-  return job_conf_.train_conf().weight_decay();
+  return job_conf_.train_conf().l1_weight_decay();
+}
+
+float JobDesc::L2WeightDecay() const {
+  CHECK(IsTrain());
+  return job_conf_.train_conf().l2_weight_decay();
 }
 
 }  // namespace oneflow

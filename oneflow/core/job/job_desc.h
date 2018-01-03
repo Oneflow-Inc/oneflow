@@ -48,7 +48,8 @@ class JobDesc final {
   int32_t PieceNumOfPrintLoss() const;
   int32_t BatchSize() const;
   RegularizationMethod regularization_method() const;
-  float WeightDecay() const;
+  float L1WeightDecay() const;
+  float L2WeightDecay() const;
 
  private:
   JobDesc(const JobConf&);
