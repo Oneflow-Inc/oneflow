@@ -13,7 +13,6 @@ class Regst final {
 
   // Getters
   int recurrent_flag() const { return recurrent_flag_; }
-  bool is_forward() const { return is_forward_; }
   int64_t piece_id() const { return piece_id_; }
   int64_t model_version_id() const { return model_version_id_; }
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
@@ -30,7 +29,6 @@ class Regst final {
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
   void set_recurrent_flag(int val) { recurrent_flag_ = val; }
-  void set_is_forward(bool val) { is_forward_ = val; }
 
  private:
   friend class RegstMgr;
@@ -41,7 +39,6 @@ class Regst final {
 
   int recurrent_flag_;
   // 0: no recurrent, 1 recurrent from top, -1 recurrent from bot
-  bool is_forward_;  // true for fw regst, false for bp regst
 
   const RtRegstDesc* regst_desc_;
   std::function<void()> deleter_;

@@ -162,14 +162,6 @@ void Actor::AsyncSendRegstMsgToConsumer(
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
       if (!IsAllowedActor(consumer)) { continue; }
-      if (true) {  // TODO: mark the recurrent edge
-        if (regst->is_forward() && regst->piece_status().IsLastCol()) {
-          continue;
-        }
-        if (!(regst->is_forward()) && regst->piece_status().col_id() == 0) {
-          continue;
-        }
-      }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
       if (this_actor_id == consumer) { regst->set_recurrent_flag(-1); }

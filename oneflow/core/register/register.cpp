@@ -11,7 +11,6 @@ Regst::Regst() {
   piece_id_ = -1;
   model_version_id_ = -1;
   recurrent_flag_ = 0;
-  is_forward_ = true;
   regst_desc_ = nullptr;
 }
 

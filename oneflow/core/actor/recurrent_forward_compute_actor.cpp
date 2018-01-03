@@ -53,6 +53,9 @@ int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
         latest_model_regst_ = cur_regst;
       } else if (cur_regst_desc_id == out_regst_desc_id_) {
         CHECK(!out_regst_);
+        if (cur_regst->piece_status().IsLastCol()) {
+          AsyncSendRegstMsgToProducer(cur_regst);
+        }
         out_regst_ = cur_regst;
       } else {
         UNEXPECTED_RUN();
@@ -95,7 +98,6 @@ void RecurrentForwardCompActor::Act() {
                     [&](int64_t regst_desc_id) -> Regst* { return nullptr; });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_model_version_id(cur_model_regst_->model_version_id());
-    regst->set_is_forward(true);
     return true;
   });
 
