@@ -75,9 +75,6 @@ struct KernelUtil final {
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
 
-  // y[i] = (x > static_cast<T>(0)) - (x < static_cast<T>(0))
-  static void Sign(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
   // matrix vector multiply
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,

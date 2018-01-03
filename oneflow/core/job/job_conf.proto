@@ -8,7 +8,7 @@ enum RegularizationMethod {
   kNone = 0;
   kL1 = 1;
   kL2 = 2;
-  KL1L2 = 3;
+  kL1L2 = 3;
 }
 
 message TrainConf {
@@ -21,7 +21,7 @@ message TrainConf {
   required int32 num_of_pieces_in_batch = 7;
   required RegularizationMethod regularization_method = 8 [default = kNone];
   required float l1_weight_decay = 9 [default = 0];
-  required float l2_weight_decay = 9 [default = 0];
+  required float l2_weight_decay = 10 [default = 0];
 
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;

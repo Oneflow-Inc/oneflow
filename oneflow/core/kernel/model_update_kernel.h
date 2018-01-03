@@ -13,19 +13,7 @@ class MdUpdateKernel : public KernelIf<device_type> {
 
   void Forward(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
-    Regularization(ctx.device_ctx, BnInOp2Blob);
-    UpdateModel(
-        ctx.device_ctx, std::get<1>(*tpl), std::get<0>(*tpl),
-        [BnInOp2Blob](const std::string& bn) {
-          if (bn == "model_diff_acc"
-              && JobDesc::Singleton()->regularization_method() != kNone) {
-            return BnInOp2Blob("regularized_diff");
-          }
-          return BnInOp2Blob(bn);
-        });
-  }
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  protected:
   MdUpdateKernel() = default;
@@ -35,60 +23,22 @@ class MdUpdateKernel : public KernelIf<device_type> {
 
  private:
   void L1Regularization(DeviceCtx* ctx, float weight_decay,
-                        const Blob* model_blob, const Blob* model_diff_acc_blob,
-                        Blob* regularized_diff_blob) const {
-    KernelUtil<device_type, T>::Sign(
-        ctx, model_diff_acc_blob->shape().elem_cnt(),
-        model_diff_acc_blob->dptr<T>(), regularized_diff_blob->mut_dptr<T>());
-    KernelUtil<device_type, T>::Axpy(
-        ctx, model_diff_acc_blob->shape().elem_cnt(),
-        static_cast<T>(weight_decay), model_blob->dptr<T>(), 1,
-        regularized_diff_blob->mut_dptr<T>(), 1);
-  }
+                        const Blob* model_blob,
+                        Blob* model_diff_acc_blob) const;
   void L2Regularization(DeviceCtx* ctx, float weight_decay,
-                        const Blob* model_blob, const Blob* model_diff_acc_blob,
-                        Blob* regularized_diff_blob) const {
-    KernelUtil<device_type, T>::Copy(
-        ctx, model_diff_acc_blob->shape().elem_cnt(), model_diff_acc_blob->dptr<T>(),
-        1, regularized_diff_blob->mut_dptr<T>(), 1);
-    KernelUtil<device_type, T>::Axpy(
-        ctx, model_diff_acc_blob->shape().elem_cnt(),
-        static_cast<T>(weight_decay), model_blob->dptr<T>(), 1,
-        regularized_diff_blob->mut_dptr<T>(), 1);
-  }
-  void L1L2Regularization(DeviceCtx* ctx, float l1_weight_decay, float l2_weight_decay,
-                          const Blob* model_diff_acc_blob, const Blob* model_blob,
-                          Blob* regularized_diff_blob) {
-    L1Regularization(ctx, l1_weight_decay, model_diff_acc_blob, model_blob,
-                     regularized_diff_blob);
-    KernelUtil<device_type, T>::Axpy(
-        ctx, model_diff_acc_blob->shape().elem_cnt(),
-        static_cast<T>(l2_weight_decay), model_blob->dptr<T>(), 1,
-        regularized_diff_blob->mut_dptr<T>(), 1);
-  }
+                        const Blob* model_blob,
+                        Blob* model_diff_acc_blob) const;
   void Regularization(
       DeviceCtx* ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    auto regularization_method = JobDesc::Singleton()->regularization_method();
-    if (regularization_method == kNone) { return; }
-    Blob* regularized_diff_blob = BnInOp2Blob("regularized_diff");
-    const Blob* model_diff_acc_blob = BnInOp2Blob("model_diff_acc");
-    const Blob* model_blob = BnInOp2Blob("model");
-    float l1_weight_decay = JobDesc::Singleton()->L0WeightDecay();
-    float l2_weight_decay = JobDesc::Singleton()->L1WeightDecay();
-    if (regularization_method == kL1) {
-      L1Regularization(ctx, l1_weight_decay, model_diff_acc_blob, model_blob,
-                       regularized_diff_blob);
-    } else if (regularization_method == kL2) {
-      L2Regularization(ctx, l2_weight_decay, model_diff_acc_blob, model_blob,
-                       regularized_diff_blob);
-    } else if (regularization_method = kL1L2) {
-      L1L2Regularization(ctx, l1_weight_decay, l2_weight_decay, model_diff_acc_blob,
-                         model_blob, regularized_diff_blob);
-    } else {
-      UNEXPECTED_RUN();
-    }
-  }
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+};
+
+template<DeviceType device_type, typename T>
+class MdUpdateKernelUtil final {
+ public:
+  static void L1Regularization(DeviceCtx* ctx, const int64_t n,
+                               float weight_decay, const T* model,
+                               T* model_diff);
 };
 
 }  // namespace oneflow

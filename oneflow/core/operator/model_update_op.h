@@ -10,33 +10,19 @@ class ModelUpdtOp : public Operator {
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOp);
   virtual ~ModelUpdtOp() = default;
 
-  void InitFromOpConf() override {
+  virtual void InitFromOpConf() {
     EnrollInputBn("model_diff_acc");
     EnrollOutputBn("model");
-    if (JobDesc::Singleton()->regularization_method() != kNone) {
-      EnrollDataTmpBn("regularized_diff");
-    }
     VirtualInitFromOpConf();
   }
 
-  void InferBlobDescs(
+  virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {
-    const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
-    CHECK_EQ(model_blob_desc->data_type(),
-             JobDesc::Singleton()->DefaultDataType());
-    CHECK_EQ(model_blob_desc->has_data_id(), false);
-    if (JobDesc::Singleton()->regularization_method() == kNone) { return; }
-    *GetBlobDesc4BnInOp("regularized_diff") = *model_blob_desc;
-    VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-  }
+      const ParallelContext* parallel_ctx) {}
 
  protected:
   ModelUpdtOp() = default;
-  virtual void VirtualInitFromOpConf(){};
-  virtual void VirtualInferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {};
+  virtual void VirtualInitFromOpConf() {}
 
  private:
 };
