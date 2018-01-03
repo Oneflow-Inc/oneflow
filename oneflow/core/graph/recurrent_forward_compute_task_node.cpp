@@ -18,6 +18,17 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   }
 }
 
+void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
+  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
+  CHECK(op->IsRecurrentOp());
+  ExecNode* exec_node = mut_exec_gph().NewNode();
+  exec_node->mut_op() = op;
+  exec_node->BindBnInOpAndRegst("in", GetConsumedRegst("in"));
+  exec_node->BindBnInOpAndRegst("ht_1", GetConsumedRegst("ht_1"));
+  std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0");
+  if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }
+}
+
 bool RecurrentForwardCompTaskNode::IsReadyForBuild() {
   bool ret = GetConsumedRegst("in")->IsLocked()
              && GetConsumedRegst("ht_1")->IsLocked();
