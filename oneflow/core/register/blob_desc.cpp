@@ -4,10 +4,28 @@
 namespace oneflow {
 
 BlobDesc::BlobDesc()
-    : shape_(),
-      data_type_(JobDesc::Singleton()->DefaultDataType()),
-      has_data_id_(false),
-      max_seq_size_(1) {}
+    : BlobDesc(Shape(), JobDesc::Singleton()->DefaultDataType(), false, 1) {}
+
+BlobDesc::BlobDesc(Shape shape, DataType data_type, bool has_data_id,
+                   int32_t max_seq_size)
+    : shape_(shape),
+      data_type_(data_type),
+      has_data_id_(has_data_id),
+      max_seq_size_(max_seq_size) {}
+
+BlobDesc::BlobDesc(const BlobDescProto& proto) {
+  shape_ = Shape(proto.shape());
+  data_type_ = proto.data_type();
+  has_data_id_ = proto.has_data_id();
+  max_seq_size_ = proto.max_seq_size();
+}
+
+void BlobDesc::ToProto(BlobDescProto* proto) const {
+  shape_.ToProto(proto->mutable_shape());
+  proto->set_data_type(data_type_);
+  proto->set_has_data_id(has_data_id_);
+  proto->set_max_seq_size(max_seq_size_);
+}
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (has_data_id_) {
@@ -33,7 +51,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   int64_t total_byte_size = 0;
-  std::unordered_set<int> data_type_set;
+  HashSet<int> data_type_set;
   bool has_data_id = false;
   int32_t max_seq_size = -1;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
