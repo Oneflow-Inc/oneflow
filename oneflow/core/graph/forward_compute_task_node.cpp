@@ -95,7 +95,6 @@ void ForwardCompTaskNode::FixRegisterNumRange() {
   if (!static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
     activation_regst->set_max_register_num(max_seq_size);
     data_tmp_regst->set_max_register_num(max_seq_size);
-    out_regst->set_max_register_num(max_seq_size);
   }
 }
 

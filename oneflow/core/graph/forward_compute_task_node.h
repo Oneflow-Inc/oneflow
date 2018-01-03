@@ -18,7 +18,7 @@ class ForwardCompTaskNode : public CompTaskNode {
 
  protected:
   virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); };
-  virtual void BuildExecGphStructAndBindInRegst(){UNEXPECTED_RUN()};
+  virtual void BuildExecGphStructAndBindInRegst() { UNEXPECTED_RUN(); };
   virtual void BuildActivationRegst(){};
 
  private:
