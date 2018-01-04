@@ -15,13 +15,16 @@ class ForwardCompTaskNode : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void LockRegsts() override;
-  bool IsReadyForBuild() override;
+
+ protected:
+  virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); };
+  virtual void BuildExecGphStructAndBindInRegst() { UNEXPECTED_RUN(); };
 
  private:
-  void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
+  void FixRegisterNumRange() override;
 };
 
 }  // namespace oneflow
