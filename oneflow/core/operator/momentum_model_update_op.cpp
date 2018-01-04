@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void MomentumModelUpdateOp::VirtualInitFromOpConf() {
+void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("momentum");
 }
 

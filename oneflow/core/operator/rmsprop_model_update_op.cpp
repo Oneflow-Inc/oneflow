@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void RMSPropModelUpdateOp::VirtualInitFromOpConf() {
+void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("mean_square");
 }
 

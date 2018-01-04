@@ -17,7 +17,7 @@ class RMSPropModelUpdateOp final : public ModelUpdtOp {
       const ParallelContext* parallel_ctx) const override;
 
  private:
-  void VirtualInitFromOpConf() override;
+  void MdUpdtVirtualInitFromOpConf() override;
   std::string ibn2lbn(const std::string& input_bn) const override {
     return kPackedBlobName;
   }

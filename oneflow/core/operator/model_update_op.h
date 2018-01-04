@@ -11,9 +11,9 @@ class ModelUpdtOp : public Operator {
   virtual ~ModelUpdtOp() = default;
 
   virtual void InitFromOpConf() {
-    EnrollInputBn("model_diff_acc");
-    EnrollOutputBn("model");
-    VirtualInitFromOpConf();
+    EnrollInputBn("model_diff_acc", false);
+    EnrollOutputBn("model", false);
+    MdUpdtVirtualInitFromOpConf();
   }
 
   virtual void InferBlobDescs(
@@ -22,7 +22,7 @@ class ModelUpdtOp : public Operator {
 
  protected:
   ModelUpdtOp() = default;
-  virtual void VirtualInitFromOpConf() {}
+  virtual void MdUpdtVirtualInitFromOpConf() {}
 
  private:
 };

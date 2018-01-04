@@ -6,11 +6,20 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void L1RegularizationGpu(const int64_t n, float a, const T* x,
+__global__ void L1RegularizationGpu(const int64_t n, float l1, const T* x,
                                     T* y) {
   T zero = static_cast<T>(0);
   CUDA_1D_KERNEL_LOOP(i, n) {
-    y[i] += a * static_cast<T>((x[i] > zero) - (zero < x[i]));
+    y[i] += l1 * static_cast<T>((x[i] > zero) - (zero < x[i]));
+  }
+}
+
+template<typename T>
+__global__ void L1L2RegularizationGpu(const int64_t n, float l1, float l2,
+                                      const T* x, T* y) {
+  T zero = static_cast<T>(0);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    y[i] += l1 * static_cast<T>((x[i] > zero) - (zero < x[i])) + x[i] * l2;
   }
 }
 
@@ -19,11 +28,17 @@ __global__ void L1RegularizationGpu(const int64_t n, float a, const T* x,
 template<typename T>
 class MdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void L1Regularization(DeviceCtx* ctx, int64_t n, float weight_decay,
-                               const T* model, T* model_diff) {
+  static void L1Regularization(DeviceCtx* ctx, int64_t n, float l1,
+                               const T* model, T* model_diff_acc) {
     L1RegularizationGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->cuda_stream()>>>(n, weight_decay, model, model_diff);
+           ctx->cuda_stream()>>>(n, l1, model, model_diff_acc);
+  }
+  static void L1L2Regularization(DeviceCtx* ctx, int64_t n, float l1, float l2,
+                                 const T* model, T* model_diff_acc) {
+    L1L2RegularizationGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(n, l1, l2, model, model_diff_acc);
   }
 };
 
