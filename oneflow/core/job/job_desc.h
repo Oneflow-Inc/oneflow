@@ -28,7 +28,9 @@ class JobDesc final {
   size_t SizeOfOneDataId() const;
   bool use_rdma() const { return job_conf_.use_rdma(); }
   int64_t TotalMachineNum() const { return resource_.machine().size(); }
-  DeviceType GetDeviceType() const { return resource_.device_type(); }
+  int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
+  int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
+  int32_t XpuDeviceNum() const { return CpuDeviceNum() + GpuDeviceNum(); }
   int32_t PersistenceWorkerNum() const;
   int32_t BoxingWorkerNum() const;
   int32_t CommNetWorkerNum() const;
