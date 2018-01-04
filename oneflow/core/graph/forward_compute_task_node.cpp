@@ -55,6 +55,15 @@ void ForwardCompTaskNode::BuildOutRegst() {
   });
 }
 
+void ForwardCompTaskNode::BuildActivationRegst() {
+  std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
+  mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
+    activation_regst->AddLbn(edge->lbn());
+    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
+  });
+}
+
 void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");

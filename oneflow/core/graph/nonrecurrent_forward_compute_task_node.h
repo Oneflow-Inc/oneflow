@@ -19,7 +19,6 @@ class NonRecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
  private:
   void VirtualConsumeInRegst(TaskEdge* edge) override;
   void BuildExecGphStructAndBindInRegst() override;
-  void BuildActivationRegst() override;
 };
 
 }  // namespace oneflow
