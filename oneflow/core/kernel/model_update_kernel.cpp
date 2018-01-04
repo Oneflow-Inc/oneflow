@@ -7,33 +7,33 @@ void MdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
-  Regularization(ctx.device_ctx, BnInOp2Blob);
-  UpdateModel(ctx.device_ctx, std::get<1>(*tpl), std::get<0>(*tpl),
-              BnInOp2Blob);
+  DiffAveragingAndRegularization(ctx.device_ctx, BnInOp2Blob);
+  UpdateModel(ctx.device_ctx, std::get<1>(*tpl), BnInOp2Blob("model_diff_acc"),
+              std::get<0>(*tpl), BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
-void MdUpdateKernel<device_type, T>::Regularization(
+void MdUpdateKernel<device_type, T>::DiffAveragingAndRegularization(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_diff_acc_blob = BnInOp2Blob("model_diff_acc");
   const Blob* model_blob = BnInOp2Blob("model");
   float l1 = JobDesc::Singleton()->L1();
   float l2 = JobDesc::Singleton()->L2();
-  if (l1 != 0.f || l2 != 0.f) {
-    MdUpdateKernelUtil<device_type, T>::Regularization(
-        ctx, model_blob->shape().elem_cnt(), l1, l2, model_blob->dptr<T>(),
-        model_diff_acc_blob->mut_dptr<T>());
-  }
+  MdUpdateKernelUtil<device_type, T>::DiffAveragingAndRegularization(
+      ctx, model_blob->shape().elem_cnt(), l1, l2, model_blob->dptr<T>(),
+      model_diff_acc_blob->mut_dptr<T>());
 }
 
 template<typename T>
 class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void Regularization(DeviceCtx* ctx, int64_t n, float l1, float l2,
-                             const T* model, T* model_diff_acc) {
+  static void DiffAveragingAndRegularization(DeviceCtx* ctx, int64_t n,
+                                             float l1, float l2, const T* model,
+                                             T* model_diff_acc) {
     T zero = static_cast<T>(0);
     for (int64_t i = 0; i != n; ++i) {
+      model_diff_acc[i] /= JobDesc::Singleton()->BatchSize();
       model_diff_acc[i] +=
           l1 * ((model[i] > zero) - (zero < model[i])) + l2 * model[i];
     }

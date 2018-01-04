@@ -18,11 +18,12 @@ class MdUpdateKernel : public KernelIf<device_type> {
  protected:
   MdUpdateKernel() = default;
   virtual void UpdateModel(
-      DeviceCtx* ctx, const Blob* pre_model_blob, int64_t next_model_vid,
+      DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
+      int64_t next_model_vid,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
-  void Regularization(
+  void DiffAveragingAndRegularization(
       DeviceCtx* ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
@@ -30,8 +31,9 @@ class MdUpdateKernel : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 class MdUpdateKernelUtil final {
  public:
-  static void Regularization(DeviceCtx* ctx, const int64_t n, float l1,
-                             float l2, const T* model, T* model_diff_acc);
+  static void DiffAveragingAndRegularization(DeviceCtx* ctx, const int64_t n,
+                                             float l1, float l2, const T* model,
+                                             T* model_diff_acc);
 };
 
 }  // namespace oneflow

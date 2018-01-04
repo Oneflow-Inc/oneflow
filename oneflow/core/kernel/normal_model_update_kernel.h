@@ -14,7 +14,8 @@ class NormalMdUpdateKernel final : public MdUpdateKernel<device_type, T> {
 
  private:
   void UpdateModel(
-      DeviceCtx* ctx, const Blob* pre_model_blob, int64_t next_model_vid,
+      DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
+      int64_t next_model_vid,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
