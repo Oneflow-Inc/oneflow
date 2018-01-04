@@ -22,6 +22,7 @@ class BackwardCompTaskNode : public CompTaskNode {
   TaskNode* GetRelatedFwTaskNode();
 
  private:
+  void FixRegisterNumRange() override;
   void BuildActivationDiffRegst();
   void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
