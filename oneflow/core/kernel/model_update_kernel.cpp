@@ -24,8 +24,6 @@ void MdUpdateKernel<device_type, T>::Regularization(
     MdUpdateKernelUtil<device_type, T>::Regularization(
         ctx, model_blob->shape().elem_cnt(), l1, l2, model_blob->dptr<T>(),
         model_diff_acc_blob->mut_dptr<T>());
-  } else {
-    // do nothing
   }
 }
 
