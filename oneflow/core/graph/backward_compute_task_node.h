@@ -14,18 +14,19 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  TaskNode* GetRelatedFwTaskNode();
 
  protected:
   virtual void BuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); };
   virtual void BuildInDiffRegst() { UNEXPECTED_RUN(); };
   virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
-  TaskNode* GetRelatedFwTaskNode();
 
  private:
   void FixRegisterNumRange() override;
   void BuildActivationDiffRegst();
   void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
+  bool CanBindInDiffWhenRecurrent(TaskEdge* edge);
 };
 
 }  // namespace oneflow

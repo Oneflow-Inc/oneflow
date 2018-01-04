@@ -1,3 +1,4 @@
+#include "oneflow/core/graph/forward_compute_task_node.h"
 #include "oneflow/core/graph/backward_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
 
@@ -9,8 +10,15 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     if (dst_node == this) {
       edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff"));
     } else if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
-      // TODO h0_diff
-      edge->AddRegst("in_diff", ProduceRegst("in_diff"));
+      if (GetTaskType() == TaskType::kNonRecurrentBackward) {
+        edge->AddRegst("in_diff", ProduceRegst("in_diff"));
+      } else {
+        if (CanBindInDiffWhenRecurrent(edge)) {
+          edge->AddRegst("in_diff", ProduceRegst("in_diff"));
+        } else {
+          edge->AddRegst("h0_diff", ProduceRegst("h0_diff"));
+        }
+      }
     } else {
       edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     }
@@ -135,6 +143,22 @@ TaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
     if (IsForwardTaskType(fw_node->GetTaskType())) { return fw_node; }
   }
   return nullptr;
+}
+
+bool BackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
+  TaskNode* node = edge->dst_node();
+  while (node->GetTaskType() == kBoxing) {
+    TaskEdge* edge = *(node->out_edges().begin());
+    node = edge->dst_node();
+  }
+  BackwardCompTaskNode* succ_bw_node = static_cast<BackwardCompTaskNode*>(node);
+  ForwardCompTaskNode* pred_fw_node =
+      static_cast<ForwardCompTaskNode*>(succ_bw_node->GetRelatedFwTaskNode());
+  std::string in_lbn = chain_node()->SoleOp()->Lbn4BnInOp("in");
+  for (std::string lbn : pred_fw_node->chain_node()->data_output_lbns()) {
+    if (lbn == in_lbn) { return true; }
+  }
+  return false;
 }
 
 }  // namespace oneflow
