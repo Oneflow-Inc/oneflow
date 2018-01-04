@@ -36,7 +36,7 @@ void RecurrentOp::InitFromOpConf() {
   const RecurrentOpConf& conf = op_conf().recurrent_conf();
   EnrollInputBn("in");
   EnrollInputBn("ht_1");
-  if (!conf.init_hidden().empty()) {
+  if (conf.init_hidden_type() == RecurrentOpConf_InitHiddenType_NONE) {
     EnrollInputBn("h0");
   } else {
     EnrollModelBn("h0");

@@ -200,14 +200,21 @@ message BasicLstmCellConf {
 }
 
 message RecurrentOpConf {
+  enum InitHiddenType {
+    NONE = 0;
+    ZERO = 1;
+    UNIFORM = 2;
+  }
+
   required string in = 1;
   optional string init_hidden = 2;
-  required string out = 3;
-  required int32 hidden_size = 4;
-  optional bool has_bias_term = 5 [default = true];
+  optional InitHiddenType init_hidden_type = 3 [default = NONE];
+  required string out = 4;
+  required int32 hidden_size = 5;
+  optional bool has_bias_term = 6 [default = true];
   oneof rnn_type {
-   BasicRnnCellConf basic_rnn_cell = 6;
-   BasicLstmCellConf basic_lstm_cell = 7;
+   BasicRnnCellConf basic_rnn_cell = 7;
+   BasicLstmCellConf basic_lstm_cell = 8;
   }
 }
 
