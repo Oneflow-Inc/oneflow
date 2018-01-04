@@ -35,7 +35,7 @@ class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
     for (int64_t i = 0; i != n; ++i) {
       model_diff_acc[i] /= JobDesc::Singleton()->BatchSize();
       model_diff_acc[i] +=
-          l1 * ((model[i] > zero) - (zero < model[i])) + l2 * model[i];
+          l1 * ((model[i] >= zero) - (model[i] <= zero)) + l2 * model[i];
     }
   }
 };
