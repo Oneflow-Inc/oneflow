@@ -49,6 +49,8 @@ class JobDesc final {
   const FillConf* DefaultFillConf() const;
   int32_t PieceNumOfPrintLoss() const;
   int32_t BatchSize() const;
+  float L1() const;
+  float L2() const;
 
  private:
   JobDesc(const JobConf&);

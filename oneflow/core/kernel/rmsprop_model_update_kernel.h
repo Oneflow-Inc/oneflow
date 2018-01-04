@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class RMSPropMdUpdateKernel final : public MdUpdateKernel<device_type> {
+class RMSPropMdUpdateKernel final : public MdUpdateKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RMSPropMdUpdateKernel);
   RMSPropMdUpdateKernel() = default;

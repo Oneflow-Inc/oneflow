@@ -2,11 +2,6 @@
 
 namespace oneflow {
 
-void NormalModelUpdateOp::InitFromOpConf() {
-  EnrollInputBn("model_diff_acc", false);
-  EnrollOutputBn("model", false);
-}
-
 const PbMessage& NormalModelUpdateOp::GetSpecialConf() const {
   return op_conf().normal_mdupdt_conf();
 }

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class MdUpdateKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdateKernel);
@@ -13,11 +13,7 @@ class MdUpdateKernel : public KernelIf<device_type> {
 
   void Forward(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
-    auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
-    UpdateModel(ctx.device_ctx, std::get<1>(*tpl), std::get<0>(*tpl),
-                BnInOp2Blob);
-  }
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  protected:
   MdUpdateKernel() = default;
@@ -26,6 +22,16 @@ class MdUpdateKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
+  void Regularization(
+      DeviceCtx* ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+};
+
+template<DeviceType device_type, typename T>
+class MdUpdateKernelUtil final {
+ public:
+  static void Regularization(DeviceCtx* ctx, const int64_t n, float l1,
+                             float l2, const T* model, T* model_diff_acc);
 };
 
 }  // namespace oneflow
