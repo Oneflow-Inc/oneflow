@@ -250,6 +250,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
   auto it = writeable_produced_regst_.find(regst_desc_id);
   if (it == writeable_produced_regst_.end()) { return nullptr; }
+  if (it->second.empty()) { return nullptr; }
   return it->second.front();
 }
 

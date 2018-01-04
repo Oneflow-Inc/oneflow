@@ -343,7 +343,7 @@ void ChainGraph::BuildLossPrintStruct() {
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(
-        IDMgr::Singleton()->MachineName4MachineId(0) + ":0");
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence:1");
     auto loss_print_chain = NewNode<LossPrintChainNode>();
     loss_print_chain->mut_op_vec() = {loss_print_op};
     loss_print_chain->mut_parallel_desc().reset(
@@ -414,7 +414,9 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
     auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
     md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
-    md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+    md_diff_acc_pr_desc->set_policy(kInvalidParallel);
+    md_diff_acc_chain->mut_parallel_desc().reset(md_diff_acc_pr_desc);
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
     Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
   });

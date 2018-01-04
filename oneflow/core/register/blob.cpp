@@ -36,14 +36,14 @@ bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
   data_id_ptr_ = blob_desc->has_data_id() ? mem_ptr : nullptr;
-  if (blob_desc->has_offset()) {
-    offset_ptr_ = reinterpret_cast<BlobDesc::OffSetType*>(
+  if (blob_desc->has_seq_len()) {
+    seq_len_ptr_ = reinterpret_cast<BlobDesc::SeqLenType*>(
         mem_ptr + blob_desc->ByteSizeOfDataIdField());
   } else {
-    offset_ptr_ = nullptr;
+    seq_len_ptr_ = nullptr;
   }
   dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField()
-          + blob_desc->ByteSizeOfOffsetField();
+          + blob_desc->ByteSizeOfSeqLenField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
 }
@@ -53,14 +53,14 @@ const char* Blob::data_id(int32_t no) const {
   return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();
 }
 
-BlobDesc::OffSetType Blob::offset(int32_t no) const {
-  CHECK_NOTNULL(offset_ptr_);
-  return *(offset_ptr_ + no);
+BlobDesc::SeqLenType Blob::seq_len(int32_t no) const {
+  CHECK_NOTNULL(seq_len_ptr_);
+  return *(seq_len_ptr_ + no);
 }
 
-BlobDesc::OffSetType& Blob::mut_offset(int32_t no) {
-  CHECK_NOTNULL(offset_ptr_);
-  return *(offset_ptr_ + no);
+BlobDesc::SeqLenType& Blob::mut_seq_len(int32_t no) {
+  CHECK_NOTNULL(seq_len_ptr_);
+  return *(seq_len_ptr_ + no);
 }
 
 template<DeviceType device_type>
@@ -78,8 +78,8 @@ void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 template<DeviceType device_type>
 void Blob::CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, offset_ptr_, rhs->offset_ptr_,
-                      ByteSizeOfOffsetField());
+  Memcpy<device_type>(device_ctx, seq_len_ptr_, rhs->seq_len_ptr_,
+                      ByteSizeOfSeqLenField());
 }
 template<DeviceType device_type>
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {

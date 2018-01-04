@@ -53,17 +53,17 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
-  BlobDesc::OffSetType offset(int32_t no) const;
-  BlobDesc::OffSetType& mut_offset(int32_t no);
+  BlobDesc::SeqLenType seq_len(int32_t no) const;
+  BlobDesc::SeqLenType& mut_seq_len(int32_t no);
 
-  BlobDesc::OffSetType offset() const { return offset(0); }
-  BlobDesc::OffSetType& mut_offset() { return mut_offset(0); }
+  BlobDesc::SeqLenType seq_len() const { return seq_len(0); }
+  BlobDesc::SeqLenType& mut_seq_len() { return mut_seq_len(0); }
 
   const void* memory_ptr() const {
     if (data_id_ptr_) {
       return static_cast<void*>(data_id_ptr_);
-    } else if (offset_ptr_) {
-      return static_cast<void*>(offset_ptr_);
+    } else if (seq_len_ptr_) {
+      return static_cast<void*>(seq_len_ptr_);
     } else {
       return dptr_;
     }
@@ -89,12 +89,12 @@ class Blob final {
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id() const { return blob_desc_->has_data_id(); }
-  bool has_offset() const { return blob_desc_->has_offset(); }
+  bool has_seq_len() const { return blob_desc_->has_seq_len(); }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
-  size_t ByteSizeOfOffsetField() const {
-    return blob_desc_->ByteSizeOfOffsetField();
+  size_t ByteSizeOfSeqLenField() const {
+    return blob_desc_->ByteSizeOfSeqLenField();
   }
   size_t ByteSizeOfDataContentField() const {
     return blob_desc_->ByteSizeOfDataContentField();
@@ -124,7 +124,7 @@ class Blob final {
   }
 
   char* data_id_ptr_;
-  BlobDesc::OffSetType* offset_ptr_;
+  BlobDesc::SeqLenType* seq_len_ptr_;
   void* dptr_;
   PieceStatus piece_status_;
   const void* comm_net_token_;

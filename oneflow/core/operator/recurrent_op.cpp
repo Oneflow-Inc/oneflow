@@ -8,27 +8,24 @@ namespace {
 void InferBasicRnnCellBlobDesc(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     int32_t hidden_size, bool has_bias_term) {
-  DataType data_type = JobDesc::Singleton()->DefaultDataType();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().At(1);
   int64_t piece_size = in_blob_desc->shape().At(0);
   BlobDesc data_tmp_blob_desc =
-      BlobDesc(Shape({embedding_size, hidden_size}), data_type,
-               in_blob_desc->has_data_id(), in_blob_desc->has_offset(), -1);
+      BlobDesc(Shape({embedding_size, hidden_size}),
+               JobDesc::Singleton()->DefaultDataType(), false, false,
+               in_blob_desc->max_seq_size());
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("f_op_out") = data_tmp_blob_desc;
 
-  BlobDesc weight_blob_desc = BlobDesc(Shape({hidden_size, embedding_size}),
-                                       data_type, false, false, -1);
+  BlobDesc weight_blob_desc = BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("in_ip_op_weight") = weight_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_weight") = weight_blob_desc;
   if (has_bias_term) {
-    *GetBlobDesc4BnInOp("bias") =
-        BlobDesc(Shape({1, hidden_size}), data_type, false, false, -1);
-    *GetBlobDesc4BnInOp("bias_multiplier") =
-        BlobDesc(Shape({piece_size, 1}), data_type, false, false, -1);
+    *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({piece_size, 1}));
   }
 }
 
@@ -39,7 +36,12 @@ void RecurrentOp::InitFromOpConf() {
   const RecurrentOpConf& conf = op_conf().recurrent_conf();
   EnrollInputBn("in");
   EnrollInputBn("ht_1");
-  if (!conf.init_hidden().empty()) { EnrollInputBn("h0"); }
+  if (!conf.init_hidden().empty()) {
+    CHECK(!conf.has_init_hidden_fill());
+    EnrollInputBn("h0");
+  } else {
+    EnrollModelBn("h0");
+  }
   EnrollOutputBn("ht");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
@@ -72,21 +74,28 @@ void RecurrentOp::InferBlobDescs(
   DataType data_type = JobDesc::Singleton()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
+  int64_t piece_size = in_blob_desc->shape().At(0);
+  int32_t hidden_size = conf.hidden_size();
+  Shape h0_shape = Shape({piece_size, hidden_size});
   if (!conf.init_hidden().empty()) {
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
-    CHECK_EQ(in_blob_desc->shape(), h0_blob_desc->shape());
+    CHECK_EQ(h0_blob_desc->shape(), h0_shape);
+    CHECK_EQ(h0_blob_desc->has_data_id(), in_blob_desc->has_data_id());
+    CHECK_EQ(h0_blob_desc->max_seq_size(), 1);
+  } else {
+    *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
   }
-  int32_t hidden_size = conf.hidden_size();
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(hidden_size, parallel_ctx->parallel_num());
     hidden_size = splitter.At(parallel_ctx->parallel_id()).size();
   }
   // ht
   BlobDesc* ht_blob_desc = GetBlobDesc4BnInOp("ht");
-  ht_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), hidden_size});
+  ht_blob_desc->mut_shape() = Shape({piece_size, hidden_size});
   ht_blob_desc->set_data_type(data_type);
   ht_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
+  ht_blob_desc->set_max_seq_size(in_blob_desc->max_seq_size());
 
   if (op_conf().recurrent_conf().rnn_type_case()
       == RecurrentOpConf::kBasicRnnCell) {
