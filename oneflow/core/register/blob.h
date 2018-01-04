@@ -7,6 +7,38 @@
 
 namespace oneflow {
 
+class PieceStatus final {
+ public:
+  PieceStatus() : piece_id_(0), col_id_(0), max_col_num_(0) {}
+  ~PieceStatus() = default;
+  PieceStatus(const PieceStatus&) = default;
+  PieceStatus& operator=(const PieceStatus&) = default;
+
+  bool operator==(const PieceStatus& other) const {
+    return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
+           && (max_col_num_ == other.max_col_num_);
+  }
+  bool operator!=(const PieceStatus& other) const { return !(*this == other); }
+
+  int64_t piece_id() const { return piece_id_; }
+  int64_t col_id() const { return col_id_; }
+  int64_t max_col_num() const { return max_col_num_; }
+
+  void set_piece_id(int64_t val) { piece_id_ = val; }
+  void set_col_id(int64_t val) { col_id_ = val; }
+  void set_max_col_num(int64_t val) { max_col_num_ = val; }
+
+  int GetIntoNextStatus();
+  bool IsLast() const;
+  bool IsLastCol() const { return col_id_ == max_col_num_ - 1; }
+  bool IsNextColOf(const PieceStatus& pre) const;
+
+ private:
+  int64_t piece_id_;
+  int64_t col_id_;
+  int64_t max_col_num_;
+};
+
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
@@ -21,8 +53,20 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
+  BlobDesc::SeqLenType seq_len(int32_t no) const;
+  BlobDesc::SeqLenType& mut_seq_len(int32_t no);
+
+  BlobDesc::SeqLenType seq_len() const { return seq_len(0); }
+  BlobDesc::SeqLenType& mut_seq_len() { return mut_seq_len(0); }
+
   const void* memory_ptr() const {
-    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
+    if (data_id_ptr_) {
+      return static_cast<void*>(data_id_ptr_);
+    } else if (seq_len_ptr_) {
+      return static_cast<void*>(seq_len_ptr_);
+    } else {
+      return dptr_;
+    }
   }
   void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
@@ -45,8 +89,12 @@ class Blob final {
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id() const { return blob_desc_->has_data_id(); }
+  bool has_seq_len() const { return blob_desc_->has_seq_len(); }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
+  }
+  size_t ByteSizeOfSeqLenField() const {
+    return blob_desc_->ByteSizeOfSeqLenField();
   }
   size_t ByteSizeOfDataContentField() const {
     return blob_desc_->ByteSizeOfDataContentField();
@@ -58,7 +106,12 @@ class Blob final {
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
+  void CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+
+  const PieceStatus& piece_status() const { return piece_status_; }
+  void set_piece_status(const PieceStatus& pst) { piece_status_ = pst; }
 
  private:
   template<typename T>
@@ -71,7 +124,9 @@ class Blob final {
   }
 
   char* data_id_ptr_;
+  BlobDesc::SeqLenType* seq_len_ptr_;
   void* dptr_;
+  PieceStatus piece_status_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
 };
