@@ -37,6 +37,7 @@ void RecurrentOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollInputBn("ht_1");
   if (!conf.init_hidden().empty()) {
+    CHECK(!conf.has_init_hidden_fill());
     EnrollInputBn("h0");
   } else {
     EnrollModelBn("h0");

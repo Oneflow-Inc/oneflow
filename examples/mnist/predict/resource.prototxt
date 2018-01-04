@@ -1,14 +1,21 @@
 machine {
   addr: "192.168.1.11"
-  port: 6666
+  port: 6789
   name: "192.168.1.11"
 }
-
+machine {
+  addr: "192.168.1.12"
+  port: 6789
+  name: "192.168.1.12"
+}
 machine {
   addr: "192.168.1.13"
-  port: 6666
+  port: 6789
   name: "192.168.1.13"
 }
 
-device_num_per_machine: 4
-device_type: kCPU
+cpu_device_num: 20
+gpu_device_num: 2
+persistence_worker_num: 6
+boxing_worker_num: 6
+comm_net_worker_num: 4

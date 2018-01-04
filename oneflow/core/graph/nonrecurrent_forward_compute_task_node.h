@@ -14,8 +14,11 @@ class NonRecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
   TaskType GetTaskType() const override {
     return TaskType::kNonRecurrentForward;
   }
+  bool IsReadyForBuild() override;
 
  private:
+  void VirtualConsumeInRegst(TaskEdge* edge) override;
+  void BuildExecGphStructAndBindInRegst() override;
 };
 
 }  // namespace oneflow
