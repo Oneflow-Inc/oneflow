@@ -94,17 +94,10 @@ void ForwardCompTaskNode::LockRegsts() {
 }
 
 void ForwardCompTaskNode::FixRegisterNumRange() {
-  std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   int32_t max_seq_size = GetConsumedRegst("in")->MaxSeqSize();
-  activation_regst->set_min_register_num(max_seq_size);
-  data_tmp_regst->set_min_register_num(max_seq_size);
-  out_regst->set_min_register_num(max_seq_size);
-  if (!static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
-    activation_regst->set_max_register_num(max_seq_size);
-    data_tmp_regst->set_max_register_num(max_seq_size);
-  }
+  GetProducedRegst("activation")->set_min_register_num(max_seq_size);
+  GetProducedRegst("data_tmp")->set_min_register_num(max_seq_size);
+  GetProducedRegst("out")->set_min_register_num(max_seq_size);
 }
 
 }  // namespace oneflow
