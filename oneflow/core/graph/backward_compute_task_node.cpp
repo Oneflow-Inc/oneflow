@@ -62,11 +62,7 @@ void BackwardCompTaskNode::BuildExecGphAndRegst() {
 }
 
 void BackwardCompTaskNode::FixRegisterNumRange() {
-  int32_t max_seq_size = GetConsumedRegst("in")->MaxSeqSize();
-  std::shared_ptr<RegstDesc> ht_1_diff_regst = GetProducedRegst("ht_1_diff");
-  std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
-  ht_1_diff_regst->set_min_register_num(max_seq_size);
-  in_diff_regst->set_min_register_num(max_seq_size);
+  // TODO: special treatment to gather, in_diff same with in
 }
 
 void BackwardCompTaskNode::BuildActivationDiffRegst() {
@@ -131,8 +127,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
     ht_1_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("out").get());
   }
 
-  if (GetConsumedRegst("h0")) {
-    auto h0_diff_regst = GetProducedRegst("h0_diff_regst");
+  if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
   }
 }
