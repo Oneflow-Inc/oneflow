@@ -5,7 +5,7 @@
 namespace oneflow {
 
 bool RecurrentBackwardCompTaskNode::IsReadyForBuild() {
-  auto consumed_regsts_ = GetConsumedRegsts();
+  auto consumed_regsts_ = consumed_regsts();
   for (auto& pair : consumed_regsts_) {
     if (pair.first == "ht_1_diff") { continue; }
     if (pair.second.lock()->IsLocked() == false) { return false; }

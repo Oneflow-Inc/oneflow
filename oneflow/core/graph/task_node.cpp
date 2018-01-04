@@ -136,7 +136,7 @@ std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegst(const std::string& name) {
 }
 
 const HashMap<std::string, std::weak_ptr<RegstDesc>>&
-TaskNode::GetConsumedRegsts() {
+TaskNode::consumed_regsts() {
   return consumed_regsts_;
 }
 
