@@ -3,7 +3,8 @@
 
 namespace oneflow {
 
-void NonRecurrentBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
+void NonRecurrentBackwardCompTaskNode::
+    VirtualBuildExecGphAndBindOutDiffRegst() {
   HashMap<std::string, std::pair<ExecNode*, std::string>> lbn2producer;
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
@@ -33,7 +34,30 @@ void NonRecurrentBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
   });
 }
 
-void NonRecurrentBackwardCompTaskNode::BuildInDiffRegst() {
+void NonRecurrentBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
+  std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
+  auto activation_diff_regst = GetProducedRegst("activation_diff");
+  mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
+    if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
+        || edge->dst_node()->op()->NeedOutWhenBackward()) {
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
+                                           activation_diff_regst);
+      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(),
+                                           activation_diff_regst);
+      activation_diff_regst->AddLbn(edge->lbn());
+    } else {
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
+    }
+
+    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
+                                         activation_regst);
+    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
+                                         activation_regst);
+  });
+}
+
+void NonRecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {

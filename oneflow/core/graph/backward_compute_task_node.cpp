@@ -1,4 +1,3 @@
-#include "oneflow/core/graph/forward_compute_task_node.h"
 #include "oneflow/core/graph/backward_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
 
@@ -8,41 +7,33 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (dst_node == this) {
-      edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff"));
-    } else if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
-      if (GetTaskType() == TaskType::kNonRecurrentBackward) {
-        edge->AddRegst("in_diff", ProduceRegst("in_diff"));
-      } else {
-        if (CanBindInDiffWhenRecurrent(edge)) {
-          edge->AddRegst("in_diff", ProduceRegst("in_diff"));
-        } else {
-          edge->AddRegst("h0_diff", ProduceRegst("h0_diff"));
-        }
-      }
+      VirtualProduceRegstOnSelfEdge(edge);
+      continue;
+    }
+    if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
+      VirtualProduceInDiffAndBindEdge(edge);
     } else {
       edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     }
   }
-  if (GetTaskType() == TaskType::kNonRecurrentBackward) {
-    ProduceRegst("activation_diff", 1, 1);
-  }
+  VirtualProduceActivationDiff();
 }
 
 void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
+    if (src_node == this) {
+      VirtualConsumeRegstOnSelfEdge(edge);
+      continue;
+    }
     TaskType src_task_type = src_node->GetTaskType();
     if (IsForwardTaskType(src_task_type)) {
-      if (GetTaskType() == TaskType::kNonRecurrentBackward) {
-        ConsumeRegst("activation", edge->GetRegst("activation"));
-      }
+      VirtualConsumeActivation(edge);
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
     } else if (src_task_type == TaskType::kMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
-    } else if (src_node == this) {
-      ConsumeRegst("ht_1_diff", edge->GetSoleRegst());
     } else {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
@@ -52,40 +43,11 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
-  BuildExecGphAndBindOutDiffRegst();
-  if (GetTaskType() == TaskType::kNonRecurrentBackward) {
-    BuildActivationDiffRegst();
-  }
-  BuildInDiffRegst();
+  VirtualBuildExecGphAndBindOutDiffRegst();
+  VirtualBuildActivationDiffRegst();
+  VirtualBuildInDiffRegst();
   BuildModelDiffRegst();
   InferBlobDescsInProducedRegsts();
-}
-
-void BackwardCompTaskNode::FixRegisterNumRange() {
-  // TODO: special treatment to gather, in_diff same with in
-}
-
-void BackwardCompTaskNode::BuildActivationDiffRegst() {
-  std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
-  auto activation_diff_regst = GetProducedRegst("activation_diff");
-  mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
-    if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
-        || edge->dst_node()->op()->NeedOutWhenBackward()) {
-      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
-                                           activation_diff_regst);
-      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(),
-                                           activation_diff_regst);
-      activation_diff_regst->AddLbn(edge->lbn());
-    } else {
-      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
-      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
-    }
-
-    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
-                                         activation_regst);
-    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
-                                         activation_regst);
-  });
 }
 
 void BackwardCompTaskNode::BuildModelDiffRegst() {
@@ -118,18 +80,8 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
   md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
 
-  if (GetTaskType() == TaskType::kNonRecurrentBackward) {
-    auto activation_diff_regst = GetProducedRegst("activation_diff");
-    activation_diff_regst->CopyBlobDescWithoutAddLbn(
-        GetConsumedRegst("activation").get());
-  } else {
-    auto ht_1_diff_regst = GetProducedRegst("ht_1_diff");
-    ht_1_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("out").get());
-  }
-
-  if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
-    h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
-  }
+  VirtualInferBlobDescInActivationDiff();
+  VirtualInferBlobDescInHiddenDiff();
 }
 
 TaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
@@ -138,22 +90,6 @@ TaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
     if (IsForwardTaskType(fw_node->GetTaskType())) { return fw_node; }
   }
   return nullptr;
-}
-
-bool BackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
-  TaskNode* node = edge->dst_node();
-  while (node->GetTaskType() == kBoxing) {
-    TaskEdge* edge = *(node->out_edges().begin());
-    node = edge->dst_node();
-  }
-  BackwardCompTaskNode* succ_bw_node = static_cast<BackwardCompTaskNode*>(node);
-  ForwardCompTaskNode* pred_fw_node =
-      static_cast<ForwardCompTaskNode*>(succ_bw_node->GetRelatedFwTaskNode());
-  std::string in_lbn = chain_node()->SoleOp()->Lbn4BnInOp("in");
-  for (std::string lbn : pred_fw_node->chain_node()->data_output_lbns()) {
-    if (lbn == in_lbn) { return true; }
-  }
-  return false;
 }
 
 }  // namespace oneflow

@@ -16,9 +16,24 @@ class NonRecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   }
 
  private:
-  void BuildExecGphAndBindOutDiffRegst() override;
-  void BuildInDiffRegst() override;
+  void VirtualBuildExecGphAndBindOutDiffRegst() override;
+  void VirtualBuildActivationDiffRegst() override;
+  void VirtualBuildInDiffRegst() override;
   void VirtualConsumeInRegst() override;
+  void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override {
+    edge->AddRegst("in_diff", ProduceRegst("in_diff"));
+  }
+  void VirtualProduceActivationDiff() override {
+    ProduceRegst("activation_diff", 1, 1);
+  }
+  void VirtualConsumeActivation(TaskEdge* edge) override {
+    ConsumeRegst("activation", edge->GetRegst("activation"));
+  }
+  void VirtualInferBlobDescInActivationDiff() override {
+    auto activation_diff_regst = GetProducedRegst("activation_diff");
+    activation_diff_regst->CopyBlobDescWithoutAddLbn(
+        GetConsumedRegst("activation").get());
+  }
 };
 
 }  // namespace oneflow

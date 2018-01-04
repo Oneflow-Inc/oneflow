@@ -17,16 +17,27 @@ class BackwardCompTaskNode : public CompTaskNode {
   TaskNode* GetRelatedFwTaskNode();
 
  protected:
-  virtual void BuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); };
-  virtual void BuildInDiffRegst() { UNEXPECTED_RUN(); };
+  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBuildActivationDiffRegst() {}
+  virtual void VirtualBuildInDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
+    UNEXPECTED_RUN();
+  };
+  virtual void VirtualProduceRegstOnSelfEdge(TaskEdge* edge) {
+    UNEXPECTED_RUN();
+  }
+  virtual void VirtualProduceActivationDiff() {}
+  virtual void VirtualConsumeRegstOnSelfEdge(TaskEdge* edge) {
+    UNEXPECTED_RUN();
+  }
+  virtual void VirtualConsumeActivation(TaskEdge* edge) {}
   virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
+  virtual void VirtualInferBlobDescInActivationDiff() {}
+  virtual void VirtualInferBlobDescInHiddenDiff() {}
 
  private:
-  void FixRegisterNumRange() override;
-  void BuildActivationDiffRegst();
   void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
-  bool CanBindInDiffWhenRecurrent(TaskEdge* edge);
 };
 
 }  // namespace oneflow
