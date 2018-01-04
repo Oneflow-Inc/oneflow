@@ -30,11 +30,11 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 bool RecurrentForwardCompTaskNode::IsReadyForBuild() {
-  bool ret = GetConsumedRegst("in")->IsLocked()
-             && GetConsumedRegst("ht_1")->IsLocked();
   std::shared_ptr<RegstDesc> regst = GetConsumedRegst("h0");
-  if (regst) { ret = ret && regst->IsLocked(); }
-  return ret;
+  if (GetConsumedRegst("in")->IsLocked() && (!regst || regst->IsLocked())) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace oneflow
