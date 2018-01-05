@@ -61,7 +61,7 @@ message BasicDataLoaderOpConf {
   required string out = 1;
   required DataType data_type = 2;
   required string data_dir = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
+  optional int32 max_seq_len = 4 [default = 1];
   required ShapeProto shape = 5;
 }
 
