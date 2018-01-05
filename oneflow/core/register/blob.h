@@ -7,18 +7,18 @@
 
 namespace oneflow {
 
-class PieceStatus final {
+class BlobHeader final {
  public:
-  PieceStatus() : piece_id_(0), col_id_(0), max_col_num_(0) {}
-  ~PieceStatus() = default;
-  PieceStatus(const PieceStatus&) = default;
-  PieceStatus& operator=(const PieceStatus&) = default;
+  BlobHeader() : piece_id_(0), col_id_(0), max_col_num_(0) {}
+  ~BlobHeader() = default;
+  BlobHeader(const BlobHeader&) = default;
+  BlobHeader& operator=(const BlobHeader&) = default;
 
-  bool operator==(const PieceStatus& other) const {
+  bool operator==(const BlobHeader& other) const {
     return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
            && (max_col_num_ == other.max_col_num_);
   }
-  bool operator!=(const PieceStatus& other) const { return !(*this == other); }
+  bool operator!=(const BlobHeader& other) const { return !(*this == other); }
 
   int64_t piece_id() const { return piece_id_; }
   int64_t col_id() const { return col_id_; }
@@ -28,10 +28,9 @@ class PieceStatus final {
   void set_col_id(int64_t val) { col_id_ = val; }
   void set_max_col_num(int64_t val) { max_col_num_ = val; }
 
-  int GetIntoNextStatus();
   bool IsLast() const;
   bool IsLastCol() const { return col_id_ == max_col_num_ - 1; }
-  bool IsNextColOf(const PieceStatus& pre) const;
+  bool IsNextColOf(const BlobHeader& pre) const;
 
  private:
   int64_t piece_id_;
@@ -60,13 +59,7 @@ class Blob final {
   BlobDesc::SeqLenType& mut_seq_len() { return mut_seq_len(0); }
 
   const void* memory_ptr() const {
-    if (data_id_ptr_) {
-      return static_cast<void*>(data_id_ptr_);
-    } else if (seq_len_ptr_) {
-      return static_cast<void*>(seq_len_ptr_);
-    } else {
-      return dptr_;
-    }
+    return reinterpret_cast<void*>(blob_header_);
   }
   void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
@@ -90,6 +83,9 @@ class Blob final {
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id() const { return blob_desc_->has_data_id(); }
   bool has_seq_len() const { return blob_desc_->has_seq_len(); }
+  size_t ByteSizeOfBlobHeaderField() const {
+    return blob_desc_->ByteSizeOfBlobHeaderField();
+  }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
@@ -102,6 +98,8 @@ class Blob final {
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   template<DeviceType device_type>
+  void CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -110,8 +108,8 @@ class Blob final {
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
-  const PieceStatus& piece_status() const { return piece_status_; }
-  void set_piece_status(const PieceStatus& pst) { piece_status_ = pst; }
+  const BlobHeader& blob_header() const { return *blob_header_; }
+  void set_blob_header(const BlobHeader& val) { *blob_header_ = val; }
 
  private:
   template<typename T>
@@ -123,10 +121,10 @@ class Blob final {
         << blob_desc_->data_type() << " " << GetDataType<T>::val;
   }
 
+  BlobHeader* blob_header_;
   char* data_id_ptr_;
   BlobDesc::SeqLenType* seq_len_ptr_;
   void* dptr_;
-  PieceStatus piece_status_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
 };

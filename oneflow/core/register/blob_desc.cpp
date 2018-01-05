@@ -1,4 +1,5 @@
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -31,6 +32,10 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   proto->set_max_seq_size(max_seq_size_);
 }
 
+size_t BlobDesc::ByteSizeOfBlobHeaderField() const {
+  return sizeof(BlobHeader);
+}
+
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (has_data_id_) {
     return shape_.At(0) * JobDesc::Singleton()->SizeOfOneDataId();
@@ -52,8 +57,8 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfDataIdField() + ByteSizeOfSeqLenField()
-         + ByteSizeOfDataContentField();
+  return ByteSizeOfBlobHeaderField() + ByteSizeOfDataIdField()
+         + ByteSizeOfSeqLenField() + ByteSizeOfDataContentField();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {

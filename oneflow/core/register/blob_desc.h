@@ -37,6 +37,7 @@ class BlobDesc final {
   void set_max_seq_size(int32_t val) { max_seq_size_ = val; }
 
   void ToProto(BlobDescProto* proto) const;
+  size_t ByteSizeOfBlobHeaderField() const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfSeqLenField() const;
   size_t ByteSizeOfDataContentField() const;

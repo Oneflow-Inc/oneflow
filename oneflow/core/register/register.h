@@ -20,8 +20,8 @@ class Regst final {
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbn(const std::string& lbn);
   Blob* packed_blob() { return packed_blob_.get(); }
-  const PieceStatus& piece_status() const {
-    return lbn2blob_.begin()->second->piece_status();
+  const BlobHeader& blob_header() const {
+    return lbn2blob_.begin()->second->blob_header();
   }
 
   // Setters

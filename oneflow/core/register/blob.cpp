@@ -5,19 +5,7 @@
 
 namespace oneflow {
 
-int PieceStatus::GetIntoNextStatus() {
-  if (IsLast()) { return -1; }
-  if (col_id_ == max_col_num_ - 1) {
-    piece_id_ += 1;
-    col_id_ = 0;
-    max_col_num_ = 0;
-  } else {
-    col_id_ += 1;
-  }
-  return 0;
-}
-
-bool PieceStatus::IsLast() const {
+bool BlobHeader::IsLast() const {
   if (piece_id_ == RuntimeCtx::Singleton()->total_piece_num() - 1
       && col_id_ == max_col_num_ - 1) {
     return true;
@@ -25,7 +13,7 @@ bool PieceStatus::IsLast() const {
   return false;
 }
 
-bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
+bool BlobHeader::IsNextColOf(const BlobHeader& pre) const {
   if (piece_id_ == pre.piece_id_ && max_col_num_ == pre.max_col_num_
       && col_id_ == pre.col_id_ + 1) {
     return true;
@@ -35,14 +23,21 @@ bool PieceStatus::IsNextColOf(const PieceStatus& pre) const {
 
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
-  data_id_ptr_ = blob_desc->has_data_id() ? mem_ptr : nullptr;
+  blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
+  if (blob_desc->has_data_id()) {
+    data_id_ptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField();
+  } else {
+    data_id_ptr_ = nullptr;
+  }
   if (blob_desc->has_seq_len()) {
     seq_len_ptr_ = reinterpret_cast<BlobDesc::SeqLenType*>(
-        mem_ptr + blob_desc->ByteSizeOfDataIdField());
+        mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
+        + blob_desc->ByteSizeOfDataIdField());
   } else {
     seq_len_ptr_ = nullptr;
   }
-  dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField()
+  dptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
+          + blob_desc->ByteSizeOfDataIdField()
           + blob_desc->ByteSizeOfSeqLenField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
@@ -64,23 +59,35 @@ BlobDesc::SeqLenType& Blob::mut_seq_len(int32_t no) {
 }
 
 template<DeviceType device_type>
+void Blob::CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  Memcpy<device_type>(device_ctx, static_cast<void*>(blob_header_),
+                      static_cast<void*>(rhs->blob_header_),
+                      ByteSizeOfBlobHeaderField());
+}
+
+template<DeviceType device_type>
 void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   Memcpy<device_type>(device_ctx, dptr_, rhs->dptr_,
                       ByteSizeOfDataContentField());
 }
+
 template<DeviceType device_type>
 void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   Memcpy<device_type>(device_ctx, data_id_ptr_, rhs->data_id_ptr_,
                       ByteSizeOfDataIdField());
 }
+
 template<DeviceType device_type>
 void Blob::CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, seq_len_ptr_, rhs->seq_len_ptr_,
+  Memcpy<device_type>(device_ctx, static_cast<void*>(seq_len_ptr_),
+                      static_cast<void*>(rhs->seq_len_ptr_),
                       ByteSizeOfSeqLenField());
 }
+
 template<DeviceType device_type>
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
@@ -89,6 +96,7 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 #define INSTANTIATE_BLOB_FUNC(dev_t)                                       \
+  template void Blob::CopyBlobHeaderFrom<dev_t>(DeviceCtx*, const Blob*);  \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
   template void Blob::CopyOffSetFrom<dev_t>(DeviceCtx*, const Blob*);      \
