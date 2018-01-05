@@ -95,6 +95,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
   }
 #endif
   SnapshotMgr::NewSingleton(plan);
+  MemoryAllocator::NewSingleton();
   RegstMgr::NewSingleton();
   ActorMsgBus::NewSingleton();
   ThreadMgr::NewSingleton();
@@ -104,6 +105,7 @@ void Runtime::DeleteAllSingleton() {
   ThreadMgr::DeleteSingleton();
   ActorMsgBus::DeleteSingleton();
   RegstMgr::DeleteSingleton();
+  MemoryAllocator::DeleteSingleton();
   SnapshotMgr::DeleteSingleton();
   delete CommNet::Singleton();
   RuntimeCtx::DeleteSingleton();

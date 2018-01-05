@@ -21,14 +21,14 @@ class CommNet {
   virtual void RegisterMemoryDone() = 0;
 
   // Stream
-  virtual void* NewActorReadId() = 0;
-  virtual void DeleteActorReadId(void* actor_read_id) = 0;
+  void* NewActorReadId();
+  void DeleteActorReadId(void* actor_read_id);
   virtual void* Read(void* actor_read_id, int64_t src_machine_id,
                      const void* src_token, const void* dst_token) = 0;
-  virtual void AddReadCallBack(void* actor_read_id, void* read_id,
-                               std::function<void()> callback) = 0;
-  virtual void AddReadCallBackDone(void* actor_read_id, void* read_id) = 0;
-  virtual void ReadDone(void* read_done_id) = 0;
+  void AddReadCallBack(void* actor_read_id, void* read_id,
+                       std::function<void()> callback);
+  void AddReadCallBackDone(void* actor_read_id, void* read_id);
+  void ReadDone(void* read_done_id);
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
@@ -37,7 +37,20 @@ class CommNet {
   CommNet() = default;
   static void set_comm_network_ptr(CommNet* val) { comm_network_ptr_ = val; }
 
+  struct ReadContext {
+    std::list<std::function<void()>> cbl;
+    std::mutex done_cnt_mtx;
+    int8_t done_cnt;
+  };
+  struct ActorReadContext {
+    std::mutex read_ctx_list_mtx;
+    std::list<ReadContext*> read_ctx_list;
+  };
+
  private:
+  int8_t IncreaseDoneCnt(ReadContext*);
+  void FinishOneReadContext(ActorReadContext*, ReadContext*);
+
   static CommNet* comm_network_ptr_;
 };
 

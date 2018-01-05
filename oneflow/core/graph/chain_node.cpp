@@ -1,6 +1,8 @@
 #include "oneflow/core/graph/chain_node.h"
-#include "oneflow/core/graph/backward_compute_task_node.h"
-#include "oneflow/core/graph/forward_compute_task_node.h"
+#include "oneflow/core/graph/recurrent_backward_compute_task_node.h"
+#include "oneflow/core/graph/nonrecurrent_backward_compute_task_node.h"
+#include "oneflow/core/graph/recurrent_forward_compute_task_node.h"
+#include "oneflow/core/graph/nonrecurrent_forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
@@ -126,10 +128,10 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
-    for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
+    for (int64_t thrd_id : parallel_desc_->sorted_thrd_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
-      comp_task_node->set_thrd_id(dev_phy_id);
+      comp_task_node->set_thrd_id(thrd_id);
       comp_task_node->set_chain_node(this);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
@@ -169,7 +171,7 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
     UNEXPECTED_RUN();                                                         \
     return {};                                                                \
   }                                                                           \
-  CompTaskNode* x##ChainNode::NewCompTaskNode() const {                       \
+  CompTaskNode* x##ChainNode::NewCompTaskNodeWithSameName() const {           \
     return new x##CompTaskNode;                                               \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
@@ -224,6 +226,13 @@ void ForwardChainNode::set_data_output_lbns() {
     }
   });
 }
+CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
+  if (HasSoleRecurrentOp()) {
+    return new RecurrentForwardCompTaskNode;
+  } else {
+    return new NonRecurrentForwardCompTaskNode;
+  }
+}
 
 // BackwardChainNode
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
@@ -276,6 +285,13 @@ void BackwardChainNode::set_data_output_lbns() {
       AddDataOutputLbnsTo(to_node);
     }
   });
+}
+CompTaskNode* BackwardChainNode::NewCompTaskNode() const {
+  if (HasSoleRecurrentOp()) {
+    return new RecurrentBackwardCompTaskNode;
+  } else {
+    return new NonRecurrentBackwardCompTaskNode;
+  }
 }
 
 // SourceChainNode

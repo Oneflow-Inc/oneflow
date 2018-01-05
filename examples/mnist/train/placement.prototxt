@@ -5,36 +5,22 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:0-5"
+    device_name: "192.168.1.11:persistence:2"
+    device_name: "192.168.1.12:persistence:2"
+    device_name: "192.168.1.13:persistence:2"
   }
 }
 
 placement_group {
   op_set {
     op_name: "conv"
-  }
-  parallel_conf {
-    policy: kDataParallel
-    device_name: "192.168.1.11:0-3"
-  }
-}
-
-placement_group {
-  op_set {
     op_name: "ip10"
-  }
-  parallel_conf {
-    policy: kDataParallel
-    device_name: "192.168.1.12:0-3"
-  }
-}
-
-placement_group {
-  op_set {
     op_name: "softmax_loss"
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:0-3"
+    device_name: "192.168.1.11:gpu:0-1"
+    device_name: "192.168.1.12:gpu:0-1"
+    device_name: "192.168.1.13:gpu:0-1"
   }
 }

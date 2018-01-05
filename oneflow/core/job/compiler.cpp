@@ -5,10 +5,22 @@ namespace oneflow {
 namespace {
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"}, {kForward, "2"},   {kBackward, "3"},  {kSource, "1"},
-    {kLoss, "4"},    {kLossAcc, "5"},   {kLossPrint, "1"}, {kMdUpdt, "6"},
-    {kMdSave, "1"},  {kMdDiffAcc, "7"}, {kCopyHd, "8"},    {kCopyCommNet, "9"},
-    {kBoxing, "10"}, {kPrint, "1"},
+    {kInvalid, "0"},
+    {kNonRecurrentForward, "2"},
+    {kRecurrentForward, "2"},
+    {kNonRecurrentBackward, "3"},
+    {kRecurrentBackward, "3"},
+    {kSource, "1"},
+    {kLoss, "4"},
+    {kLossAcc, "5"},
+    {kLossPrint, "1"},
+    {kMdUpdt, "6"},
+    {kMdSave, "1"},
+    {kMdDiffAcc, "7"},
+    {kCopyHd, "8"},
+    {kCopyCommNet, "9"},
+    {kBoxing, "10"},
+    {kPrint, "1"},
 };
 
 void ToDotFile(const Plan& plan, const std::string& filepath) {

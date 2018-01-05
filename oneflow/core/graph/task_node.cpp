@@ -2,6 +2,16 @@
 
 namespace oneflow {
 
+bool IsForwardTaskType(TaskType tt) {
+  return tt == TaskType::kNonRecurrentForward
+         || tt == TaskType::kRecurrentForward;
+}
+
+bool IsBackwardTaskType(TaskType tt) {
+  return tt == TaskType::kNonRecurrentBackward
+         || tt == TaskType::kRecurrentBackward;
+}
+
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
@@ -30,6 +40,7 @@ void TaskNode::set_thrd_id(int64_t val) {
 void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
+  FixRegisterNumRange();
 }
 
 void TaskNode::EraseEmptyProducedRegst() {
@@ -73,8 +84,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
-  exec_gph_.ToExecSequence(GetTaskType() != TaskType::kBackward, parallel_ctx(),
-                           task_proto->mutable_exec_sequence());
+  exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false,
+                           parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -88,6 +99,10 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     int64_t regst_desc_id = regst->regst_desc_id();
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_id}).second);
   }
+}
+
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
+  return ProduceRegst(name, 1, kMaxRegisterNum);
 }
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
@@ -118,6 +133,11 @@ std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegst(const std::string& name) {
   auto it = consumed_regsts_.find(name);
   if (it != consumed_regsts_.end()) { return it->second.lock(); }
   return nullptr;
+}
+
+const HashMap<std::string, std::weak_ptr<RegstDesc>>&
+TaskNode::consumed_regsts() {
+  return consumed_regsts_;
 }
 
 bool TaskNode::TryLockConsumedRegst(const std::string& name) {

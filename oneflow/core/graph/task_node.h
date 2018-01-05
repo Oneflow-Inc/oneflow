@@ -8,6 +8,9 @@
 
 namespace oneflow {
 
+bool IsForwardTaskType(TaskType);
+bool IsBackwardTaskType(TaskType);
+
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {
@@ -37,12 +40,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void InferMemCaseOfProducedRegst();
 
   // Others
-  virtual TaskType GetTaskType() const = 0;
+  virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
 
  protected:
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,
                                           int32_t min_register_num,
                                           int32_t max_register_num);
@@ -50,10 +54,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
+  const HashMap<std::string, std::weak_ptr<RegstDesc>>& consumed_regsts();
   bool TryLockConsumedRegst(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
+  virtual void FixRegisterNumRange() {}
 
  private:
   void UpdateTaskId();

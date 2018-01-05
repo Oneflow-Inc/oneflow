@@ -5,25 +5,39 @@
 
 namespace oneflow {
 
-class BackwardCompTaskNode final : public CompTaskNode {
+class BackwardCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BackwardCompTaskNode);
   BackwardCompTaskNode() = default;
-  ~BackwardCompTaskNode() = default;
+  virtual ~BackwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  TaskNode* GetRelatedFwTaskNode();
 
-  TaskType GetTaskType() const override { return TaskType::kBackward; }
+ protected:
+  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBuildActivationDiffRegst() {}
+  virtual void VirtualBuildInDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
+    UNEXPECTED_RUN();
+  };
+  virtual void VirtualProduceRegstOnSelfEdge(TaskEdge* edge) {
+    UNEXPECTED_RUN();
+  }
+  virtual void VirtualProduceActivationDiff() {}
+  virtual void VirtualConsumeRegstOnSelfEdge(TaskEdge* edge) {
+    UNEXPECTED_RUN();
+  }
+  virtual void VirtualConsumeActivation(TaskEdge* edge) {}
+  virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
+  virtual void VirtualInferBlobDescInActivationDiff() {}
+  virtual void VirtualInferBlobDescInHiddenDiff() {}
 
  private:
-  void BuildExecGphAndBindOutDiffRegst();
-  void BuildActivationDiffRegst();
-  void BuildInDiffRegst();
   void BuildModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
-  std::shared_ptr<RegstDesc> GetRelatedInRegst();
 };
 
 }  // namespace oneflow

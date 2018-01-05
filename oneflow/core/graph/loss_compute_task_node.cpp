@@ -4,8 +4,8 @@
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto loss_regst = ProduceRegst("loss", 1, kMaxRegisterNum);
-  auto in_diff_regst = ProduceRegst("in_diff", 1, kMaxRegisterNum);
+  auto loss_regst = ProduceRegst("loss");
+  auto in_diff_regst = ProduceRegst("in_diff");
   auto data_tmp_regst = ProduceRegst("data_tmp", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     TaskType dst_task_node_type = edge->dst_node()->GetTaskType();

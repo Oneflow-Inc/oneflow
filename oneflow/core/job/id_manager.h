@@ -20,6 +20,11 @@ class IDMgr final {
   DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
 
+  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
+  int64_t GetGpuDeviceThrdId(int64_t dev_phy_id) const;
+
+  int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
+
   int64_t AllocatePersistenceThrdId(int64_t machine_id);
   int64_t AllocateBoxingThrdId(int64_t machine_id);
   int64_t CommNetThrdId() const;
@@ -44,8 +49,9 @@ class IDMgr final {
   IDMgr();
   int64_t GetMachineThrdId(int64_t machine_id, int64_t thrd_id);
 
-  int32_t machine_num_;
-  int64_t device_num_per_machine_;
+  int64_t cpu_device_num_;
+  int64_t gpu_device_num_;
+  int64_t xpu_device_num_;
   int64_t regst_desc_id_count_;
   HashMap<int64_t, int64_t> thread_id2num_of_tasks_;
   HashMap<int64_t, int64_t> thread_id2num_of_streams_;

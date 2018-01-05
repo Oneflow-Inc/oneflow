@@ -47,6 +47,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
       LogicalNode* pred_node = lbn2producer.at(lbn);
+      if (pred_node == cur_node) { continue; }
       LogicalEdge* edge = NewEdge();
       CHECK(edge2lbn->emplace(edge, lbn).second);
       CHECK(edge2ibn->emplace(edge, ibn).second);

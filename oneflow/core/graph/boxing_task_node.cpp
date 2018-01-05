@@ -14,7 +14,7 @@ void BoxingTaskNode::Init(int64_t machine_id) {
 void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* out_edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(out_edge->edge_id());
-    auto out_regst = ProduceRegst(name, 1, kMaxRegisterNum);
+    auto out_regst = ProduceRegst(name);
     out_edge->AddRegst(name, out_regst);
   }
   ProduceRegst("middle", 1, 1);
