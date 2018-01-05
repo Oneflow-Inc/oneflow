@@ -9,5 +9,5 @@ message BlobDescProto {
   required DataType data_type = 2;
   required bool has_data_id = 3;
   required bool has_seq_len = 4;
-  required int32 max_seq_size = 5;
+  required int32 max_seq_len = 5;
 }

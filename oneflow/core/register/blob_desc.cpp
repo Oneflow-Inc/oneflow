@@ -9,19 +9,19 @@ BlobDesc::BlobDesc()
                1) {}
 
 BlobDesc::BlobDesc(Shape shape, DataType data_type, bool has_data_id,
-                   bool has_seq_len, int32_t max_seq_size)
+                   bool has_seq_len, int32_t max_seq_len)
     : shape_(shape),
       data_type_(data_type),
       has_data_id_(has_data_id),
       has_seq_len_(has_seq_len),
-      max_seq_size_(max_seq_size) {}
+      max_seq_len_(max_seq_len) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) {
   shape_ = Shape(proto.shape());
   data_type_ = proto.data_type();
   has_data_id_ = proto.has_data_id();
   has_seq_len_ = proto.has_seq_len();
-  max_seq_size_ = proto.max_seq_size();
+  max_seq_len_ = proto.max_seq_len();
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
@@ -29,7 +29,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   proto->set_data_type(data_type_);
   proto->set_has_data_id(has_data_id_);
   proto->set_has_seq_len(has_seq_len_);
-  proto->set_max_seq_size(max_seq_size_);
+  proto->set_max_seq_len(max_seq_len_);
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeaderField() const {
@@ -46,7 +46,7 @@ size_t BlobDesc::ByteSizeOfDataIdField() const {
 
 size_t BlobDesc::ByteSizeOfSeqLenField() const {
   if (has_seq_len_) {
-    return shape_.At(0) * sizeof(SeqLenType);
+    return shape_.At(0) * sizeof(int32_t);
   } else {
     return 0;
   }
@@ -64,7 +64,7 @@ size_t BlobDesc::TotalByteSize() const {
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return shape_ == rhs.shape_ && data_type_ == rhs.data_type_
          && has_data_id_ == rhs.has_data_id_ && has_seq_len_ == rhs.has_seq_len_
-         && max_seq_size_ == rhs.max_seq_size_;
+         && max_seq_len_ == rhs.max_seq_len_;
 }
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
@@ -72,17 +72,17 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   HashSet<int> data_type_set;
   bool has_data_id = false;
   bool has_seq_len = false;
-  int32_t max_seq_size = -1;
+  int32_t max_seq_len = -1;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     total_byte_size += blob_desc->TotalByteSize();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     has_data_id = has_data_id || blob_desc->has_data_id();
     has_seq_len = has_seq_len || blob_desc->has_seq_len();
-    if (max_seq_size == -1) {
-      max_seq_size = blob_desc->max_seq_size();
+    if (max_seq_len == -1) {
+      max_seq_len = blob_desc->max_seq_len();
     } else {
-      CHECK_EQ(max_seq_size, 1);
-      CHECK_EQ(blob_desc->max_seq_size(), 1);
+      CHECK_EQ(max_seq_len, 1);
+      CHECK_EQ(blob_desc->max_seq_len(), 1);
     }
   }
   BlobDesc ret;
@@ -99,7 +99,7 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   }
   ret.set_has_data_id(false);
   ret.set_has_seq_len(false);
-  ret.set_max_seq_size(max_seq_size);
+  ret.set_max_seq_len(max_seq_len);
   return ret;
 }
 

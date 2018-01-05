@@ -8,9 +8,16 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 }
 
 Regst::Regst() {
-  piece_id_ = -1;
   model_version_id_ = -1;
   regst_desc_ = nullptr;
+}
+
+bool Regst::IsNexColOf(const Regst* other) const {
+  if (piece_id() == other->piece_id() && max_col_num() == other->max_col_num()
+      && col_id() == other->col_id() + 1) {
+    return true;
+  }
+  return false;
 }
 
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {

@@ -25,7 +25,10 @@ class BlobHeader final {
   int64_t max_col_num() const { return max_col_num_; }
 
   void set_piece_id(int64_t val) { piece_id_ = val; }
-  void set_col_id(int64_t val) { col_id_ = val; }
+  void set_col_id(int64_t val) {
+    CHECK_LT(val, max_col_num_);
+    col_id_ = val;
+  }
   void set_max_col_num(int64_t val) { max_col_num_ = val; }
 
   bool IsLast() const;
@@ -46,17 +49,20 @@ class Blob final {
   Blob(const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
   ~Blob() = default;
 
+  const BlobHeader* blob_header() const { return blob_header_; }
+  BlobHeader* mut_blob_header() { return blob_header_; }
+
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
 
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
-  BlobDesc::SeqLenType seq_len(int32_t no) const;
-  BlobDesc::SeqLenType& mut_seq_len(int32_t no);
+  int32_t seq_len(int32_t no) const;
+  int32_t& mut_seq_len(int32_t no);
 
-  BlobDesc::SeqLenType seq_len() const { return seq_len(0); }
-  BlobDesc::SeqLenType& mut_seq_len() { return mut_seq_len(0); }
+  int32_t seq_len() const { return seq_len(0); }
+  int32_t& mut_seq_len() { return mut_seq_len(0); }
 
   const void* memory_ptr() const {
     return reinterpret_cast<void*>(blob_header_);
@@ -104,12 +110,9 @@ class Blob final {
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
-  void CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopySeqLenFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
-
-  const BlobHeader& blob_header() const { return *blob_header_; }
-  void set_blob_header(const BlobHeader& val) { *blob_header_ = val; }
 
  private:
   template<typename T>
@@ -123,7 +126,7 @@ class Blob final {
 
   BlobHeader* blob_header_;
   char* data_id_ptr_;
-  BlobDesc::SeqLenType* seq_len_ptr_;
+  int32_t* seq_len_ptr_;
   void* dptr_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;

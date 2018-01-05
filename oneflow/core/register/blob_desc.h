@@ -10,14 +10,12 @@ namespace oneflow {
 
 class BlobDesc final {
  public:
-  typedef int32_t SeqLenType;
-
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
   ~BlobDesc() = default;
 
   BlobDesc();
   BlobDesc(Shape shape, DataType data_type, bool has_data_id, bool has_seq_len,
-           int32_t max_seq_size);
+           int32_t max_seq_len);
   BlobDesc(Shape shape) : BlobDesc() { shape_ = shape; }
   BlobDesc(const BlobDescProto& proto);
 
@@ -33,8 +31,8 @@ class BlobDesc final {
   bool has_seq_len() const { return has_seq_len_; }
   void set_has_seq_len(bool val) { has_seq_len_ = val; }
 
-  int32_t max_seq_size() const { return max_seq_size_; }
-  void set_max_seq_size(int32_t val) { max_seq_size_ = val; }
+  int32_t max_seq_len() const { return max_seq_len_; }
+  void set_max_seq_len(int32_t val) { max_seq_len_ = val; }
 
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeaderField() const;
@@ -49,7 +47,7 @@ class BlobDesc final {
   DataType data_type_;
   bool has_data_id_;
   bool has_seq_len_;
-  int32_t max_seq_size_;
+  int32_t max_seq_len_;
 };
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);

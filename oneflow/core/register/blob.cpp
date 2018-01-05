@@ -30,7 +30,7 @@ Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
     data_id_ptr_ = nullptr;
   }
   if (blob_desc->has_seq_len()) {
-    seq_len_ptr_ = reinterpret_cast<BlobDesc::SeqLenType*>(
+    seq_len_ptr_ = reinterpret_cast<int32_t*>(
         mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
         + blob_desc->ByteSizeOfDataIdField());
   } else {
@@ -48,12 +48,12 @@ const char* Blob::data_id(int32_t no) const {
   return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();
 }
 
-BlobDesc::SeqLenType Blob::seq_len(int32_t no) const {
+int32_t Blob::seq_len(int32_t no) const {
   CHECK_NOTNULL(seq_len_ptr_);
   return *(seq_len_ptr_ + no);
 }
 
-BlobDesc::SeqLenType& Blob::mut_seq_len(int32_t no) {
+int32_t& Blob::mut_seq_len(int32_t no) {
   CHECK_NOTNULL(seq_len_ptr_);
   return *(seq_len_ptr_ + no);
 }
@@ -81,7 +81,7 @@ void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 template<DeviceType device_type>
-void Blob::CopyOffSetFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+void Blob::CopySeqLenFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
   Memcpy<device_type>(device_ctx, static_cast<void*>(seq_len_ptr_),
                       static_cast<void*>(rhs->seq_len_ptr_),
@@ -99,7 +99,7 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   template void Blob::CopyBlobHeaderFrom<dev_t>(DeviceCtx*, const Blob*);  \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
-  template void Blob::CopyOffSetFrom<dev_t>(DeviceCtx*, const Blob*);      \
+  template void Blob::CopySeqLenFrom<dev_t>(DeviceCtx*, const Blob*);      \
   template void Blob::CopyFrom<dev_t>(DeviceCtx*, const Blob*);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BLOB_FUNC, DEVICE_TYPE_SEQ);
