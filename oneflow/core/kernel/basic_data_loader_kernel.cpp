@@ -6,10 +6,6 @@
 
 namespace oneflow {
 
-static int32_t next_col = 0;
-static int32_t max_length = 0;
-static int64_t piece_id = -1; 
-
 template<typename T>
 void BasicDataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
@@ -23,11 +19,16 @@ void BasicDataLoaderKernel<T>::Forward(
   if (next_col >= max_length) {
     piece_id++;
     next_col = 0;
-    ReadOnePieceToBuffer(out_blob);
+    max_length = 0;
+    ReadOnePieceToBuffer(buffer_blob);
   }
 
   CopyDataToOutBlob(buffer_blob, out_blob);
   next_col++;
+  if(is_last_piece && next_col >= max_length){
+    CHECK(kernel_ctx.other);
+    *(static_cast<bool*>(kernel_ctx.other)) = true;
+  }
 }
 
 template<typename T>
@@ -41,11 +42,15 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
   } else {
     in_stream_.reset(new NormalPersistentInStream(GlobalFS(), file_path));
   }
+  next_col = 0;
+  max_length = 0;
+  piece_id = -1;
+  is_last_piece = false;
 }
 
 template<typename T>
-void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(Blob* buffer_blob) {
-  int64_t piece_size = out_blob->shape().At(0);
+void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(Blob* buffer_blob) const {
+  int64_t piece_size = buffer_blob->shape().At(0);
   int64_t max_seq_len = op_conf().basic_data_loader_conf().max_seq_len();
   T* buffer_dptr = buffer_blob->mut_dptr<T>();
 
@@ -79,8 +84,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(Blob* buffer_blob) {
       max_length = max_length > seq_len ? max_length : seq_len;
       CHECK_EQ(*(line_ptr - 1), '\0');
     } else {
-      CHECK(kernel_ctx.other);
-      *(static_cast<bool*>(kernel_ctx.other)) = true;
+      is_last_piece = true;
       CHECK_EQ(read_status, -1);
       if (buffer_blob->has_data_id()) {
         memset(buffer_blob->mut_data_id(i), '\0',
@@ -105,8 +109,8 @@ void BasicDataLoaderKernel<T>::CopyDataToOutBlob(Blob* buffer_blob,
   FOR_RANGE(int64_t, i, 0, piece_size) {
     // blob_header
     out_blob->mut_blob_header()->set_piece_id(piece_id);
-    out_blob->mut_blob_header()->set_col_id(next_col);
     out_blob->mut_blob_header()->set_max_col_num(max_length);
+    out_blob->mut_blob_header()->set_col_id(next_col);
     // data_id
     if (out_blob->has_data_id()) {
       memcpy(out_blob->mut_data_id(i), buffer_blob->data_id(i),

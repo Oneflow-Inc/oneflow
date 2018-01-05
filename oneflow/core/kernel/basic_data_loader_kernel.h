@@ -23,6 +23,11 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
   void CopyDataToOutBlob(Blob* buffer_blob, Blob* out_blob) const;
 
   std::unique_ptr<PersistentInStream> in_stream_;
+
+  mutable int32_t next_col;
+  mutable int32_t max_length;
+  mutable int64_t piece_id;
+  mutable bool is_last_piece;
 };
 
 }  // namespace oneflow
