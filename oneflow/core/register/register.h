@@ -29,7 +29,7 @@ class Regst final {
     return lbn2blob_.begin()->second->blob_header()->max_col_num();
   }
   bool IsLastCol() const { return col_id() == max_col_num() - 1; }
-  bool IsNexColOf(const Regst* other) const;
+  bool IsNextColOf(const Regst* other) const;
 
   // Setters
   void set_piece_id(int64_t val) {

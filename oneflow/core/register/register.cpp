@@ -12,7 +12,7 @@ Regst::Regst() {
   regst_desc_ = nullptr;
 }
 
-bool Regst::IsNexColOf(const Regst* other) const {
+bool Regst::IsNextColOf(const Regst* other) const {
   if (piece_id() == other->piece_id() && max_col_num() == other->max_col_num()
       && col_id() == other->col_id() + 1) {
     return true;
