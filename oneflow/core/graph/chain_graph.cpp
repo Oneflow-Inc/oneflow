@@ -414,7 +414,9 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
     auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
     md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
-    md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+    md_diff_acc_pr_desc->set_policy(kInvalidParallel);
+    md_diff_acc_chain->mut_parallel_desc().reset(md_diff_acc_pr_desc);
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
     Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
   });
