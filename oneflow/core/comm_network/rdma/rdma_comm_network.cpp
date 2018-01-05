@@ -17,15 +17,12 @@ void RdmaCommNet::Init() {
   CommNet::Singleton()->set_comm_network_ptr(new RdmaCommNet());
 }
 
-void RdmaCommNet::EstablishNetwork() {
-  endpoint_manager_->InitRdma();
-  endpoint_manager_->Start();
-}
-
 RdmaCommNet::RdmaCommNet() {
   mems_.clear();
   unregister_mems_cnt_ = 0;
   endpoint_manager_ = new EndpointManager();
+  endpoint_manager_->InitRdma();
+  endpoint_manager_->Start();
 }
 
 RdmaCommNet::~RdmaCommNet() {

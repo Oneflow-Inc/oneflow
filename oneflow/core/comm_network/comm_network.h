@@ -13,7 +13,6 @@ class CommNet {
   virtual ~CommNet() = default;
 
   static CommNet* Singleton() { return comm_network_ptr_; }
-  virtual void EstablishNetwork() = 0;
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"

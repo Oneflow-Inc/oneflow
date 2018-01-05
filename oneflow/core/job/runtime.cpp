@@ -28,7 +28,6 @@ void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
 
 Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
   NewAllSingleton(plan, is_experiment_phase);
-  CommNet::Singleton()->EstablishNetwork();
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;

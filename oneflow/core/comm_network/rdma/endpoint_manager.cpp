@@ -38,7 +38,7 @@ EndpointManager::~EndpointManager() {
   for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
        ++it) {
     delete it->first;
-    CommNet::Singleton()->UnRegisterMemory(it->second);
+    delete it->second;
   }
   for (auto it = connection_pool_.begin(); it != connection_pool_.end(); ++it) {
     delete it->second;
@@ -76,8 +76,7 @@ void EndpointManager::InitRdma() {
               << conn->mut_peer_machine_conn_info().iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg();
-      const RdmaMem* rdma_mem = static_cast<const RdmaMem*>(
-          CommNet::Singleton()->RegisterMemory(actor_msg, sizeof(ActorMsg)));
+      const RdmaMem* rdma_mem = NewRdmaMem(actor_msg, sizeof(ActorMsg));
       recv_msg2conn_ptr_.emplace(actor_msg, conn);
       recv_msg2rdma_mem_.emplace(actor_msg, rdma_mem);
       conn->PostRecvRequest(actor_msg, rdma_mem);
