@@ -18,6 +18,10 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
 
+  void ReadOnePieceToBuffer(Blob* buffer_blob) const;
+
+  void CopyDataToOutBlob(Blob* buffer_blob, Blob* out_blob) const;
+
   std::unique_ptr<PersistentInStream> in_stream_;
 };
 
