@@ -12,8 +12,8 @@ message TrainConf {
   optional FillConf default_fill_conf = 5;
   optional int32 piece_num_of_print_loss = 6 [default = 100];
   required int32 num_of_pieces_in_batch = 7;
-  required float l1 = 8 [default = 0];
-  required float l2 = 9 [default = 0];
+  optional float l1 = 8 [default = 0];
+  optional float l2 = 9 [default = 0];
 
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;

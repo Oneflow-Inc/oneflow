@@ -11,7 +11,8 @@ __global__ void DiffAveragingRegularizationGpu(const int64_t n, T l1, T l2,
                                                T* y) {
   T zero = static_cast<T>(0);
   CUDA_1D_KERNEL_LOOP(i, n) {
-    y[i] = y[i] / batch_size + l1 * ((x[i] >= zero) - (x[i] <= zero)) + x[i] * l2;
+    y[i] =
+        y[i] / batch_size + l1 * ((x[i] >= zero) - (x[i] <= zero)) + x[i] * l2;
   }
 }
 
