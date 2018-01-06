@@ -35,6 +35,11 @@ EndpointManager::EndpointManager() {
 }
 
 EndpointManager::~EndpointManager() {
+  for (auto it = send_msg2rdma_mem_.begin(); it != send_msg2rdma_mem_.end();
+       ++it) {
+    delete it->first;
+    delete it->second;
+  }
   for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
        ++it) {
     delete it->first;
@@ -43,7 +48,6 @@ EndpointManager::~EndpointManager() {
   for (auto it = connection_pool_.begin(); it != connection_pool_.end(); ++it) {
     delete it->second;
   }
-  connection_pool_.clear();
   if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
   if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
   if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
@@ -150,11 +154,10 @@ void EndpointManager::SendActorMsg(int64_t dst_machine_id,
   auto iter = connection_pool_.find(dst_machine_id);
   CHECK(iter != connection_pool_.end());
   Connection* conn = iter->second;
-  ActorMsg* msg_ptr = new ActorMsg;
+  std::tuple<ActorMsg*, RdmaMem*> allocate_ret = AllocateSendMsg();
+  ActorMsg* msg_ptr = std::get<0>(allocate_ret);
   *msg_ptr = msg;
-  const void* rdma_mem =
-      CommNet::Singleton()->RegisterMemory(msg_ptr, sizeof(ActorMsg));
-  conn->PostSendRequest(msg_ptr, static_cast<const RdmaMem*>(rdma_mem));
+  conn->PostSendRequest(msg_ptr, std::get<1>(allocate_ret));
 }
 
 void EndpointManager::Start() {
@@ -187,9 +190,7 @@ void EndpointManager::PollSendQueue() {
   }
   switch (wc.opcode) {
     case IBV_WC_SEND: {
-      CommNet::Singleton()->UnRegisterMemory(
-          reinterpret_cast<const void*>(wc.wr_id));
-      delete reinterpret_cast<ActorMsg*>(wc.wr_id);
+      ReleaseSendMsg(reinterpret_cast<ActorMsg*>(wc.wr_id));
       return;
     }
     case IBV_WC_RDMA_READ: {
@@ -217,6 +218,26 @@ void EndpointManager::PollRecvQueue() {
   Connection* conn = recv_msg2conn_ptr_.at(msg);
   auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
   conn->PostRecvRequest(msg, msg2mem_it->second);
+}
+
+std::tuple<ActorMsg*, RdmaMem*> EndpointManager::AllocateSendMsg() {
+  std::unique_lock<std::mutex> lck(send_msg_pool_mutex_);
+  if (send_msg_pool_.empty()) {
+    ActorMsg* msg = new ActorMsg;
+    RdmaMem* mem = NewRdmaMem(msg, sizeof(ActorMsg));
+    send_msg2rdma_mem_.emplace(msg, mem);
+    send_msg_pool_.push(msg);
+  }
+  ActorMsg* ret_msg = send_msg_pool_.front();
+  send_msg_pool_.pop();
+  auto send_msg2rdma_mem_it = send_msg2rdma_mem_.find(ret_msg);
+  CHECK(send_msg2rdma_mem_it != send_msg2rdma_mem_.end());
+  return std::make_tuple(ret_msg, send_msg2rdma_mem_it->second);
+}
+
+void EndpointManager::ReleaseSendMsg(ActorMsg* msg) {
+  std::unique_lock<std::mutex> lck(send_msg_pool_mutex_);
+  send_msg_pool_.push(msg);
 }
 
 }  // namespace oneflow
