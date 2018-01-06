@@ -12,14 +12,6 @@ Regst::Regst() {
   regst_desc_ = nullptr;
 }
 
-bool Regst::IsNextColOf(const Regst* other) const {
-  if (piece_id() == other->piece_id() && max_col_num() == other->max_col_num()
-      && col_id() == other->col_id() + 1) {
-    return true;
-  }
-  return false;
-}
-
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
   if (it != lbn2blob_.end()) {

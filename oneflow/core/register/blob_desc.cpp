@@ -71,13 +71,19 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   int64_t total_byte_size = 0;
   HashSet<int> data_type_set;
   bool has_data_id = false;
-  bool has_seq_len = false;
+  int32_t seq_len_flag = 0;
   int32_t max_seq_len = -1;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     total_byte_size += blob_desc->TotalByteSize();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     has_data_id = has_data_id || blob_desc->has_data_id();
-    has_seq_len = has_seq_len || blob_desc->has_seq_len();
+    if (seq_len_flag == 0) {
+      seq_len_flag = blob_desc->has_seq_len() ? 1 : -1;
+    } else if (seq_len_flag == 1) {
+      CHECK(blob_desc->has_seq_len());
+    } else {
+      CHECK(!(blob_desc->has_seq_len()));
+    }
     if (max_seq_len == -1) {
       max_seq_len = blob_desc->max_seq_len();
     } else {
@@ -86,8 +92,7 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
     }
   }
   BlobDesc ret;
-  if (has_data_id == false && has_seq_len == false
-      && data_type_set.size() == 1) {
+  if (has_data_id == false && seq_len_flag == -1 && data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(total_byte_size % size_of_one_elem, 0);

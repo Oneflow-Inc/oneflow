@@ -7,38 +7,12 @@
 
 namespace oneflow {
 
-class BlobHeader final {
- public:
-  BlobHeader() : piece_id_(0), col_id_(0), max_col_num_(0) {}
-  ~BlobHeader() = default;
-  BlobHeader(const BlobHeader&) = default;
-  BlobHeader& operator=(const BlobHeader&) = default;
+struct BlobHeader {
+  BlobHeader() : piece_id(-1), col_id(-1), max_col_num(-1) {}
 
-  bool operator==(const BlobHeader& other) const {
-    return (piece_id_ == other.piece_id_) && (col_id_ == other.col_id_)
-           && (max_col_num_ == other.max_col_num_);
-  }
-  bool operator!=(const BlobHeader& other) const { return !(*this == other); }
-
-  int64_t piece_id() const { return piece_id_; }
-  int64_t col_id() const { return col_id_; }
-  int64_t max_col_num() const { return max_col_num_; }
-
-  void set_piece_id(int64_t val) { piece_id_ = val; }
-  void set_col_id(int64_t val) {
-    CHECK_LT(val, max_col_num_);
-    col_id_ = val;
-  }
-  void set_max_col_num(int64_t val) { max_col_num_ = val; }
-
-  bool IsLast() const;
-  bool IsLastCol() const { return col_id_ == max_col_num_ - 1; }
-  bool IsNextColOf(const BlobHeader& pre) const;
-
- private:
-  int64_t piece_id_;
-  int64_t col_id_;
-  int64_t max_col_num_;
+  int64_t piece_id;
+  int64_t col_id;
+  int64_t max_col_num;
 };
 
 class Blob final {
@@ -49,9 +23,6 @@ class Blob final {
   Blob(const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
   ~Blob() = default;
 
-  const BlobHeader* blob_header() const { return blob_header_; }
-  BlobHeader* mut_blob_header() { return blob_header_; }
-
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
 
@@ -59,10 +30,10 @@ class Blob final {
   char* mut_data_id() { return mut_data_id(0); }
 
   int32_t seq_len(int32_t no) const;
-  int32_t& mut_seq_len(int32_t no);
+  int32_t* mut_seq_len(int32_t no);
 
   int32_t seq_len() const { return seq_len(0); }
-  int32_t& mut_seq_len() { return mut_seq_len(0); }
+  int32_t* mut_seq_len() { return mut_seq_len(0); }
 
   const void* memory_ptr() const {
     return reinterpret_cast<void*>(blob_header_);
@@ -113,6 +84,31 @@ class Blob final {
   void CopySeqLenFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+
+  int64_t piece_id() const { return blob_header_->piece_id; }
+  int64_t col_id() const { return blob_header_->col_id; }
+  int64_t max_col_num() const { return blob_header_->max_col_num; }
+
+  void set_piece_id(int64_t val) { blob_header_->piece_id = val; }
+  void set_col_id(int64_t val) {
+    CHECK_LT(val, blob_header_->max_col_num);
+    blob_header_->col_id = val;
+  }
+  void set_max_col_num(int64_t val) { blob_header_->max_col_num = val; }
+
+  bool HasSamePieceStatus(const Blob& other) const {
+    return piece_id() == other.piece_id() && col_id() == other.col_id()
+           && max_col_num() == other.max_col_num();
+  }
+  bool IsLastCol() const {
+    CHECK_NE(-1, piece_id());
+    return col_id() == max_col_num() - 1;
+  }
+  bool IsNextColOf(const Blob& pre) const {
+    CHECK_NE(-1, piece_id());
+    return piece_id() == pre.piece_id() && max_col_num() == pre.max_col_num()
+           && col_id() == pre.col_id() + 1;
+  }
 
  private:
   template<typename T>

@@ -5,22 +5,6 @@
 
 namespace oneflow {
 
-bool BlobHeader::IsLast() const {
-  if (piece_id_ == RuntimeCtx::Singleton()->total_piece_num() - 1
-      && col_id_ == max_col_num_ - 1) {
-    return true;
-  }
-  return false;
-}
-
-bool BlobHeader::IsNextColOf(const BlobHeader& pre) const {
-  if (piece_id_ == pre.piece_id_ && max_col_num_ == pre.max_col_num_
-      && col_id_ == pre.col_id_ + 1) {
-    return true;
-  }
-  return false;
-}
-
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
   blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
@@ -53,9 +37,9 @@ int32_t Blob::seq_len(int32_t no) const {
   return *(seq_len_ptr_ + no);
 }
 
-int32_t& Blob::mut_seq_len(int32_t no) {
+int32_t* Blob::mut_seq_len(int32_t no) {
   CHECK_NOTNULL(seq_len_ptr_);
-  return *(seq_len_ptr_ + no);
+  return (seq_len_ptr_ + no);
 }
 
 template<DeviceType device_type>
