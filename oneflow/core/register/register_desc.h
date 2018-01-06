@@ -43,7 +43,7 @@ class RegstDesc final {
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
   // util
-  int32_t MaxSeqSize() const { return packed_blob_desc_->max_seq_size(); }
+  int32_t MaxSeqLen() const { return packed_blob_desc_->max_seq_len(); }
   void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
@@ -61,6 +61,12 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
 };
+
+inline void UpdtMinRegisterNumByMaxSequenceSize(RegstDesc* regst_desc) {
+  if (regst_desc->min_register_num() < regst_desc->MaxSeqLen()) {
+    regst_desc->set_min_register_num(regst_desc->MaxSeqLen());
+  }
+}
 
 }  // namespace oneflow
 

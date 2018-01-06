@@ -14,18 +14,24 @@ enum DeviceType {
 
 message Resource {
   repeated Machine machine = 1;
-  required int32 device_num_per_machine = 2;
-  required DeviceType device_type = 3;
+  required int32 cpu_device_num = 2;
+  required int32 gpu_device_num = 3;
   optional int32 persistence_worker_num = 4 [default = 4];
   optional int32 boxing_worker_num = 5 [default = 4];
   optional int32 comm_net_worker_num = 6 [default = 4];
 }
 
-// If one machine named "machine_xxx" and device_num_per_machine = 4
-// then we have 4 devices: 
-// "machine_xxx:0"
-// "machine_xxx:1"
-// "machine_xxx:2"
-// "machine_xxx:3"
+// If one machine named "machine_xxx" and cpu_device_num_per_machine = 4, gpu_device_num_per_machine = 2
+// then we have follow device_names:
+// "machine_xxx:cpu:0"
+// "machine_xxx:cpu:1"
+// "machine_xxx:cpu:2"
+// "machine_xxx:cpu:3"
+// "machine_xxx:gpu:0"
+// "machine_xxx:gpu:1"
+// "machine_xxx:persistence"
 // 
-// "machine_xxx:0-2" means {"machine_xxx:0", "machine_xxx:1", "machine_xxx:2"}
+// "machine_xxx:persistence" is special device_name for persistence_op such as "data_loader", "print"
+// "data_loader" placed with "machine_xxx:persistence:10" means: load 10-part on "machine_xxx:persistence"
+
+// "machine_xxx:xpu:0-2" means {"machine_xxx:xpu:0", "machine_xxx:xpu:1", "machine_xxx:xpu:2"}

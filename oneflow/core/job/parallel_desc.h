@@ -21,8 +21,8 @@ class ParallelDesc {
   const std::vector<int64_t>& sorted_machine_ids() const {
     return sorted_machine_ids_;
   }
-  const std::vector<int64_t>& sorted_dev_phy_ids(int64_t machine_id) const {
-    return machine_id2sorted_dev_phy_ids_.at(machine_id);
+  const std::vector<int64_t>& sorted_thrd_ids(int64_t machine_id) const {
+    return machine_id2sorted_thrd_ids_.at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
 
@@ -44,7 +44,7 @@ class ParallelDesc {
 
   ParallelPolicy policy_;
   std::vector<int64_t> sorted_machine_ids_;
-  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
+  HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_thrd_ids_;
   int64_t parallel_num_;
 };
 
