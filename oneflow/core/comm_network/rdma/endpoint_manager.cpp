@@ -79,8 +79,8 @@ void EndpointManager::InitRdma() {
               << conn->mut_peer_machine_conn_info().snp() << " "
               << conn->mut_peer_machine_conn_info().iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
-      ActorMsg* actor_msg = new ActorMsg();
-      const RdmaMem* rdma_mem = NewRdmaMem(actor_msg, sizeof(ActorMsg));
+      ActorMsg* actor_msg = new ActorMsg;
+      RdmaMem* rdma_mem = NewRdmaMem(actor_msg, sizeof(ActorMsg));
       recv_msg2conn_ptr_.emplace(actor_msg, conn);
       recv_msg2rdma_mem_.emplace(actor_msg, rdma_mem);
       conn->PostRecvRequest(actor_msg, rdma_mem);
@@ -211,7 +211,7 @@ void EndpointManager::PollRecvQueue() {
     LOG(INFO) << "PollRecv wc.status != WC_SUCCESS " << wc.status;
     return;
   }
-  const ActorMsg* msg = reinterpret_cast<const ActorMsg*>(wc.wr_id);
+  ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
   CHECK(recv_msg2conn_ptr_.find(msg) != recv_msg2conn_ptr_.end());

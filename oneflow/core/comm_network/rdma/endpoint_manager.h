@@ -39,8 +39,8 @@ class EndpointManager {
   void ReleaseSendMsg(ActorMsg* msg);
 
   enum { kPrePostRecvNum = 15 };  // TODO
-  HashMap<const ActorMsg*, Connection*> recv_msg2conn_ptr_;
-  HashMap<const ActorMsg*, const RdmaMem*> recv_msg2rdma_mem_;
+  HashMap<ActorMsg*, Connection*> recv_msg2conn_ptr_;
+  HashMap<ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
 
   std::mutex send_msg_pool_mutex_;
