@@ -2,10 +2,8 @@
 
 namespace oneflow {
 
-void RMSPropModelUpdateOp::InitFromOpConf() {
-  EnrollInputBn("model_diff_acc", false);
+void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("mean_square");
-  EnrollOutputBn("model", false);
 }
 
 const PbMessage& RMSPropModelUpdateOp::GetSpecialConf() const {

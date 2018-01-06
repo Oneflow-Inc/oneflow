@@ -24,31 +24,14 @@ class EpollCommNet final : public CommNet {
   void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
-  void* NewActorReadId();
-  void DeleteActorReadId(void* actor_read_id);
   void* Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
              const void* dst_token) override;
-  void AddReadCallBack(void* actor_read_id, void* read_id,
-                       std::function<void()> callback) override;
-  void AddReadCallBackDone(void* actor_read_id, void* read_id) override;
-  void ReadDone(void* read_done_id);
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:
-  struct ReadContext {
-    CallBackList cbl;
-    std::mutex done_cnt_mtx;
-    int8_t done_cnt;
-  };
-  struct ActorReadContext {
-    std::mutex read_ctx_list_mtx;
-    std::list<ReadContext*> read_ctx_list;
-  };
   EpollCommNet();
-  int8_t IncreaseDoneCnt(ReadContext*);
-  void FinishOneReadContext(ActorReadContext*, ReadContext*);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
 

@@ -40,4 +40,5 @@ message TaskProto {
   optional uint32 random_seed = 1001; // MdUpdtCompTask
   optional int64 related_save_task_id = 1002 [default = -1];
   optional int64 related_fw_task_id = 1003 [default = -1];
+  optional int64 chain_id = 1004 [default = -1];
 };
