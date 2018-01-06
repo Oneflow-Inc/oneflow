@@ -19,11 +19,11 @@ void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
 }
 
-void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
+void Connection::PostSendRequest(ActorMsg* msg, RdmaMem* msg_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
-  wr.sg_list = const_cast<RdmaMem*>(msg_mem)->ibv_sge_ptr();
+  wr.sg_list = msg_mem->ibv_sge_ptr();
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
   wr.send_flags = IBV_SEND_SIGNALED;
@@ -31,11 +31,11 @@ void Connection::PostSendRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
   CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
-void Connection::PostRecvRequest(const ActorMsg* msg, const RdmaMem* msg_mem) {
+void Connection::PostRecvRequest(ActorMsg* msg, RdmaMem* msg_mem) {
   ibv_recv_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
-  wr.sg_list = const_cast<RdmaMem*>(msg_mem)->ibv_sge_ptr();
+  wr.sg_list = msg_mem->ibv_sge_ptr();
   wr.num_sge = 1;
 
   CHECK_EQ(ibv_post_recv(qp_ptr_, &wr, &bad_wr), 0);

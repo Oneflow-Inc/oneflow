@@ -11,7 +11,6 @@
 #include <arpa/inet.h>
 #include "oneflow/core/comm_network/rdma/connection.h"
 #include "oneflow/core/comm_network/rdma/rdma_memory.h"
-#include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
 
 namespace oneflow {
 
@@ -36,11 +35,17 @@ class EndpointManager {
   void PollLoop();
   void PollSendQueue();
   void PollRecvQueue();
+  std::tuple<ActorMsg*, RdmaMem*> AllocateSendMsg();
+  void ReleaseSendMsg(ActorMsg* msg);
 
   enum { kPrePostRecvNum = 15 };  // TODO
-  HashMap<const ActorMsg*, Connection*> recv_msg2conn_ptr_;
-  HashMap<const ActorMsg*, const RdmaMem*> recv_msg2rdma_mem_;
+  HashMap<ActorMsg*, Connection*> recv_msg2conn_ptr_;
+  HashMap<ActorMsg*, RdmaMem*> recv_msg2rdma_mem_;
   HashMap<int64_t, Connection*> connection_pool_;
+
+  std::mutex send_msg_pool_mutex_;
+  std::queue<ActorMsg*> send_msg_pool_;
+  HashMap<ActorMsg*, RdmaMem*> send_msg2rdma_mem_;
 
   std::thread poll_thread_;
   bool poll_state_;

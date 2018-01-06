@@ -9,8 +9,6 @@
 
 namespace oneflow {
 
-class EndpointManager;
-
 class RdmaCommNet final : public CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RdmaCommNet);
@@ -21,36 +19,17 @@ class RdmaCommNet final : public CommNet {
   }
 
   static void Init();
-  void EstablishNetwork();
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
-  void* NewActorReadId();
-  void DeleteActorReadId(void* actor_read_id);
   void* Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
              const void* dst_token) override;
-  void AddReadCallBack(void* actor_read_id, void* read_id,
-                       std::function<void()> callback) override;
-  void AddReadCallBackDone(void* actor_read_id, void* read_id) override;
-  void ReadDone(void* read_done_id);
-
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
-  struct ReadContext {
-    std::list<std::function<void()>> cbl;
-    std::mutex done_cnt_mtx;
-    int8_t done_cnt;
-  };
-  struct ActorReadContext {
-    std::mutex read_ctx_list_mtx;
-    std::list<ReadContext*> read_ctx_list;
-  };
   RdmaCommNet();
-  int8_t IncreaseDoneCnt(ReadContext*);
-  void FinishOneReadContext(ActorReadContext*, ReadContext*);
 
   std::mutex mem_mutex_;
   std::list<RdmaMem*> mems_;
