@@ -10,7 +10,7 @@ namespace oneflow {
 class CudnnConvolutionOpUtil {
  public:
   CudnnConvolutionOpUtil();
-  ~CudnnConvolutionOpUtil() = default;
+  ~CudnnConvolutionOpUtil();
 
   void InitTensorDesc(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

@@ -15,6 +15,16 @@ CudnnConvolutionOpUtil::CudnnConvolutionOpUtil() {
   CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc_));
 }
 
+CudnnConvolutionOpUtil::~CudnnConvolutionOpUtil() {
+  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
+  CudaCheck(cudnnDestroyConvolutionDescriptor(conv_desc_));
+  CudaCheck(cudnnDestroyFilterDescriptor(filter_desc_));
+
+  CudaCheck(cudaStreamDestroy(cuda_stream_));
+  CudaCheck(cudnnDestroy(cudnn_handle_));
+}
+
 void CudnnConvolutionOpUtil::InitTensorDesc(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ConvolutionOpConf& conv_conf) {
