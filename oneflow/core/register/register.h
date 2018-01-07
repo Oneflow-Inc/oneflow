@@ -19,9 +19,10 @@ class Regst final {
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbn(const std::string& lbn);
   Blob* packed_blob() { return packed_blob_.get(); }
+
   int64_t piece_id() const { return first_blob()->piece_id(); }
   int64_t col_id() const { return first_blob()->col_id(); }
-  int64_t max_col_num() const { return first_blob()->max_col_num(); }
+  int64_t col_num() const { return first_blob()->max_col_num(); }
   bool IsLastCol() const { return first_blob()->IsLastCol(); }
   bool IsNextColOf(const Regst* other) const {
     return first_blob()->IsNextColOf(*(other->first_blob()));
