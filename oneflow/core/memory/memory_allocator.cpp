@@ -6,7 +6,7 @@ namespace oneflow {
 
 std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
     MemoryCase mem_case, std::size_t size) {
-  const int memset_val = 255;
+  const int memset_val = 0;
   char* dptr = nullptr;
   const void* comm_net_token = nullptr;
   if (mem_case.has_host_pageable_mem()) {

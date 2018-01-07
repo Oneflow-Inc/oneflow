@@ -32,7 +32,7 @@ void Kernel::InitModelBlobs(
 void Kernel::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
+  CHECK_EQ(kernel_conf().model_tmp_bns().size(), 0);
 }
 
 void Kernel::Launch(
@@ -52,13 +52,14 @@ const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
 void Kernel::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
+  CHECK_EQ(kernel_conf().model_bns().size(), 0);
 }
+
 void Kernel::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNEXPECTED_RUN();
+  CHECK_EQ(kernel_conf().model_bns().size(), 0);
 }
 
 void Kernel::Forward(
@@ -143,7 +144,9 @@ std::unique_ptr<const Kernel> ConstructKernel(
     DeviceType device_type, const ParallelContext* parallel_ctx,
     const KernelConf& conf) {
   OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
-  Kernel* rptr = GetCreatorsMap().at(opcase)(device_type, conf);
+  auto it = GetCreatorsMap().find(opcase);
+  CHECK(it != GetCreatorsMap().end()) << opcase;
+  Kernel* rptr = it->second(device_type, conf);
   rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }

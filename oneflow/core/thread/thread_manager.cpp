@@ -10,7 +10,7 @@ ThreadMgr::~ThreadMgr() {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     threads_[i]->GetMsgChannelPtr()->Send(msg);
     delete threads_[i];
-    LOG(INFO) << "device thread " << i << " finish";
+    LOG(INFO) << "actor thread " << i << " finish";
   }
 }
 
@@ -19,13 +19,13 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
 ThreadMgr::ThreadMgr() {
   const JobDesc* job_desc = JobDesc::Singleton();
   int64_t thrd_id = 0;
-  // device
-  FOR_RANGE(int64_t, dev_id, 0, job_desc->resource().device_num_per_machine()) {
-    if (job_desc->resource().device_type() == kGPU) {
-      threads_.push_back(new GpuThread(thrd_id++, dev_id));
-    } else {
-      threads_.push_back(new CpuThread(thrd_id++));
-    }
+  // cpu device
+  FOR_RANGE(int64_t, i, 0, job_desc->CpuDeviceNum()) {
+    threads_.push_back(new CpuThread(thrd_id++));
+  }
+  // gpu device
+  FOR_RANGE(int64_t, i, 0, job_desc->GpuDeviceNum()) {
+    threads_.push_back(new GpuThread(thrd_id++, i));
   }
   // persistence
   FOR_RANGE(int64_t, i, 0, job_desc->PersistenceWorkerNum()) {

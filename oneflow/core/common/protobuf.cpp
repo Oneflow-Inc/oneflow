@@ -15,14 +15,6 @@ using google::protobuf::io::OstreamOutputStream;
 using google::protobuf::io::ZeroCopyInputStream;
 using google::protobuf::io::ZeroCopyOutputStream;
 
-// string
-void ParseProtoFromString(const std::string& str, PbMessage* proto) {
-  CHECK(google::protobuf::TextFormat::ParseFromString(str, proto));
-}
-void PrintProtoToString(const PbMessage& proto, std::string* str) {
-  CHECK(google::protobuf::TextFormat::PrintToString(proto, str));
-}
-
 // txt file
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);

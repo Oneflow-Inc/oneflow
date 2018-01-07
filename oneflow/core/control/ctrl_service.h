@@ -22,12 +22,11 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(TryLock)       \
   OF_PP_MAKE_TUPLE_SEQ(NotifyDone)    \
   OF_PP_MAKE_TUPLE_SEQ(WaitUntilDone) \
-  OF_PP_MAKE_TUPLE_SEQ(PushPlan)      \
-  OF_PP_MAKE_TUPLE_SEQ(ClearPlan)     \
-  OF_PP_MAKE_TUPLE_SEQ(PullPlan)      \
-  OF_PP_MAKE_TUPLE_SEQ(PushPort)      \
-  OF_PP_MAKE_TUPLE_SEQ(ClearPort)     \
-  OF_PP_MAKE_TUPLE_SEQ(PullPort)
+  OF_PP_MAKE_TUPLE_SEQ(PushKV)        \
+  OF_PP_MAKE_TUPLE_SEQ(ClearKV)       \
+  OF_PP_MAKE_TUPLE_SEQ(PullKV)        \
+  OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
+  OF_PP_MAKE_TUPLE_SEQ(Clear)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,

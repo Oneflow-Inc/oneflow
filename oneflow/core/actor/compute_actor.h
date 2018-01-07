@@ -15,17 +15,10 @@ class CompActor : public Actor {
 
   virtual void VirtualCompActorInit(const TaskProto& task_proto) {}
 
-  const ParallelContext* parallel_ctx() const override {
-    return &parallel_ctx_;
-  }
-
  private:
   void VirtualActorInit(const TaskProto& task_proto) override {
-    parallel_ctx_ = task_proto.parallel_ctx();
     VirtualCompActorInit(task_proto);
   }
-
-  ParallelContext parallel_ctx_;
 };
 
 inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {

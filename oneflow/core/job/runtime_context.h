@@ -16,27 +16,19 @@ class RuntimeCtx final {
 
   OF_SINGLETON(RuntimeCtx);
 
-  int64_t this_machine_id() const { return this_machine_id_; }
-  bool IsThisMachineMaster() const { return this_machine_id_ == 0; }
-  std::string GetThisCtrlAddr() const { return GetCtrlAddr(this_machine_id_); }
-  std::string GetMasterCtrlAddr() const { return GetCtrlAddr(0); }
-  std::string GetCtrlAddr(int64_t machine_id) const;
+  int64_t total_piece_num() const { return total_piece_num_; }
+  bool is_experiment_phase() const { return is_experiment_phase_; }
 
-  BlockingCounter& mut_model_init_cnt() { return model_init_cnt_; }
-  BlockingCounter& mut_running_actor_cnt() { return running_actor_cnt_; }
-  BlockingCounter& mut_constructing_actor_cnt() {
-    return constructing_actor_cnt_;
-  }
+  void NewCounter(const std::string& name, int64_t val);
+  void DecreaseCounter(const std::string& name);
+  void WaitUntilCntEqualZero(const std::string& name);
 
  private:
-  RuntimeCtx(const std::string& name);
+  RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase);
 
-  int64_t this_machine_id_;
-
-  BlockingCounter model_init_cnt_;
-
-  BlockingCounter running_actor_cnt_;
-  BlockingCounter constructing_actor_cnt_;
+  int64_t total_piece_num_;
+  bool is_experiment_phase_;
+  HashMap<std::string, std::unique_ptr<BlockingCounter>> counters_;
 };
 
 }  // namespace oneflow

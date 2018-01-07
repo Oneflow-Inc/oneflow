@@ -1,10 +1,9 @@
 op {
   name: "feature"
-  data_loader_conf {
+  basic_data_loader_conf {
     out: "out"
     data_type: kFloat
     shape {
-      dim: 60000
       dim: 1
       dim: 28
       dim: 28
@@ -15,11 +14,10 @@ op {
 
 op {
   name: "label"
-  data_loader_conf {
+  basic_data_loader_conf {
     out: "out"
     data_type: kInt32
     shape {
-      dim: 60000
     }
     data_dir: "/mnist/label/"
   }

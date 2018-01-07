@@ -4,6 +4,10 @@ namespace oneflow {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
+  act_id_ = 0;
+  if (task_proto.has_parallel_ctx()) {
+    parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
+  }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
     ek.kernel =
@@ -22,8 +26,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
   msg_handler_ = nullptr;
-  InitDeviceCtx(thread_ctx);
-  // Status of Produced Registers
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
       writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
@@ -34,6 +36,15 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
   VirtualActorInit(task_proto);
+  InitDeviceCtx(thread_ctx);
+}
+
+int64_t Actor::machine_id() const {
+  return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+}
+
+int64_t Actor::thrd_id() const {
+  return IDMgr::Singleton()->ThrdId4ActorId(actor_id_);
 }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
@@ -45,13 +56,13 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
 void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx);
+      device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(cuda_handle_.cuda_stream(),
-                                          cuda_handle_.cublas_handle(),
-                                          cuda_handle_.cudnn_handle()));
+      device_ctx_.reset(new CudaDeviceCtx(
+          NewWorkStreamId(), cuda_handle_.cuda_stream(),
+          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
       break;
     }
     default: { UNEXPECTED_RUN(); }
@@ -82,7 +93,25 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady()) { Act(); }
+  while (IsReadReady() && IsWriteReady()) {
+    ActEvent* act_event = nullptr;
+    if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+      act_event = new ActEvent;
+      act_event->set_actor_id(actor_id_);
+      act_event->set_act_id(act_id_++);
+      act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      device_ctx_->AddCallBack(
+          [act_event]() { act_event->set_start_time(GetCurTime()); });
+    }
+    Act();
+    if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+      device_ctx_->AddCallBack([act_event]() {
+        act_event->set_stop_time(GetCurTime());
+        CtrlClient::Singleton()->PushActEvent(*act_event);
+        delete act_event;
+      });
+    }
+  }
 }
 
 bool Actor::IsWriteReady() {
@@ -123,12 +152,12 @@ void Actor::AsyncLaunchKernel(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess,
+    std::function<bool(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
-    RegstPreProcess(regst);
+    if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
     CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
@@ -147,17 +176,17 @@ void Actor::AsyncSendRegstMsgToConsumer(
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<void(Regst*)> RegstPreProcess) {
+    std::function<bool(Regst*)> RegstPreProcess) {
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
-  AsyncSendRegstMsgToConsumer([](Regst*) {}, IsAllowedActor);
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
 void Actor::AsyncSendRegstMsgToConsumer() {
-  AsyncSendRegstMsgToConsumer([](Regst*) {});
+  AsyncSendRegstMsgToConsumer([](Regst*) { return true; });
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
@@ -208,6 +237,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
   auto it = writeable_produced_regst_.find(regst_desc_id);
   if (it == writeable_produced_regst_.end()) { return nullptr; }
+  if (it->second.empty()) { return nullptr; }
   return it->second.front();
 }
 
@@ -218,6 +248,15 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 Regst* Actor::GetCurSoleWriteableRegst() {
   CHECK_EQ(writeable_produced_regst_.size(), 1);
   return writeable_produced_regst_.begin()->second.front();
+}
+
+int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
+  return IDMgr::Singleton()->GetReservedWorkStreamId(machine_id(), thrd_id(),
+                                                     reserved_id);
+}
+
+int64_t Actor::NewWorkStreamId() {
+  return IDMgr::Singleton()->NewWorkStreamId(machine_id(), thrd_id());
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -235,7 +274,9 @@ void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
                                 const ThreadCtx& thread_ctx) {
-  Actor* rptr = ActorCreatorMap().at(task_proto.task_type())();
+  auto it = ActorCreatorMap().find(task_proto.task_type());
+  CHECK(it != ActorCreatorMap().end()) << TaskType_Name(task_proto.task_type());
+  Actor* rptr = it->second();
   rptr->Init(task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }

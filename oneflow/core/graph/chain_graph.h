@@ -29,11 +29,11 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
     for (ChainNodeType* valid_node : valid_nodes) { Handler(valid_node); }
   }
 
-  void BuildFwStruct();
+  void BuildFwStruct(bool is_train);
   void BuildBwStruct();
   void BuildLossPrintStruct();
   void BuildModelStruct(bool is_train);
-  void BuildRnnStruct();
+  void BuildRecurrentStruct();
 };
 
 }  // namespace oneflow

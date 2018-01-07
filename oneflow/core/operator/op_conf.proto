@@ -43,44 +43,10 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional bool use_cudnn = 13 [default = true];
+  optional bool with_cudnn = 13 [default = true];
   
-  enum cudnnConvolutionFwdAlgo_t {
-    CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM = 0;
-    CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM = 1;
-    CUDNN_CONVOLUTION_FWD_ALGO_GEMM = 2;
-    CUDNN_CONVOLUTION_FWD_ALGO_DIRECT = 3;
-    CUDNN_CONVOLUTION_FWD_ALGO_FFT = 4;
-    CUDNN_CONVOLUTION_FWD_ALGO_FFT_TILING = 5;
-    CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD = 6;
-    CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED = 7;
-    CUDNN_CONVOLUTION_FWD_ALGO_COUNT = 8;
-  }
-  enum cudnnConvolutionBwdFilterAlgo_t {
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0 = 0;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1 = 1;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT = 2;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_3 = 3;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD = 4;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED = 5;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_FFT_TILING = 6;
-    CUDNN_CONVOLUTION_BWD_FILTER_ALGO_COUNT = 7;
-  }
-  enum cudnnConvolutionBwdDataAlgo_t {
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_0 = 0;
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_1 = 1;
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT = 2;
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING = 3;
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD = 4;
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED = 5;
-    CUDNN_CONVOLUTION_BWD_DATA_ALGO_COUNT = 6;
-  }
-  optional cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = 14 [default = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM];
-  optional cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo = 15 [default = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0];
-  optional cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = 16 [default = CUDNN_CONVOLUTION_BWD_DATA_ALGO_0];
-
-  optional FillConf weight_fill = 17;
-  optional FillConf bias_fill = 18;
+  optional FillConf weight_fill = 14;
+  optional FillConf bias_fill = 15;
 }
 
 message InnerProductOpConf {
@@ -93,11 +59,12 @@ message InnerProductOpConf {
   optional FillConf bias_fill = 6; 
 }
 
-message DataLoaderOpConf {
+message BasicDataLoaderOpConf {
   required string out = 1;
   required DataType data_type = 2;
-  required ShapeProto shape = 3;
-  required string data_dir = 4;
+  required string data_dir = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+  required ShapeProto shape = 5;
 }
 
 message PoolingOpConf {
@@ -130,8 +97,8 @@ message SoftmaxOpConf {
 
 message SoftmaxLossOpConf {
   required string prediction = 1;
-  required string label = 3;
-  required string loss = 4;
+  required string label = 2;
+  required string loss = 3;
 }
 
 message MultinomialLogisticLossOpConf {
@@ -143,7 +110,7 @@ message MultinomialLogisticLossOpConf {
 message ConcatOpConf {
   repeated string in = 1;
   required string out = 2;
-  required int32 axis = 4;
+  required int32 axis = 3;
 }
 
 message CopyCommNetOpConf {
@@ -178,17 +145,17 @@ message BoxCloneConf {
 }
 
 message BoxingOpConf {
-  required string lbn = 2;
-  required int32 in_num = 3;
-  required int32 out_num = 4;
+  required string lbn = 1;
+  required int32 in_num = 2;
+  required int32 out_num = 3;
 
   oneof in_box {
-    BoxConcatConf concat_box = 5;
-    BoxAddConf add_box = 6;
+    BoxConcatConf concat_box = 4;
+    BoxAddConf add_box = 5;
   }
   oneof out_box {
-    BoxSplitConf split_box = 7;
-    BoxCloneConf clone_box = 8;
+    BoxSplitConf split_box = 6;
+    BoxCloneConf clone_box = 7;
   }
 }
 
@@ -222,13 +189,38 @@ message PrintOpConf {
 message LossPrintOpConf {
 }
 
+message SumOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 axis = 3;
+}
+
+message BasicRnnCellConf {
+}
+
+message BasicLstmCellConf {
+}
+
+message RecurrentOpConf {
+  required string in = 1;
+  optional string init_hidden = 2;
+  optional FillConf init_hidden_fill = 3;
+  required string out = 4;
+  required int32 hidden_size = 5;
+  optional bool has_bias_term = 6 [default = true];
+  oneof rnn_type {
+   BasicRnnCellConf basic_rnn_cell = 7;
+   BasicLstmCellConf basic_lstm_cell = 8;
+  }
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;
-    DataLoaderOpConf data_loader_conf = 102;
+    BasicDataLoaderOpConf basic_data_loader_conf = 102;
     PoolingOpConf pooling_conf = 103;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
@@ -246,5 +238,7 @@ message OperatorConf {
     SoftmaxLossOpConf softmax_loss_conf = 117;
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
+    SumOpConf sum_conf = 120;
+    RecurrentOpConf recurrent_conf = 121; 
   }
 }

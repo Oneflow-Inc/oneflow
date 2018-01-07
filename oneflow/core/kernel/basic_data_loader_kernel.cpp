@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/data_loader_kernel.h"
+#include "oneflow/core/kernel/basic_data_loader_kernel.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/persistence/cyclic_persistent_in_stream.h"
@@ -7,7 +7,7 @@
 namespace oneflow {
 
 template<typename T>
-void DataLoaderKernel<T>::Forward(
+void BasicDataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob("out");
@@ -48,11 +48,11 @@ void DataLoaderKernel<T>::Forward(
 }
 
 template<typename T>
-void DataLoaderKernel<T>::VirtualKernelInit(
+void BasicDataLoaderKernel<T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
-  const std::string& data_dir = op_conf().data_loader_conf().data_dir();
+  const std::string& data_dir = op_conf().basic_data_loader_conf().data_dir();
   std::string parallel_id = std::to_string(parallel_ctx->parallel_id());
-  std::string file_path = JoinPath(data_dir, "part-", parallel_id);
+  std::string file_path = JoinPath(data_dir, "part-" + parallel_id);
   if (JobDesc::Singleton()->IsTrain()) {
     in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));
   } else {
@@ -60,7 +60,7 @@ void DataLoaderKernel<T>::VirtualKernelInit(
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kDataLoaderConf, DataLoaderKernel,
-                               ARITHMETIC_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicDataLoaderConf,
+                               BasicDataLoaderKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

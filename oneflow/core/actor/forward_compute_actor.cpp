@@ -112,6 +112,7 @@ void ForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(in_regst->piece_id());
     regst->set_model_version_id(model_version_id);
+    return true;
   });
   if (JobDesc::Singleton()->IsTrain() && model_regst_) {
     int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
@@ -149,7 +150,7 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
   }
 }
 
-REGISTER_ACTOR(TaskType::kForward, ForwardCompActor);
+REGISTER_ACTOR(TaskType::kNonRecurrentForward, ForwardCompActor);
 REGISTER_ACTOR(TaskType::kLoss, ForwardCompActor);
 
 }  // namespace oneflow

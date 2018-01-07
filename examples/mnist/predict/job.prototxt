@@ -1,14 +1,14 @@
 dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./placement.prototxt"
-model_load_snapshot_path: "/willzhang/snapshots/snapshot_10"
-piece_size: 1000
-max_data_id_length: 16
 global_fs_conf {
   hdfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
   }
 }
+single_piece_size: 1000
+data_part_num: 6
+model_load_snapshot_path: "/willzhang/snapshots/snapshot_10"
+max_data_id_length: 16
 predict_conf {
-  total_data_num: 60000
 }

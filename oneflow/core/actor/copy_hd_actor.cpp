@@ -4,11 +4,13 @@ namespace oneflow {
 
 void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
+  is_in_eord_ = false;
 }
 
 void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   CHECK(thread_ctx.copy_hd_cuda_stream);
-  mut_device_ctx().reset(new CudaDeviceCtx(thread_ctx.copy_hd_cuda_stream));
+  mut_device_ctx().reset(new CudaDeviceCtx(GetReservedWorkStreamId(0),
+                                           thread_ctx.copy_hd_cuda_stream));
 }
 
 int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
@@ -40,6 +42,7 @@ void CopyHdActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
     out_regst->set_model_version_id(in_regst->model_version_id());
+    return true;
   });
   AsyncSendRegstMsgToProducer(in_regst);
 }

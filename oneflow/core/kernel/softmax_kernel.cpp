@@ -4,7 +4,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void SoftmaxKernel<device_type, T>::Forward(
+void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
@@ -19,7 +19,7 @@ void SoftmaxKernel<device_type, T>::Forward(
 }
 
 template<DeviceType device_type, typename T>
-void SoftmaxKernel<device_type, T>::Backward(
+void SoftmaxKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
@@ -34,8 +34,8 @@ void SoftmaxKernel<device_type, T>::Backward(
   const T* out = out_blob->dptr<T>();
   const T* out_diff = out_diff_blob->dptr<T>();
   // copy out_diff to in_diff
-  KernelUtil<device_type, T>::BlasCopy(ctx.device_ctx, n * w, out_diff, 1,
-                                       in_diff, 1);
+  KernelUtil<device_type, T>::Copy(ctx.device_ctx, n * w, out_diff, 1, in_diff,
+                                   1);
   // dot product | get dot product tmp[i] from out[i] * out_diff[i]
   SoftmaxKernelUtil<device_type, T>::BackwardDot(ctx.device_ctx, n, w, out,
                                                  out_diff, tmp);
@@ -68,18 +68,24 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix,
                   const T* vector) {
     for (int64_t i = 0; i < w; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::BlasAxpy(ctx, n, static_cast<T>(-1.0),
-                                                vector, 1, matrix + i, w);
+      KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, n, static_cast<T>(-1.0),
+                                            vector, 1, matrix + i, w);
     }
   }
 
   static void BackwardDot(DeviceCtx* ctx, const int64_t n, const int64_t w,
                           const T* out, const T* out_diff, T* tmp) {
     for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::BlasDot(ctx, w, out + i * w, 1,
-                                               out_diff + i * w, 1, tmp + i);
+      KernelUtil<DeviceType::kCPU, T>::Dot(ctx, w, out + i * w, 1,
+                                           out_diff + i * w, 1, tmp + i);
     }
   }
 };
+#define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
+  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

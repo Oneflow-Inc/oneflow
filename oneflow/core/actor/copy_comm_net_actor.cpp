@@ -1,5 +1,6 @@
 #include "oneflow/core/actor/copy_comm_net_actor.h"
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/register/register.h"
 
 namespace oneflow {
@@ -14,8 +15,10 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(void* actor_read_id)
-      : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {}
+  CommNetDeviceCtx(int64_t work_stream_id, void* actor_read_id)
+      : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {
+    set_work_stream_id(work_stream_id);
+  }
 
   void AddCallBack(std::function<void()> callback) const override {
     CommNet::Singleton()->AddReadCallBack(actor_read_id_, read_id_, callback);
@@ -29,8 +32,10 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 };
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
+  is_in_eord_ = false;
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
+  comm_net_device_ctx_ =
+      new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
   next_piece_id_ = 0;
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
@@ -41,9 +46,10 @@ void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
 
 int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    return 1;
+    DecreaseRemainingEordCnt();
+    is_in_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == RuntimeCtx::Singleton()->this_machine_id()) {
+    if (msg.SrcMachineId() == MachineCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
     } else {
       RegstCtx regst_ctx;
@@ -56,7 +62,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
-  return 0;
+  return TrySwitchToZombieOrFinish();
 }
 
 void CopyCommNetActor::Act() {
@@ -73,8 +79,10 @@ void CopyCommNetActor::Act() {
   void* read_id = CommNet::Singleton()->Read(actor_read_id_, src_machine_id,
                                              readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
-  AsyncSendRegstMsgToConsumer(
-      [&](Regst* regst) { regst->set_piece_id(next_piece_id_); });
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_piece_id(next_piece_id_);
+    return true;
+  });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
   CommNet::Singleton()->AddReadCallBackDone(actor_read_id_, read_id);
@@ -87,11 +95,12 @@ bool CopyCommNetActor::IsReadReady() {
 }
 
 bool CopyCommNetActor::IsReadAlwaysUnReadyFromNow() {
-  UNEXPECTED_RUN();
-  return false;
+  return is_in_eord_ && piece_id2regst_ctx.empty();
 }
 
-void CopyCommNetActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
+void CopyCommNetActor::AsyncReturnAllReadableRegst() {
+  CHECK(piece_id2regst_ctx.empty());
+}
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
 

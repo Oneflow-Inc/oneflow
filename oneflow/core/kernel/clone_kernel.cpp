@@ -45,7 +45,7 @@ void CloneKernel<device_type, T>::BackwardDataContent(
    public:                                                                \
     static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a,      \
                                Blob* b) {                                 \
-      KernelUtil<device_type, type_cpp>::BlasAxpy(                        \
+      KernelUtil<device_type, type_cpp>::Axpy(                            \
           device_ctx, a->shape().elem_cnt(), 1.0, a->dptr<type_cpp>(), 1, \
           b->mut_dptr<type_cpp>(), 1);                                    \
     }                                                                     \
@@ -66,21 +66,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL,
                      INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
 
-namespace {
-
-Kernel* CreateCloneKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CLONE_KERNEL_ENTRY(device_type, data_type_pair)                       \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {         \
-     return new CloneKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CLONE_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(dev_type, kernel_conf.data_type()))();
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kCloneConf, CreateCloneKernel));
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel,
+                           ALL_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

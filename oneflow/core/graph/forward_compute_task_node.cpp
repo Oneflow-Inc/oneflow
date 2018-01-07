@@ -4,20 +4,14 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  if (static_cast<const ForwardChainNode*>(chain_node())->bw_node()) {
-    ProduceRegst("activation", 1, kMaxRegisterNum);
-    ProduceRegst("data_tmp", 1, kMaxRegisterNum);
-  } else {
-    ProduceRegst("activation", 1, 1);
-    ProduceRegst("data_tmp", 1, 1);
-  }
-
-  auto out_regst = ProduceRegst("out", 1, kMaxRegisterNum);
+  std::shared_ptr<RegstDesc> activation_regst = ProduceRegst("activation");
+  std::shared_ptr<RegstDesc> data_tmp_regst = ProduceRegst("data_tmp");
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() == TaskType::kBackward) {
-      edge->AddRegst("activation", GetProducedRegst("activation"));
-      edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
+    if (IsBackwardTaskType(dst_node->GetTaskType())) {
+      edge->AddRegst("activation", activation_regst);
+      edge->AddRegst("data_tmp", data_tmp_regst);
     }
     edge->AddRegst("out", out_regst);
   }
@@ -30,7 +24,7 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      ConsumeRegst("in", edge->GetSoleRegst());
+      VirtualConsumeInRegst(edge);
     }
   }
 }
@@ -42,34 +36,6 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
-  });
-}
-
-void ForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
-  HashMap<std::string, std::pair<ExecNode*, std::string>> lbn2producer;
-  for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
-    ExecNode* cur_node = mut_exec_gph().NewNode();
-    cur_node->mut_op() = op;
-    for (const std::string& obn : op->output_bns()) {
-      const std::string& lbn = op->Lbn4BnInOp(obn);
-      CHECK(lbn2producer.insert({lbn, {cur_node, obn}}).second);
-    }
-  }
-  std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
-  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    for (const std::string& ibn : cur_node->op()->input_bns()) {
-      const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
-      auto producer_it = lbn2producer.find(lbn);
-      if (producer_it != lbn2producer.end()) {
-        ExecEdge* edge = mut_exec_gph().NewEdge();
-        edge->set_lbn(lbn);
-        edge->mut_src_bn() = producer_it->second.second;
-        edge->mut_dst_bn() = ibn;
-        Connect(producer_it->second.first, edge, cur_node);
-      } else {
-        cur_node->BindBnInOpAndRegst(ibn, in_regst);
-      }
-    }
   });
 }
 
@@ -123,12 +89,15 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
 
 void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
-  GetConsumedRegst("model")->Lock();
-  GetConsumedRegst("model_tmp")->Lock();
+  TryLockConsumedRegst("model");
+  TryLockConsumedRegst("model_tmp");
 }
 
-bool ForwardCompTaskNode::IsReadyForBuild() {
-  return GetConsumedRegst("in")->IsLocked();
+void ForwardCompTaskNode::FixRegisterNumRange() {
+  int32_t max_seq_len = GetConsumedRegst("in")->MaxSeqLen();
+  GetProducedRegst("activation")->set_min_register_num(max_seq_len);
+  GetProducedRegst("data_tmp")->set_min_register_num(max_seq_len);
+  GetProducedRegst("out")->set_min_register_num(max_seq_len);
 }
 
 }  // namespace oneflow

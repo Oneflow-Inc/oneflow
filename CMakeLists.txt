@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
+option(BUILD_RDMA "Build RDMA components" OFF)
 
 # Project
 if (BUILD_THIRD_PARTY)
@@ -38,6 +39,25 @@ if (WIN32)
 else()
   list(APPEND CUDA_NVCC_FLAGS "-std=c++11 -w -Wno-deprecated-gpu-targets")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wall -Wno-sign-compare -O0")
+endif()
+
+if (BUILD_RDMA)
+  if (UNIX)
+    include(CheckIncludeFiles)
+    include(CheckLibraryExists)
+    CHECK_INCLUDE_FILES(infiniband/verbs.h HAVE_VERBS_H)
+    CHECK_LIBRARY_EXISTS(ibverbs ibv_create_qp "" HAVE_IBVERBS)
+    if (HAVE_VERBS_H AND HAVE_IBVERBS)
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -libverbs")
+      add_definitions(-DWITH_RDMA)
+    elseif(HAVE_VERBS_H)
+      message(FATAL_ERROR "RDMA library not found")
+    elseif(HAVE_IBVERBS)
+      message(FATAL_ERROR "RDMA head file not found")
+    else()
+      message(FATAL_ERROR "RDMA library and head file not found")
+    endif()
+  endif()
 endif()
 
 set(THIRD_PARTY_DIR "${PROJECT_SOURCE_DIR}/third_party"

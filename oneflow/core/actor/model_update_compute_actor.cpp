@@ -38,7 +38,7 @@ int MdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   }
   if (init_remaining_cnt_ == 0) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerSendInitialModel);
-    RuntimeCtx::Singleton()->mut_model_init_cnt().Decrease();
+    RuntimeCtx::Singleton()->DecreaseCounter("model_init_cnt");
   }
   return 0;
 }
@@ -48,6 +48,7 @@ int MdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
   pre_model_regst_ = GetCurWriteableRegst(model_regst_desc_id_);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_model_version_id(next_model_version_id_);
+    return true;
   });
   next_model_version_id_ += 1;
   if (JobDesc::Singleton()->IsTrain()) {
@@ -81,8 +82,8 @@ void MdUpdtCompActor::Act() {
   Regst* cur_model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   cur_model_regst->set_model_version_id(next_model_version_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  std::tuple<int64_t, Blob*> other_val(next_model_version_id_,
-                                       pre_model_regst_->packed_blob());
+  std::tuple<int64_t, const Blob*> other_val(next_model_version_id_,
+                                             pre_model_regst_->packed_blob());
   kernel_ctx.other = &other_val;
   pre_model_regst_ = cur_model_regst;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
@@ -94,15 +95,16 @@ void MdUpdtCompActor::Act() {
   });
   AsyncSendRegstMsgToProducer(model_diff_acc_regst);
   const JobDesc* job_desc = JobDesc::Singleton();
+  auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   if (next_model_version_id_ == job_desc->TotalBatchNum()) {
-    AsyncSendRegstMsgToConsumer([this](int64_t actor_id) {
+    AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
       return actor_id == related_save_actor_id_;
     });
   } else {
     if (next_model_version_id_ % job_desc->NumOfBatchesInSnapshot() == 0) {
-      AsyncSendRegstMsgToConsumer();
+      AsyncSendRegstMsgToConsumer(RegstPreProcess);
     } else {
-      AsyncSendRegstMsgToConsumer([this](int64_t actor_id) {
+      AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
         return actor_id != related_save_actor_id_;
       });
     }

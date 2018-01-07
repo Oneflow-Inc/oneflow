@@ -19,11 +19,13 @@ LogicalGraph::LogicalGraph() {
   NaiveBuildGraphStruct(&edge2lbn, &edge2ibn);
   FillNodeWithParallelDesc();
   AddCloneNodes(edge2lbn, edge2ibn);
+  total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     for (const std::string& obn : node->op()->output_bns()) {
       const std::string& lbn = node->op()->Lbn4BnInOp(obn);
       CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
+    total_mbn_num_ += node->op()->model_bns().size();
   });
   ToDotWithAutoFilePath();
 }
@@ -45,6 +47,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
       LogicalNode* pred_node = lbn2producer.at(lbn);
+      if (pred_node == cur_node) { continue; }
       LogicalEdge* edge = NewEdge();
       CHECK(edge2lbn->emplace(edge, lbn).second);
       CHECK(edge2ibn->emplace(edge, ibn).second);
@@ -74,8 +77,15 @@ void LogicalGraph::FillNodeWithParallelDesc() {
       while (pred_node->op()->IsElemWiseOp()) {
         pred_node = pred_node->SoleInEdge()->src_node();
       }
+      if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
+          == false) {
+        LOG(WARNING) << "Parallel Conf of " << cur_node->op()->op_name()
+                     << " is not equal to " << pred_node->op()->op_name();
+      }
       cur_node->mut_parallel_desc() = pred_node->parallel_desc();
     }
+    CHECK(cur_node->parallel_desc())
+        << "Please set the placement of " << cur_node->op()->op_name();
   });
 }
 

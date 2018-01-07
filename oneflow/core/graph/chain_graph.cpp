@@ -83,12 +83,15 @@ void ModelMergeChains(std::list<Chain>* chain_list,
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
     CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()));
+    if (pred_node->op()->IsRecurrentOp()) { continue; }
     // Get chain
     ChainIt pred_chain = logical2chain_it->at(pred_node);
     ChainIt cur_chain = pair.second;
     // Merge
     pred_chain->nodes.insert(pred_chain->nodes.end(), cur_chain->nodes.begin(),
                              cur_chain->nodes.end());
+    pred_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
+                                          cur_chain->nodes.end());
     for (const LogicalNode* node : cur_chain->nodes) {
       pred_chain->descendants.erase(node);
       logical2chain_it->at(node) = pred_chain;
@@ -193,6 +196,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->op()->IsLossOp()) { continue; }
     if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
+    if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
@@ -201,18 +205,18 @@ void DataMergeChains(std::list<Chain>* chain_list,
 }  // namespace
 
 ChainGraph::ChainGraph(bool is_train) {
-  BuildFwStruct();
+  BuildFwStruct(is_train);
   if (is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
   }
   BuildModelStruct(is_train);
-  BuildRnnStruct();
+  BuildRecurrentStruct();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
 
-void ChainGraph::BuildFwStruct() {
+void ChainGraph::BuildFwStruct(bool is_train) {
   // Build Chain
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
@@ -230,7 +234,7 @@ void ChainGraph::BuildFwStruct() {
     ChainNode* chain_node = nullptr;
     if (chain_it->nodes.size() == 1) {
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
-      if (op->IsLossOp()) {
+      if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
       } else if (op->IsDataLoaderOp()) {
         chain_node = NewNode<SourceChainNode>();
@@ -339,7 +343,7 @@ void ChainGraph::BuildLossPrintStruct() {
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(
-        IDMgr::Singleton()->MachineName4MachineId(0) + ":0");
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence:1");
     auto loss_print_chain = NewNode<LossPrintChainNode>();
     loss_print_chain->mut_op_vec() = {loss_print_op};
     loss_print_chain->mut_parallel_desc().reset(
@@ -350,7 +354,7 @@ void ChainGraph::BuildLossPrintStruct() {
 
 std::shared_ptr<const Operator> ConstructModelUpdateOp() {
   OperatorConf mdupdt_conf;
-  mdupdt_conf.set_name("model_update_" + NewUniqueId());
+  mdupdt_conf.set_name("md_update_" + NewUniqueId());
   const JobDesc* job_desc = JobDesc::Singleton();
   if (job_desc->IsTrain()) {
     const TrainConf& train_conf = job_desc->job_conf().train_conf();
@@ -382,6 +386,7 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_updt_chain->mut_op_vec() = {ConstructModelUpdateOp()};
     md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
+    if (is_train == false) { return; }
     // Model Save Chain
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("md_save_" + NewUniqueId());
@@ -401,7 +406,6 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
     // Model Diff Accumulate Chain
-    if (is_train == false) { return; }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
@@ -410,12 +414,20 @@ void ChainGraph::BuildModelStruct(bool is_train) {
     auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
     auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
     md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
-    md_diff_acc_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+    auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_chain->parallel_desc()));
+    md_diff_acc_pr_desc->set_policy(kInvalidParallel);
+    md_diff_acc_chain->mut_parallel_desc().reset(md_diff_acc_pr_desc);
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
     Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
   });
 }
 
-void ChainGraph::BuildRnnStruct() {}
+void ChainGraph::BuildRecurrentStruct() {
+  ForEachNode([&](ChainNode* chain_node) {
+    if (chain_node->HasSoleRecurrentOp()) {
+      Connect(chain_node, NewEdge(), chain_node);
+    }
+  });
+}
 
 }  // namespace oneflow

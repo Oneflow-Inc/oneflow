@@ -18,7 +18,7 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
   const int ldb = (trans_b == CblasNoTrans) ? n : k;
   const int ldc = n;
 
-  KernelUtil<device_type, T>::BlasGemm(
+  KernelUtil<device_type, T>::Gemm(
       ctx.device_ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
       a->dptr<T>(), lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);
 }
@@ -60,17 +60,17 @@ void InnerProductKernel<device_type, T>::BackwardDataContent(
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
 
+  // weight_diff = out_diff * in
+  BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
+                                   static_cast<T>(1.0), static_cast<T>(0.0),
+                                   out_diff_blob, in_blob, weight_diff_blob);
+
   // in_diff = out_diff * weight
   if (in_diff_blob != nullptr) {
     BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
                                      static_cast<T>(1.0), static_cast<T>(0.0),
                                      out_diff_blob, weight_blob, in_diff_blob);
   }
-
-  // weight_diff = out_diff * in
-  BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
-                                   static_cast<T>(1.0), static_cast<T>(0.0),
-                                   out_diff_blob, in_blob, weight_diff_blob);
 
   if (this->op_conf().innerproduct_conf().has_bias_term()) {
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");

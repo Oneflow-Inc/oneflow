@@ -1,6 +1,8 @@
 #include "oneflow/core/graph/chain_node.h"
-#include "oneflow/core/graph/backward_compute_task_node.h"
-#include "oneflow/core/graph/forward_compute_task_node.h"
+#include "oneflow/core/graph/recurrent_backward_compute_task_node.h"
+#include "oneflow/core/graph/nonrecurrent_backward_compute_task_node.h"
+#include "oneflow/core/graph/recurrent_forward_compute_task_node.h"
+#include "oneflow/core/graph/nonrecurrent_forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
@@ -38,9 +40,9 @@ BldBoxingOpConfMthd GetBldBoxingOpConfMethodByBwParallelPolicy(
   if (in_policy == kDataParallel && out_policy == kDataParallel) {
     return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndDataSplit;
   } else if (in_policy == kDataParallel && out_policy == kModelParallel) {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit;
-  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
     return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndModelSplit;
+  } else if (in_policy == kModelParallel && out_policy == kDataParallel) {
+    return &BoxingTaskNode::BldBoxingOpConfWithAddAndDataSplit;
   } else if (in_policy == kModelParallel && out_policy == kModelParallel) {
     return &BoxingTaskNode::BldBoxingOpConfWithAddAndModelSplit;
   } else {
@@ -95,6 +97,10 @@ const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
   return op_vec_;
 }
 
+bool ChainNode::HasSoleRecurrentOp() const {
+  return op_vec_.size() == 1 && op_vec_.front()->IsRecurrentOp();
+}
+
 std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
   return parallel_desc_;
 }
@@ -122,10 +128,10 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
-    for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
+    for (int64_t thrd_id : parallel_desc_->sorted_thrd_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
-      comp_task_node->set_thrd_id(dev_phy_id);
+      comp_task_node->set_thrd_id(thrd_id);
       comp_task_node->set_chain_node(this);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
@@ -165,7 +171,7 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
     UNEXPECTED_RUN();                                                         \
     return {};                                                                \
   }                                                                           \
-  CompTaskNode* x##ChainNode::NewCompTaskNode() const {                       \
+  CompTaskNode* x##ChainNode::NewCompTaskNodeWithSameName() const {           \
     return new x##CompTaskNode;                                               \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
@@ -190,7 +196,11 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
-  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
+  }
 }
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
     const ChainNode* node) const {
@@ -198,7 +208,11 @@ BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
 }
 std::vector<std::string> ForwardChainNode::FindLbnsFromForward(
     const ChainNode* node) const {
-  return FindLbnsBetweenFw(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return FindLbnsBetweenFw(node, this);
+  }
 }
 std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
     const ChainNode* node) const {
@@ -212,6 +226,13 @@ void ForwardChainNode::set_data_output_lbns() {
     }
   });
 }
+CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
+  if (HasSoleRecurrentOp()) {
+    return new RecurrentForwardCompTaskNode;
+  } else {
+    return new NonRecurrentForwardCompTaskNode;
+  }
+}
 
 // BackwardChainNode
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
@@ -220,7 +241,11 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromBackward(
     const ChainNode* node) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+  if (this == node) {
+    TODO();
+  } else {
+    return &TaskGraph::BldSubTskGphByBoxing;
+  }
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
     const ChainNode* node) const {
@@ -232,7 +257,11 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromBackward(
     const ChainNode* node) const {
-  return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
+  }
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
     const ChainNode* node) const {
@@ -240,7 +269,11 @@ BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
 }
 std::vector<std::string> BackwardChainNode::FindLbnsFromBackward(
     const ChainNode* node) const {
-  return FindLbnsBetweenBw(node, this);
+  if (this == node) {
+    TODO();
+  } else {
+    return FindLbnsBetweenBw(node, this);
+  }
 }
 std::vector<std::string> BackwardChainNode::FindLbnsFromLoss(
     const ChainNode* node) const {
@@ -253,12 +286,20 @@ void BackwardChainNode::set_data_output_lbns() {
     }
   });
 }
+CompTaskNode* BackwardChainNode::NewCompTaskNode() const {
+  if (HasSoleRecurrentOp()) {
+    return new RecurrentBackwardCompTaskNode;
+  } else {
+    return new NonRecurrentBackwardCompTaskNode;
+  }
+}
 
 // SourceChainNode
 void SourceChainNode::set_data_output_lbns() {
   ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
     if (dynamic_cast<const ForwardChainNode*>(to_node)
-        || dynamic_cast<const LossChainNode*>(to_node)) {
+        || dynamic_cast<const LossChainNode*>(to_node)
+        || dynamic_cast<const PrintChainNode*>(to_node)) {
       AddDataOutputLbnsTo(to_node);
     }
   });

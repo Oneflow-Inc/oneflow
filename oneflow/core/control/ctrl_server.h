@@ -34,12 +34,10 @@ class CtrlServer final {
       barrier_calls_;
   // TryLock, NotifyDone, WaitUntilDone
   HashMap<std::string, void*> name2lock_status_;
-  // PushPlan, PullPlan
-  std::unique_ptr<Plan> plan_;
-  std::list<CtrlCall<PullPlanRequest, PullPlanResponse>*> pending_plan_calls_;
-  // PushPort, ClearPort, PullPort
-  int32_t port_;
-  std::list<CtrlCall<PullPortRequest, PullPortResponse>*> pending_port_calls_;
+  // PushKV, ClearKV, PullKV
+  HashMap<std::string, std::string> kv_;
+  HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>>
+      pending_kv_calls_;
 };
 
 }  // namespace oneflow

@@ -35,6 +35,33 @@ void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
   }
 }
 
+template<typename T>
+void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
+  T* dptr = blob->mut_dptr<T>();
+  const int64_t elem_cnt = blob->shape().elem_cnt();
+  const T value = fill_conf.value();
+  CHECK(elem_cnt);
+  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
+}
+
+template<typename T>
+void UniformFill(const UniformFillConf& fill_conf, uint32_t random_seed,
+                 Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.min()),
+                static_cast<T>(fill_conf.max()), random_seed,
+                blob->mut_dptr<T>());
+}
+
+template<typename T>
+void GaussianFill(const GaussianFillConf& fill_conf, uint32_t random_seed,
+                  Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.mean()),
+                 static_cast<T>(fill_conf.std()), random_seed,
+                 blob->mut_dptr<T>());
+}
+
 }  // namespace
 
 template<>
@@ -50,110 +77,83 @@ void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value,
 }
 
 template<typename T>
-class KernelUtil<DeviceType::kCPU, T> final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelUtil);
-  KernelUtil() = delete;
-
-  static void BlasAxpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
-                       const int incx, T* y, const int incy) {
+struct KernelUtil<DeviceType::kCPU, T> final {
+  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
+                  const T* y, const int incy, T* result) {
+    *result = cblas_dot(n, x, incx, y, incy);
+  }
+  static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
+                   T* y, const int incy) {
+    cblas_copy(n, x, incx, y, incy);
+  }
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
+                   const int incx, T* y, const int incy) {
     cblas_axpy(n, alpha, x, incx, y, incy);
   }
-
-  static void BlasScal(DeviceCtx* ctx, const int n, const T alpha, T* x,
-                       const int incx) {
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+                   const int incx) {
     cblas_scal(n, alpha, x, incx);
   }
-
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
   }
-
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
     *max_ptr = x[0];
     for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
   }
-
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
   }
-
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr) {
     Sum(ctx, n, x, sum_ptr, nullptr, 0);
   }
-
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
     *sum_ptr = 0;
     for (int64_t i = 0; i < n; ++i) { *sum_ptr += x[i]; }
   }
-
-  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha_ptr) {
-    for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha_ptr); }
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
+    for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha); }
   }
-
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
-
-  static void BlasGemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                       int n, const T alpha, const T* a, int lda, const T* x,
-                       const int incx, const T beta, T* y, const int incy) {
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                   int n, const T alpha, const T* a, int lda, const T* x,
+                   const int incx, const T beta, T* y, const int incy) {
     // Set col major to keep it as the same with cublas
     cblas_gemv(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x, incx,
                beta, y, incy);
   }
-
-  static void BlasGemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                       const enum CBLAS_TRANSPOSE trans_a,
-                       const enum CBLAS_TRANSPOSE trans_b, const int m,
-                       const int n, const int k, const T alpha, const T* a,
-                       const int lda, const T* b, const int ldb, const T beta,
-                       T* c, const int ldc) {
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                   const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                   const int k, const T alpha, const T* a, const int lda,
+                   const T* b, const int ldb, const T beta, T* c,
+                   const int ldc) {
     cblas_gemm(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c,
                ldc);
   }
 
-  static void BlasDot(DeviceCtx* ctx, const int n, const T* x, const int incx,
-                      const T* y, const int incy, T* result) {
-    *result = cblas_dot(n, x, incx, y, incy);
-  }
-
-  static void BlasSwap(DeviceCtx* ctx, const int n, T* x, const int incx, T* y,
-                       const int incy) {
-    cblas_swap(n, x, incx, y, incy);
-  }
-
-  static void BlasCopy(DeviceCtx* ctx, const int n, const T* x, const int incx,
-                       T* y, const int incy) {
-    cblas_copy(n, x, incx, y, incy);
-  }
-
-  static void Fill(const FillConf& fill_conf, uint32_t random_seed,
-                   Blob* blob) {
+  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
+                   uint32_t random_seed, Blob* blob) {
     if (fill_conf.has_constant_conf()) {
-      ConstantFill(fill_conf.constant_conf(), blob);
+      ConstantFill<T>(fill_conf.constant_conf(), blob);
     } else if (fill_conf.has_uniform_conf()) {
-      UniformFill(fill_conf.uniform_conf(), random_seed, blob);
+      UniformFill<T>(fill_conf.uniform_conf(), random_seed, blob);
     } else if (fill_conf.has_gaussian_conf()) {
-      GaussianFill(fill_conf.gaussian_conf(), random_seed, blob);
+      GaussianFill<T>(fill_conf.gaussian_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
   }
-
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob) {
-    Fill(fill_conf, random_seed, blob);
-  }
-
   static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
                                int32_t part_num, const std::string& model_dir,
                                Blob* blob, const std::string& bn_in_op,
                                int32_t dim_num, int64_t num_in_each_dim) {
-    int64_t blob_size = blob->TotalByteSize();
+    int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);
     uint64_t file_size = GlobalFS()->GetFileSize(file_path);
@@ -163,35 +163,24 @@ class KernelUtil<DeviceType::kCPU, T> final {
     NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
     in_stream.Read(blob->mut_dptr<char>(), blob_size);
   }
-
- private:
-  static void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
-    T* dptr = blob->mut_dptr<T>();
-    const int64_t elem_cnt = blob->shape().elem_cnt();
-    const T value = fill_conf.value();
-    CHECK(elem_cnt);
-    for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
-  }
-
-  static void UniformFill(const UniformFillConf& fill_conf,
-                          uint32_t random_seed, Blob* blob) {
-    CHECK(blob->shape().elem_cnt());
-    RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.min()),
-                  static_cast<T>(fill_conf.max()), random_seed,
-                  blob->mut_dptr<T>());
-  }
-
-  static void GaussianFill(const GaussianFillConf& fill_conf,
-                           uint32_t random_seed, Blob* blob) {
-    CHECK(blob->shape().elem_cnt());
-    RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.mean()),
-                   static_cast<T>(fill_conf.std()), random_seed,
-                   blob->mut_dptr<T>());
-  }
-};  // namespace oneflow
+};
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
-  template class KernelUtil<DeviceType::kCPU, type_cpp>;
+  template struct KernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+
+#define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template<>                                                                  \
+  void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
+      DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
+      T* y, const int incy) {                                                 \
+    FOR_RANGE(int, i, 0, n) {                                                 \
+      *y += alpha * *x;                                                       \
+      x += incx;                                                              \
+      y += incy;                                                              \
+    }                                                                         \
+  }
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
 
 }  //  namespace oneflow

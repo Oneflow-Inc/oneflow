@@ -2,6 +2,20 @@
 
 namespace oneflow {
 
+namespace {
+
+DataType GetDataTypeFromBnInOpVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::vector<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc) { return blob_desc->data_type(); }
+  }
+  return DataType::kInvalidDataType;
+}
+
+}  // namespace
+
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
   InitFromOpConf();
@@ -46,17 +60,26 @@ const std::string& Operator::SoleDtbn() const {
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
+  if (IsDataLoaderOp()) {
+    CHECK_EQ(pr_desc->parallel_num(),
+             JobDesc::Singleton()->job_conf().data_part_num())
+        << "parallel_num of data loader is not equal to the data_part_num in "
+           "job.prototxt";
+  }
   if (model_bns_.empty() && model_tmp_bns_.empty()) {
+    LOG_IF(WARNING, pr_desc->policy() == ParallelPolicy::kModelParallel)
+        << op_name() << " doesn't have any model, so fix it with DataParallel";
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (IsDataLoaderOp() == false && IsPrintOp() == false) {
-    pr_desc->RemoveInvalidDevice();
+    pr_desc->RemoveInvalidDevice(op_name());
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
-    pr_desc->RemoveNeedlessDevice(MaxModelSplitNum());
+    pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
   }
   if (pr_desc->policy() == kDataParallel) {
-    pr_desc->RemoveNeedlessDevice(JobDesc::Singleton()->ParallelPieceSize());
+    pr_desc->RemoveNeedlessDevice(op_name(),
+                                  JobDesc::Singleton()->ParallelPieceSize());
   }
   VirtualFixParallelDesc(pr_desc);
 }
@@ -90,13 +113,12 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_is_forward(is_forward);
-  if (output_bns_.empty() == false) {
-    kernel_conf->set_data_type(GetBlobDesc4BnInOp(output_bns_[0])->data_type());
-  } else if (input_bns_.empty() == false) {
-    kernel_conf->set_data_type(GetBlobDesc4BnInOp(input_bns_[0])->data_type());
-  } else {
-    kernel_conf->set_data_type(DataType::kInvalidDataType);
+  DataType data_type =
+      GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
+  if (data_type == DataType::kInvalidDataType) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
   }
+  kernel_conf->set_data_type(data_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
@@ -186,6 +208,19 @@ std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   std::shared_ptr<Operator> ret(rptr);
   ret->InitFromOpConf(op_conf);
   return ret;
+}
+
+void EraseEmptyBnInVec(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    PbRpf<std::string>* bns) {
+  size_t idx_available = 0;
+  for (size_t i = 0; i < bns->size(); ++i) {
+    if (GetBlobDesc4BnInOp((*bns)[i])) {
+      if (i != idx_available) { (*bns)[idx_available] = (*bns)[i]; }
+      ++idx_available;
+    }
+  }
+  bns->erase(bns->begin() + idx_available, bns->end());
 }
 
 }  // namespace oneflow

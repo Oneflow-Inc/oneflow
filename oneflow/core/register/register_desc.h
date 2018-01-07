@@ -27,9 +27,9 @@ class RegstDesc final {
 
   // min_register_num_, max_register_num_
   int32_t min_register_num() const { return min_register_num_; }
-  void set_min_register_num(int32_t val) { min_register_num_ = val; }
+  void set_min_register_num(int32_t val);
   int32_t max_register_num() const { return max_register_num_; }
-  void set_max_register_num(int32_t val) { max_register_num_ = val; }
+  void set_max_register_num(int32_t val);
 
   // lbn2blob_desc_
   bool IsLocked() const { return is_locked_; }
@@ -43,10 +43,10 @@ class RegstDesc final {
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
   // util
+  int32_t MaxSeqLen() const { return packed_blob_desc_->max_seq_len(); }
   void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
-  BlobDesc CompPackedBlobDesc() const;
 
  private:
   int64_t regst_desc_id_;
@@ -61,6 +61,12 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
 };
+
+inline void UpdtMinRegisterNumByMaxSequenceSize(RegstDesc* regst_desc) {
+  if (regst_desc->min_register_num() < regst_desc->MaxSeqLen()) {
+    regst_desc->set_min_register_num(regst_desc->MaxSeqLen());
+  }
+}
 
 }  // namespace oneflow
 

@@ -27,22 +27,16 @@ void SourceCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
-  AsyncSendRegstMsgToConsumer(
-      [this](Regst* regst) { regst->set_piece_id(next_piece_id_); });
+  AsyncSendRegstMsgToConsumer([this](Regst* regst) {
+    regst->set_piece_id(next_piece_id_);
+    return true;
+  });
   next_piece_id_ += 1;
 }
 
 bool SourceCompActor::IsReadReady() {
-  const JobDesc* job_desc = JobDesc::Singleton();
-  if (job_desc->IsTrain()) {
-    int64_t total_piece_num =
-        job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
-    return next_piece_id_ < total_piece_num;
-  } else if (job_desc->IsPredict()) {
-    return is_eof_ == false;
-  } else {
-    UNEXPECTED_RUN();
-  }
+  return is_eof_ == false
+         && next_piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
 }
 
 REGISTER_ACTOR(kSource, SourceCompActor);

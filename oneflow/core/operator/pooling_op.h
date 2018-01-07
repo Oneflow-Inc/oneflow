@@ -12,6 +12,9 @@ class PoolingOp final : public Operator {
   ~PoolingOp() = default;
 
   void InitFromOpConf() override;
+
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override { return false; }
   const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDescs(

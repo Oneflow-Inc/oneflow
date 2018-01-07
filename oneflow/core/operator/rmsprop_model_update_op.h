@@ -11,13 +11,13 @@ class RMSPropModelUpdateOp final : public ModelUpdtOp {
   RMSPropModelUpdateOp() = default;
   ~RMSPropModelUpdateOp() = default;
 
-  void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) override;
+      const ParallelContext* parallel_ctx) const override;
 
  private:
+  void MdUpdtVirtualInitFromOpConf() override;
   std::string ibn2lbn(const std::string& input_bn) const override {
     return kPackedBlobName;
   }
