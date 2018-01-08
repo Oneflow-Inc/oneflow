@@ -1,19 +1,17 @@
-#ifndef ONEFLOW_CORE_GRAPH_NONRECURRENT_BACKWARD_COMPUTE_TASK_NODE_H_
-#define ONEFLOW_CORE_GRAPH_NONRECURRENT_BACKWARD_COMPUTE_TASK_NODE_H_
+#ifndef ONEFLOW_CORE_GRAPH_NORMAL_BACKWARD_COMPUTE_TASK_NODE_H_
+#define ONEFLOW_CORE_GRAPH_NORMAL_BACKWARD_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/backward_compute_task_node.h"
 
 namespace oneflow {
 
-class NonRecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
+class NormalBackwardCompTaskNode final : public BackwardCompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NonRecurrentBackwardCompTaskNode);
-  NonRecurrentBackwardCompTaskNode() = default;
-  ~NonRecurrentBackwardCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalBackwardCompTaskNode);
+  NormalBackwardCompTaskNode() = default;
+  ~NormalBackwardCompTaskNode() = default;
 
-  TaskType GetTaskType() const override {
-    return TaskType::kNonRecurrentBackward;
-  }
+  TaskType GetTaskType() const override { return TaskType::kNormalBackward; }
 
  private:
   void VirtualBuildExecGphAndBindOutDiffRegst() override;
@@ -38,4 +36,4 @@ class NonRecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_NONRECURRENT_BACKWARD_COMPUTE_TASK_NODE_H_
+#endif  // ONEFLOW_CORE_GRAPH_NORMAL_BACKWARD_COMPUTE_TASK_NODE_H_
