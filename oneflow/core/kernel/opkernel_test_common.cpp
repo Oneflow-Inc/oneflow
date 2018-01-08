@@ -7,7 +7,7 @@ namespace oneflow {
 
 namespace test {
 
-std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
+std::function<BlobDesc*(const std::string&)> ConstructBn2BlobDescFunc(
     std::shared_ptr<Operator> op) {
   auto InsertBnsWithEmptyBlobDesc2Map =
       [](const std::vector<std::string>& bns,
@@ -30,10 +30,27 @@ std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
   };
 }
 
+std::function<Blob*(const std::string&)> ConstructBn2BlobFunc() {
+  auto bn2blob_map = new HashMap<std::string, Blob*>();
+  return [bn2blob_map](const std::string& bn) {
+    if (bn2blob_map->find(bn) == bn2blob_map->end()) {
+      bn2blob_map->insert({bn, new Blob});
+    }
+    return bn2blob_map->at(bn);
+  };
+}
+
+template<>
+void* MallocAndClean<DeviceType::kCPU>(size_t sz) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, sz));
+  memset(mem_ptr, 0, sz);
+  return mem_ptr;
+}
+
 template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
-  void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
+  void* mem_ptr = MallocAndClean<DeviceType::kCPU>(blob_desc->TotalByteSize());
   return new Blob(blob_desc, static_cast<char*>(mem_ptr));
 }
 
@@ -45,20 +62,18 @@ void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
 template<>
 void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 
+template<>
+void CopyFromHost<DeviceType::kCPU>(void* dst, const void* src, size_t sz) {
+  CudaCheck(cudaMemcpy(dst, src, sz, cudaMemcpyHostToHost));
+}
+
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
-    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
-                         ret->ByteSizeOfDataContentField(),
-                         cudaMemcpyHostToHost));
-    return ret;
-  }
-
   static void BlobCmp(const Blob* lhs, const Blob* rhs) {
     ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
+    CHECK_EQ(lhs->has_data_id(), rhs->has_data_id());
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
         ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
@@ -68,6 +83,10 @@ class KTCommon<DeviceType::kCPU, T> final {
           memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataContentField()),
           0);
     }
+    if (lhs->has_data_id() == false) { return; }
+    CHECK_EQ(
+        memcmp(lhs->data_id(0), rhs->data_id(0), lhs->ByteSizeOfDataIdField()),
+        0);
   }
 
   static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
