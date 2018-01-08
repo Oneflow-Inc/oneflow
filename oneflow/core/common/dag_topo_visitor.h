@@ -32,7 +32,7 @@ class DAGTopoVisitor final {
  private:
   void Walk(const std::list<NodeType>& init_nodes,
             const FinalNodeIndicatorFn& is_final,
-	    const NodeHandlerFn& cb) const {
+            const NodeHandlerFn& cb) const {
     CheckInitNodesHasNoPrev(init_nodes);
 
     HashMap<NodeType, bool> has_queued;
