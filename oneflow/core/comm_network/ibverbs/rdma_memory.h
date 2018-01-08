@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 
-#ifdef WITH_RDMA
+#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 #include <infiniband/verbs.h>
 #include "oneflow/core/comm_network/rdma/rdma_memory_desc.pb.h"
@@ -25,6 +25,6 @@ class RdmaMem {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA
+#endif  // WITH_RDMA && PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_RDMA_MEMORY_H_

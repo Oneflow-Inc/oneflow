@@ -1,6 +1,6 @@
 #include "oneflow/core/comm_network/rdma/connection.h"
 
-#ifdef WITH_RDMA
+#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 namespace oneflow {
 
@@ -96,4 +96,4 @@ void Connection::CompleteConnection() {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA
+#endif  // WITH_RDMA && PLATFORM_POSIX

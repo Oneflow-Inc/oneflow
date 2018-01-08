@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_RDMA_CONNECTION_H_
 #define ONEFLOW_CORE_COMM_NETWORK_RDMA_CONNECTION_H_
 
-#ifdef WITH_RDMA
+#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/rdma/rdma_connection_info.pb.h"
@@ -47,6 +47,6 @@ class Connection {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA
+#endif  // WITH_RDMA && PLATFORM_POSIX
 
 #endif  // ONEFLOW_CORE_COMM_NETWORK_RDMA_CONNECTION_H_
