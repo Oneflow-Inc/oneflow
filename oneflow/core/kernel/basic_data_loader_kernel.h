@@ -18,16 +18,15 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
 
-  void ReadOnePieceToBuffer(Blob* buffer_blob) const;
+  void ReadDirectToOutBlob(const KernelCtx&, Blob*) const;
 
-  void CopyDataToOutBlob(Blob* buffer_blob, Blob* out_blob) const;
+  void ReadOnePieceToBuffer(const KernelCtx&, Blob*) const;
+
+  void ReadBufferToOutBlob(const KernelCtx&, Blob*, Blob*) const;
+
+  void FillBlobRowsWithZero(Blob*, int64_t, int64_t) const;
 
   std::unique_ptr<PersistentInStream> in_stream_;
-
-  mutable int32_t next_col;
-  mutable int32_t max_length;
-  mutable int64_t piece_id;
-  mutable bool is_last_piece;
 };
 
 }  // namespace oneflow
