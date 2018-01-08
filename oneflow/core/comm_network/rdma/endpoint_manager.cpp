@@ -34,18 +34,16 @@ EndpointManager::EndpointManager() {
 }
 
 EndpointManager::~EndpointManager() {
-  for (auto it = send_msg2rdma_mem_.begin(); it != send_msg2rdma_mem_.end();
-       ++it) {
-    delete it->first;
-    delete it->second;
+  for (auto& msg2mem : send_msg2rdma_mem_) {
+    delete msg2mem.first;
+    delete msg2mem.second;
   }
-  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
-       ++it) {
-    delete it->first;
-    delete it->second;
+  for (auto& msg2mem : recv_msg2rdma_mem_) {
+    delete msg2mem.first;
+    delete msg2mem.second;
   }
-  for (auto it = connection_pool_.begin(); it != connection_pool_.end(); ++it) {
-    delete it->second;
+  for (auto& machine_id2connection : connection_pool_) {
+    delete machine_id2connection.second;
   }
   if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
   if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }

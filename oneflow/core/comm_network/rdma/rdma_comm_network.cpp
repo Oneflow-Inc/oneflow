@@ -54,25 +54,23 @@ void RdmaCommNet::UnRegisterMemory(const void* token) {
 void RdmaCommNet::RegisterMemoryDone() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
-  HashMap<uint64_t, RdmaMemDesc> this_machine_tokens_msg;
+  RdmaTokensMsg this_machine_tokens_msg;
   for (RdmaMem* mem_ptr : mems_) {
-    this_machine_tokens_msg.insert(
+    this_machine_tokens_msg.mutable_token2mem_desc()->insert(
         {reinterpret_cast<uint64_t>(mem_ptr), mem_ptr->GenRdmaMemDesc()});
   }
-  RdmaTokensMsg tokens_msg;
-  *(tokens_msg.mutable_token2mem_desc()) =
-      HashMap2PbMap<uint64_t, RdmaMemDesc>(this_machine_tokens_msg);
-  CtrlClient::Singleton()->PushKV(GenTokensMsgKey(this_machine_id), tokens_msg);
+  CtrlClient::Singleton()->PushKV(GenTokensMsgKey(this_machine_id),
+                                  this_machine_tokens_msg);
   OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    RdmaTokensMsg peer_tokens_msg;
+    RdmaTokensMsg peer_machine_tokens_msg;
     CtrlClient::Singleton()->PullKV(GenTokensMsgKey(peer_machine_id),
-                                    &peer_tokens_msg);
+                                    &peer_machine_tokens_msg);
     HashMap<uint64_t, RdmaMemDesc> peer_token2mem_desc =
-        PbMap2HashMap(peer_tokens_msg.token2mem_desc());
+        PbMap2HashMap(peer_machine_tokens_msg.token2mem_desc());
     for (auto pair : peer_token2mem_desc) {
       token2mem_desc_.insert({pair.first, pair.second});
     }
