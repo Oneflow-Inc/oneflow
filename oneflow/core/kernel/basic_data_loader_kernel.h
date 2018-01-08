@@ -22,7 +22,7 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
 
   void ReadOnePieceToBuffer(const KernelCtx&, Blob*) const;
 
-  void ReadBufferToOutBlob(const KernelCtx&, Blob*, Blob*) const;
+  void ReadBufferToOutBlob(const KernelCtx&, const Blob*, Blob*) const;
 
   void FillBlobRowsWithZero(Blob*, int64_t, int64_t) const;
 
