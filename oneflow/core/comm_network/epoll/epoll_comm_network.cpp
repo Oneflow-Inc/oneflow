@@ -67,12 +67,12 @@ const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   auto mem_desc = new SocketMemDesc;
   mem_desc->mem_ptr = mem_ptr;
   mem_desc->byte_size = byte_size;
-  comm_mem_mgr_->RegisterCommMem(mem_desc);
+  mem_desc_mgr_.RegisterMemDesc(mem_desc);
   return mem_desc;
 }
 
 void EpollCommNet::UnRegisterMemory(const void* token) {
-  comm_mem_mgr_->UnRegisterCommMem();
+  mem_desc_mgr_.UnRegisterMemDesc();
 }
 
 void EpollCommNet::RegisterMemoryDone() {
@@ -115,7 +115,6 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
 }
 
 EpollCommNet::EpollCommNet() {
-  comm_mem_mgr_ = new CommMemMgr<SocketMemDesc>;
   pollers_.resize(JobDesc::Singleton()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
