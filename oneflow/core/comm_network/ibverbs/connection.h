@@ -4,8 +4,8 @@
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 #include "oneflow/core/actor/actor_message.h"
-#include "oneflow/core/comm_network/rdma/rdma_connection_info.pb.h"
-#include "oneflow/core/comm_network/rdma/rdma_memory.h"
+#include "oneflow/core/comm_network/ibverbs/rdma_connection_info.pb.h"
+#include "oneflow/core/comm_network/ibverbs/rdma_memory.h"
 
 namespace oneflow {
 

@@ -1,4 +1,4 @@
-#include "oneflow/core/comm_network/rdma/connection.h"
+#include "oneflow/core/comm_network/ibverbs/connection.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
