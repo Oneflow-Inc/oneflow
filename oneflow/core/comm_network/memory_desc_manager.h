@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<typename MemDescType>
-class MemDescMgr {
+class MemDescMgr final {
  public:
   MemDescMgr() : unregister_mem_descs_cnt_(0) { mem_descs_.clear(); }
   ~MemDescMgr() { CHECK_EQ(unregister_mem_descs_cnt_, 0); }
