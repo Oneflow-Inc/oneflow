@@ -6,7 +6,7 @@ namespace oneflow {
 
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
-  data_id_ptr_ = blob_desc->has_data_id() ? mem_ptr : nullptr;
+  data_id_ptr_ = blob_desc->has_data_id_field() ? mem_ptr : nullptr;
   dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;

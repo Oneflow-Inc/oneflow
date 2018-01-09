@@ -1,15 +1,15 @@
-#ifdef WITH_RDMA
-
-#include "oneflow/core/comm_network/rdma/endpoint_manager.h"
+#include "oneflow/core/comm_network/ibverbs/endpoint_manager.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/actor/actor_message_bus.h"
+
+#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 namespace oneflow {
 
 namespace {
 
 std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
-  return "RdmaConnInfo/" + std::to_string(src_machine_id) + " "
+  return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + " "
          + std::to_string(dst_machine_id);
 }
 
@@ -31,23 +31,21 @@ EndpointManager::EndpointManager() {
   CHECK(recv_cq_);
 
   ibv_free_device_list(device_list);
-  LOG(INFO) << "Finish EndpointManager Constructor";
+  InitRdma();
+  Start();
 }
 
 EndpointManager::~EndpointManager() {
-  for (auto it = send_msg2rdma_mem_.begin(); it != send_msg2rdma_mem_.end();
-       ++it) {
-    delete it->first;
-    delete it->second;
+  Stop();
+  for (auto& pair : send_msg2mem_desc_) {
+    delete pair.first;
+    delete pair.second;
   }
-  for (auto it = recv_msg2rdma_mem_.begin(); it != recv_msg2rdma_mem_.end();
-       ++it) {
-    delete it->first;
-    delete it->second;
+  for (auto& pair : recv_msg2mem_desc_) {
+    delete pair.first;
+    delete pair.second;
   }
-  for (auto it = connection_pool_.begin(); it != connection_pool_.end(); ++it) {
-    delete it->second;
-  }
+  for (auto& pair : connection_pool_) { delete pair.second; }
   if (send_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(send_cq_), 0); }
   if (recv_cq_ != nullptr) { CHECK_EQ(ibv_destroy_cq(recv_cq_), 0); }
   if (pd_ != nullptr) { CHECK_EQ(ibv_dealloc_pd(pd_), 0); }
@@ -59,7 +57,7 @@ void EndpointManager::InitRdma() {
   int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == this_machine_id) { continue; }
-    Connection* conn = NewConnection();
+    IBVerbsConnection* conn = NewIBVerbsConnection();
     connection_pool_.emplace(peer_machine_id, conn);
     CtrlClient::Singleton()->PushKV(
         GenConnInfoKey(this_machine_id, peer_machine_id),
@@ -68,7 +66,7 @@ void EndpointManager::InitRdma() {
   OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
     if (peer_machine_id == this_machine_id) { continue; }
-    Connection* conn = connection_pool_[peer_machine_id];
+    IBVerbsConnection* conn = connection_pool_[peer_machine_id];
     CtrlClient::Singleton()->PullKV(
         GenConnInfoKey(peer_machine_id, this_machine_id),
         conn->mut_peer_machine_conn_info_ptr());
@@ -80,23 +78,23 @@ void EndpointManager::InitRdma() {
               << conn->mut_peer_machine_conn_info().iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg;
-      RdmaMem* rdma_mem = NewRdmaMem(actor_msg, sizeof(ActorMsg));
+      auto ibverbs_mem_desc = NewIBVerbsMemDesc(actor_msg, sizeof(ActorMsg));
       recv_msg2conn_ptr_.emplace(actor_msg, conn);
-      recv_msg2rdma_mem_.emplace(actor_msg, rdma_mem);
-      conn->PostRecvRequest(actor_msg, rdma_mem);
+      recv_msg2mem_desc_.emplace(actor_msg, ibverbs_mem_desc);
+      conn->PostRecvRequest(actor_msg, ibverbs_mem_desc);
     }
     conn->CompleteConnection();
   }
   OF_BARRIER();
-  LOG(INFO) << "Finish InitRdma";
 }
 
-RdmaMem* EndpointManager::NewRdmaMem(void* mem_ptr, size_t byte_size) {
-  return new RdmaMem(pd_, mem_ptr, byte_size);
+IBVerbsMemDesc* EndpointManager::NewIBVerbsMemDesc(void* mem_ptr,
+                                                   size_t byte_size) {
+  return new IBVerbsMemDesc(pd_, mem_ptr, byte_size);
 }
 
-Connection* EndpointManager::NewConnection() {
-  Connection* conn = new Connection();
+IBVerbsConnection* EndpointManager::NewIBVerbsConnection() {
+  IBVerbsConnection* conn = new IBVerbsConnection();
 
   // Init queue pair
   ibv_qp_init_attr qp_init_attr;
@@ -141,20 +139,20 @@ Connection* EndpointManager::NewConnection() {
 }
 
 void EndpointManager::Read(void* read_ctx, int64_t src_machine_id,
-                           const RdmaMem* local_mem,
-                           const RdmaMemDesc& remote_mem_desc) {
+                           IBVerbsMemDesc* local_mem_desc,
+                           IBVerbsMemDescProto& remote_mem_desc_proto) {
   auto iter = connection_pool_.find(src_machine_id);
   CHECK(iter != connection_pool_.end());
-  Connection* conn = iter->second;
-  conn->PostReadRequest(read_ctx, local_mem, remote_mem_desc);
+  IBVerbsConnection* conn = iter->second;
+  conn->PostReadRequest(read_ctx, local_mem_desc, remote_mem_desc_proto);
 }
 
 void EndpointManager::SendActorMsg(int64_t dst_machine_id,
                                    const ActorMsg& msg) {
   auto iter = connection_pool_.find(dst_machine_id);
   CHECK(iter != connection_pool_.end());
-  Connection* conn = iter->second;
-  std::tuple<ActorMsg*, RdmaMem*> allocate_ret = AllocateSendMsg();
+  IBVerbsConnection* conn = iter->second;
+  std::tuple<ActorMsg*, IBVerbsMemDesc*> allocate_ret = AllocateSendMsg();
   ActorMsg* msg_ptr = std::get<0>(allocate_ret);
   *msg_ptr = msg;
   conn->PostSendRequest(msg_ptr, std::get<1>(allocate_ret));
@@ -215,24 +213,24 @@ void EndpointManager::PollRecvQueue() {
 
   ActorMsgBus::Singleton()->SendMsg(*msg);
   CHECK(recv_msg2conn_ptr_.find(msg) != recv_msg2conn_ptr_.end());
-  Connection* conn = recv_msg2conn_ptr_.at(msg);
-  auto msg2mem_it = recv_msg2rdma_mem_.find(msg);
+  IBVerbsConnection* conn = recv_msg2conn_ptr_.at(msg);
+  auto msg2mem_it = recv_msg2mem_desc_.find(msg);
   conn->PostRecvRequest(msg, msg2mem_it->second);
 }
 
-std::tuple<ActorMsg*, RdmaMem*> EndpointManager::AllocateSendMsg() {
+std::tuple<ActorMsg*, IBVerbsMemDesc*> EndpointManager::AllocateSendMsg() {
   std::unique_lock<std::mutex> lck(send_msg_pool_mutex_);
   if (send_msg_pool_.empty()) {
     ActorMsg* msg = new ActorMsg;
-    RdmaMem* mem = NewRdmaMem(msg, sizeof(ActorMsg));
-    send_msg2rdma_mem_.emplace(msg, mem);
+    IBVerbsMemDesc* mem_desc = NewIBVerbsMemDesc(msg, sizeof(ActorMsg));
+    send_msg2mem_desc_.emplace(msg, mem_desc);
     send_msg_pool_.push(msg);
   }
   ActorMsg* ret_msg = send_msg_pool_.front();
   send_msg_pool_.pop();
-  auto send_msg2rdma_mem_it = send_msg2rdma_mem_.find(ret_msg);
-  CHECK(send_msg2rdma_mem_it != send_msg2rdma_mem_.end());
-  return std::make_tuple(ret_msg, send_msg2rdma_mem_it->second);
+  auto send_msg2mem_desc_it = send_msg2mem_desc_.find(ret_msg);
+  CHECK(send_msg2mem_desc_it != send_msg2mem_desc_.end());
+  return std::make_tuple(ret_msg, send_msg2mem_desc_it->second);
 }
 
 void EndpointManager::ReleaseSendMsg(ActorMsg* msg) {
@@ -242,4 +240,4 @@ void EndpointManager::ReleaseSendMsg(ActorMsg* msg) {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA
+#endif  // WITH_RDMA && PLATFORM_POSIX

@@ -1,6 +1,6 @@
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
-#include "oneflow/core/comm_network/rdma/rdma_comm_network.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
@@ -86,7 +86,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
 #ifdef PLATFORM_POSIX
   if (JobDesc::Singleton()->use_rdma()) {
 #ifdef WITH_RDMA
-    RdmaCommNet::Init();
+    IBVerbsCommNet::Init();
 #else
     EpollCommNet::Init();
 #endif

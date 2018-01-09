@@ -1,25 +1,27 @@
-#include "oneflow/core/comm_network/rdma/connection.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_connection.h"
 
-#ifdef WITH_RDMA
+#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 namespace oneflow {
 
-void Connection::PostReadRequest(void* read_ctx, const RdmaMem* local_mem,
-                                 const RdmaMemDesc& remote_mem) {
+void IBVerbsConnection::PostReadRequest(void* read_ctx,
+                                        IBVerbsMemDesc* local_mem,
+                                        IBVerbsMemDescProto& remote_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(read_ctx);
   wr.opcode = IBV_WR_RDMA_READ;
-  wr.sg_list = const_cast<RdmaMem*>(local_mem)->ibv_sge_ptr();
+  wr.sg_list = local_mem->ibv_sge_ptr();
   wr.num_sge = 1;
   wr.send_flags = IBV_SEND_SIGNALED;
   wr.wr.rdma.remote_addr = remote_mem.mem_ptr();
   wr.wr.rdma.rkey = remote_mem.mr_rkey();
 
-  // return val may be incorrect when successfully executed
+  // return val may be incorrect when successfully executing
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
 }
 
-void Connection::PostSendRequest(ActorMsg* msg, RdmaMem* msg_mem) {
+void IBVerbsConnection::PostSendRequest(ActorMsg* msg,
+                                        IBVerbsMemDesc* msg_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
@@ -31,7 +33,8 @@ void Connection::PostSendRequest(ActorMsg* msg, RdmaMem* msg_mem) {
   CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
-void Connection::PostRecvRequest(ActorMsg* msg, RdmaMem* msg_mem) {
+void IBVerbsConnection::PostRecvRequest(ActorMsg* msg,
+                                        IBVerbsMemDesc* msg_mem) {
   ibv_recv_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
@@ -41,7 +44,7 @@ void Connection::PostRecvRequest(ActorMsg* msg, RdmaMem* msg_mem) {
   CHECK_EQ(ibv_post_recv(qp_ptr_, &wr, &bad_wr), 0);
 }
 
-void Connection::CompleteConnection() {
+void IBVerbsConnection::CompleteConnection() {
   LOG(INFO) << "Peer conn info: " << peer_machine_conn_info_.qpn() << " "
             << peer_machine_conn_info_.psn() << " "
             << peer_machine_conn_info_.snp() << " "
@@ -102,4 +105,4 @@ void Connection::CompleteConnection() {
 
 }  // namespace oneflow
 
-#endif  // WITH_RDMA
+#endif  // WITH_RDMA && PLATFORM_POSIX
