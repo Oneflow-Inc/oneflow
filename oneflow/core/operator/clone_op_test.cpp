@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-template<typename T, bool has_data_id>
+template<typename T, bool has_data_id_field>
 void TestCloneOp() {
   OperatorConf op_conf;
   op_conf.set_name("clone_test");
@@ -12,7 +12,7 @@ void TestCloneOp() {
   auto clone_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
   bn2blobdesc_map[clone_op->SoleIbn()] =
-      new BlobDesc(Shape({4, 3}), GetDataType<T>::val, has_data_id);
+      new BlobDesc(Shape({4, 3}), GetDataType<T>::val, has_data_id_field);
   for (const std::string& obn : clone_op->output_bns()) {
     bn2blobdesc_map[obn] = new BlobDesc;
   }

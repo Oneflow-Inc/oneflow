@@ -60,7 +60,7 @@ void BasicDataLoaderKernel<T>::ReadDirectToOutBlob(const KernelCtx& kernel_ctx,
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
       line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      if (out_blob->has_data_id()) {
+      if (out_blob->has_data_id_field()) {
         CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
         memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
         if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {

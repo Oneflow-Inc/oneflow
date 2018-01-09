@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_COMM_NETWORK_EPOLL_EPOLL_COMM_NETWORK_H_
 
 #include "oneflow/core/comm_network/comm_network.h"
+#include "oneflow/core/comm_network/memory_desc_manager.h"
 #include "oneflow/core/comm_network/epoll/socket_helper.h"
 #include "oneflow/core/comm_network/epoll/socket_memory_desc.h"
 
@@ -36,9 +37,7 @@ class EpollCommNet final : public CommNet {
   SocketHelper* GetSocketHelper(int64_t machine_id);
 
   // Memory Desc
-  std::mutex mem_desc_mtx_;
-  std::list<SocketMemDesc*> mem_descs_;
-  size_t unregister_mem_descs_cnt_;
+  MemDescMgr<SocketMemDesc> mem_desc_mgr_;
   // Socket
   std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;

@@ -29,7 +29,8 @@ void SoftmaxLossOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
-  CHECK_EQ(pred_blob_desc->has_data_id(), label_blob_desc->has_data_id());
+  CHECK_EQ(pred_blob_desc->has_data_id_field(),
+           label_blob_desc->has_data_id_field());
   CHECK(IsIntegral(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
@@ -37,17 +38,17 @@ void SoftmaxLossOp::InferBlobDescs(
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_blob_desc->set_has_data_id(pred_blob_desc->has_data_id());
+  loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
   // tmp_1D
   BlobDesc* tmp_1D_blob_desc = GetBlobDesc4BnInOp("tmp_1D");
   tmp_1D_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   tmp_1D_blob_desc->set_data_type(pred_blob_desc->data_type());
-  tmp_1D_blob_desc->set_has_data_id(false);
+  tmp_1D_blob_desc->set_has_data_id_field(false);
   // prob
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
-  prob_blob_desc->set_has_data_id(false);
+  prob_blob_desc->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxLossConf, SoftmaxLossOp);
