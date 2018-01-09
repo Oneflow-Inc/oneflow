@@ -35,7 +35,7 @@ void BasicDataLoaderOp::InferBlobDescs(
   // shape of buffer
   if (conf.max_sequence_size() > 1) {
     BlobDesc* buffer = GetBlobDesc4BnInOp("buffer");
-    dim_vec.insert(dim_vec.begin() + 1, conf.max_seq_len());
+    dim_vec.insert(dim_vec.begin() + 1, conf.max_sequence_size());
     buffer->mut_shape() = Shape(dim_vec);
     buffer->set_data_type(conf.data_type());
     buffer->set_has_data_id_field(JobDesc::Singleton()->SizeOfOneDataId() > 0);
