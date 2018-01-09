@@ -8,21 +8,22 @@ namespace oneflow {
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
   blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
-  if (blob_desc->has_data_id()) {
+
+  if (blob_desc->has_data_id_field()) {
     data_id_ptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField();
   } else {
     data_id_ptr_ = nullptr;
   }
-  if (blob_desc->has_seq_len()) {
-    seq_len_ptr_ = reinterpret_cast<int32_t*>(
+  if (blob_desc->has_col_num_field()) {
+    col_num_ptr_ = reinterpret_cast<int32_t*>(
         mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
         + blob_desc->ByteSizeOfDataIdField());
   } else {
-    seq_len_ptr_ = nullptr;
+    col_num_ptr_ = nullptr;
   }
   dptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
           + blob_desc->ByteSizeOfDataIdField()
-          + blob_desc->ByteSizeOfSeqLenField();
+          + blob_desc->ByteSizeOfColNumField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
 }
@@ -32,21 +33,40 @@ const char* Blob::data_id(int32_t no) const {
   return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();
 }
 
-int32_t Blob::seq_len(int32_t no) const {
-  CHECK_NOTNULL(seq_len_ptr_);
-  return *(seq_len_ptr_ + no);
+int32_t Blob::col_num(int32_t no) const {
+  CHECK_NOTNULL(col_num_ptr_);
+  return *(col_num_ptr_ + no);
 }
 
-int32_t* Blob::mut_seq_len(int32_t no) {
-  CHECK_NOTNULL(seq_len_ptr_);
-  return (seq_len_ptr_ + no);
+void Blob::set_col_num(int32_t no, int32_t val) {
+  CHECK_NOTNULL(col_num_ptr_);
+  *(col_num_ptr_ + no) = val;
+}
+
+const void* Blob::memory_ptr() const {
+  return reinterpret_cast<void*>(blob_header_);
+}
+
+size_t Blob::ByteSizeOfBlobHeaderField() const {
+  return blob_desc_->ByteSizeOfDataIdField();
+}
+
+size_t Blob::ByteSizeOfDataIdField() const {
+  return blob_desc_->ByteSizeOfDataIdField();
+}
+
+size_t Blob::ByteSizeOfColNumField() const {
+  return blob_desc_->ByteSizeOfColNumField();
+}
+
+size_t Blob::ByteSizeOfDataContentField() const {
+  return blob_desc_->ByteSizeOfDataContentField();
 }
 
 template<DeviceType device_type>
 void Blob::CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, static_cast<void*>(blob_header_),
-                      static_cast<void*>(rhs->blob_header_),
+  Memcpy<device_type>(device_ctx, blob_header_, rhs->blob_header_,
                       ByteSizeOfBlobHeaderField());
 }
 
@@ -65,11 +85,11 @@ void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 template<DeviceType device_type>
-void Blob::CopySeqLenFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, static_cast<void*>(seq_len_ptr_),
-                      static_cast<void*>(rhs->seq_len_ptr_),
-                      ByteSizeOfSeqLenField());
+  Memcpy<device_type>(device_ctx, static_cast<void*>(col_num_ptr_),
+                      static_cast<void*>(rhs->col_num_ptr_),
+                      ByteSizeOfColNumField());
 }
 
 template<DeviceType device_type>
@@ -83,7 +103,7 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   template void Blob::CopyBlobHeaderFrom<dev_t>(DeviceCtx*, const Blob*);  \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
-  template void Blob::CopySeqLenFrom<dev_t>(DeviceCtx*, const Blob*);      \
+  template void Blob::CopyColNumFrom<dev_t>(DeviceCtx*, const Blob*);      \
   template void Blob::CopyFrom<dev_t>(DeviceCtx*, const Blob*);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BLOB_FUNC, DEVICE_TYPE_SEQ);

@@ -12,6 +12,7 @@ class Regst final {
   ~Regst() { deleter_(); }
 
   // Getters
+  int64_t piece_id() const { return piece_id_; }
   int64_t model_version_id() const { return model_version_id_; }
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
@@ -20,31 +21,22 @@ class Regst final {
   Blob* GetBlobByLbn(const std::string& lbn);
   Blob* packed_blob() { return packed_blob_.get(); }
 
-  int64_t piece_id() const { return first_blob()->piece_id(); }
-  int64_t col_id() const { return first_blob()->col_id(); }
-  int64_t col_num() const { return first_blob()->max_col_num(); }
-  bool IsLastCol() const { return first_blob()->IsLastCol(); }
-  bool IsNextColOf(const Regst* other) const {
-    return first_blob()->IsNextColOf(*(other->first_blob()));
-  }
-  bool HasSamePieceStatus(const Regst* other) const {
-    return first_blob()->HasSamePieceStatus(*(other->first_blob()));
-  }
+  int64_t col_id() const { return FirstBlob()->col_id(); }
+  int64_t max_col_id() const { return FirstBlob()->max_col_id(); }
+  bool IsLastCol() const { return FirstBlob()->IsLastCol(); }
+  bool IsNextColOf(const Regst* other) const;
 
   // Setters
-  void set_piece_id(int64_t val) {
-    // TODO: remove this method
-  }
+  void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
 
  private:
   friend class RegstMgr;
   Regst();
 
-  const std::unique_ptr<Blob>& first_blob() const {
-    return lbn2blob_.begin()->second;
-  }
+  const Blob* FirstBlob() const { return lbn2blob_.begin()->second.get(); }
 
+  int64_t piece_id_;
   int64_t model_version_id_;
 
   const RtRegstDesc* regst_desc_;

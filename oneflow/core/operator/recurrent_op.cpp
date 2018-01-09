@@ -14,7 +14,7 @@ void InferBasicRnnCellBlobDesc(
   BlobDesc data_tmp_blob_desc =
       BlobDesc(Shape({embedding_size, hidden_size}),
                JobDesc::Singleton()->DefaultDataType(), false, false,
-               in_blob_desc->max_seq_len());
+               in_blob_desc->max_col_num());
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
@@ -81,8 +81,9 @@ void RecurrentOp::InferBlobDescs(
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
     CHECK_EQ(h0_blob_desc->shape(), h0_shape);
-    CHECK_EQ(h0_blob_desc->has_data_id(), in_blob_desc->has_data_id());
-    CHECK_EQ(h0_blob_desc->max_seq_len(), 1);
+    CHECK_EQ(h0_blob_desc->has_data_id_field(),
+             in_blob_desc->has_data_id_field());
+    CHECK_EQ(h0_blob_desc->max_col_num(), 1);
   } else {
     *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
   }
@@ -94,8 +95,8 @@ void RecurrentOp::InferBlobDescs(
   BlobDesc* ht_blob_desc = GetBlobDesc4BnInOp("ht");
   ht_blob_desc->mut_shape() = Shape({piece_size, hidden_size});
   ht_blob_desc->set_data_type(data_type);
-  ht_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
-  ht_blob_desc->set_max_seq_len(in_blob_desc->max_seq_len());
+  ht_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
+  ht_blob_desc->set_max_col_num(in_blob_desc->max_col_num());
 
   if (op_conf().recurrent_conf().rnn_type_case()
       == RecurrentOpConf::kBasicRnnCell) {

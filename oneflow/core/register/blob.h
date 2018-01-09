@@ -7,14 +7,6 @@
 
 namespace oneflow {
 
-struct BlobHeader {
-  BlobHeader() : piece_id(-1), col_id(-1), max_col_num(-1) {}
-
-  int64_t piece_id;
-  int64_t col_id;
-  int64_t max_col_num;
-};
-
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
@@ -29,15 +21,10 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
-  int32_t seq_len(int32_t no) const;
-  int32_t* mut_seq_len(int32_t no);
+  int32_t col_num(int32_t no) const;
+  void set_col_num(int32_t no, int32_t val);
 
-  int32_t seq_len() const { return seq_len(0); }
-  int32_t* mut_seq_len() { return mut_seq_len(0); }
-
-  const void* memory_ptr() const {
-    return reinterpret_cast<void*>(blob_header_);
-  }
+  const void* memory_ptr() const;
   void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
   template<typename T = void>
@@ -58,20 +45,12 @@ class Blob final {
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
-  bool has_data_id() const { return blob_desc_->has_data_id(); }
-  bool has_seq_len() const { return blob_desc_->has_seq_len(); }
-  size_t ByteSizeOfBlobHeaderField() const {
-    return blob_desc_->ByteSizeOfBlobHeaderField();
-  }
-  size_t ByteSizeOfDataIdField() const {
-    return blob_desc_->ByteSizeOfDataIdField();
-  }
-  size_t ByteSizeOfSeqLenField() const {
-    return blob_desc_->ByteSizeOfSeqLenField();
-  }
-  size_t ByteSizeOfDataContentField() const {
-    return blob_desc_->ByteSizeOfDataContentField();
-  }
+  bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
+  bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
+  size_t ByteSizeOfBlobHeaderField() const;
+  size_t ByteSizeOfDataIdField() const;
+  size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   template<DeviceType device_type>
@@ -81,34 +60,16 @@ class Blob final {
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
-  void CopySeqLenFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
-  int64_t piece_id() const { return blob_header_->piece_id; }
   int64_t col_id() const { return blob_header_->col_id; }
-  int64_t max_col_num() const { return blob_header_->max_col_num; }
+  void set_col_id(int64_t val) { blob_header_->col_id = val; }
+  int64_t max_col_id() const { return blob_header_->max_col_id; }
+  void set_max_col_id(int64_t val) { blob_header_->max_col_id = val; }
 
-  void set_piece_id(int64_t val) { blob_header_->piece_id = val; }
-  void set_col_id(int64_t val) {
-    CHECK_LT(val, blob_header_->max_col_num);
-    blob_header_->col_id = val;
-  }
-  void set_max_col_num(int64_t val) { blob_header_->max_col_num = val; }
-
-  bool HasSamePieceStatus(const Blob& other) const {
-    return piece_id() == other.piece_id() && col_id() == other.col_id()
-           && max_col_num() == other.max_col_num();
-  }
-  bool IsLastCol() const {
-    CHECK_NE(-1, piece_id());
-    return col_id() == max_col_num() - 1;
-  }
-  bool IsNextColOf(const Blob& pre) const {
-    CHECK_NE(-1, piece_id());
-    return piece_id() == pre.piece_id() && max_col_num() == pre.max_col_num()
-           && col_id() == pre.col_id() + 1;
-  }
+  bool IsLastCol() const { return col_id() == max_col_id(); }
 
  private:
   template<typename T>
@@ -122,7 +83,7 @@ class Blob final {
 
   BlobHeader* blob_header_;
   char* data_id_ptr_;
-  int32_t* seq_len_ptr_;
+  int32_t* col_num_ptr_;
   void* dptr_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
