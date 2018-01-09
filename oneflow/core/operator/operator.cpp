@@ -89,7 +89,7 @@ static bool HasBlobDescWithDataId(
     const std::vector<std::string>& bn_in_ops) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc && blob_desc->has_data_id()) { return true; }
+    if (blob_desc && blob_desc->has_data_id_field()) { return true; }
   }
   return false;
 }
