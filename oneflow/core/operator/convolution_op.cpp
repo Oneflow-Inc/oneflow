@@ -4,7 +4,9 @@
 namespace oneflow {
 
 #ifdef WITH_CUDNN
-CudnnConvolutionOpUtil::CudnnConvolutionOpUtil() {
+CudnnConvolutionOpUtil::CudnnConvolutionOpUtil(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ConvolutionOpConf& conv_conf) {
   CudaCheck(cudaStreamCreate(&cuda_stream_));
   CudaCheck(cudnnCreate(&cudnn_handle_));
   CudaCheck(cudnnSetStream(cudnn_handle_, cuda_stream_));
@@ -13,19 +15,52 @@ CudnnConvolutionOpUtil::CudnnConvolutionOpUtil() {
   CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
   CudaCheck(cudnnCreateFilterDescriptor(&filter_desc_));
   CudaCheck(cudnnCreateConvolutionDescriptor(&conv_desc_));
+
+  SetTensorDesc(GetBlobDesc4BnInOp, conv_conf);
 }
 
 CudnnConvolutionOpUtil::~CudnnConvolutionOpUtil() {
-  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
-  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
-  CudaCheck(cudnnDestroyConvolutionDescriptor(conv_desc_));
   CudaCheck(cudnnDestroyFilterDescriptor(filter_desc_));
+  CudaCheck(cudnnDestroyConvolutionDescriptor(conv_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
 
-  CudaCheck(cudaStreamDestroy(cuda_stream_));
   CudaCheck(cudnnDestroy(cudnn_handle_));
+  CudaCheck(cudaStreamDestroy(cuda_stream_));
 }
 
-void CudnnConvolutionOpUtil::InitTensorDesc(
+void CudnnConvolutionOpUtil::SetCudnnConfInConvKernelConf(
+    ConvolutionKernelConf* conv_kernel_conf) {
+  conv_kernel_conf->set_cudnn_fwd_algo(InferFwdAlgo());
+  conv_kernel_conf->set_cudnn_bwd_filter_algo(InferBwdFilterAlgo());
+  conv_kernel_conf->set_cudnn_bwd_data_algo(InferBwdDataAlgo());
+}
+
+size_t CudnnConvolutionOpUtil::InferWorkspaceSize() {
+  size_t cudnn_fwd_workspace_sizes = 0;
+  size_t cudnn_bwd_filter_workspace_sizes = 0;
+  size_t cudnn_bwd_data_workspace_sizes = 0;
+  size_t cudnn_workspace_sizes = 0;
+
+  // get workspace sizes of algorithm
+  CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
+      cudnn_handle_, in_desc_, filter_desc_, conv_desc_, out_desc_,
+      InferFwdAlgo(), &cudnn_fwd_workspace_sizes));
+  CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+      cudnn_handle_, in_desc_, out_desc_, conv_desc_, filter_desc_,
+      InferBwdFilterAlgo(), &cudnn_bwd_filter_workspace_sizes));
+  CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
+      cudnn_handle_, filter_desc_, out_desc_, conv_desc_, in_desc_,
+      InferBwdDataAlgo(), &cudnn_bwd_data_workspace_sizes));
+
+  cudnn_workspace_sizes = std::max(std::initializer_list<size_t>(
+      {cudnn_fwd_workspace_sizes, cudnn_bwd_filter_workspace_sizes,
+       cudnn_bwd_data_workspace_sizes}));
+
+  return cudnn_workspace_sizes;
+}
+
+void CudnnConvolutionOpUtil::SetTensorDesc(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ConvolutionOpConf& conv_conf) {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -87,34 +122,6 @@ cudnnConvolutionBwdDataAlgo_t CudnnConvolutionOpUtil::InferBwdDataAlgo() {
 
   return cudnn_bwd_data_algo;
 }
-
-size_t CudnnConvolutionOpUtil::InferWorkspaceSize(
-    cudnnConvolutionFwdAlgo_t cudnn_fwd_algo,
-    cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo,
-    cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo) {
-  size_t cudnn_fwd_workspace_sizes = 0;
-  size_t cudnn_bwd_filter_workspace_sizes = 0;
-  size_t cudnn_bwd_data_workspace_sizes = 0;
-  size_t cudnn_workspace_sizes = 0;
-
-  // get workspace sizes of algorithm
-  CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
-      cudnn_handle_, in_desc_, filter_desc_, conv_desc_, out_desc_,
-      cudnn_fwd_algo, &cudnn_fwd_workspace_sizes));
-  CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-      cudnn_handle_, in_desc_, out_desc_, conv_desc_, filter_desc_,
-      cudnn_bwd_filter_algo, &cudnn_bwd_filter_workspace_sizes));
-  CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
-      cudnn_handle_, filter_desc_, out_desc_, conv_desc_, in_desc_,
-      cudnn_bwd_data_algo, &cudnn_bwd_data_workspace_sizes));
-
-  cudnn_workspace_sizes = std::max(cudnn_bwd_filter_workspace_sizes,
-                                   cudnn_bwd_data_workspace_sizes);
-  cudnn_workspace_sizes =
-      std::max(cudnn_workspace_sizes, cudnn_fwd_workspace_sizes);
-
-  return cudnn_workspace_sizes;
-}
 #endif  // WITH_CUDNN
 
 void ConvolutionOp::InitFromOpConf() {
@@ -126,12 +133,12 @@ void ConvolutionOp::InitFromOpConf() {
   EnrollModelBn("weight");
   if (op_conf().convolution_conf().has_bias_term()) {
     EnrollModelBn("bias");
-    if (!op_conf().convolution_conf().with_cudnn()) {
+    if (!op_conf().convolution_conf().use_cudnn()) {
       EnrollModelTmpBn("bias_multiplier");
     }
   }
 
-  if (op_conf().convolution_conf().with_cudnn()) {
+  if (op_conf().convolution_conf().use_cudnn()) {
     EnrollDataTmpBn("cudnn_workspace");
   } else {
     EnrollDataTmpBn("col_buf");
@@ -189,7 +196,7 @@ void ConvolutionOp::InferBlobDescs(
     bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_blob_desc->set_has_data_id(false);
 
-    if (!conf.with_cudnn()) {
+    if (!conf.use_cudnn()) {
       // bias multiplier
       BlobDesc* bias_multiplier_blob_desc =
           GetBlobDesc4BnInOp("bias_multiplier");
@@ -201,31 +208,22 @@ void ConvolutionOp::InferBlobDescs(
   }
 
 #ifdef WITH_CUDNN
-  if (conf.with_cudnn()) {
-    CudnnConvolutionOpUtil cudnn_conv_util;
-
-    cudnn_conv_util.InitTensorDesc(GetBlobDesc4BnInOp, conf);
-    cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = cudnn_conv_util.InferFwdAlgo();
-    cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
-        cudnn_conv_util.InferBwdFilterAlgo();
-    cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
-        cudnn_conv_util.InferBwdDataAlgo();
-
-    size_t cudnn_workspace_size = cudnn_conv_util.InferWorkspaceSize(
-        cudnn_fwd_algo, cudnn_bwd_filter_algo, cudnn_bwd_data_algo);
+  if (conf.use_cudnn()) {
+    CudnnConvolutionOpUtil cudnn_conv_util(GetBlobDesc4BnInOp, conf);
 
     BlobDesc* cudnn_workspace_blob_desc = GetBlobDesc4BnInOp("cudnn_workspace");
     cudnn_workspace_blob_desc->mut_shape() =
-        Shape({static_cast<int64_t>(cudnn_workspace_size)});
+        Shape({static_cast<int64_t>(cudnn_conv_util.InferWorkspaceSize())});
     cudnn_workspace_blob_desc->set_data_type(
         JobDesc::Singleton()->DefaultDataType());
     cudnn_workspace_blob_desc->set_has_data_id(false);
   }
 #endif  // WITH_CUDNN
 
-  if (!conf.with_cudnn()) {
+  if (!conf.use_cudnn()) {
     // col_buf
     BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
+    CHECK(col_buf_blob_desc);
     col_buf_blob_desc->mut_shape() =
         Shape({data_num, output_size, c_i * kernel});
     col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
@@ -237,26 +235,11 @@ void ConvolutionOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
 #ifdef WITH_CUDNN
-  if (op_conf().convolution_conf().with_cudnn()) {
-    CudnnConvolutionOpUtil cudnn_conv_util;
-
-    cudnn_conv_util.InitTensorDesc(GetBlobDesc4BnInOp,
-                                   op_conf().convolution_conf());
-    cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = cudnn_conv_util.InferFwdAlgo();
-    cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
-        cudnn_conv_util.InferBwdFilterAlgo();
-    cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
-        cudnn_conv_util.InferBwdDataAlgo();
-
-    kernel_conf->mutable_convolution_conf()->set_cudnn_fwd_algo(
-        static_cast<ConvolutionKernelConf::cudnnConvolutionFwdAlgo_t>(
-            cudnn_fwd_algo));
-    kernel_conf->mutable_convolution_conf()->set_cudnn_bwd_filter_algo(
-        static_cast<ConvolutionKernelConf::cudnnConvolutionBwdFilterAlgo_t>(
-            cudnn_bwd_filter_algo));
-    kernel_conf->mutable_convolution_conf()->set_cudnn_bwd_data_algo(
-        static_cast<ConvolutionKernelConf::cudnnConvolutionBwdDataAlgo_t>(
-            cudnn_bwd_data_algo));
+  if (op_conf().convolution_conf().use_cudnn()) {
+    CudnnConvolutionOpUtil cudnn_conv_util(GetBlobDesc4BnInOp,
+                                           op_conf().convolution_conf());
+    cudnn_conv_util.SetCudnnConfInConvKernelConf(
+        kernel_conf->mutable_convolution_conf());
   }
 #endif  // WITH_CUDNN
 }

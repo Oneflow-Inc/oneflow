@@ -9,21 +9,22 @@ namespace oneflow {
 #ifdef WITH_CUDNN
 class CudnnConvolutionOpUtil {
  public:
-  CudnnConvolutionOpUtil();
+  CudnnConvolutionOpUtil(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ConvolutionOpConf& conv_conf);
   ~CudnnConvolutionOpUtil();
 
-  void InitTensorDesc(
+  void SetCudnnConfInConvKernelConf(ConvolutionKernelConf* conv_kernel_conf);
+  size_t InferWorkspaceSize();
+
+ private:
+  void SetTensorDesc(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ConvolutionOpConf& conv_conf);
   cudnnConvolutionFwdAlgo_t InferFwdAlgo();
   cudnnConvolutionBwdFilterAlgo_t InferBwdFilterAlgo();
   cudnnConvolutionBwdDataAlgo_t InferBwdDataAlgo();
-  size_t InferWorkspaceSize(
-      cudnnConvolutionFwdAlgo_t cudnn_fwd_algo,
-      cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo,
-      cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo);
 
- private:
   cudaStream_t cuda_stream_;
   cudnnHandle_t cudnn_handle_;
   cudnnTensorDescriptor_t in_desc_;

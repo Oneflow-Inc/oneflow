@@ -43,7 +43,7 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional bool with_cudnn = 13 [default = true];
+  optional bool use_cudnn = 13 [default = true];
   
   optional FillConf weight_fill = 14;
   optional FillConf bias_fill = 15;
