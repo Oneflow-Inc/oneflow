@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-message RdmaMemDescProto {
+message IBVerbsMemDescProto {
   required uint64 mem_ptr = 1;
   required uint32 mr_rkey = 2;
 }
