@@ -12,9 +12,10 @@ void BasicDataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
+  Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
-  if (out_blob->has_seq_len()) {
+  if (out_blob->has_col_num_field()) {
     Blob* buffer_blob = BnInOp2Blob("buffer");
     CHECK(buffer_blob);
     CHECK_EQ(GetDataType<T>::val, buffer_blob->data_type());
@@ -49,7 +50,7 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadDirectToOutBlob(const KernelCtx& kernel_ctx,
                                                    Blob* out_blob) const {
-  CHECK(!out_blob->has_seq_len());
+  CHECK(!out_blob->set_has_col_num_field());
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
   int64_t piece_size = out_blob->shape().At(0);
   T* out_dptr = out_blob->mut_dptr<T>();
@@ -87,11 +88,11 @@ void BasicDataLoaderKernel<T>::ReadDirectToOutBlob(const KernelCtx& kernel_ctx,
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(const KernelCtx& kernel_ctx,
                                                     Blob* buffer_blob) const {
-  CHECK(buffer_blob->has_seq_len());
+  CHECK(buffer_blob->has_col_num_field());
   CHECK(kernel_ctx.other);
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
   int64_t piece_size = buffer_blob->shape().At(0);
-  int64_t max_seq_len = op_conf().basic_data_loader_conf().max_seq_len();
+  int64_t max_seq_size = buffer_blob->max_col_num();
   status->max_col_num = 0;
   T* buffer_dptr = buffer_blob->mut_dptr<T>();
 
@@ -100,7 +101,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(const KernelCtx& kernel_ctx,
 
   // each line format: (data_id)?(,data_content)*
   FOR_RANGE(int64_t, i, 0, piece_size) {
-    T* each_buff_dptr = buffer_dptr + i * max_seq_len;
+    T* each_buff_dptr = buffer_dptr + i * max_seq_size;
     int32_t seq_len = 0;
     int32_t read_status = in_stream_->ReadLine(&line);
     if (read_status == 0) {
@@ -139,13 +140,13 @@ template<typename T>
 void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
                                                    const Blob* buffer_blob,
                                                    Blob* out_blob) const {
-  CHECK(out_blob->has_seq_len());
+  CHECK(out_blob->has_col_num_field());
   CHECK(kernel_ctx.other);
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
   T* out_dptr = out_blob->mut_dptr<T>();
   T* buffer_dptr = buffer_blob->mut_dptr<T>();
   int64_t piece_size = out_blob->shape().At(0);
-  int64_t max_seq_len = op_conf().basic_data_loader_conf().max_seq_len();
+  int64_t max_seq_size = buffer_blob->max_col_num();
 
   out_blob->set_piece_id(status->piece_id);
   out_blob->set_max_col_num(status->max_col_num);
@@ -158,7 +159,7 @@ void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
 
   FOR_RANGE(int64_t, i, 0, piece_size) {
     T* each_out_dptr = out_dptr + i * out_blob->shape().Count(1);
-    T* each_buff_dptr = buffer_dptr + i * max_seq_len
+    T* each_buff_dptr = buffer_dptr + i * max_seq_size
                         + status->next_col_id * out_blob->shape().Count(1);
     *(out_blob->mut_seq_len(i)) = buffer_blob->seq_len(i);
     if (status->next_col_id < buffer_blob->seq_len(i)) {
@@ -180,7 +181,7 @@ void BasicDataLoaderKernel<T>::FillBlobRowsWithZero(Blob* blob, int64_t start,
     memset(blob->mut_data_id(start), '\0',
            (end - start) * JobDesc::Singleton()->SizeOfOneDataId());
   }
-  if (blob->has_seq_len()) {
+  if (blob->has_col_num_field()) {
     FOR_RANGE(int64_t, i, start, end) { *(blob->mut_seq_len(i)) = 0; }
   }
   T* dptr_start = blob->mut_dptr<T>() + start * blob->shape().Count(1);
