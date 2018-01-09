@@ -44,7 +44,7 @@ class Blob final {
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
-  bool has_data_id() const { return blob_desc_->has_data_id(); }
+  bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   size_t ByteSizeOfDataIdField() const {
     return blob_desc_->ByteSizeOfDataIdField();
   }
