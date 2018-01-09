@@ -73,7 +73,6 @@ void BasicDataLoaderKernel<T>::ReadDirectToOutBlob(const KernelCtx& kernel_ctx,
       }
       CHECK_EQ(*(line_ptr - 1), '\0');
     } else {
-      LOG(INFO)<<"end";
       CHECK(kernel_ctx.other);
       auto status =
           static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
@@ -138,7 +137,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(const KernelCtx& kernel_ctx,
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
-                                                   Blob* buffer_blob,
+                                                   const Blob* buffer_blob,
                                                    Blob* out_blob) const {
   CHECK(out_blob->has_seq_len());
   CHECK(kernel_ctx.other);
@@ -184,11 +183,10 @@ void BasicDataLoaderKernel<T>::FillBlobRowsWithZero(Blob* blob, int64_t start,
   if (blob->has_seq_len()) {
     FOR_RANGE(int64_t, i, start, end) { *(blob->mut_seq_len(i)) = 0; }
   }
-  FOR_RANGE(int64_t, i, start, end) {
-    T* dptr = blob->mut_dptr<T>() + i * blob->shape().Count(1);
-    FOR_RANGE(int64_t, j, 0, blob->shape().Count(1)) {
-      *dptr++ = static_cast<T>(0);
-    }
+  T* dptr_start = blob->mut_dptr<T>() + start * blob->shape().Count(1);
+  T* dptr_end = blob->mut_dptr<T>() + end * blob->shape().Count(1);
+  FOR_RANGE(T*, dptr, dptr_start, dptr_end) {
+    *dptr = static_cast<T>(0);
   }
 }
 
