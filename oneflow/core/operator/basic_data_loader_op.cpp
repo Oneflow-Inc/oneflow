@@ -41,8 +41,8 @@ void BasicDataLoaderOp::InferBlobDescs(
     buffer->mut_shape() = Shape(dim_vec);
     buffer->set_data_type(conf.data_type());
     buffer->set_has_data_id_field(JobDesc::Singleton()->SizeOfOneDataId() > 0);
-    out->set_has_col_num_field(true);
-    out->set_max_col_num(conf.max_sequence_size());
+    buffer->set_has_col_num_field(true);
+    buffer->set_max_col_num(conf.max_sequence_size());
   }
 }
 
