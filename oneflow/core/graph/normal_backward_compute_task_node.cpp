@@ -1,10 +1,9 @@
-#include "oneflow/core/graph/nonrecurrent_backward_compute_task_node.h"
+#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
 
 namespace oneflow {
 
-void NonRecurrentBackwardCompTaskNode::
-    VirtualBuildExecGphAndBindOutDiffRegst() {
+void NormalBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   HashMap<std::string, std::pair<ExecNode*, std::string>> lbn2producer;
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
@@ -34,7 +33,7 @@ void NonRecurrentBackwardCompTaskNode::
   });
 }
 
-void NonRecurrentBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
+void NormalBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
@@ -57,7 +56,7 @@ void NonRecurrentBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
   });
 }
 
-void NonRecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
+void NormalBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
@@ -77,7 +76,7 @@ void NonRecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   });
 }
 
-void NonRecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
+void NormalBackwardCompTaskNode::VirtualConsumeInRegst() {
   TaskNode* fw_node = GetRelatedFwTaskNode();
   for (TaskEdge* edge : fw_node->in_edges()) {
     TaskNode* pred_fw_node = edge->src_node();
