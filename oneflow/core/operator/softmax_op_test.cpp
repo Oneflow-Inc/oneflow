@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-template<typename T, bool has_data_id>
+template<typename T, bool has_data_id_field>
 void TestSoftmaxOp() {
   // create softmax_op
   OperatorConf op_conf;
@@ -13,7 +13,7 @@ void TestSoftmaxOp() {
   auto softmax_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
       {softmax_op->SoleIbn(),
-       new BlobDesc(Shape({3, 5}), data_type, has_data_id)},
+       new BlobDesc(Shape({3, 5}), data_type, has_data_id_field)},
       {softmax_op->SoleObn(), new BlobDesc},
       {softmax_op->SoleDtbn(), new BlobDesc}};
   auto fp = [&bn2blobdesc_map](const std::string& bn) {

@@ -43,7 +43,7 @@ class RegstDesc final {
   size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
 
   // util
-  int32_t MaxSeqLen() const { return packed_blob_desc_->max_seq_len(); }
+  int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
   void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
@@ -63,8 +63,8 @@ class RegstDesc final {
 };
 
 inline void UpdtMinRegisterNumByMaxSequenceSize(RegstDesc* regst_desc) {
-  if (regst_desc->min_register_num() < regst_desc->MaxSeqLen()) {
-    regst_desc->set_min_register_num(regst_desc->MaxSeqLen());
+  if (regst_desc->min_register_num() < regst_desc->MaxColNum()) {
+    regst_desc->set_min_register_num(regst_desc->MaxColNum());
   }
 }
 

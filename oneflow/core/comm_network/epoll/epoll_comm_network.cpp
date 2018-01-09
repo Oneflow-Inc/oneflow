@@ -67,22 +67,12 @@ const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   auto mem_desc = new SocketMemDesc;
   mem_desc->mem_ptr = mem_ptr;
   mem_desc->byte_size = byte_size;
-  {
-    std::unique_lock<std::mutex> lck(mem_desc_mtx_);
-    mem_descs_.push_back(mem_desc);
-  }
+  mem_desc_mgr_.RegisterMemDesc(mem_desc);
   return mem_desc;
 }
 
 void EpollCommNet::UnRegisterMemory(const void* token) {
-  std::unique_lock<std::mutex> lck(mem_desc_mtx_);
-  CHECK(!mem_descs_.empty());
-  unregister_mem_descs_cnt_ += 1;
-  if (unregister_mem_descs_cnt_ == mem_descs_.size()) {
-    for (SocketMemDesc* mem_desc : mem_descs_) { delete mem_desc; }
-    mem_descs_.clear();
-    unregister_mem_descs_cnt_ = 0;
-  }
+  mem_desc_mgr_.UnRegisterMemDesc();
 }
 
 void EpollCommNet::RegisterMemoryDone() {
@@ -125,8 +115,6 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
 }
 
 EpollCommNet::EpollCommNet() {
-  mem_descs_.clear();
-  unregister_mem_descs_cnt_ = 0;
   pollers_.resize(JobDesc::Singleton()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;

@@ -8,14 +8,19 @@
 
 namespace oneflow {
 
+struct BlobHeader {
+  int64_t col_id;
+  int64_t max_col_id;
+};
+
 class BlobDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
   ~BlobDesc() = default;
 
   BlobDesc();
-  BlobDesc(Shape shape, DataType data_type, bool has_data_id,
-           int32_t max_seq_len);
+  BlobDesc(Shape shape, DataType data_type, bool has_data_id_field,
+           bool has_col_num_field, int32_t max_col_num);
   BlobDesc(Shape shape) : BlobDesc() { shape_ = shape; }
   BlobDesc(const BlobDescProto& proto);
 
@@ -25,14 +30,19 @@ class BlobDesc final {
   DataType data_type() const { return data_type_; }
   void set_data_type(DataType val) { data_type_ = val; }
 
-  bool has_data_id() const { return has_data_id_; }
-  void set_has_data_id(bool val) { has_data_id_ = val; }
+  bool has_data_id_field() const { return has_data_id_field_; }
+  void set_has_data_id_field(bool val) { has_data_id_field_ = val; }
 
-  int32_t max_seq_len() const { return max_seq_len_; }
-  void set_max_seq_len(int32_t val) { max_seq_len_ = val; }
+  bool has_col_num_field() const { return has_col_num_field_; }
+  void set_has_col_num_field(bool val) { has_col_num_field_ = val; }
+
+  int32_t max_col_num() const { return max_col_num_; }
+  void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
   void ToProto(BlobDescProto* proto) const;
+  size_t ByteSizeOfBlobHeaderField() const { return sizeof(BlobHeader); }
   size_t ByteSizeOfDataIdField() const;
+  size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
   bool operator==(const BlobDesc& rhs) const;
@@ -40,8 +50,9 @@ class BlobDesc final {
  private:
   Shape shape_;
   DataType data_type_;
-  bool has_data_id_;
-  int32_t max_seq_len_;
+  bool has_data_id_field_;
+  bool has_col_num_field_;
+  int64_t max_col_num_;
 };
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
