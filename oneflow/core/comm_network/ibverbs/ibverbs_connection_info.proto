@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-message RdmaConnectionInfo {
+message IBVerbsConnectionInfo {
   required int32 lid = 1;
   required int32 qpn = 2;
   required int32 psn = 3;
