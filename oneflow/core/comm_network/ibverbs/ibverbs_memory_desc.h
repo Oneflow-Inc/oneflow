@@ -15,7 +15,7 @@ class IBVerbsMemDesc {
   IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size);
   ~IBVerbsMemDesc() { CHECK_EQ(ibv_dereg_mr(mr_), 0); }
 
-  IBVerbsMemDescProto GenIBVerbsMemDescProto();
+  IBVerbsMemDescProto IBVerbsMemDescToProto();
   ibv_sge* ibv_sge_ptr() { return &sge_; }
 
  private:

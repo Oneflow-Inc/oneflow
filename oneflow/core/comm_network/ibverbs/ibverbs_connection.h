@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_CONNECTION_H_
-#define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_CONNECTION_H_
+#ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_CONNECTION_H_
+#define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_CONNECTION_H_
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -9,10 +9,10 @@
 
 namespace oneflow {
 
-class Connection {
+class IBVerbsConnection {
  public:
-  explicit Connection() : qp_ptr_(nullptr) {}
-  ~Connection() {
+  explicit IBVerbsConnection() : qp_ptr_(nullptr) {}
+  ~IBVerbsConnection() {
     if (qp_ptr_ != nullptr) { CHECK_EQ(ibv_destroy_qp(qp_ptr_), 0); }
   }
 
@@ -49,4 +49,4 @@ class Connection {
 
 #endif  // WITH_RDMA && PLATFORM_POSIX
 
-#endif  // ONEFLOW_CORE_COMM_NETWORK_IBVERBS_CONNECTION_H_
+#endif  // ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_CONNECTION_H_

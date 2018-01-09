@@ -1,11 +1,12 @@
-#include "oneflow/core/comm_network/ibverbs/connection.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_connection.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 namespace oneflow {
 
-void Connection::PostReadRequest(void* read_ctx, IBVerbsMemDesc* local_mem,
-                                 IBVerbsMemDescProto& remote_mem) {
+void IBVerbsConnection::PostReadRequest(void* read_ctx,
+                                        IBVerbsMemDesc* local_mem,
+                                        IBVerbsMemDescProto& remote_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(read_ctx);
   wr.opcode = IBV_WR_RDMA_READ;
@@ -19,7 +20,8 @@ void Connection::PostReadRequest(void* read_ctx, IBVerbsMemDesc* local_mem,
   ibv_post_send(qp_ptr_, &wr, &bad_wr);
 }
 
-void Connection::PostSendRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) {
+void IBVerbsConnection::PostSendRequest(ActorMsg* msg,
+                                        IBVerbsMemDesc* msg_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
@@ -31,7 +33,8 @@ void Connection::PostSendRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) {
   CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
-void Connection::PostRecvRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) {
+void IBVerbsConnection::PostRecvRequest(ActorMsg* msg,
+                                        IBVerbsMemDesc* msg_mem) {
   ibv_recv_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
   wr.next = nullptr;
@@ -41,7 +44,7 @@ void Connection::PostRecvRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) {
   CHECK_EQ(ibv_post_recv(qp_ptr_, &wr, &bad_wr), 0);
 }
 
-void Connection::CompleteConnection() {
+void IBVerbsConnection::CompleteConnection() {
   ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
