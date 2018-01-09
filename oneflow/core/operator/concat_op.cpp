@@ -35,12 +35,13 @@ void ConcatOp::InferBlobDescs(
       }
     }
     CHECK_EQ(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
-    CHECK_EQ(in_i_blob_desc->has_data_id(), in_0_blob_desc->has_data_id());
+    CHECK_EQ(in_i_blob_desc->has_data_id_field(),
+             in_0_blob_desc->has_data_id_field());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
   out_blob_desc->set_data_type(in_0_blob_desc->data_type());
-  out_blob_desc->set_has_data_id(in_0_blob_desc->has_data_id());
+  out_blob_desc->set_has_data_id_field(in_0_blob_desc->has_data_id_field());
 }
 
 void ConcatOp::VirtualGenKernelConf(
