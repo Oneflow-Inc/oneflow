@@ -38,6 +38,8 @@ class UnfoldedActorNode final
   double time_per_act_;
 };
 
+static int unfolded_piece_num = 2;
+
 class UnfoldedActorGraph final
     : public Graph<UnfoldedActorNode, UnfoldedActorEdge> {
  public:
@@ -46,7 +48,7 @@ class UnfoldedActorGraph final
       const ActorGraph& actor_graph,
       const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts);
   ~UnfoldedActorGraph() = default;
-  double CalcActorNodeAvgLongestPathTime(
+  double CalcActorNodesLongestPathTime(
       const ActorNode* start_actor_node,
       const std::unordered_set<const ActorNode*>& end_actor_nodes) const;
 
@@ -75,19 +77,21 @@ std::list<const UnfoldedActorNode*> FilterNodesOnOutEdgeByActorNode(
   return filtered_nodes;
 }
 
-double UnfoldedActorGraph::CalcActorNodeAvgLongestPathTime(
+double UnfoldedActorGraph::CalcActorNodesLongestPathTime(
     const ActorNode* start_actor_node,
     const std::unordered_set<const ActorNode*>& end_actor_nodes) const {
-  const auto& unfolded_nodes = actor_node2unfolded_.at(start_actor_node);
-  CHECK(!unfolded_nodes.empty());
   double sum = 0;
-  for (const UnfoldedActorNode* node : unfolded_nodes) {
+  int end_node_num = 0;
+  for (const auto* node : actor_node2unfolded_.at(start_actor_node)) {
     auto filtered_unfolded_end_nodes =
         FilterNodesOnOutEdgeByActorNode(node, end_actor_nodes);
-    CHECK(!filtered_unfolded_end_nodes.empty());
-    sum += CalcLongestPathTime(node, filtered_unfolded_end_nodes);
+    if (!filtered_unfolded_end_nodes.empty()) {
+      sum += CalcLongestPathTime(node, filtered_unfolded_end_nodes);
+      ++end_node_num;
+    }
   }
-  return sum / unfolded_nodes.size();
+  CHECK(end_node_num != 0);
+  return sum / end_node_num;
 }
 
 double UnfoldedActorGraph::CalcLongestPathTime(
@@ -97,7 +101,7 @@ double UnfoldedActorGraph::CalcLongestPathTime(
   return 0;
 }
 
-HashMap<int64_t, std::list<const ActEvent*>> TakingActEventsOfTwoPieces(
+HashMap<int64_t, std::list<const ActEvent*>> TakingActEventsOfFrontPieces(
     const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts) {
   TODO();
   return task_id2act_evts;
@@ -121,7 +125,7 @@ UnfoldedActorGraph::UnfoldedActorGraph(
     const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts)
     : actor_graph_(&actor_graph) {
   auto back_edges = FindBackEdges(actor_graph);
-  CreateNodes(TakingActEventsOfTwoPieces(task_id2act_evts));
+  CreateNodes(TakingActEventsOfFrontPieces(task_id2act_evts));
   actor_graph.ForEachEdge([&](ActorEdge* actor_edge) {
     ConnectNodes(&actor_node2unfolded_.at(actor_edge->src_node()),
                  &actor_node2unfolded_.at(actor_edge->dst_node()),
