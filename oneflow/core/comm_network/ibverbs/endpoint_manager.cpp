@@ -70,12 +70,6 @@ void EndpointManager::InitRdma() {
     CtrlClient::Singleton()->PullKV(
         GenConnInfoKey(peer_machine_id, this_machine_id),
         conn->mut_peer_machine_conn_info_ptr());
-    LOG(INFO) << "Connection " << reinterpret_cast<uint64_t>(conn)
-              << " info: " << conn->mut_peer_machine_conn_info().lid() << " "
-              << conn->mut_peer_machine_conn_info().qpn() << " "
-              << conn->mut_peer_machine_conn_info().psn() << " "
-              << conn->mut_peer_machine_conn_info().snp() << " "
-              << conn->mut_peer_machine_conn_info().iid();
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
       ActorMsg* actor_msg = new ActorMsg;
       auto ibverbs_mem_desc = NewIBVerbsMemDesc(actor_msg, sizeof(ActorMsg));
@@ -129,12 +123,6 @@ IBVerbsConnection* EndpointManager::NewIBVerbsConnection() {
   conn->mut_this_machine_conn_info_ptr()->set_iid(gid.global.interface_id);
   conn->set_ibv_mtu(attr.active_mtu);
   conn->set_ibv_qp_ptr(qp_ptr);
-  LOG(INFO) << "Connection " << reinterpret_cast<uint64_t>(conn)
-            << " info: " << conn->mut_this_machine_conn_info().lid() << " "
-            << conn->mut_this_machine_conn_info().qpn() << " "
-            << conn->mut_this_machine_conn_info().psn() << " "
-            << conn->mut_this_machine_conn_info().snp() << " "
-            << conn->mut_this_machine_conn_info().iid();
   return conn;
 }
 
@@ -159,18 +147,18 @@ void EndpointManager::SendActorMsg(int64_t dst_machine_id,
 }
 
 void EndpointManager::Start() {
-  thread_state_ = true;
-  thread_ = std::thread(&EndpointManager::PollLoop, this);
+  poll_state_ = true;
+  poll_thread_ = std::thread(&EndpointManager::PollLoop, this);
 }
 
 void EndpointManager::Stop() {
-  thread_state_ = false;
-  thread_.join();
+  poll_state_ = false;
+  poll_thread_.join();
 }
 
 void EndpointManager::PollLoop() {
   while (true) {
-    if (!thread_state_) { return; }
+    if (!poll_state_) { return; }
     PollSendQueue();
     PollRecvQueue();
   }
@@ -183,8 +171,7 @@ void EndpointManager::PollSendQueue() {
   if (len <= 0) { return; }
 
   if (wc.status != IBV_WC_SUCCESS) {
-    LOG(INFO) << "PollSend wc.status != WC_SUCCESS " << wc.status;
-    return;
+    LOG(FATAL) << "PollSendQueue Error Code: " << wc.status;
   }
   switch (wc.opcode) {
     case IBV_WC_SEND: {
@@ -206,8 +193,7 @@ void EndpointManager::PollRecvQueue() {
   if (len <= 0) { return; }
 
   if (wc.status != IBV_WC_SUCCESS) {
-    LOG(INFO) << "PollRecv wc.status != WC_SUCCESS " << wc.status;
-    return;
+    LOG(FATAL) << "PollRecvQueue Error Code:  " << wc.status;
   }
   ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
 

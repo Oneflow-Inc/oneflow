@@ -13,7 +13,7 @@ namespace oneflow {
 class IBVerbsCommNet final : public CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
-  ~IBVerbsCommNet();
+  ~IBVerbsCommNet() = default;
 
   static IBVerbsCommNet* Singleton() {
     return static_cast<IBVerbsCommNet*>(CommNet::Singleton());
@@ -30,11 +30,10 @@ class IBVerbsCommNet final : public CommNet {
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
-  IBVerbsCommNet();
+  IBVerbsCommNet() = default;
 
   MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
-
-  EndpointManager* endpoint_manager_;
+  EndpointManager endpoint_manager_;
   HashMap<uint64_t, IBVerbsMemDescProto> token2mem_desc_proto_;
 };
 

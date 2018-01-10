@@ -47,8 +47,8 @@ class EndpointManager {
   std::queue<ActorMsg*> send_msg_pool_;
   HashMap<ActorMsg*, IBVerbsMemDesc*> send_msg2mem_desc_;
 
-  std::thread thread_;
-  bool thread_state_;
+  std::thread poll_thread_;
+  bool poll_state_;
 
   ibv_context* context_;
   ibv_pd* pd_;
