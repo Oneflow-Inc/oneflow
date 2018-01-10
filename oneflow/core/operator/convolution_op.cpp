@@ -62,10 +62,6 @@ void InferCudnnConvAlgo(const cudnnHandle_t* cudnn_handle,
                         cudnnConvolutionFwdAlgo_t* cudnn_fwd_algo,
                         cudnnConvolutionBwdFilterAlgo_t* cudnn_bwd_filter_algo,
                         cudnnConvolutionBwdDataAlgo_t* cudnn_bwd_data_algo) {
-  *cudnn_fwd_algo = static_cast<cudnnConvolutionFwdAlgo_t>(0);
-  *cudnn_bwd_filter_algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
-  *cudnn_bwd_data_algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
-
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(
       *cudnn_handle, *in_desc, *filter_desc, *conv_desc, *out_desc,
       CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, cudnn_fwd_algo));
@@ -87,9 +83,9 @@ size_t ComputeCudnnConvWorkspaceSize(
   cudnnFilterDescriptor_t filter_desc;
   cudnnConvolutionDescriptor_t conv_desc;
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
+  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = static_cast<cudnnConvolutionFwdAlgo_t>(0);
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
+  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
 
   InitCudnnTensorDesc(GetBlobDesc4BnInOp, conv_conf, &in_desc, &out_desc,
                       &filter_desc, &conv_desc);
@@ -133,9 +129,9 @@ void SetCudnnConfInConvKernelConf(
   cudnnFilterDescriptor_t filter_desc;
   cudnnConvolutionDescriptor_t conv_desc;
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
+  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = static_cast<cudnnConvolutionFwdAlgo_t>(0);
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
+  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
 
   InitCudnnTensorDesc(GetBlobDesc4BnInOp, conv_conf, &in_desc, &out_desc,
                       &filter_desc, &conv_desc);
