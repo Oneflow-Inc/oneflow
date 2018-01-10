@@ -1,12 +1,13 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_MEM_DESC_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_MEM_DESC_H_
 
+#include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc_proto.pb.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 #include <infiniband/verbs.h>
-#include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc_proto.pb.h"
 
 namespace oneflow {
 
