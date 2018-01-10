@@ -83,9 +83,12 @@ size_t ComputeCudnnConvWorkspaceSize(
   cudnnFilterDescriptor_t filter_desc;
   cudnnConvolutionDescriptor_t conv_desc;
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = static_cast<cudnnConvolutionFwdAlgo_t>(0);
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
+  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
+      static_cast<cudnnConvolutionFwdAlgo_t>(0);
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
+      static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
+  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
+      static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
 
   InitCudnnTensorDesc(GetBlobDesc4BnInOp, conv_conf, &in_desc, &out_desc,
                       &filter_desc, &conv_desc);
@@ -129,9 +132,12 @@ void SetCudnnConfInConvKernelConf(
   cudnnFilterDescriptor_t filter_desc;
   cudnnConvolutionDescriptor_t conv_desc;
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo = static_cast<cudnnConvolutionFwdAlgo_t>(0);
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo = static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
+  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
+      static_cast<cudnnConvolutionFwdAlgo_t>(0);
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
+      static_cast<cudnnConvolutionBwdFilterAlgo_t>(0);
+  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
+      static_cast<cudnnConvolutionBwdDataAlgo_t>(0);
 
   InitCudnnTensorDesc(GetBlobDesc4BnInOp, conv_conf, &in_desc, &out_desc,
                       &filter_desc, &conv_desc);
@@ -206,20 +212,20 @@ void ConvolutionOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
   out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
+  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // weight
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   weight_blob_desc->mut_shape() = Shape({c_o, c_i * kernel});
   weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  weight_blob_desc->set_has_data_id(false);
+  weight_blob_desc->set_has_data_id_field(false);
 
   if (conf.has_bias_term()) {
     // bias
     BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
     bias_blob_desc->mut_shape() = Shape({c_o});
     bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    bias_blob_desc->set_has_data_id(false);
+    bias_blob_desc->set_has_data_id_field(false);
 
     if (!conf.use_cudnn()) {
       // bias multiplier
@@ -228,7 +234,7 @@ void ConvolutionOp::InferBlobDescs(
       bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
       bias_multiplier_blob_desc->set_data_type(
           JobDesc::Singleton()->DefaultDataType());
-      bias_multiplier_blob_desc->set_has_data_id(false);
+      bias_multiplier_blob_desc->set_has_data_id_field(false);
     }
   }
 
@@ -239,7 +245,7 @@ void ConvolutionOp::InferBlobDescs(
         ComputeCudnnConvWorkspaceSize(GetBlobDesc4BnInOp, conf))});
     cudnn_workspace_blob_desc->set_data_type(
         JobDesc::Singleton()->DefaultDataType());
-    cudnn_workspace_blob_desc->set_has_data_id(false);
+    cudnn_workspace_blob_desc->set_has_data_id_field(false);
   }
 #endif  // WITH_CUDNN
 
@@ -250,7 +256,7 @@ void ConvolutionOp::InferBlobDescs(
     col_buf_blob_desc->mut_shape() =
         Shape({data_num, output_size, c_i * kernel});
     col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    col_buf_blob_desc->set_has_data_id(false);
+    col_buf_blob_desc->set_has_data_id_field(false);
   }
 }
 

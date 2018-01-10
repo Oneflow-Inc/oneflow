@@ -6,9 +6,9 @@ namespace {
 
 std::map<TaskType, std::string> task_type2color = {
     {kInvalid, "0"},
-    {kNonRecurrentForward, "2"},
+    {kNormalForward, "2"},
     {kRecurrentForward, "2"},
-    {kNonRecurrentBackward, "3"},
+    {kNormalBackward, "3"},
     {kRecurrentBackward, "3"},
     {kSource, "1"},
     {kLoss, "4"},
