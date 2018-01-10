@@ -45,12 +45,6 @@ void IBVerbsConnection::PostRecvRequest(ActorMsg* msg,
 }
 
 void IBVerbsConnection::CompleteConnection() {
-  LOG(INFO) << "Peer conn info: " << peer_machine_conn_info_.qpn() << " "
-            << peer_machine_conn_info_.psn() << " "
-            << peer_machine_conn_info_.snp() << " "
-            << peer_machine_conn_info_.iid() << " "
-            << peer_machine_conn_info_.lid();
-  LOG(INFO) << "My conn info: " << this_machine_conn_info_.psn();
   ibv_qp_attr qp_attr;
   memset(&qp_attr, 0, sizeof(ibv_qp_attr));
 
