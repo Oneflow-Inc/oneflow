@@ -24,9 +24,9 @@ class SourceCompActor final : public CompActor {
 
   struct DataLoadStatus {
     DataLoadStatus()
-        : next_col_id(-1), max_col_num(-1), piece_id(-1), is_eof(false) {}
+        : next_col_id(-1), max_col_id(-1), piece_id(-1), is_eof(false) {}
     int64_t next_col_id;
-    int64_t max_col_num;
+    int64_t max_col_id;
     int64_t piece_id;
     bool is_eof;
   };

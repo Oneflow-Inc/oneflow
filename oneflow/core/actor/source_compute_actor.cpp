@@ -33,7 +33,7 @@ void SourceCompActor::Act() {
 
 bool SourceCompActor::IsReadReady() {
   bool all_columns_has_read =
-      data_load_status.next_col_id == data_load_status.max_col_num;
+      data_load_status.next_col_id == data_load_status.max_col_id;
   bool all_piece_has_read =
       data_load_status.is_eof
       || data_load_status.piece_id

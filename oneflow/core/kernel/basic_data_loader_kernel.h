@@ -26,6 +26,8 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
 
   void FillBlobRowsWithZero(Blob*, int64_t, int64_t) const;
 
+  void ReadOneDataId(const std::string&, Blob*, int64_t) const;
+
   std::unique_ptr<PersistentInStream> in_stream_;
 };
 

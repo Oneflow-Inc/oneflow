@@ -11,25 +11,23 @@ template<typename T>
 void BasicDataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(kernel_ctx.other);
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
+  status->piece_id++;
   if (out_blob->has_col_num_field()) {
     Blob* buffer_blob = BnInOp2Blob("buffer");
     CHECK(buffer_blob);
     CHECK_EQ(GetDataType<T>::val, buffer_blob->data_type());
-    CHECK(kernel_ctx.other);
-    // read data to buffer
-    if (status->next_col_id >= status->max_col_num) {
-      status->piece_id++;
+    if (status->next_col_id > status->max_col_id) {
       status->next_col_id = 0;
       ReadOnePieceToBuffer(kernel_ctx, buffer_blob);
     }
     ReadBufferToOutBlob(kernel_ctx, buffer_blob, out_blob);
     status->next_col_id++;
   } else {
-    status->piece_id++;
     ReadDirectToOutBlob(kernel_ctx, out_blob);
   }
 }
@@ -50,24 +48,21 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadDirectToOutBlob(const KernelCtx& kernel_ctx,
                                                    Blob* out_blob) const {
-  CHECK(!out_blob->set_has_col_num_field());
-  CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
-  int64_t piece_size = out_blob->shape().At(0);
+  CHECK(!out_blob->has_col_num_field());
   T* out_dptr = out_blob->mut_dptr<T>();
   std::string line;
   std::string token;
-  FOR_RANGE(int64_t, i, 0, piece_size) {
+  FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
     int32_t read_status = in_stream_->ReadLine(&line);
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
       line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      if (out_blob->has_data_id_field()) {
-        CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
-        memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
-        if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {
-          *(out_blob->mut_data_id(i) + token.size()) = '\0';
-        }
-      }
+      // blob_header
+      out_blob->set_col_id(0);
+      out_blob->set_max_col_id(0);
+      // data_id
+      ReadOneDataId(token, out_blob, i);
+      // data_content
       FOR_RANGE(int64_t, j, 0, out_blob->shape().Count(1)) {
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
         *out_dptr++ = oneflow_cast<T>(token);
@@ -79,7 +74,7 @@ void BasicDataLoaderKernel<T>::ReadDirectToOutBlob(const KernelCtx& kernel_ctx,
           static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
       status->is_eof = true;
       CHECK_EQ(read_status, -1);
-      FillBlobRowsWithZero(out_blob, i, piece_size);
+      FillBlobRowsWithZero(out_blob, i, out_blob->shape().At(0));
       break;
     }
   }
@@ -91,49 +86,40 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBuffer(const KernelCtx& kernel_ctx,
   CHECK(buffer_blob->has_col_num_field());
   CHECK(kernel_ctx.other);
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
-  int64_t piece_size = buffer_blob->shape().At(0);
-  int64_t max_seq_size = buffer_blob->max_col_num();
-  status->max_col_num = 0;
+  int64_t max_col_id = -1;
   T* buffer_dptr = buffer_blob->mut_dptr<T>();
-
   std::string line;
   std::string token;
-
-  // each line format: (data_id)?(,data_content)*
-  FOR_RANGE(int64_t, i, 0, piece_size) {
-    T* each_buff_dptr = buffer_dptr + i * max_seq_size;
-    int32_t seq_len = 0;
+  FOR_RANGE(int64_t, i, 0, buffer_blob->shape().At(0)) {
+    T* each_dptr = buffer_dptr + i * buffer_blob->blob_desc().max_col_num();
     int32_t read_status = in_stream_->ReadLine(&line);
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
       line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      if (buffer_blob->has_data_id()) {
-        CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
-        memcpy(buffer_blob->mut_data_id(i), token.c_str(), token.size());
-        if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {
-          *(buffer_blob->mut_data_id(i) + token.size()) = '\0';
-        }
-      }
+      // data_id
+      ReadOneDataId(token, buffer_blob, i);
+      // data_content
+      int32_t each_max_col_id = -1;
       FOR_RANGE(int64_t, j, 0, buffer_blob->shape().At(1)) {
         FOR_RANGE(int64_t, k, 0, buffer_blob->shape().Count(2)) {
           line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-          *each_buff_dptr++ = oneflow_cast<T>(token);
+          *each_dptr++ = oneflow_cast<T>(token);
         }
-        seq_len++;
+        each_max_col_id++;
         if (*(line_ptr - 1) == '\0') { break; }
       }
-      *(buffer_blob->mut_seq_len(i)) = seq_len;
-      status->max_col_num = status->max_col_num > status->max_col_num
-                                ? status->max_col_num
-                                : seq_len;
+      // col_num
+      buffer_blob->set_col_num(i, each_max_col_id + 1);
+      max_col_id = max_col_id > each_max_col_id ? max_col_id : each_max_col_id;
       CHECK_EQ(*(line_ptr - 1), '\0');
     } else {
-      status->is_eof = true;
       CHECK_EQ(read_status, -1);
-      FillBlobRowsWithZero(buffer_blob, i, piece_size);
+      status->is_eof = true;
+      FillBlobRowsWithZero(buffer_blob, i, buffer_blob->shape().At(0));
       break;
     }
   }
+  status->max_col_id = max_col_id;
 }
 
 template<typename T>
@@ -144,25 +130,28 @@ void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
   CHECK(kernel_ctx.other);
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
   T* out_dptr = out_blob->mut_dptr<T>();
-  T* buffer_dptr = buffer_blob->mut_dptr<T>();
-  int64_t piece_size = out_blob->shape().At(0);
-  int64_t max_seq_size = buffer_blob->max_col_num();
-
-  out_blob->set_piece_id(status->piece_id);
-  out_blob->set_max_col_num(status->max_col_num);
+  const T* buffer_dptr = buffer_blob->dptr<T>();
+  int64_t max_col_num = buffer_blob->blob_desc().max_col_num();
+  // header
+  out_blob->set_max_col_id(status->max_col_id);
   out_blob->set_col_id(status->next_col_id);
-
-  if (out_blob->has_data_id()) {
-    memcpy(out_blob->mut_data_id(), buffer_blob->data_id(),
-           out_blob->ByteSizeOfDataIdField());
+  // data_id
+  if (out_blob->has_data_id_field()) {
+    out_blob->CopyDataIdFrom<DeviceType::kCPU>(kernel_ctx.device_ctx,
+                                               buffer_blob);
   }
-
-  FOR_RANGE(int64_t, i, 0, piece_size) {
+  // col_num
+  if (out_blob->has_col_num_field()) {
+    out_blob->CopyColNumFrom<DeviceType::kCPU>(kernel_ctx.device_ctx,
+                                               buffer_blob);
+  }
+  // data_content
+  FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
     T* each_out_dptr = out_dptr + i * out_blob->shape().Count(1);
-    T* each_buff_dptr = buffer_dptr + i * max_seq_size
-                        + status->next_col_id * out_blob->shape().Count(1);
-    *(out_blob->mut_seq_len(i)) = buffer_blob->seq_len(i);
-    if (status->next_col_id < buffer_blob->seq_len(i)) {
+    const T* each_buff_dptr =
+        buffer_dptr + i * max_col_num
+        + status->next_col_id * out_blob->shape().Count(1);
+    if (status->next_col_id < buffer_blob->col_num(i)) {
       FOR_RANGE(int64_t, j, 0, out_blob->shape().Count(1)) {
         *each_out_dptr++ = *each_buff_dptr++;
       }
@@ -177,17 +166,27 @@ void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
 template<typename T>
 void BasicDataLoaderKernel<T>::FillBlobRowsWithZero(Blob* blob, int64_t start,
                                                     int64_t end) const {
-  if (blob->has_data_id()) {
+  if (blob->has_data_id_field()) {
     memset(blob->mut_data_id(start), '\0',
            (end - start) * JobDesc::Singleton()->SizeOfOneDataId());
   }
   if (blob->has_col_num_field()) {
-    FOR_RANGE(int64_t, i, start, end) { *(blob->mut_seq_len(i)) = 0; }
+    FOR_RANGE(int64_t, i, start, end) { blob->set_col_num(i, 0); }
   }
   T* dptr_start = blob->mut_dptr<T>() + start * blob->shape().Count(1);
   T* dptr_end = blob->mut_dptr<T>() + end * blob->shape().Count(1);
-  FOR_RANGE(T*, dptr, dptr_start, dptr_end) {
-    *dptr = static_cast<T>(0);
+  FOR_RANGE(T*, dptr, dptr_start, dptr_end) { *dptr = static_cast<T>(0); }
+}
+
+template<typename T>
+void BasicDataLoaderKernel<T>::ReadOneDataId(const std::string& token,
+                                             Blob* blob, int64_t index) const {
+  if (blob->has_data_id_field()) {
+    CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
+    memcpy(blob->mut_data_id(index), token.c_str(), token.size());
+    if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {
+      *(blob->mut_data_id(index) + token.size()) = '\0';
+    }
   }
 }
 
