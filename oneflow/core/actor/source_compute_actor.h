@@ -22,6 +22,8 @@ class SourceCompActor final : public CompActor {
   bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
   void AsyncReturnAllReadableRegst() override {}
 
+  std::list<std::string> InputActUidsOfCurAct() const override;
+
   int64_t next_piece_id_;
   bool is_eof_;
 };
