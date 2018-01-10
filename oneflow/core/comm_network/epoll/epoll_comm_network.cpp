@@ -83,12 +83,7 @@ void* EpollCommNet::Read(void* actor_read_id, int64_t src_machine_id,
                          const void* src_token, const void* dst_token) {
   // ReadContext
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
-  ReadContext* read_ctx = new ReadContext;
-  read_ctx->done_cnt = 0;
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
-    actor_read_ctx->read_ctx_list.push_back(read_ctx);
-  }
+  ReadContext* read_ctx = NewReadCtxInActorReadCtx(actor_read_ctx);
   // request write msg
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;

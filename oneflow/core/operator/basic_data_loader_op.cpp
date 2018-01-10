@@ -34,8 +34,8 @@ void BasicDataLoaderOp::InferBlobDescs(
   out->set_has_col_num_field(conf.max_sequence_size() > 1);
   out->set_max_col_num(conf.max_sequence_size());
 
-  // buffer
   if (conf.max_sequence_size() > 1) {
+    // buffer
     BlobDesc* buffer = GetBlobDesc4BnInOp("buffer");
     dim_vec.insert(dim_vec.begin() + 1, conf.max_sequence_size());
     buffer->mut_shape() = Shape(dim_vec);
