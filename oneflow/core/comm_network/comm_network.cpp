@@ -56,6 +56,16 @@ void CommNet::ReadDone(void* read_done_id) {
   }
 }
 
+void* CommNet::NewReadCtxInActorReadCtx(ActorReadContext* actor_read_ctx) {
+  ReadContext* read_ctx = new ReadContext;
+  read_ctx->done_cnt = 0;
+  {
+    std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
+    actor_read_ctx->read_ctx_list.push_back(read_ctx);
+  }
+  return read_ctx;
+}
+
 int8_t CommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
   std::unique_lock<std::mutex> lck(read_ctx->done_cnt_mtx);
   read_ctx->done_cnt += 1;
