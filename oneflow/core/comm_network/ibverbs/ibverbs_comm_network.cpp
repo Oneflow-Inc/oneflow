@@ -52,10 +52,8 @@ void IBVerbsCommNet::RegisterMemoryDone() {
     IBVerbsTokensMsg peer_machine_tokens_msg;
     CtrlClient::Singleton()->PullKV(GenTokensMsgKey(peer_machine_id),
                                     &peer_machine_tokens_msg);
-    HashMap<uint64_t, IBVerbsMemDescProto> peer_machine_token2mem_desc_proto =
-        PbMap2HashMap(peer_machine_tokens_msg.token2mem_desc_proto());
-    for (auto& pair : peer_machine_token2mem_desc_proto) {
-      token2mem_desc_proto_.insert({pair.first, pair.second});
+    for (auto& pair : peer_machine_tokens_msg.token2mem_desc_proto()) {
+      CHECK(token2mem_desc_proto_.insert({pair.first, pair.second}).second);
     }
   }
   OF_BARRIER();
