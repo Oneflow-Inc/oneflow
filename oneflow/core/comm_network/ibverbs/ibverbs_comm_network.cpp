@@ -64,12 +64,7 @@ void IBVerbsCommNet::RegisterMemoryDone() {
 void* IBVerbsCommNet::Read(void* actor_read_id, int64_t src_machine_id,
                            const void* src_token, const void* dst_token) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
-  ReadContext* read_ctx = new ReadContext;
-  read_ctx->done_cnt = 0;
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
-    actor_read_ctx->read_ctx_list.push_back(read_ctx);
-  }
+  ReadContext* read_ctx = NewReadCtxInActorReadCtx(actor_read_ctx);
   IBVerbsMemDescProto& remote_mem_desc_proto =
       token2mem_desc_proto_[reinterpret_cast<uint64_t>(src_token)];
   auto local_mem_desc = const_cast<IBVerbsMemDesc*>(
