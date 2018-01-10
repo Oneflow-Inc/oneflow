@@ -48,7 +48,7 @@ const void* Blob::memory_ptr() const {
 }
 
 size_t Blob::ByteSizeOfBlobHeaderField() const {
-  return blob_desc_->ByteSizeOfDataIdField();
+  return blob_desc_->ByteSizeOfBlobHeaderField();
 }
 
 size_t Blob::ByteSizeOfDataIdField() const {
