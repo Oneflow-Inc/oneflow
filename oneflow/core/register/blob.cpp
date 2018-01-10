@@ -87,8 +87,7 @@ void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 template<DeviceType device_type>
 void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, static_cast<void*>(col_num_ptr_),
-                      static_cast<void*>(rhs->col_num_ptr_),
+  Memcpy<device_type>(device_ctx, col_num_ptr_, rhs->col_num_ptr_,
                       ByteSizeOfColNumField());
 }
 
