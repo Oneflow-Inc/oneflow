@@ -88,7 +88,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
 #ifdef WITH_RDMA
     IBVerbsCommNet::Init();
 #else
-    EpollCommNet::Init();
+    LOG(FATAL) << "RDMA components not found";
 #endif
   } else {
     EpollCommNet::Init();
