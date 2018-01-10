@@ -56,7 +56,8 @@ void CommNet::ReadDone(void* read_done_id) {
   }
 }
 
-void* CommNet::NewReadCtxInActorReadCtx(ActorReadContext* actor_read_ctx) {
+CommNet::ReadContext* CommNet::NewReadCtxInActorReadCtx(
+    ActorReadContext* actor_read_ctx) {
   ReadContext* read_ctx = new ReadContext;
   read_ctx->done_cnt = 0;
   {
