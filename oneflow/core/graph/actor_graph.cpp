@@ -6,87 +6,65 @@ namespace oneflow {
 
 namespace {
 
-std::unordered_set<ActorEdge*> FindBackEdges(const ActorGraph& actor_graph) {
-  TODO();
-  return std::unordered_set<ActorEdge*>();
-}
-
-class UnfoldedActorNode;
-class UnfoldedActorEdge final
-    : public Edge<UnfoldedActorNode, UnfoldedActorEdge> {
+class ActNode;
+class ActEdge final : public Edge<ActNode, ActEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UnfoldedActorEdge);
-  UnfoldedActorEdge() = default;
-  ~UnfoldedActorEdge() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ActEdge);
+  ActEdge() = default;
+  ~ActEdge() = default;
 };
 
-class UnfoldedActorNode final
-    : public Node<UnfoldedActorNode, UnfoldedActorEdge> {
+class ActNode final : public Node<ActNode, ActEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UnfoldedActorNode);
-  explicit UnfoldedActorNode(const ActorNode* actor_node, int64_t act_id,
-                             double time_per_act)
-      : actor_node_(actor_node), act_id_(act_id), time_per_act_(time_per_act) {}
-  ~UnfoldedActorNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ActNode);
+  explicit ActNode(const ActEvent& act_event) : act_event_(act_event) {}
+  ~ActNode() = default;
 
   // Getters
-  const ActorNode* actor_node() const { return actor_node_; }
+  int64_t actor_id() const { return act_event_.actor_id(); }
 
  private:
-  const ActorNode* actor_node_;
-  int64_t act_id_;
-  double time_per_act_;
+  ActEvent act_event_;
 };
 
-static int unfolded_piece_num = 2;
-
-class UnfoldedActorGraph final
-    : public Graph<UnfoldedActorNode, UnfoldedActorEdge> {
+class ActGraph final : public Graph<ActNode, ActEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(UnfoldedActorGraph);
-  UnfoldedActorGraph(
-      const ActorGraph& actor_graph,
-      const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts);
-  ~UnfoldedActorGraph() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ActGraph);
+  explicit ActGraph(const std::list<ActEvent>& task_id2act_evts);
+  ~ActGraph() = default;
   double CalcActorNodesLongestPathTime(
-      const ActorNode* start_actor_node,
-      const std::unordered_set<const ActorNode*>& end_actor_nodes) const;
+      int64_t start_actor_ids,
+      const std::unordered_set<int64_t>& end_actor_ids) const;
 
  private:
-  double CalcLongestPathTime(
-      const UnfoldedActorNode* start_node,
-      const std::list<const UnfoldedActorNode*>& end_nodes) const;
-  void CreateNodes(
-      const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts);
-  void ConnectNodes(std::list<UnfoldedActorNode*>* src_nodes,
-                    std::list<UnfoldedActorNode*>* dst_nodes, bool is_back_edge,
-                    TaskType src_task_type);
-  const ActorGraph* actor_graph_;
-  HashMap<const ActorNode*, std::list<UnfoldedActorNode*>> actor_node2unfolded_;
+  double CalcLongestPathTime(const ActNode* start_node,
+                             const std::list<const ActNode*>& end_nodes) const;
+  void CreateNodes(const std::list<ActEvent>& task_id2act_evts);
+  void ConnectNodes();
+  HashMap<int64_t, std::list<ActNode*>> actor_id2act_nodes_;
+  HashMap<std::string, ActNode*> act_uid2act_node_;
 };
 
-std::list<const UnfoldedActorNode*> FilterNodesOnOutEdgeByActorNode(
-    const UnfoldedActorNode* node,
-    const std::unordered_set<const ActorNode*>& actor_nodes) {
-  std::list<const UnfoldedActorNode*> filtered_nodes;
-  node->ForEachNodeOnOutEdge([&](UnfoldedActorNode* next) {
-    if (actor_nodes.find(next->actor_node()) != actor_nodes.end()) {
+std::list<const ActNode*> FilterNodesOnOutEdgeByActorId(
+    const ActNode* node, const std::unordered_set<int64_t>& actor_ids) {
+  std::list<const ActNode*> filtered_nodes;
+  node->ForEachNodeOnOutEdge([&](ActNode* next) {
+    if (actor_ids.find(next->actor_id()) != actor_ids.end()) {
       filtered_nodes.push_back(next);
     }
   });
   return filtered_nodes;
 }
 
-double UnfoldedActorGraph::CalcActorNodesLongestPathTime(
-    const ActorNode* start_actor_node,
-    const std::unordered_set<const ActorNode*>& end_actor_nodes) const {
+double ActGraph::CalcActorNodesLongestPathTime(
+    int64_t start_actor_id,
+    const std::unordered_set<int64_t>& end_actor_ids) const {
   double sum = 0;
   int end_node_num = 0;
-  for (const auto* node : actor_node2unfolded_.at(start_actor_node)) {
-    auto filtered_unfolded_end_nodes =
-        FilterNodesOnOutEdgeByActorNode(node, end_actor_nodes);
-    if (!filtered_unfolded_end_nodes.empty()) {
-      sum += CalcLongestPathTime(node, filtered_unfolded_end_nodes);
+  for (const auto* node : actor_id2act_nodes_.at(start_actor_id)) {
+    auto related_act_nodes = FilterNodesOnOutEdgeByActorId(node, end_actor_ids);
+    if (!related_act_nodes.empty()) {
+      sum += CalcLongestPathTime(node, related_act_nodes);
       ++end_node_num;
     }
   }
@@ -94,44 +72,24 @@ double UnfoldedActorGraph::CalcActorNodesLongestPathTime(
   return sum / end_node_num;
 }
 
-double UnfoldedActorGraph::CalcLongestPathTime(
-    const UnfoldedActorNode* start_node,
-    const std::list<const UnfoldedActorNode*>& end_nodes) const {
+double ActGraph::CalcLongestPathTime(
+    const ActNode* start_node,
+    const std::list<const ActNode*>& end_nodes) const {
   TODO();
   return 0;
 }
 
-HashMap<int64_t, std::list<const ActEvent*>> TakingActEventsOfFrontPieces(
-    const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts) {
+void ActGraph::CreateNodes(const std::list<ActEvent>& task_id2act_evts) {
   TODO();
-  return task_id2act_evts;
+  actor_id2act_nodes_ = {};
+  act_uid2act_node_ = {};
 }
 
-void UnfoldedActorGraph::CreateNodes(
-    const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts) {
-  TODO();
-  actor_node2unfolded_ = {};
-}
+void ActGraph::ConnectNodes() { TODO(); }
 
-void UnfoldedActorGraph::ConnectNodes(std::list<UnfoldedActorNode*>* src_nodes,
-                                      std::list<UnfoldedActorNode*>* dst_nodes,
-                                      bool is_back_edge,
-                                      TaskType src_task_type) {
-  TODO();
-}
-
-UnfoldedActorGraph::UnfoldedActorGraph(
-    const ActorGraph& actor_graph,
-    const HashMap<int64_t, std::list<const ActEvent*>>& task_id2act_evts)
-    : actor_graph_(&actor_graph) {
-  auto back_edges = FindBackEdges(actor_graph);
-  CreateNodes(TakingActEventsOfFrontPieces(task_id2act_evts));
-  actor_graph.ForEachEdge([&](ActorEdge* actor_edge) {
-    ConnectNodes(&actor_node2unfolded_.at(actor_edge->src_node()),
-                 &actor_node2unfolded_.at(actor_edge->dst_node()),
-                 back_edges.find(actor_edge) != back_edges.end(),
-                 actor_edge->src_node()->task_type());
-  });
+ActGraph::ActGraph(const std::list<ActEvent>& task_id2act_evts) {
+  CreateNodes(task_id2act_evts);
+  ConnectNodes();
 }
 
 }  // namespace

@@ -98,11 +98,11 @@ size_t Improver::AvailableMemSize(int64_t machine_id,
 }
 
 int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
-  if (JobDesc::Singleton()->GetDeviceType() == DeviceType::kCPU) { return 0; }
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();
+  } else {
+    return 0;
   }
-  return JobDesc::Singleton()->resource().device_num_per_machine();
 }
 
 void Improver::MakeMemZoneRegstDescs(const Plan& plan,
