@@ -150,7 +150,7 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
                                                      int64_t index) const {
   std::string token;
   int32_t each_max_col_id = -1;
-  T* each_dptr = blob->mut_dptr<T>() + index * blob->shape().At(1);
+  T* each_dptr = blob->mut_dptr<T>() + index * blob->shape().Count(1);
   if (blob->has_col_num_field()) {
     FOR_RANGE(int64_t, j, 0, blob->shape().At(1)) {
       FOR_RANGE(int64_t, k, 0, blob->shape().Count(2)) {
