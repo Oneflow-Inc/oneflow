@@ -4,25 +4,25 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
-message ConstantFillConf {
+message ConstantInitializerConf {
   optional float value = 1 [default = 0];
 }
 
-message UniformFillConf {
+message UniformInitializerConf {
   optional float min = 1 [default = 0];
   optional float max = 2 [default = 1];
 }
 
-message GaussianFillConf {
+message GaussianInitializerConf {
   optional float mean = 1 [default = 0];
   optional float std = 2 [default = 1];
 }
 
-message FillConf {
+message InitializerConf {
   oneof type {
-    ConstantFillConf constant_conf = 1;
-    UniformFillConf uniform_conf = 2;
-    GaussianFillConf gaussian_conf = 3;
+    ConstantInitializerConf constant_conf = 1;
+    UniformInitializerConf uniform_conf = 2;
+    GaussianInitializerConf gaussian_conf = 3;
   }
 }
 
@@ -43,8 +43,8 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional FillConf weight_fill = 13;
-  optional FillConf bias_fill = 14;
+  optional InitializerConf weight_initializer = 13;
+  optional InitializerConf bias_initializer = 14;
 }
 
 message InnerProductOpConf {
@@ -53,8 +53,8 @@ message InnerProductOpConf {
 
   required int32 out_num = 3;
   optional bool has_bias_term = 4 [default = true];
-  optional FillConf weight_fill = 5; 
-  optional FillConf bias_fill = 6; 
+  optional InitializerConf weight_initializer = 5; 
+  optional InitializerConf bias_initializer = 6; 
 }
 
 message BasicDataLoaderOpConf {
@@ -202,7 +202,7 @@ message BasicLstmCellConf {
 message RecurrentOpConf {
   required string in = 1;
   optional string init_hidden = 2;
-  optional FillConf init_hidden_fill = 3;
+  optional InitializerConf init_hidden_initializer = 3;
   required string out = 4;
   required int32 hidden_size = 5;
   optional bool has_bias_term = 6 [default = true];
