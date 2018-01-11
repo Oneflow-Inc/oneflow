@@ -18,15 +18,15 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
 
-  void ReadDirectToOutBlob(const KernelCtx&, Blob*) const;
-
-  void ReadOnePieceToBuffer(const KernelCtx&, Blob*) const;
+  void ReadOnePieceToBlob(const KernelCtx&, Blob*) const;
 
   void ReadBufferToOutBlob(const KernelCtx&, const Blob*, Blob*) const;
 
   void FillBlobRowsWithZero(Blob*, int64_t, int64_t) const;
 
-  void ReadOneDataId(const std::string&, Blob*, int64_t) const;
+  const char* ReadOneDataId(const char*, Blob*, int64_t) const;
+
+  int32_t ReadOneDataContent(const char*, Blob*, int64_t) const;
 
   std::unique_ptr<PersistentInStream> in_stream_;
 };

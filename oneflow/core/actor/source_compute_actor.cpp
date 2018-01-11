@@ -21,22 +21,22 @@ int SourceCompActor::HandlerNormal(const ActorMsg& msg) {
 
 void SourceCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &data_load_status;
+  kernel_ctx.other = &data_load_status_;
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
   AsyncSendRegstMsgToConsumer([this](Regst* regst) {
-    regst->set_piece_id(data_load_status.piece_id);
+    regst->set_piece_id(data_load_status_.next_piece_id - 1);
     return true;
   });
 }
 
 bool SourceCompActor::IsReadReady() {
   bool all_columns_has_read =
-      data_load_status.next_col_id == data_load_status.max_col_id;
+      data_load_status_.next_col_id > data_load_status_.max_col_id;
   bool all_piece_has_read =
-      data_load_status.is_eof
-      || data_load_status.piece_id
+      data_load_status_.is_eof
+      || data_load_status_.next_piece_id
              == RuntimeCtx::Singleton()->total_piece_num();
   return !all_columns_has_read || !all_piece_has_read;
 }
