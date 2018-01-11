@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_BASIC_DATA_LOADER_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_BASIC_DATA_LOADER_KERNEL_H_
 
+#include "oneflow/core/actor/source_compute_actor.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
@@ -18,15 +19,15 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
 
-  void ReadOnePieceToBlob(const KernelCtx&, Blob*) const;
+  void ReadOnePieceToBlob(SourceCompActor::DataLoadStatus*, Blob*) const;
 
   void ReadBufferToOutBlob(const KernelCtx&, const Blob*, Blob*) const;
 
   void FillBlobRowsWithZero(Blob*, int64_t, int64_t) const;
 
-  const char* ReadOneDataId(const char*, Blob*, int64_t) const;
+  const char* ReadOnePieceDataId(const char*, Blob*, int64_t) const;
 
-  int32_t ReadOneDataContent(const char*, Blob*, int64_t) const;
+  int32_t ReadOnePieceDataContent(const char*, Blob*, int64_t) const;
 
   std::unique_ptr<PersistentInStream> in_stream_;
 };
