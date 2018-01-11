@@ -16,7 +16,7 @@ train_conf {
   num_of_batches_in_snapshot: 10
   staleness: 0
   total_batch_num: 1000
-  default_fill_conf {
+  default_initializer_conf {
     gaussian_conf {
       mean: 0.0
       std: 0.1
