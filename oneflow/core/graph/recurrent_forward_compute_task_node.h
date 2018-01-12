@@ -17,6 +17,7 @@ class RecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
  private:
   void VirtualConsumeInRegst(TaskEdge* edge) override;
   void BuildExecGphStructAndBindInRegst() override;
+  void BuildOutRegst() override;
 };
 
 }  // namespace oneflow
