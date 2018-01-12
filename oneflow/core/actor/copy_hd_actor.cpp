@@ -55,6 +55,11 @@ void CopyHdActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_in_regst_.empty());
 }
 
+std::list<std::string> CopyHdActor::InputActUidsOfCurAct() const {
+  TODO();
+  return {""};
+}
+
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);
 
 }  // namespace oneflow

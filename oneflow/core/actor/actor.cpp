@@ -100,6 +100,9 @@ void Actor::ActUntilFail() {
       act_event->set_actor_id(actor_id_);
       act_event->set_act_id(act_id_++);
       act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      for (const std::string& act_uid : InputActUidsOfCurAct()) {
+        act_event->add_input_act_uid(act_uid);
+      }
       device_ctx_->AddCallBack(
           [act_event]() { act_event->set_start_time(GetCurTime()); });
     }

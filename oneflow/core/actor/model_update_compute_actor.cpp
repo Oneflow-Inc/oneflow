@@ -124,6 +124,11 @@ void MdUpdtCompActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_model_diff_acc_queue_.empty());
 }
 
+std::list<std::string> MdUpdtCompActor::InputActUidsOfCurAct() const {
+  TODO();
+  return {""};
+}
+
 REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);
 
 }  // namespace oneflow

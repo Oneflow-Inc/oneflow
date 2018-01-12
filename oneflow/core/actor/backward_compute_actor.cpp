@@ -124,6 +124,11 @@ void BackwardCompActor::Act() {
   }
 }
 
+std::list<std::string> BackwardCompActor::InputActUidsOfCurAct() const {
+  TODO();
+  return {""};
+}
+
 REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);
 
 }  // namespace oneflow

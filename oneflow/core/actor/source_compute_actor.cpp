@@ -39,6 +39,11 @@ bool SourceCompActor::IsReadReady() {
          && next_piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
 }
 
+std::list<std::string> SourceCompActor::InputActUidsOfCurAct() const {
+  TODO();
+  return {""};
+}
+
 REGISTER_ACTOR(kSource, SourceCompActor);
 
 }  // namespace oneflow

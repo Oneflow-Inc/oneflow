@@ -102,6 +102,11 @@ void CopyCommNetActor::AsyncReturnAllReadableRegst() {
   CHECK(piece_id2regst_ctx.empty());
 }
 
+std::list<std::string> CopyCommNetActor::InputActUidsOfCurAct() const {
+  TODO();
+  return {""};
+}
+
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
 
 }  // namespace oneflow

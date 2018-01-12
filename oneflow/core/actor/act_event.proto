@@ -7,4 +7,5 @@ message ActEvent {
   required int64 act_id = 3;
   required double start_time = 4;
   required double stop_time = 5;
+  repeated string input_act_uid = 6;
 }
