@@ -151,6 +151,22 @@ void Actor::AsyncLaunchKernel(
   }
 }
 
+void Actor::AsyncLaunchRecurrentKernel(
+    const KernelCtx& kernel_ctx,
+    std::function<Regst*(int64_t, const std::string&)> FindRegst) {
+  for (const ExecKernel& ek : exec_kernel_vec_) {
+    ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+      auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
+      if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
+        return nullptr;
+      }
+      Regst* regst = FindRegst(regst_desc_id_it->second, bn_in_op);
+      const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
+      return regst->GetBlobByLbn(lbn);
+    });
+  }
+}
+
 void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
@@ -164,6 +180,7 @@ void Actor::AsyncSendRegstMsgToConsumer(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
+      if (this_actor_id == consumer) { regst->set_recurrent_flag(-1); }
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
         ActorMsg msg =
             ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
@@ -223,6 +240,10 @@ void Actor::AsyncDo(std::function<void()> func) {
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
+
+  // for out_produce, out_consume is its down-actor
+  if (regst->recurrent_flag() == -1) { return -1; }
+
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
