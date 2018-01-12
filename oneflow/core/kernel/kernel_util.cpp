@@ -65,6 +65,46 @@ void RandomNormalInitializer(
       static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
 }
 
+template<typename T>
+T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
+  T fan = static_cast<T>(0);
+  T fan_in = static_cast<T>(blob->shape().Count(1));
+  T fan_out = static_cast<T>(blob->shape().Count(0) / blob->shape().At(1));
+  if (variance_norm == VarianceNorm::kAverage) {
+    fan = (fan_in + fan_out) / static_cast<T>(2);
+  } else if (variance_norm == VarianceNorm::kFanIn) {
+    fan = fan_in;
+  } else if (variance_norm == VarianceNorm::kFanOut) {
+    fan = fan_out;
+  } else {
+    UNEXPECTED_RUN();
+  }
+  return fan;
+}
+
+template<typename T>
+void XavierInitializer(const XavierInitializerConf& initializer_conf,
+                       uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm =
+      static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T scale =
+      std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob));
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale),
+                static_cast<T>(scale), random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+void MsraInitializer(const MsraInitializerConf& initializer_conf,
+                     uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm =
+      static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
+  RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(0),
+                 static_cast<T>(std), random_seed, blob->mut_dptr<T>());
+}
+
 }  // namespace
 
 template<>
@@ -151,6 +191,10 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     } else if (initializer_conf.has_random_normal_conf()) {
       RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
                                  random_seed, blob);
+    } else if (initializer_conf.has_xavier_conf()) {
+      XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob);
+    } else if (initializer_conf.has_msra_conf()) {
+      MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
