@@ -1,12 +1,18 @@
 syntax = "proto2";
 package oneflow;
 
+message RegstEvent {
+  required int64 regst_desc_id = 1;
+  required int64 producer_actor_id = 2;
+  required int64 producer_act_id = 3;
+}
+
 message ActEvent {
   required int64 actor_id = 1;
   required int64 work_stream_id = 2;
   required int64 act_id = 3;
   required double start_time = 4;
   required double stop_time = 5;
-  required string act_uid = 6;
-  repeated string input_act_uid = 7;
+  repeated RegstEvent consumed_regst_event = 6;
+  repeated RegstEvent produced_regst_event = 7;
 }

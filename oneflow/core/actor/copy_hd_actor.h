@@ -23,7 +23,7 @@ class CopyHdActor final : public Actor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
-  std::list<std::string> InputActUidsOfCurAct() const override;
+  std::list<RegstEvent> CurActComsumedRegstEvents() const override;
 
   bool is_in_eord_;
   std::queue<Regst*> pending_in_regst_;

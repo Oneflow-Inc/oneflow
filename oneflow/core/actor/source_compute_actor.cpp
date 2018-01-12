@@ -39,9 +39,9 @@ bool SourceCompActor::IsReadReady() {
          && next_piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
 }
 
-std::list<std::string> SourceCompActor::InputActUidsOfCurAct() const {
+std::list<RegstEvent> SourceCompActor::CurActComsumedRegstEvents() const {
   TODO();
-  return {""};
+  return {};
 }
 
 REGISTER_ACTOR(kSource, SourceCompActor);

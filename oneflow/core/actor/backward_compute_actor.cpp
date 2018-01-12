@@ -124,9 +124,9 @@ void BackwardCompActor::Act() {
   }
 }
 
-std::list<std::string> BackwardCompActor::InputActUidsOfCurAct() const {
+std::list<RegstEvent> BackwardCompActor::CurActComsumedRegstEvents() const {
   TODO();
-  return {""};
+  return {};
 }
 
 REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);

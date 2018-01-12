@@ -124,9 +124,9 @@ void MdUpdtCompActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_model_diff_acc_queue_.empty());
 }
 
-std::list<std::string> MdUpdtCompActor::InputActUidsOfCurAct() const {
+std::list<RegstEvent> MdUpdtCompActor::CurActComsumedRegstEvents() const {
   TODO();
-  return {""};
+  return {};
 }
 
 REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);

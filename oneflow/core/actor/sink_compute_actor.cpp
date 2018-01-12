@@ -34,9 +34,9 @@ bool SinkCompActor::IsReadAlwaysUnReadyFromNow() {
 
 void SinkCompActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
 
-std::list<std::string> SinkCompActor::InputActUidsOfCurAct() const {
+std::list<RegstEvent> SinkCompActor::CurActComsumedRegstEvents() const {
   TODO();
-  return {""};
+  return {};
 }
 
 }  // namespace oneflow

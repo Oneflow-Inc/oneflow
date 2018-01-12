@@ -30,7 +30,7 @@ class ForwardCompActor final : public CompActor {
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();
 
-  std::list<std::string> InputActUidsOfCurAct() const override;
+  std::list<RegstEvent> CurActComsumedRegstEvents() const override;
 
   bool is_in_eord_;
   int64_t in_regst_desc_id_;

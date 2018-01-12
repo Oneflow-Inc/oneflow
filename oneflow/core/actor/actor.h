@@ -94,10 +94,8 @@ class Actor {
   Regst* GetCurSoleWriteableRegst();
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
-  std::string GenActUid(int64_t actor_id, int64_t act_id) const {
-    return std::to_string(actor_id) + "-" + std::to_string(act_id);
-  }
-  virtual std::list<std::string> InputActUidsOfCurAct() const = 0;
+  virtual std::list<RegstEvent> CurActComsumedRegstEvents() const = 0;
+  virtual std::list<RegstEvent> CurActProducedRegstEvents(int64_t act_id) const;
 
  private:
   int64_t actor_id_;

@@ -55,9 +55,9 @@ void CopyHdActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_in_regst_.empty());
 }
 
-std::list<std::string> CopyHdActor::InputActUidsOfCurAct() const {
+std::list<RegstEvent> CopyHdActor::CurActComsumedRegstEvents() const {
   TODO();
-  return {""};
+  return {};
 }
 
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);

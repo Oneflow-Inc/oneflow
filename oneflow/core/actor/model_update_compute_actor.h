@@ -26,7 +26,7 @@ class MdUpdtCompActor final : public CompActor {
   bool IsWriteReady() override;
   void AsyncReturnAllReadableRegst() override;
 
-  std::list<std::string> InputActUidsOfCurAct() const override;
+  std::list<RegstEvent> CurActComsumedRegstEvents() const override;
 
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;

@@ -76,9 +76,9 @@ void AccumulateCompActor::Act() {
   pending_in_regst_.pop();
 }
 
-std::list<std::string> AccumulateCompActor::InputActUidsOfCurAct() const {
+std::list<RegstEvent> AccumulateCompActor::CurActComsumedRegstEvents() const {
   TODO();
-  return {""};
+  return {};
 }
 
 }  // namespace oneflow

@@ -96,13 +96,16 @@ void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     ActEvent* act_event = nullptr;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+      ++act_id_;
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
-      act_event->set_act_id(act_id_++);
+      act_event->set_act_id(act_id_);
       act_event->set_work_stream_id(device_ctx_->work_stream_id());
-      act_event->set_act_uid(GenActUid(actor_id_, act_id_));
-      for (const std::string& act_uid : InputActUidsOfCurAct()) {
-        act_event->add_input_act_uid(act_uid);
+      for (const RegstEvent& regst_event : CurActComsumedRegstEvents()) {
+        *(act_event->add_consumed_regst_event()) = regst_event;
+      }
+      for (const RegstEvent& regst_event : CurActProducedRegstEvents(act_id_)) {
+        *(act_event->add_produced_regst_event()) = regst_event;
       }
       device_ctx_->AddCallBack(
           [act_event]() { act_event->set_start_time(GetCurTime()); });
@@ -120,6 +123,18 @@ void Actor::ActUntilFail() {
 
 bool Actor::IsWriteReady() {
   return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
+}
+
+std::list<RegstEvent> Actor::CurActProducedRegstEvents(int64_t act_id) const {
+  std::list<RegstEvent> produced_regst_events;
+  for (const auto& pair : writeable_produced_regst_) {
+    produced_regst_events.emplace_back();
+    RegstEvent& regst_event = produced_regst_events.back();
+    regst_event.set_regst_desc_id(pair.first);
+    regst_event.set_producer_actor_id(actor_id());
+    regst_event.set_producer_act_id(act_id);
+  }
+  return {};
 }
 
 void Actor::DecreaseRemainingEordCnt() { remaining_eord_cnt_ -= 1; }
