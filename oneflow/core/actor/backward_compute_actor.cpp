@@ -124,11 +124,6 @@ void BackwardCompActor::Act() {
   }
 }
 
-std::list<RegstEvent> BackwardCompActor::CurActComsumedRegstEvents() const {
-  TODO();
-  return {};
-}
-
 REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);
 
 }  // namespace oneflow

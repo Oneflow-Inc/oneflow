@@ -102,11 +102,6 @@ void CopyCommNetActor::AsyncReturnAllReadableRegst() {
   CHECK(piece_id2regst_ctx.empty());
 }
 
-std::list<RegstEvent> CopyCommNetActor::CurActComsumedRegstEvents() const {
-  TODO();
-  return {};
-}
-
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
 
 }  // namespace oneflow

@@ -22,8 +22,6 @@ class AccumulateCompActor : public CompActor {
   void AsyncReturnAllReadableRegst() override;
   void Act() override;
 
-  std::list<RegstEvent> CurActComsumedRegstEvents() const override;
-
   bool is_in_eord_;
   std::queue<Regst*> pending_in_regst_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;

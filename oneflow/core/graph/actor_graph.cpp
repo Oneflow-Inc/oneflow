@@ -6,6 +6,10 @@ namespace oneflow {
 
 namespace {
 
+std::string GenActUid(int64_t actor_id, int64_t act_id) {
+  return std::to_string(actor_id) + ":" + std::to_string(act_id);
+}
+
 class ActNode;
 class ActEdge final : public Edge<ActNode, ActEdge> {
  public:

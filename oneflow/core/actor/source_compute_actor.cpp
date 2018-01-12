@@ -39,11 +39,6 @@ bool SourceCompActor::IsReadReady() {
          && next_piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
 }
 
-std::list<RegstEvent> SourceCompActor::CurActComsumedRegstEvents() const {
-  TODO();
-  return {};
-}
-
 REGISTER_ACTOR(kSource, SourceCompActor);
 
 }  // namespace oneflow

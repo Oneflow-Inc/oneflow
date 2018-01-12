@@ -50,6 +50,8 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
+  virtual void ForEachCurReadableRegst(std::function<void(const Regst*)>) {}
+  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -93,9 +95,6 @@ class Actor {
   Regst* GetCurWriteableRegst(const std::string& name);
   Regst* GetCurSoleWriteableRegst();
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
-
-  virtual std::list<RegstEvent> CurActComsumedRegstEvents() const = 0;
-  virtual std::list<RegstEvent> CurActProducedRegstEvents(int64_t act_id) const;
 
  private:
   int64_t actor_id_;

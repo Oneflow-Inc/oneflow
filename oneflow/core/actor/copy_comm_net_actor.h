@@ -29,8 +29,6 @@ class CopyCommNetActor final : public Actor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
-  std::list<RegstEvent> CurActComsumedRegstEvents() const override;
-
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
   void* actor_read_id_;

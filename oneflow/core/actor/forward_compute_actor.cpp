@@ -150,11 +150,6 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
   }
 }
 
-std::list<RegstEvent> ForwardCompActor::CurActComsumedRegstEvents() const {
-  TODO();
-  return {};
-}
-
 REGISTER_ACTOR(TaskType::kNormalForward, ForwardCompActor);
 REGISTER_ACTOR(TaskType::kLoss, ForwardCompActor);
 

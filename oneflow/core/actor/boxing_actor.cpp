@@ -63,11 +63,6 @@ void BoxingActor::AsyncReturnAllReadableRegst() {
   CHECK_EQ(readable_regst_cnt_, 0);
 }
 
-std::list<RegstEvent> BoxingActor::CurActComsumedRegstEvents() const {
-  TODO();
-  return {};
-}
-
 REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);
 
 }  // namespace oneflow

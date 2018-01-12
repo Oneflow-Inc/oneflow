@@ -46,7 +46,7 @@ class JobDesc final {
   int32_t NumOfPiecesInBatch() const;
   int32_t Staleness() const;
   int64_t TotalBatchNum() const;
-  const FillConf* DefaultFillConf() const;
+  const InitializerConf* DefaultInitializerConf() const;
   int32_t PieceNumOfPrintLoss() const;
   int32_t BatchSize() const;
   float L1() const;
