@@ -20,9 +20,10 @@ void InferBasicRnnCellBlobDesc(
   *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("f_op_out") = data_tmp_blob_desc;
 
-  BlobDesc weight_blob_desc = BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("in_ip_op_weight") = weight_blob_desc;
-  *GetBlobDesc4BnInOp("hidden_ip_op_weight") = weight_blob_desc;
+  *GetBlobDesc4BnInOp("in_ip_op_weight") =
+      BlobDesc(Shape({hidden_size, embedding_size}));
+  *GetBlobDesc4BnInOp("hidden_ip_op_weight") =
+      BlobDesc(Shape({hidden_size, hidden_size}));
   if (has_bias_term) {
     *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({piece_size, 1}));
@@ -43,6 +44,7 @@ void RecurrentOp::InitFromOpConf() {
     EnrollModelBn("h0");
   }
   EnrollOutputBn("ht");
+  EnrollOutputBn("rec_ht");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
     EnrollDataTmpBn("in_ip_op_out");
@@ -97,6 +99,8 @@ void RecurrentOp::InferBlobDescs(
   ht_blob_desc->set_data_type(data_type);
   ht_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
   ht_blob_desc->set_max_col_num(in_blob_desc->max_col_num());
+  // recurrent_ht
+  *GetBlobDesc4BnInOp("rec_ht") = *ht_blob_desc;
 
   if (op_conf().recurrent_conf().rnn_type_case()
       == RecurrentOpConf::kBasicRnnCell) {

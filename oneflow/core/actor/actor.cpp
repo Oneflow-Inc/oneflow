@@ -75,6 +75,11 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
+void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
+  info->set_regst_desc_id(regst->regst_desc_id());
+  info->set_act_id(regst->act_id());
+}
+
 int Actor::HandlerZombie(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
@@ -98,12 +103,17 @@ void Actor::ActUntilFail() {
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
-      act_event->set_act_id(act_id_++);
+      act_event->set_act_id(act_id_);
       act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      ForEachCurReadableRegst([&](const Regst* readable_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        SetReadableRegstInfo(readable_regst, info);
+      });
       device_ctx_->AddCallBack(
           [act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     Act();
+    act_id_ += 1;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
       device_ctx_->AddCallBack([act_event]() {
         act_event->set_stop_time(GetCurTime());
@@ -164,6 +174,7 @@ void Actor::AsyncSendRegstMsgToConsumer(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
+      regst->set_act_id(act_id_);
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
         ActorMsg msg =
             ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);

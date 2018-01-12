@@ -14,6 +14,7 @@ class Regst final {
   // Getters
   int64_t piece_id() const { return piece_id_; }
   int64_t model_version_id() const { return model_version_id_; }
+  int64_t act_id() const { return act_id_; }
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
@@ -29,6 +30,7 @@ class Regst final {
   // Setters
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
+  void set_act_id(int64_t val) { act_id_ = val; }
 
  private:
   friend class RegstMgr;
@@ -38,6 +40,7 @@ class Regst final {
 
   int64_t piece_id_;
   int64_t model_version_id_;
+  int64_t act_id_;
 
   const RtRegstDesc* regst_desc_;
   std::function<void()> deleter_;
