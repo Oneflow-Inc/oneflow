@@ -51,12 +51,14 @@ class KTCommon<DeviceType::kGPU, T> final {
     KTCommon<DeviceType::kCPU, T>::BlobCmp(cpu_lhs, cpu_rhs);
   }
 
-  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf) {
     Blob* cpu_blob = CreateBlob<DeviceType::kCPU>(blob->blob_desc_ptr());
     CudaCheck(cudaMemcpy(cpu_blob->mut_dptr(), blob->dptr(),
                          blob->ByteSizeOfDataContentField(),
                          cudaMemcpyDeviceToHost));
-    KTCommon<DeviceType::kCPU, T>::CheckFillResult(cpu_blob, fill_conf);
+    KTCommon<DeviceType::kCPU, T>::CheckInitializeResult(cpu_blob,
+                                                         initializer_conf);
   }
 };
 

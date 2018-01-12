@@ -21,9 +21,10 @@ class Blob final {
   const char* data_id() const { return data_id(0); }
   char* mut_data_id() { return mut_data_id(0); }
 
-  const void* memory_ptr() const {
-    return data_id_ptr_ == nullptr ? dptr_ : static_cast<void*>(data_id_ptr_);
-  }
+  int32_t col_num(int32_t no) const;
+  void set_col_num(int32_t no, int32_t val);
+
+  const void* memory_ptr() const;
   void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
 
   template<typename T = void>
@@ -44,21 +45,31 @@ class Blob final {
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
-  bool has_data_id() const { return blob_desc_->has_data_id(); }
-  size_t ByteSizeOfDataIdField() const {
-    return blob_desc_->ByteSizeOfDataIdField();
-  }
-  size_t ByteSizeOfDataContentField() const {
-    return blob_desc_->ByteSizeOfDataContentField();
-  }
+  bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
+  bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
+  size_t ByteSizeOfBlobHeaderField() const;
+  size_t ByteSizeOfDataIdField() const;
+  size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
+  template<DeviceType device_type>
+  void CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
+  void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+
+  int64_t col_id() const { return blob_header_->col_id; }
+  void set_col_id(int64_t val) { blob_header_->col_id = val; }
+  int64_t max_col_id() const { return blob_header_->max_col_id; }
+  void set_max_col_id(int64_t val) { blob_header_->max_col_id = val; }
+
+  bool IsLastCol() const { return col_id() == max_col_id(); }
 
  private:
   template<typename T>
@@ -70,7 +81,9 @@ class Blob final {
         << blob_desc_->data_type() << " " << GetDataType<T>::val;
   }
 
+  BlobHeader* blob_header_;
   char* data_id_ptr_;
+  int32_t* col_num_ptr_;
   void* dptr_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;

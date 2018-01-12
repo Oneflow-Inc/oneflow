@@ -7,9 +7,9 @@ import "oneflow/core/job/placement.proto";
 
 enum TaskType {
   kInvalid = 0;
-  kNonRecurrentForward = 1;
+  kNormalForward = 1;
   kRecurrentForward = 2;
-  kNonRecurrentBackward = 3;
+  kNormalBackward = 3;
   kRecurrentBackward = 4;
   kSource = 5;
   kLoss = 6;

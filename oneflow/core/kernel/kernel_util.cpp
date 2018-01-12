@@ -36,30 +36,31 @@ void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
 }
 
 template<typename T>
-void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
+void ConstantInitializer(const ConstantInitializerConf& initializer_conf,
+                         Blob* blob) {
   T* dptr = blob->mut_dptr<T>();
   const int64_t elem_cnt = blob->shape().elem_cnt();
-  const T value = fill_conf.value();
+  const T value = initializer_conf.value();
   CHECK(elem_cnt);
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
 }
 
 template<typename T>
-void UniformFill(const UniformFillConf& fill_conf, uint32_t random_seed,
-                 Blob* blob) {
+void UniformInitializer(const UniformInitializerConf& initializer_conf,
+                        uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.min()),
-                static_cast<T>(fill_conf.max()), random_seed,
-                blob->mut_dptr<T>());
+  RngUniform<T>(
+      blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
+      static_cast<T>(initializer_conf.max()), random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
-void GaussianFill(const GaussianFillConf& fill_conf, uint32_t random_seed,
-                  Blob* blob) {
+void GaussianInitializer(const GaussianInitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.mean()),
-                 static_cast<T>(fill_conf.std()), random_seed,
-                 blob->mut_dptr<T>());
+  RngGaussian<T>(
+      blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
+      static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
 }
 
 }  // namespace
@@ -137,22 +138,25 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                ldc);
   }
 
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob) {
-    if (fill_conf.has_constant_conf()) {
-      ConstantFill<T>(fill_conf.constant_conf(), blob);
-    } else if (fill_conf.has_uniform_conf()) {
-      UniformFill<T>(fill_conf.uniform_conf(), random_seed, blob);
-    } else if (fill_conf.has_gaussian_conf()) {
-      GaussianFill<T>(fill_conf.gaussian_conf(), random_seed, blob);
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
+    if (initializer_conf.has_constant_conf()) {
+      ConstantInitializer<T>(initializer_conf.constant_conf(), blob);
+    } else if (initializer_conf.has_uniform_conf()) {
+      UniformInitializer<T>(initializer_conf.uniform_conf(), random_seed, blob);
+    } else if (initializer_conf.has_gaussian_conf()) {
+      GaussianInitializer<T>(initializer_conf.gaussian_conf(), random_seed,
+                             blob);
     } else {
       UNEXPECTED_RUN();
     }
   }
-  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& bn_in_op,
-                               int32_t dim_num, int64_t num_in_each_dim) {
+  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                                     int32_t part_num,
+                                     const std::string& model_dir, Blob* blob,
+                                     const std::string& bn_in_op,
+                                     int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);

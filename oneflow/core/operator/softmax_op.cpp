@@ -23,13 +23,13 @@ void SoftmaxOp::InferBlobDescs(
   BlobDesc* out = GetBlobDesc4BnInOp("out");
   out->mut_shape() = Shape({in->shape().At(0), in->shape().Count(1)});
   out->set_data_type(in->data_type());
-  out->set_has_data_id(in->has_data_id());
+  out->set_has_data_id_field(in->has_data_id_field());
   CHECK_EQ(in->data_type(), out->data_type());
   // tmp
   BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
   tmp->mut_shape() = Shape({in->shape().At(0)});
   tmp->set_data_type(in->data_type());
-  tmp->set_has_data_id(false);
+  tmp->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);

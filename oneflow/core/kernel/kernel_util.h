@@ -89,23 +89,26 @@ struct KernelUtil final {
                    const int ldc);
 
   // Generate random number of specific distribution
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob);
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob);
 
-  // detect fill conf
-  static void FillWithProperConf(DeviceCtx* ctx, const FillConf* fill_conf,
-                                 uint32_t random_seed, Blob* blob) {
-    if (fill_conf == nullptr) {
-      fill_conf = JobDesc::Singleton()->DefaultFillConf();
+  // detect initialize conf
+  static void InitializeWithProperConf(DeviceCtx* ctx,
+                                       const InitializerConf* initializer_conf,
+                                       uint32_t random_seed, Blob* blob) {
+    if (initializer_conf == nullptr) {
+      initializer_conf = JobDesc::Singleton()->DefaultInitializerConf();
     }
-    Fill(ctx, *fill_conf, random_seed, blob);
+    Initialize(ctx, *initializer_conf, random_seed, blob);
   }
 
-  // fill blob with model dir
-  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& bn_in_op,
-                               int32_t dim_num, int64_t num_in_each_dim);
+  // initialize blob with model dir
+  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                                     int32_t part_num,
+                                     const std::string& model_dir, Blob* blob,
+                                     const std::string& bn_in_op,
+                                     int32_t dim_num, int64_t num_in_each_dim);
 };
 
 }  // namespace oneflow

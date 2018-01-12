@@ -10,11 +10,14 @@ void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   CHECK_EQ(GetDataType<T>::val, blob->data_type());
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
-    if (blob->has_data_id()) {
-      for (size_t j = 0; j != JobDesc::Singleton()->SizeOfOneDataId(); ++j) {
-        if (*(blob->data_id(i) + j) == '\0') { break; }
-        out_stream.Write(blob->data_id(i) + j, 1);
+    if (blob->has_data_id_field()) {
+      size_t data_id_size = 0;
+      for (; data_id_size != JobDesc::Singleton()->SizeOfOneDataId();
+           ++data_id_size) {
+        if (*(blob->data_id(i) + data_id_size) == '\0') { break; }
       }
+      if (data_id_size == 0) { continue; }
+      out_stream.Write(blob->data_id(i), data_id_size);
       out_stream.Write(",", 1);
     }
     for (int64_t j = 0; j < blob->shape().Count(1); ++j) {

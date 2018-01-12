@@ -21,7 +21,7 @@ void BasicDataLoaderKernel<T>::Forward(
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
       line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      if (out_blob->has_data_id()) {
+      if (out_blob->has_data_id_field()) {
         CHECK_LE(token.size(), JobDesc::Singleton()->SizeOfOneDataId());
         memcpy(out_blob->mut_data_id(i), token.c_str(), token.size());
         if (token.size() != JobDesc::Singleton()->SizeOfOneDataId()) {
@@ -37,7 +37,7 @@ void BasicDataLoaderKernel<T>::Forward(
       CHECK(kernel_ctx.other);
       *(static_cast<bool*>(kernel_ctx.other)) = true;
       CHECK_EQ(read_status, -1);
-      CHECK(out_blob->has_data_id());
+      CHECK(out_blob->has_data_id_field());
       memset(out_blob->mut_data_id(i), '\0',
              JobDesc::Singleton()->SizeOfOneDataId());
       for (int64_t j = 0; j < out_blob->shape().Count(1); ++j) {
