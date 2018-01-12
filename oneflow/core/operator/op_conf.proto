@@ -8,12 +8,12 @@ message ConstantInitializerConf {
   optional float value = 1 [default = 0];
 }
 
-message UniformInitializerConf {
+message RandomUniformInitializerConf {
   optional float min = 1 [default = 0];
   optional float max = 2 [default = 1];
 }
 
-message GaussianInitializerConf {
+message RandomNormalInitializerConf {
   optional float mean = 1 [default = 0];
   optional float std = 2 [default = 1];
 }
@@ -21,8 +21,8 @@ message GaussianInitializerConf {
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
-    UniformInitializerConf uniform_conf = 2;
-    GaussianInitializerConf gaussian_conf = 3;
+    RandomUniformInitializerConf random_uniform_conf = 2;
+    RandomNormalInitializerConf random_normal_conf = 3;
   }
 }
 

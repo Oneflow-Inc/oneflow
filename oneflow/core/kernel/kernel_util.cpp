@@ -22,8 +22,8 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max,
 }
 
 template<typename T>
-void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
-                 uint32_t random_seed, T* dptr) {
+void RngNormal(const int64_t elem_cnt, const T mean, const T std,
+               uint32_t random_seed, T* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
@@ -46,8 +46,9 @@ void ConstantInitializer(const ConstantInitializerConf& initializer_conf,
 }
 
 template<typename T>
-void UniformInitializer(const UniformInitializerConf& initializer_conf,
-                        uint32_t random_seed, Blob* blob) {
+void RandomUniformInitializer(
+    const RandomUniformInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
   CHECK(blob->shape().elem_cnt());
   RngUniform<T>(
       blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
@@ -55,10 +56,11 @@ void UniformInitializer(const UniformInitializerConf& initializer_conf,
 }
 
 template<typename T>
-void GaussianInitializer(const GaussianInitializerConf& initializer_conf,
-                         uint32_t random_seed, Blob* blob) {
+void RandomNormalInitializer(
+    const RandomNormalInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngGaussian<T>(
+  RngNormal<T>(
       blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
       static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
 }
@@ -143,11 +145,12 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                          uint32_t random_seed, Blob* blob) {
     if (initializer_conf.has_constant_conf()) {
       ConstantInitializer<T>(initializer_conf.constant_conf(), blob);
-    } else if (initializer_conf.has_uniform_conf()) {
-      UniformInitializer<T>(initializer_conf.uniform_conf(), random_seed, blob);
-    } else if (initializer_conf.has_gaussian_conf()) {
-      GaussianInitializer<T>(initializer_conf.gaussian_conf(), random_seed,
-                             blob);
+    } else if (initializer_conf.has_random_uniform_conf()) {
+      RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(),
+                                  random_seed, blob);
+    } else if (initializer_conf.has_random_normal_conf()) {
+      RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
+                                 random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
