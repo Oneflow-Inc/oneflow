@@ -77,9 +77,9 @@ class KTCommon<DeviceType::kCPU, T> final {
         ASSERT_FLOAT_EQ(blob->dptr<T>()[i],
                         initializer_conf.constant_conf().value());
       }
-    } else if (initializer_conf.has_uniform_conf()) {
+    } else if (initializer_conf.has_random_uniform_conf()) {
       TODO();
-    } else if (initializer_conf.has_gaussian_conf()) {
+    } else if (initializer_conf.has_random_normal_conf()) {
       TODO();
     } else {
       UNEXPECTED_RUN();
