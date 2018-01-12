@@ -9,11 +9,15 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (IsBackwardTaskType(dst_node->GetTaskType())) {
-      edge->AddRegst("activation", activation_regst);
-      edge->AddRegst("data_tmp", data_tmp_regst);
+    if (IsRecurrentOutEdge(edge)) {
+      edge->AddRegst("rec_ht", ProduceRegst("rec_ht"));
+    } else {
+      edge->AddRegst("out", out_regst);
+      if (IsBackwardTaskType(dst_node->GetTaskType())) {
+        edge->AddRegst("activation", activation_regst);
+        edge->AddRegst("data_tmp", data_tmp_regst);
+      }
     }
-    edge->AddRegst("out", out_regst);
   }
 }
 
