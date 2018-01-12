@@ -2,10 +2,11 @@
 
 namespace oneflow {
 
-void AccumulateCompActor::Init(const TaskProto& task_proto,
-                               int32_t max_acc_cnt) {
+void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
+                               bool is_ascending) {
   using namespace std::placeholders;
   is_in_eord_ = false;
+  is_ascending_ = is_ascending;
   if (GetDeviceType() == DeviceType::kCPU) {
     cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4,
                           cudaMemcpyKind::cudaMemcpyHostToHost);
@@ -47,11 +48,13 @@ void AccumulateCompActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
   Regst* out_regst = GetCurSoleWriteableRegst();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  if (acc_cnt_ == 0) {
+  if (acc_cnt_ == 0
+      && ((is_ascending_ && in_regst->col_id() == 0)
+          || (!is_ascending_ && in_regst->IsLastCol()))) {
     Blob* in_blob = in_regst->packed_blob();
     Blob* out_blob = out_regst->packed_blob();
-    cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
-              in_blob->ByteSizeOfDataContentField());
+    cpy_func_(kernel_ctx.device_ctx, out_blob->mut_memory_ptr(),
+              in_blob->memory_ptr(), in_blob->TotalByteSize());
   } else {
     AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
       Regst* regst = GetCurWriteableRegst(regst_desc_id);
@@ -63,7 +66,10 @@ void AccumulateCompActor::Act() {
       }
     });
   }
-  acc_cnt_ += 1;
+  if ((is_ascending_ && in_regst->IsLastCol())
+      || (!is_ascending_ && in_regst->col_id() == 0)) {
+    acc_cnt_ += 1;
+  }
   if (acc_cnt_ == max_acc_cnt_) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
       regst->set_piece_id(next_piece_id_);
