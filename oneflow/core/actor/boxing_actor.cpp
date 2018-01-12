@@ -4,12 +4,31 @@
 namespace oneflow {
 
 void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
+  ascending_status_ = 0;
+  readable_regst_cnt_ = 0;
   is_eord_ = false;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     readable_regst_[pair.second] = {};
+    previous_pid_cid_[pair.second] = std::make_pair(-1, -1);
   }
-  readable_regst_cnt_ = 0;
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
+}
+
+void BoxingActor::TrySetAscendingStatus(const Regst* cur_regst) {
+  auto& pre_pid_cid = previous_pid_cid_.at(cur_regst->regst_desc_id());
+  int64_t cur_pid = cur_regst->piece_id();
+  int64_t cur_cid = cur_regst->col_id();
+  if (pre_pid_cid.first != cur_pid) {
+    pre_pid_cid = std::make_pair(cur_pid, cur_cid);
+    return;
+  }
+  if (cur_cid == pre_pid_cid.second + 1) {
+    ascending_status_ = 1;
+  } else {
+    CHECK_EQ(cur_cid, pre_pid_cid.second - 1);
+    ascending_status_ = -1;
+  }
+  return;
 }
 
 int BoxingActor::HandlerNormal(const ActorMsg& msg) {
@@ -18,9 +37,12 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      std::queue<Regst*>& rq = readable_regst_.at(msg.regst()->regst_desc_id());
-      if (rq.empty()) { readable_regst_cnt_ += 1; }
-      rq.push(msg.regst());
+      int64_t regst_desc_id = msg.regst()->regst_desc_id();
+      if (!ascending_status_) { TrySetAscendingStatus(msg.regst()); }
+      if (readable_regst_.at(regst_desc_id).empty()) {
+        readable_regst_cnt_ += 1;
+      }
+      readable_regst_.at(regst_desc_id).push(msg.regst());
     }
     ActUntilFail();
   } else {
@@ -30,7 +52,6 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void BoxingActor::Act() {
-  int64_t piece_id = readable_regst_.begin()->second.front()->piece_id();
   AsyncLaunchKernel(GenDefaultKernelCtx(),
                     [this](int64_t regst_desc_id) -> Regst* {
                       Regst* regst = GetCurWriteableRegst(regst_desc_id);
@@ -40,11 +61,23 @@ void BoxingActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(piece_id);
-    return true;
-  });
+  AsyncSendRegstMsgToConsumer(
+      [&](Regst* regst) { return regst->col_id() <= regst->max_col_id(); });
+  int64_t cur_max_cid = 0;
+  int64_t cur_max_maxcid = 0;
+  for (const auto& pair : readable_regst_) {
+    cur_max_cid = std::max(cur_max_cid, pair.second.front()->col_id());
+    cur_max_maxcid =
+        std::max(cur_max_maxcid, pair.second.front()->max_col_id());
+  }
   for (auto& pair : readable_regst_) {
+    if (ascending_status_ == 1) {
+      if (pair.second.front()->IsLastCol() && cur_max_cid < cur_max_maxcid) {
+        continue;
+      }
+    } else if (pair.second.front()->col_id() < cur_max_cid) {
+      continue;
+    }
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
     if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
@@ -52,11 +85,12 @@ void BoxingActor::Act() {
 }
 
 bool BoxingActor::IsReadReady() {
+  CHECK_NE(0, ascending_status_);
   return readable_regst_.size() == readable_regst_cnt_;
 }
 
 bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
-  return is_eord_ && readable_regst_cnt_ == 0;
+  return is_eord_ && !readable_regst_cnt_;
 }
 
 void BoxingActor::AsyncReturnAllReadableRegst() {
