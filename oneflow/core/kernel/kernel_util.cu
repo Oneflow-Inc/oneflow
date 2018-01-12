@@ -110,38 +110,40 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                 &alpha, b, ldb, a, lda, &beta, c, ldc);
   }
 
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob) {
-    // create temporary host blob store fill
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
+    // create temporary host blob store initializer result
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
-    size_t byte_size = blob->ByteSizeOfDataContentField();
-    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+    CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
     Blob host_blob(&blob_desc, host_raw_dptr);
-    // synchronous fill the host blob
-    KernelUtil<DeviceType::kCPU, T>::Fill(nullptr, fill_conf, random_seed,
-                                          &host_blob);
+    // synchronous initialize the host blob
+    KernelUtil<DeviceType::kCPU, T>::Initialize(nullptr, initializer_conf,
+                                                random_seed, &host_blob);
     // asynchronous copy to device
-    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(),
+                             blob->ByteSizeOfDataContentField(),
                              cudaMemcpyHostToDevice);
     cudaStreamSynchronize(ctx->cuda_stream());
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 
-  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& bn_in_op,
-                               int32_t dim_num, int64_t num_in_each_dim) {
+  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                                     int32_t part_num,
+                                     const std::string& model_dir, Blob* blob,
+                                     const std::string& bn_in_op,
+                                     int32_t dim_num, int64_t num_in_each_dim) {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
-    size_t byte_size = blob->ByteSizeOfDataContentField();
-    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
+    CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
     Blob host_blob(&blob_desc, host_raw_dptr);
-    KernelUtil<DeviceType::kCPU, T>::FillWithModelDir(
+    KernelUtil<DeviceType::kCPU, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_dir, &host_blob, bn_in_op, dim_num,
         num_in_each_dim);
 
-    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(),
+                             blob->ByteSizeOfDataContentField(),
                              cudaMemcpyHostToDevice);
     cudaStreamSynchronize(ctx->cuda_stream());
     CudaCheck(cudaFreeHost(host_raw_dptr));

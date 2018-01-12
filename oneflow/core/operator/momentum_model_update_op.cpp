@@ -2,12 +2,8 @@
 
 namespace oneflow {
 
-void MomentumModelUpdateOp::InitFromOpConf() {
-  CHECK(op_conf().has_momentum_mdupdt_conf());
-
-  EnrollInputBn("model_diff_acc", false);
+void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("momentum");
-  EnrollOutputBn("model", false);
 }
 
 const PbMessage& MomentumModelUpdateOp::GetSpecialConf() const {
@@ -20,7 +16,7 @@ void MomentumModelUpdateOp::InferBlobDescs(
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(),
            JobDesc::Singleton()->DefaultDataType());
-  CHECK_EQ(model_blob_desc->has_data_id(), false);
+  CHECK_EQ(model_blob_desc->has_data_id_field(), false);
   *GetBlobDesc4BnInOp("momentum") = *model_blob_desc;
 }
 

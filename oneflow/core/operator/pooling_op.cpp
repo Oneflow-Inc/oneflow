@@ -40,7 +40,7 @@ void PoolingOp::InferBlobDescs(
       Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1), shape_h,
              shape_w});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
-  out_blob_desc->set_has_data_id(in_blob_desc->has_data_id());
+  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // idx
   if (conf.pool() == PoolingOpConf::kMax
@@ -48,7 +48,7 @@ void PoolingOp::InferBlobDescs(
     BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
     idx_blob_desc->mut_shape() = out_blob_desc->shape();
     idx_blob_desc->set_data_type(DataType::kUInt32);
-    idx_blob_desc->set_has_data_id(false);
+    idx_blob_desc->set_has_data_id_field(false);
   }
 }
 

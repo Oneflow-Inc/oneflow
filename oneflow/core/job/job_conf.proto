@@ -9,9 +9,12 @@ message TrainConf {
   required int32 num_of_batches_in_snapshot = 2;
   optional int32 staleness = 3 [default = 0]; // -1 means unlimited, 0 means BSP, > 0 means SSP
   required int64 total_batch_num = 4;
-  optional FillConf default_fill_conf = 5;
+  optional InitializerConf default_initializer_conf = 5;
   optional int32 piece_num_of_print_loss = 6 [default = 100];
   required int32 num_of_pieces_in_batch = 7;
+  optional float l1 = 8 [default = 0];
+  optional float l2 = 9 [default = 0];
+
   oneof ModelUpdateCase {
     NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
     MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
@@ -46,7 +49,7 @@ message JobConf {
   optional string model_load_snapshot_path = 7 [default = ""];
   optional int32 max_data_id_length = 8 [default = 0];
   optional bool use_rdma = 9 [default = false];
-  
+
   optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 101 [default = 100];
   oneof JobType {

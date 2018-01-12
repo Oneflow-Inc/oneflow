@@ -94,10 +94,10 @@ void ForwardCompTaskNode::LockRegsts() {
 }
 
 void ForwardCompTaskNode::FixRegisterNumRange() {
-  int32_t max_seq_size = GetConsumedRegst("in")->MaxSeqSize();
-  GetProducedRegst("activation")->set_min_register_num(max_seq_size);
-  GetProducedRegst("data_tmp")->set_min_register_num(max_seq_size);
-  GetProducedRegst("out")->set_min_register_num(max_seq_size);
+  int32_t max_col_num = GetConsumedRegst("in")->MaxColNum();
+  GetProducedRegst("activation")->set_min_register_num(max_col_num);
+  GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
+  GetProducedRegst("out")->set_min_register_num(max_col_num);
 }
 
 }  // namespace oneflow

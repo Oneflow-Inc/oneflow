@@ -69,9 +69,9 @@ int64_t JobDesc::TotalBatchNum() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().total_batch_num();
 }
-const FillConf* JobDesc::DefaultFillConf() const {
+const InitializerConf* JobDesc::DefaultInitializerConf() const {
   CHECK(IsTrain());
-  return OF_PB_POINTER_GET(job_conf_.train_conf(), default_fill_conf);
+  return OF_PB_POINTER_GET(job_conf_.train_conf(), default_initializer_conf);
 }
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
@@ -79,6 +79,15 @@ int32_t JobDesc::PieceNumOfPrintLoss() const {
 }
 int32_t JobDesc::BatchSize() const {
   return NumOfPiecesInBatch() * ParallelPieceSize();
+}
+float JobDesc::L1() const {
+  CHECK(IsTrain());
+  return job_conf_.train_conf().l1();
+}
+
+float JobDesc::L2() const {
+  CHECK(IsTrain());
+  return job_conf_.train_conf().l2();
 }
 
 }  // namespace oneflow

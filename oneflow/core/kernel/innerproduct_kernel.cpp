@@ -87,15 +87,17 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::FillWithProperConf(
+  KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx.device_ctx,
-      OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(), weight_fill),
+      OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(),
+                        weight_initializer),
       random_seed_gen(), BnInOp2Blob("weight"));
 
   if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    KernelUtil<device_type, T>::FillWithProperConf(
+    KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
-        OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(), bias_fill),
+        OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(),
+                          bias_initializer),
         random_seed_gen(), BnInOp2Blob("bias"));
   }
 }
@@ -106,11 +108,11 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->op_conf().innerproduct_conf().out_num();
-  KernelUtil<device_type, T>::FillWithModelDir(
+  KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
       dim_num, weight_blob->shape().Count(1));
   if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    KernelUtil<device_type, T>::FillWithModelDir(
+    KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
         "bias", dim_num, 1);
   }
@@ -121,10 +123,11 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    FillConf bias_multiplier_fill_conf;
-    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.0f);
-    KernelUtil<device_type, T>::Fill(ctx.device_ctx, bias_multiplier_fill_conf,
-                                     0, BnInOp2Blob("bias_multiplier"));
+    InitializerConf bias_multiplier_initializer_conf;
+    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+    KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
+                                           bias_multiplier_initializer_conf, 0,
+                                           BnInOp2Blob("bias_multiplier"));
   }
 }
 

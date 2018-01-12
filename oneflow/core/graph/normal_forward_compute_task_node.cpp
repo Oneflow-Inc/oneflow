@@ -1,14 +1,14 @@
 #include "oneflow/core/graph/forward_compute_task_node.h"
-#include "oneflow/core/graph/nonrecurrent_forward_compute_task_node.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
 
 namespace oneflow {
 
-void NonRecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
+void NormalForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   ConsumeRegst("in", edge->GetSoleRegst());
 }
 
-void NonRecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
+void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   HashMap<std::string, std::pair<ExecNode*, std::string>> lbn2producer;
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
@@ -36,7 +36,7 @@ void NonRecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   });
 }
 
-bool NonRecurrentForwardCompTaskNode::IsReadyForBuild() {
+bool NormalForwardCompTaskNode::IsReadyForBuild() {
   return GetConsumedRegst("in")->IsLocked();
 }
 
