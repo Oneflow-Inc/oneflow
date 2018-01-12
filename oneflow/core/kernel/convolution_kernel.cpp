@@ -113,10 +113,11 @@ void ConvolutionKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Gemm(
         ctx.device_ctx, CBLAS_ORDER::CblasRowMajor, CblasNoTrans, CblasTrans,
         out_blob->shape().At(1), out_blob->shape().Count(2),
-        weight_blob->shape().At(1), static_cast<T>(1.0), weight_blob->dptr<T>(),
-        weight_blob->shape().At(1), col_buf_blob->dptr<T>(),
-        weight_blob->shape().At(1), static_cast<T>(0.0),
-        out_blob->mut_dptr<T>() + i * out_im_sz, col_buf_blob->shape().At(1));
+        weight_blob->shape().Count(1), static_cast<T>(1.0),
+        weight_blob->dptr<T>(), weight_blob->shape().Count(1),
+        col_buf_blob->dptr<T>(), weight_blob->shape().Count(1),
+        static_cast<T>(0.0), out_blob->mut_dptr<T>() + i * out_im_sz,
+        col_buf_blob->shape().At(1));
 
     if (this->op_conf().convolution_conf().has_bias_term()) {
       const Blob* bias_blob = BnInOp2Blob("bias");
@@ -218,7 +219,7 @@ void ConvolutionKernel<device_type, T>::ComputeInputDiff(
         weight_blob->shape().At(0), static_cast<T>(1.0),
         out_diff_blob->dptr<T>() + i * out_im_sz,
         out_diff_blob->shape().Count(2), weight_blob->dptr<T>(),
-        weight_blob->shape().At(1), static_cast<T>(0.0),
+        weight_blob->shape().Count(1), static_cast<T>(0.0),
         col_buf_blob->mut_dptr<T>(), col_buf_blob->shape().At(2));
 
     ConvolutionKernelUtil<device_type, T>::Col2Im(
