@@ -20,9 +20,8 @@ void InferBasicRnnCellBlobDesc(
   *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("f_op_out") = data_tmp_blob_desc;
 
-  BlobDesc weight_blob_desc = BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("in_ip_op_weight") = weight_blob_desc;
-  *GetBlobDesc4BnInOp("hidden_ip_op_weight") = weight_blob_desc;
+  *GetBlobDesc4BnInOp("in_ip_op_weight") = BlobDesc(Shape({hidden_size, embedding_size}));
+  *GetBlobDesc4BnInOp("hidden_ip_op_weight") = BlobDesc(Shape({hidden_size, hidden_size}));
   if (has_bias_term) {
     *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({piece_size, 1}));
