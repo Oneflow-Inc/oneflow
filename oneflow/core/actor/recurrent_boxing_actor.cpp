@@ -9,22 +9,23 @@ void RecurrentBoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   is_eord_ = false;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     readable_regst_[pair.second] = {};
-    previous_pst_[pair.second] = PieceStatus();
+    previous_pid_cid_[pair.second] = std::make_pair(-1, -1);
   }
   OF_SET_MSG_HANDLER(&RecurrentBoxingActor::HandlerNormal);
 }
 
 void RecurrentBoxingActor::TrySetAscendingStatus(const Regst* cur_regst) {
-  PieceStatus& pre_pst = previous_pst_.at(cur_regst->regst_desc_id());
-  const PieceStatus& cur_pst = cur_regst->piece_status();
-  if (!pre_pst.max_col_num() || pre_pst.piece_id() != cur_pst.piece_id()) {
-    pre_pst = cur_pst;
+  auto& pre_pid_cid = previous_pid_cid_.at(cur_regst->regst_desc_id());
+  int64_t cur_pid = cur_regst->piece_id();
+  int64_t cur_cid = cur_regst->col_id();
+  if (pre_pid_cid.first != cur_pid) {
+    pre_pid_cid = std::make_pair(cur_pid, cur_cid);
     return;
   }
-  if (cur_pst.IsNextColOf(pre_pst)) {
+  if (cur_cid == pre_pid_cid.second + 1) {
     ascending_status_ = 1;
   } else {
-    CHECK(pre_pst.IsNextColOf(cur_pst));
+    CHECK_EQ(cur_cid, pre_pid_cid - 1);
     ascending_status_ = -1;
   }
   return;
@@ -60,21 +61,18 @@ void RecurrentBoxingActor::Act() {
                         return regst;
                       }
                     });
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    return regst->piece_status().col_id() < regst->piece_status().max_col_num();
-  });
-  int64_t cur_max_col_id = 0;
-  int64_t cur_max_col_num = 0;
+  AsyncSendRegstMsgToConsumer(
+      [&](Regst* regst) { return regst->.col_id() <= regst->.max_col_id(); });
+  int64_t cur_max_cid = 0;
+  int64_t cur_max_maxcid = 0;
   for (const auto& pair : readable_regst_) {
-    const PieceStatus& pst = pair.second.front()->piece_status();
-    cur_max_col_id = std::max(cur_max_col_id, pst.col_id());
-    cur_max_col_num = std::max(cur_max_col_num, pst.max_col_num());
+    cur_max_cid = std::max(cur_max_cid, pair->col_id());
+    cur_max_maxcid = std::max(cur_max_maxcid, pair->max_col_id());
   }
   for (auto& pair : readable_regst_) {
-    const PieceStatus& pst = pair.second.front()->piece_status();
     if (ascending_status_ == 1) {
-      if (pst.IsLastCol() && cur_max_col_id < cur_max_col_num - 1) { continue; }
-    } else if (pst.col_id() < cur_max_col_id) {
+      if (pair->IsLastCol() && cur_max_cid < cur_max_maxcid) { continue; }
+    } else if (pair->col_id() < cur_max_cid) {
       continue;
     }
     AsyncSendRegstMsgToProducer(pair.second.front());

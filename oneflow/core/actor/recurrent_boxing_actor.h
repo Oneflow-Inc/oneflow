@@ -25,7 +25,8 @@ class RecurrentBoxingActor final : public Actor {
 
   // <regst_desc_id, regst*>
   HashMap<int64_t, std::queue<Regst*>> readable_regst_;
-  HashMap<int64_t, PieceStatus> previous_pst_;
+  // <regst_desc_id, <pid, cid>>
+  HashMap<int64_t, std::pair<int64_t, int64_t>> previous_pid_cid_;
   int64_t readable_regst_cnt_;
   // 0 for unset, 1 for ascending, -1 for descending
   int ascending_status_;
