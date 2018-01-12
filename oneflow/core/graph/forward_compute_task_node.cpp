@@ -86,6 +86,9 @@ void ForwardCompTaskNode::FixRegisterNumRange() {
   GetProducedRegst("activation")->set_min_register_num(max_col_num);
   GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
   GetProducedRegst("out")->set_min_register_num(max_col_num);
+  if (GetProducedRegst("rec_ht")) {
+    GetProducedRegst("rec_ht")->set_min_register_num(2);
+  }
 }
 
 }  // namespace oneflow
