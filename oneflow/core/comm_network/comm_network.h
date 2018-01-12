@@ -47,6 +47,8 @@ class CommNet {
     std::list<ReadContext*> read_ctx_list;
   };
 
+  ReadContext* NewReadCtxInActorReadCtx(ActorReadContext*);
+
  private:
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneReadContext(ActorReadContext*, ReadContext*);

@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_CONNECTION_H_
 #define ONEFLOW_CORE_COMM_NETWORK_IBVERBS_IBVERBS_CONNECTION_H_
 
-#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
-
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_connection_info.pb.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
+
+#if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
 namespace oneflow {
 

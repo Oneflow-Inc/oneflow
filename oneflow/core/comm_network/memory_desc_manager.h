@@ -27,7 +27,7 @@ class MemDescMgr final {
     }
   }
 
-  const std::list<MemDescType *> &mem_descs() { return mem_descs; }
+  const std::list<MemDescType *> &mem_descs() { return mem_descs_; }
 
  private:
   size_t unregister_mem_descs_cnt_;

@@ -26,6 +26,11 @@ class Regst final {
     return lbn2blob_.begin()->second->piece_status();
   }
 
+  int64_t col_id() const { return FirstBlob()->col_id(); }
+  int64_t max_col_id() const { return FirstBlob()->max_col_id(); }
+  bool IsLastCol() const { return FirstBlob()->IsLastCol(); }
+  bool HaveNextPieceColStatusOf(const Regst* other) const;
+
   // Setters
   void set_piece_id(int64_t val) { piece_id_ = val; }
   void set_model_version_id(int64_t val) { model_version_id_ = val; }
@@ -35,6 +40,8 @@ class Regst final {
  private:
   friend class RegstMgr;
   Regst();
+
+  const Blob* FirstBlob() const { return lbn2blob_.begin()->second.get(); }
 
   int64_t piece_id_;
   int64_t model_version_id_;
