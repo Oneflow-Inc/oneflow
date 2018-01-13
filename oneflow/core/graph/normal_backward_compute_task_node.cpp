@@ -82,7 +82,7 @@ void NormalBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
 
 void NormalBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
     TaskEdge* edge) {
-  edge->AddRegst("in_diff", GetProducedRegst("in_diff"));
+  edge->AddRegst("in_diff", ProduceRegst("in_diff"));
 }
 
 void NormalBackwardCompTaskNode::VirtualProduceActivationDiff() {

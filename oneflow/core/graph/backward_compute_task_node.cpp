@@ -34,7 +34,6 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
       VirtualConsumeDiffRegst(edge);
     }
   }
-
   VirtualConsumeInRegst();
 }
 

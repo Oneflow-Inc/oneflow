@@ -108,9 +108,19 @@ void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
 
 bool RecurrentBackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
   TaskNode* node = edge->dst_node();
-  while (node->GetTaskType() == kBoxing) {
-    TaskEdge* edge = *(node->out_edges().begin());
-    node = edge->dst_node();
+  while (true) {
+    if (node->GetTaskType() == TaskType::kBoxing) {
+      TaskEdge* edge = *(node->out_edges().begin());
+      node = edge->dst_node();
+    } else if (node->GetTaskType() == TaskType::kCopyHd) {
+      TaskEdge* edge = node->SoleOutEdge();
+      node = edge->dst_node();
+    } else if (node->GetTaskType() == TaskType::kNormalBackward
+               || node->GetTaskType() == TaskType::kRecurrentBackward) {
+      break;
+    } else {
+      UNEXPECTED_RUN();
+    }
   }
   BackwardCompTaskNode* succ_bw_node = static_cast<BackwardCompTaskNode*>(node);
   ForwardCompTaskNode* pred_fw_node =
