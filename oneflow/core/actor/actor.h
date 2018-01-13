@@ -15,6 +15,8 @@
 
 namespace oneflow {
 
+enum class ColIdOrder { kUncertain = 0, kAscending, kDescending };
+
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);

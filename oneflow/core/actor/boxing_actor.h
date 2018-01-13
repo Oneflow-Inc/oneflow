@@ -21,9 +21,15 @@ class BoxingActor final : public Actor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
-  bool is_eord_;
+  void TrySetAscendingStatus(const Regst*);
+
+  // <regst_desc_id, regst*>
   HashMap<int64_t, std::queue<Regst*>> readable_regst_;
-  int64_t readable_regst_cnt_;
+  // <regst_desc_id, <pid, cid>>
+  HashMap<int64_t, std::pair<int64_t, int64_t>> previous_pid_cid_;
+  int8_t readable_regst_cnt_;
+  ColIdOrder col_id_order_;
+  bool is_eord_;
 };
 
 }  // namespace oneflow
