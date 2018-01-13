@@ -31,14 +31,14 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 
 void RecurrentForwardCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  std::shared_ptr<RegstDesc> rec_ht_regst = GetProducedRegst("rec_ht");
-  CHECK(rec_ht_regst != NULL);
+  std::shared_ptr<RegstDesc> ht_regst = GetProducedRegst("ht");
+  CHECK(ht_regst != NULL);
   ExecNode* exec_node = mut_exec_gph().SoleNode();
-  const std::string& lbn = exec_node->op()->Lbn4BnInOp("ht");
+  const std::string& lbn = exec_node->op()->Lbn4BnInOp("out");
   out_regst->AddLbn(lbn);
-  rec_ht_regst->AddLbn(lbn);
-  exec_node->BindBnInOpAndRegst("ht", out_regst);
-  exec_node->BindBnInOpAndRegst("rec_ht", rec_ht_regst);
+  ht_regst->AddLbn(lbn);
+  exec_node->BindBnInOpAndRegst("out", out_regst);
+  exec_node->BindBnInOpAndRegst("ht", ht_regst);
 }
 
 bool RecurrentForwardCompTaskNode::IsReadyForBuild() {

@@ -4,18 +4,16 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> activation_regst = ProduceRegst("activation");
-  std::shared_ptr<RegstDesc> data_tmp_regst = ProduceRegst("data_tmp");
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (IsRecurrentOutEdge(edge)) {
-      edge->AddRegst("rec_ht", ProduceRegst("rec_ht"));
+      edge->AddRegst("ht", ProduceRegst("ht"));
     } else {
       edge->AddRegst("out", out_regst);
       if (IsBackwardTaskType(dst_node->GetTaskType())) {
-        edge->AddRegst("activation", activation_regst);
-        edge->AddRegst("data_tmp", data_tmp_regst);
+        edge->AddRegst("activation", ProduceRegst("activation"));
+        edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
       }
     }
   }
@@ -86,8 +84,9 @@ void ForwardCompTaskNode::FixRegisterNumRange() {
   GetProducedRegst("activation")->set_min_register_num(max_col_num);
   GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
   GetProducedRegst("out")->set_min_register_num(max_col_num);
-  if (GetProducedRegst("rec_ht")) {
-    GetProducedRegst("rec_ht")->set_min_register_num(2);
+  if (GetProducedRegst("ht")) {
+    GetProducedRegst("ht")->set_min_register_num(2);
+    GetProducedRegst("ht")->set_max_register_num(2);
   }
 }
 
