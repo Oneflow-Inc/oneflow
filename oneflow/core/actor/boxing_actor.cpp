@@ -9,7 +9,7 @@ void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
     previous_pid_cid_[pair.second] = std::make_pair(-1, -1);
   }
   readable_regst_cnt_ = 0;
-  col_id_order_ = ColIdOrder::kUnset;
+  col_id_order_ = ColIdOrder::kUncertain;
   is_eord_ = false;
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
 }
@@ -37,14 +37,12 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      int64_t regst_desc_id = msg.regst()->regst_desc_id();
-      if (col_id_order_ == ColIdOrder::kUnset) {
+      if (col_id_order_ == ColIdOrder::kUncertain) {
         TrySetAscendingStatus(msg.regst());
       }
-      if (readable_regst_.at(regst_desc_id).empty()) {
-        readable_regst_cnt_ += 1;
-      }
-      readable_regst_.at(regst_desc_id).push(msg.regst());
+      std::queue<Regst*>& rq = readable_regst_.at(msg.regst()->regst_desc_id());
+      if (rq.empty()) { readable_regst_cnt_ += 1; }
+      rq.push(msg.regst());
     }
     ActUntilFail();
   } else {
@@ -88,12 +86,11 @@ void BoxingActor::Act() {
 }
 
 bool BoxingActor::IsReadReady() {
-  CHECK_NE(0, ascending_status_);
   return readable_regst_.size() == readable_regst_cnt_;
 }
 
 bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
-  return is_eord_ && !readable_regst_cnt_;
+  return is_eord_ && readable_regst_cnt_ == 0;
 }
 
 void BoxingActor::AsyncReturnAllReadableRegst() {
