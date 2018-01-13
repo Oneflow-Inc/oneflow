@@ -54,7 +54,6 @@ void RandomUniformInitializer(
       blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
       static_cast<T>(initializer_conf.max()), random_seed, blob->mut_dptr<T>());
 }
-
 template<typename T>
 void RandomNormalInitializer(
     const RandomNormalInitializerConf& initializer_conf, uint32_t random_seed,
@@ -101,8 +100,8 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf,
   VarianceNorm variance_norm =
       static_cast<VarianceNorm>(initializer_conf.variance_norm());
   T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
-  RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(0),
-                 static_cast<T>(std), random_seed, blob->mut_dptr<T>());
+  RngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(0), static_cast<T>(std),
+               random_seed, blob->mut_dptr<T>());
 }
 
 }  // namespace
