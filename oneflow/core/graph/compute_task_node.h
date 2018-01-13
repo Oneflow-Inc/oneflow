@@ -28,6 +28,8 @@ class CompTaskNode : public TaskNode {
   void set_chain_node(const ChainNode* val) { chain_node_ = val; }
 
  protected:
+  bool IsRecurrentOutEdge(TaskEdge* edge);
+
  private:
   ParallelContext parallel_ctx_;
   const ChainNode* chain_node_;
