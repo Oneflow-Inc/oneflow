@@ -8,6 +8,8 @@ namespace oneflow {
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
   blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
+  blob_header_->col_id = -1;
+  blob_header_->max_col_id = -1;
 
   if (blob_desc->has_data_id_field()) {
     data_id_ptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField();

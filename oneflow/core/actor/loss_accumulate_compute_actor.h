@@ -12,8 +12,9 @@ class LossAccCompActor final : public AccumulateCompActor {
   ~LossAccCompActor() = default;
 
   void VirtualCompActorInit(const TaskProto& proto) override {
-    AccumulateCompActor::Init(
-        proto, JobDesc::Singleton()->PieceNumOfPrintLoss(), true);
+    AccumulateCompActor::Init(proto,
+                              JobDesc::Singleton()->PieceNumOfPrintLoss(),
+                              ColIdOrder::kAscending);
   }
 
  private:
