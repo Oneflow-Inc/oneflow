@@ -10,16 +10,14 @@ void CompTaskNode::ToProto(TaskProto* task_proto) {
 }
 
 bool CompTaskNode::IsRecurrentOutEdge(TaskEdge* edge) {
-  CompTaskNode* self_node = dynamic_cast<CompTaskNode*>(edge->src_node());
-  CHECK(self_node);
+  CHECK_EQ(this, edge->src_node());
   CompTaskNode* next_comp_node = nullptr;
   do {
     TaskNode* dst_node = edge->dst_node();
     edge = *(dst_node->out_edges().begin());
     next_comp_node = dynamic_cast<CompTaskNode*>(dst_node);
   } while (!next_comp_node && edge);
-  if (next_comp_node
-      && next_comp_node->chain_node() == self_node->chain_node()) {
+  if (next_comp_node && next_comp_node->chain_node() == chain_node()) {
     return true;
   }
   return false;
