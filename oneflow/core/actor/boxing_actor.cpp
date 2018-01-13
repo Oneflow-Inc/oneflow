@@ -88,11 +88,12 @@ void BoxingActor::Act() {
 }
 
 bool BoxingActor::IsReadReady() {
+  CHECK_NE(0, ascending_status_);
   return readable_regst_.size() == readable_regst_cnt_;
 }
 
 bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
-  return is_eord_ && readable_regst_cnt_ == 0;
+  return is_eord_ && !readable_regst_cnt_;
 }
 
 void BoxingActor::AsyncReturnAllReadableRegst() {
