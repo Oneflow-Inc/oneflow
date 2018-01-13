@@ -8,7 +8,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (IsRecurrentOutEdge(edge)) {
-      edge->AddRegst("ht", ProduceRegst("ht"));
+      VirtualAddRegstForRecurrentOutEdge(edge);
     } else {
       edge->AddRegst("out", out_regst);
       if (IsBackwardTaskType(dst_node->GetTaskType())) {
@@ -84,10 +84,7 @@ void ForwardCompTaskNode::FixRegisterNumRange() {
   GetProducedRegst("activation")->set_min_register_num(max_col_num);
   GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
   GetProducedRegst("out")->set_min_register_num(max_col_num);
-  if (GetProducedRegst("ht")) {
-    GetProducedRegst("ht")->set_min_register_num(2);
-    GetProducedRegst("ht")->set_max_register_num(2);
-  }
+  VirtualFixRegisterNumRange();
 }
 
 }  // namespace oneflow
