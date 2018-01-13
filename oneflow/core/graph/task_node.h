@@ -52,6 +52,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                                           int32_t max_register_num);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
+  bool IsRecurrentOutEdge(TaskEdge* edge) { TODO(); }
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
   const HashMap<std::string, std::weak_ptr<RegstDesc>>& consumed_regsts();

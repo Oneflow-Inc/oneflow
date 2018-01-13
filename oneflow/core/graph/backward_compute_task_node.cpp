@@ -5,11 +5,11 @@ namespace oneflow {
 
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
-    if (dst_node == this) {
+    if (IsRecurrentOutEdge(edge)) {
       VirtualProduceRegstOnSelfEdge(edge);
       continue;
     }
+    TaskNode* dst_node = edge->dst_node();
     if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
       VirtualProduceInDiffAndBindEdge(edge);
     } else {
@@ -22,10 +22,6 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void BackwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node == this) {
-      VirtualConsumeRegstOnSelfEdge(edge);
-      continue;
-    }
     TaskType src_task_type = src_node->GetTaskType();
     if (IsForwardTaskType(src_task_type)) {
       VirtualConsumeActivation(edge);
@@ -35,7 +31,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      ConsumeRegst("out_diff", edge->GetSoleRegst());
+      VirtualConsumeDiffRegst(edge);
     }
   }
 
@@ -44,13 +40,13 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildExecGphAndBindOutDiffRegst();
-  VirtualBuildActivationDiffRegst();
-  VirtualBuildInDiffRegst();
-  BuildModelDiffRegst();
+  VirtualBindActivationDiffRegst();
+  VirtualBindInDiffRegst();
+  BindModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
 
-void BackwardCompTaskNode::BuildModelDiffRegst() {
+void BackwardCompTaskNode::BindModelDiffRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetConsumedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");

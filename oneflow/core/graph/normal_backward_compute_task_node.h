@@ -15,23 +15,14 @@ class NormalBackwardCompTaskNode final : public BackwardCompTaskNode {
 
  private:
   void VirtualBuildExecGphAndBindOutDiffRegst() override;
-  void VirtualBuildActivationDiffRegst() override;
-  void VirtualBuildInDiffRegst() override;
+  void VirtualBindActivationDiffRegst() override;
+  void VirtualBindInDiffRegst() override;
+  void VirtualConsumeDiffRegst(TaskEdge* edge) override;
   void VirtualConsumeInRegst() override;
-  void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override {
-    edge->AddRegst("in_diff", ProduceRegst("in_diff"));
-  }
-  void VirtualProduceActivationDiff() override {
-    ProduceRegst("activation_diff", 1, 1);
-  }
-  void VirtualConsumeActivation(TaskEdge* edge) override {
-    ConsumeRegst("activation", edge->GetRegst("activation"));
-  }
-  void VirtualInferBlobDescInActivationDiff() override {
-    auto activation_diff_regst = GetProducedRegst("activation_diff");
-    activation_diff_regst->CopyBlobDescWithoutAddLbn(
-        GetConsumedRegst("activation").get());
-  }
+  void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override;
+  void VirtualProduceActivationDiff() override;
+  void VirtualConsumeActivation(TaskEdge* edge) override;
+  void VirtualInferBlobDescInActivationDiff() override;
 };
 
 }  // namespace oneflow

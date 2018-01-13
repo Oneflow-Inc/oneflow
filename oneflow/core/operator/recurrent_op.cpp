@@ -44,7 +44,7 @@ void RecurrentOp::InitFromOpConf() {
     EnrollModelBn("h0");
   }
   EnrollOutputBn("ht");
-  EnrollOutputBn("rec_ht");
+  EnrollOutputBn("out");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
     EnrollDataTmpBn("in_ip_op_out");
