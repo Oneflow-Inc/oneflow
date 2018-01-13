@@ -22,7 +22,6 @@ class ForwardCompTaskNode : public CompTaskNode {
   virtual void BuildOutRegst() { UNEXPECTED_RUN(); }
 
  private:
-  bool IsRecurrentOutEdge(TaskEdge* edge) { TODO(); }
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
   void FixRegisterNumRange() override;

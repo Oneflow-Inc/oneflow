@@ -61,6 +61,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   virtual void FixRegisterNumRange() {}
 
+  bool IsRecurrentOutEdge(TaskEdge* edge) { TODO(); }
+
  private:
   void UpdateTaskId();
 
