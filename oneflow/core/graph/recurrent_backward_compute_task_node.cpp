@@ -22,9 +22,7 @@ void RecurrentBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
   exec_node->BindBnInOpAndRegst("out", out_regst);
   exec_node->BindBnInOpAndRegst("out_diff", out_diff_regst);
-  std::shared_ptr<RegstDesc> ht_regst = GetConsumedRegst("ht");
   std::shared_ptr<RegstDesc> ht_diff_regst = GetConsumedRegst("ht_diff");
-  exec_node->BindBnInOpAndRegst("ht", ht_regst);
   exec_node->BindBnInOpAndRegst("ht_diff", ht_diff_regst);
 }
 
