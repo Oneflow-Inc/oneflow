@@ -15,7 +15,7 @@
 
 namespace oneflow {
 
-enum class ColIdOrder { kUnSet = 0, kAscending, kDescending };
+enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 class Actor {
  public:
