@@ -86,19 +86,16 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
     } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
       ConsumeRegst("h0", regst);
     } else {
-      UNEXPECTED_RUN();
+      continue;
     }
   }
 }
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
-  std::shared_ptr<RegstDesc> ht_1_diff_regst = GetProducedRegst("ht_1_diff");
-  ht_1_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
-  std::shared_ptr<RegstDesc> ht_diff_regst = GetConsumedRegst("ht_diff");
-  if (!ht_diff_regst->IsLocked()) {
-    ht_diff_regst->CopyBlobDescFrom(ht_1_diff_regst.get());
-  }
+  std::shared_ptr<RegstDesc> ht_1_diff_regst = GetProducedRegst("ht_1_diff");
+  std::shared_ptr<RegstDesc> ht_1_regst = GetHt_1RegstInRelatedFwTaskNode();
+  ht_1_diff_regst->CopyBlobDescWithoutAddLbn(ht_1_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
   }
@@ -107,17 +104,12 @@ void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
 bool RecurrentBackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
   TaskNode* node = edge->dst_node();
   while (true) {
-    if (node->GetTaskType() == TaskType::kBoxing) {
-      TaskEdge* edge = *(node->out_edges().begin());
-      node = edge->dst_node();
-    } else if (node->GetTaskType() == TaskType::kCopyHd) {
-      TaskEdge* edge = node->SoleOutEdge();
-      node = edge->dst_node();
-    } else if (node->GetTaskType() == TaskType::kNormalBackward
-               || node->GetTaskType() == TaskType::kRecurrentBackward) {
+    CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(node);
+    if (comp_node) {
       break;
     } else {
-      UNEXPECTED_RUN();
+      TaskEdge* edge = *(node->out_edges().begin());
+      node = edge->dst_node();
     }
   }
   BackwardCompTaskNode* succ_bw_node = static_cast<BackwardCompTaskNode*>(node);
@@ -128,6 +120,25 @@ bool RecurrentBackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
     if (lbn == in_lbn) { return true; }
   }
   return false;
+}
+
+std::shared_ptr<RegstDesc>
+RecurrentBackwardCompTaskNode::GetHt_1RegstInRelatedFwTaskNode() {
+  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
+  ForwardCompTaskNode* fw_node =
+      static_cast<ForwardCompTaskNode*>(GetRelatedFwTaskNode());
+  for (TaskEdge* edge : fw_node->in_edges()) {
+    std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
+    if (regst->GetBlobDesc(op->Lbn4BnInOp("in"))) {
+      continue;
+    } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
+      continue;
+    } else {
+      return regst;
+    }
+  }
+  UNEXPECTED_RUN();
+  return nullptr;
 }
 
 }  // namespace oneflow
