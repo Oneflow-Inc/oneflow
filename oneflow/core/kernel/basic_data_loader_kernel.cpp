@@ -21,7 +21,7 @@ void BasicDataLoaderKernel<T>::Forward(
     if (status->next_col_id > status->max_col_id) {
       ReadOnePieceToBlob(status, buffer_blob);
     }
-    ReadBufferToOutBlob(kernel_ctx, buffer_blob, out_blob);
+    ReadOneColFromBufferToOutBlob(kernel_ctx, buffer_blob, out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
   }
@@ -56,7 +56,9 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
       int32_t max_col_id_of_this_line = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
         blob->set_col_num(i, max_col_id_of_this_line + 1);
-        status->max_col_id = std::max(status->max_col_id, max_col_id_of_this_line);
+        if (status->max_col_id < max_col_id_of_this_line) {
+          status->max_col_id = max_col_id_of_this_line;
+        }
       }
     } else {
       CHECK_EQ(read_status, -1);
@@ -72,7 +74,8 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
         }
       }
       T* dptr = blob->mut_dptr<T>() + i * blob->shape().Count(1);
-      memset(dptr, static_cast<T>(0), (blob->shape().Count(0) - i * blob->shape().Count(1)));
+      memset(dptr, static_cast<T>(0),
+             (blob->shape().Count(0) - i * blob->shape().Count(1)));
       break;
     }
   }
@@ -80,9 +83,9 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
 }
 
 template<typename T>
-void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(const KernelCtx& kernel_ctx,
-                                                   const Blob* buffer_blob,
-                                                   Blob* out_blob) const {
+void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
+    const KernelCtx& kernel_ctx, const Blob* buffer_blob,
+    Blob* out_blob) const {
   CHECK(kernel_ctx.other);
   auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
   out_blob->set_max_col_id(status->max_col_id);
@@ -107,8 +110,8 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(const KernelCtx& ke
 
 template<typename T>
 const char* BasicDataLoaderKernel<T>::ReadOneDataId(const char* line_ptr,
-                                                         Blob* blob,
-                                                         int64_t index) const {
+                                                    Blob* blob,
+                                                    int64_t index) const {
   std::string token;
   line_ptr = StrToToken(line_ptr, ",", &token) + 1;
   if (blob->has_data_id_field()) {
@@ -123,8 +126,8 @@ const char* BasicDataLoaderKernel<T>::ReadOneDataId(const char* line_ptr,
 
 template<typename T>
 int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
-                                                          Blob* blob,
-                                                          int64_t index) const {
+                                                     Blob* blob,
+                                                     int64_t index) const {
   std::string token;
   int32_t each_max_col_id = -1;
   T* each_dptr = blob->mut_dptr<T>() + index * blob->shape().Count(1);
