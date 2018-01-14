@@ -2,14 +2,12 @@
 
 namespace oneflow {
 
-bool Actor::IsFirstRegstInPieceOfThisOrder(const Regst* regst,
-                                           ColIdOrder order) {
+bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
   return (order == ColIdOrder::kAscending && regst->col_id() == 0)
          || (order == ColIdOrder::kDescending && regst->IsLastCol());
 }
 
-bool Actor::IsLastRegstInPieceOfThisOrder(const Regst* regst,
-                                          ColIdOrder order) {
+bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
   return (order == ColIdOrder::kAscending && regst->IsLastCol())
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }

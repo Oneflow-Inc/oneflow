@@ -17,6 +17,9 @@ namespace oneflow {
 
 enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
+bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
+bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
+
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
@@ -31,9 +34,6 @@ class Actor {
   int64_t machine_id() const;
   int64_t thrd_id() const;
   int64_t actor_id() const { return actor_id_; }
-
-  bool IsFirstRegstInPieceOfThisOrder(const Regst*, ColIdOrder);
-  bool IsLastRegstInPieceOfThisOrder(const Regst*, ColIdOrder);
 
  protected:
   struct ExecKernel {
