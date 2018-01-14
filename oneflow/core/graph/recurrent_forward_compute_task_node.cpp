@@ -34,16 +34,12 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }
 }
 
-void RecurrentForwardCompTaskNode::BuildOutRegst() {
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+void RecurrentForwardCompTaskNode::VirtualBindOutRegst() {
   std::shared_ptr<RegstDesc> ht_regst = GetProducedRegst("ht");
   CHECK(ht_regst != NULL);
   ExecNode* exec_node = mut_exec_gph().SoleNode();
-  const std::string& out_lbn = exec_node->op()->Lbn4BnInOp("out");
   const std::string& ht_lbn = exec_node->op()->Lbn4BnInOp("ht");
-  out_regst->AddLbn(out_lbn);
   ht_regst->AddLbn(ht_lbn);
-  exec_node->BindBnInOpAndRegst("out", out_regst);
   exec_node->BindBnInOpAndRegst("ht", ht_regst);
 }
 

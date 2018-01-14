@@ -33,15 +33,32 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
-  BuildOutRegst();
-  BuildActivationRegst();
-  BuildModelAndTmpRegsts();
+  BindOutRegst();
+  BindActivationRegst();
+  BindModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
   });
 }
 
-void ForwardCompTaskNode::BuildActivationRegst() {
+void ForwardCompTaskNode::BindOutRegst() {
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    HashSet<std::string> found_lbns;
+    for (ExecEdge* out_edge : cur_node->out_edges()) {
+      CHECK(found_lbns.insert(out_edge->lbn()).second);
+    }
+    for (const std::string& obn : cur_node->op()->output_bns()) {
+      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
+      if (found_lbns.find(lbn) != found_lbns.end()) { continue; }
+      out_regst->AddLbn(lbn);
+      cur_node->BindBnInOpAndRegst(obn, out_regst);
+    }
+  });
+  VirtualBindOutRegst();
+}
+
+void ForwardCompTaskNode::BindActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
     activation_regst->AddLbn(edge->lbn());
@@ -50,7 +67,7 @@ void ForwardCompTaskNode::BuildActivationRegst() {
   });
 }
 
-void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
+void ForwardCompTaskNode::BindModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");

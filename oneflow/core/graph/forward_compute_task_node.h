@@ -20,12 +20,13 @@ class ForwardCompTaskNode : public CompTaskNode {
   virtual void VirtualAddRegstForRecurrentOutEdge(TaskEdge* edge) {}
   virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); }
   virtual void BuildExecGphStructAndBindInRegst() { UNEXPECTED_RUN(); }
-  virtual void BuildOutRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBindOutRegst() {}
   virtual void VirtualFixRegisterNumRange() {}
 
  private:
-  void BuildActivationRegst();
-  void BuildModelAndTmpRegsts();
+  void BindOutRegst();
+  void BindActivationRegst();
+  void BindModelAndTmpRegsts();
   void FixRegisterNumRange() override;
 };
 

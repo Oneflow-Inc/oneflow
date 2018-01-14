@@ -18,7 +18,7 @@ class RecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
   void VirtualAddRegstForRecurrentOutEdge(TaskEdge* edge) override;
   void VirtualConsumeInRegst(TaskEdge* edge) override;
   void BuildExecGphStructAndBindInRegst() override;
-  void BuildOutRegst() override;
+  void VirtualBindOutRegst() override;
   void VirtualFixRegisterNumRange() override;
 };
 
