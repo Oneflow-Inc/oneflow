@@ -17,14 +17,11 @@ void BasicDataLoaderKernel<T>::Forward(
 
   if (out_blob->has_col_num_field()) {
     Blob* buffer_blob = BnInOp2Blob("buffer");
-    CHECK(buffer_blob);
     CHECK_EQ(GetDataType<T>::val, buffer_blob->data_type());
     if (status->next_col_id > status->max_col_id) {
-      status->next_col_id = 0;
       ReadOnePieceToBlob(status, buffer_blob);
     }
     ReadBufferToOutBlob(kernel_ctx, buffer_blob, out_blob);
-    status->next_col_id++;
   } else {
     ReadOnePieceToBlob(status, out_blob);
   }
@@ -46,21 +43,20 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
     SourceCompActor::DataLoadStatus* status, Blob* blob) const {
-  int64_t max_col_id = -1;
-  int32_t each_max_col_id = 0;
+  status->max_col_id = -1;
+  status->next_col_id = 0;
   std::string line;
+  blob->set_col_id(0);
+  blob->set_max_col_id(0);
   FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
     int32_t read_status = in_stream_->ReadLine(&line);
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
-      blob->set_col_id(0);
-      blob->set_max_col_id(0);
-      line_ptr = ReadOnePieceDataId(line_ptr, blob, i);
-      each_max_col_id = ReadOnePieceDataContent(line_ptr, blob, i);
+      line_ptr = ReadOneDataId(line_ptr, blob, i);
+      int32_t max_col_id_of_this_line = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
-        blob->set_col_num(i, each_max_col_id + 1);
-        max_col_id =
-            max_col_id > each_max_col_id ? max_col_id : each_max_col_id;
+        blob->set_col_num(i, max_col_id_of_this_line + 1);
+        status->max_col_id = std::max(status->max_col_id, max_col_id_of_this_line);
       }
     } else {
       CHECK_EQ(read_status, -1);
@@ -75,18 +71,16 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
           blob->set_col_num(i, 0);
         }
       }
-      T* dptr_start = blob->mut_dptr<T>() + i * blob->shape().Count(1);
-      T* dptr_end = blob->mut_dptr<T>() + blob->shape().Count(0);
-      FOR_RANGE(T*, dptr, dptr_start, dptr_end) { *dptr = static_cast<T>(0); }
+      T* dptr = blob->mut_dptr<T>() + i * blob->shape().Count(1);
+      memset(dptr, static_cast<T>(0), (blob->shape().Count(0) - i * blob->shape().Count(1)));
       break;
     }
   }
   status->next_piece_id++;
-  status->max_col_id = max_col_id;
 }
 
 template<typename T>
-void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
+void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(const KernelCtx& kernel_ctx,
                                                    const Blob* buffer_blob,
                                                    Blob* out_blob) const {
   CHECK(kernel_ctx.other);
@@ -108,10 +102,11 @@ void BasicDataLoaderKernel<T>::ReadBufferToOutBlob(const KernelCtx& kernel_ctx,
         + status->next_col_id * buffer_blob->shape().Count(2);
     memcpy(each_out_dptr, each_buff_dptr, out_blob->shape().Count(1));
   }
+  ++status->next_col_id;
 }
 
 template<typename T>
-const char* BasicDataLoaderKernel<T>::ReadOnePieceDataId(const char* line_ptr,
+const char* BasicDataLoaderKernel<T>::ReadOneDataId(const char* line_ptr,
                                                          Blob* blob,
                                                          int64_t index) const {
   std::string token;
@@ -127,7 +122,7 @@ const char* BasicDataLoaderKernel<T>::ReadOnePieceDataId(const char* line_ptr,
 }
 
 template<typename T>
-int32_t BasicDataLoaderKernel<T>::ReadOnePieceDataContent(const char* line_ptr,
+int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
                                                           Blob* blob,
                                                           int64_t index) const {
   std::string token;
