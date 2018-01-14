@@ -222,9 +222,12 @@ message RecurrentOpConf {
   required string out = 4;
   required int32 hidden_size = 5;
   optional bool has_bias_term = 6 [default = true];
+  optional InitializerConf in_ip_op_weight_initializer = 7;
+  optional InitializerConf hidden_ip_op_weight_initializer = 8;
+  optional InitializerConf bias_initializer = 9;
   oneof rnn_type {
-   BasicRnnCellConf basic_rnn_cell = 7;
-   BasicLstmCellConf basic_lstm_cell = 8;
+   BasicRnnCellConf basic_rnn_cell = 10;
+   BasicLstmCellConf basic_lstm_cell = 11;
   }
 }
 
