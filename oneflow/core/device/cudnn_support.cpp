@@ -121,9 +121,8 @@ size_t CudnnConvolutionDesc::InferWorkspaceSize(
       this->conv_handle_, this->in_handle_,
       this->InferBwdDataAlgo(cudnn_handle), &bwd_data_workspace_sizes));
 
-  return std::max(std::initializer_list<size_t>({fwd_workspace_sizes,
-                                                 bwd_filter_workspace_sizes,
-                                                 bwd_data_workspace_sizes}));
+  return std::max({fwd_workspace_sizes, bwd_filter_workspace_sizes,
+                   bwd_data_workspace_sizes});
 }
 
 }  // namespace oneflow

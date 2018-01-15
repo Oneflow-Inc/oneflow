@@ -9,10 +9,10 @@
 namespace oneflow {
 
 template<typename T>
-class CudnnDataType;
+struct CudnnDataType;
 
 template<>
-class CudnnDataType<float> {
+struct CudnnDataType<float> {
  public:
   static const cudnnDataType_t type = CUDNN_DATA_FLOAT;
   static float oneval;
@@ -22,7 +22,7 @@ class CudnnDataType<float> {
 };
 
 template<>
-class CudnnDataType<double> {
+struct CudnnDataType<double> {
  public:
   static const cudnnDataType_t type = CUDNN_DATA_DOUBLE;
   static double oneval;
