@@ -3,6 +3,10 @@
 namespace oneflow {
 
 void SourceCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  data_load_status_.next_col_id = 0;
+  data_load_status_.max_col_id = -1;
+  data_load_status_.next_piece_id = 0;
+  data_load_status_.is_eof = false;
   OF_SET_MSG_HANDLER(&SourceCompActor::HandlerWaitToStart);
 }
 

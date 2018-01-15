@@ -1,10 +1,16 @@
 #ifndef ONEFLOW_CORE_KERNEL_BASIC_DATA_LOADER_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_BASIC_DATA_LOADER_KERNEL_H_
 
-#include "oneflow/core/actor/source_compute_actor.h"
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
+
+struct DataLoadStatus {
+  int32_t next_col_id;
+  int32_t max_col_id;
+  int64_t next_piece_id;
+  bool is_eof;
+};
 
 template<typename T>
 class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
@@ -18,9 +24,8 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ReadOnePieceToBlob(SourceCompActor::DataLoadStatus*, Blob*) const;
-  void ReadOneColFromBufferToOutBlob(const KernelCtx&,
-                                     SourceCompActor::DataLoadStatus*,
+  void ReadOnePieceToBlob(DataLoadStatus*, Blob*) const;
+  void ReadOneColFromBufferToOutBlob(const KernelCtx&, DataLoadStatus*,
                                      const Blob* buffer_blob,
                                      Blob* out_blob) const;
   const char* ReadOneDataId(const char* line_ptr, Blob*, int64_t index) const;

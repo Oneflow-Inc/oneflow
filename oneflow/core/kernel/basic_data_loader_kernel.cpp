@@ -11,11 +11,11 @@ void BasicDataLoaderKernel<T>::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(kernel_ctx.other);
-  auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
+  auto status = static_cast<DataLoadStatus*>(kernel_ctx.other);
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
-  if (out_blob->max_col_num() == 1) {
+  if (out_blob->max_col_num() > 1) {
     Blob* buffer_blob = BnInOp2Blob("buffer");
     CHECK_EQ(GetDataType<T>::val, buffer_blob->data_type());
     if (status->next_col_id > status->max_col_id) {
@@ -41,8 +41,8 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
 }
 
 template<typename T>
-void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
-    SourceCompActor::DataLoadStatus* status, Blob* blob) const {
+void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
+                                                  Blob* blob) const {
   status->max_col_id = -1;
   status->next_col_id = 0;
   std::string line;
@@ -53,12 +53,10 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
       line_ptr = ReadOneDataId(line_ptr, blob, i);
-      int32_t max_col_id_of_this_line = ReadOneDataContent(line_ptr, blob, i);
+      int32_t line_length = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
-        blob->set_col_num(i, max_col_id_of_this_line + 1);
-        if (status->max_col_id < max_col_id_of_this_line) {
-          status->max_col_id = max_col_id_of_this_line;
-        }
+        blob->set_col_num(i, line_length);
+        status->max_col_id = std::max(status->max_col_id, line_length);
       }
     } else {
       CHECK_EQ(read_status, -1);
@@ -84,7 +82,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
-    const KernelCtx& kernel_ctx, SourceCompActor::DataLoadStatus* status,
+    const KernelCtx& kernel_ctx, DataLoadStatus* status,
     const Blob* buffer_blob, Blob* out_blob) const {
   out_blob->set_max_col_id(status->max_col_id);
   out_blob->set_col_id(status->next_col_id);
@@ -127,7 +125,7 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
                                                      Blob* blob,
                                                      int64_t index) const {
   std::string token;
-  int32_t each_max_col_id = -1;
+  int32_t line_length = 0;
   T* each_dptr = blob->mut_dptr<T>() + index * blob->shape().Count(1);
   if (blob->has_col_num_field()) {
     FOR_RANGE(int64_t, j, 0, blob->shape().At(1)) {
@@ -135,7 +133,7 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
         *each_dptr++ = oneflow_cast<T>(token);
       }
-      ++each_max_col_id;
+      ++line_length;
       if (*(line_ptr - 1) == '\0') { break; }
     }
   } else {
@@ -145,7 +143,7 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
     }
   }
   CHECK_EQ(*(line_ptr - 1), '\0');
-  return each_max_col_id;
+  return line_length;
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicDataLoaderConf,

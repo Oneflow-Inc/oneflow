@@ -65,10 +65,10 @@ class Blob final {
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
-  int64_t col_id() const { return blob_header_->col_id; }
-  void set_col_id(int64_t val) { blob_header_->col_id = val; }
-  int64_t max_col_id() const { return blob_header_->max_col_id; }
-  void set_max_col_id(int64_t val) { blob_header_->max_col_id = val; }
+  int32_t col_id() const { return blob_header_->col_id; }
+  void set_col_id(int32_t val) { blob_header_->col_id = val; }
+  int32_t max_col_id() const { return blob_header_->max_col_id; }
+  void set_max_col_id(int32_t val) { blob_header_->max_col_id = val; }
 
   bool IsLastCol() const { return col_id() == max_col_id(); }
 
