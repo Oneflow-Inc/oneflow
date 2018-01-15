@@ -8,9 +8,26 @@ namespace oneflow {
 
 namespace {
 
+void ForEachInterval(const std::list<ActEvent>& act_events,
+                     const std::function<void(double)>& Handler) {
+  HashMap<int64_t, double> stream_id2time;
+  HashMap<int64_t, std::unordered_set<int64_t>> stream_id2act_ids;
+  for (const ActEvent& act_event : act_events) {
+    stream_id2time[act_event.work_stream_id()] +=
+        act_event.stop_time() - act_event.start_time();
+    stream_id2act_ids[act_event.work_stream_id()].insert(act_event.act_id());
+  }
+  for (const auto& pair : stream_id2time) {
+    Handler(pair.second / stream_id2act_ids[pair.first].size());
+  }
+}
+
 double CalcBaseII(const std::list<ActEvent>& act_events) {
-  TODO();
-  return 0;
+  double initiation_interval = 0;
+  ForEachInterval(act_events, [&](double ii) {
+    initiation_interval = std::max(initiation_interval, ii);
+  });
+  return initiation_interval;
 }
 
 void ParseActEvents(const std::string& act_event_filepath,
