@@ -33,7 +33,7 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
   const std::string& data_dir = op_conf().basic_data_loader_conf().data_dir();
   std::string parallel_id = std::to_string(parallel_ctx->parallel_id());
-  std::string file_path = JoinPath(data_dir, "part-0" + parallel_id);
+  std::string file_path = JoinPath(data_dir, "part-" + parallel_id);
   if (JobDesc::Singleton()->IsTrain()) {
     in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));
   } else {
