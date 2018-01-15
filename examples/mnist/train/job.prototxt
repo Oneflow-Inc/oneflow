@@ -1,6 +1,7 @@
 dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./placement.prototxt"
+use_rdma: true
 global_fs_conf {
   hdfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
@@ -15,8 +16,8 @@ train_conf {
   num_of_batches_in_snapshot: 10
   staleness: 0
   total_batch_num: 1000
-  default_fill_conf {
-    gaussian_conf {
+  default_initializer_conf {
+    random_normal_conf {
       mean: 0.0
       std: 0.1
     }

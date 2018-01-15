@@ -22,8 +22,8 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max,
 }
 
 template<typename T>
-void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
-                 uint32_t random_seed, T* dptr) {
+void RngNormal(const int64_t elem_cnt, const T mean, const T std,
+               uint32_t random_seed, T* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
@@ -36,30 +36,73 @@ void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
 }
 
 template<typename T>
-void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
+void ConstantInitializer(const ConstantInitializerConf& initializer_conf,
+                         Blob* blob) {
   T* dptr = blob->mut_dptr<T>();
   const int64_t elem_cnt = blob->shape().elem_cnt();
-  const T value = fill_conf.value();
+  const T value = initializer_conf.value();
   CHECK(elem_cnt);
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
 }
 
 template<typename T>
-void UniformFill(const UniformFillConf& fill_conf, uint32_t random_seed,
-                 Blob* blob) {
+void RandomUniformInitializer(
+    const RandomUniformInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.min()),
-                static_cast<T>(fill_conf.max()), random_seed,
-                blob->mut_dptr<T>());
+  RngUniform<T>(
+      blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
+      static_cast<T>(initializer_conf.max()), random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
-void GaussianFill(const GaussianFillConf& fill_conf, uint32_t random_seed,
-                  Blob* blob) {
+void RandomNormalInitializer(
+    const RandomNormalInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.mean()),
-                 static_cast<T>(fill_conf.std()), random_seed,
-                 blob->mut_dptr<T>());
+  RngNormal<T>(
+      blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
+      static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
+  T fan = static_cast<T>(0);
+  T fan_in = static_cast<T>(blob->shape().Count(1));
+  T fan_out = static_cast<T>(blob->shape().Count(0) / blob->shape().At(1));
+  if (variance_norm == VarianceNorm::kAverage) {
+    fan = (fan_in + fan_out) / static_cast<T>(2);
+  } else if (variance_norm == VarianceNorm::kFanIn) {
+    fan = fan_in;
+  } else if (variance_norm == VarianceNorm::kFanOut) {
+    fan = fan_out;
+  } else {
+    UNEXPECTED_RUN();
+  }
+  return fan;
+}
+
+template<typename T>
+void XavierInitializer(const XavierInitializerConf& initializer_conf,
+                       uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm =
+      static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T scale =
+      std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob));
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale),
+                static_cast<T>(scale), random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+void MsraInitializer(const MsraInitializerConf& initializer_conf,
+                     uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm =
+      static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
+  RngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(0), static_cast<T>(std),
+               random_seed, blob->mut_dptr<T>());
 }
 
 }  // namespace
@@ -137,22 +180,30 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                ldc);
   }
 
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob) {
-    if (fill_conf.has_constant_conf()) {
-      ConstantFill<T>(fill_conf.constant_conf(), blob);
-    } else if (fill_conf.has_uniform_conf()) {
-      UniformFill<T>(fill_conf.uniform_conf(), random_seed, blob);
-    } else if (fill_conf.has_gaussian_conf()) {
-      GaussianFill<T>(fill_conf.gaussian_conf(), random_seed, blob);
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
+    if (initializer_conf.has_constant_conf()) {
+      ConstantInitializer<T>(initializer_conf.constant_conf(), blob);
+    } else if (initializer_conf.has_random_uniform_conf()) {
+      RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(),
+                                  random_seed, blob);
+    } else if (initializer_conf.has_random_normal_conf()) {
+      RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
+                                 random_seed, blob);
+    } else if (initializer_conf.has_xavier_conf()) {
+      XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob);
+    } else if (initializer_conf.has_msra_conf()) {
+      MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
     } else {
       UNEXPECTED_RUN();
     }
   }
-  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& bn_in_op,
-                               int32_t dim_num, int64_t num_in_each_dim) {
+  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                                     int32_t part_num,
+                                     const std::string& model_dir, Blob* blob,
+                                     const std::string& bn_in_op,
+                                     int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);

@@ -4,25 +4,41 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
-message ConstantFillConf {
+message ConstantInitializerConf {
   optional float value = 1 [default = 0];
 }
 
-message UniformFillConf {
+message RandomUniformInitializerConf {
   optional float min = 1 [default = 0];
   optional float max = 2 [default = 1];
 }
 
-message GaussianFillConf {
+message RandomNormalInitializerConf {
   optional float mean = 1 [default = 0];
   optional float std = 2 [default = 1];
 }
 
-message FillConf {
+enum VarianceNorm {
+  kFanIn = 0;
+  kFanOut = 1;
+  kAverage = 2;
+}
+
+message XavierInitializerConf {
+  required VarianceNorm variance_norm = 1;
+}
+
+message MsraInitializerConf {
+  required VarianceNorm variance_norm = 1;
+}
+
+message InitializerConf {
   oneof type {
-    ConstantFillConf constant_conf = 1;
-    UniformFillConf uniform_conf = 2;
-    GaussianFillConf gaussian_conf = 3;
+    ConstantInitializerConf constant_conf = 1;
+    RandomUniformInitializerConf random_uniform_conf = 2;
+    RandomNormalInitializerConf random_normal_conf = 3;
+    XavierInitializerConf xavier_conf = 4;
+    MsraInitializerConf msra_conf = 5;
   }
 }
 
@@ -45,8 +61,8 @@ message ConvolutionOpConf {
 
   optional bool use_cudnn = 13 [default = true];
   
-  optional FillConf weight_fill = 14;
-  optional FillConf bias_fill = 15;
+  optional InitializerConf weight_initializer = 14;
+  optional InitializerConf bias_initializer = 15;
 }
 
 message InnerProductOpConf {
@@ -55,8 +71,8 @@ message InnerProductOpConf {
 
   required int32 out_num = 3;
   optional bool has_bias_term = 4 [default = true];
-  optional FillConf weight_fill = 5; 
-  optional FillConf bias_fill = 6; 
+  optional InitializerConf weight_initializer = 5; 
+  optional InitializerConf bias_initializer = 6; 
 }
 
 message BasicDataLoaderOpConf {
@@ -204,7 +220,7 @@ message BasicLstmCellConf {
 message RecurrentOpConf {
   required string in = 1;
   optional string init_hidden = 2;
-  optional FillConf init_hidden_fill = 3;
+  optional InitializerConf init_hidden_initializer = 3;
   required string out = 4;
   required int32 hidden_size = 5;
   optional bool has_bias_term = 6 [default = true];
