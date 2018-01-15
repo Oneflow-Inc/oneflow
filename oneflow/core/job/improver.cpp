@@ -168,7 +168,7 @@ void Improver::MemoryLimitedAllocate(
     const ActGraph& graph, double base_ii,
     HashMap<int64_t, double>* regst_desc_id2num) const {
   HashMap<int64_t, double> regst_desc_id2life_time;
-  graph.ForEachRegstLifeTime([&](int64_t regst_desc_id, double ii) {
+  graph.ForEachRegstDescLifeTime([&](int64_t regst_desc_id, double ii) {
     regst_desc_id2life_time[regst_desc_id] = ii;
   });
   MemZoneRegstDescs mz_regst_descs;
