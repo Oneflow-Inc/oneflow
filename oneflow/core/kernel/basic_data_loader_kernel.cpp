@@ -15,13 +15,13 @@ void BasicDataLoaderKernel<T>::Forward(
   Blob* out_blob = BnInOp2Blob("out");
   CHECK_EQ(GetDataType<T>::val, out_blob->data_type());
 
-  if (out_blob->has_col_num_field()) {
+  if (out_blob->max_col_num() == 1) {
     Blob* buffer_blob = BnInOp2Blob("buffer");
     CHECK_EQ(GetDataType<T>::val, buffer_blob->data_type());
     if (status->next_col_id > status->max_col_id) {
       ReadOnePieceToBlob(status, buffer_blob);
     }
-    ReadOneColFromBufferToOutBlob(kernel_ctx, buffer_blob, out_blob);
+    ReadOneColFromBufferToOutBlob(kernel_ctx, status, buffer_blob, out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
   }
@@ -79,15 +79,13 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
       break;
     }
   }
-  status->next_piece_id++;
+  status->next_piece_id += 1;
 }
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
-    const KernelCtx& kernel_ctx, const Blob* buffer_blob,
-    Blob* out_blob) const {
-  CHECK(kernel_ctx.other);
-  auto status = static_cast<SourceCompActor::DataLoadStatus*>(kernel_ctx.other);
+    const KernelCtx& kernel_ctx, SourceCompActor::DataLoadStatus* status, 
+    const Blob* buffer_blob, Blob* out_blob) const {
   out_blob->set_max_col_id(status->max_col_id);
   out_blob->set_col_id(status->next_col_id);
   if (out_blob->has_data_id_field()) {
@@ -105,7 +103,7 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
         + status->next_col_id * buffer_blob->shape().Count(2);
     memcpy(each_out_dptr, each_buff_dptr, out_blob->shape().Count(1));
   }
-  ++status->next_col_id;
+  status->next_col_id += 1;
 }
 
 template<typename T>
@@ -137,7 +135,7 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
         *each_dptr++ = oneflow_cast<T>(token);
       }
-      each_max_col_id++;
+      ++each_max_col_id;
       if (*(line_ptr - 1) == '\0') { break; }
     }
   } else {
