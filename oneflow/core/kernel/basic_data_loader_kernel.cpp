@@ -84,7 +84,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
-    const KernelCtx& kernel_ctx, SourceCompActor::DataLoadStatus* status, 
+    const KernelCtx& kernel_ctx, SourceCompActor::DataLoadStatus* status,
     const Blob* buffer_blob, Blob* out_blob) const {
   out_blob->set_max_col_id(status->max_col_id);
   out_blob->set_col_id(status->next_col_id);
