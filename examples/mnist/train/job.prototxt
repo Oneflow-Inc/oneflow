@@ -17,7 +17,7 @@ train_conf {
   staleness: 0
   total_batch_num: 1000
   default_initializer_conf {
-    gaussian_conf {
+    random_normal_conf {
       mean: 0.0
       std: 0.1
     }
