@@ -8,6 +8,11 @@ namespace oneflow {
 
 void ConvolutionOp::InitFromOpConf() {
   CHECK(op_conf().has_convolution_conf());
+  if (op_conf().convolution_conf().use_cudnn()) {
+#ifndef WITH_CUDNN
+    LOG(FATAL);
+#endif  // WITH_CUDNN
+  }
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
