@@ -33,10 +33,11 @@ class CudnnDataType<double> {
 
 class CudnnConvolutionDesc {
  public:
-  CudnnConvolutionDesc(const BlobDesc*, const BlobDesc*,
-                       const ConvolutionOpConf&);
+  CudnnConvolutionDesc();
   ~CudnnConvolutionDesc();
 
+  void InitFromBlobDescAndOpConf(const BlobDesc*, const BlobDesc*,
+                                 const ConvolutionOpConf&);
   cudnnConvolutionFwdAlgo_t InferFwdAlgo(const cudnnHandle_t*);
   cudnnConvolutionBwdFilterAlgo_t InferBwdFilterAlgo(const cudnnHandle_t*);
   cudnnConvolutionBwdDataAlgo_t InferBwdDataAlgo(const cudnnHandle_t*);
@@ -47,6 +48,7 @@ class CudnnConvolutionDesc {
   cudnnTensorDescriptor_t out_handle_;
   cudnnFilterDescriptor_t filter_handle_;
   cudnnConvolutionDescriptor_t conv_handle_;
+  cudnnTensorDescriptor_t bias_handle_;
 };
 
 }  // namespace oneflow

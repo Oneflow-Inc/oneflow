@@ -17,14 +17,25 @@ const void* CudnnDataType<double>::one =
 const void* CudnnDataType<double>::zero =
     static_cast<void*>(&CudnnDataType<double>::zeroval);
 
-CudnnConvolutionDesc::CudnnConvolutionDesc(const BlobDesc* in_blob_desc,
-                                           const BlobDesc* out_blob_desc,
-                                           const ConvolutionOpConf& conv_conf) {
+CudnnConvolutionDesc::CudnnConvolutionDesc() {
   CudaCheck(cudnnCreateTensorDescriptor(&this->in_handle_));
   CudaCheck(cudnnCreateTensorDescriptor(&this->out_handle_));
   CudaCheck(cudnnCreateFilterDescriptor(&this->filter_handle_));
   CudaCheck(cudnnCreateConvolutionDescriptor(&this->conv_handle_));
+  CudaCheck(cudnnCreateTensorDescriptor(&this->bias_handle_));
+}
 
+CudnnConvolutionDesc::~CudnnConvolutionDesc() {
+  CudaCheck(cudnnDestroyTensorDescriptor(this->bias_handle_));
+  CudaCheck(cudnnDestroyConvolutionDescriptor(this->conv_handle_));
+  CudaCheck(cudnnDestroyFilterDescriptor(this->filter_handle_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->out_handle_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->in_handle_));
+}
+
+void CudnnConvolutionDesc::InitFromBlobDescAndOpConf(
+    const BlobDesc* in_blob_desc, const BlobDesc* out_blob_desc,
+    const ConvolutionOpConf& conv_conf) {
   cudnnDataType_t cudnn_data_type;
   switch (in_blob_desc->data_type()) {
     case kFloat: cudnn_data_type = CUDNN_DATA_FLOAT; break;
@@ -48,13 +59,11 @@ CudnnConvolutionDesc::CudnnConvolutionDesc(const BlobDesc* in_blob_desc,
       this->conv_handle_, conv_conf.pad_h(), conv_conf.pad_w(),
       conv_conf.stride_h(), conv_conf.stride_w(), 1, 1, CUDNN_CROSS_CORRELATION,
       cudnn_data_type));
-}
-
-CudnnConvolutionDesc::~CudnnConvolutionDesc() {
-  CudaCheck(cudnnDestroyConvolutionDescriptor(this->conv_handle_));
-  CudaCheck(cudnnDestroyFilterDescriptor(this->filter_handle_));
-  CudaCheck(cudnnDestroyTensorDescriptor(this->out_handle_));
-  CudaCheck(cudnnDestroyTensorDescriptor(this->in_handle_));
+  if (conv_conf.has_bias_term()) {
+    CudaCheck(cudnnSetTensor4dDescriptor(this->bias_handle_, CUDNN_TENSOR_NCHW,
+                                         cudnn_data_type, 1,
+                                         out_blob_desc->shape().At(1), 1, 1));
+  }
 }
 
 cudnnConvolutionFwdAlgo_t CudnnConvolutionDesc::InferFwdAlgo(

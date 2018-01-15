@@ -93,8 +93,9 @@ void ConvolutionOp::InferBlobDescs(
 #ifdef WITH_CUDNN
   if (conf.use_cudnn()) {
     CudaStreamHandle cuda_handle;
-    CudnnConvolutionDesc conv_desc(GetBlobDesc4BnInOp("in"),
-                                   GetBlobDesc4BnInOp("out"), conf);
+    CudnnConvolutionDesc conv_desc;
+    conv_desc.InitFromBlobDescAndOpConf(GetBlobDesc4BnInOp("in"),
+                                        GetBlobDesc4BnInOp("out"), conf);
 
     BlobDesc* cudnn_workspace_blob_desc = GetBlobDesc4BnInOp("cudnn_workspace");
     cudnn_workspace_blob_desc->mut_shape() = Shape({static_cast<int64_t>(
@@ -122,9 +123,10 @@ void ConvolutionOp::VirtualGenKernelConf(
 #ifdef WITH_CUDNN
   if (op_conf().convolution_conf().use_cudnn()) {
     CudaStreamHandle cuda_handle;
-    CudnnConvolutionDesc conv_desc(GetBlobDesc4BnInOp("in"),
-                                   GetBlobDesc4BnInOp("out"),
-                                   op_conf().convolution_conf());
+    CudnnConvolutionDesc conv_desc;
+    conv_desc.InitFromBlobDescAndOpConf(GetBlobDesc4BnInOp("in"),
+                                        GetBlobDesc4BnInOp("out"),
+                                        op_conf().convolution_conf());
 
     kernel_conf->mutable_convolution_conf()->set_cudnn_fwd_algo(
         conv_desc.InferFwdAlgo(cuda_handle.cudnn_handle()));
