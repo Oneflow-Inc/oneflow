@@ -26,7 +26,7 @@ void RecurrentBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   exec_node->BindBnInOpAndRegst("ht_diff", ht_diff_regst);
 }
 
-void RecurrentBackwardCompTaskNode::VirtualBindInDiffRegst() {
+void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().SoleNode();
 
@@ -40,8 +40,8 @@ void RecurrentBackwardCompTaskNode::VirtualBindInDiffRegst() {
   ht_1_diff_regst->AddLbn(op->Lbn4BnInOp("ht_1"));
   exec_node->BindBnInOpAndRegst("ht_1_diff", ht_1_diff_regst);
 
-  if (GetConsumedRegst("h0")) {
-    exec_node->BindBnInOpAndRegst("h0", GetConsumedRegst("h0"));
+  if (std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0")) {
+    exec_node->BindBnInOpAndRegst("h0", h0_regst);
     std::shared_ptr<RegstDesc> h0_diff_regst = GetProducedRegst("h0_diff");
     h0_diff_regst->AddLbn(op->Lbn4BnInOp("h0"));
     exec_node->BindBnInOpAndRegst("h0_diff", h0_diff_regst);
@@ -57,8 +57,9 @@ void RecurrentBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
   }
 }
 
-void RecurrentBackwardCompTaskNode::VirtualProduceRegstOnSelfEdge(
+void RecurrentBackwardCompTaskNode::VirtualProduceRegstOnRecurrentEdge(
     TaskEdge* edge) {
+  // TODO: fix h0_diff regst number
   edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff"));
 }
 

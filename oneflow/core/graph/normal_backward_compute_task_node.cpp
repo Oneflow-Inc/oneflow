@@ -33,7 +33,7 @@ void NormalBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   });
 }
 
-void NormalBackwardCompTaskNode::VirtualBindActivationDiffRegst() {
+void NormalBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
@@ -56,7 +56,7 @@ void NormalBackwardCompTaskNode::VirtualBindActivationDiffRegst() {
   });
 }
 
-void NormalBackwardCompTaskNode::VirtualBindInDiffRegst() {
+void NormalBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {

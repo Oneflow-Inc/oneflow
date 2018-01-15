@@ -16,9 +16,9 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
 
  private:
   void VirtualBuildExecGphAndBindOutDiffRegst() override;
-  void VirtualBindInDiffRegst() override;
+  void VirtualBuildInDiffRegst() override;
   void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override;
-  void VirtualProduceRegstOnSelfEdge(TaskEdge* edge) override;
+  void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) override;
   void VirtualConsumeDiffRegst(TaskEdge* edge) override;
   void VirtualConsumeInRegst();
   void VirtualInferBlobDescInHiddenDiff() override;

@@ -6,7 +6,7 @@ namespace oneflow {
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     if (IsRecurrentOutEdge(edge)) {
-      VirtualProduceRegstOnSelfEdge(edge);
+      VirtualProduceRegstOnRecurrentEdge(edge);
       continue;
     }
     TaskNode* dst_node = edge->dst_node();
@@ -39,8 +39,8 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildExecGphAndBindOutDiffRegst();
-  VirtualBindActivationDiffRegst();
-  VirtualBindInDiffRegst();
+  VirtualBuildActivationDiffRegst();
+  VirtualBuildInDiffRegst();
   BindModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
