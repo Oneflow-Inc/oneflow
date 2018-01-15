@@ -21,7 +21,8 @@ void BasicDataLoaderKernel<T>::Forward(
     if (status->next_col_id > status->max_col_id) {
       ReadOnePieceToBlob(status, buffer_blob);
     }
-    ReadOneColFromBufferToOutBlob(kernel_ctx, status, buffer_blob, out_blob);
+    ReadOneColFromBufferToOutBlob(kernel_ctx.device_ctx, status, buffer_blob,
+                                  out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
   }
@@ -82,17 +83,15 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
-    const KernelCtx& kernel_ctx, DataLoadStatus* status,
-    const Blob* buffer_blob, Blob* out_blob) const {
+    DeviceCtx* device_ctx, DataLoadStatus* status, const Blob* buffer_blob,
+    Blob* out_blob) const {
   out_blob->set_max_col_id(status->max_col_id);
   out_blob->set_col_id(status->next_col_id);
   if (out_blob->has_data_id_field()) {
-    out_blob->CopyDataIdFrom<DeviceType::kCPU>(kernel_ctx.device_ctx,
-                                               buffer_blob);
+    out_blob->CopyDataIdFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
   }
   if (out_blob->has_col_num_field()) {
-    out_blob->CopyColNumFrom<DeviceType::kCPU>(kernel_ctx.device_ctx,
-                                               buffer_blob);
+    out_blob->CopyColNumFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
   }
   FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
     T* each_out_dptr = out_blob->mut_dptr<T>() + i * out_blob->shape().Count(1);

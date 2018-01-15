@@ -25,7 +25,7 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void VirtualKernelInit(const ParallelContext*) override;
   void ReadOnePieceToBlob(DataLoadStatus*, Blob*) const;
-  void ReadOneColFromBufferToOutBlob(const KernelCtx&, DataLoadStatus*,
+  void ReadOneColFromBufferToOutBlob(DeviceCtx*, DataLoadStatus*,
                                      const Blob* buffer_blob,
                                      Blob* out_blob) const;
   const char* ReadOneDataId(const char* line_ptr, Blob*, int64_t index) const;
