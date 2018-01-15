@@ -9,60 +9,48 @@
 
 namespace oneflow {
 
-class ActorEdge;
-class ActorNode final : public Node<ActorNode, ActorEdge> {
+class ActNode;
+class ActEdge final : public Edge<ActNode, ActEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ActorNode);
-  explicit ActorNode(const TaskProto& task_proto) : task_proto_(&task_proto) {}
-  ~ActorNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ActEdge);
+  ActEdge() = default;
+  ~ActEdge() = default;
+};
+
+class ActNode final : public Node<ActNode, ActEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ActNode);
+  explicit ActNode(const ActEvent& act_event) : act_event_(act_event) {}
+  ~ActNode() = default;
 
   // Getters
-  const TaskProto& task_proto() const { return *task_proto_; }
-  int64_t task_id() const { return task_proto().task_id(); }
-  TaskType task_type() const { return task_proto().task_type(); }
+  int64_t actor_id() const { return act_event_.actor_id(); }
 
  private:
-  const TaskProto* task_proto_;
+  ActEvent act_event_;
 };
 
-class ActorEdge final : public Edge<ActorNode, ActorEdge> {
+class ActGraph final : public Graph<ActNode, ActEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ActorEdge);
-  ActorEdge() = default;
-  ~ActorEdge() = default;
-};
+  OF_DISALLOW_COPY_AND_MOVE(ActGraph);
+  explicit ActGraph(const Plan& plan,
+                    std::unique_ptr<std::list<ActEvent>>&& act_events);
+  ~ActGraph() = default;
 
-class ActorGraph final : public Graph<ActorNode, ActorEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ActorGraph);
-  ActorGraph(const Plan& plan,
-             std::unique_ptr<std::list<ActEvent>>&& act_events);
-  ~ActorGraph() = default;
+  void ForEachRegstLifeTime(
+      const std::function<void(int64_t, double)>& Handler) const;
 
-  //  Getters
   const Plan& plan() const { return *plan_; }
 
-  const char* TypeName() const { return "ActorGraph"; }
-  const ActorNode* GetActorNode(int64_t task_id) const {
-    return task_id2task_.at(task_id);
-  }
-  //  compute initiation interval
-  double InitiationInterval() const;
-
-  void MakeTaskId2AvgDurationHash(
-      HashMap<int64_t, double>* task_id2avg_duration) const;
-  void MakeRegstDescId2AvgLifeTimeHash(
-      HashMap<int64_t, double>* regst_desc_id2life_time,
-      const std::function<double(int64_t)>& AvgDuration4TaskId) const;
-
  private:
+  double CalcLongestPathTime(const ActNode* start_node,
+                             const std::list<const ActNode*>& end_nodes) const;
+  void CreateNodes();
+  void ConnectNodes();
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
-  HashMap<int64_t, ActorNode*> task_id2task_;
-  HashMap<const ActorNode*, std::unordered_set<const ActorNode*>>
-      task2ancestors_;
-  HashMap<int64_t, std::list<const ActEvent*>> stream_id2act_events_;
-  HashMap<int64_t, std::list<const ActEvent*>> task_id2act_events_;
+  HashMap<int64_t, std::list<ActNode*>> actor_id2act_nodes_;
+  HashMap<std::string, ActNode*> act_uid2act_node_;
 };
 
 }  // namespace oneflow

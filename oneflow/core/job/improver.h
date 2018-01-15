@@ -20,7 +20,7 @@ class Improver final {
 
  private:
   explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
-  void MemoryLimitedAllocate(const ActorGraph& graph,
+  void MemoryLimitedAllocate(const ActGraph& graph, double base_ii,
                              HashMap<int64_t, double>* regst_desc_id2num) const;
   using MemZoneRegstDescs =
       std::vector<std::vector<std::list<const RegstDescProto*>>>;

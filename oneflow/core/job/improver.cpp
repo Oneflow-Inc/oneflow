@@ -8,6 +8,11 @@ namespace oneflow {
 
 namespace {
 
+double CalcBaseII(const std::list<ActEvent>& act_events) {
+  TODO();
+  return 0;
+}
+
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<ActEvent>* act_events) {
   NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
@@ -35,28 +40,6 @@ size_t MemoryConsuming(const std::list<const RegstDescProto*>& regst_descs,
         regst_num * runtime_regst_desc.packed_blob_desc()->TotalByteSize();
   }
   return mem_consuming;
-}
-
-void CalcBaseIIAndRegstDescAvgLifeTime(
-    const ActorGraph& graph, double* base_ii,
-    HashMap<int64_t, double>* regst_desc_id2life_time) {
-  *base_ii = graph.InitiationInterval();
-  HashMap<int64_t, double> task_id2avg_duration;
-  graph.MakeTaskId2AvgDurationHash(&task_id2avg_duration);
-  auto AvgDuration4TaskId = [&](int64_t task_id) -> double {
-    if (task_id2avg_duration.find(task_id) == task_id2avg_duration.end()) {
-      return static_cast<double>(0);
-    } else {
-      return task_id2avg_duration.at(task_id);
-    }
-  };
-  graph.MakeRegstDescId2AvgLifeTimeHash(regst_desc_id2life_time,
-                                        AvgDuration4TaskId);
-  //	default value for life_time
-  for (auto& pair : *regst_desc_id2life_time) {
-    if (pair.second <= 0) { pair.second = *base_ii; }
-    LOG(INFO) << "default life time" << pair.first << "\t" << pair.second;
-  }
 }
 
 std::vector<double> CalcIISearchSpace(HashMap<int64_t, double> id2life_time,
@@ -165,11 +148,12 @@ double Improver::CalcII(double base_ii,
 }
 
 void Improver::MemoryLimitedAllocate(
-    const ActorGraph& graph,
+    const ActGraph& graph, double base_ii,
     HashMap<int64_t, double>* regst_desc_id2num) const {
-  double base_ii = 0;
   HashMap<int64_t, double> regst_desc_id2life_time;
-  CalcBaseIIAndRegstDescAvgLifeTime(graph, &base_ii, &regst_desc_id2life_time);
+  graph.ForEachRegstLifeTime([&](int64_t regst_desc_id, double ii) {
+    regst_desc_id2life_time[regst_desc_id] = ii;
+  });
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
   double ii = CalcII(base_ii, regst_desc_id2life_time, mz_regst_descs);
@@ -183,9 +167,10 @@ Plan Improver::Improve(const Plan& naive_plan,
   Plan plan(naive_plan);
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
-  ActorGraph actor_graph(plan, std::move(act_events));
+  double base_ii = CalcBaseII(*act_events);
+  ActGraph act_graph(plan, std::move(act_events));
   HashMap<int64_t, double> regst_desc_id2num;
-  MemoryLimitedAllocate(actor_graph, &regst_desc_id2num);
+  MemoryLimitedAllocate(act_graph, base_ii, &regst_desc_id2num);
   SetRegstNum(&plan, regst_desc_id2num);
   return plan;
 }
