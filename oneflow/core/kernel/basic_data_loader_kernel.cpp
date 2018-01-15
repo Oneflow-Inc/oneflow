@@ -73,8 +73,9 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
         }
       }
       T* dptr = blob->mut_dptr<T>() + i * blob->shape().Count(1);
-      memset(dptr, static_cast<T>(0),
-             (blob->shape().Count(0) - i * blob->shape().Count(1)));
+      memset(dptr, 0,
+             (blob->shape().At(0) - i) * blob->shape().Count(1)
+                 * GetSizeOfDataType(blob->data_type()));
       break;
     }
   }
@@ -98,7 +99,9 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
     const T* each_buff_dptr =
         buffer_blob->dptr<T>() + i * buffer_blob->shape().Count(1)
         + status->next_col_id * buffer_blob->shape().Count(2);
-    memcpy(each_out_dptr, each_buff_dptr, out_blob->shape().Count(1));
+    memcpy(
+        each_out_dptr, each_buff_dptr,
+        out_blob->shape().Count(1) * GetSizeOfDataType(out_blob->data_type()));
   }
   status->next_col_id += 1;
 }
