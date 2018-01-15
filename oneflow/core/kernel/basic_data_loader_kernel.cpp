@@ -25,6 +25,8 @@ void BasicDataLoaderKernel<T>::Forward(
                                   out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
+    blob->set_col_id(0);
+    blob->set_max_col_id(0);
   }
 }
 
@@ -47,17 +49,15 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
   status->max_col_id = -1;
   status->next_col_id = 0;
   std::string line;
-  blob->set_col_id(0);
-  blob->set_max_col_id(0);
   FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
     int32_t read_status = in_stream_->ReadLine(&line);
     if (read_status == 0) {
       const char* line_ptr = line.c_str();
       line_ptr = ReadOneDataId(line_ptr, blob, i);
-      int32_t line_length = ReadOneDataContent(line_ptr, blob, i);
+      int32_t col_num_of_cur_line = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
-        blob->set_col_num(i, line_length);
-        status->max_col_id = std::max(status->max_col_id, line_length - 1);
+        blob->set_col_num(i, col_num_of_cur_line);
+        status->max_col_id = std::max(status->max_col_id, col_num_of_cur_line - 1);
       }
     } else {
       CHECK_EQ(read_status, -1);
@@ -129,24 +129,24 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
   std::string token;
   T* dptr_base = blob->mut_dptr<T>() + index * blob->shape().Count(1);
   int64_t offset = 0;
-  int64_t line_length = 0;
+  int64_t col_num = 0;
 
   while (*(line_ptr - 1) != '\0') {
     line_ptr = StrToToken(line_ptr, ",", &token) + 1;
     *(dptr_base + (offset++)) = oneflow_cast<T>(token);
   }
   if (offset == blob->shape().Count(1)) {
-    line_length = blob->max_col_num();
+    col_num = blob->max_col_num();
   } else if (offset < blob->shape().Count(1)) {
     CHECK(offset % blob->shape().Count(2) == 0);
-    line_length = offset / blob->shape().Count(2);
+    col_num = offset / blob->shape().Count(2);
     memset(dptr_base + offset, 0,
            (blob->shape().Count(1) - offset)
                * GetSizeOfDataType(blob->data_type()));
   } else {
     UNEXPECTED_RUN();
   }
-  return line_length;
+  return col_num;
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicDataLoaderConf,
