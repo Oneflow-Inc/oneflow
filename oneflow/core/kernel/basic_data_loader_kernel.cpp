@@ -57,7 +57,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
       int32_t line_length = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
         blob->set_col_num(i, line_length);
-        status->max_col_id = std::max(status->max_col_id, line_length);
+        status->max_col_id = std::max(status->max_col_id, line_length - 1);
       }
     } else {
       CHECK_EQ(read_status, -1);
@@ -128,20 +128,25 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
                                                      int64_t index) const {
   std::string token;
   int32_t line_length = 0;
-  T* each_dptr = blob->mut_dptr<T>() + index * blob->shape().Count(1);
+  T* dptr = blob->mut_dptr<T>() + index * blob->shape().Count(1);
   if (blob->has_col_num_field()) {
     FOR_RANGE(int64_t, j, 0, blob->shape().At(1)) {
       FOR_RANGE(int64_t, k, 0, blob->shape().Count(2)) {
         line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-        *each_dptr++ = oneflow_cast<T>(token);
+        *dptr++ = oneflow_cast<T>(token);
       }
       ++line_length;
-      if (*(line_ptr - 1) == '\0') { break; }
+      if (*(line_ptr - 1) == '\0') {
+        memset(dptr, 0,
+               (blob->shape().At(1) - j) * blob->shape().Count(2)
+                   * GetSizeOfDataType(blob->data_type()));
+        break;
+      }
     }
   } else {
     FOR_RANGE(int64_t, j, 0, blob->shape().Count(1)) {
       line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      *each_dptr++ = oneflow_cast<T>(token);
+      *dptr++ = oneflow_cast<T>(token);
     }
   }
   CHECK_EQ(*(line_ptr - 1), '\0');
