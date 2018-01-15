@@ -140,7 +140,6 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
   } else if (offset < blob->shape().Count(1)) {
     CHECK(offset % blob->shape().Count(2) == 0);
     line_length = offset / blob->shape().Count(2);
-    CHECK(line_length < blob->max_col_num());
     memset(dptr_base + offset, 0,
            (blob->shape().Count(1) - offset)
                * GetSizeOfDataType(blob->data_type()));
