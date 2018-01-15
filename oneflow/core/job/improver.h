@@ -5,9 +5,10 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
-#include "oneflow/core/graph/actor_graph.h"
+#include "oneflow/core/graph/act_graph.h"
 
 namespace oneflow {
+
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);

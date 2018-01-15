@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_GRAPH_SS_TASK_GRAPH_H_
-#define ONEFLOW_CORE_GRAPH_SS_TASK_GRAPH_H_
+#ifndef ONEFLOW_CORE_GRAPH_ACT_GRAPH_H_
+#define ONEFLOW_CORE_GRAPH_ACT_GRAPH_H_
 
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/plan.pb.h"
@@ -54,4 +54,5 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
 };
 
 }  // namespace oneflow
-#endif  // ONEFLOW_CORE_GRAPH_SS_TASK_GRAPH_H_
+
+#endif  // ONEFLOW_CORE_GRAPH_ACT_GRAPH_H_
