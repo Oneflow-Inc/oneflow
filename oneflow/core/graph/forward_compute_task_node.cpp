@@ -33,15 +33,15 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
-  BindOutRegst();
-  BindActivationRegst();
-  BindModelAndTmpRegsts();
+  BuildOutRegst();
+  BuildActivationRegst();
+  BuildModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
   });
 }
 
-void ForwardCompTaskNode::BindOutRegst() {
+void ForwardCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<std::string> found_lbns;
@@ -55,10 +55,10 @@ void ForwardCompTaskNode::BindOutRegst() {
       cur_node->BindBnInOpAndRegst(obn, out_regst);
     }
   });
-  VirtualBindOutRegst();
+  VirtualBuildRecurrentOutRegst();
 }
 
-void ForwardCompTaskNode::BindActivationRegst() {
+void ForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
     activation_regst->AddLbn(edge->lbn());
@@ -67,7 +67,7 @@ void ForwardCompTaskNode::BindActivationRegst() {
   });
 }
 
-void ForwardCompTaskNode::BindModelAndTmpRegsts() {
+void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
@@ -101,7 +101,6 @@ void ForwardCompTaskNode::FixRegisterNumRange() {
   GetProducedRegst("activation")->set_min_register_num(max_col_num);
   GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
   GetProducedRegst("out")->set_min_register_num(max_col_num);
-  VirtualFixRegisterNumRange();
 }
 
 }  // namespace oneflow

@@ -6,10 +6,12 @@ namespace oneflow {
 
 void RecurrentForwardCompTaskNode::VirtualAddRegstForRecurrentOutEdge(
     TaskEdge* edge) {
-  edge->AddRegst("ht", ProduceRegst("ht"));
+  edge->AddRegst("ht", ProduceRegst("ht", 1, 1));
 }
 
 void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
+  TODO();
+  /*
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
   if (regst->GetBlobDesc(op->Lbn4BnInOp("in"))) {
@@ -21,6 +23,7 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   } else {
     UNEXPECTED_RUN();
   }
+  */
 }
 
 void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
@@ -34,7 +37,7 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }
 }
 
-void RecurrentForwardCompTaskNode::VirtualBindOutRegst() {
+void RecurrentForwardCompTaskNode::VirtualBuildRecurrentOutRegst() {
   std::shared_ptr<RegstDesc> ht_regst = GetProducedRegst("ht");
   CHECK(ht_regst != NULL);
   ExecNode* exec_node = mut_exec_gph().SoleNode();
@@ -49,11 +52,6 @@ bool RecurrentForwardCompTaskNode::IsReadyForBuild() {
     return true;
   }
   return false;
-}
-
-void RecurrentForwardCompTaskNode::VirtualFixRegisterNumRange() {
-  GetProducedRegst("ht")->set_min_register_num(2);
-  GetProducedRegst("ht")->set_max_register_num(2);
 }
 
 }  // namespace oneflow

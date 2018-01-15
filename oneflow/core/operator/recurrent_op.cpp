@@ -9,7 +9,7 @@ void InferBasicRnnCellBlobDesc(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     int32_t hidden_size, bool has_bias_term) {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  int64_t embedding_size = in_blob_desc->shape().At(1);
+  int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t piece_size = in_blob_desc->shape().At(0);
   BlobDesc data_tmp_blob_desc =
       BlobDesc(Shape({embedding_size, hidden_size}),
@@ -77,6 +77,7 @@ void RecurrentOp::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
   int64_t piece_size = in_blob_desc->shape().At(0);
+  CHECK_EQ(piece_size, JobDesc::Singleton()->SinglePieceSize());
   int32_t hidden_size = conf.hidden_size();
   Shape h0_shape = Shape({piece_size, hidden_size});
   if (!conf.init_hidden().empty()) {
