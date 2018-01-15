@@ -33,7 +33,7 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
   const std::string& data_dir = op_conf().basic_data_loader_conf().data_dir();
   std::string parallel_id = std::to_string(parallel_ctx->parallel_id());
-  std::string file_path = JoinPath(data_dir, "part-" + parallel_id);
+  std::string file_path = JoinPath(data_dir, "part-0" + parallel_id);
   if (JobDesc::Singleton()->IsTrain()) {
     in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));
   } else {
@@ -95,12 +95,12 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
     out_blob->CopyColNumFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
   }
   FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
-    T* each_out_dptr = out_blob->mut_dptr<T>() + i * out_blob->shape().Count(1);
-    const T* each_buff_dptr =
-        buffer_blob->dptr<T>() + i * buffer_blob->shape().Count(1)
-        + status->next_col_id * buffer_blob->shape().Count(2);
+    T* out_dptr = out_blob->mut_dptr<T>() + i * out_blob->shape().Count(1);
+    const T* buff_dptr = buffer_blob->dptr<T>()
+                         + i * buffer_blob->shape().Count(1)
+                         + status->next_col_id * buffer_blob->shape().Count(2);
     memcpy(
-        each_out_dptr, each_buff_dptr,
+        out_dptr, buff_dptr,
         out_blob->shape().Count(1) * GetSizeOfDataType(out_blob->data_type()));
   }
   status->next_col_id += 1;
@@ -127,29 +127,26 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
                                                      Blob* blob,
                                                      int64_t index) const {
   std::string token;
-  int32_t line_length = 0;
-  T* dptr = blob->mut_dptr<T>() + index * blob->shape().Count(1);
-  if (blob->has_col_num_field()) {
-    FOR_RANGE(int64_t, j, 0, blob->shape().At(1)) {
-      FOR_RANGE(int64_t, k, 0, blob->shape().Count(2)) {
-        line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-        *dptr++ = oneflow_cast<T>(token);
-      }
-      ++line_length;
-      if (*(line_ptr - 1) == '\0') {
-        memset(dptr, 0,
-               (blob->shape().At(1) - j) * blob->shape().Count(2)
-                   * GetSizeOfDataType(blob->data_type()));
-        break;
-      }
-    }
-  } else {
-    FOR_RANGE(int64_t, j, 0, blob->shape().Count(1)) {
-      line_ptr = StrToToken(line_ptr, ",", &token) + 1;
-      *dptr++ = oneflow_cast<T>(token);
-    }
+  T* dptr_base = blob->mut_dptr<T>() + index * blob->shape().Count(1);
+  int64_t offset = 0;
+  int64_t line_length = 0;
+
+  while (*(line_ptr - 1) != '\0') {
+    line_ptr = StrToToken(line_ptr, ",", &token) + 1;
+    *(dptr_base + (offset++)) = oneflow_cast<T>(token);
   }
-  CHECK_EQ(*(line_ptr - 1), '\0');
+  if (offset == blob->shape().Count(1)) {
+    line_length = blob->max_col_num();
+  } else if (offset < blob->shape().Count(1)) {
+    CHECK(offset % blob->shape().Count(2) == 0);
+    line_length = offset / blob->shape().Count(2);
+    CHECK(line_length < blob->max_col_num());
+    memset(dptr_base + offset, 0,
+           (blob->shape().Count(1) - offset)
+               * GetSizeOfDataType(blob->data_type()));
+  } else {
+    UNEXPECTED_RUN();
+  }
   return line_length;
 }
 
