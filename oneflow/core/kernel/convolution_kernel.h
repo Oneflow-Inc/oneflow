@@ -56,6 +56,26 @@ class ConvolutionKernel final : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
+#ifdef WITH_CUDNN
+template<typename T>
+class CudnnConvolutionKernel final : public ConvolutionKernel<DeviceType::kGPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel() = default;
+  ~CudnnConvolutionKernel() = default;
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
+  CudnnConvolutionDesc cudnn_convolution_desc_;
+};
+#endif  // WITH_CUDNN
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_

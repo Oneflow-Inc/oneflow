@@ -43,6 +43,12 @@ class CudnnConvolutionDesc {
   cudnnConvolutionBwdDataAlgo_t InferBwdDataAlgo(const cudnnHandle_t*);
   size_t InferWorkspaceSize(const cudnnHandle_t*);
 
+  void Forward();
+  void BackwardData();
+  void BackwardFilter();
+  void BackwardBias();
+
+
  private:
   cudnnTensorDescriptor_t in_handle_;
   cudnnTensorDescriptor_t out_handle_;

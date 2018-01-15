@@ -124,6 +124,75 @@ class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
+#ifdef WITH_CUDNN
+template<typename T>
+void CudnnConvolutionKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto conv_conf = this->op_conf().convolution_conf();
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* weight_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+  Blob* cudnn_workspace = BnInOp2Blob("cudnn_workspace");
+
+  this->cudnn_conv_desc_.InitFromBlobDescAndOpConf(in_blob->blob_desc_ptr(),
+                                             out_blob->blob_desc_ptr(),
+                                             conv_conf);
+
+  CudaCheck(cudnnConvolutionForward(
+        ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->conv_desc_.in_handle(),
+        in_blob->dptr<T>(), this->conv_desc_.filter_handle(), weight_blob->dptr<T>(),
+        this->conv_desc_.conv_handle(), this->kernel_conf().cudnn_fwd_algo(),
+        cudnn_workspace->mut_dptr<T>(), cudnn_workspace->shape().At(0), CudnnDataType<T>::zero,
+        this->conv_desc_.out_handle(), out_blob->mut_dptr<T>()));
+
+  cudnn_conv_desc_.Forward<T>(
+      ctx.device_ctx->cudnn_handle(), in_blob, weight_blob, out_blob, cudnn_workspace,
+      this->kernel_conf().cudnn_fwd_algo(), conv_conf.has_bias_term());
+}
+
+template<typename T>
+void CudnnConvolutionKernel<T>::BackwardDataContent(
+    const KernelCtx& ctx, 
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto conv_conf = this->op_conf().convolution_conf();
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+
+  // compute bias_diff  
+  if (conv_conf.has_bias_term()) {
+    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
+    Memset<DeviceType::kGPU>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
+                             bias_diff_blob->ByteSizeOfDataContentField());
+    cudnn_conv_desc_.BackwardBias<T>(
+        ctx.device_ctx->cudnn_handle(), out_diff_blob, bias_diff_blob);
+  }
+
+  // compute weight_diff
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
+  Blob* cudnn_workspace = BnInOp2Blob("cudnn_workspace");
+  Memset<DeviceType::kGPU>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
+                           weight_diff_blob->ByteSizeOfDataContentField());
+  cudnn_conv_desc_.BackwardFilter<T>(
+      ctx.device_ctx->cudnn_handle(), in_blob, out_diff_blob, weight_diff_blob,
+      cudnn_workspace, this->kernel_conf().cudnn_bwd_filter_algo());
+
+  // compute in_diff
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob == nullptr) { return; }
+  Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataContentField());
+  cudnn_conv_desc_.BackwardData<T>(
+      ctx.device_ctx->cudnn_handle(), weight_blob, out_diff_blob, in_diff_blob,
+      cudnn_workspace, this->kernel_conf().cudnn_bwd_data_algo());
+}
+
+#define INSTANTIATE_CONVOLUTION_KERNEL(type_cpp, type_proto) \
+  template class CudnnConvolutionKernel<type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONVOLUTION_KERNEL, FLOATING_DATA_TYPE_SEQ)
+#endif  // WITH_CUDNN
+
 #define INSTANTIATE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \
   template class ConvolutionKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONVOLUTION_KERNEL_UTIL,
