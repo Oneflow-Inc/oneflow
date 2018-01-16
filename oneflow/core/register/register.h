@@ -24,7 +24,7 @@ class Regst final {
 
   int64_t col_id() const { return FirstBlob()->col_id(); }
   int64_t max_col_id() const { return FirstBlob()->max_col_id(); }
-  bool IsLastCol() const { return FirstBlob()->IsLastCol(); }
+  bool IsMaxCol() const { return FirstBlob()->IsMaxCol(); }
   bool HaveNextPieceColStatusOf(const Regst* other) const;
 
   // Setters
