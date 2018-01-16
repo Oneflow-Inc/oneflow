@@ -8,7 +8,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
-      VirtualAddRegstForRecurrentOutEdge(edge);
+      VirtualAddRegstOnRecurrentOutEdge(edge);
     } else {
       edge->AddRegst("out", out_regst);
       if (IsBackwardTaskType(dst_node->GetTaskType())) {

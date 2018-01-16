@@ -4,9 +4,13 @@
 
 namespace oneflow {
 
-void RecurrentForwardCompTaskNode::VirtualAddRegstForRecurrentOutEdge(
+void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
     TaskEdge* edge) {
-  edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, 1));
+  int32_t max_regst_num = 1;
+  if (parallel_ctx()->policy() == kModelParallel) {
+    max_regst_num = kMaxRegisterNum;
+  }
+  edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, max_regst_num));
 }
 
 void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
@@ -47,8 +51,7 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 void RecurrentForwardCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> rec_out_regst = GetProducedRegst("rec_out");
-  CHECK(out_regst != NULL);
-  CHECK(rec_out_regst != NULL);
+  CHECK(out_regst && rec_out_regst);
   ExecNode* exec_node = mut_exec_gph().SoleNode();
   const std::string& out_lbn = exec_node->op()->Lbn4BnInOp("out");
   const std::string& rec_out_lbn = exec_node->op()->Lbn4BnInOp("rec_out");

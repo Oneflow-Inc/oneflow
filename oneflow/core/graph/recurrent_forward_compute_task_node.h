@@ -15,7 +15,7 @@ class RecurrentForwardCompTaskNode final : public ForwardCompTaskNode {
   bool IsReadyForBuild() override;
 
  private:
-  void VirtualAddRegstForRecurrentOutEdge(TaskEdge* edge) override;
+  void VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) override;
   void VirtualConsumeInRegst(TaskEdge* edge) override;
   void BuildExecGphStructAndBindInRegst() override;
   void BuildOutRegst() override;
