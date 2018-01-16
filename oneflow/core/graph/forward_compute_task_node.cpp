@@ -7,7 +7,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    if (IsRecurrentOutEdge(edge)) {
+    if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstForRecurrentOutEdge(edge);
     } else {
       edge->AddRegst("out", out_regst);

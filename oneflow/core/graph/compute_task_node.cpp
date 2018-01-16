@@ -9,18 +9,26 @@ void CompTaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_chain_id(chain_node()->node_id());
 }
 
-bool CompTaskNode::IsRecurrentOutEdge(TaskEdge* edge) {
-  CHECK_EQ(this, edge->src_node());
-  CompTaskNode* next_comp_node = nullptr;
+const ChainNode* CompTaskNode::SuccChainNodeOnEdge(TaskEdge* edge) {
+  CompTaskNode* succ_comp_node = nullptr;
   do {
     TaskNode* dst_node = edge->dst_node();
     edge = *(dst_node->out_edges().begin());
-    next_comp_node = dynamic_cast<CompTaskNode*>(dst_node);
-  } while (!next_comp_node && edge);
-  if (next_comp_node && next_comp_node->chain_node() == chain_node()) {
-    return true;
-  }
-  return false;
+    succ_comp_node = dynamic_cast<CompTaskNode*>(dst_node);
+  } while (!succ_comp_node && edge);
+  if (succ_comp_node) { return succ_comp_node->chain_node(); }
+  return nullptr;
+}
+
+const ChainNode* CompTaskNode::PredChainNodeOnEdge(TaskEdge* edge) {
+  CompTaskNode* pred_comp_node = nullptr;
+  do {
+    TaskNode* src_node = edge->src_node();
+    edge = *(src_node->in_edges().begin());
+    pred_comp_node = dynamic_cast<CompTaskNode*>(src_node);
+  } while (!pred_comp_node && edge);
+  if (pred_comp_node) { return pred_comp_node->chain_node(); }
+  return nullptr;
 }
 
 void SortByParallelId(std::vector<CompTaskNode*>* node_vec) {
