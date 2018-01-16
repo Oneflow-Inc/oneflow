@@ -24,8 +24,8 @@ class Blob final {
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
 
-  const void* memory_ptr() const;
-  void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
+  const void* memory_ptr() const { return mem_ptr_; }
+  void* mut_memory_ptr() { return mem_ptr_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -82,6 +82,7 @@ class Blob final {
         << blob_desc_->data_type() << " " << GetDataType<T>::val;
   }
 
+  void* mem_ptr_;
   BlobHeader* blob_header_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
