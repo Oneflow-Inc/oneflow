@@ -41,23 +41,6 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   });
 }
 
-void ForwardCompTaskNode::BuildOutRegst() {
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    HashSet<std::string> found_lbns;
-    for (ExecEdge* out_edge : cur_node->out_edges()) {
-      CHECK(found_lbns.insert(out_edge->lbn()).second);
-    }
-    for (const std::string& obn : cur_node->op()->output_bns()) {
-      const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
-      if (found_lbns.find(lbn) != found_lbns.end()) { continue; }
-      out_regst->AddLbn(lbn);
-      cur_node->BindBnInOpAndRegst(obn, out_regst);
-    }
-  });
-  VirtualBuildRecurrentOutRegst();
-}
-
 void ForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
