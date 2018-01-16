@@ -25,8 +25,8 @@ void BasicDataLoaderKernel<T>::Forward(
                                   out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
-    blob->set_col_id(0);
-    blob->set_max_col_id(0);
+    out_blob->set_col_id(0);
+    out_blob->set_max_col_id(0);
   }
 }
 
@@ -57,7 +57,8 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
       int32_t col_num_of_cur_line = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
         blob->set_col_num(i, col_num_of_cur_line);
-        status->max_col_id = std::max(status->max_col_id, col_num_of_cur_line - 1);
+        status->max_col_id =
+            std::max(status->max_col_id, col_num_of_cur_line - 1);
       }
     } else {
       CHECK_EQ(read_status, -1);
