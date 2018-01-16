@@ -36,7 +36,7 @@ class ForwardCompActor final : public CompActor {
   int64_t model_tmp_regst_desc_id_;
   Regst* model_regst_;
   Regst* model_tmp_regst_;
-  std::queue<Regst*> pending_in_regsts_;
+  // std::queue<Regst*> pending_in_regsts_;
 };
 
 }  // namespace oneflow

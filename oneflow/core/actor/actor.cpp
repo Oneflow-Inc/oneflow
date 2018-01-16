@@ -75,6 +75,11 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
+void Actor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> SetRegstInfo) {
+  for (const auto it : readable_regsts_) { SetRegstInfo(it.second.front()); }
+}
+
 void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
   info->set_regst_desc_id(regst->regst_desc_id());
   info->set_act_id(regst->act_id());

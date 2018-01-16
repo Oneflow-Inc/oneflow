@@ -65,12 +65,13 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (regst->regst_desc_id() == in_regst_desc_id_) {
-      pending_in_regsts_.push(regst);
+      readable_regsts_[in_regst_desc_id_].push(regst);
     } else if (regst->regst_desc_id() == model_regst_desc_id_) {
       UpdateModelRegstPtr(regst);
     } else if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
       CHECK(!model_tmp_regst_);
       model_tmp_regst_ = regst;
+      readable_regsts_[model_tmp_regst_desc_id_].push(regst);
     } else {
       CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
     }
@@ -82,19 +83,23 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 bool ForwardCompActor::IsReadReady() {
-  if (pending_in_regsts_.empty()) { return false; }
+  // if (pending_in_regsts_.empty()) { return false; }
+  if (readable_regsts_[in_regst_desc_id_].empty()) { return false; }
   if (model_regst_desc_id_ != -1 && !model_regst_) { return false; }
   if (model_tmp_regst_desc_id_ != -1 && !model_tmp_regst_) { return false; }
   return true;
 }
 
 bool ForwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_in_eord_ && pending_in_regsts_.empty();
+  // return is_in_eord_ && pending_in_regsts_.empty();
+  return is_in_eord_ && readable_regsts_[in_regst_desc_id_].empty();
 }
 
 void ForwardCompActor::Act() {
-  Regst* in_regst = pending_in_regsts_.front();
-  pending_in_regsts_.pop();
+  // Regst* in_regst = pending_in_regsts_.front();
+  // pending_in_regsts_.pop();
+  Regst* in_regst = readable_regsts_[in_regst_desc_id_].front();
+  readable_regsts_[in_regst_desc_id_].pop();
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   AsyncLaunchKernel(GenDefaultKernelCtx(),
@@ -123,7 +128,8 @@ void ForwardCompActor::Act() {
 }
 
 void ForwardCompActor::AsyncReturnAllReadableRegst() {
-  CHECK(pending_in_regsts_.empty());
+  // CHECK(pending_in_regsts_.empty());
+  CHECK(readable_regsts_[in_regst_desc_id_].empty());
   TryAsyncReturnModelRegst();
   TryAsyncReturnModelTmpRegst();
 }
@@ -131,12 +137,14 @@ void ForwardCompActor::AsyncReturnAllReadableRegst() {
 void ForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
   TryAsyncReturnModelRegst();
   model_regst_ = regst;
+  readable_regsts_[model_regst_desc_id_].push(regst);
 }
 
 void ForwardCompActor::AsyncReturnModelRegst() {
   CHECK_NOTNULL(model_regst_);
   AsyncSendRegstMsgToProducer(model_regst_);
   model_regst_ = nullptr;
+  readable_regsts_[model_regst_desc_id_].pop();
 }
 
 void ForwardCompActor::TryAsyncReturnModelRegst() {
@@ -147,6 +155,7 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
   if (model_tmp_regst_) {
     AsyncSendRegstMsgToProducer(model_tmp_regst_);
     model_tmp_regst_ = nullptr;
+    readable_regsts_[model_tmp_regst_desc_id_].pop();
   }
 }
 
