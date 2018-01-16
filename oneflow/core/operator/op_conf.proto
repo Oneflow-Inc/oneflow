@@ -6,7 +6,7 @@ import "oneflow/core/common/data_type.proto";
 
 enum ActivationType {
   kTanH = 0;
-  kSigmod = 1;
+  kSigmoid = 1;
 }
 
 message ConstantInitializerConf {
