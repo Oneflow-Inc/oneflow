@@ -30,7 +30,7 @@ class BackwardCompActor final : public CompActor {
   int64_t out_regst_desc_id_;
   int64_t out_diff_regst_desc_id_;
   bool is_out_diff_eord_;
-  HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
+  // HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
   int64_t readable_regst_cnt_;
 };
 
