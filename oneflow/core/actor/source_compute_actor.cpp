@@ -3,8 +3,10 @@
 namespace oneflow {
 
 void SourceCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  next_piece_id_ = 0;
-  is_eof_ = false;
+  data_load_status_.next_col_id = 0;
+  data_load_status_.max_col_id = -1;
+  data_load_status_.next_piece_id = 0;
+  data_load_status_.is_eof = false;
   OF_SET_MSG_HANDLER(&SourceCompActor::HandlerWaitToStart);
 }
 
@@ -23,20 +25,24 @@ int SourceCompActor::HandlerNormal(const ActorMsg& msg) {
 
 void SourceCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &is_eof_;
+  kernel_ctx.other = &data_load_status_;
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
   AsyncSendRegstMsgToConsumer([this](Regst* regst) {
-    regst->set_piece_id(next_piece_id_);
+    regst->set_piece_id(data_load_status_.next_piece_id - 1);
     return true;
   });
-  next_piece_id_ += 1;
 }
 
 bool SourceCompActor::IsReadReady() {
-  return is_eof_ == false
-         && next_piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
+  bool all_columns_has_read =
+      data_load_status_.next_col_id > data_load_status_.max_col_id;
+  bool all_piece_has_read =
+      data_load_status_.is_eof
+      || data_load_status_.next_piece_id
+             == RuntimeCtx::Singleton()->total_piece_num();
+  return !all_columns_has_read || !all_piece_has_read;
 }
 
 REGISTER_ACTOR(kSource, SourceCompActor);

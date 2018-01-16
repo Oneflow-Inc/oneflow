@@ -9,8 +9,8 @@
 namespace oneflow {
 
 struct BlobHeader {
-  int64_t col_id;
-  int64_t max_col_id;
+  int32_t col_id;
+  int32_t max_col_id;
 };
 
 class BlobDesc final {
