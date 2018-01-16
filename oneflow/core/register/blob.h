@@ -70,7 +70,7 @@ class Blob final {
   int32_t max_col_id() const { return blob_header_->max_col_id; }
   void set_max_col_id(int32_t val) { blob_header_->max_col_id = val; }
 
-  bool IsLastCol() const { return col_id() == max_col_id(); }
+  bool IsMaxCol() const { return col_id() == max_col_id(); }
 
  private:
   template<typename T>
