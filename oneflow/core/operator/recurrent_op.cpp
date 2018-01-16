@@ -7,7 +7,7 @@ namespace {
 
 void InferBasicRnnCellBlobDesc(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    int32_t hidden_size, bool has_bias_term) {
+    int32_t hidden_size) {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
@@ -24,10 +24,8 @@ void InferBasicRnnCellBlobDesc(
       BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("hidden_ip_op_weight") =
       BlobDesc(Shape({hidden_size, hidden_size}));
-  if (has_bias_term) {
-    *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
-  }
+  *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+  *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
 }
 
 }  //  namespace
@@ -53,10 +51,8 @@ void RecurrentOp::InitFromOpConf() {
     EnrollDataTmpBn("f_op_out");
     EnrollModelBn("in_ip_op_weight");
     EnrollModelBn("hidden_ip_op_weight");
-    if (conf.has_bias_term()) {
-      EnrollModelBn("bias");
-      EnrollModelTmpBn("bias_multiplier");
-    }
+    EnrollModelBn("bias");
+    EnrollModelTmpBn("bias_multiplier");
   } else if (conf.rnn_type_case() == RecurrentOpConf::kBasicLstmCell) {
     TODO();
   } else {
@@ -104,8 +100,7 @@ void RecurrentOp::InferBlobDescs(
 
   if (op_conf().recurrent_conf().rnn_type_case()
       == RecurrentOpConf::kBasicRnnCell) {
-    InferBasicRnnCellBlobDesc(GetBlobDesc4BnInOp, hidden_size,
-                              conf.has_bias_term());
+    InferBasicRnnCellBlobDesc(GetBlobDesc4BnInOp, hidden_size);
   } else if (op_conf().recurrent_conf().rnn_type_case()
              == RecurrentOpConf::kBasicLstmCell) {
     TODO();
