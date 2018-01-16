@@ -18,13 +18,14 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
     ConsumeRegst("in", regst);
   } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
     ConsumeRegst("h0", regst);
-  } else if (lbns.find(op->Lbn4BnInOp("rec_in")) != lbns.end()
-             && parallel_ctx()->policy() == kModelParallel) {
-    ConsumeRegst("rec_in", regst);
+  } else if (lbns.find(op->Lbn4BnInOp("rec_in")) != lbns.end()) {
+    if (parallel_ctx()->policy() == kModelParallel) {
+      ConsumeRegst("rec_in", regst);
+    }
   } else {
     UNEXPECTED_RUN();
   }
-}
+}  // namespace oneflow
 
 void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
