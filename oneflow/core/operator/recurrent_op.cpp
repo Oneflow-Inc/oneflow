@@ -99,7 +99,7 @@ void RecurrentOp::InferBlobDescs(
   ht_blob_desc->set_data_type(data_type);
   ht_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
   ht_blob_desc->set_max_col_num(in_blob_desc->max_col_num());
-  // rec_ht
+  // recurrent_ht
   *GetBlobDesc4BnInOp("rec_ht") = *ht_blob_desc;
 
   if (op_conf().recurrent_conf().rnn_type_case()
