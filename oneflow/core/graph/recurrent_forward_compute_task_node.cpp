@@ -25,7 +25,7 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   } else {
     UNEXPECTED_RUN();
   }
-}  // namespace oneflow
+}
 
 void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
