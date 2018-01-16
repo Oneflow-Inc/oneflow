@@ -35,7 +35,7 @@ CudnnConvolutionDesc::~CudnnConvolutionDesc() {
 
 void CudnnConvolutionDesc::InitFromBlobDescAndOpConf(
     const BlobDesc* in_blob_desc, const BlobDesc* out_blob_desc,
-    const ConvolutionOpConf& conv_conf) {
+    const ConvolutionOpConf& conv_conf) const {
   cudnnDataType_t cudnn_data_type;
   switch (in_blob_desc->data_type()) {
     case kFloat: cudnn_data_type = CUDNN_DATA_FLOAT; break;
@@ -67,22 +67,22 @@ void CudnnConvolutionDesc::InitFromBlobDescAndOpConf(
 }
 
 cudnnConvolutionFwdAlgo_t CudnnConvolutionDesc::InferFwdAlgo(
-    const cudnnHandle_t* cudnn_handle) {
+    const cudnnHandle_t& cudnn_handle) const {
   cudnnConvolutionFwdAlgo_t fwd_algo;
 
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(
-      *cudnn_handle, this->in_handle_, this->filter_handle_, this->conv_handle_,
+      cudnn_handle, this->in_handle_, this->filter_handle_, this->conv_handle_,
       this->out_handle_, CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &fwd_algo));
 
   return fwd_algo;
 }
 
 cudnnConvolutionBwdFilterAlgo_t CudnnConvolutionDesc::InferBwdFilterAlgo(
-    const cudnnHandle_t* cudnn_handle) {
+    const cudnnHandle_t& cudnn_handle) const {
   cudnnConvolutionBwdFilterAlgo_t bwd_filter_algo;
 
   CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
-      *cudnn_handle, this->in_handle_, this->out_handle_, this->conv_handle_,
+      cudnn_handle, this->in_handle_, this->out_handle_, this->conv_handle_,
       this->filter_handle_, CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0,
       &bwd_filter_algo));
 
@@ -90,36 +90,36 @@ cudnnConvolutionBwdFilterAlgo_t CudnnConvolutionDesc::InferBwdFilterAlgo(
 }
 
 cudnnConvolutionBwdDataAlgo_t CudnnConvolutionDesc::InferBwdDataAlgo(
-    const cudnnHandle_t* cudnn_handle) {
+    const cudnnHandle_t& cudnn_handle) const {
   cudnnConvolutionBwdDataAlgo_t bwd_data_algo;
 
   CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
-      *cudnn_handle, this->filter_handle_, this->out_handle_,
-      this->conv_handle_, this->in_handle_,
-      CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST, 0, &bwd_data_algo));
+      cudnn_handle, this->filter_handle_, this->out_handle_, this->conv_handle_,
+      this->in_handle_, CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST, 0,
+      &bwd_data_algo));
 
   return bwd_data_algo;
 }
 
 size_t CudnnConvolutionDesc::InferWorkspaceSize(
-    const cudnnHandle_t* cudnn_handle) {
+    const cudnnHandle_t& cudnn_handle) const {
   size_t fwd_workspace_sizes = 0;
   size_t bwd_filter_workspace_sizes = 0;
   size_t bwd_data_workspace_sizes = 0;
 
   // get workspace sizes of algorithm
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
-      *cudnn_handle, this->in_handle_, this->filter_handle_, this->conv_handle_,
+      cudnn_handle, this->in_handle_, this->filter_handle_, this->conv_handle_,
       this->out_handle_, this->InferFwdAlgo(cudnn_handle),
       &fwd_workspace_sizes));
   CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-      *cudnn_handle, this->in_handle_, this->out_handle_, this->conv_handle_,
+      cudnn_handle, this->in_handle_, this->out_handle_, this->conv_handle_,
       this->filter_handle_, this->InferBwdFilterAlgo(cudnn_handle),
       &bwd_filter_workspace_sizes));
   CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
-      *cudnn_handle, this->filter_handle_, this->out_handle_,
-      this->conv_handle_, this->in_handle_,
-      this->InferBwdDataAlgo(cudnn_handle), &bwd_data_workspace_sizes));
+      cudnn_handle, this->filter_handle_, this->out_handle_, this->conv_handle_,
+      this->in_handle_, this->InferBwdDataAlgo(cudnn_handle),
+      &bwd_data_workspace_sizes));
 
   return std::max({fwd_workspace_sizes, bwd_filter_workspace_sizes,
                    bwd_data_workspace_sizes});

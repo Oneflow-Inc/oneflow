@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/device/cudnn_support.h"
 
 namespace oneflow {
 
@@ -21,7 +22,7 @@ class ConvolutionKernelUtil final {
 };
 
 template<DeviceType device_type, typename T>
-class ConvolutionKernel final : public KernelIf<device_type> {
+class ConvolutionKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
   ConvolutionKernel() = default;
@@ -58,7 +59,8 @@ class ConvolutionKernel final : public KernelIf<device_type> {
 
 #ifdef WITH_CUDNN
 template<typename T>
-class CudnnConvolutionKernel final : public ConvolutionKernel<DeviceType::kGPU> {
+class CudnnConvolutionKernel final
+    : public ConvolutionKernel<DeviceType::kGPU, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
   CudnnConvolutionKernel() = default;
@@ -72,7 +74,7 @@ class CudnnConvolutionKernel final : public ConvolutionKernel<DeviceType::kGPU> 
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
 
-  CudnnConvolutionDesc cudnn_convolution_desc_;
+  CudnnConvolutionDesc cudnn_conv_desc_;
 };
 #endif  // WITH_CUDNN
 
