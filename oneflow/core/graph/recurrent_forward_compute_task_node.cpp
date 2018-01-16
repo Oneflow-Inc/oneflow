@@ -10,20 +10,20 @@ void RecurrentForwardCompTaskNode::VirtualAddRegstForRecurrentOutEdge(
 }
 
 void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
-  TODO();
-  /*
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-  if (regst->GetBlobDesc(op->Lbn4BnInOp("in"))) {
+  const HashSet<std::string>& lbns =
+      PredChainNodeOnEdge(edge)->data_output_lbns();
+  if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {
     ConsumeRegst("in", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
+  } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
     ConsumeRegst("h0", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("rec_in"))) {
+  } else if (lbns.find(op->Lbn4BnInOp("rec_in")) != lbns.end()
+             && parallel_ctx()->policy() == kModelParallel) {
     ConsumeRegst("rec_in", regst);
   } else {
     UNEXPECTED_RUN();
   }
-  */
 }
 
 void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
@@ -32,7 +32,13 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
   exec_node->BindBnInOpAndRegst("in", GetConsumedRegst("in"));
-  exec_node->BindBnInOpAndRegst("rec_in", GetConsumedRegst("rec_in"));
+  if (parallel_ctx()->policy() == kModelParallel) {
+    exec_node->BindBnInOpAndRegst("rec_in", GetConsumedRegst("rec_in"));
+  } else if (parallel_ctx()->policy() == kDataParallel) {
+    exec_node->BindBnInOpAndRegst("rec_in", GetProducedRegst("rec_out"));
+  } else {
+    UNEXPECTED_RUN();
+  }
   std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0");
   if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }
 }
