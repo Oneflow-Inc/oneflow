@@ -13,7 +13,7 @@ void InferBasicRnnCellBlobDesc(
   int64_t data_num = in_blob_desc->shape().At(0);
   BlobDesc data_tmp_blob_desc =
       BlobDesc(Shape({embedding_size, hidden_size}),
-               JobDesc::Singleton()->DefaultDataType(), false, false,
+               JobDesc::Singleton()->DefaultDataType(), false, false, false,
                in_blob_desc->max_col_num());
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;

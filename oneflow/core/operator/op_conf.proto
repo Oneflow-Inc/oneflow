@@ -23,11 +23,27 @@ message RandomNormalInitializerConf {
   optional float std = 2 [default = 1];
 }
 
+enum VarianceNorm {
+  kFanIn = 0;
+  kFanOut = 1;
+  kAverage = 2;
+}
+
+message XavierInitializerConf {
+  required VarianceNorm variance_norm = 1;
+}
+
+message MsraInitializerConf {
+  required VarianceNorm variance_norm = 1;
+}
+
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
     RandomUniformInitializerConf random_uniform_conf = 2;
     RandomNormalInitializerConf random_normal_conf = 3;
+    XavierInitializerConf xavier_conf = 4;
+    MsraInitializerConf msra_conf = 5;
   }
 }
 
