@@ -18,8 +18,8 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
     ConsumeRegst("in", regst);
   } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
     ConsumeRegst("h0", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("out_1"))) {
-    ConsumeRegst("out_1", regst);
+  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("rec_in"))) {
+    ConsumeRegst("rec_in", regst);
   } else {
     UNEXPECTED_RUN();
   }

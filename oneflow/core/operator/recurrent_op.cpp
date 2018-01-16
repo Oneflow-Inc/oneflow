@@ -111,7 +111,7 @@ void RecurrentOp::InferBlobDescs(
 
 std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
   if (input_bn == "rec_in") {
-    return obn2lbn("out");
+    return obn2lbn("rec_out");
   } else if (input_bn == "h0") {
     return op_conf().recurrent_conf().init_hidden();
   } else if (input_bn == "in") {
