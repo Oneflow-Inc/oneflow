@@ -63,7 +63,8 @@ void ConvolutionOp::InferBlobDescs(
 
   // weight
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
-  weight_blob_desc->mut_shape() = Shape({c_o, c_i * kernel});
+  weight_blob_desc->mut_shape() =
+      Shape({c_o, c_i, conf.kernel_h(), conf.kernel_w()});
   weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   weight_blob_desc->set_has_data_id_field(false);
 
