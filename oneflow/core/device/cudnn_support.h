@@ -38,10 +38,10 @@ class CudnnConvolutionDesc {
 
   void InitFromBlobDescAndOpConf(const BlobDesc*, const BlobDesc*,
                                  const ConvolutionOpConf&);
-  cudnnConvolutionFwdAlgo_t InferFwdAlgo(const cudnnHandle_t*);
-  cudnnConvolutionBwdFilterAlgo_t InferBwdFilterAlgo(const cudnnHandle_t*);
-  cudnnConvolutionBwdDataAlgo_t InferBwdDataAlgo(const cudnnHandle_t*);
-  size_t InferWorkspaceSize(const cudnnHandle_t*);
+  cudnnConvolutionFwdAlgo_t InferFwdAlgo(const cudnnHandle_t&);
+  cudnnConvolutionBwdFilterAlgo_t InferBwdFilterAlgo(const cudnnHandle_t&);
+  cudnnConvolutionBwdDataAlgo_t InferBwdDataAlgo(const cudnnHandle_t&);
+  size_t InferWorkspaceSize(const cudnnHandle_t&);
 
  private:
   cudnnTensorDescriptor_t in_handle_;

@@ -104,7 +104,7 @@ void ConvolutionOp::InferBlobDescs(
 
     BlobDesc* cudnn_workspace_blob_desc = GetBlobDesc4BnInOp("cudnn_workspace");
     cudnn_workspace_blob_desc->mut_shape() = Shape({static_cast<int64_t>(
-        conv_desc.InferWorkspaceSize(cuda_handle.cudnn_handle()))});
+        conv_desc.InferWorkspaceSize(*cuda_handle.cudnn_handle()))});
     cudnn_workspace_blob_desc->set_data_type(
         JobDesc::Singleton()->DefaultDataType());
     cudnn_workspace_blob_desc->set_has_data_id_field(false);
@@ -134,11 +134,11 @@ void ConvolutionOp::VirtualGenKernelConf(
                                         op_conf().convolution_conf());
 
     kernel_conf->mutable_convolution_conf()->set_cudnn_fwd_algo(
-        conv_desc.InferFwdAlgo(cuda_handle.cudnn_handle()));
+        conv_desc.InferFwdAlgo(*cuda_handle.cudnn_handle()));
     kernel_conf->mutable_convolution_conf()->set_cudnn_bwd_filter_algo(
-        conv_desc.InferBwdFilterAlgo(cuda_handle.cudnn_handle()));
+        conv_desc.InferBwdFilterAlgo(*cuda_handle.cudnn_handle()));
     kernel_conf->mutable_convolution_conf()->set_cudnn_bwd_data_algo(
-        conv_desc.InferBwdDataAlgo(cuda_handle.cudnn_handle()));
+        conv_desc.InferBwdDataAlgo(*cuda_handle.cudnn_handle()));
   }
 #endif  // WITH_CUDNN
 }
