@@ -26,6 +26,9 @@ class ActNode final : public Node<ActNode, ActEdge> {
   // Getters
   int64_t actor_id() const { return act_event_->actor_id(); }
   int64_t act_id() const { return act_event_->act_id(); }
+  double time() const {
+    return act_event_->stop_time() - act_event_->start_time();
+  }
   const ActEvent& act_event() const { return *act_event_; }
 
  private:
@@ -45,14 +48,13 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   const Plan& plan() const { return *plan_; }
 
  private:
-  void ForEachConnectedSubGraphSources(
-      const std::function<void(const std::list<const ActNode*>& sources)>&
-          Handler) const;
   void ForEachRegstUidLifeTime(
       const std::function<void(double, int64_t, int64_t)>& Handler) const;
   void ForEachSubGraphRegstUidLifeTime(
       const std::list<const ActNode*>& sources,
       const std::function<void(double, int64_t, int64_t)>& Handler) const;
+
+  void InitSources();
   void InitNodes();
   void InitEdges();
   void InitProducerId2RegstDescIds();
@@ -62,6 +64,7 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   HashMap<int64_t, std::list<int64_t>> regst_desc_id2producer_act_ids_;
   HashMap<std::string, ActNode*> regst_uid2producer_node_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_acts_;
+  std::list<const ActNode*> sources_;
 };
 
 }  // namespace oneflow
