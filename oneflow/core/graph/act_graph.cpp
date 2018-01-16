@@ -64,7 +64,7 @@ double CalcLongestPathTime(
   auto SetLongestPathTime = [&](const ActNode* node) {
     double time = 0;
     ForEachInNode(node, [&](const ActNode* in_node) {
-      time = std::max(time, in_node->time());
+      time = std::max(time, node2longest_path_time[in_node]);
     });
     node2longest_path_time[node] = time + node->time();
   };
