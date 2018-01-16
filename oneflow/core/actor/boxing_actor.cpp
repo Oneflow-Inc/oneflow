@@ -78,7 +78,7 @@ void BoxingActor::Act() {
   }
   for (auto& pair : readable_regst_) {
     if (col_id_order_ == ColIdOrder::kAscending) {
-      if (pair.second.front()->IsLastCol() && cur_max_cid < cur_max_maxcid) {
+      if (pair.second.front()->IsMaxCol() && cur_max_cid < cur_max_maxcid) {
         continue;
       }
     } else if (col_id_order_ == ColIdOrder::kDescending) {
