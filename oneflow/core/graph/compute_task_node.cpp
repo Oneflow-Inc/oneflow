@@ -6,7 +6,6 @@ namespace oneflow {
 void CompTaskNode::ToProto(TaskProto* task_proto) {
   TaskNode::ToProto(task_proto);
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;
-  task_proto->set_chain_id(chain_node()->node_id());
 }
 
 const ChainNode* CompTaskNode::SuccChainNodeOnEdge(TaskEdge* edge) {
