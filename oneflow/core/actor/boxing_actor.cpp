@@ -56,7 +56,13 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void BoxingActor::Act() {
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  std::function<void(const std::string&, int64_t)> fn = 
+    [this](const std::string& bn, int32_t max_col) {
+      int regst_desc_id = exec_kernel_vec()[0].bn_in_op2regst_desc_id.at(bn);
+    };
+  //kernel_ctx.other = &data_load_status_;
+  AsyncLaunchKernel(kernel_ctx,
                     [this](int64_t regst_desc_id) -> Regst* {
                       Regst* regst = GetCurWriteableRegst(regst_desc_id);
                       if (regst == nullptr) {
