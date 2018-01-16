@@ -44,7 +44,7 @@ void RecurrentOp::InitFromOpConf() {
     EnrollModelBn("h0");
   }
   EnrollOutputBn("ht");
-  EnrollOutputBn("out");
+  EnrollOutputBn("rec_ht");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
     EnrollDataTmpBn("in_ip_op_out");
@@ -93,14 +93,14 @@ void RecurrentOp::InferBlobDescs(
     BalancedSplitter splitter(hidden_size, parallel_ctx->parallel_num());
     hidden_size = splitter.At(parallel_ctx->parallel_id()).size();
   }
-  // ht -- for recurrent edge
+  // ht
   BlobDesc* ht_blob_desc = GetBlobDesc4BnInOp("ht");
   ht_blob_desc->mut_shape() = Shape({data_num, hidden_size});
   ht_blob_desc->set_data_type(data_type);
   ht_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
   ht_blob_desc->set_max_col_num(in_blob_desc->max_col_num());
-  // out
-  *GetBlobDesc4BnInOp("out") = *ht_blob_desc;
+  // rec_ht
+  *GetBlobDesc4BnInOp("rec_ht") = *ht_blob_desc;
 
   if (op_conf().recurrent_conf().rnn_type_case()
       == RecurrentOpConf::kBasicRnnCell) {
