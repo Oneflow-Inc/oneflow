@@ -7,10 +7,14 @@ namespace oneflow {
 
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
-  blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
-  blob_header_->col_id = 0;
-  blob_header_->max_col_id = 0;
-
+  mem_ptr_ = mem_ptr;
+  if (blob_desc->has_header_field()) {
+    blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
+    blob_header_->col_id = -1;
+    blob_header_->max_col_id = -1;
+  } else {
+    blob_header_ = nullptr;
+  }
   if (blob_desc->has_data_id_field()) {
     data_id_ptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField();
   } else {
@@ -43,10 +47,6 @@ int32_t Blob::col_num(int32_t no) const {
 void Blob::set_col_num(int32_t no, int32_t val) {
   CHECK_NOTNULL(col_num_ptr_);
   *(col_num_ptr_ + no) = val;
-}
-
-const void* Blob::memory_ptr() const {
-  return reinterpret_cast<void*>(blob_header_);
 }
 
 size_t Blob::ByteSizeOfBlobHeaderField() const {
