@@ -10,36 +10,75 @@ std::string GenRegstUid(int64_t regst_desc_id, int64_t producer_act_id) {
   return std::to_string(regst_desc_id) + ":" + std::to_string(producer_act_id);
 }
 
+void ForEachSubGraphNode(const std::list<const ActNode*>& sources,
+                         const std::function<void(ActNode*)>& Handler) {
+  TODO();
+}
+
+void InitSubGraphReachables(
+    const std::list<const ActNode*>& sources,
+    HashMap<const ActNode*, std::unordered_set<const ActNode*>>*
+        node2reachables) {
+  TODO();
+}
+
+double CalcLongestPathTime(
+    const std::function<bool(const ActNode* src, const ActNode* dst)>&
+        IsReachable,
+    const ActNode* start_node, const std::list<const ActNode*>& end_nodes) {
+  TODO();
+  return 0;
+}
+
 }  // namespace
 
 void ActGraph::ForEachRegstDescLifeTime(
     const std::function<void(int64_t, double)>& Handler) const {
-  for (const auto& pair : regst_desc_id2producer_act_ids_) {
-    Handler(pair.first, CalcRegstDescLifeTime(pair.first, pair.second));
+  HashMap<int64_t, double> regst_desc_id2total_time;
+  HashMap<int64_t, int> regst_desc_id2cnt;
+  ForEachRegstUidLifeTime([&](double time, int64_t regst_desc_id, int64_t) {
+    regst_desc_id2total_time[regst_desc_id] += time;
+    ++regst_desc_id2cnt[regst_desc_id];
+  });
+  for (const auto& pair : regst_desc_id2total_time) {
+    Handler(pair.first, pair.second / regst_desc_id2cnt.at(pair.first));
   }
 }
 
-double ActGraph::CalcRegstDescLifeTime(int64_t regst_desc_id,
-                                       const std::list<int64_t> act_ids) const {
-  double life_time = 0;
-  double cnt = 0;
-  for (int64_t act_id : act_ids) {
-    std::string regst_uid = GenRegstUid(regst_desc_id, act_id);
-    const auto& consumers_it = regst_uid2comsumer_acts_.find(regst_uid);
-    if (consumers_it == regst_uid2comsumer_acts_.end()) { continue; }
-    const ActNode* producer = regst_uid2producer_node_.at(regst_uid);
-    life_time += CalcLongestPathTime(producer, consumers_it->second);
-    ++cnt;
-  }
-  if (cnt == 0) { return 0; }
-  return life_time / cnt;
-}
-
-double ActGraph::CalcLongestPathTime(
-    const ActNode* start_node,
-    const std::list<const ActNode*>& end_nodes) const {
+void ActGraph::ForEachConnectedSubGraphSources(
+    const std::function<void(const std::list<const ActNode*>& sources)>&
+        Handler) const {
   TODO();
-  return 0;
+}
+
+void ActGraph::ForEachSubGraphRegstUidLifeTime(
+    const std::list<const ActNode*>& sources,
+    const std::function<void(double, int64_t, int64_t)>& Handler) const {
+  HashMap<const ActNode*, std::unordered_set<const ActNode*>> node2reachables;
+  InitSubGraphReachables(sources, &node2reachables);
+  auto IsReachable = [&](const ActNode* src, const ActNode* dst) {
+    const auto& it = node2reachables.find(src);
+    if (it == node2reachables.end()) { return false; }
+    return it->second.find(dst) != it->second.end();
+  };
+  ForEachSubGraphNode(sources, [&](ActNode* node) {
+    int64_t actor_id = node->actor_id();
+    for (int64_t regst_desc_id : producer_id2regst_desc_ids_.at(actor_id)) {
+      const auto& regst_uid = GenRegstUid(regst_desc_id, node->act_id());
+      const auto& consumers = regst_uid2consumer_acts_.at(regst_uid);
+      if (consumers.empty()) { continue; }
+      double time = CalcLongestPathTime(IsReachable, node, consumers);
+      Handler(time, regst_desc_id, node->act_id());
+    }
+  });
+}
+
+void ActGraph::ForEachRegstUidLifeTime(
+    const std::function<void(double, int64_t, int64_t)>& Handler) const {
+  ForEachConnectedSubGraphSources(
+      [&](const std::list<const ActNode*>& sources) {
+        ForEachSubGraphRegstUidLifeTime(sources, Handler);
+      });
 }
 
 void ActGraph::InitNodes() {
@@ -63,7 +102,7 @@ void ActGraph::InitEdges() {
           GenRegstUid(readable.regst_desc_id(), readable.act_id());
       ActNode* producer = regst_uid2producer_node_.at(regst_uid);
       Connect(producer, NewEdge(), node);
-      regst_uid2comsumer_acts_[regst_uid].push_back(node);
+      regst_uid2consumer_acts_[regst_uid].push_back(node);
     }
   });
 }

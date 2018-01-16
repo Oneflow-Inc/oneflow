@@ -25,6 +25,7 @@ class ActNode final : public Node<ActNode, ActEdge> {
 
   // Getters
   int64_t actor_id() const { return act_event_->actor_id(); }
+  int64_t act_id() const { return act_event_->act_id(); }
   const ActEvent& act_event() const { return *act_event_; }
 
  private:
@@ -44,10 +45,14 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   const Plan& plan() const { return *plan_; }
 
  private:
-  double CalcRegstDescLifeTime(int64_t regst_desc_id,
-                               const std::list<int64_t> act_ids) const;
-  double CalcLongestPathTime(const ActNode* start_node,
-                             const std::list<const ActNode*>& end_nodes) const;
+  void ForEachConnectedSubGraphSources(
+      const std::function<void(const std::list<const ActNode*>& sources)>&
+          Handler) const;
+  void ForEachRegstUidLifeTime(
+      const std::function<void(double, int64_t, int64_t)>& Handler) const;
+  void ForEachSubGraphRegstUidLifeTime(
+      const std::list<const ActNode*>& sources,
+      const std::function<void(double, int64_t, int64_t)>& Handler) const;
   void InitNodes();
   void InitEdges();
   void InitProducerId2RegstDescIds();
@@ -56,7 +61,7 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   HashMap<int64_t, std::list<int64_t>> producer_id2regst_desc_ids_;
   HashMap<int64_t, std::list<int64_t>> regst_desc_id2producer_act_ids_;
   HashMap<std::string, ActNode*> regst_uid2producer_node_;
-  HashMap<std::string, std::list<const ActNode*>> regst_uid2comsumer_acts_;
+  HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_acts_;
 };
 
 }  // namespace oneflow
