@@ -26,7 +26,6 @@ message InitializerConf {
   }
 }
 
-
 message ConvolutionOpConf {
   required string in = 1;
   required string out = 2;
@@ -200,15 +199,23 @@ message BasicLstmCellConf {
 }
 
 message RecurrentOpConf {
+  enum ActivationType {
+    TanH = 0;
+    Sigmod = 1;
+  }
   required string in = 1;
   optional string init_hidden = 2;
-  optional InitializerConf init_hidden_initializer = 3;
-  required string out = 4;
-  required int32 hidden_size = 5;
-  optional bool has_bias_term = 6 [default = true];
+  required string out = 3;
+  required int32 hidden_size = 4;
+  optional bool has_bias_term = 5 [default = true];
+  optional ActivationType activation = 6;
+
+  optional InitializerConf init_hidden_initializer = 7;
+  optional InitializerConf weight_initializer = 8;
+  optional InitializerConf bias_initializer = 9;
   oneof rnn_type {
-   BasicRnnCellConf basic_rnn_cell = 7;
-   BasicLstmCellConf basic_lstm_cell = 8;
+   BasicRnnCellConf basic_rnn_cell = 10;
+   BasicLstmCellConf basic_lstm_cell = 11;
   }
 }
 
