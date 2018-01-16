@@ -17,13 +17,10 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   if (IDMgr::Singleton()->MachineId4ActorId(consumer)
       == MachineCtx::Singleton()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
-    msg.regst_wrapper_.piece_id = -1;
-    msg.regst_wrapper_.act_id = -1;
   } else {
     msg.regst_wrapper_.comm_net_token =
         regst_raw_ptr->packed_blob()->comm_net_token();
-    msg.regst_wrapper_.piece_id = regst_raw_ptr->piece_id();
-    msg.regst_wrapper_.act_id = regst_raw_ptr->act_id();
+    msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
   }
   return msg;
 }
@@ -36,7 +33,6 @@ ActorMsg ActorMsg::BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
   msg.regst_wrapper_.comm_net_token = nullptr;
-  msg.regst_wrapper_.piece_id = -1;
   return msg;
 }
 
@@ -74,12 +70,12 @@ Regst* ActorMsg::regst() const {
 
 int64_t ActorMsg::piece_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  return regst_wrapper_.piece_id;
+  return regst_wrapper_.regst_status.piece_id;
 }
 
 int64_t ActorMsg::act_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
-  return regst_wrapper_.act_id;
+  return regst_wrapper_.regst_status.act_id;
 }
 
 const void* ActorMsg::comm_net_token() const {

@@ -13,7 +13,7 @@ void InferBasicRnnCellBlobDesc(
   int64_t data_num = in_blob_desc->shape().At(0);
   BlobDesc data_tmp_blob_desc =
       BlobDesc(Shape({embedding_size, hidden_size}),
-               JobDesc::Singleton()->DefaultDataType(), true, false, true,
+               JobDesc::Singleton()->DefaultDataType(), false, true,
                in_blob_desc->max_col_num());
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
@@ -72,7 +72,6 @@ void RecurrentOp::InferBlobDescs(
   DataType data_type = JobDesc::Singleton()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(in_blob_desc->has_header_field(), true);
   CHECK_EQ(in_blob_desc->has_col_num_field(), true);
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t hidden_size = conf.hidden_size();
