@@ -21,6 +21,8 @@ class BoxingActor final : public Actor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+
   bool is_eord_;
   HashMap<int64_t, std::queue<Regst*>> readable_regst_;
   int64_t readable_regst_cnt_;

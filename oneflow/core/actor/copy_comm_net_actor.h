@@ -17,6 +17,7 @@ class CopyCommNetActor final : public Actor {
     const void* comm_net_token;
     Regst* regst_raw_ptr;
     int64_t producer;
+    int64_t act_id;
   };
 
   void VirtualActorInit(const TaskProto&) override;
@@ -28,6 +29,9 @@ class CopyCommNetActor final : public Actor {
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
+
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
 
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
