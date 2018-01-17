@@ -45,7 +45,7 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
                                                   Blob* blob) const {
-  status->max_col_id = -1;
+  status->max_col_id = 0;
   status->next_col_id = 0;
   std::string line;
   FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
@@ -84,7 +84,7 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
-    DeviceCtx* device_ctx, int next_col_id, const Blob* buffer_blob,
+    DeviceCtx* device_ctx, int32_t col_id, const Blob* buffer_blob,
     Blob* out_blob) const {
   if (out_blob->has_data_id_field()) {
     out_blob->CopyDataIdFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
@@ -96,7 +96,7 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
     T* out_dptr = out_blob->mut_dptr<T>() + i * out_blob->shape().Count(1);
     const T* buff_dptr = buffer_blob->dptr<T>()
                          + i * buffer_blob->shape().Count(1)
-                         + next_col_id * buffer_blob->shape().Count(2);
+                         + col_id * buffer_blob->shape().Count(2);
     memcpy(
         out_dptr, buff_dptr,
         out_blob->shape().Count(1) * GetSizeOfDataType(out_blob->data_type()));
