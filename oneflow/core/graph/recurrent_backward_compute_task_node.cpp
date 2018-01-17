@@ -59,12 +59,7 @@ void RecurrentBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
 
 void RecurrentBackwardCompTaskNode::VirtualProduceRegstOnRecurrentEdge(
     TaskEdge* edge) {
-  auto parallel_desc = chain_node()->parallel_desc();
-  if (parallel_desc->policy() == ParallelPolicy::kDataParallel) {
-    edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff", 1, 1));
-  } else {
-    edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff"));
-  }
+  edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff", 1, 1));
 }
 
 void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
