@@ -5,6 +5,13 @@
 
 namespace oneflow {
 
+struct DataLoadStatus {
+  int32_t next_col_id;
+  int32_t max_col_id;
+  int64_t next_piece_id;
+  bool is_eof;
+};
+
 template<typename T>
 class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  public:
@@ -17,6 +24,12 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
+  void ReadOnePieceToBlob(DataLoadStatus*, Blob*) const;
+  void ReadOneColFromBufferToOutBlob(DeviceCtx*, DataLoadStatus*,
+                                     const Blob* buffer_blob,
+                                     Blob* out_blob) const;
+  const char* ReadOneDataId(const char* line_ptr, Blob*, int64_t index) const;
+  int32_t ReadOneDataContent(const char* line_ptr, Blob*, int64_t index) const;
 
   std::unique_ptr<PersistentInStream> in_stream_;
 };

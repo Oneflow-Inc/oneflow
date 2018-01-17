@@ -7,22 +7,19 @@ namespace oneflow {
 
 Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
-  blob_header_ = reinterpret_cast<BlobHeader*>(mem_ptr);
-
+  mem_ptr_ = mem_ptr;
   if (blob_desc->has_data_id_field()) {
-    data_id_ptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField();
+    data_id_ptr_ = mem_ptr;
   } else {
     data_id_ptr_ = nullptr;
   }
   if (blob_desc->has_col_num_field()) {
     col_num_ptr_ = reinterpret_cast<int32_t*>(
-        mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
-        + blob_desc->ByteSizeOfDataIdField());
+        mem_ptr + blob_desc->ByteSizeOfDataIdField());
   } else {
     col_num_ptr_ = nullptr;
   }
-  dptr_ = mem_ptr + blob_desc->ByteSizeOfBlobHeaderField()
-          + blob_desc->ByteSizeOfDataIdField()
+  dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField()
           + blob_desc->ByteSizeOfColNumField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
@@ -43,14 +40,6 @@ void Blob::set_col_num(int32_t no, int32_t val) {
   *(col_num_ptr_ + no) = val;
 }
 
-const void* Blob::memory_ptr() const {
-  return reinterpret_cast<void*>(blob_header_);
-}
-
-size_t Blob::ByteSizeOfBlobHeaderField() const {
-  return blob_desc_->ByteSizeOfBlobHeaderField();
-}
-
 size_t Blob::ByteSizeOfDataIdField() const {
   return blob_desc_->ByteSizeOfDataIdField();
 }
@@ -61,13 +50,6 @@ size_t Blob::ByteSizeOfColNumField() const {
 
 size_t Blob::ByteSizeOfDataContentField() const {
   return blob_desc_->ByteSizeOfDataContentField();
-}
-
-template<DeviceType device_type>
-void Blob::CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, blob_header_, rhs->blob_header_,
-                      ByteSizeOfBlobHeaderField());
 }
 
 template<DeviceType device_type>
@@ -99,7 +81,6 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 }
 
 #define INSTANTIATE_BLOB_FUNC(dev_t)                                       \
-  template void Blob::CopyBlobHeaderFrom<dev_t>(DeviceCtx*, const Blob*);  \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
   template void Blob::CopyColNumFrom<dev_t>(DeviceCtx*, const Blob*);      \

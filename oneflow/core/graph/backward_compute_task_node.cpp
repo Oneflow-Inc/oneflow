@@ -5,7 +5,7 @@ namespace oneflow {
 
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
-    if (IsRecurrentOutEdge(edge)) {
+    if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualProduceRegstOnRecurrentEdge(edge);
       continue;
     }
