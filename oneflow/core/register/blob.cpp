@@ -81,7 +81,11 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
                       TotalByteSize());
 }
 
+int32_t Blob::col_id() const { return regst_->col_id(); }
+
 void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
+
+int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
 
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 
