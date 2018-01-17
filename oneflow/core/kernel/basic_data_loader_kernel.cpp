@@ -21,13 +21,12 @@ void BasicDataLoaderKernel<T>::Forward(
     if (status->next_col_id > status->max_col_id) {
       ReadOnePieceToBlob(status, buffer_blob);
     }
-    ReadOneColFromBufferToOutBlob(kernel_ctx.device_ctx, status, buffer_blob,
-                                  out_blob);
+    ReadOneColFromBufferToOutBlob(kernel_ctx.device_ctx, status->next_col_id,
+                                  buffer_blob, out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
-    // out_blob->set_col_id(0);
-    // out_blob->set_max_col_id(0);
   }
+  status->next_col_id += 1;
 }
 
 template<typename T>
@@ -46,7 +45,7 @@ void BasicDataLoaderKernel<T>::VirtualKernelInit(
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
                                                   Blob* blob) const {
-  status->max_col_id = -1;
+  status->max_col_id = 0;
   status->next_col_id = 0;
   std::string line;
   FOR_RANGE(int64_t, i, 0, blob->shape().At(0)) {
@@ -57,9 +56,9 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
       int32_t col_num_of_cur_line = ReadOneDataContent(line_ptr, blob, i);
       if (blob->has_col_num_field()) {
         blob->set_col_num(i, col_num_of_cur_line);
-        status->max_col_id =
-            std::max(status->max_col_id, col_num_of_cur_line - 1);
       }
+      status->max_col_id =
+          std::max(status->max_col_id, col_num_of_cur_line - 1);
     } else {
       CHECK_EQ(read_status, -1);
       status->is_eof = true;
@@ -85,10 +84,8 @@ void BasicDataLoaderKernel<T>::ReadOnePieceToBlob(DataLoadStatus* status,
 
 template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
-    DeviceCtx* device_ctx, DataLoadStatus* status, const Blob* buffer_blob,
+    DeviceCtx* device_ctx, int32_t col_id, const Blob* buffer_blob,
     Blob* out_blob) const {
-  // out_blob->set_max_col_id(status->max_col_id);
-  // out_blob->set_col_id(status->next_col_id);
   if (out_blob->has_data_id_field()) {
     out_blob->CopyDataIdFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
   }
@@ -99,12 +96,11 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
     T* out_dptr = out_blob->mut_dptr<T>() + i * out_blob->shape().Count(1);
     const T* buff_dptr = buffer_blob->dptr<T>()
                          + i * buffer_blob->shape().Count(1)
-                         + status->next_col_id * buffer_blob->shape().Count(2);
+                         + col_id * buffer_blob->shape().Count(2);
     memcpy(
         out_dptr, buff_dptr,
         out_blob->shape().Count(1) * GetSizeOfDataType(out_blob->data_type()));
   }
-  status->next_col_id += 1;
 }
 
 template<typename T>
