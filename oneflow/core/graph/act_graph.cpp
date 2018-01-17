@@ -1,7 +1,7 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
-#include "oneflow/core/graph/visitor.h"
+#include "oneflow/core/graph/graph_node_visitor_util.h"
 
 namespace oneflow {
 
@@ -11,28 +11,67 @@ std::string GenRegstUid(int64_t regst_desc_id, int64_t producer_act_id) {
   return std::to_string(regst_desc_id) + ":" + std::to_string(producer_act_id);
 }
 
-void ForEachConnectedNode(const ActNode* node,
-                          const std::function<void(const ActNode*)>& Handler) {
-  node->ForEachNodeOnInEdge(Handler);
-  node->ForEachNodeOnOutEdge(Handler);
-}
+using ActNodeVisitor = GraphNodeVisitorUtil<const ActNode*>;
+using ActNodeHandler = GraphNodeVisitorUtil<const ActNode*>::HandlerType;
+using IsReachablePredicator =
+    std::function<bool(const ActNode* src, const ActNode* dst)>;
 
-void BfsForEachActNode(const std::list<const ActNode*>& starts,
-                       const std::function<void(const ActNode*)>& Handler) {
-  Visitor<const ActNode*>::BfsForEach(starts, ForEachConnectedNode, Handler);
+void ForEachConnectedActNode(
+    const std::list<const ActNode*>& starts,
+    const std::function<void(const ActNode*)>& Handler) {
+  auto ForEachConnectedNode = [](const ActNode* node,
+                                 const ActNodeHandler& Handler) {
+    node->ForEachNodeOnInEdge(Handler);
+    node->ForEachNodeOnOutEdge(Handler);
+  };
+  ActNodeVisitor::BfsForEach(starts, ForEachConnectedNode, Handler);
 }
 
 void TopoForEachActNode(const std::list<const ActNode*>& starts,
                         const std::function<void(const ActNode*)>& Handler) {
-  auto ForEachInNode = std::bind(&ActNode::ForEachNodeOnInEdge,
-                                 std::placeholders::_1, std::placeholders::_2);
-  auto ForEachOutNode = std::bind(&ActNode::ForEachNodeOnOutEdge,
-                                  std::placeholders::_1, std::placeholders::_2);
-  Visitor<const ActNode*>::TopoForEach(starts, ForEachInNode, ForEachOutNode,
-                                       Handler);
+  auto ForEachIn = std::bind(&ActNode::ForEachNodeOnInEdge,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&ActNode::ForEachNodeOnOutEdge,
+                              std::placeholders::_1, std::placeholders::_2);
+  ActNodeVisitor::TopoForEach(starts, ForEachIn, ForEachOut, Handler);
 }
 
-void InitSubGraphAncestors(
+double CalcLongestPathTime(const ActNode* src, const ActNode* dst,
+                           const IsReachablePredicator& IsReachable) {
+  CHECK(IsReachable(src, dst));
+  auto ForEachIn = [&](const ActNode* node, const ActNodeHandler& Handler) {
+    node->ForEachNodeOnInEdge([&](const ActNode* in) {
+      if (in == src || IsReachable(src, in)) { Handler(in); }
+    });
+  };
+  auto ForEachOut = [&](const ActNode* node, const ActNodeHandler& Handler) {
+    node->ForEachNodeOnOutEdge([&](const ActNode* out) {
+      if (out == dst || IsReachable(out, dst)) { Handler(out); }
+    });
+  };
+  HashMap<const ActNode*, double> node2longest_path_time;
+  auto CalculateTime = [&](const ActNode* node) {
+    double time = 0;
+    ForEachIn(node, [&](const ActNode* in_node) {
+      time = std::max(time, node2longest_path_time[in_node]);
+    });
+    node2longest_path_time[node] = time + node->time();
+  };
+  ActNodeVisitor::TopoForEach({src}, ForEachIn, ForEachOut, CalculateTime);
+  return node2longest_path_time.at(dst);
+}
+
+double CalcLongestPathTime(const ActNode* src,
+                           const std::list<const ActNode*>& dst_nodes,
+                           const IsReachablePredicator& IsReachable) {
+  double time = 0;
+  for (const ActNode* dst : dst_nodes) {
+    time = std::max(time, CalcLongestPathTime(src, dst, IsReachable));
+  }
+  return time;
+}
+
+IsReachablePredicator MakeIsReachablePredicator(
     const std::list<const ActNode*>& sources,
     HashMap<const ActNode*, std::unordered_set<const ActNode*>>*
         node2ancestors) {
@@ -43,62 +82,11 @@ void InitSubGraphAncestors(
       (*node2ancestors)[node].insert(prev);
     });
   });
-}
-
-double CalcLongestPathTime(
-    const ActNode* src, const ActNode* dst,
-    const std::function<bool(const ActNode* src, const ActNode* dst)>&
-        IsReachable) {
-  using ForEachNodeFn = std::function<void(const ActNode*)>;
-  auto ForEachInNode = [&](const ActNode* node, const ForEachNodeFn& Handler) {
-    node->ForEachNodeOnInEdge([&](const ActNode* in) {
-      if (in == src || IsReachable(src, in)) { Handler(in); }
-    });
+  return [&](const ActNode* src, const ActNode* dst) {
+    const auto& it = node2ancestors->find(dst);
+    if (it == node2ancestors->end()) { return false; }
+    return it->second.find(src) != it->second.end();
   };
-  auto ForEachOutNode = [&](const ActNode* node, const ForEachNodeFn& Handler) {
-    node->ForEachNodeOnOutEdge([&](const ActNode* out) {
-      if (out == dst || IsReachable(out, dst)) { Handler(out); }
-    });
-  };
-  HashMap<const ActNode*, double> node2longest_path_time;
-  auto SetLongestPathTime = [&](const ActNode* node) {
-    double time = 0;
-    ForEachInNode(node, [&](const ActNode* in_node) {
-      time = std::max(time, node2longest_path_time[in_node]);
-    });
-    node2longest_path_time[node] = time + node->time();
-  };
-  Visitor<const ActNode*>::TopoForEach({src}, ForEachInNode, ForEachOutNode,
-                                       SetLongestPathTime);
-  return node2longest_path_time.at(dst);
-}
-
-double CalcLongestPathTime(
-    const ActNode* src, const std::list<const ActNode*>& dst_nodes,
-    const std::function<bool(const ActNode* src, const ActNode* dst)>&
-        IsReachable) {
-  double time = 0;
-  for (const ActNode* dst : dst_nodes) {
-    time = std::max(time, CalcLongestPathTime(src, dst, IsReachable));
-  }
-  return time;
-}
-
-void ForEachConnectedSubGraphSources(
-    const std::list<const ActNode*>& sources,
-    const std::function<void(const std::list<const ActNode*>&)>& Handler) {
-  HashMap<const ActNode*, bool> visited;
-  for (const ActNode* source : sources) {
-    if (visited[source]) { continue; }
-    std::list<const ActNode*> sub_graph_sources;
-    BfsForEachActNode({source}, [&](const ActNode* node) {
-      if (node->in_edges().empty()) { sub_graph_sources.push_back(node); }
-    });
-    Handler(sub_graph_sources);
-    for (const ActNode* sub_graph_source : sub_graph_sources) {
-      visited[sub_graph_source] = true;
-    }
-  }
 }
 
 }  // namespace
@@ -116,42 +104,29 @@ void ActGraph::ForEachRegstDescLifeTime(
   }
 }
 
+void ActGraph::ForEachRegstUidLifeTime(
+    const std::function<void(double, int64_t, int64_t)>& Handler) const {
+  for (const auto& sources : connected_subgraph_sources_) {
+    ForEachSubGraphRegstUidLifeTime(sources, Handler);
+  }
+}
+
 void ActGraph::ForEachSubGraphRegstUidLifeTime(
     const std::list<const ActNode*>& sources,
     const std::function<void(double, int64_t, int64_t)>& Handler) const {
   HashMap<const ActNode*, std::unordered_set<const ActNode*>> node2ancestors;
-  TopoForEachActNode(sources, [&](const ActNode* node) {
-    node->ForEachNodeOnInEdge([&](const ActNode* prev) {
-      node2ancestors[node].insert(node2ancestors[prev].begin(),
-                                  node2ancestors[prev].end());
-      node2ancestors[node].insert(prev);
-    });
-  });
-  auto IsReachable = [&](const ActNode* src, const ActNode* dst) {
-    const auto& it = node2ancestors.find(dst);
-    if (it == node2ancestors.end()) { return false; }
-    return it->second.find(src) != it->second.end();
-  };
-  BfsForEachActNode(sources, [&](const ActNode* node) {
+  auto IsReachable = MakeIsReachablePredicator(sources, &node2ancestors);
+  ForEachConnectedActNode(sources, [&](const ActNode* node) {
     int64_t actor_id = node->actor_id();
     for (int64_t regst_desc_id : producer_id2regst_desc_ids_.at(actor_id)) {
       const auto& regst_uid = GenRegstUid(regst_desc_id, node->act_id());
-      const auto& consumers_it = regst_uid2consumer_acts_.find(regst_uid);
-      if (consumers_it == regst_uid2consumer_acts_.end()) { continue; }
-      const auto& consumers = consumers_it->second;
-      if (consumers.empty()) { continue; }
-      double time = CalcLongestPathTime(node, consumers, IsReachable);
+      const auto& csm_acts_it = regst_uid2consumer_acts_.find(regst_uid);
+      if (csm_acts_it == regst_uid2consumer_acts_.end()) { continue; }
+      if (csm_acts_it->second.empty()) { continue; }
+      double time = CalcLongestPathTime(node, csm_acts_it->second, IsReachable);
       Handler(time, regst_desc_id, node->act_id());
     }
   });
-}
-
-void ActGraph::ForEachRegstUidLifeTime(
-    const std::function<void(double, int64_t, int64_t)>& Handler) const {
-  ForEachConnectedSubGraphSources(
-      sources_, [&](const std::list<const ActNode*>& sources) {
-        ForEachSubGraphRegstUidLifeTime(sources, Handler);
-      });
 }
 
 void ActGraph::InitNodes() {
@@ -189,9 +164,17 @@ void ActGraph::InitProducerId2RegstDescIds() {
   }
 }
 
-void ActGraph::InitSources() {
+void ActGraph::InitConnectedSubGraphSources() {
+  HashMap<const ActNode*, bool> visited;
   ForEachNode([&](ActNode* node) {
-    if (node->in_edges().empty()) { sources_.push_back(node); }
+    if (visited[node]) { return; }
+    connected_subgraph_sources_.push_back({});
+    ForEachConnectedActNode({node}, [&](const ActNode* sub_graph_node) {
+      if (sub_graph_node->in_edges().empty()) {
+        connected_subgraph_sources_.back().push_back(sub_graph_node);
+      }
+      visited[sub_graph_node] = true;
+    });
   });
 }
 
@@ -201,7 +184,7 @@ ActGraph::ActGraph(const Plan& plan,
   InitProducerId2RegstDescIds();
   InitNodes();
   InitEdges();
-  InitSources();
+  InitConnectedSubGraphSources();
 }
 
 }  // namespace oneflow

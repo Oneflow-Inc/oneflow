@@ -54,17 +54,17 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
       const std::list<const ActNode*>& sources,
       const std::function<void(double, int64_t, int64_t)>& Handler) const;
 
-  void InitSources();
+  void InitProducerId2RegstDescIds();
   void InitNodes();
   void InitEdges();
-  void InitProducerId2RegstDescIds();
+  void InitConnectedSubGraphSources();
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
   HashMap<int64_t, std::list<int64_t>> producer_id2regst_desc_ids_;
   HashMap<int64_t, std::list<int64_t>> regst_desc_id2producer_act_ids_;
   HashMap<std::string, ActNode*> regst_uid2producer_node_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_acts_;
-  std::list<const ActNode*> sources_;
+  std::list<std::list<const ActNode*>> connected_subgraph_sources_;
 };
 
 }  // namespace oneflow

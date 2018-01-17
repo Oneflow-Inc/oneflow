@@ -1,20 +1,22 @@
-#ifndef ONEFLOW_CORE_GRAPH_VISITOR_H_
-#define ONEFLOW_CORE_GRAPH_VISITOR_H_
+#ifndef ONEFLOW_CORE_GRAPH_GRAPH_VISITOR_UTIL_H_
+#define ONEFLOW_CORE_GRAPH_GRAPH_VISITOR_UTIL_H_
 
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 template<typename NodeType>
-class Visitor final {
+class GraphNodeVisitorUtil final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Visitor);
-  using NodeList = std::list<NodeType>;
-  using NodeHandlerFn = std::function<void(NodeType)>;
-  using ForEachNodeFn = std::function<void(NodeType, const NodeHandlerFn&)>;
-  static void BfsForEach(const NodeList& starts,
-                         const ForEachNodeFn& ForEachNext,
-                         const NodeHandlerFn& Handler) {
+  OF_DISALLOW_COPY_AND_MOVE(GraphNodeVisitorUtil);
+  GraphNodeVisitorUtil() = delete;
+  ~GraphNodeVisitorUtil() = delete;
+
+  using HandlerType = std::function<void(NodeType)>;
+  using ForEachFnType = std::function<void(NodeType, const HandlerType&)>;
+  static void BfsForEach(const std::list<NodeType>& starts,
+                         const ForEachFnType& ForEachNext,
+                         const HandlerType& Handler) {
     HashMap<NodeType, bool> has_queued;
     std::queue<NodeType> queue;
     for (NodeType start : starts) {
@@ -34,10 +36,10 @@ class Visitor final {
     }
   }
 
-  static void TopoForEach(const NodeList& starts,
-                          const ForEachNodeFn& ForEachInNode,
-                          const ForEachNodeFn& ForEachOutNode,
-                          const NodeHandlerFn& Handler) {
+  static void TopoForEach(const std::list<NodeType>& starts,
+                          const ForEachFnType& ForEachInNode,
+                          const ForEachFnType& ForEachOutNode,
+                          const HandlerType& Handler) {
     HashMap<NodeType, bool> has_queued;
     std::queue<NodeType> queue;
     for (NodeType start : starts) {
@@ -65,4 +67,4 @@ class Visitor final {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_GRAPH_VISITOR_H_
+#endif  // ONEFLOW_CORE_GRAPH_GRAPH_VISITOR_UTIL_H_
