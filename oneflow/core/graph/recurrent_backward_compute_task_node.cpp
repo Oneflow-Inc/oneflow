@@ -7,7 +7,7 @@ namespace oneflow {
 bool RecurrentBackwardCompTaskNode::IsReadyForBuild() {
   auto consumed_regsts_ = consumed_regsts();
   for (auto& pair : consumed_regsts_) {
-    if (pair.first == "ht_diff") { continue; }
+    if (pair.first == "rec_out_diff") { continue; }
     if (pair.second.lock()->IsLocked() == false) { return false; }
   }
   return true;
@@ -22,8 +22,8 @@ void RecurrentBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
   exec_node->BindBnInOpAndRegst("out", out_regst);
   exec_node->BindBnInOpAndRegst("out_diff", out_diff_regst);
-  std::shared_ptr<RegstDesc> ht_diff_regst = GetConsumedRegst("ht_diff");
-  exec_node->BindBnInOpAndRegst("ht_diff", ht_diff_regst);
+  std::shared_ptr<RegstDesc> rec_out_diff_regst = GetConsumedRegst("rec_out_diff");
+  exec_node->BindBnInOpAndRegst("rec_out_diff", rec_out_diff_regst);
 }
 
 void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
@@ -36,9 +36,9 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   in_diff_regst->AddLbn(op->Lbn4BnInOp("in"));
   exec_node->BindBnInOpAndRegst("in_diff", in_diff_regst);
 
-  std::shared_ptr<RegstDesc> ht_1_diff_regst = GetProducedRegst("ht_1_diff");
-  ht_1_diff_regst->AddLbn(op->Lbn4BnInOp("ht_1"));
-  exec_node->BindBnInOpAndRegst("ht_1_diff", ht_1_diff_regst);
+  std::shared_ptr<RegstDesc> rec_in_diff_regst = GetProducedRegst("rec_in_diff");
+  rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("ht_1"));
+  exec_node->BindBnInOpAndRegst("rec_in_diff", rec_in_diff_regst);
 
   if (std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0")) {
     exec_node->BindBnInOpAndRegst("h0", h0_regst);
@@ -59,7 +59,7 @@ void RecurrentBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
 
 void RecurrentBackwardCompTaskNode::VirtualProduceRegstOnRecurrentEdge(
     TaskEdge* edge) {
-  edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff", 1, 1));
+  edge->AddRegst("rec_in_diff", ProduceRegst("rec_in_diff", 1, 1));
 }
 
 void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
@@ -67,8 +67,8 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
   if (regst->GetBlobDesc(op->Lbn4BnInOp("out_diff"))) {
     ConsumeRegst("out_diff", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("ht_diff"))) {
-    ConsumeRegst("ht_diff", regst);
+  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("rec_out_diff"))) {
+    ConsumeRegst("rec_out_diff", regst);
   } else {
     UNEXPECTED_RUN();
   }
@@ -93,9 +93,9 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
-  std::shared_ptr<RegstDesc> ht_1_diff_regst = GetProducedRegst("ht_1_diff");
+  std::shared_ptr<RegstDesc> rec_in_diff_regst = GetProducedRegst("rec_in_diff");
   std::shared_ptr<RegstDesc> ht_1_regst = GetHt_1RegstInRelatedFwTaskNode();
-  ht_1_diff_regst->CopyBlobDescWithoutAddLbn(ht_1_regst.get());
+  rec_in_diff_regst->CopyBlobDescWithoutAddLbn(ht_1_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
   }
