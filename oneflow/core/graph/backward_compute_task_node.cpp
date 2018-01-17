@@ -79,10 +79,12 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   VirtualInferBlobDescInHiddenDiff();
 }
 
-TaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
+CompTaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* fw_node = edge->src_node();
-    if (IsForwardTaskType(fw_node->GetTaskType())) { return fw_node; }
+    if (IsForwardTaskType(fw_node->GetTaskType())) {
+      return static_cast<CompTaskNode*>(fw_node);
+    }
   }
   return nullptr;
 }

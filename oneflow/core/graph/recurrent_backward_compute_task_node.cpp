@@ -22,7 +22,14 @@ void RecurrentBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
   exec_node->BindBnInOpAndRegst("out", out_regst);
   exec_node->BindBnInOpAndRegst("out_diff", out_diff_regst);
-  std::shared_ptr<RegstDesc> rec_out_diff_regst = GetConsumedRegst("rec_out_diff");
+  std::shared_ptr<RegstDesc> rec_out_diff_regst = nullptr;
+  if (parallel_ctx()->policy() == kDataParallel) {
+    rec_out_diff_regst = GetProducedRegst("rec_in_diff");
+  } else if (parallel_ctx()->policy() == kModelParallel) {
+    rec_out_diff_regst = GetConsumedRegst("rec_out_diff");
+  } else {
+    UNEXPECTED_RUN();
+  }
   exec_node->BindBnInOpAndRegst("rec_out_diff", rec_out_diff_regst);
 }
 
@@ -32,11 +39,13 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
 
   exec_node->BindBnInOpAndRegst("in", GetConsumedRegst("in"));
 
-  std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
-  in_diff_regst->AddLbn(op->Lbn4BnInOp("in"));
-  exec_node->BindBnInOpAndRegst("in_diff", in_diff_regst);
+  if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
+    in_diff_regst->AddLbn(op->Lbn4BnInOp("in"));
+    exec_node->BindBnInOpAndRegst("in_diff", in_diff_regst);
+  }
 
-  std::shared_ptr<RegstDesc> rec_in_diff_regst = GetProducedRegst("rec_in_diff");
+  std::shared_ptr<RegstDesc> rec_in_diff_regst =
+      GetProducedRegst("rec_in_diff");
   rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("ht_1"));
   exec_node->BindBnInOpAndRegst("rec_in_diff", rec_in_diff_regst);
 
@@ -65,12 +74,12 @@ void RecurrentBackwardCompTaskNode::VirtualProduceRegstOnRecurrentEdge(
 void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-  if (regst->GetBlobDesc(op->Lbn4BnInOp("out_diff"))) {
+  const auto& lbns = PredChainNodeOnEdge(edge)->data_output_lbns();
+  if (lbns.find(op->Lbn4BnInOp("out_diff")) != lbns.end()) {
     ConsumeRegst("out_diff", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("rec_out_diff"))) {
+  } else if (lbns.find(op->Lbn4BnInOp("rec_out_diff")) != lbns.end()) {
+    CHECK_EQ(parallel_ctx()->policy(), kModelParallel);
     ConsumeRegst("rec_out_diff", regst);
-  } else {
-    UNEXPECTED_RUN();
   }
 }
 
@@ -81,60 +90,44 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
     TaskNode* pred_fw_node = edge->src_node();
     if (pred_fw_node->GetTaskType() == TaskType::kMdUpdt) { continue; }
     std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-    if (regst->GetBlobDesc(op->Lbn4BnInOp("in"))) {
+    const auto& lbns = SuccChainNodeOnEdge(edge)->data_output_lbns();
+    if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {
       ConsumeRegst("in", regst);
-    } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
+    } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
       ConsumeRegst("h0", regst);
-    } else {
-      continue;
     }
   }
+  CHECK(GetConsumedRegst("in"));
 }
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
-  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
-  std::shared_ptr<RegstDesc> rec_in_diff_regst = GetProducedRegst("rec_in_diff");
-  std::shared_ptr<RegstDesc> ht_1_regst = GetHt_1RegstInRelatedFwTaskNode();
-  rec_in_diff_regst->CopyBlobDescWithoutAddLbn(ht_1_regst.get());
+  if (parallel_ctx()->policy() == kModelParallel) {
+    auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
+    auto rec_in_regst = GetRecInRegstInRelatedFwTaskNode();
+    rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
+  }
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
   }
 }
 
 bool RecurrentBackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
-  TaskNode* node = edge->dst_node();
-  while (true) {
-    CompTaskNode* comp_node = dynamic_cast<CompTaskNode*>(node);
-    if (comp_node) {
-      break;
-    } else {
-      TaskEdge* edge = *(node->out_edges().begin());
-      node = edge->dst_node();
-    }
-  }
-  BackwardCompTaskNode* succ_bw_node = static_cast<BackwardCompTaskNode*>(node);
-  ForwardCompTaskNode* pred_fw_node =
-      static_cast<ForwardCompTaskNode*>(succ_bw_node->GetRelatedFwTaskNode());
+  const BackwardChainNode* succ_bw_chain_node =
+      static_cast<const BackwardChainNode*>(SuccChainNodeOnEdge(edge));
+  const auto& lbns = succ_bw_chain_node->fw_node()->data_output_lbns();
   std::string in_lbn = chain_node()->SoleOp()->Lbn4BnInOp("in");
-  for (std::string lbn : pred_fw_node->chain_node()->data_output_lbns()) {
+  for (const std::string& lbn : lbns) {
     if (lbn == in_lbn) { return true; }
   }
   return false;
 }
 
 std::shared_ptr<RegstDesc>
-RecurrentBackwardCompTaskNode::GetHt_1RegstInRelatedFwTaskNode() {
-  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
-  ForwardCompTaskNode* fw_node =
-      static_cast<ForwardCompTaskNode*>(GetRelatedFwTaskNode());
+RecurrentBackwardCompTaskNode::GetRecInRegstInRelatedFwTaskNode() {
+  CompTaskNode* fw_node = GetRelatedFwTaskNode();
   for (TaskEdge* edge : fw_node->in_edges()) {
-    std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-    if (regst->GetBlobDesc(op->Lbn4BnInOp("in"))) {
-      continue;
-    } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
-      continue;
-    } else {
-      return regst;
+    if (fw_node->PredChainNodeOnEdge(edge) == fw_node->chain_node()) {
+      return edge->GetSoleRegst();
     }
   }
   UNEXPECTED_RUN();

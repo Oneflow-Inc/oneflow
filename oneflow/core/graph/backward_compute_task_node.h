@@ -14,7 +14,7 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  TaskNode* GetRelatedFwTaskNode();
+  CompTaskNode* GetRelatedFwTaskNode();
 
  protected:
   virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); }

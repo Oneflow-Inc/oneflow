@@ -27,7 +27,6 @@ class CompTaskNode : public TaskNode {
   const ChainNode* chain_node() const { return chain_node_; }
   void set_chain_node(const ChainNode* val) { chain_node_ = val; }
 
- protected:
   const ChainNode* SuccChainNodeOnEdge(TaskEdge* edge);
   const ChainNode* PredChainNodeOnEdge(TaskEdge* edge);
 
