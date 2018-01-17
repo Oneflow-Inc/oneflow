@@ -4,15 +4,32 @@
 
 namespace oneflow {
 
+void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
+    TaskEdge* edge) {
+  int32_t max_regst_num = -1;
+  if (parallel_ctx()->policy() == kDataParallel) {
+    max_regst_num = 1;
+  } else if (parallel_ctx()->policy() == kModelParallel) {
+    max_regst_num = kMaxRegisterNum;
+  } else {
+    UNEXPECTED_RUN();
+  }
+  edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, max_regst_num));
+}
+
 void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-  if (regst->GetBlobDesc(op->Lbn4BnInOp("in"))) {
+  const HashSet<std::string>& lbns =
+      PredChainNodeOnEdge(edge)->data_output_lbns();
+  if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {
     ConsumeRegst("in", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("h0"))) {
+  } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
     ConsumeRegst("h0", regst);
-  } else if (regst->GetBlobDesc(op->Lbn4BnInOp("ht_1"))) {
-    ConsumeRegst("ht_1", regst);
+  } else if (lbns.find(op->Lbn4BnInOp("rec_in")) != lbns.end()) {
+    if (parallel_ctx()->policy() == kModelParallel) {
+      ConsumeRegst("rec_in", regst);
+    }
   } else {
     UNEXPECTED_RUN();
   }
@@ -24,9 +41,28 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
   exec_node->BindBnInOpAndRegst("in", GetConsumedRegst("in"));
-  exec_node->BindBnInOpAndRegst("ht_1", GetConsumedRegst("ht_1"));
+  if (parallel_ctx()->policy() == kModelParallel) {
+    exec_node->BindBnInOpAndRegst("rec_in", GetConsumedRegst("rec_in"));
+  } else if (parallel_ctx()->policy() == kDataParallel) {
+    exec_node->BindBnInOpAndRegst("rec_in", GetProducedRegst("rec_out"));
+  } else {
+    UNEXPECTED_RUN();
+  }
   std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0");
   if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }
+}
+
+void RecurrentForwardCompTaskNode::BuildOutRegst() {
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  std::shared_ptr<RegstDesc> rec_out_regst = GetProducedRegst("rec_out");
+  CHECK(out_regst && rec_out_regst);
+  ExecNode* exec_node = mut_exec_gph().SoleNode();
+  const std::string& out_lbn = exec_node->op()->Lbn4BnInOp("out");
+  const std::string& rec_out_lbn = exec_node->op()->Lbn4BnInOp("rec_out");
+  out_regst->AddLbn(out_lbn);
+  rec_out_regst->AddLbn(rec_out_lbn);
+  exec_node->BindBnInOpAndRegst("out", out_regst);
+  exec_node->BindBnInOpAndRegst("rec_out", rec_out_regst);
 }
 
 bool RecurrentForwardCompTaskNode::IsReadyForBuild() {
