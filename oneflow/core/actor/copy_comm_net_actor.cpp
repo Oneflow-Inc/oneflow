@@ -85,7 +85,7 @@ void CopyCommNetActor::Act() {
   });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
-  CommNet::Singleton()->AddReadCallBackDone(actor_read_id_, read_id);
+  CommNet::Singleton()->AddReadCallBackDone(read_id);
   piece_id2regst_ctx.erase(readable_it);
   next_piece_id_ += 1;
 }
