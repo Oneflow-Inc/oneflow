@@ -117,7 +117,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-    Blob host_blob(&blob_desc, host_raw_dptr);
+    Blob host_blob(nullptr, &blob_desc, host_raw_dptr);
     // synchronous initialize the host blob
     KernelUtil<DeviceType::kCPU, T>::Initialize(nullptr, initializer_conf,
                                                 random_seed, &host_blob);
@@ -137,7 +137,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-    Blob host_blob(&blob_desc, host_raw_dptr);
+    Blob host_blob(nullptr, &blob_desc, host_raw_dptr);
     KernelUtil<DeviceType::kCPU, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_dir, &host_blob, bn_in_op, dim_num,
         num_in_each_dim);

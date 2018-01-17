@@ -24,13 +24,13 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     char* cur_pointer = std::get<0>(allocation_result);
     for (const std::string& lbn : lbns) {
       const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
-      auto blob_ptr = of_make_unique<Blob>(blob_desc, cur_pointer);
+      auto blob_ptr = of_make_unique<Blob>(regst, blob_desc, cur_pointer);
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }
-    regst->packed_blob_.reset(new Blob(runtime_regst_desc->packed_blob_desc(),
-                                       std::get<0>(allocation_result),
-                                       std::get<1>(allocation_result)));
+    regst->packed_blob_.reset(new Blob(
+        regst, runtime_regst_desc->packed_blob_desc(),
+        std::get<0>(allocation_result), std::get<1>(allocation_result)));
     regst->deleter_ = std::get<2>(allocation_result);
     OneRegstDone(regst);
   }
