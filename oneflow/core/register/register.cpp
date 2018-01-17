@@ -8,15 +8,12 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 }
 
 Regst::Regst() {
-  piece_id_ = -1;
-  model_version_id_ = -1;
+  status_.piece_id = -1;
+  status_.model_version_id = -1;
+  status_.act_id = -1;
+  status_.col_id = -1;
+  status_.max_col_id = -1;
   regst_desc_ = nullptr;
-}
-
-bool Regst::HaveNextPieceColStatusOf(const Regst* other) const {
-  return (piece_id() == other->piece_id())
-         && (max_col_id() == other->max_col_id())
-         && (col_id() == other->col_id() + 1);
 }
 
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {

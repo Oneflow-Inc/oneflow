@@ -48,14 +48,11 @@ class Blob final {
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
-  size_t ByteSizeOfBlobHeaderField() const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
-  template<DeviceType device_type>
-  void CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
@@ -64,13 +61,6 @@ class Blob final {
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
-
-  int32_t col_id() const { return blob_header_->col_id; }
-  void set_col_id(int32_t val) { blob_header_->col_id = val; }
-  int32_t max_col_id() const { return blob_header_->max_col_id; }
-  void set_max_col_id(int32_t val) { blob_header_->max_col_id = val; }
-
-  bool IsMaxCol() const { return col_id() == max_col_id(); }
 
  private:
   template<typename T>
@@ -83,7 +73,6 @@ class Blob final {
   }
 
   void* mem_ptr_;
-  BlobHeader* blob_header_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;

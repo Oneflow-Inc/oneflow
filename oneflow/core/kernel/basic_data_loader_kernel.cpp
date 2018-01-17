@@ -25,8 +25,8 @@ void BasicDataLoaderKernel<T>::Forward(
                                   out_blob);
   } else {
     ReadOnePieceToBlob(status, out_blob);
-    out_blob->set_col_id(0);
-    out_blob->set_max_col_id(0);
+    // out_blob->set_col_id(0);
+    // out_blob->set_max_col_id(0);
   }
 }
 
@@ -87,8 +87,8 @@ template<typename T>
 void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
     DeviceCtx* device_ctx, DataLoadStatus* status, const Blob* buffer_blob,
     Blob* out_blob) const {
-  out_blob->set_max_col_id(status->max_col_id);
-  out_blob->set_col_id(status->next_col_id);
+  // out_blob->set_max_col_id(status->max_col_id);
+  // out_blob->set_col_id(status->next_col_id);
   if (out_blob->has_data_id_field()) {
     out_blob->CopyDataIdFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
   }
