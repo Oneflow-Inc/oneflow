@@ -31,6 +31,8 @@ void SourceCompActor::Act() {
   });
   AsyncSendRegstMsgToConsumer([this](Regst* regst) {
     regst->set_piece_id(data_load_status_.next_piece_id - 1);
+    regst->set_col_id(data_load_status_.next_col_id - 1);
+    regst->set_max_col_id(data_load_status_.max_col_id);
     return true;
   });
 }
