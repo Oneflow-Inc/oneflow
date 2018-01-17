@@ -8,23 +8,22 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 }
 
 Regst::Regst() {
-  piece_id_ = -1;
-  model_version_id_ = -1;
-  act_id_ = -1;
-  recurrent_flag_ = 0;
+  status_.piece_id = -1;
+  status_.model_version_id = -1;
+  status_.act_id = -1;
+  status_.col_id = -1;
+  status_.max_col_id = -1;
   regst_desc_ = nullptr;
 }
 
-bool Regst::HaveNextPieceColStatusOf(const Regst* other) const {
-  return (piece_id() == other->piece_id())
-         && (max_col_id() == other->max_col_id())
-         && (col_id() == other->col_id() + 1);
+bool Regst::HaveNextPieceColStatusOf(const Regst* rhs) const {
+  return (piece_id() == rhs->piece_id()) && (max_col_id() == rhs->max_col_id())
+         && (col_id() == rhs->col_id() + 1);
 }
 
-bool Regst::HaveSamePieceColStatusAs(const Regst* other) const {
-  return (piece_id() == other->piece_id())
-         && (max_col_id() == other->max_col_id())
-         && (col_id() == other->col_id());
+bool Regst::HaveSamePieceColStatusAs(const Regst* rhs) const {
+  return (piece_id() == rhs->piece_id()) && (max_col_id() == rhs->max_col_id())
+         && (col_id() == rhs->col_id());
 }
 
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {

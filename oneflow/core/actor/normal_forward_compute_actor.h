@@ -18,7 +18,6 @@ class NormalForwardCompActor final : public ForwardCompActor {
   void Act() override;
 
   void VirtualForwardCompActorInit(const TaskProto&) override;
-  void SetMsgHandlerOfNormal() override;
   void TryAsyncReturnModelRegst() override;
   void CheckBeforeAsyncReturnAllReadableRegst() override;
 

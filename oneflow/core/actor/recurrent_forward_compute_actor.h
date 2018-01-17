@@ -18,18 +18,17 @@ class RecurrentForwardCompActor final : public ForwardCompActor {
   void Act() override;
 
   void VirtualForwardCompActorInit(const TaskProto&) override;
-  void SetMsgHandlerOfNormal() override;
   void TryAsyncReturnModelRegst() override;
   void CheckBeforeAsyncReturnAllReadableRegst() override;
 
-  int64_t out_regst_desc_id_;
-  int64_t initial_hidden_regst_desc_id_;
+  int64_t rec_in_regst_desc_id_;
+  int64_t h0_regst_desc_id_;
 
   std::queue<Regst*> in_regsts_;
-  std::queue<Regst*> initial_hidden_regsts_;
+  std::queue<Regst*> h0_regsts_;
   Regst* latest_model_regst_;
   Regst* cur_model_regst_;
-  Regst* out_regst_;
+  Regst* rec_in_regst_;
 };
 
 }  // namespace oneflow

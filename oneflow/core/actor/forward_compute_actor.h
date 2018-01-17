@@ -11,6 +11,7 @@ class ForwardCompActor : public CompActor {
   ForwardCompActor() = default;
   ~ForwardCompActor() = default;
 
+ protected:
   bool is_in_eord() const { return is_in_eord_; }
   int64_t in_regst_desc_id() const { return in_regst_desc_id_; }
   int64_t model_regst_desc_id() const { return model_regst_desc_id_; }
@@ -18,9 +19,8 @@ class ForwardCompActor : public CompActor {
   Regst* model_tmp_regst() const { return model_tmp_regst_; }
 
   void set_is_in_eord(bool val) { is_in_eord_ = val; }
-  void set_mode_tmp_regst(Regst* val) { model_tmp_regst_ = val; }
+  void set_model_tmp_regst(Regst* val) { model_tmp_regst_ = val; }
 
- protected:
   void SwitchToHandlerInitModelTmpOrNormal();
   int HandlerInitModel(const ActorMsg&);
   int HandlerInitModelTmp(const ActorMsg&);
@@ -30,7 +30,6 @@ class ForwardCompActor : public CompActor {
   void VirtualCompActorInit(const TaskProto& task_proto) override;
   void AsyncReturnAllReadableRegst() override;
   virtual void VirtualForwardCompActorInit(const TaskProto&) = 0;
-  virtual void SetMsgHandlerOfNormal() = 0;
   virtual void TryAsyncReturnModelRegst() = 0;
   virtual void CheckBeforeAsyncReturnAllReadableRegst() = 0;
 

@@ -16,7 +16,7 @@ void ForwardCompActor::SwitchToHandlerInitModelTmpOrNormal() {
   if (model_tmp_regst_desc_id_ != -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelTmp);
   } else {
-    SetMsgHandlerOfNormal();
+    OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   }
 }
 
@@ -49,7 +49,7 @@ int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
         });
   }
   AsyncSendRegstMsgToProducer(model_tmp_regst);
-  SetMsgHandlerOfNormal();
+  OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   return 0;
 }
 

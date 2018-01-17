@@ -12,10 +12,6 @@ void NormalForwardCompActor::VirtualForwardCompActorInit(
   }
 }
 
-void NormalForwardCompActor::SetMsgHandlerOfNormal() {
-  OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
-}
-
 int NormalForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     if (msg.eord_regst_desc_id() == in_regst_desc_id()) {
@@ -30,7 +26,7 @@ int NormalForwardCompActor::HandlerNormal(const ActorMsg& msg) {
       UpdateModelRegstPtr(regst);
     } else if (regst->regst_desc_id() == model_tmp_regst_desc_id()) {
       CHECK(!model_tmp_regst());
-      set_mode_tmp_regst(regst);
+      set_model_tmp_regst(regst);
     } else {
       CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
     }
@@ -71,6 +67,8 @@ void NormalForwardCompActor::Act() {
                     });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(in_regst->piece_id());
+    regst->set_col_id(in_regst->col_id());
+    regst->set_max_col_id(in_regst->max_col_id());
     regst->set_model_version_id(model_version_id);
     return true;
   });

@@ -6,16 +6,27 @@
 
 namespace oneflow {
 
+struct RegstStatus {
+  int64_t piece_id;
+  int64_t model_version_id;
+  int64_t act_id;
+  int32_t col_id;
+  int32_t max_col_id;
+};
+
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
   ~Regst() { deleter_(); }
 
   // Getters
-  int64_t piece_id() const { return piece_id_; }
-  int64_t recurrent_flag() const { return recurrent_flag_; }
-  int64_t model_version_id() const { return model_version_id_; }
-  int64_t act_id() const { return act_id_; }
+  const RegstStatus& status() const { return status_; }
+  int64_t piece_id() const { return status_.piece_id; }
+  int64_t model_version_id() const { return status_.model_version_id; }
+  int64_t act_id() const { return status_.act_id; }
+  int32_t col_id() const { return status_.col_id; }
+  int32_t max_col_id() const { return status_.max_col_id; }
+
   int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
@@ -23,30 +34,22 @@ class Regst final {
   Blob* GetBlobByLbn(const std::string& lbn);
   Blob* packed_blob() { return packed_blob_.get(); }
 
-  int64_t col_id() const { return FirstBlob()->col_id(); }
-  int64_t max_col_id() const { return FirstBlob()->max_col_id(); }
-  bool IsLastCol() const { return FirstBlob()->IsLastCol(); }
-  bool HaveNextPieceColStatusOf(const Regst* other) const;
-  bool HaveSamePieceColStatusAs(const Regst* other) const;
+  bool IsMaxCol() const { return col_id() == max_col_id(); }
+  bool HaveNextPieceColStatusOf(const Regst* rhs) const;
+  bool HaveSamePieceColStatusAs(const Regst* rhs) const;
 
   // Setters
-  void set_piece_id(int64_t val) { piece_id_ = val; }
-  void set_model_version_id(int64_t val) { model_version_id_ = val; }
-  void set_act_id(int64_t val) { act_id_ = val; }
-  void set_recurrent_flag(int64_t val) { recurrent_flag_ = val; }
+  void set_piece_id(int64_t val) { status_.piece_id = val; }
+  void set_model_version_id(int64_t val) { status_.model_version_id = val; }
+  void set_act_id(int64_t val) { status_.act_id = val; }
+  void set_col_id(int32_t val) { status_.col_id = val; }
+  void set_max_col_id(int32_t val) { status_.max_col_id = val; }
 
  private:
   friend class RegstMgr;
   Regst();
 
-  const Blob* FirstBlob() const { return lbn2blob_.begin()->second.get(); }
-
-  int64_t piece_id_;
-  int64_t model_version_id_;
-  int64_t act_id_;
-  // 0: not set, -1: to cosumer, 1: to producer
-  int32_t recurrent_flag_;
-
+  RegstStatus status_;
   const RtRegstDesc* regst_desc_;
   std::function<void()> deleter_;
   HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
