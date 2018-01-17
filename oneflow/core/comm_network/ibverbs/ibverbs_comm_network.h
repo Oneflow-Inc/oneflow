@@ -25,12 +25,12 @@ class IBVerbsCommNet final : public CommNet {
   void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
-  void* Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
-             const void* dst_token) override;
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
   IBVerbsCommNet() = default;
+  void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+              const void* dst_token) override;
 
   MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
   EndpointManager endpoint_manager_;

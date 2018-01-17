@@ -18,8 +18,12 @@ void RecurrentBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   CHECK(op->IsRecurrentOp());
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
-  exec_node->BindBnInOpAndRegst("out", GetConsumedRegst("out"));
-  exec_node->BindBnInOpAndRegst("out_diff", GetConsumedRegst("out_diff"));
+  std::shared_ptr<RegstDesc> out_regst = GetConsumedRegst("out");
+  std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
+  exec_node->BindBnInOpAndRegst("ht", out_regst);
+  exec_node->BindBnInOpAndRegst("ht_diff", out_diff_regst);
+  exec_node->BindBnInOpAndRegst("rec_ht", out_regst);
+  exec_node->BindBnInOpAndRegst("rec_ht_diff", out_diff_regst);
 }
 
 void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
