@@ -6,8 +6,14 @@ namespace oneflow {
 
 void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
     TaskEdge* edge) {
-  int32_t max_regst_num = 1;
-  if (parallel_ctx()->policy() == kModelParallel) { max_regst_num = 2; }
+  int32_t max_regst_num = -1;
+  if (parallel_ctx()->policy() == kDataParallel) {
+    max_regst_num = 1;
+  } else if (parallel_ctx()->policy() == kModelParallel) {
+    max_regst_num = kMaxRegisterNum;
+  } else {
+    UNEXPECTED_RUN();
+  }
   edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, max_regst_num));
 }
 
