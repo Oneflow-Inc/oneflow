@@ -44,8 +44,7 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
     exec_node->BindBnInOpAndRegst("in_diff", in_diff_regst);
   }
 
-  std::shared_ptr<RegstDesc> rec_in_diff_regst =
-      GetProducedRegst("rec_in_diff");
+  auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
   rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("ht_1"));
   exec_node->BindBnInOpAndRegst("rec_in_diff", rec_in_diff_regst);
 
