@@ -65,7 +65,9 @@ class Blob final {
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
+  int32_t col_id() const;
   void set_col_id(int32_t val);
+  int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
 
  private:
