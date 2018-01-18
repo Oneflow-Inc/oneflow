@@ -124,6 +124,21 @@ void BackwardCompActor::Act() {
   }
 }
 
+void BackwardCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> SetRegInfo) {
+  int64_t piece_id = readable_regsts_[out_regst_desc_id_].front()->piece_id();
+  for (auto& pair : readable_regsts_) {
+    if (pair.first == model_tmp_regst_desc_id_
+        || pair.first == model_regst_desc_id_) {
+      if (piece_id % JobDesc::Singleton()->NumOfPiecesInBatch() == 0) {
+        SetRegInfo(pair.second.front());
+      }
+    } else {
+      SetRegInfo(pair.second.front());
+    }
+  }
+}
+
 REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);
 
 }  // namespace oneflow

@@ -55,6 +55,11 @@ void CopyHdActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_in_regst_.empty());
 }
 
+void CopyHdActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> SetRegInfo) {
+  SetRegInfo(pending_in_regst_.front());
+}
+
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);
 
 }  // namespace oneflow

@@ -56,6 +56,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
       regst_ctx.comm_net_token = msg.comm_net_token();
       regst_ctx.regst_raw_ptr = msg.regst();
       regst_ctx.producer = msg.src_actor_id();
+      regst_ctx.act_id = msg.act_id();
       CHECK(piece_id2regst_ctx.emplace(msg.piece_id(), regst_ctx).second);
     }
     ActUntilFail();
@@ -100,6 +101,17 @@ bool CopyCommNetActor::IsReadAlwaysUnReadyFromNow() {
 
 void CopyCommNetActor::AsyncReturnAllReadableRegst() {
   CHECK(piece_id2regst_ctx.empty());
+}
+
+void CopyCommNetActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> SetRegInfo) {
+  SetRegInfo(nullptr);
+}
+
+void CopyCommNetActor::SetReadableRegstInfo(const Regst* reg,
+                                            ReadableRegstInfo* info) {
+  info->set_regst_desc_id(RegstDescId4Name("in"));
+  info->set_act_id(piece_id2regst_ctx[next_piece_id_].act_id);
 }
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
