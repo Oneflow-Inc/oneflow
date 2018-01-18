@@ -11,13 +11,10 @@ void InferBasicRnnCellBlobDesc(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().At(1);
   int64_t piece_size = in_blob_desc->shape().At(0);
-  BlobDesc data_tmp_blob_desc =
+  *GetBlobDesc4BnInOp("plus_op_out") = 
       BlobDesc(Shape({embedding_size, hidden_size}),
                JobDesc::Singleton()->DefaultDataType(), false, false,
                in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
-  *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
-  *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
 
   *GetBlobDesc4BnInOp("in_ip_op_weight") =
       BlobDesc(Shape({hidden_size, embedding_size}));
@@ -46,8 +43,6 @@ void RecurrentOp::InitFromOpConf() {
   EnrollOutputBn("rec_ht");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
-    EnrollDataTmpBn("in_ip_op_out");
-    EnrollDataTmpBn("hidden_ip_op_out");
     EnrollDataTmpBn("plus_op_out");
     EnrollModelBn("in_ip_op_weight");
     EnrollModelBn("hidden_ip_op_weight");
