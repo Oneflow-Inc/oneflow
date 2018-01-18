@@ -28,7 +28,7 @@ class ConvolutionKernel : public KernelIf<device_type> {
   ConvolutionKernel() = default;
   ~ConvolutionKernel() = default;
 
- private:
+ protected:
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
@@ -46,6 +46,7 @@ class ConvolutionKernel : public KernelIf<device_type> {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+ private:
   void ComputeWeightDiff(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
