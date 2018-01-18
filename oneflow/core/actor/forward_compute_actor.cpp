@@ -154,9 +154,9 @@ void ForwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> SetRegInfo) {
   const Regst* in_regst = pending_in_regsts_.front();
   SetRegInfo(in_regst);
-  if (in_regst->piece_id() % JobDesc::Singleton()->NumOfPiecesInBatch() == 0) {
-    if (model_regst_desc_id_ != -1) SetRegInfo(model_regst_);
-    if (model_tmp_regst_desc_id_ != -1) SetRegInfo(model_tmp_regst_);
+  if (in_regst->piece_id() % JobDesc::Singleton()->NumOfPiecesInBatch() == 0
+      && model_regst_desc_id_ != -1 && in_regst->piece_id() > 0) {
+    SetRegInfo(model_regst_);
   }
 }
 
