@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
+Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
            const void* comm_net_token) {
   mem_ptr_ = mem_ptr;
   if (blob_desc->has_data_id_field()) {
@@ -23,6 +23,7 @@ Blob::Blob(const BlobDesc* blob_desc, char* mem_ptr,
           + blob_desc->ByteSizeOfColNumField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
+  regst_ = regst;
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -79,6 +80,14 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   Memcpy<device_type>(device_ctx, mut_memory_ptr(), rhs->memory_ptr(),
                       TotalByteSize());
 }
+
+int32_t Blob::col_id() const { return regst_->col_id(); }
+
+void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
+
+int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
+
+void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 
 #define INSTANTIATE_BLOB_FUNC(dev_t)                                       \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \

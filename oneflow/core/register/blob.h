@@ -7,12 +7,15 @@
 
 namespace oneflow {
 
+class Regst;
+
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(blob_desc, mem_ptr, nullptr) {}
-  Blob(const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+       const void* comm_net_token);
   ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -62,6 +65,11 @@ class Blob final {
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
+  int32_t col_id() const;
+  void set_col_id(int32_t val);
+  int32_t max_col_id() const;
+  void set_max_col_id(int32_t val);
+
  private:
   template<typename T>
   void CheckDataType() const {
@@ -78,6 +86,7 @@ class Blob final {
   void* dptr_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
+  Regst* regst_;
 };
 
 }  // namespace oneflow

@@ -55,23 +55,18 @@ void IBVerbsCommNet::RegisterMemoryDone() {
   OF_BARRIER();
 }
 
-void* IBVerbsCommNet::Read(void* actor_read_id, int64_t src_machine_id,
-                           const void* src_token, const void* dst_token) {
-  auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
-  ReadContext* read_ctx = NewReadCtxInActorReadCtx(actor_read_ctx);
+void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
+  endpoint_manager_.SendActorMsg(dst_machine_id, msg);
+}
+
+void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id,
+                            const void* src_token, const void* dst_token) {
   IBVerbsMemDescProto& remote_mem_desc_proto =
       token2mem_desc_proto_[reinterpret_cast<uint64_t>(src_token)];
   auto local_mem_desc = const_cast<IBVerbsMemDesc*>(
       static_cast<const IBVerbsMemDesc*>(dst_token));
-  void* read_done_id =
-      new std::tuple<ActorReadContext*, ReadContext*>(actor_read_ctx, read_ctx);
-  endpoint_manager_.Read(read_done_id, src_machine_id, local_mem_desc,
+  endpoint_manager_.Read(read_id, src_machine_id, local_mem_desc,
                          remote_mem_desc_proto);
-  return read_ctx;
-}
-
-void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  endpoint_manager_.SendActorMsg(dst_machine_id, msg);
 }
 
 }  // namespace oneflow
