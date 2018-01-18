@@ -13,6 +13,10 @@ PbRpf<std::string> ConstructPbRpf(const std::string& s) {
   return ret;
 }
 
+bool IsValidBlobInBlobs(const Blob* blob, ) {
+
+}
+
 template<typename T>
 void CalcSumOfBlobs(DeviceCtx* ctx,
                     std::function<Blob*(const std::string&)> BnInOp2Blob,
@@ -68,10 +72,21 @@ void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
       break;
     }
     size_t cp_size = std::min(src_size, dst_size);
-    Memcpy<DeviceType::kCPU>(ctx, dst_ptr, src_ptr, cp_size);
-    src_ptr += cp_size;
+    if(src_ptr == nullptr) {
+      if(dst_ptr != nullptr) {
+        memset(dst_ptr, 0, cp_size);
+        dst_ptr += cp_size;
+      }
+    } else {
+      if(dst_ptr != nullptr) {
+        UNEXPECTED_RUN();
+      } else {
+        Memcpy<DeviceType::kCPU>(ctx, dst_ptr, src_ptr, cp_size);
+        src_ptr += cp_size;
+        dst_ptr += cp_size;
+      }
+    }
     src_size -= cp_size;
-    dst_ptr += cp_size;
     dst_size -= cp_size;
   }
 }
