@@ -7,12 +7,15 @@
 
 namespace oneflow {
 
+class Regst;
+
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(blob_desc, mem_ptr, nullptr) {}
-  Blob(const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+       const void* comm_net_token);
   ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -24,8 +27,8 @@ class Blob final {
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
 
-  const void* memory_ptr() const;
-  void* mut_memory_ptr() { return const_cast<void*>(memory_ptr()); }
+  const void* memory_ptr() const { return mem_ptr_; }
+  void* mut_memory_ptr() { return mem_ptr_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -48,14 +51,11 @@ class Blob final {
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
-  size_t ByteSizeOfBlobHeaderField() const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
-  template<DeviceType device_type>
-  void CopyBlobHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   template<DeviceType device_type>
@@ -65,12 +65,10 @@ class Blob final {
   template<DeviceType device_type>
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
-  int32_t col_id() const { return blob_header_->col_id; }
-  void set_col_id(int32_t val) { blob_header_->col_id = val; }
-  int32_t max_col_id() const { return blob_header_->max_col_id; }
-  void set_max_col_id(int32_t val) { blob_header_->max_col_id = val; }
-
-  bool IsLastCol() const { return col_id() == max_col_id(); }
+  int32_t col_id() const;
+  void set_col_id(int32_t val);
+  int32_t max_col_id() const;
+  void set_max_col_id(int32_t val);
 
  private:
   template<typename T>
@@ -82,12 +80,13 @@ class Blob final {
         << blob_desc_->data_type() << " " << GetDataType<T>::val;
   }
 
-  BlobHeader* blob_header_;
+  void* mem_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
+  Regst* regst_;
 };
 
 }  // namespace oneflow
