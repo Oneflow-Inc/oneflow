@@ -184,21 +184,12 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-template class BasicRnnKernel<DeviceType::kCPU, float>;
-template class BasicRnnKernel<DeviceType::kCPU, double>;
-template class BasicRnnKernel<DeviceType::kGPU, float>;
-template class BasicRnnKernel<DeviceType::kGPU, double>;
+#define INSTANTIATE_KERNEL(device_type, data_type_pair) \
+  template class BasicRnnKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ)
+
 template class BasicRnnKernelUtil<DeviceType::kCPU, float>;
 template class BasicRnnKernelUtil<DeviceType::kCPU, double>;
-/*
-#define INSTANTIATE_KERNEL(data_type_pair)       \
-  template class BasicRnnKernel<DeviceType::kCPU, \
-                               OF_PP_PAIR_FIRST(data_type_pair)>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, FLOATING_DATA_TYPE_SEQ)
 
-#define INSTANTIATE_KERNEL_UTIL(data_type_pair)      \
-  template class BasicRnnKernelUtil<DeviceType::kCPU, \
-                                   OF_PP_PAIR_FIRST(data_type_pair)>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
-*/
 }  // namespace oneflow
