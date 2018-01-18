@@ -58,7 +58,7 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
 
 void RecurrentBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
     TaskEdge* edge) {
-  if (CanBindInDiffWhenRecurrent(edge)) {
+  if (CanBindInDiff(edge)) {
     edge->AddRegst("in_diff", ProduceRegst("in_diff"));
   } else {
     edge->AddRegst("h0_diff", ProduceRegst("h0_diff"));
@@ -86,39 +86,32 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
   CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
   std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
   for (TaskEdge* edge : fw_node->in_edges()) {
-    TaskNode* pred_fw_node = edge->src_node();
-    if (pred_fw_node->GetTaskType() == TaskType::kMdUpdt) { continue; }
+    if (edge->src_node()->GetTaskType() == TaskType::kMdUpdt) { continue; }
     std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-    const auto& lbns = SuccChainNodeOnEdge(edge)->data_output_lbns();
+    const auto& lbns = PredChainNodeOnEdge(edge)->data_output_lbns();
     if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {
       ConsumeRegst("in", regst);
     } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
       ConsumeRegst("h0", regst);
     }
   }
-  CHECK(GetConsumedRegst("in"));
 }
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
-  if (parallel_ctx()->policy() == kModelParallel) {
-    auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
-    auto rec_in_regst = GetRecInRegstInRelatedFwTaskNode();
-    rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
-  }
+  auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
+  auto rec_in_regst = GetRecInRegstInRelatedFwTaskNode();
+  rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
   }
 }
 
-bool RecurrentBackwardCompTaskNode::CanBindInDiffWhenRecurrent(TaskEdge* edge) {
+bool RecurrentBackwardCompTaskNode::CanBindInDiff(TaskEdge* edge) {
   const BackwardChainNode* succ_bw_chain_node =
       static_cast<const BackwardChainNode*>(SuccChainNodeOnEdge(edge));
   const auto& lbns = succ_bw_chain_node->fw_node()->data_output_lbns();
   std::string in_lbn = chain_node()->SoleOp()->Lbn4BnInOp("in");
-  for (const std::string& lbn : lbns) {
-    if (lbn == in_lbn) { return true; }
-  }
-  return false;
+  return lbns.find(in_lbn) != lbns.end();
 }
 
 std::shared_ptr<RegstDesc>

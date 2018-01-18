@@ -22,7 +22,7 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   void VirtualConsumeDiffRegst(TaskEdge* edge) override;
   void VirtualConsumeInRegst();
   void VirtualInferBlobDescInHiddenDiff() override;
-  bool CanBindInDiffWhenRecurrent(TaskEdge* edge);
+  bool CanBindInDiff(TaskEdge* edge);
   std::shared_ptr<RegstDesc> GetRecInRegstInRelatedFwTaskNode();
 };
 
