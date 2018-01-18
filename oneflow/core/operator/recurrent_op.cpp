@@ -18,7 +18,6 @@ void InferBasicRnnCellBlobDesc(
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
-  *GetBlobDesc4BnInOp("f_op_out") = data_tmp_blob_desc;
 
   *GetBlobDesc4BnInOp("in_ip_op_weight") =
       BlobDesc(Shape({hidden_size, embedding_size}));
@@ -50,7 +49,6 @@ void RecurrentOp::InitFromOpConf() {
     EnrollDataTmpBn("in_ip_op_out");
     EnrollDataTmpBn("hidden_ip_op_out");
     EnrollDataTmpBn("plus_op_out");
-    EnrollDataTmpBn("f_op_out");
     EnrollModelBn("in_ip_op_weight");
     EnrollModelBn("hidden_ip_op_weight");
     if (conf.has_bias_term()) {
