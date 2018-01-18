@@ -110,7 +110,8 @@ void CopyCommNetActor::ForEachCurReadableRegst(
 
 void CopyCommNetActor::SetReadableRegstInfo(const Regst* reg,
                                             ReadableRegstInfo* info) {
-  info->set_regst_desc_id(RegstDescId4Name("in"));
+  CHECK(RegstDescId4Name("copy_in") != -1);
+  info->set_regst_desc_id(RegstDescId4Name("copy_in"));
   info->set_act_id(piece_id2regst_ctx[next_piece_id_].act_id);
 }
 

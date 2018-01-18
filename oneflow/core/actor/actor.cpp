@@ -86,6 +86,7 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 }
 
 void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
+  CHECK(regst->regst_desc_id() != -1);
   info->set_regst_desc_id(regst->regst_desc_id());
   info->set_act_id(regst->act_id());
 }
