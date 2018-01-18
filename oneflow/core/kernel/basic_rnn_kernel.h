@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_BASE_RNN_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_BASE_RNN_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_BASIC_RNN_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_BASIC_RNN_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/recurrent_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BaseRnnKernel final : public KernelIf<device_type> {
+class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BaseRnnKernel);
-  BaseRnnKernel() = default;
-  ~BaseRnnKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BasicRnnKernel);
+  BasicRnnKernel() = default;
+  ~BasicRnnKernel() = default;
 
  private:
   void ForwardDataContent(
@@ -21,10 +21,10 @@ class BaseRnnKernel final : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithRandomSeed(
+  void VirtualInitModelBlobsWithRandomSeed(
       const KernelCtx&, std::mt19937,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelBlobsWithDir(
+  void VirtualInitModelBlobsWithDir(
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -34,12 +34,14 @@ class BaseRnnKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-class BaseRnnKernelUtil final {
+class BasicRnnKernelUtil final {
  public:
-  static void Add(DeviceCtx* ctx, const T* x, const T* y, T* z);
-  static void Tanh(DeviceCtx* ctx, const T* x, T* y);
+  static void Add(DeviceCtx* ctx, int64_t n, const T* x, const T* y, T* z);
+  static void Tanh(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+  static void ComputePlusOutDiff(DeviceCtx* ctx, int64_t n, const T* ht,
+                                 const T* ht_diff, T* plus_out_diff);
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_BASE_RNN_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_BASIC_RNN_KERNEL_H_
