@@ -84,22 +84,15 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
 
 void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
   CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
-  std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
-  for (TaskEdge* edge : fw_node->in_edges()) {
-    if (edge->src_node()->GetTaskType() == TaskType::kMdUpdt) { continue; }
-    std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-    const auto& lbns = PredChainNodeOnEdge(edge)->data_output_lbns();
-    if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {
-      ConsumeRegst("in", regst);
-    } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
-      ConsumeRegst("h0", regst);
-    }
+  ConsumeRegst("in", fw_node->GetConsumedRegstWrapper("in"));
+  if (auto h0_regst = fw_node->GetConsumedRegstWrapper("h0")) {
+    ConsumeRegst("h0", h0_regst);
   }
 }
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
   auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
-  auto rec_in_regst = GetRecInRegstInRelatedFwTaskNode();
+  auto rec_in_regst = GetRelatedFwTaskNode()->GetConsumedRegstWrapper("rec_in");
   rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
@@ -112,18 +105,6 @@ bool RecurrentBackwardCompTaskNode::CanBindInDiff(TaskEdge* edge) {
   const auto& lbns = succ_bw_chain_node->fw_node()->data_output_lbns();
   std::string in_lbn = chain_node()->SoleOp()->Lbn4BnInOp("in");
   return lbns.find(in_lbn) != lbns.end();
-}
-
-std::shared_ptr<RegstDesc>
-RecurrentBackwardCompTaskNode::GetRecInRegstInRelatedFwTaskNode() {
-  CompTaskNode* fw_node = GetRelatedFwTaskNode();
-  for (TaskEdge* edge : fw_node->in_edges()) {
-    if (fw_node->PredChainNodeOnEdge(edge) == fw_node->chain_node()) {
-      return edge->GetSoleRegst();
-    }
-  }
-  UNEXPECTED_RUN();
-  return nullptr;
 }
 
 }  // namespace oneflow

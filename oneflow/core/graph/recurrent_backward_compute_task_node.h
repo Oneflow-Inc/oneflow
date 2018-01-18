@@ -23,7 +23,6 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   void VirtualConsumeInRegst();
   void VirtualInferBlobDescInHiddenDiff() override;
   bool CanBindInDiff(TaskEdge* edge);
-  std::shared_ptr<RegstDesc> GetRecInRegstInRelatedFwTaskNode();
 };
 
 }  // namespace oneflow

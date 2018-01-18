@@ -33,6 +33,11 @@ const ChainNode* CompTaskNode::PredChainNodeOnEdge(TaskEdge* edge) {
   return ChainNodeOnEdge(edge, &TaskEdge::src_node, &TaskNode::in_edges);
 }
 
+std::shared_ptr<RegstDesc> CompTaskNode::GetConsumedRegstWrapper(
+    const std::string& name) {
+  return GetConsumedRegst(name);
+}
+
 void SortByParallelId(std::vector<CompTaskNode*>* node_vec) {
   std::sort(node_vec->begin(), node_vec->end(),
             [](const CompTaskNode* lhs, const CompTaskNode* rhs) {

@@ -100,15 +100,7 @@ void NormalBackwardCompTaskNode::VirtualInferBlobDescInActivationDiff() {
 }
 
 void NormalBackwardCompTaskNode::VirtualConsumeInRegst() {
-  TaskNode* fw_node = GetRelatedFwTaskNode();
-  for (TaskEdge* edge : fw_node->in_edges()) {
-    TaskNode* pred_fw_node = edge->src_node();
-    if (pred_fw_node->GetTaskType() != TaskType::kMdUpdt) {
-      ConsumeRegst("in", edge->GetSoleRegst());
-      return;
-    }
-  }
-  UNEXPECTED_RUN();
+  ConsumeRegst("in", GetRelatedFwTaskNode()->GetConsumedRegstWrapper("in"));
 }
 
 }  // namespace oneflow
