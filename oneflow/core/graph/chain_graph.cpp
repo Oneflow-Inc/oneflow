@@ -337,7 +337,8 @@ void ChainGraph::BuildLossPrintStruct() {
     Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
     // Loss Print Chain
     OperatorConf loss_print_op_conf;
-    loss_print_op_conf.set_name("loss_print_" + NewUniqueId());
+    loss_print_op_conf.set_name("loss_print_"
+                                + loss_chain->SoleOp()->op_name());
     loss_print_op_conf.mutable_loss_print_conf();
     auto loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
