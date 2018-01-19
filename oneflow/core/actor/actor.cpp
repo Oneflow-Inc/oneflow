@@ -2,6 +2,16 @@
 
 namespace oneflow {
 
+bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  return (order == ColIdOrder::kAscending && regst->col_id() == 0)
+         || (order == ColIdOrder::kDescending && regst->IsMaxCol());
+}
+
+bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  return (order == ColIdOrder::kAscending && regst->IsMaxCol())
+         || (order == ColIdOrder::kDescending && regst->col_id() == 0);
+}
+
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = 0;

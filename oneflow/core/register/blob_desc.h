@@ -19,8 +19,8 @@ class BlobDesc final {
   ~BlobDesc() = default;
 
   BlobDesc();
-  BlobDesc(Shape, DataType, bool has_header_field, bool has_data_id_field,
-           bool has_col_num_field, int32_t max_col_num);
+  BlobDesc(Shape, DataType, bool has_data_id_field, bool has_col_num_field,
+           int32_t max_col_num);
   BlobDesc(Shape shape) : BlobDesc() { shape_ = shape; }
   BlobDesc(const BlobDescProto& proto);
 
@@ -29,9 +29,6 @@ class BlobDesc final {
 
   DataType data_type() const { return data_type_; }
   void set_data_type(DataType val) { data_type_ = val; }
-
-  bool has_header_field() const { return has_header_field_; }
-  void set_has_header_field(bool val) { has_header_field_ = val; }
 
   bool has_data_id_field() const { return has_data_id_field_; }
   void set_has_data_id_field(bool val) { has_data_id_field_ = val; }
@@ -43,7 +40,6 @@ class BlobDesc final {
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
   void ToProto(BlobDescProto* proto) const;
-  size_t ByteSizeOfBlobHeaderField() const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
@@ -53,7 +49,6 @@ class BlobDesc final {
  private:
   Shape shape_;
   DataType data_type_;
-  bool has_header_field_;
   bool has_data_id_field_;
   bool has_col_num_field_;
   int64_t max_col_num_;

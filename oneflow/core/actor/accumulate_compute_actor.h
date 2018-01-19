@@ -12,7 +12,7 @@ class AccumulateCompActor : public CompActor {
   virtual ~AccumulateCompActor() = default;
 
  protected:
-  void Init(const TaskProto&, int32_t max_acc_cnt);
+  void Init(const TaskProto&, int32_t max_acc_cnt, ColIdOrder order);
 
  private:
   int HandlerNormal(const ActorMsg&) override;
@@ -23,6 +23,7 @@ class AccumulateCompActor : public CompActor {
   void Act() override;
 
   bool is_in_eord_;
+  ColIdOrder order_;
   std::queue<Regst*> pending_in_regst_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
   int32_t acc_cnt_;

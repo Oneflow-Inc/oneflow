@@ -13,7 +13,7 @@ void InferBasicRnnCellBlobDesc(
   int64_t data_num = in_blob_desc->shape().At(0);
   BlobDesc data_tmp_blob_desc =
       BlobDesc(Shape({embedding_size, hidden_size}),
-               JobDesc::Singleton()->DefaultDataType(), true, false, true,
+               JobDesc::Singleton()->DefaultDataType(), false, true,
                in_blob_desc->max_col_num());
   *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
   *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
@@ -34,15 +34,15 @@ void RecurrentOp::InitFromOpConf() {
   CHECK(op_conf().has_recurrent_conf());
   const RecurrentOpConf& conf = op_conf().recurrent_conf();
   EnrollInputBn("in");
-  EnrollInputBn("ht_1");
+  EnrollInputBn("rec_in");
   if (!conf.init_hidden().empty()) {
     CHECK(!conf.has_init_hidden_initializer());
     EnrollInputBn("h0");
   } else {
     EnrollModelBn("h0");
   }
-  EnrollOutputBn("ht");
-  EnrollOutputBn("rec_ht");
+  EnrollOutputBn("out");
+  EnrollOutputBn("rec_out");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
     EnrollDataTmpBn("in_ip_op_out");
@@ -72,7 +72,6 @@ void RecurrentOp::InferBlobDescs(
   DataType data_type = JobDesc::Singleton()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(in_blob_desc->has_header_field(), true);
   CHECK_EQ(in_blob_desc->has_col_num_field(), true);
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t hidden_size = conf.hidden_size();
@@ -91,12 +90,12 @@ void RecurrentOp::InferBlobDescs(
     BalancedSplitter splitter(hidden_size, parallel_ctx->parallel_num());
     hidden_size = splitter.At(parallel_ctx->parallel_id()).size();
   }
-  // ht
-  BlobDesc ht_blob_desc = *in_blob_desc;
-  ht_blob_desc.mut_shape() = Shape({data_num, hidden_size});
-  *GetBlobDesc4BnInOp("ht") = ht_blob_desc;
-  // recurrent_ht
-  *GetBlobDesc4BnInOp("rec_ht") = ht_blob_desc;
+  // out
+  BlobDesc out_blob_desc = *in_blob_desc;
+  out_blob_desc.mut_shape() = Shape({data_num, hidden_size});
+  *GetBlobDesc4BnInOp("out") = out_blob_desc;
+  // recurrent_out
+  *GetBlobDesc4BnInOp("rec_out") = out_blob_desc;
 
   if (op_conf().recurrent_conf().rnn_type_case()
       == RecurrentOpConf::kBasicRnnCell) {
@@ -110,8 +109,8 @@ void RecurrentOp::InferBlobDescs(
 }
 
 std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
-  if (input_bn == "ht_1") {
-    return obn2lbn("ht");
+  if (input_bn == "rec_in") {
+    return obn2lbn("rec_out");
   } else if (input_bn == "h0") {
     return op_conf().recurrent_conf().init_hidden();
   } else if (input_bn == "in") {
