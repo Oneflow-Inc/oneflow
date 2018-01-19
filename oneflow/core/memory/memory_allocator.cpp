@@ -10,14 +10,14 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
   char* dptr = nullptr;
   const void* comm_net_token = nullptr;
   if (mem_case.has_host_pageable_mem()) {
-    dptr = (char*)malloc(size);
+    dptr = reinterpret_cast<char*>(malloc(size));
     CHECK_NOTNULL(dptr);
     memset(dptr, memset_val, size);
   } else if (mem_case.has_host_pinned_mem()) {
     if (mem_case.host_pinned_mem().used_by_device()) {
       CudaCheck(cudaMallocHost(&dptr, size));
     } else {
-      dptr = (char*)malloc(size);
+      dptr = reinterpret_cast<char*>(malloc(size));
     }
     if (mem_case.host_pinned_mem().used_by_network()) {
       comm_net_token = CommNet::Singleton()->RegisterMemory(dptr, size);

@@ -67,6 +67,7 @@ void Kernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
+  ForwardColNum(ctx, BnInOp2Blob);
 }
 
 void Kernel::Backward(
@@ -74,6 +75,7 @@ void Kernel::Backward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
+  BackwardColNum(ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type>
