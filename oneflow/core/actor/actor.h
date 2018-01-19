@@ -56,7 +56,7 @@ class Actor {
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   virtual void ForEachCurReadableRegst(std::function<void(const Regst*)>) {}
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
+  virtual void SetReadableRegstInfo(const Regst*, ActEvent*);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }

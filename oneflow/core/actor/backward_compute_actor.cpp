@@ -130,7 +130,7 @@ void BackwardCompActor::ForEachCurReadableRegst(
 }
 
 void BackwardCompActor::SetReadableRegstInfo(const Regst* regst,
-                                             ReadableRegstInfo* info) {
+                                             ActEvent* act_event) {
   int64_t piece_id = readable_regsts_[out_regst_desc_id_].front()->piece_id();
   if (regst->regst_desc_id() == model_regst_desc_id_) {
     if (!(piece_id > 0
@@ -139,6 +139,7 @@ void BackwardCompActor::SetReadableRegstInfo(const Regst* regst,
     }
   }
   if (regst->regst_desc_id() == model_tmp_regst_desc_id_) { return; }
+  ReadableRegstInfo* info = act_event->add_readable_regst_infos();
   info->set_regst_desc_id(regst->regst_desc_id());
   info->set_act_id(regst->act_id());
 }

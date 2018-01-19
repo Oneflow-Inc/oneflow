@@ -85,7 +85,8 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
+void Actor::SetReadableRegstInfo(const Regst* regst, ActEvent* act_event) {
+  ReadableRegstInfo* info = act_event->add_readable_regst_infos();
   info->set_regst_desc_id(regst->regst_desc_id());
   info->set_act_id(regst->act_id());
 }
@@ -116,8 +117,7 @@ void Actor::ActUntilFail() {
       act_event->set_act_id(act_id_);
       act_event->set_work_stream_id(device_ctx_->work_stream_id());
       ForEachCurReadableRegst([&](const Regst* readable_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        SetReadableRegstInfo(readable_regst, info);
+        SetReadableRegstInfo(readable_regst, act_event);
       });
       device_ctx_->AddCallBack(
           [act_event]() { act_event->set_start_time(GetCurTime()); });

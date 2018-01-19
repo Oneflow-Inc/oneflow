@@ -31,7 +31,7 @@ class CopyCommNetActor final : public Actor {
   void AsyncReturnAllReadableRegst() override;
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
+  void SetReadableRegstInfo(const Regst*, ActEvent*) override;
 
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
