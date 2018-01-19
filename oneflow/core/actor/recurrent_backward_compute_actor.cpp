@@ -5,7 +5,7 @@ namespace oneflow {
 void RecurrentBackwardCompActor::VirtualBackwardCompActorInit(
     const TaskProto& task_proto) {
   h0_regst_desc_id_ = RegstDescId4Name("h0");
-  rec_out_diff_regst_desc_id_ = RegstDescId4Name("rec_acc_diff");
+  rec_out_diff_regst_desc_id_ = RegstDescId4Name("rec_out_diff");
   if (rec_out_diff_regst_desc_id_ == -1) {
     CHECK(parallel_ctx()->policy() == kDataParallel);
   } else {
@@ -155,7 +155,7 @@ void RecurrentBackwardCompActor::Act() {
                     });
   AsyncSendRegstMsgToConsumer([this](Regst* regst) {
     if (parallel_ctx()->policy() == kDataParallel
-        && regst->regst_desc_id() == RegstDescId4Name("rec_out_diff")) {
+        && regst->regst_desc_id() == RegstDescId4Name("rec_in_diff")) {
       return false;
     }
     regst->set_piece_id(out_diff_regsts_.front().back()->piece_id());
@@ -179,8 +179,12 @@ void RecurrentBackwardCompActor::Act() {
     rec_out_diff_regst_ = nullptr;
   }
   if (out_regst->col_id() == 0) {
-    AsyncSendRegstMsgToProducer(h0_regsts_.front());
-    h0_regsts_.pop();
+    if (h0_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToProducer(h0_regsts_.front());
+      h0_regsts_.pop();
+    } else {
+      CHECK(h0_regsts_.empty());
+    }
 
     CHECK(in_regsts_.front().empty());
     in_regsts_.pop_front();
