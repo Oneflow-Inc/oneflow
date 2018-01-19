@@ -102,10 +102,6 @@ void RecurrentForwardCompActor::Act() {
                       }
                     });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    if (parallel_ctx()->policy() == kDataParallel
-        && regst->regst_desc_id() == RegstDescId4Name("rec_out")) {
-      return false;
-    }
     regst->set_piece_id(in_regst->piece_id());
     regst->set_col_id(in_regst->col_id());
     regst->set_max_col_id(in_regst->max_col_id());
