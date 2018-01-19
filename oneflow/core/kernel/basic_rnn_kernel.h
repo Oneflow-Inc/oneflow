@@ -39,7 +39,8 @@ class BasicRnnKernelUtil final {
   static void Add(DeviceCtx* ctx, int64_t n, const T* x, const T* y, T* z);
   static void Tanh(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ComputePlusOutDiff(DeviceCtx* ctx, int64_t n, const T* ht,
-                                 const T* ht_diff, T* plus_out_diff);
+                                 const T* ht_diff, const T* rec_ht_diff,
+                                 T* plus_out_diff);
 };
 
 }  // namespace oneflow

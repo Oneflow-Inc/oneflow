@@ -6,29 +6,29 @@ template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_ip_op_out_blob = BnInOp2Blob("in_ip_op_out");
   const Blob* ht_1_blob = this->GetHiddenBlob(BnInOp2Blob);
-  Blob* hidden_ip_op_out_blob = BnInOp2Blob("hidden_ip_op_out");
   Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* ht_blob = BnInOp2Blob("ht");
 
   // plus_op_out = in * in_ip_op_weight
-  KernelUtil<device_type, T>::BlasMatrixMatrix(
-      ctx, CblasNoTrans, CblasTrans, static_cast<T>(1), static_cast<T>(0),
-      BnInOp2Blob("in"), BnInOp2Blob("in_ip_op_weight"), plus_op_out_blob);
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+      static_cast<T>(0), BnInOp2Blob("in"), BnInOp2Blob("in_ip_op_weight"),
+      plus_op_out_blob);
 
-  // plus_ip_op_out += ht_1 * hidden_ip_op_weight
-  KernelUtil<device_type, T>::BlasMatrixMatrix(
-      ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1), static_cast<T>(1),
-      ht_1_blob, BnInOp2Blob("hidden_ip_op_weight"), plus_op_out_blob);
+  // plus_op_out += ht_1 * hidden_ip_op_weight
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(1), ht_1_blob, BnInOp2Blob("hidden_ip_op_weight"),
+      plus_op_out_blob);
 
-  if (this->op_conf().recurrent_conf().has_bias_term()) {
+  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
     const Blob* bias_blob = BnInOp2Blob("bias");
     const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
     // plus_op_out += bias * bias_multiplier
-    KernelUtil<device_type, T>::BlasMatrixMatrix(
-        ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1), static_cast<T>(1),
-        bias_mul_blob, bias_blob, plus_op_out_blob);
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(1), bias_mul_blob, bias_blob, plus_op_out_blob);
   }
   // ht = tanh(plus_op_out)
   BasicRnnKernelUtil<device_type, T>::Tanh(
@@ -56,48 +56,45 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   const Blob* ht_1_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* in_ip_op_weight_diff_blob = BnInOp2Blob("in_ip_op_weight_diff");
   // reuse memory
-  Blob* diff_sum_blob = BnInOp2Blob("plus_op_out");
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
-  // diff_sum = ht_diff + rec_ht_diff
-  BasicRnnKernelUtil<device_type, T>::Add(
-      ctx.device_ctx, ht_diff_blob->shape().elem_cnt(), ht_diff_blob->dptr<T>(),
-      BnInOp2Blob("rec_ht_diff")->dptr<T>(), diff_sum_blob->mut_dptr<T>());
-
-  // plus_op_out_diff = (1 - ht^2) .* diff_sum
+  // plus_op_out_diff = (1 - ht^2) .* (ht_diff + rec_ht_diff)
   BasicRnnKernelUtil<device_type, T>::ComputePlusOutDiff(
       ctx.device_ctx, ht_blob->shape().elem_cnt(), ht_blob->dptr<T>(),
-      diff_sum_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
+      ht_diff_blob->dptr<T>(), BnInOp2Blob("rec_ht_diff")->dptr<T>(),
+      plus_op_out_diff_blob->mut_dptr<T>());
 
   // hidden_ip_op_weight_diff = plus_op_out_diff * ht_1
-  KernelUtil<device_type, T>::BlasMatrixMatrix(
-      ctx, CblasNoTrans, CblasTrans, static_cast<T>(1), static_cast<T>(0),
-      plus_op_out_diff_blob, ht_1_blob,
-      BnInOp2Blob("hidden_ip_op_weight_diff"));
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       plus_op_out_diff_blob, ht_1_blob,
+                                       BnInOp2Blob("hidden_ip_op_weight_diff"));
 
   // in_ip_op_weight_diff = plus_op_out_diff * in
-  KernelUtil<device_type, T>::BlasMatrixMatrix(
-      ctx, CblasNoTrans, CblasTrans, static_cast<T>(1), static_cast<T>(0),
-      plus_op_out_diff_blob, BnInOp2Blob("in"), in_ip_op_weight_diff_blob);
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       plus_op_out_diff_blob, BnInOp2Blob("in"),
+                                       in_ip_op_weight_diff_blob);
 
   // in_diff = plus_op_out_diff * in_ip_op_weight_diff
-  KernelUtil<device_type, T>::BlasMatrixMatrix(
-      ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1), static_cast<T>(0),
-      plus_op_out_diff_blob, in_ip_op_weight_diff_blob, BnInOp2Blob("in_diff"));
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(0), plus_op_out_diff_blob, in_ip_op_weight_diff_blob,
+      BnInOp2Blob("in_diff"));
 
-  if (this->op_conf().recurrent_conf().has_bias_term()) {
+  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
     // bias_diff = plus_op_out_diff * bias_multiplier
-    KernelUtil<device_type, T>::BlasMatrixMatrix(
-        ctx, CblasTrans, CblasNoTrans, static_cast<T>(1), static_cast<T>(0),
-        BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
-        BnInOp2Blob("bias_diff"));
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
+        plus_op_out_diff_blob, BnInOp2Blob("bias_diff"));
   }
   if (this->Ish0Model() && BnInOp2Blob("rec_ht_diff")->col_id() == 0) {
     // ho_diff = plus_op_out_diff * hidden_ip_op_weight
-    KernelUtil<device_type, T>::BlasMatrixMatrix(
-        ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(0), static_cast<T>(0),
-        plus_op_out_diff_blob, BnInOp2Blob("hidden_ip_op_weight"),
-        BnInOp2Blob("h0_diff"));
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(0),
+        static_cast<T>(0), plus_op_out_diff_blob,
+        BnInOp2Blob("hidden_ip_op_weight"), BnInOp2Blob("h0_diff"));
   }
 }
 
@@ -115,7 +112,7 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
       OF_PB_POINTER_GET(this->op_conf().recurrent_conf().basic_rnn_cell(),
                         hidden_ip_op_weight_initializer),
       random_seed_gen(), BnInOp2Blob("hidden_ip_op_weight"));
-  if (this->op_conf().recurrent_conf().has_bias_term()) {
+  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
         OF_PB_POINTER_GET(this->op_conf().recurrent_conf().basic_rnn_cell(),
@@ -140,7 +137,7 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
       hidden_ip_op_weight_blob, "hidden_ip_op_weight",
       hidden_ip_op_weight_blob->shape().At(0),
       hidden_ip_op_weight_blob->shape().Count(1));
-  if (this->op_conf().recurrent_conf().has_bias_term()) {
+  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
         "bias", BnInOp2Blob("bias")->shape().At(0), 1);
@@ -151,7 +148,7 @@ template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->op_conf().recurrent_conf().has_bias_term()) {
+  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
     InitializerConf bias_multiplier_fill_conf;
     bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
     KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
@@ -175,9 +172,10 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
     }
   }
   static void ComputePlusOutDiff(DeviceCtx* ctx, int64_t n, const T* ht,
-                                 const T* ht_diff, T* plus_out_diff) {
+                                 const T* ht_diff, const T* rec_ht_diff,
+                                 T* plus_out_diff) {
     FOR_RANGE(int64_t, i, 0, n) {
-      plus_out_diff[i] = (1 - ht[i] * ht[i]) * ht_diff[i];
+      plus_out_diff[i] = (1 - ht[i] * ht[i]) * (ht_diff[i] + rec_ht_diff[i]);
     }
   }
 };

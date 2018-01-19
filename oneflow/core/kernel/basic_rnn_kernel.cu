@@ -23,9 +23,10 @@ __global__ void TanhGpu(const int64_t n, const T* x, T* y) {
 
 template<typename T>
 __global__ void ComputePlusOutDiffGpu(const int64_t n, const T* ht,
-                                      const T* ht_diff, T* plus_out_diff) {
+                                      const T* ht_diff, const T* rec_ht_diff,
+                                      T* plus_out_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    plus_out_diff[i] = (1 - ht[i] * ht[i]) * ht_diff[i];
+    plus_out_diff[i] = (1 - ht[i] * ht[i]) * (ht_diff[i] + rec_ht_diff[i]);
   }
 }
 
@@ -43,10 +44,11 @@ class BasicRnnKernelUtil<DeviceType::kGPU, T> final {
                  ctx->cuda_stream()>>>(n, x, y);
   }
   static void ComputePlusOutDiff(DeviceCtx* ctx, int64_t n, const T* ht,
-                                 const T* ht_diff, T* plus_out_diff) {
+                                 const T* ht_diff, const T* rec_ht_diff,
+                                 T* plus_out_diff) {
     ComputePlusOutDiffGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->cuda_stream()>>>(n, ht, ht_diff, plus_out_diff);
+           ctx->cuda_stream()>>>(n, ht, ht_diff, rec_ht_diff, plus_out_diff);
   }
 };
 
