@@ -15,6 +15,11 @@
 
 namespace oneflow {
 
+enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
+
+bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
+bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
+
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);

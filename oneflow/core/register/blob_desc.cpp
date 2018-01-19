@@ -52,8 +52,8 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfBlobHeaderField() + ByteSizeOfDataIdField()
-         + ByteSizeOfColNumField() + ByteSizeOfDataContentField();
+  return ByteSizeOfDataIdField() + ByteSizeOfColNumField()
+         + ByteSizeOfDataContentField();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
