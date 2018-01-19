@@ -20,8 +20,12 @@ class ActEdge final : public Edge<ActNode, ActEdge> {
 class ActNode final : public Node<ActNode, ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActNode);
-  explicit ActNode(const ActEvent* act_event) : act_event_(act_event) {}
+  explicit ActNode(const ActEvent* act_event, const TaskProto* task_proto)
+      : act_event_(act_event), task_proto_(task_proto) {}
   ~ActNode() = default;
+
+  void ForEachProducedRegstDescId(
+      const std::function<void(int64_t)>& Handler) const;
 
   // Getters
   int64_t actor_id() const { return act_event_->actor_id(); }
@@ -30,9 +34,12 @@ class ActNode final : public Node<ActNode, ActEdge> {
     return act_event_->stop_time() - act_event_->start_time();
   }
   const ActEvent& act_event() const { return *act_event_; }
+  TaskType task_type() const { return task_proto_->task_type(); }
+  std::string VisualStr() const override;
 
  private:
   const ActEvent* act_event_;
+  const TaskProto* task_proto_;
 };
 
 class ActGraph final : public Graph<ActNode, ActEdge> {
@@ -44,25 +51,24 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
 
   void ForEachRegstDescLifeTime(
       const std::function<void(int64_t, double)>& Handler) const;
+  void ToDotFiles(const std::string& dir) const;
 
   const Plan& plan() const { return *plan_; }
 
  private:
   void ForEachRegstUidLifeTime(
-      const std::function<void(double, int64_t, int64_t)>& Handler) const;
+      const std::function<void(double time, int64_t regst_desc_id,
+                               int64_t act_id)>& Handler) const;
   void ForEachSubGraphRegstUidLifeTime(
       const std::list<const ActNode*>& sources,
-      const std::function<void(double, int64_t, int64_t)>& Handler) const;
-
-  void InitProducerId2RegstDescIds();
-  void InitNodes();
-  void InitEdges();
+      const std::function<void(double time, int64_t regst_desc_id,
+                               int64_t act_id)>& Handler) const;
+  void InitNodes(HashMap<std::string, ActNode*>* regst_uid2producer);
+  void InitEdges(const HashMap<std::string, ActNode*>& regst_uid2producer);
   void InitConnectedSubGraphSources();
+
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
-  HashMap<int64_t, std::list<int64_t>> producer_id2regst_desc_ids_;
-  HashMap<int64_t, std::list<int64_t>> regst_desc_id2producer_act_ids_;
-  HashMap<std::string, ActNode*> regst_uid2producer_node_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_acts_;
   std::list<std::list<const ActNode*>> connected_subgraph_sources_;
 };
