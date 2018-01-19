@@ -84,9 +84,16 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
 
 void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
   CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
-  ConsumeRegst("in", fw_node->GetConsumedRegstWrapper("in"));
-  if (auto h0_regst = fw_node->GetConsumedRegstWrapper("h0")) {
-    ConsumeRegst("h0", h0_regst);
+  std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
+  for (TaskEdge* edge : fw_node->in_edges()) {
+    if (edge->src_node()->GetTaskType() == TaskType::kMdUpdt) { continue; }
+    std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
+    const auto& lbns = PredChainNodeOnEdge(edge)->data_output_lbns();
+    if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {
+      ConsumeRegst("in", regst);
+    } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
+      ConsumeRegst("h0", regst);
+    }
   }
 }
 
