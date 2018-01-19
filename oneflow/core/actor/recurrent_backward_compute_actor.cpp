@@ -154,10 +154,6 @@ void RecurrentBackwardCompActor::Act() {
                       }
                     });
   AsyncSendRegstMsgToConsumer([this](Regst* regst) {
-    if (parallel_ctx()->policy() == kDataParallel
-        && regst->regst_desc_id() == RegstDescId4Name("rec_in_diff")) {
-      return false;
-    }
     regst->set_piece_id(out_diff_regsts_.front().back()->piece_id());
     regst->set_piece_id(out_diff_regsts_.front().back()->col_id());
     regst->set_piece_id(out_diff_regsts_.front().back()->max_col_id());
@@ -174,7 +170,7 @@ void RecurrentBackwardCompActor::Act() {
   AsyncSendRegstMsgToProducer(data_tmp_regsts_.front().top());
   data_tmp_regsts_.front().pop();
 
-  if (!(out_regst->IsMaxCol())) {
+  if (!(out_regst->IsMaxCol()) && rec_out_diff_regst_desc_id_ == -1) {
     AsyncSendRegstMsgToProducer(rec_out_diff_regst_);
     rec_out_diff_regst_ = nullptr;
   }
