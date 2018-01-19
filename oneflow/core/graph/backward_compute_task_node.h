@@ -14,7 +14,7 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  TaskNode* GetRelatedFwTaskNode();
+  CompTaskNode* GetRelatedFwTaskNode();
 
  protected:
   virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); }
@@ -23,20 +23,18 @@ class BackwardCompTaskNode : public CompTaskNode {
   virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
     UNEXPECTED_RUN();
   };
-  virtual void VirtualProduceRegstOnSelfEdge(TaskEdge* edge) {
+  virtual void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) {
     UNEXPECTED_RUN();
   }
   virtual void VirtualProduceActivationDiff() {}
-  virtual void VirtualConsumeRegstOnSelfEdge(TaskEdge* edge) {
-    UNEXPECTED_RUN();
-  }
   virtual void VirtualConsumeActivation(TaskEdge* edge) {}
+  virtual void VirtualConsumeDiffRegst(TaskEdge* edge) { UNEXPECTED_RUN(); }
   virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
   virtual void VirtualInferBlobDescInActivationDiff() {}
   virtual void VirtualInferBlobDescInHiddenDiff() {}
 
  private:
-  void BuildModelDiffRegst();
+  void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
 };
 
