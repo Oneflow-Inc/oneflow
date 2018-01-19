@@ -125,20 +125,22 @@ void BackwardCompActor::Act() {
 }
 
 void BackwardCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> SetRegInfo) {
+    std::function<void(const Regst*)> handler) {
+  for (auto& pair : readable_regsts_) { handler(pair.second.front()); }
+}
+
+void BackwardCompActor::SetReadableRegstInfo(const Regst* regst,
+                                             ReadableRegstInfo* info) {
   int64_t piece_id = readable_regsts_[out_regst_desc_id_].front()->piece_id();
-  for (auto& pair : readable_regsts_) {
-    if (pair.first == model_regst_desc_id_) {
-      if (piece_id % JobDesc::Singleton()->NumOfPiecesInBatch() == 0
-          && piece_id > 0) {
-        SetRegInfo(pair.second.front());
-      }
-    } else if (pair.first == model_tmp_regst_desc_id_) {
-      continue;
-    } else {
-      SetRegInfo(pair.second.front());
+  if (regst->regst_desc_id() == model_regst_desc_id_) {
+    if (!(piece_id > 0
+          && piece_id % JobDesc::Singleton()->NumOfPiecesInBatch() == 0)) {
+      return;
     }
   }
+  if (regst->regst_desc_id() == model_tmp_regst_desc_id_) { return; }
+  info->set_regst_desc_id(regst->regst_desc_id());
+  info->set_act_id(regst->act_id());
 }
 
 REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);

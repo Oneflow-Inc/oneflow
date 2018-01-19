@@ -26,8 +26,8 @@ class SinkCompActor : public CompActor {
   void AsyncReturnAllReadableRegst() override;
 
   void ForEachCurReadableRegst(
-      std::function<void(const Regst*)> SetRegInfo) override {
-    SetRegInfo(in_regst_);
+      std::function<void(const Regst*)> handler) override {
+    handler(in_regst_);
   }
 
   Regst* in_regst_;

@@ -31,6 +31,7 @@ class ForwardCompActor final : public CompActor {
   void TryAsyncReturnModelTmpRegst();
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
 
   bool is_in_eord_;
   int64_t in_regst_desc_id_;

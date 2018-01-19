@@ -56,8 +56,8 @@ void CopyHdActor::AsyncReturnAllReadableRegst() {
 }
 
 void CopyHdActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> SetRegInfo) {
-  SetRegInfo(pending_in_regst_.front());
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regst_.front());
 }
 
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);

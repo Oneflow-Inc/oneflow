@@ -151,14 +151,24 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
 }
 
 void ForwardCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> SetRegInfo) {
-  const Regst* in_regst = pending_in_regsts_.front();
-  SetRegInfo(in_regst);
-  if (in_regst->piece_id() > 0 && model_regst_desc_id_ != -1
-      && in_regst->piece_id() % JobDesc::Singleton()->NumOfPiecesInBatch()
-             == 0) {
-    SetRegInfo(model_regst_);
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regsts_.front());
+  if (model_regst_desc_id_ != -1) handler(model_regst_);
+  if (model_tmp_regst_desc_id_ != -1) handler(model_tmp_regst_);
+}
+
+void ForwardCompActor::SetReadableRegstInfo(const Regst* regst,
+                                            ReadableRegstInfo* info) {
+  if (regst->regst_desc_id() == model_regst_desc_id_) {
+    int64_t piece_id = pending_in_regsts_.front()->piece_id();
+    if (!(piece_id > 0
+          && piece_id % JobDesc::Singleton()->NumOfPiecesInBatch() == 0)) {
+      return;
+    }
   }
+  if (regst->regst_desc_id() == model_tmp_regst_desc_id_) { return; }
+  info->set_regst_desc_id(regst->regst_desc_id());
+  info->set_act_id(regst->act_id());
 }
 
 REGISTER_ACTOR(TaskType::kNormalForward, ForwardCompActor);

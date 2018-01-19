@@ -125,8 +125,8 @@ void MdUpdtCompActor::AsyncReturnAllReadableRegst() {
 }
 
 void MdUpdtCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> SetRegInfo) {
-  SetRegInfo(pending_model_diff_acc_queue_.front());
+    std::function<void(const Regst*)> handler) {
+  handler(pending_model_diff_acc_queue_.front());
 }
 
 REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);
