@@ -18,15 +18,11 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   void VirtualBuildExecGphAndBindOutDiffRegst() override;
   void VirtualBuildInDiffRegst() override;
   void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override;
-  void VirtualProduceRegstOnSelfEdge(TaskEdge* edge) override {
-    edge->AddRegst("ht_1_diff", ProduceRegst("ht_1_diff"));
-  }
+  void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) override;
+  void VirtualConsumeDiffRegst(TaskEdge* edge) override;
   void VirtualConsumeInRegst();
-  void VirtualConsumeRegstOnSelfEdge(TaskEdge* edge) override {
-    ConsumeRegst("ht_1_diff", edge->GetRegst("ht_1_diff"));
-  }
   void VirtualInferBlobDescInHiddenDiff() override;
-  bool CanBindInDiffWhenRecurrent(TaskEdge* edge);
+  bool CanBindInDiff(TaskEdge* edge);
 };
 
 }  // namespace oneflow
