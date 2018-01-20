@@ -109,7 +109,13 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf,
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
-                              size_t sz, cudaMemcpyKind kind) {
+                              size_t sz
+#ifdef WITH_CUDA
+                              ,
+                              cudaMemcpyKind kind
+#endif
+
+) {
   memcpy(dst, src, sz);
 }
 

@@ -11,29 +11,51 @@ class DeviceCtx {
   virtual ~DeviceCtx() = default;
 
   int64_t work_stream_id() const { return work_stream_id_; }
+
+#ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const { return *cuda_stream_; }
   const cublasHandle_t& cublas_handle() const { return *cublas_handle_; }
+#ifdef WITH_CUDNN
   const cudnnHandle_t& cudnn_handle() const { return *cudnn_handle_; }
+#endif
+#endif
 
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:
   DeviceCtx()
-      : work_stream_id_(-1),
+      : work_stream_id_(-1)
+#ifdef WITH_CUDA
+        ,
         cuda_stream_(nullptr),
-        cublas_handle_(nullptr),
-        cudnn_handle_(nullptr) {}
+        cublas_handle_(nullptr)
+#ifdef WITH_CUDNN
+        ,
+        cudnn_handle_(nullptr)
+#endif
+#endif
+  {
+  }
 
   void set_work_stream_id(int64_t val) { work_stream_id_ = val; }
+
+#ifdef WITH_CUDA
   void set_cuda_stream(const cudaStream_t* val) { cuda_stream_ = val; }
   void set_cublas_handle(const cublasHandle_t* val) { cublas_handle_ = val; }
+#ifdef WITH_CUDNN
   void set_cudnn_handle(const cudnnHandle_t* val) { cudnn_handle_ = val; }
+#endif
+#endif
 
  private:
   int64_t work_stream_id_;
+#ifdef WITH_CUDA
   const cudaStream_t* cuda_stream_;
   const cublasHandle_t* cublas_handle_;
+#ifdef WITH_CUDNN
   const cudnnHandle_t* cudnn_handle_;
+#endif
+#endif
 };
 
 }  // namespace oneflow

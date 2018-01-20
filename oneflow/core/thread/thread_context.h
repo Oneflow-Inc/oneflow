@@ -6,9 +6,16 @@
 namespace oneflow {
 
 struct ThreadCtx {
-  ThreadCtx() : copy_hd_cuda_stream(nullptr) {}
+  ThreadCtx()
+#ifdef WITH_CUDA
+      : copy_hd_cuda_stream(nullptr)
+#endif
+  {
+  }
 
+#ifdef WITH_CUDA
   const cudaStream_t* copy_hd_cuda_stream;
+#endif
 };
 
 }  // namespace oneflow

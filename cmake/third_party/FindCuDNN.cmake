@@ -50,6 +50,5 @@ if(CUDNN_FOUND)
   set(CUDNN_LIBRARIES ${CUDNN_LIBRARY})
   message(STATUS "Found cuDNN: v${CUDNN_VERSION}  (include: ${CUDNN_INCLUDE_DIR}, library: ${CUDNN_LIBRARY})")
   mark_as_advanced(CUDNN_ROOT_DIR CUDNN_LIBRARY CUDNN_INCLUDE_DIR)
-  add_definitions(-DWITH_CUDNN)
 endif()
     
