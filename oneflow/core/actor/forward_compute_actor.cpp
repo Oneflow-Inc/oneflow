@@ -153,8 +153,8 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
 void ForwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
   handler(pending_in_regsts_.front());
-  if (model_regst_desc_id_ != -1) handler(model_regst_);
-  if (model_tmp_regst_desc_id_ != -1) handler(model_tmp_regst_);
+  if (model_regst_desc_id_ != -1) { handler(model_regst_); }
+  if (model_tmp_regst_desc_id_ != -1) { handler(model_tmp_regst_); }
 }
 
 void ForwardCompActor::SetReadableRegstInfo(const Regst* regst,
