@@ -10,7 +10,8 @@ void LossPrintKernel<T>::Forward(
   T loss_mean = loss_acc_blob->dptr<T>()[0];
   loss_mean /= JobDesc::Singleton()->ParallelPieceSize()
                * JobDesc::Singleton()->PieceNumOfPrintLoss();
-  LOG(INFO) << op_conf().name() << ":" << loss_mean;
+  const char* loss_op_name = op_conf().name().c_str() + 11;
+  LOG(INFO) << loss_op_name << ":" << loss_mean;
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kLossPrintConf, LossPrintKernel,
