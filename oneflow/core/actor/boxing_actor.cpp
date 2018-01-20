@@ -33,6 +33,7 @@ void BoxingActor::TrySetColIdOrder(const Regst* cur_regst) {
     col_id_order_ = ColIdOrder::kDescending;
   }
   delete previous_pid_cid_;
+  previous_pid_cid_ = nullptr;
   return;
 }
 
