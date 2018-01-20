@@ -20,6 +20,7 @@ void BoxingActor::TrySetColIdOrder(const Regst* cur_regst) {
   int32_t cur_cid = cur_regst->col_id();
   if (previous_pid_cid_->find(regst_desc_id) == previous_pid_cid_->end()) {
     (*previous_pid_cid_)[regst_desc_id] = std::make_pair(cur_pid, cur_cid);
+    return;
   }
   auto& pre_pid_cid = previous_pid_cid_->at(regst_desc_id);
   if (pre_pid_cid.first != cur_pid) {
