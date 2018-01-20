@@ -153,7 +153,8 @@ std::unique_ptr<const Kernel> ConstructKernel(
   return std::unique_ptr<const Kernel>(rptr);
 }
 
-template class KernelIf<DeviceType::kCPU>;
-template class KernelIf<DeviceType::kGPU>;
+#define INSTANTIATE_KERNEL_IF(x) template class KernelIf<x>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
 }  // namespace oneflow

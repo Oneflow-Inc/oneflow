@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 class GpuThread final : public Thread {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GpuThread);
@@ -15,6 +17,8 @@ class GpuThread final : public Thread {
 
  private:
 };
+
+#endif
 
 }  // namespace oneflow
 
