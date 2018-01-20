@@ -69,12 +69,19 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
       device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
+#ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(
-          NewWorkStreamId(), cuda_handle_.cuda_stream(),
-          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
+      device_ctx_.reset(new CudaDeviceCtx(NewWorkStreamId(),
+                                          cuda_handle_.cuda_stream(),
+                                          cuda_handle_.cublas_handle()
+#ifdef WITH_CUDNN
+                                              ,
+                                          cuda_handle_.cudnn_handle()
+#endif
+                                              ));
       break;
     }
+#endif
     default: { UNEXPECTED_RUN(); }
   }
 }

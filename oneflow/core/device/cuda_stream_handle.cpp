@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 const cudaStream_t* CudaStreamHandle::cuda_stream() {
   if (!cuda_stream_) {
     cuda_stream_.reset(new cudaStream_t);
@@ -20,6 +22,7 @@ const cublasHandle_t* CudaStreamHandle::cublas_handle() {
   return cublas_handle_.get();
 }
 
+#ifdef WITH_CUDNN
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
     cudnn_handle_.reset(new cudnnHandle_t);
@@ -28,11 +31,16 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   }
   return cudnn_handle_.get();
 }
+#endif  // WITH_CUDNN
 
 CudaStreamHandle::~CudaStreamHandle() {
+#ifdef WITH_CUDNN
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
+#endif  // WITH_CUDNN
   if (cublas_handle_) { CudaCheck(cublasDestroy(*cublas_handle_)); }
   if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

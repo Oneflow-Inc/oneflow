@@ -8,11 +8,19 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
   is_in_eord_ = false;
   order_ = order;
   if (GetDeviceType() == DeviceType::kCPU) {
-    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4,
-                          cudaMemcpyKind::cudaMemcpyHostToHost);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4
+#ifdef WITH_CUDA
+                          ,
+                          cudaMemcpyHostToHost
+#endif
+    );
   } else {
+#ifdef WITH_CUDA
     cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4,
-                          cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+                          cudaMemcpyDeviceToDevice);
+#else
+    UNEXPECTED_RUN();
+#endif
   }
   OF_SET_MSG_HANDLER(&AccumulateCompActor::HandlerNormal);
   acc_cnt_ = 0;
