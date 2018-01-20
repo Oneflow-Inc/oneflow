@@ -44,7 +44,8 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      if (col_id_order_ == ColIdOrder::kUnCertain) {
+      if (msg.regst()->packed_blob()->max_col_num() > 1
+          && col_id_order_ == ColIdOrder::kUnCertain) {
         TrySetColIdOrder(msg.regst());
       }
       std::queue<Regst*>& rq = readable_regst_.at(msg.regst()->regst_desc_id());
