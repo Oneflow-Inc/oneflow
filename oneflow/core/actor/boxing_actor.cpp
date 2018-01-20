@@ -7,6 +7,7 @@ void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     readable_regst_[pair.second] = {};
   }
+  previous_pid_cid_ = new HashMap<int64_t, std::pair<int64_t, int32_t>>;
   readable_regst_cnt_ = 0;
   col_id_order_ = ColIdOrder::kUnCertain;
   is_eord_ = false;
@@ -17,10 +18,10 @@ void BoxingActor::TrySetColIdOrder(const Regst* cur_regst) {
   int64_t regst_desc_id = cur_regst->regst_desc_id();
   int64_t cur_pid = cur_regst->piece_id();
   int32_t cur_cid = cur_regst->col_id();
-  if (previous_pid_cid_.find(regst_desc_id) == previous_pid_cid_.end()) {
-    previous_pid_cid_[regst_desc_id] = std::make_pair(cur_pid, cur_cid);
+  if (previous_pid_cid_->find(regst_desc_id) == previous_pid_cid_->end()) {
+    (*previous_pid_cid_)[regst_desc_id] = std::make_pair(cur_pid, cur_cid);
   }
-  auto& pre_pid_cid = previous_pid_cid_.at(regst_desc_id);
+  auto& pre_pid_cid = previous_pid_cid_->at(regst_desc_id);
   if (pre_pid_cid.first != cur_pid) {
     pre_pid_cid = std::make_pair(cur_pid, cur_cid);
     return;
@@ -31,7 +32,7 @@ void BoxingActor::TrySetColIdOrder(const Regst* cur_regst) {
     CHECK_EQ(cur_cid, pre_pid_cid.second - 1);
     col_id_order_ = ColIdOrder::kDescending;
   }
-  previous_pid_cid_.clear();
+  delete previous_pid_cid_;
   return;
 }
 

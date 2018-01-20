@@ -26,7 +26,7 @@ class BoxingActor final : public Actor {
   // <regst_desc_id, regst*>
   HashMap<int64_t, std::queue<Regst*>> readable_regst_;
   // <regst_desc_id, <pid, cid>>
-  HashMap<int64_t, std::pair<int64_t, int32_t>> previous_pid_cid_;
+  HashMap<int64_t, std::pair<int64_t, int32_t>>* previous_pid_cid_;
   int8_t readable_regst_cnt_;
   ColIdOrder col_id_order_;
   bool is_eord_;
