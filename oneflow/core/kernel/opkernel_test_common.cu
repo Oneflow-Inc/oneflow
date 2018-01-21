@@ -4,13 +4,15 @@
 
 namespace oneflow {
 
+#if defined(WITH_CUDA) && defined(WITH_CUDNN)
+
 namespace test {
 
 template<>
 Blob* CreateBlob<DeviceType::kGPU>(const BlobDesc* blob_desc) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMalloc(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(blob_desc, static_cast<char*>(mem_ptr));
+  return new Blob(nullptr, blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<>
@@ -67,5 +69,7 @@ class KTCommon<DeviceType::kGPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
 
 }  // namespace test
+
+#endif
 
 }  // namespace oneflow

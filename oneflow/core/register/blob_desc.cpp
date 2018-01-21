@@ -52,8 +52,8 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfBlobHeaderField() + ByteSizeOfDataIdField()
-         + ByteSizeOfColNumField() + ByteSizeOfDataContentField();
+  return ByteSizeOfDataIdField() + ByteSizeOfColNumField()
+         + ByteSizeOfDataContentField();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
@@ -65,6 +65,7 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   int64_t total_byte_size = 0;
+  int64_t total_data_content_byte_size = 0;
   HashSet<int> data_type_set;
   bool has_data_id_field = false;
   bool has_col_num_field = false;
@@ -73,6 +74,7 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   BlobDesc ret;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     total_byte_size += blob_desc->TotalByteSize();
+    total_data_content_byte_size += blob_desc->ByteSizeOfDataContentField();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     has_data_id_field = has_data_id_field || blob_desc->has_data_id_field();
     has_col_num_field = has_col_num_field || blob_desc->has_col_num_field();
@@ -91,8 +93,8 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   if (has_data_id_field == false && data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
-    CHECK_EQ(total_byte_size % size_of_one_elem, 0);
-    ret.mut_shape() = Shape({total_byte_size / size_of_one_elem});
+    CHECK_EQ(total_data_content_byte_size % size_of_one_elem, 0);
+    ret.mut_shape() = Shape({total_data_content_byte_size / size_of_one_elem});
     ret.set_data_type(sole_data_type);
   } else {
     ret.mut_shape() = Shape({total_byte_size});

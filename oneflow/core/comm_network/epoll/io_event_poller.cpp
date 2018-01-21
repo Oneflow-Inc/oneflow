@@ -75,7 +75,10 @@ void IOEventPoller::AddFd(int fd, std::function<void()>* read_handler,
 void IOEventPoller::EpollLoop() {
   while (true) {
     int event_num = epoll_wait(epfd_, ep_events_, max_event_num_, -1);
-    PCHECK(event_num >= 0);
+    if (event_num == -1) {
+      PCHECK(errno == EINTR);
+      continue;
+    }
     const epoll_event* cur_event = ep_events_;
     for (int event_idx = 0; event_idx < event_num; ++event_idx, ++cur_event) {
       auto io_handler = static_cast<IOHandler*>(cur_event->data.ptr);

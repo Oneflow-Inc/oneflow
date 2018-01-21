@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 class CopyHdActor final : public Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdActor);
@@ -26,6 +28,8 @@ class CopyHdActor final : public Actor {
   bool is_in_eord_;
   std::queue<Regst*> pending_in_regst_;
 };
+
+#endif
 
 }  // namespace oneflow
 

@@ -17,11 +17,12 @@ class ForwardCompTaskNode : public CompTaskNode {
   void LockRegsts() override;
 
  protected:
-  virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); };
-  virtual void BuildExecGphStructAndBindInRegst() { UNEXPECTED_RUN(); };
+  virtual void VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {}
+  virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); }
+  virtual void BuildExecGphStructAndBindInRegst() { UNEXPECTED_RUN(); }
+  virtual void BuildOutRegst() { UNEXPECTED_RUN(); }
 
  private:
-  void BuildOutRegst();
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
   void FixRegisterNumRange() override;

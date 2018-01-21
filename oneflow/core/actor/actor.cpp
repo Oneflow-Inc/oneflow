@@ -2,6 +2,16 @@
 
 namespace oneflow {
 
+bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  return (order == ColIdOrder::kAscending && regst->col_id() == 0)
+         || (order == ColIdOrder::kDescending && regst->IsMaxCol());
+}
+
+bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  return (order == ColIdOrder::kAscending && regst->IsMaxCol())
+         || (order == ColIdOrder::kDescending && regst->col_id() == 0);
+}
+
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = 0;
@@ -59,12 +69,19 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
       device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
+#ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(
-          NewWorkStreamId(), cuda_handle_.cuda_stream(),
-          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
+      device_ctx_.reset(new CudaDeviceCtx(NewWorkStreamId(),
+                                          cuda_handle_.cuda_stream(),
+                                          cuda_handle_.cublas_handle()
+#ifdef WITH_CUDNN
+                                              ,
+                                          cuda_handle_.cudnn_handle()
+#endif
+                                              ));
       break;
     }
+#endif
     default: { UNEXPECTED_RUN(); }
   }
 }

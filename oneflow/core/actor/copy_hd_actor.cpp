@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
   is_in_eord_ = false;
@@ -56,5 +58,7 @@ void CopyHdActor::AsyncReturnAllReadableRegst() {
 }
 
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);
+
+#endif
 
 }  // namespace oneflow

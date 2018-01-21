@@ -1,7 +1,7 @@
 dlnet_filepath: "./net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./placement.prototxt"
-use_rdma: true
+use_rdma: false
 global_fs_conf {
   hdfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
