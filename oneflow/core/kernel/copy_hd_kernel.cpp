@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 void CopyHdKernel::VirtualKernelInit(const ParallelContext*) {
   const CopyHdOpConf& copy_hd_conf = kernel_conf().op_conf().copy_hd_conf();
 
@@ -25,5 +27,7 @@ void CopyHdKernel::Forward(
 
 COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf,
                          []() { return new CopyHdKernel; }));
+
+#endif
 
 }  // namespace oneflow

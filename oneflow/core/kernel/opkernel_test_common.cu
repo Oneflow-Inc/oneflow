@@ -4,6 +4,8 @@
 
 namespace oneflow {
 
+#if defined(WITH_CUDA) && defined(WITH_CUDNN)
+
 namespace test {
 
 template<>
@@ -67,5 +69,7 @@ class KTCommon<DeviceType::kGPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
 
 }  // namespace test
+
+#endif
 
 }  // namespace oneflow
