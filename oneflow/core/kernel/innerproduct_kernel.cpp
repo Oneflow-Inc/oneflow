@@ -33,7 +33,7 @@ void InnerProductKernel<device_type, T>::ForwardDataContent(
   const Blob* weights_blob = BnInOp2Blob("weights");
   Blob* outputs_blob = BnInOp2Blob("outputs");
 
-  // out = in * weight
+  // outputs = inputs * weights
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
                                    static_cast<T>(1.0), static_cast<T>(0.0),
                                    inputs_blob, weights_blob, outputs_blob);
@@ -41,7 +41,7 @@ void InnerProductKernel<device_type, T>::ForwardDataContent(
   const Blob* biases_blob = BnInOp2Blob("biases");
   const Blob* biases_mul_blob = BnInOp2Blob("biases_multiplier");
 
-  // out = bias_multiplier * bias + out
+  // outputs = biases_multiplier * biases + outputs
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
                                    static_cast<T>(1.0), static_cast<T>(1.0),
                                    biases_mul_blob, biases_blob, outputs_blob);
@@ -58,12 +58,12 @@ void InnerProductKernel<device_type, T>::BackwardDataContent(
   const Blob* weights_blob = BnInOp2Blob("weights");
   Blob* weight_diff_blob = BnInOp2Blob("weights_diff");
 
-  // weight_diff = out_diff * in
+  // weights_diff = outputs_diff * inputs
   BlasMatrixMatrix<device_type, T>(
       ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
       outputs_diff_blob, inputs_blob, weight_diff_blob);
 
-  // in_diff = out_diff * weight
+  // inputs_diff = outputs_diff * weights
   if (inputs_diff_blob != nullptr) {
     BlasMatrixMatrix<device_type, T>(
         ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
@@ -73,7 +73,7 @@ void InnerProductKernel<device_type, T>::BackwardDataContent(
   const Blob* biases_mul_blob = BnInOp2Blob("biases_multiplier");
   Blob* biases_diff_blob = BnInOp2Blob("biases_diff");
 
-  // bias_diff = bias_multiplier * out_diff
+  // biases_diff = biases_multiplier * outputs_diff
   BlasMatrixMatrix<device_type, T>(
       ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
       biases_mul_blob, outputs_diff_blob, biases_diff_blob);
@@ -109,7 +109,7 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
   Blob* weights_blob = BnInOp2Blob("weightes");
   int32_t dim_num = this->op_conf().innerproduct_conf().num_outputs();
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob, "weight",
+      ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob, "weights",
       dim_num, weights_blob->shape().Count(1));
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("biases"),
@@ -121,7 +121,11 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf biases_multiplier_initializer_conf;
-  biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  if (this->op_conf().InnerProductKernel().has_biases_initializer() {
+    biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  } else {
+    biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(0);
+  }
   KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
                                          biases_multiplier_initializer_conf, 0,
                                          BnInOp2Blob("biases_multiplier"));
