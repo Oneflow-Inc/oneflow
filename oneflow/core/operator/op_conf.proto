@@ -63,8 +63,10 @@ message ConvolutionOpConf {
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
 
-  optional InitializerConf weight_initializer = 13;
-  optional InitializerConf bias_initializer = 14;
+  optional bool use_cudnn = 13 [default = true];
+  
+  optional InitializerConf weight_initializer = 14;
+  optional InitializerConf bias_initializer = 15;
 }
 
 message InnerProductOpConf {

@@ -1,19 +1,34 @@
 #include "oneflow/core/operator/convolution_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#ifdef WITH_CUDNN
+#include "oneflow/core/device/cudnn_support.h"
+#endif  // WITH_CUDNN
 
 namespace oneflow {
 
 void ConvolutionOp::InitFromOpConf() {
   CHECK(op_conf().has_convolution_conf());
+  if (op_conf().convolution_conf().use_cudnn()) {
+#ifndef WITH_CUDNN
+    LOG(FATAL);
+#endif  // WITH_CUDNN
+  }
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("col_buf");
 
   EnrollModelBn("weight");
-  if (GetBoolFromSpecialConf("has_bias_term")) {
+  if (op_conf().convolution_conf().has_bias_term()) {
     EnrollModelBn("bias");
-    EnrollModelTmpBn("bias_multiplier");
+    if (!op_conf().convolution_conf().use_cudnn()) {
+      EnrollModelTmpBn("bias_multiplier");
+    }
+  }
+
+  if (op_conf().convolution_conf().use_cudnn()) {
+    EnrollDataTmpBn("cudnn_workspace");
+  } else {
+    EnrollDataTmpBn("col_buf");
   }
 }
 
@@ -55,12 +70,6 @@ void ConvolutionOp::InferBlobDescs(
   out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
-  // col_buf
-  BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
-  col_buf_blob_desc->mut_shape() = Shape({1, output_size, c_i * kernel});
-  col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  col_buf_blob_desc->set_has_data_id_field(false);
-
   // weight
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   weight_blob_desc->mut_shape() =
@@ -75,13 +84,63 @@ void ConvolutionOp::InferBlobDescs(
     bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
     bias_blob_desc->set_has_data_id_field(false);
 
-    // bias multiplier
-    BlobDesc* bias_multiplier_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
-    bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
-    bias_multiplier_blob_desc->set_data_type(
-        JobDesc::Singleton()->DefaultDataType());
-    bias_multiplier_blob_desc->set_has_data_id_field(false);
+    if (!conf.use_cudnn()) {
+      // bias multiplier
+      BlobDesc* bias_multiplier_blob_desc =
+          GetBlobDesc4BnInOp("bias_multiplier");
+      bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
+      bias_multiplier_blob_desc->set_data_type(
+          JobDesc::Singleton()->DefaultDataType());
+      bias_multiplier_blob_desc->set_has_data_id_field(false);
+    }
   }
+
+#ifdef WITH_CUDNN
+  if (conf.use_cudnn()) {
+    CudaStreamHandle cuda_handle;
+    CudnnConvolutionDesc conv_desc;
+    conv_desc.InitFromBlobDescAndOpConf(GetBlobDesc4BnInOp("in"),
+                                        GetBlobDesc4BnInOp("out"), conf);
+
+    BlobDesc* cudnn_workspace_blob_desc = GetBlobDesc4BnInOp("cudnn_workspace");
+    cudnn_workspace_blob_desc->mut_shape() = Shape({static_cast<int64_t>(
+        conv_desc.InferWorkspaceSize(*cuda_handle.cudnn_handle()))});
+    cudnn_workspace_blob_desc->set_data_type(
+        JobDesc::Singleton()->DefaultDataType());
+    cudnn_workspace_blob_desc->set_has_data_id_field(false);
+  }
+#endif  // WITH_CUDNN
+
+  if (!conf.use_cudnn()) {
+    // col_buf
+    BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
+    CHECK(col_buf_blob_desc);
+    col_buf_blob_desc->mut_shape() =
+        Shape({data_num, output_size, c_i * kernel});
+    col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+    col_buf_blob_desc->set_has_data_id_field(false);
+  }
+}
+
+void ConvolutionOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+#ifdef WITH_CUDNN
+  if (op_conf().convolution_conf().use_cudnn()) {
+    CudaStreamHandle cuda_handle;
+    CudnnConvolutionDesc conv_desc;
+    conv_desc.InitFromBlobDescAndOpConf(GetBlobDesc4BnInOp("in"),
+                                        GetBlobDesc4BnInOp("out"),
+                                        op_conf().convolution_conf());
+
+    kernel_conf->mutable_convolution_conf()->set_cudnn_fwd_algo(
+        conv_desc.InferFwdAlgo(*cuda_handle.cudnn_handle()));
+    kernel_conf->mutable_convolution_conf()->set_cudnn_bwd_filter_algo(
+        conv_desc.InferBwdFilterAlgo(*cuda_handle.cudnn_handle()));
+    kernel_conf->mutable_convolution_conf()->set_cudnn_bwd_data_algo(
+        conv_desc.InferBwdDataAlgo(*cuda_handle.cudnn_handle()));
+  }
+#endif  // WITH_CUDNN
 }
 
 REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_CONVOLUTION_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/device/cudnn_support.h"
 
 namespace oneflow {
 
@@ -21,13 +22,13 @@ class ConvolutionKernelUtil final {
 };
 
 template<DeviceType device_type, typename T>
-class ConvolutionKernel final : public KernelIf<device_type> {
+class ConvolutionKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernel);
   ConvolutionKernel() = default;
   ~ConvolutionKernel() = default;
 
- private:
+ protected:
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
@@ -45,6 +46,7 @@ class ConvolutionKernel final : public KernelIf<device_type> {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+ private:
   void ComputeWeightDiff(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -55,6 +57,27 @@ class ConvolutionKernel final : public KernelIf<device_type> {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
+
+#ifdef WITH_CUDNN
+template<typename T>
+class CudnnConvolutionKernel final
+    : public ConvolutionKernel<DeviceType::kGPU, T> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionKernel);
+  CudnnConvolutionKernel() = default;
+  ~CudnnConvolutionKernel() = default;
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
+  CudnnConvolutionDesc cudnn_conv_desc_;
+};
+#endif  // WITH_CUDNN
 
 }  // namespace oneflow
 

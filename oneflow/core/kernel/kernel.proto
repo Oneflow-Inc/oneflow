@@ -4,6 +4,12 @@ package oneflow;
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 
+message ConvolutionKernelConf {
+  optional int32 cudnn_fwd_algo = 1 [default = 0];
+  optional int32 cudnn_bwd_filter_algo = 2 [default = 0];
+  optional int32 cudnn_bwd_data_algo = 3 [default = 0];
+}
+
 message ConcatKernelConf {
   required int64 total_cp_num = 1;
   repeated int64 per_cp_bytesize = 2;
@@ -42,6 +48,7 @@ message KernelConf {
   required DataType data_type = 14;
 
   oneof kernel_type {
+    ConvolutionKernelConf convolution_conf = 100;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
     ConcatKernelConf concat_conf = 113; 
     SoftmaxLossKernelConf softmax_loss_conf = 117;
