@@ -96,7 +96,7 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithRandomSeed(
         random_seed_gen(), BnInOp2Blob("biases"));
   } else {
     InitializerConf biases_initializer_conf;
-    biases_initializer_conf.mutable_constant_conf()->set_value(0.0);
+    biases_initializer_conf.mutable_constant_conf()->set_value(0.0f);
     KernelUtil<device_type, T>::Initialize(
         ctx.device_ctx, biases_initializer_conf, 0, BnInOp2Blob("biases"));
   }
@@ -109,8 +109,8 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
   Blob* weights_blob = BnInOp2Blob("weightes");
   int32_t dim_num = this->op_conf().innerproduct_conf().num_outputs();
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob, "weights",
-      dim_num, weights_blob->shape().Count(1));
+      ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob,
+      "weights", dim_num, weights_blob->shape().Count(1));
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("biases"),
       "biases", dim_num, 1);
@@ -121,10 +121,10 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf biases_multiplier_initializer_conf;
-  if (this->op_conf().InnerProductKernel().has_biases_initializer() {
+  if (this->op_conf().innerproduct_conf().has_biases_initializer()) {
     biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
   } else {
-    biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(0);
+    biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(0.0f);
   }
   KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
                                          biases_multiplier_initializer_conf, 0,

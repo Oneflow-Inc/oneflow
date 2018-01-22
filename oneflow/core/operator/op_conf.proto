@@ -71,8 +71,8 @@ message InnerProductOpConf {
   required string inputs = 1;
   required string outputs = 2;
   required int32 num_outputs = 3;
-  optional InitializerConf weights_initializer = 5;
-  optional InitializerConf biases_initializer = 6;
+  optional InitializerConf weights_initializer = 4;
+  optional InitializerConf biases_initializer = 5;
 }
 
 message BasicDataLoaderOpConf {
