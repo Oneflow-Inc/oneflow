@@ -21,4 +21,12 @@ RuntimeCtx::RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase) {
   is_experiment_phase_ = is_experiment_phase;
 }
 
+int32_t RuntimeCtx::Staleness() const {
+  if (is_experiment_phase_) {
+    return 0;
+  } else {
+    return JobDesc::Singleton()->Staleness();
+  }
+}
+
 }  // namespace oneflow
