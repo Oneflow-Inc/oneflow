@@ -94,6 +94,16 @@ static bool HasBlobDescWithDataId(
   return false;
 }
 
+static bool HasBlobDescWithColNum(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const std::vector<std::string>& bn_in_ops) {
+  for (const std::string& bn_in_op : bn_in_ops) {
+    const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
+    if (blob_desc && blob_desc->has_col_num_field()) { return true; }
+  }
+  return false;
+}
+
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     bool is_forward, const ParallelContext* parallel_ctx,
@@ -111,6 +121,9 @@ void Operator::GenKernelConf(
   kernel_conf->set_need_do_data_id(false);
   if (HasBlobDescWithDataId(GetBlobDesc4BnInOp, output_bns_)) {
     kernel_conf->set_need_do_data_id(true);
+  }
+  if (HasBlobDescWithColNum(GetBlobDesc4BnInOp, output_bns_)) {
+    kernel_conf->set_need_do_col_num(true);
   }
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =

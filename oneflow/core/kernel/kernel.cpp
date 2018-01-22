@@ -67,7 +67,7 @@ void Kernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-  ForwardColNum(ctx, BnInOp2Blob);
+  if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
 }
 
 void Kernel::Backward(
@@ -75,27 +75,23 @@ void Kernel::Backward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
-  BackwardColNum(ctx, BnInOp2Blob);
+  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf().input_bns().size() == 1) {
-    const Blob* in_blob = BnInOp2Blob(kernel_conf().input_bns(0));
-    CopyDataIdToAllOb(ctx.device_ctx, BnInOp2Blob, in_blob);
-  } else {
-    CHECK_EQ(kernel_conf().input_bns().size(),
-             kernel_conf().output_bns().size());
-    FOR_RANGE(size_t, i, 0, kernel_conf().input_bns().size()) {
-      const std::string& ibn = kernel_conf().input_bns(i);
-      const std::string& obn = kernel_conf().output_bns(i);
-      Blob* in_blob = BnInOp2Blob(ibn);
-      Blob* out_blob = BnInOp2Blob(obn);
-      out_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, in_blob);
-    }
-  }
+  CopyFieldFromInToOut(ctx.device_ctx, BnInOp2Blob,
+                       &Blob::CopyDataIdFrom<device_type>);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyFieldFromInToOut(ctx.device_ctx, BnInOp2Blob,
+                       &Blob::CopyColNumFrom<device_type>);
 }
 
 template<DeviceType device_type>
@@ -106,12 +102,55 @@ void KernelIf<device_type>::BackwardDataId(
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::BackwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyFieldFromInToOut(ctx.device_ctx, BnInOp2Blob,
+                       &Blob::CopyColNumFrom<device_type>);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyFieldFromInToOut(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+  if (kernel_conf().input_bns().size() == 1) {
+    const Blob* in_blob = BnInOp2Blob(kernel_conf().input_bns(0));
+    CopyFromBlobToAllOb(ctx, BnInOp2Blob, in_blob, Copy);
+  } else {
+    CHECK_EQ(kernel_conf().input_bns().size(),
+             kernel_conf().output_bns().size());
+    FOR_RANGE(size_t, i, 0, kernel_conf().input_bns().size()) {
+      const std::string& ibn = kernel_conf().input_bns(i);
+      const std::string& obn = kernel_conf().output_bns(i);
+      Blob* in_blob = BnInOp2Blob(ibn);
+      Blob* out_blob = BnInOp2Blob(obn);
+      (out_blob->*Copy)(ctx, in_blob);
+    }
+  }
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::CopyDataIdToAllOb(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* blob) const {
+  CopyFromBlobToAllOb(ctx, BnInOp2Blob, blob,
+                      &Blob::CopyDataIdFrom<device_type>);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyColNumToAllOb(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const Blob* blob) const {
+  CopyFromBlobToAllOb(ctx, BnInOp2Blob, blob,
+                      &Blob::CopyColNumFrom<device_type>);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyFromBlobToAllOb(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const Blob* blob, void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
   for (const std::string& obn : kernel_conf().output_bns()) {
-    Blob* output_blob = BnInOp2Blob(obn);
-    output_blob->CopyDataIdFrom<device_type>(ctx, blob);
+    (BnInOp2Blob(obn)->*Copy)(ctx, blob);
   }
 }
 

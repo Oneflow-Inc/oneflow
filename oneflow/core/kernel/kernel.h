@@ -57,7 +57,7 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void ForwardColNum(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
   virtual void Backward(
       const KernelCtx& ctx,
@@ -70,7 +70,7 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BackwardColNum(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
   KernelConf kernel_conf_;
@@ -88,13 +88,31 @@ class KernelIf : public Kernel {
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void BackwardColNum(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void CopyDataIdToAllOb(DeviceCtx* ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob,
                          const Blob* blob) const;
+  void CopyColNumToAllOb(DeviceCtx* ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob,
+                         const Blob* blob) const;
+
+ private:
+  void CopyFieldFromInToOut(
+      DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+      void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+  void CopyFromBlobToAllOb(DeviceCtx* ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob,
+                           const Blob* blob,
+                           void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
 };
 
 using KernelCreator1 = std::function<Kernel*(DeviceType, const KernelConf&)>;
