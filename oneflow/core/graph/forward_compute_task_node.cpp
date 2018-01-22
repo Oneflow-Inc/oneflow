@@ -41,6 +41,10 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   });
 }
 
+void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
+  UNEXPECTED_RUN();
+}
+
 void ForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
