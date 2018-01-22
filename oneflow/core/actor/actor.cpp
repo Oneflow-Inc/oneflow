@@ -14,7 +14,7 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
-  act_id_ = 0;
+  act_id_ = -1;
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
@@ -116,6 +116,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
+    act_id_ += 1;
     ActEvent* act_event = nullptr;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
       act_event = new ActEvent;
@@ -130,7 +131,6 @@ void Actor::ActUntilFail() {
           [act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     Act();
-    act_id_ += 1;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
       device_ctx_->AddCallBack([act_event]() {
         act_event->set_stop_time(GetCurTime());
