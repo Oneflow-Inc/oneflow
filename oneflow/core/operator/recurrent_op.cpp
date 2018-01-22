@@ -16,9 +16,9 @@ void InferBasicRnnCellBlobDesc(
                JobDesc::Singleton()->DefaultDataType(), false, true,
                in_blob_desc->max_col_num());
 
-  *GetBlobDesc4BnInOp("in_ip_op_weight") =
+  *GetBlobDesc4BnInOp("i2h_weight") =
       BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("hidden_ip_op_weight") =
+  *GetBlobDesc4BnInOp("h2h_weight") =
       BlobDesc(Shape({hidden_size, hidden_size}));
   *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
   *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
@@ -42,8 +42,8 @@ void RecurrentOp::InitFromOpConf() {
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
     EnrollDataTmpBn("plus_op_out");
-    EnrollModelBn("in_ip_op_weight");
-    EnrollModelBn("hidden_ip_op_weight");
+    EnrollModelBn("i2h_weight");
+    EnrollModelBn("h2h_weight");
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   } else if (conf.rnn_type_case() == RecurrentOpConf::kBasicLstmCell) {

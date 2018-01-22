@@ -19,7 +19,7 @@ template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->Ish0Model()) {
+  if (Ish0Model()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
         OF_PB_POINTER_GET(this->op_conf().recurrent_conf(),

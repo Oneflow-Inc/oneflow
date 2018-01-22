@@ -215,8 +215,8 @@ message SumOpConf {
 
 message BasicRnnCellConf {
   required bool has_bias_term = 1 [default = true];
-  optional InitializerConf in_ip_op_weight_initializer = 2;
-  optional InitializerConf hidden_ip_op_weight_initializer = 3;
+  optional InitializerConf i2h_weight_initializer = 2;
+  optional InitializerConf h2h_weight_initializer = 3;
   optional InitializerConf bias_initializer = 4;
 }
 
@@ -231,6 +231,8 @@ message RecurrentOpConf {
   optional ActivationType activation = 6 [default = kTanH];
 
   optional InitializerConf init_hidden_initializer = 7;
+  optional InitializerConf weight_initializer = 8;
+  optional InitializerConf bias_initializer = 9;
   oneof rnn_type {
    BasicRnnCellConf basic_rnn_cell = 100;
    BasicLstmCellConf basic_lstm_cell = 101;
