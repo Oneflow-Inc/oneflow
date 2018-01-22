@@ -58,6 +58,13 @@ void CopyDataIdFromFirstToOtherBlobs(
                             &Blob::CopyDataIdFrom<DeviceType::kCPU>);
 }
 
+void CopyColNumFromFirstToOtherBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& bns) {
+  CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, bns,
+                            &Blob::CopyColNumFrom<DeviceType::kCPU>);
+}
+
 template<typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
   const char* src_ptr = nullptr;
@@ -272,6 +279,41 @@ void BoxingKernel<T>::ForwardDataId(
   }
 }
 
+template<typename T>
+void BoxingKernel<T>::ForwardColNum(const KernelCtx&,
+                   std::function<Blob*(const std::string&)>) const {
+  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      ConcatSplitColNum(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+                        boxing_conf.concat_box().axis(),
+                        kernel_conf().output_bns(),
+                        boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      ConcatSplitColNum(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+                        boxing_conf.concat_box().axis(), obn_0_, 0);
+      CopyColNumFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
+                                      kernel_conf().output_bns());
+    } else {
+      UNEXPECTED_RUN();
+    }
+  } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      ConcatSplitColNum(ctx.device_ctx, BnInOp2Blob, ibn_0_, 0,
+                        kernel_conf().output_bns(),
+                        boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      CopyColNumToAllOb(ctx.device_ctx, BnInOp2Blob,
+                        BnInOp2Blob(ibn_0_.Get(0)));
+    } else {
+      UNEXPECTED_RUN();
+    }
+  } else {
+    UNEXPECTED_RUN();
+  }
+ 
+}
+ 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel,
                                ARITHMETIC_DATA_TYPE_SEQ);
 
