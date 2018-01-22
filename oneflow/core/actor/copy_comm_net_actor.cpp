@@ -111,9 +111,10 @@ void CopyCommNetActor::ForEachCurReadableRegst(
 
 void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst,
                                             ReadableRegstInfo* info) {
-  CHECK(regst == piece_id2regst_ctx[next_piece_id_].regst_raw_ptr);
+  const RegstCtx& regst_ctx = piece_id2regst_ctx[next_piece_id_];
+  CHECK(regst == regst_ctx.regst_raw_ptr);
   info->set_regst_desc_id(in_regst_desc_id_);
-  info->set_act_id(piece_id2regst_ctx[next_piece_id_].act_id);
+  info->set_act_id(regst_ctx.act_id);
 }
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
