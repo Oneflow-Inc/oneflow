@@ -24,7 +24,6 @@ class BackwardCompActor final : public CompActor {
   void Act() override;
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-  void SetReadableRegstInfo(const Regst*, ActEvent*) override;
 
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;

@@ -37,6 +37,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   comm_net_device_ctx_ =
       new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
   next_piece_id_ = 0;
+  in_regst_desc_id_ = RegstDescId4Name("copy_in");
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
 
@@ -109,10 +110,9 @@ void CopyCommNetActor::ForEachCurReadableRegst(
 }
 
 void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst,
-                                            ActEvent* act_event) {
+                                            ReadableRegstInfo* info) {
   CHECK(regst == piece_id2regst_ctx[next_piece_id_].regst_raw_ptr);
-  ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-  info->set_regst_desc_id(RegstDescId4Name("copy_in"));
+  info->set_regst_desc_id(in_regst_desc_id_);
   info->set_act_id(piece_id2regst_ctx[next_piece_id_].act_id);
 }
 
