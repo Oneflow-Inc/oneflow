@@ -254,6 +254,7 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromBackward(
     const ChainNode* node) const {
+  if (this == node) { CHECK_EQ(parallel_desc()->policy(), kModelParallel); }
   return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
