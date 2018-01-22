@@ -56,6 +56,16 @@ struct GetDataType<void> {
 OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
 
 template<DataType data_type>
+struct GetTypename;
+
+#define DECLARE_GET_TYPENAME(type_cpp, type_proto) \
+  template<>                                       \
+  struct GetTypename<type_proto> {                 \
+    using val = type_cpp;                          \
+  };
+OF_PP_FOR_EACH_TUPLE(DECLARE_GET_TYPENAME, ALL_DATA_TYPE_SEQ);
+
+template<DataType data_type>
 struct GetSizeOf;
 
 #define DECLARE_GET_SIZE_OF(type_cpp, type_proto) \
