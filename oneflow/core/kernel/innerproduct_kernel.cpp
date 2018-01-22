@@ -29,58 +29,54 @@ template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* out_blob = BnInOp2Blob("out");
+  const Blob* inputs_blob = BnInOp2Blob("inputs");
+  const Blob* weights_blob = BnInOp2Blob("weights");
+  Blob* outputs_blob = BnInOp2Blob("outputs");
 
   // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
                                    static_cast<T>(1.0), static_cast<T>(0.0),
-                                   in_blob, weight_blob, out_blob);
+                                   inputs_blob, weights_blob, outputs_blob);
 
-  if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    const Blob* bias_blob = BnInOp2Blob("bias");
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+  const Blob* biases_blob = BnInOp2Blob("biases");
+  const Blob* biases_mul_blob = BnInOp2Blob("biases_multiplier");
 
-    // out = bias_multiplier * bias + out
-    BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
-                                     static_cast<T>(1.0), static_cast<T>(1.0),
-                                     bias_mul_blob, bias_blob, out_blob);
-  }
+  // out = bias_multiplier * bias + out
+  BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
+                                   static_cast<T>(1.0), static_cast<T>(1.0),
+                                   biases_mul_blob, biases_blob, outputs_blob);
 }
 
 template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  const Blob* inputs_blob = BnInOp2Blob("inputs");
+  const Blob* outputs_diff_blob = BnInOp2Blob("outputs_diff");
+  Blob* inputs_diff_blob = BnInOp2Blob("inputs_diff");
 
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
+  const Blob* weights_blob = BnInOp2Blob("weights");
+  Blob* weight_diff_blob = BnInOp2Blob("weights_diff");
 
   // weight_diff = out_diff * in
-  BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
-                                   static_cast<T>(1.0), static_cast<T>(0.0),
-                                   out_diff_blob, in_blob, weight_diff_blob);
+  BlasMatrixMatrix<device_type, T>(
+      ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
+      outputs_diff_blob, inputs_blob, weight_diff_blob);
 
   // in_diff = out_diff * weight
-  if (in_diff_blob != nullptr) {
-    BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
-                                     static_cast<T>(1.0), static_cast<T>(0.0),
-                                     out_diff_blob, weight_blob, in_diff_blob);
-  }
-
-  if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
-
-    // bias_diff = bias_multiplier * out_diff
+  if (inputs_diff_blob != nullptr) {
     BlasMatrixMatrix<device_type, T>(
-        ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
-        bias_mul_blob, out_diff_blob, bias_diff_blob);
+        ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
+        static_cast<T>(0.0), outputs_diff_blob, weights_blob, inputs_diff_blob);
   }
+
+  const Blob* biases_mul_blob = BnInOp2Blob("biases_multiplier");
+  Blob* biases_diff_blob = BnInOp2Blob("biases_diff");
+
+  // bias_diff = bias_multiplier * out_diff
+  BlasMatrixMatrix<device_type, T>(
+      ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
+      biases_mul_blob, outputs_diff_blob, biases_diff_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -90,15 +86,19 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithRandomSeed(
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx.device_ctx,
       OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(),
-                        weight_initializer),
-      random_seed_gen(), BnInOp2Blob("weight"));
+                        weights_initializer),
+      random_seed_gen(), BnInOp2Blob("weights"));
 
-  if (this->op_conf().innerproduct_conf().has_bias_term()) {
+  if (this->op_conf().innerproduct_conf().has_biases_initializer()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
-        OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(),
-                          bias_initializer),
-        random_seed_gen(), BnInOp2Blob("bias"));
+        &(this->op_conf().innerproduct_conf().biases_initializer()),
+        random_seed_gen(), BnInOp2Blob("biases"));
+  } else {
+    InitializerConf biases_initializer_conf;
+    biases_initializer_conf.mutable_constant_conf()->set_value(0.0);
+    KernelUtil<device_type, T>::Initialize(
+        ctx.device_ctx, biases_initializer_conf, 0, BnInOp2Blob("biases"));
   }
 }
 template<DeviceType device_type, typename T>
@@ -106,29 +106,25 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* weight_blob = BnInOp2Blob("weight");
-  int32_t dim_num = this->op_conf().innerproduct_conf().out_num();
+  Blob* weights_blob = BnInOp2Blob("weightes");
+  int32_t dim_num = this->op_conf().innerproduct_conf().num_outputs();
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
-      dim_num, weight_blob->shape().Count(1));
-  if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    KernelUtil<device_type, T>::InitializeWithModelDir(
-        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
-        "bias", dim_num, 1);
-  }
+      ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob, "weight",
+      dim_num, weights_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("biases"),
+      "biases", dim_num, 1);
 }
 
 template<DeviceType device_type, typename T>
 void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->op_conf().innerproduct_conf().has_bias_term()) {
-    InitializerConf bias_multiplier_initializer_conf;
-    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-    KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                           bias_multiplier_initializer_conf, 0,
-                                           BnInOp2Blob("bias_multiplier"));
-  }
+  InitializerConf biases_multiplier_initializer_conf;
+  biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
+                                         biases_multiplier_initializer_conf, 0,
+                                         BnInOp2Blob("biases_multiplier"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kInnerproductConf, InnerProductKernel,
