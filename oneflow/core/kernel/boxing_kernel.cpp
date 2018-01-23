@@ -194,6 +194,41 @@ void ConcatSplitDataId(DeviceCtx* ctx,
   }
 }
 
+class ColNumIterator finale {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ColNumIterator);
+  ColNumIterator() = delete;
+  ~ColNumIterator() = default;
+
+  ColNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const PbRpf<std::string>* bns, int32_t axis) {
+    BnInOp2Blob_ = BnInOp2Blob;
+    bns_ = bns;
+    bn_idx_ = 0;
+    if (axis == 0) {
+      bn_num_ = bns_->size();
+    } else {
+      bn_num_ = 1;
+    }
+    col_num_idx_ = 0;
+  }
+
+  int32_t GetNext() {
+    if (bn_idx_ == bn_num_) { return -1; }
+    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_++));
+    std::get<0>(ret) = blob->mut_data_id();
+    std::get<1>(ret) = blob->ByteSizeOfDataIdField();
+    return ret;
+  }
+
+ private:
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  const PbRpf<std::string>* bns_;
+  int32_t bn_idx_;
+  int32_t bn_num_;
+  int32_t col_num_idx_;
+};
+
 }  // namespace
 
 template<typename T>
@@ -208,6 +243,7 @@ template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  SetColIdAndMaxColId(ctx, BnInOp2Blob);
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
