@@ -4,12 +4,38 @@
 namespace oneflow {
 
 void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
-  is_eord_ = false;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     readable_regst_[pair.second] = {};
   }
+  previous_pid_cid_ = new HashMap<int64_t, std::pair<int64_t, int32_t>>;
   readable_regst_cnt_ = 0;
+  col_id_order_ = ColIdOrder::kUnCertain;
+  is_eord_ = false;
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
+}
+
+void BoxingActor::TrySetColIdOrder(const Regst* cur_regst) {
+  int64_t regst_desc_id = cur_regst->regst_desc_id();
+  int64_t cur_pid = cur_regst->piece_id();
+  int32_t cur_cid = cur_regst->col_id();
+  if (previous_pid_cid_->find(regst_desc_id) == previous_pid_cid_->end()) {
+    (*previous_pid_cid_)[regst_desc_id] = std::make_pair(cur_pid, cur_cid);
+    return;
+  }
+  auto& pre_pid_cid = previous_pid_cid_->at(regst_desc_id);
+  if (pre_pid_cid.first != cur_pid) {
+    pre_pid_cid = std::make_pair(cur_pid, cur_cid);
+    return;
+  }
+  if (cur_cid == pre_pid_cid.second + 1) {
+    col_id_order_ = ColIdOrder::kAscending;
+  } else {
+    CHECK_EQ(cur_cid, pre_pid_cid.second - 1);
+    col_id_order_ = ColIdOrder::kDescending;
+  }
+  delete previous_pid_cid_;
+  previous_pid_cid_ = nullptr;
+  return;
 }
 
 int BoxingActor::HandlerNormal(const ActorMsg& msg) {
@@ -18,6 +44,10 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
+      if (msg.regst()->packed_blob()->max_col_num() > 1
+          && col_id_order_ == ColIdOrder::kUnCertain) {
+        TrySetColIdOrder(msg.regst());
+      }
       std::queue<Regst*>& rq = readable_regst_.at(msg.regst()->regst_desc_id());
       if (rq.empty()) { readable_regst_cnt_ += 1; }
       rq.push(msg.regst());
@@ -42,9 +72,24 @@ void BoxingActor::Act() {
                     });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
-    return true;
+    return regst->col_id() <= regst->max_col_id();
   });
+  int32_t cur_max_cid = 0;
+  int32_t cur_max_maxcid = 0;
+  for (const auto& pair : readable_regst_) {
+    cur_max_cid = std::max(cur_max_cid, pair.second.front()->col_id());
+    cur_max_maxcid =
+        std::max(cur_max_maxcid, pair.second.front()->max_col_id());
+  }
   for (auto& pair : readable_regst_) {
+    if (col_id_order_ == ColIdOrder::kAscending) {
+      if (pair.second.front()->IsMaxCol() && cur_max_cid < cur_max_maxcid) {
+        continue;
+      }
+    } else if (col_id_order_ == ColIdOrder::kDescending) {
+      if (pair.second.front()->col_id() < cur_max_cid) { continue; }
+    } else {  // do nothing
+    }
     AsyncSendRegstMsgToProducer(pair.second.front());
     pair.second.pop();
     if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
@@ -61,6 +106,11 @@ bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
 
 void BoxingActor::AsyncReturnAllReadableRegst() {
   CHECK_EQ(readable_regst_cnt_, 0);
+}
+
+void BoxingActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  for (const auto& pair : readable_regst_) { handler(pair.second.front()); }
 }
 
 REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);

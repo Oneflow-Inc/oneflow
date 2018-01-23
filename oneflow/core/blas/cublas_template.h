@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 // level 1 vector and vector
 // dot product
 template<typename FloatingPointType>
@@ -49,6 +51,8 @@ void cublas_gemm(cublasHandle_t handle, cublasOperation_t cutrans_a,
                  const FloatingPointType* alpha, const FloatingPointType* a,
                  int lda, const FloatingPointType* b, int ldb,
                  const FloatingPointType* beta, FloatingPointType* c, int ldc);
+
+#endif
 
 }  // namespace oneflow
 

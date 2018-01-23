@@ -23,10 +23,12 @@ ThreadMgr::ThreadMgr() {
   FOR_RANGE(int64_t, i, 0, job_desc->CpuDeviceNum()) {
     threads_.push_back(new CpuThread(thrd_id++));
   }
-  // gpu device
+// gpu device
+#ifdef WITH_CUDA
   FOR_RANGE(int64_t, i, 0, job_desc->GpuDeviceNum()) {
     threads_.push_back(new GpuThread(thrd_id++, i));
   }
+#endif
   // persistence
   FOR_RANGE(int64_t, i, 0, job_desc->PersistenceWorkerNum()) {
     threads_.push_back(new CpuThread(thrd_id++));

@@ -76,6 +76,29 @@ void NormalBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   });
 }
 
+void NormalBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
+  ConsumeRegst("out_diff", edge->GetSoleRegst());
+}
+
+void NormalBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
+    TaskEdge* edge) {
+  edge->AddRegst("in_diff", ProduceRegst("in_diff"));
+}
+
+void NormalBackwardCompTaskNode::VirtualProduceActivationDiff() {
+  ProduceRegst("activation_diff", 1, 1);
+}
+
+void NormalBackwardCompTaskNode::VirtualConsumeActivation(TaskEdge* edge) {
+  ConsumeRegst("activation", edge->GetRegst("activation"));
+}
+
+void NormalBackwardCompTaskNode::VirtualInferBlobDescInActivationDiff() {
+  auto activation_diff_regst = GetProducedRegst("activation_diff");
+  activation_diff_regst->CopyBlobDescWithoutAddLbn(
+      GetConsumedRegst("activation").get());
+}
+
 void NormalBackwardCompTaskNode::VirtualConsumeInRegst() {
   TaskNode* fw_node = GetRelatedFwTaskNode();
   for (TaskEdge* edge : fw_node->in_edges()) {

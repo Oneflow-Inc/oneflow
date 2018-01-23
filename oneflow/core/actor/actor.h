@@ -15,6 +15,11 @@
 
 namespace oneflow {
 
+enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
+
+bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
+bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
+
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
@@ -105,7 +110,9 @@ class Actor {
   HashMap<std::string, int64_t> name2regst_desc_id_;
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
+#ifdef WITH_CUDA
   CudaStreamHandle cuda_handle_;
+#endif
 
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;

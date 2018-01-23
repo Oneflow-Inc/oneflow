@@ -25,9 +25,6 @@ class EpollCommNet final : public CommNet {
   void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
-  void* Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
-             const void* dst_token) override;
-
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
@@ -35,6 +32,8 @@ class EpollCommNet final : public CommNet {
   EpollCommNet();
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
+  void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+              const void* dst_token) override;
 
   // Memory Desc
   MemDescMgr<SocketMemDesc> mem_desc_mgr_;

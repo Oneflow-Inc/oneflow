@@ -1,9 +1,7 @@
 #ifndef ONEFLOW_CORE_BLAS_CBLAS_TEMPLATE_H_
 #define ONEFLOW_CORE_BLAS_CBLAS_TEMPLATE_H_
 
-extern "C" {
 #include "oneflow/core/blas/cblas.h"
-}
 
 namespace oneflow {
 
