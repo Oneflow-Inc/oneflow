@@ -216,7 +216,6 @@ message SumOpConf {
 message BasicRnnCellConf {
   optional InitializerConf i2h_weight_initializer = 1;
   optional InitializerConf h2h_weight_initializer = 2;
-  optional InitializerConf bias_initializer = 3;
 }
 
 message BasicLstmCellConf {
