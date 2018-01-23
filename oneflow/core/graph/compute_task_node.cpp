@@ -11,8 +11,13 @@ const ChainNode* ChainNodeOnEdge(
   CompTaskNode* target_node = nullptr;
   do {
     TaskNode* tmp_node = (edge->*GetNode)();
-    edge = *((tmp_node->*GetEdges)().begin());
     target_node = dynamic_cast<CompTaskNode*>(tmp_node);
+    const std::unordered_set<TaskEdge*>& edges = (tmp_node->*GetEdges)();
+    if (edges.size() > 0) {
+      edge = *(edges.begin());
+    } else {
+      edge = nullptr;
+    }
   } while (!target_node && edge);
   if (target_node) { return target_node->chain_node(); }
   return nullptr;

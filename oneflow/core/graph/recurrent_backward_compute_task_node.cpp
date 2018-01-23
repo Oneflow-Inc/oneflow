@@ -77,8 +77,11 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
   if (lbns.find(op->Lbn4BnInOp("out_diff")) != lbns.end()) {
     ConsumeRegst("out_diff", regst);
   } else if (lbns.find(op->Lbn4BnInOp("rec_out_diff")) != lbns.end()) {
-    CHECK_EQ(parallel_ctx()->policy(), kModelParallel);
-    ConsumeRegst("rec_out_diff", regst);
+    if (parallel_ctx()->policy() == kModelParallel) {
+      ConsumeRegst("rec_out_diff", regst);
+    }
+  } else {
+    UNEXPECTED_RUN();
   }
 }
 
