@@ -22,14 +22,12 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
       static_cast<T>(1), ht_1_blob, BnInOp2Blob("h2h_weight"),
       plus_op_out_blob);
 
-  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
-    const Blob* bias_blob = BnInOp2Blob("bias");
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-    // plus_op_out += bias * bias_multiplier
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(1), bias_mul_blob, bias_blob, plus_op_out_blob);
-  }
+  // plus_op_out += bias * bias_multiplier
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(1), BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias"),
+      plus_op_out_blob);
+
   if (this->op_conf().recurrent_conf().activation() == kTanH) {
     BasicRnnKernelUtil<device_type, T>::TanH(
         ctx.device_ctx, ht_blob->shape().elem_cnt(),
@@ -98,13 +96,12 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
       static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
       BnInOp2Blob("in_diff"));
 
-  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
-    // bias_diff = plus_op_out_diff * bias_multiplier
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
-        plus_op_out_diff_blob, BnInOp2Blob("bias_diff"));
-  }
+  // bias_diff = plus_op_out_diff * bias_multiplier
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
+      BnInOp2Blob("bias_diff"));
+
   if (this->Ish0Model() && BnInOp2Blob("rec_ht_diff")->col_id() == 0) {
     // h0_diff = plus_op_out_diff * h2h_weight
     KernelUtil<device_type, T>::BlobGemm(
@@ -131,9 +128,7 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   INITIALZE_BLOB(i2h_weight_initializer, weight_initializer, i2h_weight);
   INITIALZE_BLOB(h2h_weight_initializer, weight_initializer, h2h_weight);
-  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
-    INITIALZE_BLOB(bias_initializer, bias_initializer, bias);
-  }
+  INITIALZE_BLOB(bias_initializer, bias_initializer, bias);
 }
 
 template<DeviceType device_type, typename T>
@@ -151,24 +146,20 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, h2h_weight_blob,
       "h2h_weight", h2h_weight_blob->shape().At(0),
       h2h_weight_blob->shape().Count(1));
-  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
-    KernelUtil<device_type, T>::InitializeWithModelDir(
-        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
-        "bias", BnInOp2Blob("bias")->shape().At(0), 1);
-  }
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
+      "bias", BnInOp2Blob("bias")->shape().At(0), 1);
 }
 
 template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->op_conf().recurrent_conf().basic_rnn_cell().has_bias_term()) {
-    InitializerConf bias_multiplier_fill_conf;
-    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
-    KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                           bias_multiplier_fill_conf, 0,
-                                           BnInOp2Blob("bias_multiplier"));
-  }
+  InitializerConf bias_multiplier_fill_conf;
+  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+  KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
+                                         bias_multiplier_fill_conf, 0,
+                                         BnInOp2Blob("bias_multiplier"));
 }
 
 template<typename T>
@@ -203,7 +194,7 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
       plus_out_diff[i] = ht[i] * (1 - ht[i]) * (ht_diff[i] + rec_ht_diff[i]);
     }
   }
-};  // namespace oneflow
+};
 
 template class BasicRnnKernelUtil<DeviceType::kCPU, float>;
 template class BasicRnnKernelUtil<DeviceType::kCPU, double>;

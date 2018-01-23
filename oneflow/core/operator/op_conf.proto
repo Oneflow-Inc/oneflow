@@ -214,10 +214,9 @@ message SumOpConf {
 }
 
 message BasicRnnCellConf {
-  required bool has_bias_term = 1 [default = true];
-  optional InitializerConf i2h_weight_initializer = 2;
-  optional InitializerConf h2h_weight_initializer = 3;
-  optional InitializerConf bias_initializer = 4;
+  optional InitializerConf i2h_weight_initializer = 1;
+  optional InitializerConf h2h_weight_initializer = 2;
+  optional InitializerConf bias_initializer = 3;
 }
 
 message BasicLstmCellConf {
