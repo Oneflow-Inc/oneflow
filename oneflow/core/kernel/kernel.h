@@ -98,21 +98,23 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void CopyDataIdToAllOb(DeviceCtx* ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         const Blob* blob) const;
-  void CopyColNumToAllOb(DeviceCtx* ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         const Blob* blob) const;
+  void CopyDataIdToAllBlob(DeviceCtx* ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob,
+                           const Blob* blob, PbRpf<std::string> bns) const;
+  void CopyColNumToAllBlob(DeviceCtx* ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob,
+                           const Blob* blob, PbRpf<std::string> bns) const;
 
  private:
   void CopyFieldFromInToOut(
       DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-      void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
-  void CopyFromBlobToAllOb(DeviceCtx* ctx,
-                           std::function<Blob*(const std::string&)> BnInOp2Blob,
-                           const Blob* blob,
-                           void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+      void (Blob::*Copy)(DeviceCtx*, const Blob*), PbRpf<std::string> ibns,
+      PbRpf<std::string> obns) const;
+  void CopyFieldToAllBlob(DeviceCtx* ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob,
+                          const Blob* blob,
+                          void (Blob::*Copy)(DeviceCtx*, const Blob*),
+                          PbRpf<std::string> bns) const;
 };
 
 using KernelCreator1 = std::function<Kernel*(DeviceType, const KernelConf&)>;

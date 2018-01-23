@@ -247,8 +247,9 @@ void BoxingKernel<T>::ForwardDataId(
                         kernel_conf().output_bns(),
                         boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CopyDataIdToAllOb(ctx.device_ctx, BnInOp2Blob,
-                        BnInOp2Blob(ibn_0_.Get(0)));
+      CopyDataIdToAllBlob(ctx.device_ctx, BnInOp2Blob,
+                          BnInOp2Blob(ibn_0_.Get(0)),
+                          kernel_conf().output_bns());
     } else {
       UNEXPECTED_RUN();
     }
