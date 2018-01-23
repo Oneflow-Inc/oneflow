@@ -108,6 +108,11 @@ void BoxingActor::AsyncReturnAllReadableRegst() {
   CHECK_EQ(readable_regst_cnt_, 0);
 }
 
+void BoxingActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  for (const auto& pair : readable_regst_) { handler(pair.second.front()); }
+}
+
 REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);
 
 }  // namespace oneflow
