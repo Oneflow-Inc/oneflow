@@ -85,4 +85,9 @@ void AccumulateCompActor::Act() {
   pending_in_regst_.pop();
 }
 
+void AccumulateCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regst_.front());
+}
+
 }  // namespace oneflow
