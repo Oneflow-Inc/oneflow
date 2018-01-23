@@ -126,7 +126,7 @@ void BackwardCompActor::Act() {
 
 void BackwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  for (auto& pair : readable_regsts_) { handler(pair.second.front()); }
+  for (const auto& pair : readable_regsts_) { handler(pair.second.front()); }
 }
 
 REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);

@@ -109,7 +109,7 @@ void BoxingActor::AsyncReturnAllReadableRegst() {
 
 void BoxingActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  for (auto& pair : readable_regst_) { handler(pair.second.front()); }
+  for (const auto& pair : readable_regst_) { handler(pair.second.front()); }
 }
 
 REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);
