@@ -37,7 +37,7 @@ op {
 
 op {
   name: "ip10"
-  innerproduct_conf {
+  fully_connected_conf {
     inputs: "conv/out"
     outputs: "out"
     num_outputs: 10

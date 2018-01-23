@@ -1,10 +1,10 @@
-#include "oneflow/core/operator/innerproduct_op.h"
+#include "oneflow/core/operator/fully_connected_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
-void InnerProductOp::InitFromOpConf() {
-  CHECK(op_conf().has_innerproduct_conf());
+void FullyConnectedOp::InitFromOpConf() {
+  CHECK(op_conf().has_fully_connected_conf());
 
   EnrollInputBn("inputs");
   EnrollOutputBn("outputs");
@@ -14,15 +14,15 @@ void InnerProductOp::InitFromOpConf() {
   EnrollModelTmpBn("biases_multiplier");
 }
 
-const PbMessage& InnerProductOp::GetSpecialConf() const {
-  return op_conf().innerproduct_conf();
+const PbMessage& FullyConnectedOp::GetSpecialConf() const {
+  return op_conf().fully_connected_conf();
 }
 
-void InnerProductOp::InferBlobDescs(
+void FullyConnectedOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // useful vars
-  const InnerProductOpConf& conf = op_conf().innerproduct_conf();
+  const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
   const BlobDesc* inputs_blob_desc = GetBlobDesc4BnInOp("inputs");
   CHECK_EQ(inputs_blob_desc->data_type(),
            JobDesc::Singleton()->DefaultDataType());
@@ -60,6 +60,6 @@ void InnerProductOp::InferBlobDescs(
   biases_mt_blob_desc->set_has_data_id_field(false);
 }
 
-REGISTER_OP(OperatorConf::kInnerproductConf, InnerProductOp);
+REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);
 
 }  // namespace oneflow

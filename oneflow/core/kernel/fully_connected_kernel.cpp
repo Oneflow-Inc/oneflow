@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/innerproduct_kernel.h"
+#include "oneflow/core/kernel/fully_connected_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -26,7 +26,7 @@ void BlasMatrixMatrix(const KernelCtx& ctx, const enum CBLAS_TRANSPOSE trans_a,
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void InnerProductKernel<device_type, T>::ForwardDataContent(
+void FullyConnectedKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* inputs_blob = BnInOp2Blob("inputs");
@@ -48,7 +48,7 @@ void InnerProductKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void InnerProductKernel<device_type, T>::BackwardDataContent(
+void FullyConnectedKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* inputs_blob = BnInOp2Blob("inputs");
@@ -80,19 +80,19 @@ void InnerProductKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void InnerProductKernel<device_type, T>::InitModelBlobsWithRandomSeed(
+void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx.device_ctx,
-      OF_PB_POINTER_GET(this->op_conf().innerproduct_conf(),
+      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
                         weights_initializer),
       random_seed_gen(), BnInOp2Blob("weights"));
 
-  if (this->op_conf().innerproduct_conf().has_biases_initializer()) {
+  if (this->op_conf().fully_connected_conf().has_biases_initializer()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
-        &(this->op_conf().innerproduct_conf().biases_initializer()),
+        &(this->op_conf().fully_connected_conf().biases_initializer()),
         random_seed_gen(), BnInOp2Blob("biases"));
   } else {
     InitializerConf biases_initializer_conf;
@@ -102,12 +102,12 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithRandomSeed(
   }
 }
 template<DeviceType device_type, typename T>
-void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
+void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weights_blob = BnInOp2Blob("weightes");
-  int32_t dim_num = this->op_conf().innerproduct_conf().num_outputs();
+  int32_t dim_num = this->op_conf().fully_connected_conf().num_outputs();
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob,
       "weights", dim_num, weights_blob->shape().Count(1));
@@ -117,11 +117,11 @@ void InnerProductKernel<device_type, T>::InitModelBlobsWithDir(
 }
 
 template<DeviceType device_type, typename T>
-void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
+void FullyConnectedKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf biases_multiplier_initializer_conf;
-  if (this->op_conf().innerproduct_conf().has_biases_initializer()) {
+  if (this->op_conf().fully_connected_conf().has_biases_initializer()) {
     biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
   } else {
     biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(0.0f);
@@ -131,7 +131,7 @@ void InnerProductKernel<device_type, T>::InitModelTmpBlobs(
                                          BnInOp2Blob("biases_multiplier"));
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kInnerproductConf, InnerProductKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFullyConnectedConf,
+                           FullyConnectedKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

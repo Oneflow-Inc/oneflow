@@ -67,7 +67,7 @@ message ConvolutionOpConf {
   optional InitializerConf bias_initializer = 14;
 }
 
-message InnerProductOpConf {
+message FullyConnectedOpConf {
   required string inputs = 1;
   required string outputs = 2;
   required int32 num_outputs = 3;
@@ -238,7 +238,7 @@ message OperatorConf {
   optional string model_load_dir = 2;
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
-    InnerProductOpConf innerproduct_conf = 101;
+    FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     PoolingOpConf pooling_conf = 103;
     ReluOpConf relu_conf = 104;
