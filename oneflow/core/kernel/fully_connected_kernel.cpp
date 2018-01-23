@@ -89,17 +89,11 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
                         weight_initializer),
       random_seed_gen(), BnInOp2Blob("weight"));
 
-  if (this->op_conf().fully_connected_conf().has_bias_initializer()) {
-    KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx,
-        &(this->op_conf().fully_connected_conf().bias_initializer()),
-        random_seed_gen(), BnInOp2Blob("bias"));
-  } else {
-    InitializerConf bias_initializer_conf;
-    bias_initializer_conf.mutable_constant_conf()->set_value(0.0f);
-    KernelUtil<device_type, T>::Initialize(
-        ctx.device_ctx, bias_initializer_conf, 0, BnInOp2Blob("bias"));
-  }
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx.device_ctx,
+      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
+                        bias_initializer),
+      random_seed_gen(), BnInOp2Blob("bias"));
 }
 template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
