@@ -106,12 +106,12 @@ void CopyCommNetActor::AsyncReturnAllReadableRegst() {
 
 void CopyCommNetActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  handler(piece_id2regst_ctx[next_piece_id_].regst_raw_ptr);
+  handler(piece_id2regst_ctx.at(next_piece_id_).regst_raw_ptr);
 }
 
 void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst,
                                             ReadableRegstInfo* info) {
-  const RegstCtx& regst_ctx = piece_id2regst_ctx[next_piece_id_];
+  const RegstCtx& regst_ctx = piece_id2regst_ctx.at(next_piece_id_);
   CHECK(regst == regst_ctx.regst_raw_ptr);
   info->set_regst_desc_id(in_regst_desc_id_);
   info->set_act_id(regst_ctx.act_id);
