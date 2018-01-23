@@ -6,12 +6,12 @@ namespace oneflow {
 void FullyConnectedOp::InitFromOpConf() {
   CHECK(op_conf().has_fully_connected_conf());
 
-  EnrollInputBn("inputs");
-  EnrollOutputBn("outputs");
-  EnrollModelBn("weights");
+  EnrollInputBn("in");
+  EnrollOutputBn("out");
+  EnrollModelBn("weight");
 
-  EnrollModelBn("biases");
-  EnrollModelTmpBn("biases_multiplier");
+  EnrollModelBn("bias");
+  EnrollModelTmpBn("bias_multiplier");
 }
 
 const PbMessage& FullyConnectedOp::GetSpecialConf() const {
@@ -23,41 +23,37 @@ void FullyConnectedOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   // useful vars
   const FullyConnectedOpConf& conf = op_conf().fully_connected_conf();
-  const BlobDesc* inputs_blob_desc = GetBlobDesc4BnInOp("inputs");
-  CHECK_EQ(inputs_blob_desc->data_type(),
-           JobDesc::Singleton()->DefaultDataType());
-  int32_t num_outputs = conf.num_outputs();
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
+  int32_t units = conf.units();
   if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(num_outputs, parallel_ctx->parallel_num());
-    num_outputs = splitter.At(parallel_ctx->parallel_id()).size();
+    BalancedSplitter splitter(units, parallel_ctx->parallel_num());
+    units = splitter.At(parallel_ctx->parallel_id()).size();
   }
-  // outputs
-  BlobDesc* outputs_blob_desc = GetBlobDesc4BnInOp("outputs");
-  outputs_blob_desc->mut_shape() =
-      Shape({inputs_blob_desc->shape().At(0), num_outputs});
-  outputs_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  outputs_blob_desc->set_has_data_id_field(
-      inputs_blob_desc->has_data_id_field());
+  // out
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
+  out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
-  // weights
-  BlobDesc* weights_blob_desc = GetBlobDesc4BnInOp("weights");
-  weights_blob_desc->mut_shape() =
-      Shape({num_outputs, inputs_blob_desc->shape().Count(1)});
-  weights_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  weights_blob_desc->set_has_data_id_field(false);
+  // weight
+  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  weight_blob_desc->mut_shape() =
+      Shape({units, in_blob_desc->shape().Count(1)});
+  weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  weight_blob_desc->set_has_data_id_field(false);
 
-  // biases
-  BlobDesc* biases_blob_desc = GetBlobDesc4BnInOp("biases");
-  biases_blob_desc->mut_shape() = Shape({1, num_outputs});
-  biases_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  biases_blob_desc->set_has_data_id_field(false);
+  // bias
+  BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
+  bias_blob_desc->mut_shape() = Shape({1, units});
+  bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  bias_blob_desc->set_has_data_id_field(false);
 
-  // biases_multiplier
-  BlobDesc* biases_mt_blob_desc = GetBlobDesc4BnInOp("biases_multiplier");
-  biases_mt_blob_desc->mut_shape() =
-      Shape({inputs_blob_desc->shape().At(0), 1});
-  biases_mt_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  biases_mt_blob_desc->set_has_data_id_field(false);
+  // bias_multiplier
+  BlobDesc* bias_mt_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
+  bias_mt_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
+  bias_mt_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  bias_mt_blob_desc->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);

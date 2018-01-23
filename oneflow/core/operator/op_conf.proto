@@ -68,11 +68,11 @@ message ConvolutionOpConf {
 }
 
 message FullyConnectedOpConf {
-  required string inputs = 1;
-  required string outputs = 2;
-  required int32 num_outputs = 3;
-  optional InitializerConf weights_initializer = 4;
-  optional InitializerConf biases_initializer = 5;
+  required string in = 1;
+  required string out = 2;
+  required int32 units = 3;
+  optional InitializerConf weight_initializer = 4;
+  optional InitializerConf bias_initializer = 5;
 }
 
 message BasicDataLoaderOpConf {

@@ -29,54 +29,54 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* inputs_blob = BnInOp2Blob("inputs");
-  const Blob* weights_blob = BnInOp2Blob("weights");
-  Blob* outputs_blob = BnInOp2Blob("outputs");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* out_blob = BnInOp2Blob("out");
 
-  // outputs = inputs * weights
+  // out = in * weight
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasTrans,
                                    static_cast<T>(1.0), static_cast<T>(0.0),
-                                   inputs_blob, weights_blob, outputs_blob);
+                                   in_blob, weight_blob, out_blob);
 
-  const Blob* biases_blob = BnInOp2Blob("biases");
-  const Blob* biases_mul_blob = BnInOp2Blob("biases_multiplier");
+  const Blob* bias_blob = BnInOp2Blob("bias");
+  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
-  // outputs = biases_multiplier * biases + outputs
+  // out = bias_multiplier * bias + out
   BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
                                    static_cast<T>(1.0), static_cast<T>(1.0),
-                                   biases_mul_blob, biases_blob, outputs_blob);
+                                   bias_mul_blob, bias_blob, out_blob);
 }
 
 template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* inputs_blob = BnInOp2Blob("inputs");
-  const Blob* outputs_diff_blob = BnInOp2Blob("outputs_diff");
-  Blob* inputs_diff_blob = BnInOp2Blob("inputs_diff");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
 
-  const Blob* weights_blob = BnInOp2Blob("weights");
-  Blob* weight_diff_blob = BnInOp2Blob("weights_diff");
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
 
-  // weights_diff = outputs_diff * inputs
-  BlasMatrixMatrix<device_type, T>(
-      ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
-      outputs_diff_blob, inputs_blob, weight_diff_blob);
+  // weight_diff = out_diff * in
+  BlasMatrixMatrix<device_type, T>(ctx, CblasTrans, CblasNoTrans,
+                                   static_cast<T>(1.0), static_cast<T>(0.0),
+                                   out_diff_blob, in_blob, weight_diff_blob);
 
-  // inputs_diff = outputs_diff * weights
-  if (inputs_diff_blob != nullptr) {
-    BlasMatrixMatrix<device_type, T>(
-        ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
-        static_cast<T>(0.0), outputs_diff_blob, weights_blob, inputs_diff_blob);
+  // in_diff = out_diff * weight
+  if (in_diff_blob != nullptr) {
+    BlasMatrixMatrix<device_type, T>(ctx, CblasNoTrans, CblasNoTrans,
+                                     static_cast<T>(1.0), static_cast<T>(0.0),
+                                     out_diff_blob, weight_blob, in_diff_blob);
   }
 
-  const Blob* biases_mul_blob = BnInOp2Blob("biases_multiplier");
-  Blob* biases_diff_blob = BnInOp2Blob("biases_diff");
+  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+  Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
-  // biases_diff = biases_multiplier * outputs_diff
+  // bias_diff = bias_multiplier * out_diff
   BlasMatrixMatrix<device_type, T>(
       ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0), static_cast<T>(0.0),
-      biases_mul_blob, outputs_diff_blob, biases_diff_blob);
+      bias_mul_blob, out_diff_blob, bias_diff_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -86,19 +86,19 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx.device_ctx,
       OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
-                        weights_initializer),
-      random_seed_gen(), BnInOp2Blob("weights"));
+                        weight_initializer),
+      random_seed_gen(), BnInOp2Blob("weight"));
 
-  if (this->op_conf().fully_connected_conf().has_biases_initializer()) {
+  if (this->op_conf().fully_connected_conf().has_bias_initializer()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
-        &(this->op_conf().fully_connected_conf().biases_initializer()),
-        random_seed_gen(), BnInOp2Blob("biases"));
+        &(this->op_conf().fully_connected_conf().bias_initializer()),
+        random_seed_gen(), BnInOp2Blob("bias"));
   } else {
-    InitializerConf biases_initializer_conf;
-    biases_initializer_conf.mutable_constant_conf()->set_value(0.0f);
+    InitializerConf bias_initializer_conf;
+    bias_initializer_conf.mutable_constant_conf()->set_value(0.0f);
     KernelUtil<device_type, T>::Initialize(
-        ctx.device_ctx, biases_initializer_conf, 0, BnInOp2Blob("biases"));
+        ctx.device_ctx, bias_initializer_conf, 0, BnInOp2Blob("bias"));
   }
 }
 template<DeviceType device_type, typename T>
@@ -106,29 +106,29 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* weights_blob = BnInOp2Blob("weightes");
-  int32_t dim_num = this->op_conf().fully_connected_conf().num_outputs();
+  Blob* weight_blob = BnInOp2Blob("weightes");
+  int32_t dim_num = this->op_conf().fully_connected_conf().units();
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, weights_blob,
-      "weights", dim_num, weights_blob->shape().Count(1));
+      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
+      dim_num, weight_blob->shape().Count(1));
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("biases"),
-      "biases", dim_num, 1);
+      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
+      "bias", dim_num, 1);
 }
 
 template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf biases_multiplier_initializer_conf;
-  if (this->op_conf().fully_connected_conf().has_biases_initializer()) {
-    biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  InitializerConf bias_multiplier_initializer_conf;
+  if (this->op_conf().fully_connected_conf().has_bias_initializer()) {
+    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
   } else {
-    biases_multiplier_initializer_conf.mutable_constant_conf()->set_value(0.0f);
+    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(0.0f);
   }
   KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                         biases_multiplier_initializer_conf, 0,
-                                         BnInOp2Blob("biases_multiplier"));
+                                         bias_multiplier_initializer_conf, 0,
+                                         BnInOp2Blob("bias_multiplier"));
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFullyConnectedConf,

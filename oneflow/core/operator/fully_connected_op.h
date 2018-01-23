@@ -20,7 +20,7 @@ class FullyConnectedOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
   int32_t ModelSplitAxis() const override { return 1; }
   int32_t MaxModelSplitNum() const override {
-    return op_conf().fully_connected_conf().num_outputs();
+    return op_conf().fully_connected_conf().units();
   }
 
  private:

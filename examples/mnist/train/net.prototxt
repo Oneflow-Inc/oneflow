@@ -38,9 +38,9 @@ op {
 op {
   name: "ip10"
   fully_connected_conf {
-    inputs: "conv/out"
-    outputs: "out"
-    num_outputs: 10
+    in: "conv/out"
+    out: "out"
+    units: 10
   }
 }
 
