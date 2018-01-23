@@ -115,11 +115,7 @@ void FullyConnectedKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf bias_multiplier_initializer_conf;
-  if (this->op_conf().fully_connected_conf().has_bias_initializer()) {
-    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  } else {
-    bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(0.0f);
-  }
+  bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
   KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
                                          bias_multiplier_initializer_conf, 0,
                                          BnInOp2Blob("bias_multiplier"));
