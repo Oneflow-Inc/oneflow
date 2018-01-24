@@ -35,12 +35,10 @@ void MultinomialLogisticLossOp::InferBlobDescs(
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({1});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_blob_desc->set_has_data_id_field(false);
   // loss_buffer
   BlobDesc* loss_buffer_blob_desc = GetBlobDesc4BnInOp("loss_buffer");
   loss_buffer_blob_desc->mut_shape() = Shape({1});
   loss_buffer_blob_desc->set_data_type(pred_blob_desc->data_type());
-  loss_buffer_blob_desc->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kMultinomialLogisticLossConf,

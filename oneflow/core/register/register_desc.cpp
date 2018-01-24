@@ -30,6 +30,20 @@ void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
   auto it = lbn2blob_desc_.begin();
+  if (lbn2blob_desc_.size() > 1) {
+    bool is_bad = false;
+    for (const auto& pair : lbn2blob_desc_) {
+      if (pair.second->max_col_num() > 1) { is_bad = true; }
+    }
+
+    if (is_bad) {
+      LOG(INFO) << "cclog: regst wrong: ";
+      for (const auto& pair : lbn2blob_desc_) {
+        LOG(INFO) << "cclog: lbn = " << pair.first;
+      }
+    }
+  }
+
   packed_blob_desc_.reset(new BlobDesc);
   *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
     const BlobDesc* ret = nullptr;

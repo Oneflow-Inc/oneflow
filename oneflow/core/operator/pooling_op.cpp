@@ -48,7 +48,6 @@ void PoolingOp::InferBlobDescs(
     BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
     idx_blob_desc->mut_shape() = out_blob_desc->shape();
     idx_blob_desc->set_data_type(DataType::kUInt32);
-    idx_blob_desc->set_has_data_id_field(false);
   }
 }
 
