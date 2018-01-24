@@ -265,3 +265,7 @@ message OperatorConf {
     RecurrentOpConf recurrent_conf = 121; 
   }
 }
+
+message OpNameSet {
+  repeated string op_name = 1;
+}
