@@ -20,11 +20,13 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 }
 
 void PushAvailableMemDescOfThisMachine() {
-  const JobDesc* job_desc = JobDesc::Singleton();
   AvailableMemDescOfMachine this_machine_mem_desc;
+#ifdef WITH_CUDA
+  const JobDesc* job_desc = JobDesc::Singleton();
   FOR_RANGE(int, i, 0, job_desc->GpuDeviceNum()) {
     this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
   }
+#endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
   CtrlClient::Singleton()->PushKV(
       GetAmdCtrlKey(MachineCtx::Singleton()->this_machine_id()),

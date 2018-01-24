@@ -14,22 +14,26 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
 template<DeviceType device_type>
 struct GetCudaMemcpyKind;
-
 template<>
 struct GetCudaMemcpyKind<DeviceType::kCPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
 };
-
 template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
+#endif
 
 template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz
+#ifdef WITH_CUDA
+            ,
+            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val
+#endif
+);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);

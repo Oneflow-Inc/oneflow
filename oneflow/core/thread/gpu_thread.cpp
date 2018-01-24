@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
   set_thrd_id(thrd_id);
   mut_actor_thread() = std::thread([this, dev_id]() {
@@ -13,5 +15,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id) {
     PollMsgChannel(ctx);
   });
 }
+
+#endif
 
 }  // namespace oneflow

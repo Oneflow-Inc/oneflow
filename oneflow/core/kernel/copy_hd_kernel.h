@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CopyHdKernel);
@@ -18,6 +20,8 @@ class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
 
   cudaMemcpyKind cp_kind_;
 };
+
+#endif
 
 }  // namespace oneflow
 
