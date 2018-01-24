@@ -114,6 +114,7 @@ void Operator::GenKernelConf(
                            &BlobDesc::has_data_id_field)) {
     kernel_conf->set_need_do_data_id(true);
   }
+  kernel_conf->set_need_do_col_num(false);
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
                            &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
