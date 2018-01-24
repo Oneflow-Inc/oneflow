@@ -27,11 +27,19 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
     return parallel_desc_;
   }
 
+  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
+    return shared_model_nodes_;
+  }
+  std::shared_ptr<const std::vector<LogicalNode*>>& mut_shared_model_nodes() {
+    return shared_model_nodes_;
+  }
+
   std::string VisualStr() const override { return op_->op_name(); }
 
  private:
   std::shared_ptr<Operator> op_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
+  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 };
 
 class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
@@ -58,8 +66,10 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  private:
   LogicalGraph();
   void NaiveBuildGraphStruct(HashMap<LogicalEdge*, std::string>* edge2lbn,
-                             HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void FillNodeWithParallelDesc();
+                             HashMap<LogicalEdge*, std::string>* edge2ibn,
+                             HashMap<std::string, LogicalNode*>* op_name2node);
+  void FillNodeWithParallelDesc(
+      const HashMap<std::string, LogicalNode*>& op_name2node);
 
   struct CloneInfo {
     std::shared_ptr<Operator> clone_op;
