@@ -101,8 +101,18 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
 }
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
-  auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
-  auto rec_in_regst = GetRelatedFwTaskNode()->GetConsumedRegstWrapper("rec_in");
+  std::shared_ptr<RegstDesc> rec_in_diff_regst =
+      GetProducedRegst("rec_in_diff");
+  std::shared_ptr<RegstDesc> rec_in_regst = nullptr;
+  CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
+  if (parallel_ctx()->policy() == kDataParallel) {
+    rec_in_regst = fw_node->GetProducedRegst("rec_out");
+  } else if (parallel_ctx()->policy() == kModelParallel) {
+    rec_in_regst = fw_node->GetConsumedRegstWrapper("rec_in");
+    ;
+  } else {
+    UNEXPECTED_RUN();
+  }
   rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());

@@ -1,0 +1,44 @@
+op {
+  name: "feature"
+  basic_data_loader_conf {
+    out: "out"
+    data_type: kFloat
+    shape {
+      dim: 28
+    }
+    max_sequence_size: 63
+    data_dir: "/min_char/feature/"
+  }
+}
+
+op {
+  name: "label"
+  basic_data_loader_conf {
+    out: "out"
+    data_type: kInt32
+    shape {
+    }
+    max_sequence_size: 63
+    data_dir: "/min_char/label/"
+  }
+}
+
+op {
+  name: "rnn_cell"
+  recurrent_conf {
+    in: "feature/out"
+    out: "out"
+    hidden_size: 64
+    basic_rnn_cell {
+    }
+  }
+}
+
+op {
+  name: "softmax_loss"
+  softmax_loss_conf {
+    prediction: "rnn_cell/out"
+    label: "label/out"
+    loss: "loss"
+  }
+}
