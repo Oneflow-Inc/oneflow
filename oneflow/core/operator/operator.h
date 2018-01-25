@@ -34,6 +34,10 @@ class Operator {
   virtual bool IsDataLoaderOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
 
+  bool HasModelOrModelTmpBlob() const {
+    return !model_bns_.empty() || !model_tmp_bns_.empty();
+  }
+
   // bn_in_op <-> lbn
   const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
   void ModifyLbn4BnInOp(const std::string& bn_in_op, const std::string& lbn);
