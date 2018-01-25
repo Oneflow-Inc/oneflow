@@ -12,7 +12,7 @@ const ChainNode* ChainNodeOnEdge(
   do {
     TaskNode* tmp_node = (edge->*GetNode)();
     target_node = dynamic_cast<CompTaskNode*>(tmp_node);
-    const std::unordered_set<TaskEdge*>& edges = (tmp_node->*GetEdges)();
+    const HashSet<TaskEdge*>& edges = (tmp_node->*GetEdges)();
     if (edges.size() > 0) {
       edge = *(edges.begin());
     } else {
@@ -36,11 +36,6 @@ const ChainNode* CompTaskNode::SuccChainNodeOnEdge(TaskEdge* edge) {
 
 const ChainNode* CompTaskNode::PredChainNodeOnEdge(TaskEdge* edge) {
   return ChainNodeOnEdge(edge, &TaskEdge::src_node, &TaskNode::in_edges);
-}
-
-std::shared_ptr<RegstDesc> CompTaskNode::GetConsumedRegstWrapper(
-    const std::string& name) {
-  return GetConsumedRegst(name);
 }
 
 void SortByParallelId(std::vector<CompTaskNode*>* node_vec) {

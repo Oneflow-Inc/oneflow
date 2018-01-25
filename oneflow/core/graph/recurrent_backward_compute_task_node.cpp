@@ -108,8 +108,7 @@ void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
   if (parallel_ctx()->policy() == kDataParallel) {
     rec_in_regst = fw_node->GetProducedRegst("rec_out");
   } else if (parallel_ctx()->policy() == kModelParallel) {
-    rec_in_regst = fw_node->GetConsumedRegstWrapper("rec_in");
-    ;
+    rec_in_regst = fw_node->GetConsumedRegst("rec_in");
   } else {
     UNEXPECTED_RUN();
   }
