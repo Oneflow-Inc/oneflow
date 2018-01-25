@@ -214,6 +214,8 @@ message SumOpConf {
 }
 
 message BasicRnnCellConf {
+  optional InitializerConf i2h_weight_initializer = 1;
+  optional InitializerConf h2h_weight_initializer = 2;
 }
 
 message BasicLstmCellConf {
@@ -262,4 +264,8 @@ message OperatorConf {
     SumOpConf sum_conf = 120;
     RecurrentOpConf recurrent_conf = 121; 
   }
+}
+
+message OpNameSet {
+  repeated string op_name = 1;
 }
