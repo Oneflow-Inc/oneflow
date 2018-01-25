@@ -14,12 +14,7 @@ message TrainConf {
   required int32 num_of_pieces_in_batch = 7;
   optional float l1 = 8 [default = 0];
   optional float l2 = 9 [default = 0];
-
-  oneof ModelUpdateCase {
-    NormalModelUpdateOpConf normal_mdupdt_conf = 1000;
-    MomentumModelUpdateOpConf momentum_mdupdt_conf = 1001;
-    RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 1002;
-  }
+  required ModelUpdateOpUserConf model_update_conf = 10;
 }
 
 message PredictConf {
