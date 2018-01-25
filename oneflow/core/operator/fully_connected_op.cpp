@@ -36,17 +36,15 @@ void FullyConnectedOp::InferBlobDescs(
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // weight
-  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
-  weight_blob_desc->mut_shape() =
+  GetBlobDesc4BnInOp("weight")->mut_shape() =
       Shape({units, in_blob_desc->shape().Count(1)});
 
   // bias
-  BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
-  bias_blob_desc->mut_shape() = Shape({1, units});
+  GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
 
   // bias_multiplier
-  BlobDesc* bias_mt_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
-  bias_mt_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
+  GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+      Shape({in_blob_desc->shape().At(0), 1});
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);
