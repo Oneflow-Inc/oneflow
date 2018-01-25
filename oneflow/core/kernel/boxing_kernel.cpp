@@ -46,6 +46,18 @@ void CopyFromFirstToOtherBlobs(
   }
 }
 
+void CopyColIdAndMaxColId(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const std::string& from_bn, const PbRpf<std::string>& to_bns) {
+  Blob* from_blob = BnInOp2Blob(from_bn);
+  int32_t col_id = from_blob>col_id();
+  int32_t max_col_id = from_blob->max_col_id();
+  for(const std::string& obn : obns) {
+    BnInOp2Blob(obn)->set_col_id(col_id);
+    BnInOp2Blob(obn)->set_max_col_id(max_col_id);
+  }
+}
+
 template<typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
   while(src_it.HasNext()) {
@@ -71,7 +83,7 @@ class DataContentIterator final {
   }
 
   bool HasNext() {
-
+    return seg_idx_ != seg_num_;
   }
 
   void SetNext(DeviceCtx* ctx, std::tuple<char*, size_t> next_data){
@@ -112,7 +124,7 @@ void ConcatSplitDataContent(
     const PbRpf<std::string>& split_bns, int32_t split_axis) {
   DataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis);
   DataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter(ctx, concat_it, split_it);
+  CopyFromIterToIter<DataContentIterator>(ctx, concat_it, split_it);
 }
 
 class DataIdIterator final {
@@ -218,7 +230,7 @@ void ConcatSplitField(DeviceCtx* ctx,
   Iter split_it(BnInOp2Blob, &split_bns, split_axis);
   CopyFromIterToIter(ctx, concat_it, split_it);
   if (split_axis != 0) {
-    CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns);
+    CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns, Iter::GetCopyFunc());
   }
 }
 
@@ -236,7 +248,6 @@ template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  SetColIdAndMaxColId(ctx, BnInOp2Blob);
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -300,9 +311,8 @@ void BoxingKernel<T>::ForwardField(
                         kernel_conf().output_bns(),
                         boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      // TODO merge dev_spw_col_num_fields
-      // CopyDataIdToAllOb(ctx.device_ctx, BnInOp2Blob,
-      //                  BnInOp2Blob(ibn_0_.Get(0)));
+      CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
+                kernel_conf().output_bns(), Iter::GetCopyFunc());
     } else {
       UNEXPECTED_RUN();
     }
@@ -319,11 +329,65 @@ void BoxingKernel<T>::ForwardDataId(
 }
 
 template<typename T>
-void BoxingKernel<T>::ForwardColNum(const KernelCtx&,
-                   std::function<Blob*(const std::string&)>) const {
+void BoxingKernel<T>::ForwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardField<T, ColNumIterator>(ctx, BnInOp2Blob);
 }
+
+void ConcatSplitColId(DeviceCtx* ctx,
+                 std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const PbRpf<std::string>& concat_bns,
+                 int32_t concat_axis, const PbRpf<std::string>& split_bns,
+                 int32_t split_axis) {
+
+}
+
+template<typename T>
+void BoxingKernel<T>::SetColId(const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      ConcatSplitColId(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+                       boxing_conf.concat_box().axis(),
+                       kernel_conf().output_bns(),
+                       boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      int32_t max_col_id_in_bns = 0;
+      for(const std::string& ibn : kernel_conf().input_bns()) {
+        Blob* in_blob = BnInOp2Blob(ibn);
+        std::max(max_col_id_in_bns, in_blob->col_id());
+      }
+      for(const std::string& obn : kernel_conf().output_bns()) {
+        BnInOp2Blob(obn)->set_col_id(max_col_id_in_bns);
+      }
+    } else {
+      UNEXPECTED_RUN();
+    }
+  } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
+    CopyColIdAndMaxColId(ctx, BnInOp2Blob,kernel_conf().input_bns(0), 
+                         kernel_conf().output_bns());
+  } else {
+    UNEXPECTED_RUN();
+  }
+}
  
+template<typename T>
+void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* out_blob = nullptr;
+  int32_t max_col_num_in_blob = 0;
+  for(const std::string& obn : kernel_conf().output_bns()) {
+    max_col_num_in_blob = 0;
+    out_blob = BnInOp2Blob(obn);
+    FOR_RANGE(int32_t, i, 0, out_blob->shape().at(0)) {
+      max_col_num_in_blob = std::max(max_col_num_in_blob, out_blob->col_num(i));
+    }
+    out_blob->set_max_col_id(max_col_num_in_blob - 1);
+  }
+}
+
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel,
                                ARITHMETIC_DATA_TYPE_SEQ);
 
