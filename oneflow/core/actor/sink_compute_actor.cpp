@@ -32,6 +32,11 @@ bool SinkCompActor::IsReadAlwaysUnReadyFromNow() {
   return false;
 }
 
+void SinkCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(in_regst_);
+}
+
 void SinkCompActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
 
 }  // namespace oneflow

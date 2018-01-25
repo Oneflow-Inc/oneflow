@@ -16,8 +16,9 @@ void LogicalGraph::SetProducerOp(const std::string& lbn,
 LogicalGraph::LogicalGraph() {
   HashMap<LogicalEdge*, std::string> edge2lbn;
   HashMap<LogicalEdge*, std::string> edge2ibn;
-  NaiveBuildGraphStruct(&edge2lbn, &edge2ibn);
-  FillNodeWithParallelDesc();
+  HashMap<std::string, LogicalNode*> op_name2node;
+  NaiveBuildGraphStruct(&edge2lbn, &edge2ibn, &op_name2node);
+  FillNodeWithParallelDesc(op_name2node);
   AddCloneNodes(edge2lbn, edge2ibn);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
@@ -32,7 +33,8 @@ LogicalGraph::LogicalGraph() {
 
 void LogicalGraph::NaiveBuildGraphStruct(
     HashMap<LogicalEdge*, std::string>* edge2lbn,
-    HashMap<LogicalEdge*, std::string>* edge2ibn) {
+    HashMap<LogicalEdge*, std::string>* edge2ibn,
+    HashMap<std::string, LogicalNode*>* op_name2node) {
   const DLNetConf& dlnet_conf = JobDesc::Singleton()->dlnet_conf();
   HashMap<std::string, LogicalNode*> lbn2producer;
   for (const OperatorConf& cur_op_conf : dlnet_conf.op()) {
@@ -42,6 +44,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
       CHECK(lbn2producer.emplace(lbn, cur_node).second);
     }
+    CHECK(op_name2node->emplace(cur_node->op()->op_name(), cur_node).second);
   }
   ForEachNode([&](LogicalNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
@@ -54,15 +57,22 @@ void LogicalGraph::NaiveBuildGraphStruct(
       Connect(pred_node, edge, cur_node);
     }
   });
+  for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
+    auto shared_model_nodes = std::make_shared<std::vector<LogicalNode*>>();
+    for (const std::string& op_name : op_name_set.op_name()) {
+      shared_model_nodes->push_back(op_name2node->at(op_name));
+    }
+    SortAndRemoveDuplication(shared_model_nodes.get());
+    for (LogicalNode* cur_node : *shared_model_nodes) {
+      cur_node->mut_shared_model_nodes() = shared_model_nodes;
+      CHECK(cur_node->op()->HasModelOrModelTmpBlob());
+    }
+  }
 }
 
-void LogicalGraph::FillNodeWithParallelDesc() {
+void LogicalGraph::FillNodeWithParallelDesc(
+    const HashMap<std::string, LogicalNode*>& op_name2node) {
   const Placement& placement = JobDesc::Singleton()->placement();
-  HashMap<std::string, LogicalNode*> op_name2node;
-  ForEachNode([&](LogicalNode* logical_node) {
-    const std::string& op_name = logical_node->op()->op_name();
-    CHECK(op_name2node.emplace(op_name, logical_node).second);
-  });
   for (const PlacementGroup& cur_group : placement.placement_group()) {
     for (const std::string& op_name : cur_group.op_set().op_name()) {
       LogicalNode* node = op_name2node.at(op_name);
@@ -83,6 +93,18 @@ void LogicalGraph::FillNodeWithParallelDesc() {
                      << " is not equal to " << pred_node->op()->op_name();
       }
       cur_node->mut_parallel_desc() = pred_node->parallel_desc();
+    } else if (cur_node->shared_model_nodes()) {
+      for (LogicalNode* shared_node : *(cur_node->shared_model_nodes())) {
+        if (shared_node->parallel_desc() == nullptr) { continue; }
+        if (cur_node->parallel_desc()) {
+          CHECK(cur_node->parallel_desc()->Equal(
+              shared_node->parallel_desc().get()));
+        } else {
+          cur_node->mut_parallel_desc() = shared_node->parallel_desc();
+        }
+      }
+    } else {
+      // do nothing
     }
     CHECK(cur_node->parallel_desc())
         << "Please set the placement of " << cur_node->op()->op_name();

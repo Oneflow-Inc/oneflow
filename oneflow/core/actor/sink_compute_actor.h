@@ -25,6 +25,8 @@ class SinkCompActor : public CompActor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+
   Regst* in_regst_;
 };
 
