@@ -113,6 +113,22 @@ struct KernelUtil final {
                                      const std::string& model_dir, Blob* blob,
                                      const std::string& bn_in_op,
                                      int32_t dim_num, int64_t num_in_each_dim);
+
+  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                       enum CBLAS_TRANSPOSE trans_b, T alpha, T beta,
+                       const Blob* a, const Blob* b, Blob* c) {
+    const int m = c->shape().At(0);
+    const int n = c->shape().Count(1);
+    const int k =
+        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
+         lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);
+  }
 };
 
 }  // namespace oneflow
