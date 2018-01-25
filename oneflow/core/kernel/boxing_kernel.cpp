@@ -6,17 +6,13 @@ namespace oneflow {
 
 namespace {
 
-using BlobFieldCopyMthd = void (Blob::*)(DeviceCtx*, const Blob*);
+using CopyMthdInBlob = void (Blob::*)(DeviceCtx*, const Blob*);
 
 PbRpf<std::string> ConstructPbRpf(const std::string& s) {
   PbRpf<std::string> ret;
   ret.Reserve(1);
   ret.Add()->assign(s);
   return ret;
-}
-
-bool IsValidBlobInBlobs(const Blob* blob, ) {
-
 }
 
 template<typename T>
@@ -36,10 +32,14 @@ void CalcSumOfBlobs(DeviceCtx* ctx,
   }
 }
 
+bool IsValidBlob(const Blob* blob) {
+  return blob->col_id() <= blob->max_col_id();
+}
+
 void CopyFromFirstToOtherBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const PbRpf<std::string>& bns,
-    BlobFieldCopyMthd Copy) {
+    CopyMthdInBlob Copy) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
   FOR_RANGE(size_t, i, 1, bns.size()) {
     (BnInOp2Blob(bns.Get(i))->*Copy)(ctx, blob_0);
@@ -48,10 +48,36 @@ void CopyFromFirstToOtherBlobs(
 
 template<typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
-  while(src_it.HasNext()) {
-    dst_it.SetNext(src_it.GetNext());
+  const char* src_ptr = nullptr;
+  size_t src_size = 0;
+  char* dst_ptr = nullptr;
+  size_t dst_size = 0;
+  while (true) {
+    if (src_size == 0) { std::tie(src_ptr, src_size) = src_it.GetNext(); }
+    if (dst_size == 0) { std::tie(dst_ptr, dst_size) = dst_it.GetNext(); }
+    if (src_size == 0) {
+      CHECK_EQ(src_size, dst_size);
+      break;
+    }
+    if (dst_ptr != nullptr) {
+      if (src_ptr != nullptr) {
+        size_t cp_size = std::min(src_size, dst_size);
+        Memcpy<DeviceType::kCPU>(ctx, dst_ptr, src_ptr, cp_size);
+        src_ptr += cp_size;
+        src_size -= cp_size;
+        dst_ptr += cp_size;
+        dst_size -= cp_size;
+      } else {
+
+      }
+    } else {
+      if (src_ptr != nullptr) {
+
+      } else {
+        
+      }
+    }
   }
-  CHECK(!dst_it.HasNext());
 }
 
 class DataContentIterator final {
@@ -70,21 +96,15 @@ class DataContentIterator final {
     axis_ = axis;
   }
 
-  bool HasNext() {
-    return seg_idx_ != seg_num_;
-  }
-
-  void SetNext(DeviceCtx* ctx, std::tuple<char*, size_t> next_data){
-
-  }
-
   std::tuple<char*, size_t> GetNext() {
     std::tuple<char*, size_t> ret(nullptr, 0);
     if (seg_idx_ == seg_num_) { return ret; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
     int64_t elem_num = blob->shape().Count(axis_);
     std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-    std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
+    if (IsValidBlob(blob)) {
+      std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
+    }
     bn_idx_ += 1;
     if (bn_idx_ == bns_->size()) {
       bn_idx_ = 0;
@@ -93,7 +113,7 @@ class DataContentIterator final {
     return ret;
   }
 
-  static BlobFieldCopyMthd GetCopyFunc() const {
+  static CopyMthdInBlob GetCopyFunc() const {
     return &Blob::CopyDataContentFrom<DeviceType::kCPU>;
   }
 
@@ -115,13 +135,13 @@ void ConcatSplitDataContent(
   CopyFromIterToIter<DataContentIterator>(ctx, concat_it, split_it);
 }
 
-class DataIdIterator final {
+class FieldIterator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DataIdIterator);
-  DataIdIterator() = delete;
-  ~DataIdIterator() = default;
+  OF_DISALLOW_COPY_AND_MOVE(FieldIterator);
+  FieldIterator() = delete;
+  ~FieldIterator() = default;
 
-  DataIdIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+  FieldIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis) {
     BnInOp2Blob_ = BnInOp2Blob;
     bns_ = bns;
@@ -131,81 +151,65 @@ class DataIdIterator final {
     } else {
       bn_num_ = 1;
     }
-  }
-
-  bool HasNext() {
-
-  }
-
-  void SetNext(DeviceCtx* ctx, std::tuple<char*, size_t> next_data){
-
   }
 
   std::tuple<char*, size_t> GetNext() {
     std::tuple<char*, size_t> ret(nullptr, 0);
     if (bn_idx_ == bn_num_) { return ret; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_++));
-    std::get<0>(ret) = blob->mut_data_id();
-    std::get<1>(ret) = blob->ByteSizeOfDataIdField();
+    if (IsValidBlob(blob)) {
+      std::get<0>(ret) = GetMutPtr(blob);
+    }
+    std::get<1>(ret) = GetSizeOfField(blob);
     return ret;
   }
 
-  static BlobFieldCopyMthd GetCopyFunc() const {
+ protected:
+  virtual char* GetMutPtr(Blob* blob) = 0;
+  virtual size_t GetSizeOfField(Blob* blob) = 0;
+
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  const PbRpf<std::string>* bns_;
+  int32_t bn_idx_;
+  int32_t bn_num_;
+}
+
+class DataIdIterator : public FieldIterator final {
+ public:
+  DataIdIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const PbRpf<std::string>* bns, int32_t axis)
+                 : FieldIterator(BnInOp2Blob,bns,axis) {} 
+  static CopyMthdInBlob GetCopyFunc() const {
     return &Blob::CopyDataIdFrom<DeviceType::kCPU>;
   }
 
- private:
-  std::function<Blob*(const std::string&)> BnInOp2Blob_;
-  const PbRpf<std::string>* bns_;
-  int32_t bn_idx_;
-  int32_t bn_num_;
+ protected:
+  char* GetMutPtr(Blob* blob) override {
+    return blob->mut_data_id();
+  }
+
+  size_t GetSizeOfField(Blob* blob) override {
+    return blob->ByteSizeOfDataIdField();
+  }
 };
 
-class ColNumIterator final {
+class ColNumIterator : public FieldIterator final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ColNumIterator);
-  ColNumIterator() = delete;
-  ~ColNumIterator() = default;
-
   ColNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                 const PbRpf<std::string>* bns, int32_t axis) {
-    BnInOp2Blob_ = BnInOp2Blob;
-    bns_ = bns;
-    bn_idx_ = 0;
-    if (axis == 0) {
-      bn_num_ = bns_->size();
-    } else {
-      bn_num_ = 1;
-    }
-    col_num_idx_ = 0;
-  }
-
-  bool HasNext() {
-
-  }
-
-  void SetNext(int32_t next_col_num){
-
-  }
-
-  int32_t GetNext() {
-    if (bn_idx_ == bn_num_) { return -1; }
-    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_++));
-    std::get<0>(ret) = blob->mut_data_id();
-    std::get<1>(ret) = blob->ByteSizeOfDataIdField();
-    return ret;
-  }
-
-  static BlobFieldCopyMthd GetCopyFunc() const {
+                 const PbRpf<std::string>* bns, int32_t axis)
+                 : FieldIterator(BnInOp2Blob,bns,axis) {} 
+  static CopyMthdInBlob GetCopyFunc() const {
     return &Blob::CopyColNumFrom<DeviceType::kCPU>;
   }
 
- private:
-  std::function<Blob*(const std::string&)> BnInOp2Blob_;
-  const PbRpf<std::string>* bns_;
-  int32_t bn_idx_;
-  int32_t bn_num_;
-  int32_t col_num_idx_;
+ protected:
+  char* GetMutPtr(Blob* blob) override {
+    return static_cast<char*>blob->mut_col_num();
+  }
+
+  size_t GetSizeOfField(Blob* blob) override {
+    return blob->ByteSizeOfColNumField();
+  }
 };
 
 template<typename Iter>
@@ -292,7 +296,7 @@ void BoxingKernel<T>::ForwardDataContent(
                              boxing_conf.concat_box().axis(), obn_0_, 0);
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
                                 kernel_conf().output_bns(), 
-                                &Blob::CopyDataContentFrom<DeviceType::kCPU>);
+                                DataContentIterator::GetCopyFunc());
     } else {
       UNEXPECTED_RUN();
     }
@@ -308,7 +312,7 @@ void BoxingKernel<T>::ForwardDataContent(
                         obn_0_.Get(0));
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
                                 kernel_conf().output_bns(), 
-                                &Blob::CopyDataContentFrom<DeviceType::kCPU>);
+                                DataContentIterator::GetCopyFunc());
     } else {
       UNEXPECTED_RUN();
     }
