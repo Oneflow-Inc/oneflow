@@ -193,18 +193,27 @@ std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   return {lbn.substr(0, pos), lbn.substr(pos + 1)};
 }
 
-static HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
-  static HashMap<int, std::function<Operator*()>> obj;
+static HashMap<int, std::function<Operator*(const OperatorConf&)>>&
+OpTypeCase2Creator() {
+  static HashMap<int, std::function<Operator*(const OperatorConf&)>> obj;
   return obj;
 }
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
-                  std::function<Operator*()> creator) {
+                  std::function<Operator*(const OperatorConf&)> creator) {
   CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
 }
 
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator) {
+  CHECK(OpTypeCase2Creator()
+            .emplace(op_type_case,
+                     [creator](const OperatorConf&) { return creator(); })
+            .second);
+}
+
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
-  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())();
+  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())(op_conf);
   std::shared_ptr<Operator> ret(rptr);
   ret->InitFromOpConf(op_conf);
   return ret;
