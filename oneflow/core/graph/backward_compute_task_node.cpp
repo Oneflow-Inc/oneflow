@@ -72,8 +72,31 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
     in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());
   }
 
-  std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
-  md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
+  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
+  model_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
+  bool need_col_num_field = false;
+  std::shared_ptr<RegstDesc> out_diff_regst = GetConsumedRegst("out_diff");
+  mut_exec_gph().ForEachNode([&](ExecNode* node) {
+    for (const std::string& odbn : node->op()->output_diff_bns()) {
+      const std::string& odlbn = node->op()->Lbn4BnInOp(odbn);
+      const BlobDesc* out_diff_blob_desc = out_diff_regst->GetBlobDesc(odlbn);
+      if (out_diff_blob_desc == nullptr) { continue; }
+      if (out_diff_blob_desc->has_col_num_field()) {
+        need_col_num_field = true;
+      } else {
+        CHECK_EQ(need_col_num_field, false);
+      }
+    }
+  });
+  if (need_col_num_field) {
+    mut_exec_gph().ForEachNode([&](ExecNode* node) {
+      for (const std::string& mdbn : node->op()->model_diff_bns()) {
+        const std::string& mdlbn = node->op()->Lbn4BnInOp(mdbn);
+        BlobDesc* model_diff_blob_desc = model_diff_regst->MutBlobDesc(mdlbn);
+        model_diff_blob_desc->set_has_col_num_field(true);
+      }
+    });
+  }
 
   VirtualInferBlobDescInActivationDiff();
   VirtualInferBlobDescInHiddenDiff();
