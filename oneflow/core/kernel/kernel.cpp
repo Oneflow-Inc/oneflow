@@ -82,18 +82,16 @@ template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyFieldFromInToOut(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-                       kernel_conf().output_bns(),
-                       &Blob::CopyDataIdFrom<device_type>);
+  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+            kernel_conf().output_bns(), &Blob::CopyDataIdFrom<device_type>);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyFieldFromInToOut(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-                       kernel_conf().output_bns(),
-                       &Blob::CopyColNumFrom<device_type>);
+  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+            kernel_conf().output_bns(), &Blob::CopyColNumFrom<device_type>);
 }
 
 template<DeviceType device_type>
@@ -107,27 +105,8 @@ template<DeviceType device_type>
 void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyFieldFromInToOut(
-      ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
-      kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom<device_type>);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyFieldFromInToOut(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const PbRpf<std::string>& ibns, const PbRpf<std::string>& obns,
-    void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-  if (ibns.size() == 1) {
-    const Blob* in_blob = BnInOp2Blob(ibns[0]);
-    CopyField(ctx, BnInOp2Blob, in_blob, obns, Copy);
-  } else {
-    CHECK_EQ(ibns.size(), obns.size());
-    FOR_RANGE(size_t, i, 0, ibns.size()) {
-      Blob* in_blob = BnInOp2Blob(ibns[i]);
-      Blob* out_blob = BnInOp2Blob(obns[i]);
-      (out_blob->*Copy)(ctx, in_blob);
-    }
-  }
+  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
+            kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom<device_type>);
 }
 
 template<DeviceType device_type>
@@ -153,6 +132,24 @@ void KernelIf<device_type>::CopyField(
     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
   for (const std::string& to_bn : to_bns) {
     (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob);
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyField(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
+    void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+  if (from_bns.size() == 1) {
+    const Blob* in_blob = BnInOp2Blob(from_bns[0]);
+    CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
+  } else {
+    CHECK_EQ(from_bns.size(), to_bns.size());
+    FOR_RANGE(size_t, i, 0, from_bns.size()) {
+      Blob* in_blob = BnInOp2Blob(from_bns[i]);
+      Blob* out_blob = BnInOp2Blob(to_bns[i]);
+      (out_blob->*Copy)(ctx, in_blob);
+    }
   }
 }
 

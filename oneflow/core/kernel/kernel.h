@@ -110,10 +110,11 @@ class KernelIf : public Kernel {
                  std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
-  void CopyFieldFromInToOut(
-      DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-      const PbRpf<std::string>& ibns, const PbRpf<std::string>& obns,
-      void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+  void CopyField(DeviceCtx* ctx,
+                 std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const PbRpf<std::string>& from_bns,
+                 const PbRpf<std::string>& to_bns,
+                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
 };
 
 using KernelCreator1 = std::function<Kernel*(DeviceType, const KernelConf&)>;
