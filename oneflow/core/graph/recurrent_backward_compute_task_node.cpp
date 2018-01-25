@@ -86,7 +86,7 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
 }
 
 void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
-  CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
+  CompTaskNode* fw_node = GetRelatedFwTaskNode();
   std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
   for (TaskEdge* edge : fw_node->in_edges()) {
     if (edge->src_node()->GetTaskType() == TaskType::kMdUpdt) { continue; }
@@ -104,7 +104,7 @@ void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
   std::shared_ptr<RegstDesc> rec_in_diff_regst =
       GetProducedRegst("rec_in_diff");
   std::shared_ptr<RegstDesc> rec_in_regst = nullptr;
-  CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
+  CompTaskNode* fw_node = GetRelatedFwTaskNode();
   if (parallel_ctx()->policy() == kDataParallel) {
     rec_in_regst = fw_node->GetProducedRegst("rec_out");
   } else if (parallel_ctx()->policy() == kModelParallel) {

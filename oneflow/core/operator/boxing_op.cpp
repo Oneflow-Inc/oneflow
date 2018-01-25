@@ -42,12 +42,19 @@ std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
 void BoxingOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  const BoxingOpConf& conf = op_conf().boxing_conf();
+  BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().front());
+  if (conf.in_box_case() == BoxingOpConf::kAddBox) {
+    const Shape& first_in_blob_shape = first_in_blob->shape();
+    for (const std::string& ibn : input_bns()) {
+      CHECK_EQ(first_in_blob_shape, GetBlobDesc4BnInOp(ibn)->shape());
+    }
+  }
+
   std::vector<int64_t> data_tmp_blob_shape_vec =
       GetBlobDesc4BnInOp(input_bns().front())->shape().dim_vec();
   InferDataTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
 
-  BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().front());
-  const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
     CHECK_GE(split_conf.axis(), 0);
