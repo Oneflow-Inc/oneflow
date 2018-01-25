@@ -18,11 +18,11 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
 
   // plus_op_out += ht_1 * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
       static_cast<T>(1), ht_1_blob, BnInOp2Blob("h2h_weight"),
       plus_op_out_blob);
 
-  // plus_op_out += bias * bias_multiplier
+  // plus_op_out += bias_multiplier * bias
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias"),
@@ -59,44 +59,44 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* ht_blob = BnInOp2Blob("ht");
   const Blob* ht_1_blob = this->GetHiddenBlob(BnInOp2Blob);
+  const Blob* ht_diff_blob = BnInOp2Blob("ht_diff");
+  const Blob* rec_ht_diff_blob = BnInOp2Blob("rec_ht_diff");
   // reuse memory
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
   if (this->op_conf().recurrent_conf().activation() == kTanH) {
     BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
         ctx.device_ctx, ht_blob->shape().elem_cnt(), ht_blob->dptr<T>(),
-        BnInOp2Blob("ht_diff")->dptr<T>(),
-        BnInOp2Blob("rec_ht_diff")->dptr<T>(),
+        ht_diff_blob->dptr<T>(), rec_ht_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
   } else if (this->op_conf().recurrent_conf().activation() == kSigmoid) {
     BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
         ctx.device_ctx, ht_blob->shape().elem_cnt(), ht_blob->dptr<T>(),
-        BnInOp2Blob("ht_diff")->dptr<T>(),
-        BnInOp2Blob("rec_ht_diff")->dptr<T>(),
+        ht_diff_blob->dptr<T>(), rec_ht_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
   } else {
     UNEXPECTED_RUN();
   }
 
   // h2h_weight_diff = plus_op_out_diff * ht_1
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        plus_op_out_diff_blob, ht_1_blob,
                                        BnInOp2Blob("h2h_weight_diff"));
 
   // i2h_weight_diff = plus_op_out_diff * in
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        plus_op_out_diff_blob, BnInOp2Blob("in"),
                                        BnInOp2Blob("i2h_weight_diff"));
 
-  // in_diff = plus_op_out_diff * i2h_weigh
+  // in_diff = plus_op_out_diff * i2h_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
       BnInOp2Blob("in_diff"));
 
-  // bias_diff = plus_op_out_diff * bias_multiplier
+  // bias_diff = bias_multiplier * plus_op_out_diff
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
