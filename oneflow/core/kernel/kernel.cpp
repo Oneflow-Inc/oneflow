@@ -65,9 +65,9 @@ void Kernel::InitModelBlobsWithDir(
 void Kernel::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardColNum(ctx, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-  ForwardColNum(ctx, BnInOp2Blob);
 }
 
 void Kernel::Backward(
@@ -122,6 +122,16 @@ void KernelIf<device_type>::CopyColNumToAllOb(
   for (const std::string& obn : kernel_conf().output_bns()) {
     Blob* output_blob = BnInOp2Blob(obn);
     output_blob->CopyColNumFrom<device_type>(ctx, blob);
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyField(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const Blob* from_blob, const PbRpf<std::string>& to_bns,
+    void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+  for (const std::string& to_bn : to_bns) {
+    (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob);
   }
 }
 

@@ -26,7 +26,7 @@ class Blob final {
 
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
-  int32_t* mut_col_num() { return static_cast<int32_t*>col_num_ptr_; }
+  int32_t* mut_col_num() { return col_num_ptr_; }
 
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }

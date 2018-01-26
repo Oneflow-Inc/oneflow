@@ -98,6 +98,10 @@ class KernelIf : public Kernel {
   void CopyColNumToAllOb(DeviceCtx* ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob,
                          const Blob* blob) const;
+  void CopyField(DeviceCtx* ctx,
+                 std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const Blob* from_blob, const PbRpf<std::string>& to_bns,
+                 void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
 };
 
 using KernelCreator1 = std::function<Kernel*(DeviceType, const KernelConf&)>;
