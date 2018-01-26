@@ -84,6 +84,21 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
+void Operator::FixLbnWhenShareModel(std::string shared_op_name) {
+  for (const std::string& model_bn : model_bns_) {
+    std::string model_lbn = shared_op_name + "/" + model_bn;
+    auto model_bn_iter = bn_in_op2lbn_.find(model_bn);
+    model_bn_iter->second = model_lbn;
+    auto model_diff_bn_iter = bn_in_op2lbn_.find(GenDiffBn(model_bn));
+    model_diff_bn_iter->second = model_lbn;
+  }
+  for (const std::string& model_tmp_bn : model_tmp_bns_) {
+    std::string model_tmp_lbn = shared_op_name + "/" + model_tmp_bn;
+    auto model_tmp_bn_iter = bn_in_op2lbn_.find(model_tmp_bn);
+    model_tmp_bn_iter->second = model_tmp_lbn;
+  }
+}
+
 static bool HasBlobDescWithDataId(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const std::vector<std::string>& bn_in_ops) {
