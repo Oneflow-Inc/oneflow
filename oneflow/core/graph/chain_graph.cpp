@@ -413,6 +413,7 @@ void ChainGraph::BuildModelStruct(
                   .second);
       } else {
         md_updt_chain = first_shared2mdupdt_it->second;
+        Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
       }
     }
     if (is_train == false) { return; }

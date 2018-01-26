@@ -16,12 +16,19 @@ void InferBasicRnnCellBlobDesc(
                JobDesc::Singleton()->DefaultDataType(), false, true,
                in_blob_desc->max_col_num());
 
-  *GetBlobDesc4BnInOp("i2h_weight") =
-      BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("h2h_weight") =
-      BlobDesc(Shape({hidden_size, hidden_size}));
-  *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
-  *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
+  if (BlobDesc* i2h_weight_blob_desc = GetBlobDesc4BnInOp("i2h_weight")) {
+    *i2h_weight_blob_desc = BlobDesc(Shape({hidden_size, embedding_size}));
+  }
+  if (BlobDesc* h2h_weight_blob_desc = GetBlobDesc4BnInOp("h2h_weight")) {
+    *h2h_weight_blob_desc = BlobDesc(Shape({hidden_size, hidden_size}));
+  }
+  if (BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias")) {
+    *bias_blob_desc = BlobDesc(Shape({1, hidden_size}));
+  }
+  if (BlobDesc* bias_multiplier_blob_desc =
+          GetBlobDesc4BnInOp("bias_multiplier")) {
+    *bias_multiplier_blob_desc = BlobDesc(Shape({data_num, 1}));
+  }
 }
 
 }  //  namespace

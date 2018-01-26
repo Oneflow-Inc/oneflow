@@ -64,15 +64,19 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
       data_tmp_regst->AddLbn(lbn);
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
     }
-    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(mtbn);
-      model_tmp_regst->AddLbn(lbn);
-      node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
+    if (!model_tmp_regst->IsLocked()) {
+      for (const std::string& mtbn : node->op()->model_tmp_bns()) {
+        const std::string& lbn = node->op()->Lbn4BnInOp(mtbn);
+        model_tmp_regst->AddLbn(lbn);
+        node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
+      }
     }
-    for (const std::string& mbn : node->op()->model_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(mbn);
-      model_regst->AddLbn(lbn);
-      node->BindBnInOpAndRegst(mbn, model_regst);
+    if (!model_regst->IsLocked()) {
+      for (const std::string& mbn : node->op()->model_bns()) {
+        const std::string& lbn = node->op()->Lbn4BnInOp(mbn);
+        model_regst->AddLbn(lbn);
+        node->BindBnInOpAndRegst(mbn, model_regst);
+      }
     }
   });
 }
