@@ -62,28 +62,24 @@ void ConvolutionOp::InferBlobDescs(
   col_buf_blob_desc->set_has_data_id_field(false);
 
   // weight
-  if (BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight")) {
-    weight_blob_desc->mut_shape() =
-        Shape({c_o, c_i, conf.kernel_h(), conf.kernel_w()});
-    weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    weight_blob_desc->set_has_data_id_field(false);
-  }
+  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  weight_blob_desc->mut_shape() = Shape({c_o, c_i * kernel});
+  weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  weight_blob_desc->set_has_data_id_field(false);
 
   if (conf.has_bias_term()) {
     // bias
-    if (BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias")) {
-      bias_blob_desc->mut_shape() = Shape({c_o});
-      bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-      bias_blob_desc->set_has_data_id_field(false);
-    }
+    BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
+    bias_blob_desc->mut_shape() = Shape({c_o});
+    bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+    bias_blob_desc->set_has_data_id_field(false);
+
     // bias multiplier
-    if (BlobDesc* bias_multiplier_blob_desc =
-            GetBlobDesc4BnInOp("bias_multiplier")) {
-      bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
-      bias_multiplier_blob_desc->set_data_type(
-          JobDesc::Singleton()->DefaultDataType());
-      bias_multiplier_blob_desc->set_has_data_id_field(false);
-    }
+    BlobDesc* bias_multiplier_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
+    bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
+    bias_multiplier_blob_desc->set_data_type(
+        JobDesc::Singleton()->DefaultDataType());
+    bias_multiplier_blob_desc->set_has_data_id_field(false);
   }
 }
 

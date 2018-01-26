@@ -33,31 +33,30 @@ void InnerProductOp::InferBlobDescs(
     out_num = splitter.At(parallel_ctx->parallel_id()).size();
   }
   // out
-  if (BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out")) {
-    out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), out_num});
-    out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
-  }
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), out_num});
+  out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
+
   // weight
-  if (BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight")) {
-    weight_blob_desc->mut_shape() =
-        Shape({out_num, in_blob_desc->shape().Count(1)});
-    weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    weight_blob_desc->set_has_data_id_field(false);
-  }
+  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  weight_blob_desc->mut_shape() =
+      Shape({out_num, in_blob_desc->shape().Count(1)});
+  weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  weight_blob_desc->set_has_data_id_field(false);
+
   if (conf.has_bias_term()) {
     // bias
-    if (BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias")) {
-      bias_blob_desc->mut_shape() = Shape({1, out_num});
-      bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-      bias_blob_desc->set_has_data_id_field(false);
-    }
+    BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
+    bias_blob_desc->mut_shape() = Shape({1, out_num});
+    bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+    bias_blob_desc->set_has_data_id_field(false);
+
     // bias_multiplier
-    if (BlobDesc* bias_mt_blob_desc = GetBlobDesc4BnInOp("bias_multiplier")) {
-      bias_mt_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
-      bias_mt_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-      bias_mt_blob_desc->set_has_data_id_field(false);
-    }
+    BlobDesc* bias_mt_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
+    bias_mt_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
+    bias_mt_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+    bias_mt_blob_desc->set_has_data_id_field(false);
   }
 }
 
