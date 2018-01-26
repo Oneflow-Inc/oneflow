@@ -233,7 +233,7 @@ void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& input_bns,
                       const PbRpf<std::string>& output_bns) {
   auto in_iter = input_bns.begin();
-  auto out_iter = input_bns.begin();
+  auto out_iter = output_bns.begin();
   int64_t in_size = BnInOp2Blob(*in_iter)->shape().At(0);
   int64_t out_size = BnInOp2Blob(*out_iter)->shape().At(0);
   int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
@@ -359,9 +359,9 @@ template<typename T>
 void BoxingKernel<T>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField<ColNumIterator>(ctx, BnInOp2Blob);
   SetMaxColId(ctx, BnInOp2Blob);
   SetColId(ctx, BnInOp2Blob);
-  ForwardField<ColNumIterator>(ctx, BnInOp2Blob);
 }
 
 template<typename T>
@@ -389,11 +389,9 @@ template<typename T>
 void BoxingKernel<T>::SetMaxColId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = nullptr;
-  int32_t max_col_num_in_blob = 0;
   for (const std::string& obn : kernel_conf().output_bns()) {
-    max_col_num_in_blob = 0;
-    out_blob = BnInOp2Blob(obn);
+    int32_t max_col_num_in_blob = 0;
+    Blob* out_blob = BnInOp2Blob(obn);
     FOR_RANGE(int32_t, i, 0, out_blob->shape().At(0)) {
       max_col_num_in_blob = std::max(max_col_num_in_blob, out_blob->col_num(i));
     }
