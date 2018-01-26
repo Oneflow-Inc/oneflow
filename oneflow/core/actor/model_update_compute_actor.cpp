@@ -12,7 +12,7 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_model_diff_acc_eord_ = false;
   next_model_version_id_ = 0;
   related_save_actor_id_ = task_proto.related_save_task_id();
-  related_fw_actor_id_ = task_proto.related_fw_task_id();
+  related_fw_actor_ids_ = PbRf2StdVec(task_proto.related_fw_task_ids());
   random_seed_ = task_proto.random_seed();
   pre_model_regst_ = nullptr;
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerInitModelAndModelTmp);
@@ -21,8 +21,8 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 void MdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   if (regst_desc_id == -1) { return; }
   Regst* regst = GetCurWriteableRegst(regst_desc_id);
-  ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(actor_id(),
-                                                   related_fw_actor_id_, regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(
+      actor_id(), related_fw_actor_ids_.front(), regst);
   ActorMsgBus::Singleton()->SendMsg(msg);
 }
 
