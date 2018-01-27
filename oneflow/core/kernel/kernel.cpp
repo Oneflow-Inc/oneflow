@@ -153,26 +153,6 @@ void KernelIf<device_type>::CopyField(
   }
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyColNumToAllOb(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const Blob* blob) const {
-  for (const std::string& obn : kernel_conf().output_bns()) {
-    Blob* output_blob = BnInOp2Blob(obn);
-    output_blob->CopyColNumFrom<device_type>(ctx, blob);
-  }
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyField(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const Blob* from_blob, const PbRpf<std::string>& to_bns,
-    void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
-  for (const std::string& to_bn : to_bns) {
-    (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob);
-  }
-}
-
 namespace {
 
 HashMap<int, KernelCreator1>& GetCreatorsMap() {

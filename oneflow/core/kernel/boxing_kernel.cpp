@@ -32,10 +32,6 @@ void CalcSumOfBlobs(DeviceCtx* ctx,
   }
 }
 
-bool IsValidBlob(const Blob* blob) {
-  return blob->col_id() <= blob->max_col_id();
-}
-
 void CopyFromFirstToOtherBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const PbRpf<std::string>& bns, CopyMthdInBlob Copy) {
@@ -95,7 +91,7 @@ class DataContentIterator final {
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
     int64_t elem_num = blob->shape().Count(axis_);
     std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-    if (IsValidBlob(blob)) {
+    if (blob->IsColValid()) {
       std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
     }
     bn_idx_ += 1;
@@ -150,7 +146,7 @@ class FieldIterator {
     std::tuple<char*, size_t> ret(nullptr, 0);
     if (bn_idx_ == bn_num_) { return ret; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_++));
-    if (IsValidBlob(blob)) { std::get<0>(ret) = GetMutPtr(blob); }
+    if (blob->IsColValid()) { std::get<0>(ret) = GetMutPtr(blob); }
     std::get<1>(ret) = GetSizeOfField(blob);
     return ret;
   }
