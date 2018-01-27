@@ -47,6 +47,7 @@ class RegstDesc final {
   void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
+  bool Equal(RegstDesc* rhs);
 
  private:
   int64_t regst_desc_id_;

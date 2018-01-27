@@ -43,7 +43,7 @@ void RegstDesc::Lock() {
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
-  if (!lbn2blob_desc_.empty()) { return; }
+  CHECK(lbn2blob_desc_.empty());
   for (const auto& pair : rhs->lbn2blob_desc_) {
     const std::string& lbn = pair.first;
     AddLbn(lbn);
@@ -60,7 +60,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
 
 BlobDesc* RegstDesc::AddLbn(const std::string& lbn) {
   CHECK_EQ(is_locked_, false);
-  if (lbn2blob_desc_.find(lbn) != lbn2blob_desc_.end()) { return nullptr; }
+  CHECK(lbn2blob_desc_.find(lbn) == lbn2blob_desc_.end()) << lbn;
   BlobDesc* blob_desc = new BlobDesc;
   lbn2blob_desc_[lbn].reset(blob_desc);
   return blob_desc;
@@ -144,6 +144,15 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
+}
+
+bool RegstDesc::Equal(RegstDesc* rhs) {
+  if (rhs->lbn2blob_desc_.size() != lbn2blob_desc_.size()) { return false; }
+  for (const auto& pair : rhs->lbn2blob_desc_) {
+    auto iter = lbn2blob_desc_.find(pair.first);
+    if (iter == lbn2blob_desc_.end()) { return false; }
+  }
+  return true;
 }
 
 }  // namespace oneflow
