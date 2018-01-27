@@ -37,11 +37,10 @@ op {
 
 op {
   name: "ip10"
-  innerproduct_conf {
+  fully_connected_conf {
     in: "conv/out"
     out: "out"
-    out_num: 10
-    has_bias_term: true
+    units: 10
   }
 }
 
