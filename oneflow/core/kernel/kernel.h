@@ -57,7 +57,7 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void ForwardColNum(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
   virtual void Backward(
       const KernelCtx& ctx,
@@ -70,7 +70,7 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BackwardColNum(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
   KernelConf kernel_conf_;
@@ -88,16 +88,24 @@ class KernelIf : public Kernel {
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void BackwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void CopyDataIdToAllOb(DeviceCtx* ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         const Blob* blob) const;
-  void CopyColNumToAllOb(DeviceCtx* ctx,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob,
-                         const Blob* blob) const;
+  void CopyDataId(DeviceCtx* ctx,
+                  std::function<Blob*(const std::string&)> BnInOp2Blob,
+                  const Blob* from_blob,
+                  const PbRpf<std::string>& to_bns) const;
+  void CopyColNum(DeviceCtx* ctx,
+                  std::function<Blob*(const std::string&)> BnInOp2Blob,
+                  const Blob* from_blob,
+                  const PbRpf<std::string>& to_bns) const;
   void CopyField(DeviceCtx* ctx,
                  std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
