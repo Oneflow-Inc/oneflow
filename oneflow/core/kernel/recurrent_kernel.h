@@ -11,7 +11,7 @@ class RecurrentKernel : public KernelIf<device_type> {
   OF_DISALLOW_COPY_AND_MOVE(RecurrentKernel);
   ~RecurrentKernel() = default;
 
-  bool Ish0Model() const;
+  bool NeedExternalH0() const;
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
 
   void InitModelBlobsWithRandomSeed(

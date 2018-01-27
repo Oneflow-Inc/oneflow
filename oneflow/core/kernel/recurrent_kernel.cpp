@@ -3,9 +3,9 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-bool RecurrentKernel<device_type, T>::Ish0Model() const {
+bool RecurrentKernel<device_type, T>::NeedExternalH0() const {
   auto& input_bns = this->kernel_conf().input_bns();
-  return find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+  return std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
 }
 
 template<DeviceType device_type, typename T>
@@ -19,7 +19,7 @@ template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (Ish0Model()) {
+  if (NeedExternalH0()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx,
         OF_PB_POINTER_GET(this->op_conf().recurrent_conf(),
@@ -34,7 +34,7 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (Ish0Model()) {
+  if (NeedExternalH0()) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"),
         "h0", BnInOp2Blob("h0")->shape().At(0), 1);
