@@ -146,7 +146,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   *(ret->mutable_mem_case()) = mem_case_;
 }
 
-bool RegstDesc::Equal(RegstDesc* rhs) {
+bool RegstDesc::HasSameLbnsWith(const RegstDesc* rhs) {
   if (rhs->lbn2blob_desc_.size() != lbn2blob_desc_.size()) { return false; }
   for (const auto& pair : rhs->lbn2blob_desc_) {
     auto iter = lbn2blob_desc_.find(pair.first);

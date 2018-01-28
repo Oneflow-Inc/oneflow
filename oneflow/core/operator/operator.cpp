@@ -84,7 +84,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
-void Operator::FixLbnWhenShareModel(std::string shared_op_name) {
+void Operator::FixLbnWhenShareModel(const std::string& shared_op_name) {
   for (const std::string& model_bn : model_bns_) {
     std::string model_lbn = shared_op_name + "/" + model_bn;
     auto model_bn_iter = bn_in_op2lbn_.find(model_bn);
