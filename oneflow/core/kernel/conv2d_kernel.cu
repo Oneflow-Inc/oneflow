@@ -1,5 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/convolution_kernel.h"
+#include "oneflow/core/kernel/conv2d_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -83,10 +83,10 @@ __global__ void Col2ImGpuKernel(const int n, const T* data_col,
 }  // namespace
 
 template<typename T>
-class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
+class Conv2dKernelUtil<DeviceType::kGPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvolutionKernelUtil);
-  ConvolutionKernelUtil() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(Conv2dKernelUtil);
+  Conv2dKernelUtil() = delete;
   static void Im2Col(const KernelCtx& ctx, const T* data_im, const int channels,
                      const int height, const int width, const int kernel_h,
                      const int kernel_w, const int pad_h, const int pad_w,
@@ -124,9 +124,8 @@ class ConvolutionKernelUtil<DeviceType::kGPU, T> final {
   }
 };
 
-#define INSTANTIATE_CONVOLUTION_KERNEL_UTIL(type_cpp, type_proto) \
-  template class ConvolutionKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONVOLUTION_KERNEL_UTIL,
-                     FLOATING_DATA_TYPE_SEQ)
+#define INSTANTIATE_CONV2D_KERNEL_UTIL(type_cpp, type_proto) \
+  template class Conv2dKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV2D_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

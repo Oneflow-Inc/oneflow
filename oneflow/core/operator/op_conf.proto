@@ -47,26 +47,25 @@ message InitializerConf {
   }
 }
 
-message ConvolutionOpConf {
+message Conv2dOpConf {
   required string in = 1;
   required string out = 2;
 
   optional int32 out_num = 3 [default = 1];
-  optional bool has_bias_term = 4 [default = true];
 
-  optional int32 pad_h = 5 [default = 0];
-  optional int32 pad_w = 6 [default = 0];
-  required int32 kernel_h = 7;
-  required int32 kernel_w = 8;
-  optional int32 stride_h = 9 [default = 1];
-  optional int32 stride_w = 10 [default = 1];
-  optional int32 dilation_h = 11 [default = 1];
-  optional int32 dilation_w = 12 [default = 1];
+  required int32 kernel_h = 4;
+  required int32 kernel_w = 5;
+  optional int32 pad_h = 6 [default = 0];
+  optional int32 pad_w = 7 [default = 0];
+  optional int32 stride_h = 8 [default = 1];
+  optional int32 stride_w = 9 [default = 1];
+  optional int32 dilation_h = 10 [default = 1];
+  optional int32 dilation_w = 11 [default = 1];
 
-  optional bool use_cudnn = 13 [default = true];
+  optional bool use_cudnn = 12 [default = true];
   
-  optional InitializerConf weight_initializer = 14;
-  optional InitializerConf bias_initializer = 15;
+  optional InitializerConf filter_initializer = 13;
+  optional InitializerConf bias_initializer = 14;
 }
 
 message InnerProductOpConf {
@@ -241,7 +240,7 @@ message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
   oneof op_type {
-    ConvolutionOpConf convolution_conf = 100;
+    Conv2dOpConf conv2d_conf = 100;
     InnerProductOpConf innerproduct_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     PoolingOpConf pooling_conf = 103;

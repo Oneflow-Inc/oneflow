@@ -11,36 +11,13 @@
 
 namespace oneflow {
 
-template<typename T>
-struct CudnnDataType;
-
-template<>
-struct CudnnDataType<float> {
- public:
-  static const cudnnDataType_t type = CUDNN_DATA_FLOAT;
-  static float oneval;
-  static float zeroval;
-  static const void* one;
-  static const void* zero;
-};
-
-template<>
-struct CudnnDataType<double> {
- public:
-  static const cudnnDataType_t type = CUDNN_DATA_DOUBLE;
-  static double oneval;
-  static double zeroval;
-  static const void* one;
-  static const void* zero;
-};
-
 class CudnnTensorDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnTensorDesc);
   CudnnTensorDesc() = delete;
   ~CudnnTensorDesc();
 
-  CudnnTensorDesc(DataType, int64_t n, int64_t c, int64_t h, int64_t w);
+  CudnnTensorDesc(DataType, int n, int c, int h, int w);
   CudnnTensorDesc(DataType, const Shape&);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
@@ -55,7 +32,7 @@ class CudnnFilterDesc final {
   CudnnFilterDesc() = delete;
   ~CudnnFilterDesc();
 
-  CudnnFilterDesc(DataType, int64_t k, int64_t c, int64_t h, int64_t w);
+  CudnnFilterDesc(DataType, int k, int c, int h, int w);
   CudnnFilterDesc(DataType, const Shape&);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
@@ -70,10 +47,7 @@ class CudnnConvolutionDesc final {
   CudnnConvolutionDesc() = delete;
   ~CudnnConvolutionDesc();
 
-  CudnnConvolutionDesc(DataType, int64_t pad_h, int64_t pad_w, int64_t stride_h,
-                       int64_t stride_w, int64_t dilation_h,
-                       int64_t dilation_w);
-  CudnnConvolutionDesc(DataType, const ConvolutionOpConf& conv_conf);
+  CudnnConvolutionDesc(DataType, const Conv2dOpConf& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 

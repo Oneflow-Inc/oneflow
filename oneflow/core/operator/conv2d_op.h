@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CONVOLUTION_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CONVOLUTION_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CONV2D_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CONV2D_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ConvolutionOp final : public Operator {
+class Conv2dOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvolutionOp);
-  ConvolutionOp() = default;
-  ~ConvolutionOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Conv2dOp);
+  Conv2dOp() = default;
+  ~Conv2dOp() = default;
 
   void InitFromOpConf() override;
 
@@ -22,7 +22,7 @@ class ConvolutionOp final : public Operator {
 
   int32_t ModelSplitAxis() const override { return 1; }
   int32_t MaxModelSplitNum() const override {
-    return op_conf().convolution_conf().out_num();
+    return op_conf().conv2d_conf().out_num();
   }
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -34,4 +34,4 @@ class ConvolutionOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CONVOLUTION_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CONV2D_OP_H_

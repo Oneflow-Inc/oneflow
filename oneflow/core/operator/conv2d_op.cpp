@@ -1,4 +1,4 @@
-#include "oneflow/core/operator/convolution_op.h"
+#include "oneflow/core/operator/conv2d_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #ifdef WITH_CUDNN
 #include "oneflow/core/device/cuda_stream_handle.h"
@@ -54,19 +54,18 @@ cudnnConvolutionBwdDataAlgo_t InferCudnnConvBwdDataAlgo(
 
 void SetCudnnConvAlgoForKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ConvolutionOpConf& conv_op_conf,
-    ConvolutionKernelConf* conv_kernel_conf) {
+    const Conv2dOpConf& conv_op_conf, Conv2dKernelConf* conv_kernel_conf) {
   CudaStreamHandle cuda_handle;
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  const BlobDesc* filter_blob_desc = GetBlobDesc4BnInOp("filter");
 
   DataType data_type = in_blob_desc->data_type();
 
   CudnnTensorDesc in_desc(data_type, in_blob_desc->shape());
   CudnnTensorDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape());
+  CudnnFilterDesc filter_desc(data_type, filter_blob_desc->shape());
   CudnnConvolutionDesc conv_desc(data_type, conv_op_conf);
 
   conv_kernel_conf->set_cudnn_fwd_algo(
@@ -82,7 +81,7 @@ void SetCudnnConvAlgoForKernelConf(
 
 size_t InferCudnnWorkspaceSize(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ConvolutionOpConf& conv_op_conf) {
+    const Conv2dOpConf& conv_op_conf) {
   size_t fwd_workspace_size = 0;
   size_t bwd_filter_workspace_size = 0;
   size_t bwd_data_workspace_size = 0;
@@ -91,13 +90,13 @@ size_t InferCudnnWorkspaceSize(
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  const BlobDesc* filter_blob_desc = GetBlobDesc4BnInOp("filter");
 
   DataType data_type = in_blob_desc->data_type();
 
   CudnnTensorDesc in_desc(data_type, in_blob_desc->shape());
   CudnnTensorDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape());
+  CudnnFilterDesc filter_desc(data_type, filter_blob_desc->shape());
   CudnnConvolutionDesc conv_desc(data_type, conv_op_conf);
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
@@ -129,9 +128,9 @@ size_t InferCudnnWorkspaceSize(
 }  // namespace
 #endif  // WITH_CUDNN
 
-void ConvolutionOp::InitFromOpConf() {
-  CHECK(op_conf().has_convolution_conf());
-  if (op_conf().convolution_conf().use_cudnn()) {
+void Conv2dOp::InitFromOpConf() {
+  CHECK(op_conf().has_conv2d_conf());
+  if (op_conf().conv2d_conf().use_cudnn()) {
 #ifndef WITH_CUDNN
     LOG(FATAL);
 #endif  // WITH_CUDNN
@@ -140,29 +139,27 @@ void ConvolutionOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
 
-  EnrollModelBn("weight");
-  if (op_conf().convolution_conf().has_bias_term()) {
-    EnrollModelBn("bias");
-    if (!op_conf().convolution_conf().use_cudnn()) {
-      EnrollModelTmpBn("bias_multiplier");
-    }
+  EnrollModelBn("filter");
+  EnrollModelBn("bias");
+  if (!op_conf().conv2d_conf().use_cudnn()) {
+    EnrollModelTmpBn("bias_multiplier");
   }
 
-  if (op_conf().convolution_conf().use_cudnn()) {
+  if (op_conf().conv2d_conf().use_cudnn()) {
     EnrollDataTmpBn("cudnn_workspace");
   } else {
     EnrollDataTmpBn("col_buf");
   }
 }
 
-const PbMessage& ConvolutionOp::GetSpecialConf() const {
-  return op_conf().convolution_conf();
+const PbMessage& Conv2dOp::GetSpecialConf() const {
+  return op_conf().conv2d_conf();
 }
 
-void ConvolutionOp::InferBlobDescs(
+void Conv2dOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const ConvolutionOpConf& conf = op_conf().convolution_conf();
+  const Conv2dOpConf& conf = op_conf().conv2d_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
@@ -193,29 +190,26 @@ void ConvolutionOp::InferBlobDescs(
   out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
-  // weight
-  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
-  weight_blob_desc->mut_shape() =
+  // filter
+  BlobDesc* filter_blob_desc = GetBlobDesc4BnInOp("filter");
+  filter_blob_desc->mut_shape() =
       Shape({c_o, c_i, conf.kernel_h(), conf.kernel_w()});
-  weight_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  weight_blob_desc->set_has_data_id_field(false);
+  filter_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  filter_blob_desc->set_has_data_id_field(false);
 
-  if (conf.has_bias_term()) {
-    // bias
-    BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
-    bias_blob_desc->mut_shape() = Shape({c_o});
-    bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    bias_blob_desc->set_has_data_id_field(false);
+  // bias
+  BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
+  bias_blob_desc->mut_shape() = Shape({c_o});
+  bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
+  bias_blob_desc->set_has_data_id_field(false);
 
-    if (!conf.use_cudnn()) {
-      // bias multiplier
-      BlobDesc* bias_multiplier_blob_desc =
-          GetBlobDesc4BnInOp("bias_multiplier");
-      bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
-      bias_multiplier_blob_desc->set_data_type(
-          JobDesc::Singleton()->DefaultDataType());
-      bias_multiplier_blob_desc->set_has_data_id_field(false);
-    }
+  if (!conf.use_cudnn()) {
+    // bias multiplier
+    BlobDesc* bias_multiplier_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
+    bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
+    bias_multiplier_blob_desc->set_data_type(
+        JobDesc::Singleton()->DefaultDataType());
+    bias_multiplier_blob_desc->set_has_data_id_field(false);
   }
 
 #ifdef WITH_CUDNN
@@ -243,18 +237,17 @@ void ConvolutionOp::InferBlobDescs(
   }
 }
 
-void ConvolutionOp::VirtualGenKernelConf(
+void Conv2dOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
 #ifdef WITH_CUDNN
-  if (op_conf().convolution_conf().use_cudnn()) {
-    SetCudnnConvAlgoForKernelConf(GetBlobDesc4BnInOp,
-                                  op_conf().convolution_conf(),
-                                  kernel_conf->mutable_convolution_conf());
+  if (op_conf().conv2d_conf().use_cudnn()) {
+    SetCudnnConvAlgoForKernelConf(GetBlobDesc4BnInOp, op_conf().conv2d_conf(),
+                                  kernel_conf->mutable_conv2d_conf());
   }
 #endif  // WITH_CUDNN
 }
 
-REGISTER_OP(OperatorConf::kConvolutionConf, ConvolutionOp);
+REGISTER_OP(OperatorConf::kConv2DConf, Conv2dOp);
 
 }  // namespace oneflow
