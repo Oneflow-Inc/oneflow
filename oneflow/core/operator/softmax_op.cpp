@@ -29,7 +29,6 @@ void SoftmaxOp::InferBlobDescs(
   BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
   tmp->mut_shape() = Shape({in->shape().At(0)});
   tmp->set_data_type(in->data_type());
-  tmp->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
