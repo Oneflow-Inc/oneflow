@@ -41,6 +41,17 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   });
 }
 
+void ForwardCompTaskNode::LockRegsts() {
+  TaskNode::LockRegsts();
+  TryLockConsumedRegst("model");
+  TryLockConsumedRegst("model_tmp");
+}
+
+void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
+  CompTaskNode::ToProto(task_proto);
+  task_proto->set_random_seed(random_seed_);
+}
+
 void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
   UNEXPECTED_RUN();
 }
@@ -79,12 +90,6 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
       node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
-}
-
-void ForwardCompTaskNode::LockRegsts() {
-  TaskNode::LockRegsts();
-  TryLockConsumedRegst("model");
-  TryLockConsumedRegst("model_tmp");
 }
 
 void ForwardCompTaskNode::FixRegisterNumRange() {

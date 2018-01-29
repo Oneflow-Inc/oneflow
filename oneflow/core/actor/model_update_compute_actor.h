@@ -36,7 +36,6 @@ class MdUpdtCompActor final : public CompActor {
   int64_t next_model_version_id_;
   int64_t related_save_actor_id_;
   int64_t related_init_model_task_id_;
-  int64_t random_seed_;
   Regst* pre_model_regst_;
 };
 

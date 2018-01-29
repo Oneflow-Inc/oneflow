@@ -13,7 +13,6 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   next_model_version_id_ = 0;
   related_save_actor_id_ = task_proto.related_save_task_id();
   related_init_model_task_id_ = task_proto.related_init_model_task_id();
-  random_seed_ = task_proto.random_seed();
   pre_model_regst_ = nullptr;
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerInitModelAndModelTmp);
 }
