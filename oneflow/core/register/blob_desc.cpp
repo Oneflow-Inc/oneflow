@@ -81,16 +81,14 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
     if (max_col_num == -1) {
       max_col_num = blob_desc->max_col_num();
     } else {
-      CHECK_EQ(max_col_num, 1);
-      CHECK_EQ(blob_desc->max_col_num(), 1);
+      CHECK_EQ(max_col_num, blob_desc->max_col_num());
     }
     blob_desc_cnt += 1;
     ret = *blob_desc;
   }
   if (blob_desc_cnt <= 1) { return ret; }
-  CHECK_EQ(has_col_num_field, false);
-  CHECK_EQ(max_col_num, 1);
-  if (has_data_id_field == false && data_type_set.size() == 1) {
+  if (has_data_id_field == false && has_col_num_field == false
+      && data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(total_data_content_byte_size % size_of_one_elem, 0);

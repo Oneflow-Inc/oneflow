@@ -216,7 +216,8 @@ std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
 void ForwardChainNode::set_data_output_lbns() {
   ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
     if (dynamic_cast<const ForwardChainNode*>(to_node)
-        || dynamic_cast<const LossChainNode*>(to_node)) {
+        || dynamic_cast<const LossChainNode*>(to_node)
+        || dynamic_cast<const PrintChainNode*>(to_node)) {
       AddDataOutputLbnsTo(to_node);
     }
   });
@@ -317,6 +318,15 @@ std::vector<std::string> LossChainNode::FindLbnsFromForward(
 std::vector<std::string> LossChainNode::FindLbnsFromSource(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
+}
+
+void LossChainNode::set_data_output_lbns() {
+  ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
+    if (dynamic_cast<const BackwardChainNode*>(to_node)
+        || dynamic_cast<const PrintChainNode*>(to_node)) {
+      AddDataOutputLbnsTo(to_node);
+    }
+  });
 }
 
 // PrintChainNode

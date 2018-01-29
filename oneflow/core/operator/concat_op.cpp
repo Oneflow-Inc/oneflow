@@ -39,9 +39,8 @@ void ConcatOp::InferBlobDescs(
              in_0_blob_desc->has_data_id_field());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_0_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
-  out_blob_desc->set_data_type(in_0_blob_desc->data_type());
-  out_blob_desc->set_has_data_id_field(in_0_blob_desc->has_data_id_field());
 }
 
 void ConcatOp::VirtualGenKernelConf(
