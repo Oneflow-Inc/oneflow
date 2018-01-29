@@ -369,7 +369,6 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     bool is_train, ForwardChainNode* fw_chain) {
   MdUpdtChainNode* md_updt_chain = NewNode<MdUpdtChainNode>();
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
-  Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
   if (is_train) {
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("md_save_" + NewUniqueId());
@@ -387,6 +386,7 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
       md_save_pr_desc->RemoveNeedlessDevice(1);
     }
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
+    Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
   }
   return md_updt_chain;
 }
