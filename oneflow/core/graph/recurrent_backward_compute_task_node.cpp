@@ -45,7 +45,7 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   }
 
   auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
-  rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("ht_1"));
+  rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("rec_in"));
   exec_node->BindBnInOpAndRegst("rec_in_diff", rec_in_diff_regst);
 
   if (std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0")) {
@@ -77,13 +77,16 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
   if (lbns.find(op->Lbn4BnInOp("out_diff")) != lbns.end()) {
     ConsumeRegst("out_diff", regst);
   } else if (lbns.find(op->Lbn4BnInOp("rec_out_diff")) != lbns.end()) {
-    CHECK_EQ(parallel_ctx()->policy(), kModelParallel);
-    ConsumeRegst("rec_out_diff", regst);
+    if (parallel_ctx()->policy() == kModelParallel) {
+      ConsumeRegst("rec_out_diff", regst);
+    }
+  } else {
+    UNEXPECTED_RUN();
   }
 }
 
 void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
-  CompTaskNode* fw_node = static_cast<CompTaskNode*>(GetRelatedFwTaskNode());
+  CompTaskNode* fw_node = GetRelatedFwTaskNode();
   std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
   for (TaskEdge* edge : fw_node->in_edges()) {
     if (edge->src_node()->GetTaskType() == TaskType::kMdUpdt) { continue; }
@@ -98,8 +101,17 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
 }
 
 void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
-  auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
-  auto rec_in_regst = GetRelatedFwTaskNode()->GetConsumedRegstWrapper("rec_in");
+  std::shared_ptr<RegstDesc> rec_in_diff_regst =
+      GetProducedRegst("rec_in_diff");
+  std::shared_ptr<RegstDesc> rec_in_regst = nullptr;
+  CompTaskNode* fw_node = GetRelatedFwTaskNode();
+  if (parallel_ctx()->policy() == kDataParallel) {
+    rec_in_regst = fw_node->GetProducedRegst("rec_out");
+  } else if (parallel_ctx()->policy() == kModelParallel) {
+    rec_in_regst = fw_node->GetConsumedRegst("rec_in");
+  } else {
+    UNEXPECTED_RUN();
+  }
   rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {
     h0_diff_regst->CopyBlobDescWithoutAddLbn(GetConsumedRegst("h0").get());
