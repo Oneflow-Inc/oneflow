@@ -190,7 +190,7 @@ void BoxingTaskNode::BuildWithChainPair(
       const std::string& obn = node->op()->output_bns().at(i);
       if (lbn == kPackedBlobName) {
         RegstDesc* in_regst = sorted_in_edges[0].edge->GetSoleRegst().get();
-        if (!regst->HasSameLbnsWith(in_regst)) {
+        if (!regst->HasSameBlobDescs(in_regst)) {
           regst->CopyBlobDescFrom(in_regst);
         }
       } else {

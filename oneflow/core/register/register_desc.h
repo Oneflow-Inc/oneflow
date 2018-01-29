@@ -47,7 +47,7 @@ class RegstDesc final {
   void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
-  bool HasSameLbnsWith(const RegstDesc*);
+  bool HasSameBlobDescs(const RegstDesc*);
 
  private:
   int64_t regst_desc_id_;
