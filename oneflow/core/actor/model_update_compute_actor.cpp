@@ -15,7 +15,8 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
   for (const auto& kv : task_proto.consumed_regst_desc_id()) {
-    model_diff_acc_regsts_.emplace(kv.second, std::queue<Regst*>());
+    CHECK(
+        model_diff_acc_regsts_.emplace(kv.second, std::queue<Regst*>()).second);
   }
   readable_model_diff_acc_cnt_ = 0;
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerInitModelAndModelTmp);
@@ -70,11 +71,9 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = actor_msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      int64_t regst_desc_id = regst->regst_desc_id();
-      if (model_diff_acc_regsts_.at(regst_desc_id).empty()) {
-        readable_model_diff_acc_cnt_ += 1;
-      }
-      model_diff_acc_regsts_.at(regst->regst_desc_id()).push(regst);
+      auto it = model_diff_acc_regsts_.find(regst->regst_desc_id());
+      if (it->second.empty()) { readable_model_diff_acc_cnt_ += 1; }
+      it->second.push(regst);
     }
     ActUntilFail();
   } else {
