@@ -11,7 +11,7 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  if (model_regst_desc_id_ != -1) {
+  if (model_regst_desc_id_ != -1 && random_seed_ != -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModel);
   } else {
     SwitchToHandlerInitModelTmpOrNormal();
@@ -19,7 +19,7 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void ForwardCompActor::SwitchToHandlerInitModelTmpOrNormal() {
-  if (model_tmp_regst_desc_id_ != -1) {
+  if (model_tmp_regst_desc_id_ != -1 && random_seed_ != -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelTmp);
   } else {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
