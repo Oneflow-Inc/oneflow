@@ -82,7 +82,9 @@ void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_random_seed(random_seed_);
   ForEachNodeOnOutEdge([&](const TaskNode* node) {
     if (IsForwardTaskType(node->GetTaskType())) {
-      task_proto->add_related_fw_task_ids(node->task_id());
+      if (task_proto->related_init_model_task_id() == -1) {
+        task_proto->set_related_init_model_task_id(node->task_id());
+      }
     } else if (IsBackwardTaskType(node->GetTaskType())) {
       // do nothing
     } else {

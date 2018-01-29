@@ -87,15 +87,12 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
 void Operator::FixLbnWhenShareModel(const std::string& shared_op_name) {
   for (const std::string& model_bn : model_bns_) {
     std::string model_lbn = shared_op_name + "/" + model_bn;
-    auto model_bn_iter = bn_in_op2lbn_.find(model_bn);
-    model_bn_iter->second = model_lbn;
-    auto model_diff_bn_iter = bn_in_op2lbn_.find(GenDiffBn(model_bn));
-    model_diff_bn_iter->second = model_lbn;
+    bn_in_op2lbn_.at(model_bn) = model_lbn;
+    bn_in_op2lbn_.at(GenDiffBn(model_bn)) = model_lbn;
   }
   for (const std::string& model_tmp_bn : model_tmp_bns_) {
     std::string model_tmp_lbn = shared_op_name + "/" + model_tmp_bn;
-    auto model_tmp_bn_iter = bn_in_op2lbn_.find(model_tmp_bn);
-    model_tmp_bn_iter->second = model_tmp_lbn;
+    bn_in_op2lbn_.at(model_tmp_bn) = model_tmp_lbn;
   }
 }
 

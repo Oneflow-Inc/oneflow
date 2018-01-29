@@ -387,7 +387,6 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
       md_save_pr_desc->RemoveNeedlessDevice(1);
     }
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
-    Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
   }
   return md_updt_chain;
 }
@@ -413,9 +412,9 @@ void ChainGraph::BuildModelStruct(
                   .second);
       } else {
         md_updt_chain = first_shared2mdupdt_it->second;
-        Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
       }
     }
+    Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     if (is_train == false) { return; }
     // Model Diff Accumulate Chain
     BackwardChainNode* bw_chain = fw_chain->bw_node();

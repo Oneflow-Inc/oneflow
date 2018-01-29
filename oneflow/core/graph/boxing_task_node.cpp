@@ -192,8 +192,6 @@ void BoxingTaskNode::BuildWithChainPair(
         RegstDesc* in_regst = sorted_in_edges[0].edge->GetSoleRegst().get();
         if (!regst->HasSameLbnsWith(in_regst)) {
           regst->CopyBlobDescFrom(in_regst);
-        } else {
-          CHECK_GT(regst->NumOfLbn(), 0);
         }
       } else {
         regst->AddLbn(lbn);
