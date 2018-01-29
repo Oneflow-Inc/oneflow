@@ -22,6 +22,8 @@ class AccumulateCompActor : public CompActor {
   void AsyncReturnAllReadableRegst() override;
   void Act() override;
 
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+
   bool is_in_eord_;
   ColIdOrder order_;
   std::queue<Regst*> pending_in_regst_;

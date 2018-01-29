@@ -4,19 +4,13 @@
 
 namespace oneflow {
 
-namespace {
-
 cudnnDataType_t GetCudnnDataType(DataType val) {
-  switch (val) {
-    case DataType::kFloat: return CUDNN_DATA_FLOAT;
-    case DataType::kDouble: return CUDNN_DATA_DOUBLE;
-    case DataType::kInt8: return CUDNN_DATA_INT8;
-    case DataType::kInt32: return CUDNN_DATA_INT32;
-    default: UNEXPECTED_RUN();
-  }
-}
-
-}  // namespace
+#define MAKE_ENTRY(type_cpp, type_cudnn) \
+  if (val == GetDataType<type_cpp>::val) { return type_cudnn; }
+  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDNN_DATA_TYPE_SEQ);
+#undef MAKE_ENTRY
+  UNEXPECTED_RUN();
+}  // namespace oneflow
 
 CudnnTensorDesc::~CudnnTensorDesc() {
   CudaCheck(cudnnDestroyTensorDescriptor(val_));

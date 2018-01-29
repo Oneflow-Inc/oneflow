@@ -187,29 +187,18 @@ void Conv2dOp::InferBlobDescs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
   out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
-  out_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // filter
-  BlobDesc* filter_blob_desc = GetBlobDesc4BnInOp("filter");
-  filter_blob_desc->mut_shape() =
+  GetBlobDesc4BnInOp("filter")->mut_shape() =
       Shape({c_o, c_i, conf.kernel_h(), conf.kernel_w()});
-  filter_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  filter_blob_desc->set_has_data_id_field(false);
 
   // bias
-  BlobDesc* bias_blob_desc = GetBlobDesc4BnInOp("bias");
-  bias_blob_desc->mut_shape() = Shape({c_o});
-  bias_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-  bias_blob_desc->set_has_data_id_field(false);
+  GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({c_o});
 
   if (!conf.use_cudnn()) {
     // bias multiplier
-    BlobDesc* bias_multiplier_blob_desc = GetBlobDesc4BnInOp("bias_multiplier");
-    bias_multiplier_blob_desc->mut_shape() = Shape({output_size});
-    bias_multiplier_blob_desc->set_data_type(
-        JobDesc::Singleton()->DefaultDataType());
-    bias_multiplier_blob_desc->set_has_data_id_field(false);
+    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({output_size});
   }
 
 #ifdef WITH_CUDNN
@@ -217,23 +206,15 @@ void Conv2dOp::InferBlobDescs(
     size_t cudnn_workspace_size =
         InferCudnnWorkspaceSize(GetBlobDesc4BnInOp, conf);
 
-    BlobDesc* cudnn_workspace_blob_desc = GetBlobDesc4BnInOp("cudnn_workspace");
-    cudnn_workspace_blob_desc->mut_shape() =
+    GetBlobDesc4BnInOp("cudnn_workspace")->mut_shape() =
         Shape({static_cast<int64_t>(cudnn_workspace_size)});
-    cudnn_workspace_blob_desc->set_data_type(
-        JobDesc::Singleton()->DefaultDataType());
-    cudnn_workspace_blob_desc->set_has_data_id_field(false);
   }
 #endif  // WITH_CUDNN
 
   if (!conf.use_cudnn()) {
     // col_buf
-    BlobDesc* col_buf_blob_desc = GetBlobDesc4BnInOp("col_buf");
-    CHECK(col_buf_blob_desc);
-    col_buf_blob_desc->mut_shape() =
-        Shape({data_num, output_size, c_i * kernel});
-    col_buf_blob_desc->set_data_type(JobDesc::Singleton()->DefaultDataType());
-    col_buf_blob_desc->set_has_data_id_field(false);
+    GetBlobDesc4BnInOp("col_buf")->mut_shape() =
+        Shape({1, output_size, c_i * kernel});
   }
 }
 

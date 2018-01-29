@@ -60,6 +60,7 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void BoxingActor::Act() {
+  int64_t piece_id = readable_regst_.begin()->second.front()->piece_id();
   AsyncLaunchKernel(GenDefaultKernelCtx(),
                     [this](int64_t regst_desc_id) -> Regst* {
                       Regst* regst = GetCurWriteableRegst(regst_desc_id);
@@ -70,7 +71,7 @@ void BoxingActor::Act() {
                       }
                     });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(regst->piece_id());
+    regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();
   });
   int32_t cur_max_cid = 0;
@@ -105,6 +106,11 @@ bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
 
 void BoxingActor::AsyncReturnAllReadableRegst() {
   CHECK_EQ(readable_regst_cnt_, 0);
+}
+
+void BoxingActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  for (const auto& pair : readable_regst_) { handler(pair.second.front()); }
 }
 
 REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);

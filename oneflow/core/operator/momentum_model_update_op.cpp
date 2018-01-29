@@ -6,10 +6,6 @@ void MomentumModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("momentum");
 }
 
-const PbMessage& MomentumModelUpdateOp::GetSpecialConf() const {
-  return op_conf().momentum_mdupdt_conf();
-}
-
 void MomentumModelUpdateOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) {
@@ -19,7 +15,5 @@ void MomentumModelUpdateOp::InferBlobDescs(
   CHECK_EQ(model_blob_desc->has_data_id_field(), false);
   *GetBlobDesc4BnInOp("momentum") = *model_blob_desc;
 }
-
-REGISTER_OP(OperatorConf::kMomentumMdupdtConf, MomentumModelUpdateOp);
 
 }  // namespace oneflow

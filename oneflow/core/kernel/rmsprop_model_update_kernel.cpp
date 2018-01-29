@@ -9,7 +9,8 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  const RMSPropModelUpdateOpConf& conf = this->op_conf().rmsprop_mdupdt_conf();
+  const RMSPropModelUpdateConf& conf =
+      this->op_conf().mdupdt_conf().user_conf().rmsprop_conf();
   float decay_rate = conf.decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
 
@@ -38,7 +39,6 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kRmspropMdupdtConf,
-                           RMSPropMdUpdateKernel, FLOATING_DATA_TYPE_SEQ);
+DEFINE_MDUPDT_KERNEL_CREATOR(RMSProp);
 
 }  // namespace oneflow

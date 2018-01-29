@@ -10,11 +10,7 @@ class ModelUpdtOp : public Operator {
   OF_DISALLOW_COPY_AND_MOVE(ModelUpdtOp);
   virtual ~ModelUpdtOp() = default;
 
-  virtual void InitFromOpConf() {
-    EnrollInputBn("model_diff_acc", false);
-    EnrollOutputBn("model", false);
-    MdUpdtVirtualInitFromOpConf();
-  }
+  virtual void InitFromOpConf();
 
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

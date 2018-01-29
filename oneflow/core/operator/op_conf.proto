@@ -68,14 +68,12 @@ message Conv2dOpConf {
   optional InitializerConf bias_initializer = 14;
 }
 
-message InnerProductOpConf {
+message FullyConnectedOpConf {
   required string in = 1;
   required string out = 2;
-
-  required int32 out_num = 3;
-  optional bool has_bias_term = 4 [default = true];
-  optional InitializerConf weight_initializer = 5; 
-  optional InitializerConf bias_initializer = 6; 
+  required int32 units = 3;
+  optional InitializerConf weight_initializer = 4;
+  optional InitializerConf bias_initializer = 5;
 }
 
 message BasicDataLoaderOpConf {
@@ -178,19 +176,32 @@ message BoxingOpConf {
   }
 }
 
-message NormalModelUpdateOpConf {
+message NormalModelUpdateConf {
   optional float learning_rate = 1 [default = 0.01];
 }
 
-message MomentumModelUpdateOpConf {
+message MomentumModelUpdateConf {
   optional float learning_rate = 1 [default = 0.01];
   optional float beta = 2 [default = 0.9];
 }
 
-message RMSPropModelUpdateOpConf {
+message RMSPropModelUpdateConf {
   optional float learning_rate = 1 [default = 0.01];
   optional float decay_rate = 2 [default = 0.99];
   optional float epsilon = 3 [default = 1e-8];
+}
+
+message ModelUpdateOpUserConf {
+  oneof mdupdt {
+    NormalModelUpdateConf normal_conf = 1000;
+    MomentumModelUpdateConf momentum_conf = 1001;
+    RMSPropModelUpdateConf rmsprop_conf = 1002;
+  }
+}
+
+message ModelUpdateOpConf {
+  required ModelUpdateOpUserConf user_conf = 1;
+  required int32 in_num = 2;
 }
 
 message AccumulateOpConf {
@@ -215,6 +226,8 @@ message SumOpConf {
 }
 
 message BasicRnnCellConf {
+  optional InitializerConf i2h_weight_initializer = 1;
+  optional InitializerConf h2h_weight_initializer = 2;
 }
 
 message BasicLstmCellConf {
@@ -241,7 +254,7 @@ message OperatorConf {
   optional string model_load_dir = 2;
   oneof op_type {
     Conv2dOpConf conv2d_conf = 100;
-    InnerProductOpConf innerproduct_conf = 101;
+    FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     PoolingOpConf pooling_conf = 103;
     ReluOpConf relu_conf = 104;
@@ -250,17 +263,19 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
-    NormalModelUpdateOpConf normal_mdupdt_conf = 110;
+    ModelUpdateOpConf mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
     AccumulateOpConf accumulate_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
-    MomentumModelUpdateOpConf momentum_mdupdt_conf = 115;
-    RMSPropModelUpdateOpConf rmsprop_mdupdt_conf = 116;
     SoftmaxLossOpConf softmax_loss_conf = 117;
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
     SumOpConf sum_conf = 120;
     RecurrentOpConf recurrent_conf = 121; 
   }
+}
+
+message OpNameSet {
+  repeated string op_name = 1;
 }
