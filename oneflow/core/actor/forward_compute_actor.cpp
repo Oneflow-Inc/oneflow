@@ -8,9 +8,10 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
+  random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  if (model_regst_desc_id_ != -1) {
+  if (model_regst_desc_id_ != -1 && random_seed_ != -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModel);
   } else {
     SwitchToHandlerInitModelTmpOrNormal();
@@ -18,7 +19,7 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void ForwardCompActor::SwitchToHandlerInitModelTmpOrNormal() {
-  if (model_tmp_regst_desc_id_ != -1) {
+  if (model_tmp_regst_desc_id_ != -1 && random_seed_ != -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelTmp);
   } else {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
@@ -26,11 +27,14 @@ void ForwardCompActor::SwitchToHandlerInitModelTmpOrNormal() {
 }
 
 int ForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
+  CHECK_NE(random_seed_, -1);
   Regst* model_regst = msg.regst();
   CHECK_EQ(model_regst->regst_desc_id(), model_regst_desc_id_);
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
+    KernelCtx kernel_ctx = GenDefaultKernelCtx();
+    kernel_ctx.other = &random_seed_;
     exec_kernel.kernel->InitModelBlobs(
-        GenDefaultKernelCtx(), parallel_ctx(),
+        kernel_ctx, parallel_ctx(),
         SnapshotMgr::Singleton()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);

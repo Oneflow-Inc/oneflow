@@ -17,7 +17,7 @@ void Kernel::InitModelBlobs(
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
   }
   if (model_load_dir == "") {
-    uint32_t random_seed = reinterpret_cast<uint64_t>(ctx.other);
+    int64_t random_seed = *static_cast<int64_t*>(ctx.other);
     std::mt19937 random_seed_gen(random_seed);
     InitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
   } else {
