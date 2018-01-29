@@ -369,7 +369,6 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     bool is_train, ForwardChainNode* fw_chain) {
   MdUpdtChainNode* md_updt_chain = NewNode<MdUpdtChainNode>();
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
-  Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
   if (is_train) {
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("md_save_" + NewUniqueId());
@@ -415,6 +414,7 @@ void ChainGraph::BuildModelStruct(
         md_updt_chain = first_shared2mdupdt_it->second;
       }
     }
+    Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     if (is_train == false) { return; }
     // Model Diff Accumulate Chain
     BackwardChainNode* bw_chain = fw_chain->bw_node();

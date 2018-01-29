@@ -36,6 +36,7 @@ class ForwardCompActor final : public CompActor {
   int64_t in_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
+  int64_t random_seed_;
   Regst* model_regst_;
   Regst* model_tmp_regst_;
   std::queue<Regst*> pending_in_regsts_;

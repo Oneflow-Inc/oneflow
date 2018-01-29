@@ -35,7 +35,7 @@ message TaskProto {
   map<string, int64> consumed_regst_desc_id = 7;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
-  optional uint32 random_seed = 1001; // MdUpdtCompTask
-  optional int64 related_save_task_id = 1002 [default = -1];
-  optional int64 related_fw_task_id = 1003 [default = -1];
+  optional int64 random_seed = 1001; // ForwardCompTask
+  optional int64 related_save_model_task_id = 1002 [default = -1];
+  optional int64 related_init_model_task_id = 1003 [default = -1];
 };

@@ -98,6 +98,7 @@ class Operator {
   }
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
+  void FixLbnWhenShareModel(const std::string& shared_op_name);
   virtual int32_t ModelSplitAxis() const { return -1; }
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(

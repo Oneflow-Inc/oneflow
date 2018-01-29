@@ -67,6 +67,11 @@ void LogicalGraph::NaiveBuildGraphStruct(
       cur_node->mut_shared_model_nodes() = shared_model_nodes;
       CHECK(cur_node->op()->HasModelOrModelTmpBlob());
     }
+    const std::string& shared_op_name =
+        shared_model_nodes->front()->op()->op_name();
+    FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
+      shared_model_nodes->at(i)->mut_op()->FixLbnWhenShareModel(shared_op_name);
+    }
   }
 }
 
