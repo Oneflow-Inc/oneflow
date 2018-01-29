@@ -24,7 +24,9 @@ train_conf {
   }
   piece_num_of_print_loss: 5
   num_of_pieces_in_batch: 10
-  normal_mdupdt_conf {
-    learning_rate: 0.01
+  model_update_conf {
+    normal_conf {
+      learning_rate: 0.01
+    }
   }
 }

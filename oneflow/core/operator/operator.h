@@ -47,7 +47,7 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }
   const OperatorConf& op_conf() const { return op_conf_; }
-  virtual const PbMessage& GetSpecialConf() const = 0;
+  virtual const PbMessage& GetSpecialConf() const { UNEXPECTED_RUN(); }
 
 #define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)             \
   ret_type Get##func_name##FromSpecialConf(const std::string& field_name) \
@@ -98,6 +98,7 @@ class Operator {
   }
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
+  void FixLbnWhenShareModel(const std::string& shared_op_name);
   virtual int32_t ModelSplitAxis() const { return -1; }
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
@@ -155,6 +156,8 @@ std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*(const OperatorConf&)> creator);
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
                   std::function<Operator*()> creator);
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
@@ -168,6 +171,16 @@ struct OpRegister {
 
 #define REGISTER_OP(OpTypeCase, OpType) \
   static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
+
+struct OpCreatorRegister {
+  OpCreatorRegister(OperatorConf::OpTypeCase op_type_case,
+                    std::function<Operator*(const OperatorConf&)> creator) {
+    AddOpCreator(op_type_case, creator);
+  }
+};
+
+#define REGISTER_OP_CREATOR(op_type_case, creator) \
+  static OpCreatorRegister g_op_creator_register_var(op_type_case, creator);
 
 void EraseEmptyBnInVec(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

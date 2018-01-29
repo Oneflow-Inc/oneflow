@@ -9,8 +9,8 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
-  const MomentumModelUpdateOpConf& conf =
-      this->op_conf().momentum_mdupdt_conf();
+  const MomentumModelUpdateConf& conf =
+      this->op_conf().mdupdt_conf().user_conf().momentum_conf();
   float learning_rate = conf.learning_rate();
   float beta = conf.beta();
   if (next_model_vid == 1) { beta = 0.0f; }
@@ -35,7 +35,6 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMomentumMdupdtConf,
-                           MomentumMdUpdateKernel, FLOATING_DATA_TYPE_SEQ);
+DEFINE_MDUPDT_KERNEL_CREATOR(Momentum);
 
 }  // namespace oneflow

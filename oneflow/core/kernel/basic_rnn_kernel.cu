@@ -7,11 +7,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void AddGpu(const int64_t n, const T* x, const T* y, T* z) {
-  CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] + y[i]; }
-}
-
-template<typename T>
 __global__ void SigmoidGpu(const int64_t n, const T* x, T* y) {
   T one = static_cast<T>(1);
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = one / (one + std::exp(-x[i])); }
@@ -49,10 +44,6 @@ __global__ void ComputeSigmoidDiffGpu(const int64_t n, const T* ht,
 template<typename T>
 class BasicRnnKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void Add(DeviceCtx* ctx, int64_t n, const T* x, const T* y, T* z) {
-    AddGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                ctx->cuda_stream()>>>(n, x, y, z);
-  }
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
     SigmoidGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                     ctx->cuda_stream()>>>(n, x, y);

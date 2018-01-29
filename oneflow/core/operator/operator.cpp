@@ -84,12 +84,25 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
-static bool HasBlobDescWithDataId(
+void Operator::FixLbnWhenShareModel(const std::string& shared_op_name) {
+  for (const std::string& model_bn : model_bns_) {
+    std::string model_lbn = shared_op_name + "/" + model_bn;
+    bn_in_op2lbn_.at(model_bn) = model_lbn;
+    bn_in_op2lbn_.at(GenDiffBn(model_bn)) = model_lbn;
+  }
+  for (const std::string& model_tmp_bn : model_tmp_bns_) {
+    std::string model_tmp_lbn = shared_op_name + "/" + model_tmp_bn;
+    bn_in_op2lbn_.at(model_tmp_bn) = model_tmp_lbn;
+  }
+}
+
+static bool HasBlobDescWithField(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const std::vector<std::string>& bn_in_ops) {
+    const std::vector<std::string>& bn_in_ops,
+    bool (BlobDesc::*has_field)() const) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc && blob_desc->has_data_id_field()) { return true; }
+    if (blob_desc && (blob_desc->*has_field)()) { return true; }
   }
   return false;
 }
@@ -109,8 +122,14 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
   *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
   kernel_conf->set_need_do_data_id(false);
-  if (HasBlobDescWithDataId(GetBlobDesc4BnInOp, output_bns_)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+                           &BlobDesc::has_data_id_field)) {
     kernel_conf->set_need_do_data_id(true);
+  }
+  kernel_conf->set_need_do_col_num(false);
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+                           &BlobDesc::has_col_num_field)) {
+    kernel_conf->set_need_do_col_num(true);
   }
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =
@@ -193,18 +212,27 @@ std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   return {lbn.substr(0, pos), lbn.substr(pos + 1)};
 }
 
-static HashMap<int, std::function<Operator*()>>& OpTypeCase2Creator() {
-  static HashMap<int, std::function<Operator*()>> obj;
+static HashMap<int, std::function<Operator*(const OperatorConf&)>>&
+OpTypeCase2Creator() {
+  static HashMap<int, std::function<Operator*(const OperatorConf&)>> obj;
   return obj;
 }
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
-                  std::function<Operator*()> creator) {
+                  std::function<Operator*(const OperatorConf&)> creator) {
   CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
 }
 
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
+                  std::function<Operator*()> creator) {
+  CHECK(OpTypeCase2Creator()
+            .emplace(op_type_case,
+                     [creator](const OperatorConf&) { return creator(); })
+            .second);
+}
+
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
-  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())();
+  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())(op_conf);
   std::shared_ptr<Operator> ret(rptr);
   ret->InitFromOpConf(op_conf);
   return ret;

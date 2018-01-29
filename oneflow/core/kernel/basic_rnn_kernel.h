@@ -36,7 +36,6 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
 template<DeviceType device_type, typename T>
 class BasicRnnKernelUtil final {
  public:
-  static void Add(DeviceCtx* ctx, int64_t n, const T* x, const T* y, T* z);
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* ht,

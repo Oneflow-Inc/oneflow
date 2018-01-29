@@ -168,9 +168,6 @@ void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
 template<typename T>
 class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void Add(DeviceCtx* ctx, int64_t n, const T* x, const T* y, T* z) {
-    FOR_RANGE(int64_t, i, 0, n) { z[i] = x[i] + y[i]; }
-  }
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
     FOR_RANGE(int64_t, i, 0, n) {
       y[i] = static_cast<T>(1) / (static_cast<T>(1) + std::exp(-x[i]));

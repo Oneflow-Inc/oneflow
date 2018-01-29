@@ -186,6 +186,8 @@ class LossChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (Forward)(Source));
+
+  void set_data_output_lbns() override;
 };
 
 class PrintChainNode final : public ChainNode {

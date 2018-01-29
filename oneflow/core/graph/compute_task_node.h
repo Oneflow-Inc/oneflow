@@ -29,8 +29,6 @@ class CompTaskNode : public TaskNode {
   const ChainNode* SuccChainNodeOnEdge(TaskEdge* edge);
   const ChainNode* PredChainNodeOnEdge(TaskEdge* edge);
 
-  std::shared_ptr<RegstDesc> GetConsumedRegstWrapper(const std::string& name);
-
  private:
   ParallelContext parallel_ctx_;
   const ChainNode* chain_node_;
