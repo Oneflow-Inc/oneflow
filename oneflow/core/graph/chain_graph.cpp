@@ -365,36 +365,9 @@ void ChainGraph::BuildLossPrintStruct() {
   });
 }
 
-std::shared_ptr<const Operator> ConstructModelUpdateOp() {
-  OperatorConf mdupdt_conf;
-  mdupdt_conf.set_name("md_update_" + NewUniqueId());
-  const JobDesc* job_desc = JobDesc::Singleton();
-  if (job_desc->IsTrain()) {
-    const TrainConf& train_conf = job_desc->job_conf().train_conf();
-    if (train_conf.has_normal_mdupdt_conf()) {
-      *(mdupdt_conf.mutable_normal_mdupdt_conf()) =
-          train_conf.normal_mdupdt_conf();
-    } else if (train_conf.has_momentum_mdupdt_conf()) {
-      *(mdupdt_conf.mutable_momentum_mdupdt_conf()) =
-          train_conf.momentum_mdupdt_conf();
-    } else if (train_conf.has_rmsprop_mdupdt_conf()) {
-      *(mdupdt_conf.mutable_rmsprop_mdupdt_conf()) =
-          train_conf.rmsprop_mdupdt_conf();
-    } else {
-      UNEXPECTED_RUN();
-    }
-  } else if (job_desc->IsPredict()) {
-    mdupdt_conf.mutable_normal_mdupdt_conf();
-  } else {
-    UNEXPECTED_RUN();
-  }
-  return ConstructOp(mdupdt_conf);
-}
-
 MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     bool is_train, ForwardChainNode* fw_chain) {
   MdUpdtChainNode* md_updt_chain = NewNode<MdUpdtChainNode>();
-  md_updt_chain->mut_op_vec() = {ConstructModelUpdateOp()};
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
   Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
   if (is_train) {

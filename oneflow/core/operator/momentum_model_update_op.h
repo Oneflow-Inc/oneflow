@@ -11,7 +11,6 @@ class MomentumModelUpdateOp final : public ModelUpdtOp {
   MomentumModelUpdateOp() = default;
   ~MomentumModelUpdateOp() = default;
 
-  const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) override;

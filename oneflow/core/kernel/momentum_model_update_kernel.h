@@ -27,6 +27,8 @@ class MomentumMdUpdateKernelUtil final {
                           const T* pre_model, T* momentum, T* model);
 };
 
+DECLARE_MDUPDT_KERNEL_CREATOR(Momentum);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_MOMENTUM_MODEL_UPDATE_KERNEL_H_

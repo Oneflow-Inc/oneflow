@@ -19,6 +19,8 @@ class NormalMdUpdateKernel final : public MdUpdateKernel<device_type, T> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
+DECLARE_MDUPDT_KERNEL_CREATOR(Normal);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
