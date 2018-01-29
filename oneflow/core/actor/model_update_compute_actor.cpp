@@ -11,8 +11,8 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   if (model_tmp_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   is_model_diff_acc_eord_ = false;
   next_model_version_id_ = 0;
-  related_save_actor_id_ = task_proto.related_save_task_id();
-  related_init_model_task_id_ = task_proto.related_init_model_task_id();
+  related_save_model_actor_id_ = task_proto.related_save_model_task_id();
+  related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerInitModelAndModelTmp);
 }
@@ -21,7 +21,7 @@ void MdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   if (regst_desc_id == -1) { return; }
   Regst* regst = GetCurWriteableRegst(regst_desc_id);
   ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(
-      actor_id(), related_init_model_task_id_, regst);
+      actor_id(), related_init_model_actor_id_, regst);
   ActorMsgBus::Singleton()->SendMsg(msg);
 }
 
@@ -97,14 +97,14 @@ void MdUpdtCompActor::Act() {
   auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   if (next_model_version_id_ == job_desc->TotalBatchNum()) {
     AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
-      return actor_id == related_save_actor_id_;
+      return actor_id == related_save_model_actor_id_;
     });
   } else {
     if (next_model_version_id_ % job_desc->NumOfBatchesInSnapshot() == 0) {
       AsyncSendRegstMsgToConsumer(RegstPreProcess);
     } else {
       AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
-        return actor_id != related_save_actor_id_;
+        return actor_id != related_save_model_actor_id_;
       });
     }
   }

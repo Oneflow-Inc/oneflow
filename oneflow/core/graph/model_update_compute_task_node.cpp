@@ -19,7 +19,7 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   auto model_regst = ProduceRegst("model", min_model_regst, max_model_regst);
   auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
   ProduceRegst("data_tmp", 1, 1);
-  bool find_related_init_model_task_node = false;
+  bool found_related_init_model_task = false;
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
     if (IsForwardTaskType(dst_node->GetTaskType())
@@ -27,10 +27,10 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       out_edge->AddRegst("model", model_regst);
       out_edge->AddRegst("model_tmp", model_tmp_regst);
       if (IsForwardTaskType(dst_node->GetTaskType())
-          && !find_related_init_model_task_node) {
+          && !found_related_init_model_task) {
         auto fw_node = static_cast<ForwardCompTaskNode*>(dst_node);
         fw_node->set_random_seed(random_seed_);
-        find_related_init_model_task_node = true;
+        found_related_init_model_task = true;
       }
     } else {
       out_edge->AddRegst("model", model_regst);
@@ -94,8 +94,8 @@ void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
     } else if (IsBackwardTaskType(node->GetTaskType())) {
       // do nothing
     } else {
-      CHECK_EQ(task_proto->related_save_task_id(), -1);
-      task_proto->set_related_save_task_id(node->task_id());
+      CHECK_EQ(task_proto->related_save_model_task_id(), -1);
+      task_proto->set_related_save_model_task_id(node->task_id());
     }
   });
 }

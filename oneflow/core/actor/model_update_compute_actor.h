@@ -34,8 +34,8 @@ class MdUpdtCompActor final : public CompActor {
   bool is_model_diff_acc_eord_;
   std::queue<Regst*> pending_model_diff_acc_queue_;
   int64_t next_model_version_id_;
-  int64_t related_save_actor_id_;
-  int64_t related_init_model_task_id_;
+  int64_t related_save_model_actor_id_;
+  int64_t related_init_model_actor_id_;
   Regst* pre_model_regst_;
 };
 
