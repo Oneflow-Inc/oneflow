@@ -222,7 +222,7 @@ message ReduceSumOpConf {
   required string in = 1;
   required string out = 2;
   optional int32 axis = 3;
-  optional bool keepdims = 4 [default = true];
+  optional bool keepdims = 4 [default = false];
 }
 
 message BasicRnnCellConf {
