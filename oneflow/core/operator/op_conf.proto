@@ -83,16 +83,34 @@ message BasicDataLoaderOpConf {
   required ShapeProto shape = 5;
 }
 
-message PoolingOpConf {
+message AveragePoolingOpConf {
   required string in = 1;
   required string out = 2;
 
-  enum PoolMethod {
-    kMax = 0;
-    kAve = 1;
-    kStochastic = 2;
-  }
-  required PoolMethod pool = 3;
+  optional int32 pad_h = 4 [default = 0];
+  optional int32 pad_w = 5 [default = 0];
+  required int32 kernel_h = 6;
+  required int32 kernel_w = 7;
+  optional int32 stride_h = 8 [default = 1];
+  optional int32 stride_w = 9 [default = 1];
+}
+
+message MaxPoolingOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  optional int32 pad_h = 4 [default = 0];
+  optional int32 pad_w = 5 [default = 0];
+  required int32 kernel_h = 6;
+  required int32 kernel_w = 7;
+  optional int32 stride_h = 8 [default = 1];
+  optional int32 stride_w = 9 [default = 1];
+}
+
+message StochasticPoolingOpConf {
+  required string in = 1;
+  required string out = 2;
+
   optional int32 pad_h = 4 [default = 0];
   optional int32 pad_w = 5 [default = 0];
   required int32 kernel_h = 6;
@@ -255,18 +273,20 @@ message OperatorConf {
     ConvolutionOpConf convolution_conf = 100;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
-    PoolingOpConf pooling_conf = 103;
-    ReluOpConf relu_conf = 104;
-    SoftmaxOpConf softmax_conf = 105;
-    MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 106;
-    CopyHdOpConf copy_hd_conf = 107;
-    CloneOpConf clone_conf = 108;
-    BoxingOpConf boxing_conf = 109;
-    ModelUpdateOpConf mdupdt_conf = 110;
-    ModelSaveOpConf model_save_conf = 111;
-    AccumulateOpConf accumulate_conf = 112;
-    ConcatOpConf concat_conf = 113;
-    CopyCommNetOpConf copy_comm_net_conf = 114;
+    AveragePoolingOpConf average_pooling_conf = 103;
+    MaxPoolingOpConf max_pooling_conf = 104;
+    StochasticPoolingOpConf stochastic_pooling_conf = 105;
+    ReluOpConf relu_conf = 106;
+    SoftmaxOpConf softmax_conf = 107;
+    MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 108;
+    CopyHdOpConf copy_hd_conf = 109;
+    CloneOpConf clone_conf = 110;
+    BoxingOpConf boxing_conf = 111;
+    ModelUpdateOpConf mdupdt_conf = 112;
+    ModelSaveOpConf model_save_conf = 113;
+    AccumulateOpConf accumulate_conf = 114;
+    ConcatOpConf concat_conf = 115;
+    CopyCommNetOpConf copy_comm_net_conf = 116;
     SoftmaxLossOpConf softmax_loss_conf = 117;
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
