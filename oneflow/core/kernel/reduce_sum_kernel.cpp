@@ -1,14 +1,22 @@
-#include "oneflow/core/kernel/sum_kernel.h"
+#include "oneflow/core/kernel/reduce_sum_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void SumKernel<device_type, T>::ForwardDataContent(
+void ReduceSumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  int32_t axis = this->kernel_conf().sum_conf().axis();
+  if (this->kernel_conf().reduce_sum_conf().has_axis() == false) {
+    Blob* tmp_blob = BnInOp2Blob("tmp");
+    KernelUtil<device_type, T>::Sum(ctx.device_ctx, in_blob->shape().elem_cnt(),
+                                    in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
+                                    tmp_blob->mut_dptr<T>(),
+                                    tmp_blob->ByteSizeOfDataContentField());
+    return;
+  }
+  int32_t axis = this->kernel_conf().reduce_sum_conf().axis();
   int64_t lhs_num = in_blob->shape().Count(0, axis);
   int64_t middle_num = in_blob->shape().At(axis);
   int64_t rhs_num = in_blob->shape().Count(axis + 1);
@@ -24,7 +32,7 @@ void SumKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSumConf, SumKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -19,8 +19,8 @@ message SoftmaxLossKernelConf {
   required DataType label_type = 2;
 }
 
-message SumKernelConf {
-  required int32 axis = 1;
+message ReduceSumKernelConf {
+  optional int32 axis = 1;
 }
 
 message KernelConf {
@@ -46,6 +46,6 @@ message KernelConf {
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
     ConcatKernelConf concat_conf = 113; 
     SoftmaxLossKernelConf softmax_loss_conf = 117;
-    SumKernelConf sum_conf = 120;
+    ReduceSumKernelConf reduce_sum_conf = 120;
   }
 }

@@ -155,6 +155,10 @@ struct KernelUtil<DeviceType::kGPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template void KernelUtil<DeviceType::kGPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+                                                                              \
   template<>                                                                  \
   void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
