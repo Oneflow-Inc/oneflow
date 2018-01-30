@@ -225,7 +225,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
   template struct KernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
-#define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+#define DEFINE_INT_KERNEL_UTIL_AXPY(T, type_proto)                            \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
@@ -237,6 +237,16 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
     }                                                                         \
   }
 
-OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL_AXPY, INT_DATA_TYPE_SEQ);
+
+#define DEFINE_INT_KERNEL_UTIL_SUM(T, type_proto)              \
+  template<>                                                   \
+  void KernelUtil<DeviceType::kCPU, T>::Sum(                   \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, \
+      T* temp_storage, size_t temp_storage_bytes) {            \
+    FOR_RANGE(size_t, i, 0, n) { *sum_ptr += x[i]; }           \
+  }
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL_SUM, INT_DATA_TYPE_SEQ);
 
 }  //  namespace oneflow

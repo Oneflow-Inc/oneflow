@@ -221,7 +221,8 @@ message LossPrintOpConf {
 message SumOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 axis = 3;
+  optional int32 axis = 3;
+  optional bool keepdims = 4 [default = true];
 }
 
 message BasicRnnCellConf {

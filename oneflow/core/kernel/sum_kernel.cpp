@@ -8,6 +8,14 @@ void SumKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
+  if (this->kernel_conf().sum_conf().has_axis() == false) {
+    Blob* tmp_blob = BnInOp2Blob("tmp");
+    KernelUtil<device_type, T>::Sum(ctx.device_ctx, in_blob->shape().elem_cnt(),
+                                    in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
+                                    tmp_blob->mut_dptr<T>(),
+                                    tmp_blob->ByteSizeOfDataContentField());
+    return;
+  }
   int32_t axis = this->kernel_conf().sum_conf().axis();
   int64_t lhs_num = in_blob->shape().Count(0, axis);
   int64_t middle_num = in_blob->shape().At(axis);

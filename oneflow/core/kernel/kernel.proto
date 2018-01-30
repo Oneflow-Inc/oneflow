@@ -20,7 +20,7 @@ message SoftmaxLossKernelConf {
 }
 
 message SumKernelConf {
-  required int32 axis = 1;
+  optional int32 axis = 1;
 }
 
 message KernelConf {
