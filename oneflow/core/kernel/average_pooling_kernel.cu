@@ -7,25 +7,27 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void AvePoolForward(const int64_t nthreads, const T* in_dptr,
-                               T* out_dptr, const int64_t channels,
-                               const int64_t height, const int64_t width,
-                               const int64_t pooled_height,
-                               const int64_t pooled_width,
-                               const int64_t kernel_h, const int64_t kernel_w,
-                               const int64_t stride_h, const int64_t stride_w,
-                               const int64_t pad_h, const int64_t pad_w) {
+__global__ void AvePoolForward(
+    const int64_t nthreads, const T* in_dptr, T* out_dptr,
+    const int64_t channels, const int64_t height, const int64_t width,
+    const int64_t pooled_height, const int64_t pooled_width,
+    const int64_t kernel_h, const int64_t kernel_w, const int64_t stride_h,
+    const int64_t stride_w, const int64_t padding_top,
+    const int64_t padding_bottom, const int64_t padding_left,
+    const int64_t padding_right) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t pw = index % pooled_width;
     const int64_t ph = (index / pooled_width) % pooled_height;
     const int64_t c = (index / pooled_width / pooled_height) % channels;
     const int64_t n = index / pooled_width / pooled_height / channels;
-    int64_t hstart = ph * stride_h - pad_h;
-    int64_t wstart = pw * stride_w - pad_w;
-    int64_t hend = (hstart + kernel_h < height + pad_h) ? (hstart + kernel_h)
-                                                        : (height + pad_h);
-    int64_t wend = (wstart + kernel_w < width + pad_w) ? (wstart + kernel_w)
-                                                       : (width + pad_w);
+    int64_t hstart = ph * stride_h - padding_top;
+    int64_t wstart = pw * stride_w - padding_left;
+    int64_t hend = (hstart + kernel_h < height + padding_bottom)
+                       ? (hstart + kernel_h)
+                       : (height + padding_bottom);
+    int64_t wend = (wstart + kernel_w < width + padding_right)
+                       ? (wstart + kernel_w)
+                       : (width + padding_right);
     const int64_t pool_size = (hend - hstart) * (wend - wstart);
     hstart = (hstart > 0) ? hstart : 0;
     wstart = (wstart > 0) ? wstart : 0;
@@ -43,17 +45,17 @@ __global__ void AvePoolForward(const int64_t nthreads, const T* in_dptr,
 }
 
 template<typename T>
-__global__ void AvePoolBackward(const int64_t nthreads, const T* out_diff_dptr,
-                                T* in_diff_dptr, const int64_t channels,
-                                const int64_t height, const int64_t width,
-                                const int64_t pooled_height,
-                                const int64_t pooled_width,
-                                const int64_t kernel_h, const int64_t kernel_w,
-                                const int64_t stride_h, const int64_t stride_w,
-                                const int64_t pad_h, const int64_t pad_w) {
+__global__ void AvePoolBackward(
+    const int64_t nthreads, const T* out_diff_dptr, T* in_diff_dptr,
+    const int64_t channels, const int64_t height, const int64_t width,
+    const int64_t pooled_height, const int64_t pooled_width,
+    const int64_t kernel_h, const int64_t kernel_w, const int64_t stride_h,
+    const int64_t stride_w, const int64_t padding_top,
+    const int64_t padding_bottom, const int64_t padding_left,
+    const int64_t padding_right) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
-    const int64_t w = index % width + pad_w;
-    const int64_t h = (index / width) % height + pad_h;
+    const int64_t w = index % width + padding_left;
+    const int64_t h = (index / width) % height + padding_top;
     const int64_t c = (index / width / height) % channels;
     const int64_t n = index / width / height / channels;
     int64_t phstart = (h < kernel_h) ? 0 : (h - kernel_h) / stride_h + 1;
@@ -67,13 +69,14 @@ __global__ void AvePoolBackward(const int64_t nthreads, const T* out_diff_dptr,
     const T* const out_diff_slice = out_diff_dptr + offset;
     for (int64_t ph = phstart; ph < phend; ++ph) {
       for (int64_t pw = pwstart; pw < pwend; ++pw) {
-        int64_t hstart = ph * stride_h - pad_h;
-        int64_t wstart = pw * stride_w - pad_w;
-        int64_t hend = (hstart + kernel_h < height + pad_h)
+        int64_t hstart = ph * stride_h - padding_top;
+        int64_t wstart = pw * stride_w - padding_left;
+        int64_t hend = (hstart + kernel_h < height + padding_bottom)
                            ? (hstart + kernel_h)
-                           : (height + pad_h);
-        int64_t wend = (wstart + kernel_w < width + pad_w) ? (wstart + kernel_w)
-                                                           : (width + pad_w);
+                           : (height + padding_bottom);
+        int64_t wend = (wstart + kernel_w < width + padding_right)
+                           ? (wstart + kernel_w)
+                           : (width + padding_right);
         int64_t pool_size = (hend - hstart) * (wend - wstart);
         gradient += out_diff_slice[ph * pooled_width + pw] / pool_size;
       }
@@ -92,22 +95,24 @@ class AveragePoolingKernelUtil<DeviceType::kGPU, T> final {
 
   static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
                              Blob* out_blob,
-                             const AveragePoolingOpConf& pooling_conf) {
+                             const AveragePoolingOpConf& op_conf,
+                             const PoolingKernelConf& kernel_conf) {
     const int64_t count = out_blob->shape().elem_cnt();
 
     AvePoolForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                         ctx.device_ctx->cuda_stream()>>>(
         count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
         in_blob->shape().At(1), in_blob->shape().At(2), in_blob->shape().At(3),
-        out_blob->shape().At(2), out_blob->shape().At(3),
-        pooling_conf.kernel_h(), pooling_conf.kernel_w(),
-        pooling_conf.stride_h(), pooling_conf.stride_w(), pooling_conf.pad_h(),
-        pooling_conf.pad_w());
+        out_blob->shape().At(2), out_blob->shape().At(3), op_conf.pool_size_h(),
+        op_conf.pool_size_w(), op_conf.strides_h(), op_conf.strides_w(),
+        kernel_conf.padding_top(), kernel_conf.padding_bottom(),
+        kernel_conf.padding_left(), kernel_conf.padding_right());
   }
 
   static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
                               Blob* in_diff_blob,
-                              const AveragePoolingOpConf& pooling_conf) {
+                              const AveragePoolingOpConf& op_conf,
+                              const PoolingKernelConf& kernel_conf) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
 
     AvePoolBackward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock,
@@ -115,9 +120,10 @@ class AveragePoolingKernelUtil<DeviceType::kGPU, T> final {
         count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
         in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
         in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-        out_diff_blob->shape().At(3), pooling_conf.kernel_h(),
-        pooling_conf.kernel_w(), pooling_conf.stride_h(),
-        pooling_conf.stride_w(), pooling_conf.pad_h(), pooling_conf.pad_w());
+        out_diff_blob->shape().At(3), op_conf.pool_size_h(),
+        op_conf.pool_size_w(), op_conf.strides_h(), op_conf.strides_w(),
+        kernel_conf.padding_top(), kernel_conf.padding_bottom(),
+        kernel_conf.padding_left(), kernel_conf.padding_right());
   }
 };
 

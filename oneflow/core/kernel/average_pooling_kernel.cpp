@@ -6,13 +6,12 @@ template<DeviceType device_type, typename T>
 void AveragePoolingKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const AveragePoolingOpConf& pooling_conf =
-      this->op_conf().average_pooling_conf();
+  const AveragePoolingOpConf& op_conf = this->op_conf().average_pooling_conf();
 
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   AveragePoolingKernelUtil<device_type, T>::PoolingForward(
-      ctx, in_blob, out_blob, pooling_conf);
+      ctx, in_blob, out_blob, op_conf, this->kernel_conf().pooling_conf());
 }
 
 template<DeviceType device_type, typename T>
@@ -23,11 +22,11 @@ void AveragePoolingKernel<device_type, T>::BackwardDataContent(
   if (in_diff_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
-  const AveragePoolingOpConf& pooling_conf =
-      this->op_conf().average_pooling_conf();
+  const AveragePoolingOpConf& op_conf = this->op_conf().average_pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   AveragePoolingKernelUtil<device_type, T>::PoolingBackward(
-      ctx, out_diff_blob, in_diff_blob, pooling_conf);
+      ctx, out_diff_blob, in_diff_blob, op_conf,
+      this->kernel_conf().pooling_conf());
 }
 
 template<typename T>
@@ -38,7 +37,8 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
 
   static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
                              Blob* out_blob,
-                             const AveragePoolingOpConf& pooling_conf) {
+                             const AveragePoolingOpConf& op_conf,
+                             const PoolingKernelConf& kernel_conf) {
     const T* in_dptr = in_blob->dptr<T>();
     T* out_dptr = out_blob->mut_dptr<T>();
 
@@ -47,15 +47,15 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
         FOR_RANGE(int64_t, out_h, 0, out_blob->shape().At(2)) {
           FOR_RANGE(int64_t, out_w, 0, out_blob->shape().At(3)) {
             int64_t hstart =
-                out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
+                out_h * op_conf.strides_h() - kernel_conf.padding_top();
             int64_t wstart =
-                out_w * pooling_conf.stride_w() - pooling_conf.pad_w();
+                out_w * op_conf.strides_w() - kernel_conf.padding_left();
             int64_t hend =
-                std::min(hstart + pooling_conf.kernel_h(),
-                         in_blob->shape().At(2) + pooling_conf.pad_h());
+                std::min(hstart + op_conf.pool_size_h(),
+                         in_blob->shape().At(2) + kernel_conf.padding_bottom());
             int64_t wend =
-                std::min(wstart + pooling_conf.kernel_w(),
-                         in_blob->shape().At(3) + pooling_conf.pad_w());
+                std::min(wstart + op_conf.pool_size_w(),
+                         in_blob->shape().At(3) + kernel_conf.padding_right());
             int64_t pool_size = (hend - hstart) * (wend - wstart);
             hstart = std::max(hstart, static_cast<int64_t>(0));
             wstart = std::max(wstart, static_cast<int64_t>(0));
@@ -79,7 +79,8 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
 
   static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
                               Blob* in_diff_blob,
-                              const AveragePoolingOpConf& pooling_conf) {
+                              const AveragePoolingOpConf& op_conf,
+                              const PoolingKernelConf& kernel_conf) {
     const T* out_diff_dptr = out_diff_blob->dptr<T>();
     T* in_diff_dptr = in_diff_blob->mut_dptr<T>();
 
@@ -88,15 +89,15 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
         FOR_RANGE(int64_t, out_h, 0, out_diff_blob->shape().At(2)) {
           FOR_RANGE(int64_t, out_w, 0, out_diff_blob->shape().At(3)) {
             int64_t hstart =
-                out_h * pooling_conf.stride_h() - pooling_conf.pad_h();
+                out_h * op_conf.strides_h() - kernel_conf.padding_top();
             int64_t wstart =
-                out_w * pooling_conf.stride_w() - pooling_conf.pad_w();
-            int64_t hend =
-                std::min(hstart + pooling_conf.kernel_h(),
-                         in_diff_blob->shape().At(2) + pooling_conf.pad_h());
-            int64_t wend =
-                std::min(wstart + pooling_conf.kernel_w(),
-                         in_diff_blob->shape().At(3) + pooling_conf.pad_w());
+                out_w * op_conf.strides_w() - kernel_conf.padding_left();
+            int64_t hend = std::min(
+                hstart + op_conf.pool_size_h(),
+                in_diff_blob->shape().At(2) + kernel_conf.padding_bottom());
+            int64_t wend = std::min(
+                wstart + op_conf.pool_size_w(),
+                in_diff_blob->shape().At(3) + kernel_conf.padding_right());
             int64_t pool_size = (hend - hstart) * (wend - wstart);
             hstart = std::max(hstart, static_cast<int64_t>(0));
             wstart = std::max(wstart, static_cast<int64_t>(0));

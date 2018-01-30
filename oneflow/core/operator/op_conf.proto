@@ -87,36 +87,22 @@ message AveragePoolingOpConf {
   required string in = 1;
   required string out = 2;
 
-  optional int32 pad_h = 4 [default = 0];
-  optional int32 pad_w = 5 [default = 0];
-  required int32 kernel_h = 6;
-  required int32 kernel_w = 7;
-  optional int32 stride_h = 8 [default = 1];
-  optional int32 stride_w = 9 [default = 1];
+  required string padding = 3 ;
+  required int32 pool_size_h = 4;
+  required int32 pool_size_w = 5;
+  optional int32 strides_h = 6 [default = 1];
+  optional int32 strides_w = 7 [default = 1];
 }
 
 message MaxPoolingOpConf {
   required string in = 1;
   required string out = 2;
 
-  optional int32 pad_h = 4 [default = 0];
-  optional int32 pad_w = 5 [default = 0];
-  required int32 kernel_h = 6;
-  required int32 kernel_w = 7;
-  optional int32 stride_h = 8 [default = 1];
-  optional int32 stride_w = 9 [default = 1];
-}
-
-message StochasticPoolingOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional int32 pad_h = 4 [default = 0];
-  optional int32 pad_w = 5 [default = 0];
-  required int32 kernel_h = 6;
-  required int32 kernel_w = 7;
-  optional int32 stride_h = 8 [default = 1];
-  optional int32 stride_w = 9 [default = 1];
+  required string padding = 3;
+  required int32 pool_size_h = 4;
+  required int32 pool_size_w = 5;
+  optional int32 strides_h = 6 [default = 1];
+  optional int32 strides_w = 7 [default = 1];
 }
 
 message ReluOpConf {
@@ -275,7 +261,6 @@ message OperatorConf {
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     AveragePoolingOpConf average_pooling_conf = 103;
     MaxPoolingOpConf max_pooling_conf = 104;
-    StochasticPoolingOpConf stochastic_pooling_conf = 105;
     ReluOpConf relu_conf = 106;
     SoftmaxOpConf softmax_conf = 107;
     MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 108;

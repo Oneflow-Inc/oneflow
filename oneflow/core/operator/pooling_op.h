@@ -24,6 +24,14 @@ class PoolingOp : public Operator {
   virtual void VirtualEnrollDataTmpBn() {}
   virtual void VirtualInferDataTmpBlobDesc(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const {}
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
+
+ private:
+  std::tuple<int, int> CalOutSize(int32_t in_h, int32_t in_w) const;
+  std::string GetPaddingMthd() const;
 };
 
 }  // namespace oneflow

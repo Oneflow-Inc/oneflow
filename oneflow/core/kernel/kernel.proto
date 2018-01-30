@@ -19,6 +19,13 @@ message SoftmaxLossKernelConf {
   required DataType label_type = 2;
 }
 
+message PoolingKernelConf {
+  optional int32 padding_top = 1 [default = 0];
+  optional int32 padding_bottom = 2 [default = 0];
+  optional int32 padding_left = 3 [default = 0];
+  optional int32 padding_right = 4 [default = 0];
+}
+
 message SumKernelConf {
   required int32 axis = 1;
 }
@@ -43,6 +50,7 @@ message KernelConf {
   required DataType data_type = 15;
 
   oneof kernel_type {
+    PoolingKernelConf pooling_conf = 103;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
     ConcatKernelConf concat_conf = 113; 
     SoftmaxLossKernelConf softmax_loss_conf = 117;

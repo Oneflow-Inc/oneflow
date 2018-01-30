@@ -28,10 +28,12 @@ class AveragePoolingKernelUtil {
   AveragePoolingKernelUtil() = delete;
 
   static void PoolingForward(const KernelCtx&, const Blob*, Blob*,
-                             const AveragePoolingOpConf&);
+                             const AveragePoolingOpConf&,
+                             const PoolingKernelConf&);
 
   static void PoolingBackward(const KernelCtx&, const Blob*, Blob*,
-                              const AveragePoolingOpConf&);
+                              const AveragePoolingOpConf&,
+                              const PoolingKernelConf&);
 };
 
 }  // namespace oneflow

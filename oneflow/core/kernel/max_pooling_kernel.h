@@ -28,10 +28,11 @@ class MaxPoolingKernelUtil {
   MaxPoolingKernelUtil() = delete;
 
   static void PoolingForward(const KernelCtx&, const Blob*, Blob*, Blob*,
-                             const MaxPoolingOpConf&);
+                             const MaxPoolingOpConf&, const PoolingKernelConf&);
 
   static void PoolingBackward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                              const MaxPoolingOpConf&);
+                              const MaxPoolingOpConf&,
+                              const PoolingKernelConf&);
 };
 
 }  // namespace oneflow
