@@ -14,11 +14,7 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   related_save_model_actor_id_ = task_proto.related_save_model_task_id();
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
-  for (const auto& kv : task_proto.consumed_regst_desc_id()) {
-    CHECK(
-        model_diff_acc_regsts_.emplace(kv.second, std::queue<Regst*>()).second);
-  }
-  readable_model_diff_acc_cnt_ = 0;
+  readable_regst_mgr_.Init(task_proto);
   OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerInitModelAndModelTmp);
 }
 
@@ -71,9 +67,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = actor_msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      auto it = model_diff_acc_regsts_.find(regst->regst_desc_id());
-      if (it->second.empty()) { readable_model_diff_acc_cnt_ += 1; }
-      it->second.push(regst);
+      readable_regst_mgr_.Push(regst);
     }
     ActUntilFail();
   } else {
@@ -93,16 +87,12 @@ void MdUpdtCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     Regst* regst = GetCurWriteableRegst(regst_desc_id);
     if (regst == nullptr) {
-      return model_diff_acc_regsts_.at(regst_desc_id).front();
+      return readable_regst_mgr_.GetCurReadable(regst_desc_id);
     } else {
       return regst;
     }
   });
-  for (auto& kv : model_diff_acc_regsts_) {
-    AsyncSendRegstMsgToProducer(kv.second.front());
-    kv.second.pop();
-    if (kv.second.empty()) { readable_model_diff_acc_cnt_ -= 1; }
-  }
+  readable_regst_mgr_.ReturnToProducerAndPopCurReadable(this);
   const JobDesc* job_desc = JobDesc::Singleton();
   auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   if (next_model_version_id_ == job_desc->TotalBatchNum()) {
@@ -122,11 +112,11 @@ void MdUpdtCompActor::Act() {
 }
 
 bool MdUpdtCompActor::IsReadReady() {
-  return readable_model_diff_acc_cnt_ == model_diff_acc_regsts_.size();
+  return readable_regst_mgr_.IsReadReady();
 }
 
 bool MdUpdtCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_model_diff_acc_eord_ && readable_model_diff_acc_cnt_ == 0;
+  return is_model_diff_acc_eord_ && readable_regst_mgr_.IsEmpty();
 }
 
 bool MdUpdtCompActor::IsWriteReady() {
@@ -134,14 +124,12 @@ bool MdUpdtCompActor::IsWriteReady() {
 }
 
 void MdUpdtCompActor::AsyncReturnAllReadableRegst() {
-  CHECK_EQ(0, readable_model_diff_acc_cnt_);
+  CHECK(readable_regst_mgr_.IsEmpty());
 }
 
 void MdUpdtCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
-  for (const auto& pair : model_diff_acc_regsts_) {
-    handler(pair.second.front());
-  }
+    std::function<void(const Regst*)> func) {
+  readable_regst_mgr_.ForEachCurReadableRegst(func);
 }
 
 REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);

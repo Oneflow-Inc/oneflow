@@ -36,6 +36,8 @@ class Actor {
   int64_t actor_id() const { return actor_id_; }
 
  protected:
+  friend class NaiveReadableRegstMgr;
+
   struct ExecKernel {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
