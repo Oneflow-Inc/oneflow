@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_MODEL_UPDATE_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/actor/naive_readable_register_manager.h"
 
 namespace oneflow {
 
@@ -32,8 +33,7 @@ class MdUpdtCompActor final : public CompActor {
   int64_t model_tmp_regst_desc_id_;
   int8_t init_remaining_cnt_;
   bool is_model_diff_acc_eord_;
-  int64_t readable_model_diff_acc_cnt_;
-  HashMap<int64_t, std::queue<Regst*>> model_diff_acc_regsts_;
+  NaiveReadableRegstMgr readable_regst_mgr_;
   int64_t next_model_version_id_;
   int64_t related_save_model_actor_id_;
   int64_t related_init_model_actor_id_;
