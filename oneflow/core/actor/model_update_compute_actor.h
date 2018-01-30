@@ -21,7 +21,7 @@ class MdUpdtCompActor final : public CompActor {
   int HandlerNormal(const ActorMsg&) override;
 
   void Act() override;
-  bool IsReadReady() override { return !pending_model_diff_acc_queue_.empty(); }
+  bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
   bool IsWriteReady() override;
   void AsyncReturnAllReadableRegst() override;
@@ -32,11 +32,11 @@ class MdUpdtCompActor final : public CompActor {
   int64_t model_tmp_regst_desc_id_;
   int8_t init_remaining_cnt_;
   bool is_model_diff_acc_eord_;
-  std::queue<Regst*> pending_model_diff_acc_queue_;
+  int64_t readable_model_diff_acc_cnt_;
+  HashMap<int64_t, std::queue<Regst*>> model_diff_acc_regsts_;
   int64_t next_model_version_id_;
-  int64_t related_save_actor_id_;
-  int64_t related_fw_actor_id_;
-  uint32_t random_seed_;
+  int64_t related_save_model_actor_id_;
+  int64_t related_init_model_actor_id_;
   Regst* pre_model_regst_;
 };
 
