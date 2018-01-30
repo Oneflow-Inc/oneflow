@@ -6,7 +6,7 @@ namespace oneflow {
 
 namespace {
 
-using CopyMthdInBlob = void (Blob::*)(DeviceCtx*, const Blob*);
+using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
 
 PbRpf<std::string> ConstructPbRpf(const std::string& s) {
   PbRpf<std::string> ret;
@@ -34,7 +34,7 @@ void CalcSumOfBlobs(DeviceCtx* ctx,
 
 void CopyFromFirstToOtherBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const PbRpf<std::string>& bns, CopyMthdInBlob Copy) {
+    const PbRpf<std::string>& bns, CopyBlobFieldMthd Copy) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
   FOR_RANGE(size_t, i, 1, bns.size()) {
     (BnInOp2Blob(bns.Get(i))->*Copy)(ctx, blob_0);
@@ -102,7 +102,7 @@ class DataContentIterator final {
     return ret;
   }
 
-  static CopyMthdInBlob GetCopyFunc() {
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
     return &Blob::CopyDataContentFrom<DeviceType::kCPU>;
   }
 
@@ -121,7 +121,7 @@ void ConcatSplitDataContent(
     const PbRpf<std::string>& split_bns, int32_t split_axis) {
   DataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis);
   DataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter<DataContentIterator>(ctx, concat_it, split_it);
+  CopyFromIterToIter(ctx, concat_it, split_it);
 }
 
 class FieldIterator {
@@ -146,7 +146,7 @@ class FieldIterator {
     std::tuple<char*, size_t> ret(nullptr, 0);
     if (bn_idx_ == bn_num_) { return ret; }
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_++));
-    if (blob->IsColValid()) { std::get<0>(ret) = GetMutPtr(blob); }
+    std::get<0>(ret) = GetMutPtr(blob);
     std::get<1>(ret) = GetSizeOfField(blob);
     return ret;
   }
@@ -166,7 +166,7 @@ class DataIdIterator final : public FieldIterator {
   DataIdIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyMthdInBlob GetCopyFunc() {
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
     return &Blob::CopyDataIdFrom<DeviceType::kCPU>;
   }
 
@@ -183,7 +183,7 @@ class ColNumIterator final : public FieldIterator {
   ColNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyMthdInBlob GetCopyFunc() {
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
     return &Blob::CopyColNumFrom<DeviceType::kCPU>;
   }
 
@@ -204,9 +204,10 @@ void ConcatSplitField(DeviceCtx* ctx,
                       const PbRpf<std::string>& split_bns, int32_t split_axis) {
   Iter concat_it(BnInOp2Blob, &concat_bns, concat_axis);
   Iter split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter<Iter>(ctx, concat_it, split_it);
+  CopyFromIterToIter(ctx, concat_it, split_it);
   if (split_axis != 0) {
-    CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns, Iter::GetCopyFunc());
+    CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns,
+                              Iter::GetCopyBlobFieldMthd());
   }
 }
 
@@ -281,7 +282,7 @@ void BoxingKernel<T>::ForwardDataContent(
                              boxing_conf.concat_box().axis(), obn_0_, 0);
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
                                 kernel_conf().output_bns(),
-                                DataContentIterator::GetCopyFunc());
+                                DataContentIterator::GetCopyBlobFieldMthd());
     } else {
       UNEXPECTED_RUN();
     }
@@ -297,7 +298,7 @@ void BoxingKernel<T>::ForwardDataContent(
                         obn_0_.Get(0));
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
                                 kernel_conf().output_bns(),
-                                DataContentIterator::GetCopyFunc());
+                                DataContentIterator::GetCopyBlobFieldMthd());
     } else {
       UNEXPECTED_RUN();
     }
@@ -324,7 +325,7 @@ void BoxingKernel<T>::ForwardField(
                              boxing_conf.concat_box().axis(), obn_0_, 0);
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob,
                                 kernel_conf().output_bns(),
-                                Iter::GetCopyFunc());
+                                Iter::GetCopyBlobFieldMthd());
     } else {
       UNEXPECTED_RUN();
     }
@@ -335,7 +336,7 @@ void BoxingKernel<T>::ForwardField(
                              boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
-                kernel_conf().output_bns(), Iter::GetCopyFunc());
+                kernel_conf().output_bns(), Iter::GetCopyBlobFieldMthd());
     } else {
       UNEXPECTED_RUN();
     }
