@@ -8,13 +8,16 @@ namespace oneflow {
 class ForwardCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ForwardCompTaskNode);
-  ForwardCompTaskNode() = default;
+  ForwardCompTaskNode() : random_seed_(-1) {}
   virtual ~ForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   void LockRegsts() override;
+
+  void set_random_seed(int64_t random_seed) { random_seed_ = random_seed; }
+  virtual void ToProto(TaskProto*) override;
 
  protected:
   virtual void VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge);
@@ -26,6 +29,8 @@ class ForwardCompTaskNode : public CompTaskNode {
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
   void FixRegisterNumRange() override;
+
+  int64_t random_seed_;
 };
 
 }  // namespace oneflow
