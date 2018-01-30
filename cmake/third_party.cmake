@@ -8,6 +8,7 @@ include(googletest)
 include(gflags)
 include(glog)
 include(grpc)
+include(eigen)
 if (BUILD_CUDA)
   include(cub)
 endif()
@@ -77,6 +78,7 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   cub_copy_headers_to_destination
+  eigen
 )
 
 include_directories(
@@ -89,4 +91,5 @@ include_directories(
     ${GRPC_INCLUDE_DIR}
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
+    ${EIGEN_INCLUDE_DIR}
 )
