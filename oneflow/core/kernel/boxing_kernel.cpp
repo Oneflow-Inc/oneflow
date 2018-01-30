@@ -128,7 +128,7 @@ class FieldIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FieldIterator);
   FieldIterator() = delete;
-  ~FieldIterator() = default;
+  virtual ~FieldIterator() = default;
 
   FieldIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                 const PbRpf<std::string>* bns, int32_t axis) {
@@ -153,7 +153,7 @@ class FieldIterator {
 
  protected:
   virtual char* GetMutPtr(Blob* blob) = 0;
-  virtual size_t GetSizeOfField(Blob* blob) = 0;
+  virtual size_t GetSizeOfField(Blob* blob) const = 0;
 
   std::function<Blob*(const std::string&)> BnInOp2Blob_;
   const PbRpf<std::string>* bns_;
@@ -170,10 +170,10 @@ class DataIdIterator final : public FieldIterator {
     return &Blob::CopyDataIdFrom<DeviceType::kCPU>;
   }
 
- protected:
+ private:
   char* GetMutPtr(Blob* blob) override { return blob->mut_data_id(); }
 
-  size_t GetSizeOfField(Blob* blob) override {
+  size_t GetSizeOfField(Blob* blob) const override {
     return blob->ByteSizeOfDataIdField();
   }
 };
@@ -187,12 +187,12 @@ class ColNumIterator final : public FieldIterator {
     return &Blob::CopyColNumFrom<DeviceType::kCPU>;
   }
 
- protected:
+ private:
   char* GetMutPtr(Blob* blob) override {
     return reinterpret_cast<char*>(blob->mut_col_num());
   }
 
-  size_t GetSizeOfField(Blob* blob) override {
+  size_t GetSizeOfField(Blob* blob) const override {
     return blob->ByteSizeOfColNumField();
   }
 };
@@ -231,26 +231,26 @@ void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& output_bns) {
   auto in_iter = input_bns.begin();
   auto out_iter = output_bns.begin();
-  int64_t in_size = BnInOp2Blob(*in_iter)->shape().At(0);
-  int64_t out_size = BnInOp2Blob(*out_iter)->shape().At(0);
+  int64_t in_data_num = BnInOp2Blob(*in_iter)->shape().At(0);
+  int64_t out_data_num = BnInOp2Blob(*out_iter)->shape().At(0);
   int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
   while (in_iter != input_bns.end() && out_iter != input_bns.end()) {
-    if (in_size < out_size) {
+    if (in_data_num < out_data_num) {
       ++in_iter;
-      in_size += BnInOp2Blob(*in_iter)->shape().At(0);
+      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
       max_col_id = std::max(max_col_id, BnInOp2Blob(*in_iter)->col_id());
-    } else if (in_size > out_size) {
+    } else if (in_data_num > out_data_num) {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_size += BnInOp2Blob(*out_iter)->shape().At(0);
+      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
     } else {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       ++in_iter;
-      in_size += BnInOp2Blob(*in_iter)->shape().At(0);
+      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
       max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_size += BnInOp2Blob(*out_iter)->shape().At(0);
+      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
     }
   }
 }
