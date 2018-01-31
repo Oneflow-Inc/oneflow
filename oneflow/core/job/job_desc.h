@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
-#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -53,7 +53,7 @@ class JobDesc final {
   float L2() const;
 
  private:
-  JobDesc(const JobConf&);
+  JobDesc(const JobDescProto&);
 
   JobConf job_conf_;
   DLNetConf dlnet_conf_;
