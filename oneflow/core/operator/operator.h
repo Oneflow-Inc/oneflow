@@ -69,6 +69,21 @@ class Operator {
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
+#define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
+  void Set##func_name##InSpecialConf(const std::string& field_name,      \
+                                     val_type val) const {               \
+    const PbMessage& special_conf = GetSpecialConf();                    \
+    PbMessage* special_conf_ptr = &const_cast<PbMessage&>(special_conf); \
+    Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
+  }
+
+  DEFINE_SET_VAL_In_SPECIAL_CONF(std::string, String);
+  DEFINE_SET_VAL_In_SPECIAL_CONF(int32_t, Int32);
+  DEFINE_SET_VAL_In_SPECIAL_CONF(int64_t, Int64);
+  DEFINE_SET_VAL_In_SPECIAL_CONF(bool, Bool);
+
+#undef DEFINE_SET_VAL_IN_SPECIAL_CONF
+
   const std::string& SoleIbn() const;
   const std::string& SoleIdbn() const;
   const std::string& SoleObn() const;
