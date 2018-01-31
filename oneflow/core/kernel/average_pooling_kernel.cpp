@@ -6,12 +6,11 @@ template<DeviceType device_type, typename T>
 void AveragePoolingKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const AveragePoolingOpConf& op_conf = this->op_conf().average_pooling_conf();
-
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   AveragePoolingKernelUtil<device_type, T>::PoolingForward(
-      ctx, in_blob, out_blob, op_conf, this->kernel_conf().pooling_conf());
+      ctx, in_blob, out_blob, this->op_conf().average_pooling_conf(),
+      this->kernel_conf().pooling_conf());
 }
 
 template<DeviceType device_type, typename T>
@@ -22,10 +21,9 @@ void AveragePoolingKernel<device_type, T>::BackwardDataContent(
   if (in_diff_blob == nullptr) { return; }
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
-  const AveragePoolingOpConf& op_conf = this->op_conf().average_pooling_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   AveragePoolingKernelUtil<device_type, T>::PoolingBackward(
-      ctx, out_diff_blob, in_diff_blob, op_conf,
+      ctx, out_diff_blob, in_diff_blob, this->op_conf().average_pooling_conf(),
       this->kernel_conf().pooling_conf());
 }
 
