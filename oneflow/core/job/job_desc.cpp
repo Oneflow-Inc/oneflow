@@ -4,32 +4,6 @@
 
 namespace oneflow {
 
-JobDesc::JobDesc(const JobConf& conf) {
-  job_conf_ = conf;
-#ifndef WITH_RDMA
-  if (job_conf_.use_rdma()) { LOG(FATAL) << "RDMA components not compiled"; }
-#endif
-  ParseProtoFromTextFile(conf.dlnet_filepath(), &dlnet_conf_);
-  ParseProtoFromTextFile(conf.resource_filepath(), &resource_);
-  ParseProtoFromTextFile(conf.placement_filepath(), &placement_);
-  int64_t piece_experiment = job_conf_.piece_num_of_experiment_phase();
-  if (job_conf_.has_train_conf()) {
-    const TrainConf& train_conf = job_conf_.train_conf();
-    piece_experiment = std::max<int64_t>(
-        piece_experiment, train_conf.num_of_batches_in_snapshot()
-                              * train_conf.num_of_pieces_in_batch());
-    piece_experiment = std::max<int64_t>(piece_experiment,
-                                         train_conf.piece_num_of_print_loss());
-    if (piece_experiment != job_conf_.piece_num_of_experiment_phase()) {
-      LOG(WARNING) << "Set piece_num_of_experiment_phase " << piece_experiment;
-      job_conf_.set_piece_num_of_experiment_phase(piece_experiment);
-    }
-  }
-#ifndef WITH_CUDA
-  CHECK_EQ(resource_.gpu_device_num(), 0);
-#endif
-}
-
 const std::string& JobDesc::MdLoadSnapshotPath() {
   return job_conf_.model_load_snapshot_path();
 }
@@ -91,6 +65,32 @@ float JobDesc::L1() const {
 float JobDesc::L2() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().l2();
+}
+
+JobDesc::JobDesc(const JobDescProto& job_desc) {
+  job_conf_ = job_desc.job_conf();
+  dlnet_conf_ = job_desc.dlnet_conf();
+  resource_ = job_desc.resource();
+  placement_ = job_desc.placement();
+#ifndef WITH_RDMA
+  CHECK_EQ(job_conf_.use_rdma(), false) << "Please compile oneflow with rdma";
+#endif
+  int64_t piece_experiment = job_conf_.piece_num_of_experiment_phase();
+  if (job_conf_.has_train_conf()) {
+    const TrainConf& train_conf = job_conf_.train_conf();
+    piece_experiment = std::max<int64_t>(
+        piece_experiment, train_conf.num_of_batches_in_snapshot()
+                              * train_conf.num_of_pieces_in_batch());
+    piece_experiment = std::max<int64_t>(piece_experiment,
+                                         train_conf.piece_num_of_print_loss());
+    if (piece_experiment != job_conf_.piece_num_of_experiment_phase()) {
+      LOG(WARNING) << "Set piece_num_of_experiment_phase " << piece_experiment;
+      job_conf_.set_piece_num_of_experiment_phase(piece_experiment);
+    }
+  }
+#ifndef WITH_CUDA
+  CHECK_EQ(resource_.gpu_device_num(), 0);
+#endif
 }
 
 }  // namespace oneflow
