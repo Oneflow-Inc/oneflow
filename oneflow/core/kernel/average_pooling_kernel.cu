@@ -12,7 +12,7 @@ __global__ void AvePoolForward(const int64_t nthreads, const T* in_dptr,
                                const int64_t height, const int64_t width,
                                const int64_t pooled_height,
                                const int64_t pooled_width,
-                               const PoolingCUDACtx ctx) {
+                               const PoolingCudaCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t pw = index % pooled_width;
     const int64_t ph = (index / pooled_width) % pooled_height;
@@ -48,7 +48,7 @@ __global__ void AvePoolBackward(const int64_t nthreads, const T* out_diff_dptr,
                                 const int64_t height, const int64_t width,
                                 const int64_t pooled_height,
                                 const int64_t pooled_width,
-                                PoolingCUDACtx ctx) {
+                                PoolingCudaCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t w = index % width + ctx.padding_left;
     const int64_t h = (index / width) % height + ctx.padding_top;
@@ -98,7 +98,7 @@ class AveragePoolingKernelUtil<DeviceType::kGPU, T> final {
                              const AveragePoolingOpConf& op_conf,
                              const PoolingKernelConf& kernel_conf) {
     const int64_t count = out_blob->shape().elem_cnt();
-    PoolingCUDACtx pooling_cuda_ctx = BuildPoolingCUDACtx(op_conf, kernel_conf);
+    PoolingCudaCtx pooling_cuda_ctx = BuildPoolingCudaCtx(op_conf, kernel_conf);
     AvePoolForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                         ctx.device_ctx->cuda_stream()>>>(
         count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
@@ -111,7 +111,7 @@ class AveragePoolingKernelUtil<DeviceType::kGPU, T> final {
                               const AveragePoolingOpConf& op_conf,
                               const PoolingKernelConf& kernel_conf) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
-    PoolingCUDACtx pooling_cuda_ctx = BuildPoolingCUDACtx(op_conf, kernel_conf);
+    PoolingCudaCtx pooling_cuda_ctx = BuildPoolingCudaCtx(op_conf, kernel_conf);
     AvePoolBackward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock,
                          0, ctx.device_ctx->cuda_stream()>>>(
         count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
