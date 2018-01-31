@@ -140,6 +140,7 @@ TaskNode::consumed_regsts() {
 
 bool TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto regst = GetConsumedRegst(name);
+  if (regst->IsLocked()) { return false; }
   if (regst) {
     regst->Lock();
     return true;

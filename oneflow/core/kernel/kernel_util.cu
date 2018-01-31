@@ -117,7 +117,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-    Blob host_blob(&blob_desc, host_raw_dptr);
+    Blob host_blob(nullptr, &blob_desc, host_raw_dptr);
     // synchronous initialize the host blob
     KernelUtil<DeviceType::kCPU, T>::Initialize(nullptr, initializer_conf,
                                                 random_seed, &host_blob);
@@ -137,7 +137,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-    Blob host_blob(&blob_desc, host_raw_dptr);
+    Blob host_blob(nullptr, &blob_desc, host_raw_dptr);
     KernelUtil<DeviceType::kCPU, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_dir, &host_blob, bn_in_op, dim_num,
         num_in_each_dim);
@@ -155,6 +155,10 @@ struct KernelUtil<DeviceType::kGPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template void KernelUtil<DeviceType::kGPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+                                                                              \
   template<>                                                                  \
   void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

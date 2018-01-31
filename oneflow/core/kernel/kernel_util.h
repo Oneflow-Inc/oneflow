@@ -14,22 +14,26 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
 template<DeviceType device_type>
 struct GetCudaMemcpyKind;
-
 template<>
 struct GetCudaMemcpyKind<DeviceType::kCPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
 };
-
 template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
+#endif
 
 template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz
+#ifdef WITH_CUDA
+            ,
+            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val
+#endif
+);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
@@ -109,6 +113,22 @@ struct KernelUtil final {
                                      const std::string& model_dir, Blob* blob,
                                      const std::string& bn_in_op,
                                      int32_t dim_num, int64_t num_in_each_dim);
+
+  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                       enum CBLAS_TRANSPOSE trans_b, T alpha, T beta,
+                       const Blob* a, const Blob* b, Blob* c) {
+    const int m = c->shape().At(0);
+    const int n = c->shape().Count(1);
+    const int k =
+        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
+         lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);
+  }
 };
 
 }  // namespace oneflow

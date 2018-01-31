@@ -79,24 +79,6 @@ void EpollCommNet::RegisterMemoryDone() {
   // do nothing
 }
 
-void* EpollCommNet::Read(void* actor_read_id, int64_t src_machine_id,
-                         const void* src_token, const void* dst_token) {
-  // ReadContext
-  auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
-  ReadContext* read_ctx = NewReadCtxInActorReadCtx(actor_read_ctx);
-  // request write msg
-  SocketMsg msg;
-  msg.msg_type = SocketMsgType::kRequestWrite;
-  msg.request_write_msg.src_token = src_token;
-  msg.request_write_msg.dst_machine_id =
-      MachineCtx::Singleton()->this_machine_id();
-  msg.request_write_msg.dst_token = dst_token;
-  msg.request_write_msg.read_done_id =
-      new std::tuple<ActorReadContext*, ReadContext*>(actor_read_ctx, read_ctx);
-  GetSocketHelper(src_machine_id)->AsyncWrite(msg);
-  return read_ctx;
-}
-
 void EpollCommNet::SendActorMsg(int64_t dst_machine_id,
                                 const ActorMsg& actor_msg) {
   SocketMsg msg;
@@ -181,6 +163,18 @@ void EpollCommNet::InitSockets() {
 SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
   int sockfd = machine_id2sockfd_.at(machine_id);
   return sockfd2helper_.at(sockfd);
+}
+
+void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id,
+                          const void* src_token, const void* dst_token) {
+  SocketMsg msg;
+  msg.msg_type = SocketMsgType::kRequestWrite;
+  msg.request_write_msg.src_token = src_token;
+  msg.request_write_msg.dst_machine_id =
+      MachineCtx::Singleton()->this_machine_id();
+  msg.request_write_msg.dst_token = dst_token;
+  msg.request_write_msg.read_id = read_id;
+  GetSocketHelper(src_machine_id)->AsyncWrite(msg);
 }
 
 }  // namespace oneflow

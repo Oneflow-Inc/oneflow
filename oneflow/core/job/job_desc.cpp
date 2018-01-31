@@ -25,6 +25,9 @@ JobDesc::JobDesc(const JobConf& conf) {
       job_conf_.set_piece_num_of_experiment_phase(piece_experiment);
     }
   }
+#ifndef WITH_CUDA
+  CHECK_EQ(resource_.gpu_device_num(), 0);
+#endif
 }
 
 const std::string& JobDesc::MdLoadSnapshotPath() {

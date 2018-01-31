@@ -1,6 +1,22 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow.cpp)
 
+function(oneflow_add_executable)
+  if (BUILD_CUDA)
+    cuda_add_executable(${ARGV})
+  else()
+    add_executable(${ARGV})
+  endif()
+endfunction()
+
+function(oneflow_add_library)
+  if (BUILD_CUDA)
+    cuda_add_library(${ARGV})
+  else()
+    add_library(${ARGV})
+  endif()
+endfunction()
+
 # source_group
 if(WIN32)
   set(oneflow_platform "windows")
@@ -35,11 +51,15 @@ foreach(oneflow_single_file ${oneflow_all_src})
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cuh$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    if(BUILD_CUDA) 
+      list(APPEND of_all_obj_cc ${oneflow_single_file})
+    endif()
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.cu$")
-    list(APPEND of_all_obj_cc ${oneflow_single_file})
+    if(BUILD_CUDA)
+      list(APPEND of_all_obj_cc ${oneflow_single_file})
+    endif()
   endif()
 
   if("${oneflow_single_file}" MATCHES "^${PROJECT_SOURCE_DIR}/oneflow/core/.*\\.proto")
@@ -79,13 +99,13 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
                                ${PROJECT_SOURCE_DIR}
                                ${of_all_rel_protos})
 
-cuda_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
+oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
 
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
-cuda_add_library(of_ccobj ${of_all_obj_cc})
+oneflow_add_library(of_ccobj ${of_all_obj_cc})
 target_link_libraries(of_ccobj ${oneflow_third_party_libs})
 add_dependencies(of_ccobj of_protoobj)
 add_dependencies(of_ccobj of_format)
@@ -103,20 +123,23 @@ endif()
 set(RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
 foreach(cc ${of_main_cc})
   get_filename_component(main_name ${cc} NAME_WE)
-  cuda_add_executable(${main_name} ${cc})
+  oneflow_add_executable(${main_name} ${cc})
   target_link_libraries(${main_name} ${of_libs} ${oneflow_third_party_libs})
   set_target_properties(${main_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
 endforeach()
 
 # build test
 if(BUILD_TESTING)
-  cuda_add_executable(oneflow_testexe ${of_all_test_cc})
+  if(NOT BUILD_CUDA or NOT BUILD_CUDNN)
+    message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA and BUILD_CUDNN")
+  endif()
+  oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
   target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
   add_test(NAME oneflow_test COMMAND oneflow_testexe)
   foreach(cc ${of_all_test_cc})
     get_filename_component(test_name ${cc} NAME_WE)
     string(CONCAT test_exe_name ${test_name} exe)
-    cuda_add_executable(${test_exe_name} ${cc})
+    oneflow_add_executable(${test_exe_name} ${cc})
     target_link_libraries(${test_exe_name} ${of_libs} ${oneflow_third_party_libs})
   endforeach()
 endif()

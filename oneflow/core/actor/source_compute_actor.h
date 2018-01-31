@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_SOURCE_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/kernel/basic_data_loader_kernel.h"
 
 namespace oneflow {
 
@@ -22,8 +23,7 @@ class SourceCompActor final : public CompActor {
   bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
   void AsyncReturnAllReadableRegst() override {}
 
-  int64_t next_piece_id_;
-  bool is_eof_;
+  DataLoadStatus data_load_status_;
 };
 
 }  // namespace oneflow

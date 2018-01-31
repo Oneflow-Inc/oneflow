@@ -33,9 +33,9 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   const std::string& loss_lbn = loss_op->Lbn4BnInOp("loss");
   OperatorConf sum_op_conf;
   sum_op_conf.set_name("sum_op_" + NewUniqueId());
-  sum_op_conf.mutable_sum_conf()->set_in(loss_lbn);
-  sum_op_conf.mutable_sum_conf()->set_out("out");
-  sum_op_conf.mutable_sum_conf()->set_axis(0);
+  sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_lbn);
+  sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
+  sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
   std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
   // exec gph
   ExecNode* loss_node = mut_exec_gph().NewNode();

@@ -54,7 +54,6 @@ void RandomUniformInitializer(
       blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
       static_cast<T>(initializer_conf.max()), random_seed, blob->mut_dptr<T>());
 }
-
 template<typename T>
 void RandomNormalInitializer(
     const RandomNormalInitializerConf& initializer_conf, uint32_t random_seed,
@@ -109,7 +108,13 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf,
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
-                              size_t sz, cudaMemcpyKind kind) {
+                              size_t sz
+#ifdef WITH_CUDA
+                              ,
+                              cudaMemcpyKind kind
+#endif
+
+) {
   memcpy(dst, src, sz);
 }
 
@@ -221,6 +226,10 @@ struct KernelUtil<DeviceType::kCPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+                                                                              \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
