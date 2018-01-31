@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_AVERAGE_POOLING_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_AVERAGE_POOLING_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/pooling_kernel.h"
 
 namespace oneflow {
 
