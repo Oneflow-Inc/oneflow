@@ -8,7 +8,7 @@ void AveragePoolingKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  AveragePoolingKernelUtil<device_type, T>::PoolingForward(
+  AveragePoolingKernelUtil<device_type, T>::Forward(
       ctx, in_blob, out_blob, this->op_conf().average_pooling_conf(),
       this->kernel_conf().average_pooling_conf().pooling_conf());
 }
@@ -22,7 +22,7 @@ void AveragePoolingKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  AveragePoolingKernelUtil<device_type, T>::PoolingBackward(
+  AveragePoolingKernelUtil<device_type, T>::Backward(
       ctx, out_diff_blob, in_diff_blob, this->op_conf().average_pooling_conf(),
       this->kernel_conf().average_pooling_conf().pooling_conf());
 }
@@ -33,10 +33,9 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
   OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelUtil);
   AveragePoolingKernelUtil() = delete;
 
-  static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
-                             Blob* out_blob,
-                             const AveragePoolingOpConf& op_conf,
-                             const PoolingKernelConf& kernel_conf) {
+  static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
+                      const AveragePoolingOpConf& op_conf,
+                      const PoolingKernelConf& kernel_conf) {
     const T* in_dptr = in_blob->dptr<T>();
     T* out_dptr = out_blob->mut_dptr<T>();
 
@@ -75,10 +74,9 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
     }
   }
 
-  static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
-                              Blob* in_diff_blob,
-                              const AveragePoolingOpConf& op_conf,
-                              const PoolingKernelConf& kernel_conf) {
+  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
+                       Blob* in_diff_blob, const AveragePoolingOpConf& op_conf,
+                       const PoolingKernelConf& kernel_conf) {
     const T* out_diff_dptr = out_diff_blob->dptr<T>();
     T* in_diff_dptr = in_diff_blob->mut_dptr<T>();
 

@@ -6,7 +6,7 @@ const PbMessage& AveragePoolingOp::GetSpecialConf() const {
   return op_conf().average_pooling_conf();
 }
 
-PoolingKernelConf* AveragePoolingOp::mut_pooling_conf(
+PoolingKernelConf* AveragePoolingOp::GetMutPoolingKernelConf(
     KernelConf* kernel_conf) const {
   return kernel_conf->mutable_average_pooling_conf()->mutable_pooling_conf();
 }

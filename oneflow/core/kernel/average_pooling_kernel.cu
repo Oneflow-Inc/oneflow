@@ -7,12 +7,12 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void AvePoolForward(const int64_t nthreads, const T* in_dptr,
-                               T* out_dptr, const int64_t channels,
-                               const int64_t height, const int64_t width,
-                               const int64_t pooled_height,
-                               const int64_t pooled_width,
-                               const PoolingCudaCtx ctx) {
+__global__ void AveragePoolForward(const int64_t nthreads, const T* in_dptr,
+                                   T* out_dptr, const int64_t channels,
+                                   const int64_t height, const int64_t width,
+                                   const int64_t pooled_height,
+                                   const int64_t pooled_width,
+                                   const PoolingCudaCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t pw = index % pooled_width;
     const int64_t ph = (index / pooled_width) % pooled_height;
@@ -43,12 +43,13 @@ __global__ void AvePoolForward(const int64_t nthreads, const T* in_dptr,
 }
 
 template<typename T>
-__global__ void AvePoolBackward(const int64_t nthreads, const T* out_diff_dptr,
-                                T* in_diff_dptr, const int64_t channels,
-                                const int64_t height, const int64_t width,
-                                const int64_t pooled_height,
-                                const int64_t pooled_width,
-                                PoolingCudaCtx ctx) {
+__global__ void AveragePoolBackward(const int64_t nthreads,
+                                    const T* out_diff_dptr, T* in_diff_dptr,
+                                    const int64_t channels,
+                                    const int64_t height, const int64_t width,
+                                    const int64_t pooled_height,
+                                    const int64_t pooled_width,
+                                    PoolingCudaCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t w = index % width + ctx.padding_left;
     const int64_t h = (index / width) % height + ctx.padding_top;
@@ -93,31 +94,32 @@ class AveragePoolingKernelUtil<DeviceType::kGPU, T> final {
   OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelUtil);
   AveragePoolingKernelUtil() = delete;
 
-  static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
-                             Blob* out_blob,
-                             const AveragePoolingOpConf& op_conf,
-                             const PoolingKernelConf& kernel_conf) {
+  static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
+                      const AveragePoolingOpConf& op_conf,
+                      const PoolingKernelConf& kernel_conf) {
     const int64_t count = out_blob->shape().elem_cnt();
     PoolingCudaCtx pooling_cuda_ctx = BuildPoolingCudaCtx(op_conf, kernel_conf);
-    AvePoolForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-                        ctx.device_ctx->cuda_stream()>>>(
-        count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-        in_blob->shape().At(1), in_blob->shape().At(2), in_blob->shape().At(3),
-        out_blob->shape().At(2), out_blob->shape().At(3), pooling_cuda_ctx);
+    AveragePoolForward<T>
+        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
+            count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
+            in_blob->shape().At(1), in_blob->shape().At(2),
+            in_blob->shape().At(3), out_blob->shape().At(2),
+            out_blob->shape().At(3), pooling_cuda_ctx);
   }
 
-  static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
-                              Blob* in_diff_blob,
-                              const AveragePoolingOpConf& op_conf,
-                              const PoolingKernelConf& kernel_conf) {
+  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
+                       Blob* in_diff_blob, const AveragePoolingOpConf& op_conf,
+                       const PoolingKernelConf& kernel_conf) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
     PoolingCudaCtx pooling_cuda_ctx = BuildPoolingCudaCtx(op_conf, kernel_conf);
-    AvePoolBackward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock,
-                         0, ctx.device_ctx->cuda_stream()>>>(
-        count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
-        in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
-        in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-        out_diff_blob->shape().At(3), pooling_cuda_ctx);
+    AveragePoolBackward<T>
+        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
+            count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
+            in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
+            in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
+            out_diff_blob->shape().At(3), pooling_cuda_ctx);
   }
 };
 

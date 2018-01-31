@@ -17,7 +17,7 @@ class MaxPoolingOp final : public PoolingOp {
   void VirtualEnrollDataTmpBn() override;
   void VirtualInferDataTmpBlobDesc(std::function<BlobDesc*(const std::string)>
                                        GetBlobDesc4BnInOp) const override;
-  PoolingKernelConf* mut_pooling_conf(KernelConf*) const override;
+  PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const override;
 };
 
 }  // namespace oneflow

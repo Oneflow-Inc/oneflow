@@ -50,7 +50,7 @@ void PoolingOp::VirtualGenKernelConf(
     const int32_t padding_needed_w =
         (std::get<1>(out_size) - 1) * GetInt32FromSpecialConf("strides_w")
         + GetInt32FromSpecialConf("pool_size_w") - in_blob_desc->shape().At(3);
-    PoolingKernelConf* pooling_conf = mut_pooling_conf(kernel_conf);
+    PoolingKernelConf* pooling_conf = GetMutPoolingKernelConf(kernel_conf);
     pooling_conf->set_padding_top(padding_needed_h / 2);
     pooling_conf->set_padding_bottom(padding_needed_h - padding_needed_h / 2);
     pooling_conf->set_padding_left(padding_needed_w / 2);

@@ -27,13 +27,11 @@ class AveragePoolingKernelUtil {
   OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelUtil);
   AveragePoolingKernelUtil() = delete;
 
-  static void PoolingForward(const KernelCtx&, const Blob*, Blob*,
-                             const AveragePoolingOpConf&,
-                             const PoolingKernelConf&);
+  static void Forward(const KernelCtx&, const Blob*, Blob*,
+                      const AveragePoolingOpConf&, const PoolingKernelConf&);
 
-  static void PoolingBackward(const KernelCtx&, const Blob*, Blob*,
-                              const AveragePoolingOpConf&,
-                              const PoolingKernelConf&);
+  static void Backward(const KernelCtx&, const Blob*, Blob*,
+                       const AveragePoolingOpConf&, const PoolingKernelConf&);
 };
 
 }  // namespace oneflow

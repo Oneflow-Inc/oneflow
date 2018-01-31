@@ -14,7 +14,7 @@ class AveragePoolingOp final : public PoolingOp {
   const PbMessage& GetSpecialConf() const override;
 
  private:
-  PoolingKernelConf* mut_pooling_conf(KernelConf*) const override;
+  PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const override;
 };
 
 }  // namespace oneflow

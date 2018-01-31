@@ -28,7 +28,7 @@ class PoolingOp : public Operator {
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
-  virtual PoolingKernelConf* mut_pooling_conf(KernelConf*) const = 0;
+  virtual PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const = 0;
 
  private:
   std::tuple<int, int> CalcOutSize(int32_t in_h, int32_t in_w) const;

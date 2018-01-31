@@ -27,12 +27,11 @@ class MaxPoolingKernelUtil {
   OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernelUtil);
   MaxPoolingKernelUtil() = delete;
 
-  static void PoolingForward(const KernelCtx&, const Blob*, Blob*, Blob*,
-                             const MaxPoolingOpConf&, const PoolingKernelConf&);
+  static void Forward(const KernelCtx&, const Blob*, Blob*, Blob*,
+                      const MaxPoolingOpConf&, const PoolingKernelConf&);
 
-  static void PoolingBackward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                              const MaxPoolingOpConf&,
-                              const PoolingKernelConf&);
+  static void Backward(const KernelCtx&, const Blob*, const Blob*, Blob*,
+                       const MaxPoolingOpConf&, const PoolingKernelConf&);
 };
 
 }  // namespace oneflow

@@ -94,10 +94,9 @@ class MaxPoolingKernelUtil<DeviceType::kGPU, T> final {
   OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernelUtil);
   MaxPoolingKernelUtil() = delete;
 
-  static void PoolingForward(const KernelCtx& ctx, const Blob* in_blob,
-                             Blob* out_blob, Blob* mask_blob,
-                             const MaxPoolingOpConf& op_conf,
-                             const PoolingKernelConf& kernel_conf) {
+  static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
+                      Blob* mask_blob, const MaxPoolingOpConf& op_conf,
+                      const PoolingKernelConf& kernel_conf) {
     const int64_t count = out_blob->shape().elem_cnt();
     PoolingCudaCtx pooling_cuda_ctx = BuildPoolingCudaCtx(op_conf, kernel_conf);
     MaxPoolForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
@@ -108,10 +107,10 @@ class MaxPoolingKernelUtil<DeviceType::kGPU, T> final {
         out_blob->shape().At(3), pooling_cuda_ctx);
   }
 
-  static void PoolingBackward(const KernelCtx& ctx, const Blob* out_diff_blob,
-                              const Blob* mask_blob, Blob* in_diff_blob,
-                              const MaxPoolingOpConf& op_conf,
-                              const PoolingKernelConf& kernel_conf) {
+  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
+                       const Blob* mask_blob, Blob* in_diff_blob,
+                       const MaxPoolingOpConf& op_conf,
+                       const PoolingKernelConf& kernel_conf) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
     PoolingCudaCtx pooling_cuda_ctx = BuildPoolingCudaCtx(op_conf, kernel_conf);
     MaxPoolBackward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock,
