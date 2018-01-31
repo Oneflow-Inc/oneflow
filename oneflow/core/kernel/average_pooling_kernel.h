@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class AveragePoolingKernel final : public KernelIf<device_type> {
+class AveragePoolingKernel final : public PoolingKernel<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernel);
   AveragePoolingKernel() = default;
@@ -19,6 +19,7 @@ class AveragePoolingKernel final : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
+  const PoolingKernelConf& GetPoolingKernelConf() const override;
 };
 
 template<DeviceType device_type, typename T>
@@ -27,11 +28,9 @@ class AveragePoolingKernelUtil {
   OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelUtil);
   AveragePoolingKernelUtil() = delete;
 
-  static void Forward(const KernelCtx&, const Blob*, Blob*,
-                      const AveragePoolingOpConf&, const PoolingKernelConf&);
+  static void Forward(const KernelCtx&, const Blob*, Blob*, const PoolingCtx&);
 
-  static void Backward(const KernelCtx&, const Blob*, Blob*,
-                       const AveragePoolingOpConf&, const PoolingKernelConf&);
+  static void Backward(const KernelCtx&, const Blob*, Blob*, const PoolingCtx&);
 };
 
 }  // namespace oneflow

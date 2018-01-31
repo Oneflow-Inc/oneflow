@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class MaxPoolingKernel final : public KernelIf<device_type> {
+class MaxPoolingKernel final : public PoolingKernel<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernel);
   MaxPoolingKernel() = default;
@@ -19,6 +19,7 @@ class MaxPoolingKernel final : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
+  const PoolingKernelConf& GetPoolingKernelConf() const override;
 };
 
 template<DeviceType device_type, typename T>
@@ -28,10 +29,10 @@ class MaxPoolingKernelUtil {
   MaxPoolingKernelUtil() = delete;
 
   static void Forward(const KernelCtx&, const Blob*, Blob*, Blob*,
-                      const MaxPoolingOpConf&, const PoolingKernelConf&);
+                      const PoolingCtx&);
 
   static void Backward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                       const MaxPoolingOpConf&, const PoolingKernelConf&);
+                       const PoolingCtx&);
 };
 
 }  // namespace oneflow

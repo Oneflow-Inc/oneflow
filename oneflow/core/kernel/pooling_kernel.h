@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-struct PoolingCudaCtx {
+struct PoolingCtx {
   int32_t pool_size_h;
   int32_t pool_size_w;
   int32_t strides_h;
@@ -16,8 +16,26 @@ struct PoolingCudaCtx {
   int32_t padding_right;
 };
 
-PoolingCudaCtx BuildPoolingCudaCtx(const PbMessage& op_conf,
-                                   const PoolingKernelConf& kernel_conf);
+template<DeviceType device_type>
+class PoolingKernel : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PoolingKernel);
+  PoolingKernel() = default;
+  virtual ~PoolingKernel() = default;
+
+ protected:
+  void VirtualKernelInit(const ParallelContext*) override {
+    pooling_ctx_ = BuildPoolingCtx(this->op_conf(), GetPoolingKernelConf());
+  }
+  const PoolingCtx& pooling_ctx() const { return pooling_ctx_; }
+  virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
+
+ private:
+  PoolingCtx pooling_ctx_;
+};
+
+PoolingCtx BuildPoolingCtx(const PbMessage& op_conf,
+                           const PoolingKernelConf& kernel_conf);
 
 }  // namespace oneflow
 

@@ -2,9 +2,9 @@
 
 namespace oneflow {
 
-PoolingCudaCtx BuildPoolingCudaCtx(const PbMessage& op_conf,
-                                   const PoolingKernelConf& kernel_conf) {
-  PoolingCudaCtx ctx;
+PoolingCtx BuildPoolingCtx(const PbMessage& op_conf,
+                           const PoolingKernelConf& kernel_conf) {
+  PoolingCtx ctx;
   ctx.pool_size_h = GetInt32FromPbMessage(op_conf, "pool_size_h");
   ctx.pool_size_w = GetInt32FromPbMessage(op_conf, "pool_size_w");
   ctx.strides_h = GetInt32FromPbMessage(op_conf, "strides_h");
