@@ -3,6 +3,14 @@
 namespace oneflow {
 
 void PoolingOp::InitFromOpConf() {
+  std::string padding_mthd = GetStringFromSpecialConf("padding");
+  std::transform(padding_mthd.begin(), padding_mthd.end(), padding_mthd.begin(),
+                 ::tolower);
+  if (padding_mthd != "same" || padding_mthd != "valid") {
+    LOG(FATAL) << "Invalid padding method in " << op_name();
+  }
+  SetStringInSpecialConf("padding", padding_mthd);
+
   EnrollInputBn("in");
   EnrollOutputBn("out");
   VirtualEnrollDataTmpBn();
@@ -28,17 +36,10 @@ void PoolingOp::InferBlobDescs(
   VirtualInferDataTmpBlobDesc(GetBlobDesc4BnInOp);
 }
 
-std::string PoolingOp::GetPaddingMthd() const {
-  std::string padding_mthd = GetStringFromSpecialConf("padding");
-  std::transform(padding_mthd.begin(), padding_mthd.end(), padding_mthd.begin(),
-                 ::tolower);
-  return padding_mthd;
-}
-
 void PoolingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  std::string padding_mthd = GetPaddingMthd();
+  std::string padding_mthd = GetStringFromSpecialConf("padding");
   if (padding_mthd == "same") {
     const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     std::tuple<int32_t, int32_t> out_size =
@@ -63,7 +64,7 @@ std::tuple<int32_t, int32_t> PoolingOp::CalOutSize(int32_t in_h,
   int32_t pool_size_w = GetInt32FromSpecialConf("pool_size_w");
   int32_t strides_h = GetInt32FromSpecialConf("strides_h");
   int32_t strides_w = GetInt32FromSpecialConf("strides_w");
-  std::string padding_mthd = GetPaddingMthd();
+  std::string padding_mthd = GetStringFromSpecialConf("padding");
   int32_t out_h = 0;
   int32_t out_w = 0;
   if (padding_mthd == "valid") {
@@ -73,7 +74,7 @@ std::tuple<int32_t, int32_t> PoolingOp::CalOutSize(int32_t in_h,
     out_h = ceil(in_h / static_cast<float>(strides_h));
     out_w = ceil(in_w / static_cast<float>(strides_w));
   } else {
-    LOG(FATAL) << "Invalid padding method in " << op_name();
+    UNEXPECTED_RUN();
   }
   return std::make_tuple(out_h, out_w);
 }

@@ -9,7 +9,7 @@ class PoolingOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
   PoolingOp() = default;
-  ~PoolingOp() = default;
+  virtual ~PoolingOp() = default;
 
   void InitFromOpConf() override;
 
@@ -31,7 +31,6 @@ class PoolingOp : public Operator {
 
  private:
   std::tuple<int, int> CalOutSize(int32_t in_h, int32_t in_w) const;
-  std::string GetPaddingMthd() const;
 };
 
 }  // namespace oneflow
