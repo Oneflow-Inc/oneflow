@@ -12,6 +12,9 @@ class AveragePoolingOp final : public PoolingOp {
   ~AveragePoolingOp() = default;
 
   const PbMessage& GetSpecialConf() const override;
+
+ private:
+  PoolingKernelConf* mut_pooling_conf(KernelConf*) const override;
 };
 
 }  // namespace oneflow

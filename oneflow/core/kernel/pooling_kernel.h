@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_POOLING_KERNEL_
-#define ONEFLOW_CORE_KERNEL_POOLING_KERNEL_
+#ifndef ONEFLOW_CORE_KERNEL_POOLING_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_POOLING_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
@@ -21,4 +21,4 @@ PoolingCudaCtx BuildPoolingCudaCtx(const PbMessage& op_conf,
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_POOLING_KERNEL_
+#endif  // ONEFLOW_CORE_KERNEL_POOLING_KERNEL_H_

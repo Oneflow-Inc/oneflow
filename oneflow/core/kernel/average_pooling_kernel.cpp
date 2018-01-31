@@ -10,7 +10,7 @@ void AveragePoolingKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   AveragePoolingKernelUtil<device_type, T>::PoolingForward(
       ctx, in_blob, out_blob, this->op_conf().average_pooling_conf(),
-      this->kernel_conf().pooling_conf());
+      this->kernel_conf().average_pooling_conf().pooling_conf());
 }
 
 template<DeviceType device_type, typename T>
@@ -24,7 +24,7 @@ void AveragePoolingKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   AveragePoolingKernelUtil<device_type, T>::PoolingBackward(
       ctx, out_diff_blob, in_diff_blob, this->op_conf().average_pooling_conf(),
-      this->kernel_conf().pooling_conf());
+      this->kernel_conf().average_pooling_conf().pooling_conf());
 }
 
 template<typename T>

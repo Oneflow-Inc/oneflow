@@ -11,7 +11,7 @@ void MaxPoolingKernel<device_type, T>::ForwardDataContent(
   Blob* idx_blob = BnInOp2Blob("idx");
   MaxPoolingKernelUtil<device_type, T>::PoolingForward(
       ctx, in_blob, out_blob, idx_blob, this->op_conf().max_pooling_conf(),
-      this->kernel_conf().pooling_conf());
+      this->kernel_conf().max_pooling_conf().pooling_conf());
 }
 
 template<DeviceType device_type, typename T>
@@ -26,7 +26,8 @@ void MaxPoolingKernel<device_type, T>::BackwardDataContent(
   const Blob* idx_blob = BnInOp2Blob("idx");
   MaxPoolingKernelUtil<device_type, T>::PoolingBackward(
       ctx, out_diff_blob, idx_blob, in_diff_blob,
-      this->op_conf().max_pooling_conf(), this->kernel_conf().pooling_conf());
+      this->op_conf().max_pooling_conf(),
+      this->kernel_conf().max_pooling_conf().pooling_conf());
 }
 
 template<typename T>

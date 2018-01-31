@@ -26,6 +26,14 @@ message PoolingKernelConf {
   optional int32 padding_right = 4 [default = 0];
 }
 
+message AveragePoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
+}
+
+message MaxPoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
+}
+
 message ReduceSumKernelConf {
   optional int32 axis = 1;
 }
@@ -50,10 +58,11 @@ message KernelConf {
   required DataType data_type = 15;
 
   oneof kernel_type {
-    PoolingKernelConf pooling_conf = 103;
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 108;
     ConcatKernelConf concat_conf = 115; 
     SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
+    AveragePoolingKernelConf average_pooling_conf = 200;
+    MaxPoolingKernelConf max_pooling_conf = 201;
   }
 }

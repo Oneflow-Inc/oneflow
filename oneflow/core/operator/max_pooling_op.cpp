@@ -16,6 +16,11 @@ void MaxPoolingOp::VirtualInferDataTmpBlobDesc(
   idx_blob_desc->set_data_type(DataType::kUInt32);
 }
 
+PoolingKernelConf* MaxPoolingOp::mut_pooling_conf(
+    KernelConf* kernel_conf) const {
+  return kernel_conf->mutable_max_pooling_conf()->mutable_pooling_conf();
+}
+
 REGISTER_OP(OperatorConf::kMaxPoolingConf, MaxPoolingOp);
 
 }  //  namespace oneflow

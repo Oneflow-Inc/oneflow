@@ -25,7 +25,7 @@ void PoolingOp::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   // out
   std::tuple<int32_t, int32_t> out_size =
-      CalOutSize(in_blob_desc->shape().At(2), in_blob_desc->shape().At(3));
+      CalcOutSize(in_blob_desc->shape().At(2), in_blob_desc->shape().At(3));
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() =
       Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
@@ -43,14 +43,14 @@ void PoolingOp::VirtualGenKernelConf(
   if (padding_mthd == "same") {
     const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
     std::tuple<int32_t, int32_t> out_size =
-        CalOutSize(in_blob_desc->shape().At(2), in_blob_desc->shape().At(3));
+        CalcOutSize(in_blob_desc->shape().At(2), in_blob_desc->shape().At(3));
     const int32_t padding_needed_h =
         (std::get<0>(out_size) - 1) * GetInt32FromSpecialConf("strides_h")
         + GetInt32FromSpecialConf("pool_size_h") - in_blob_desc->shape().At(2);
     const int32_t padding_needed_w =
         (std::get<1>(out_size) - 1) * GetInt32FromSpecialConf("strides_w")
         + GetInt32FromSpecialConf("pool_size_w") - in_blob_desc->shape().At(3);
-    PoolingKernelConf* pooling_conf = kernel_conf->mutable_pooling_conf();
+    PoolingKernelConf* pooling_conf = mut_pooling_conf(kernel_conf);
     pooling_conf->set_padding_top(padding_needed_h / 2);
     pooling_conf->set_padding_bottom(padding_needed_h - padding_needed_h / 2);
     pooling_conf->set_padding_left(padding_needed_w / 2);
@@ -58,8 +58,8 @@ void PoolingOp::VirtualGenKernelConf(
   }
 }
 
-std::tuple<int32_t, int32_t> PoolingOp::CalOutSize(int32_t in_h,
-                                                   int32_t in_w) const {
+std::tuple<int32_t, int32_t> PoolingOp::CalcOutSize(int32_t in_h,
+                                                    int32_t in_w) const {
   int32_t pool_size_h = GetInt32FromSpecialConf("pool_size_h");
   int32_t pool_size_w = GetInt32FromSpecialConf("pool_size_w");
   int32_t strides_h = GetInt32FromSpecialConf("strides_h");
