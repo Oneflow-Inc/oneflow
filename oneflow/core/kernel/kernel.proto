@@ -58,8 +58,8 @@ message KernelConf {
   required DataType data_type = 15;
 
   oneof kernel_type {
-    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 108;
-    ConcatKernelConf concat_conf = 115; 
+    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
+    ConcatKernelConf concat_conf = 113;
     SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     AveragePoolingKernelConf average_pooling_conf = 200;
