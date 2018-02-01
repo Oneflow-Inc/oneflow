@@ -143,7 +143,7 @@ CudnnConvolutionDesc::CudnnConvolutionDesc(
   int pad_w = 0;
 
   std::string padding = conv2d_op_conf.padding();
-  std::transform(padding.begin(), padding.end(), padding.begin(), std::toupper);
+  std::transform(padding.begin(), padding.end(), padding.begin(), ::toupper);
   if (padding == "SAME") {
     pad_h = (out_blob_desc->shape().At(2) - 1) * conv2d_op_conf.stride_h()
             + conv2d_op_conf.kernel_h() - in_blob_desc->shape().At(2);
@@ -207,7 +207,7 @@ void Conv2dOp::InferBlobDescs(
   int64_t out_width;
 
   std::string padding = conv2d_op_conf.padding();
-  std::transform(padding.begin(), padding.end(), padding.begin(), std::toupper);
+  std::transform(padding.begin(), padding.end(), padding.begin(), ::toupper);
   if (padding == "SAME") {
     out_height = std::ceil(in_blob_desc->shape().At(2)
                            / (conv2d_op_conf.stride_h() * 1.0));
