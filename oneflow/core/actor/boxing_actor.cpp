@@ -4,11 +4,8 @@
 namespace oneflow {
 
 void BoxingActor::VirtualActorInit(const TaskProto& task_proto) {
-  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    readable_regst_[pair.second] = {};
-  }
+  readable_regst_mgr_.Init(task_proto);
   previous_pid_cid_ = new HashMap<int64_t, std::pair<int64_t, int32_t>>;
-  readable_regst_cnt_ = 0;
   col_id_order_ = ColIdOrder::kUnCertain;
   is_eord_ = false;
   OF_SET_MSG_HANDLER(&BoxingActor::HandlerNormal);
@@ -48,9 +45,7 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
           && col_id_order_ == ColIdOrder::kUnCertain) {
         TrySetColIdOrder(msg.regst());
       }
-      std::queue<Regst*>& rq = readable_regst_.at(msg.regst()->regst_desc_id());
-      if (rq.empty()) { readable_regst_cnt_ += 1; }
-      rq.push(msg.regst());
+      readable_regst_mgr_.Push(msg.regst());
     }
     ActUntilFail();
   } else {
@@ -60,57 +55,53 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void BoxingActor::Act() {
-  int64_t piece_id = readable_regst_.begin()->second.front()->piece_id();
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [this](int64_t regst_desc_id) -> Regst* {
-                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-                      if (regst == nullptr) {
-                        return readable_regst_.at(regst_desc_id).front();
-                      } else {
-                        return regst;
-                      }
-                    });
+  int64_t piece_id = readable_regst_mgr_.GetFirstCurReadable()->piece_id();
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          return readable_regst_mgr_.GetCurReadable(regst_desc_id);
+        } else {
+          return regst;
+        }
+      });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();
   });
   int32_t cur_max_cid = 0;
   int32_t cur_max_maxcid = 0;
-  for (const auto& pair : readable_regst_) {
-    cur_max_cid = std::max(cur_max_cid, pair.second.front()->col_id());
-    cur_max_maxcid =
-        std::max(cur_max_maxcid, pair.second.front()->max_col_id());
-  }
-  for (auto& pair : readable_regst_) {
-    if (col_id_order_ == ColIdOrder::kAscending) {
-      if (pair.second.front()->IsMaxCol() && cur_max_cid < cur_max_maxcid) {
-        continue;
-      }
-    } else if (col_id_order_ == ColIdOrder::kDescending) {
-      if (pair.second.front()->col_id() < cur_max_cid) { continue; }
-    } else {  // do nothing
-    }
-    AsyncSendRegstMsgToProducer(pair.second.front());
-    pair.second.pop();
-    if (pair.second.empty()) { readable_regst_cnt_ -= 1; }
-  }
+  readable_regst_mgr_.ForEachCurReadableRegst([&](Regst* regst) {
+    cur_max_cid = std::max(cur_max_cid, regst->col_id());
+    cur_max_maxcid = std::max(cur_max_maxcid, regst->max_col_id());
+  });
+  readable_regst_mgr_.ReturnToProducerAndPopCurReadable(
+      this, [&](Regst* regst) {
+        if (col_id_order_ == ColIdOrder::kAscending) {
+          if (regst->IsMaxCol() && cur_max_cid < cur_max_maxcid) {
+            return false;
+          }
+        } else if (col_id_order_ == ColIdOrder::kDescending) {
+          if (regst->col_id() < cur_max_cid) { return false; }
+        } else {  // do nothing
+        }
+        return true;
+      });
 }
 
-bool BoxingActor::IsReadReady() {
-  return readable_regst_.size() == readable_regst_cnt_;
-}
+bool BoxingActor::IsReadReady() { return readable_regst_mgr_.IsReadReady(); }
 
 bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
-  return is_eord_ && readable_regst_cnt_ == 0;
+  return is_eord_ && readable_regst_mgr_.IsEmpty();
 }
 
 void BoxingActor::AsyncReturnAllReadableRegst() {
-  CHECK_EQ(readable_regst_cnt_, 0);
+  CHECK(readable_regst_mgr_.IsEmpty());
 }
 
 void BoxingActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
-  for (const auto& pair : readable_regst_) { handler(pair.second.front()); }
+    std::function<void(const Regst*)> func) {
+  readable_regst_mgr_.ForEachCurReadableRegst(func);
 }
 
 REGISTER_ACTOR(TaskType::kBoxing, BoxingActor);

@@ -37,7 +37,8 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
-    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
+    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
+                               device_type());
   });
 }
 

@@ -204,7 +204,8 @@ void BoxingTaskNode::BuildWithChainPair(
       node->BindBnInOpAndRegst(dtbn, middle_regst);
     }
     if (lbn != kPackedBlobName) {
-      node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+      node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr,
+                                 device_type());
     }
   }
 }
