@@ -11,8 +11,8 @@ void BasicRnnOp::VirtualInitFromOpConf() {
 }
 
 void BasicRnnOp::VirtualInferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
   int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().Count(1);
@@ -28,6 +28,5 @@ void BasicRnnOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
   *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
 }
-
 
 }  // namespace oneflow

@@ -16,6 +16,7 @@ void RecurrentOp::InitFromOpConf() {
   }
   EnrollOutputBn("out");
   EnrollOutputBn("rec_out");
+  VirtualInitFromOpConf();
 }
 
 const PbMessage& RecurrentOp::GetSpecialConf() const {

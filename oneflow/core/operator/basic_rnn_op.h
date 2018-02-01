@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_OPERATOR_BASIC_RNN_OP_H_
 #define ONEFLOW_CORE_OPERATOR_BASIC_RNN_OP_H_
 
+#include "oneflow/core/operator/recurrent_op.h"
+
 namespace oneflow {
 
 class BasicRnnOp final : public RecurrentOp {
