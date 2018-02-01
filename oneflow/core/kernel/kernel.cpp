@@ -166,27 +166,15 @@ void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator1 creator) {
   CHECK(GetCreatorsMap().emplace(opcase, creator).second);
 }
 void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator2 creator) {
-  AddKernelCreator(opcase, [creator](DeviceType type, const KernelConf&) {
-    return creator(type);
-  });
-}
-void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator3 creator) {
-  AddKernelCreator(opcase, [creator](DeviceType, const KernelConf& conf) {
-    return creator(conf);
-  });
-}
-void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator4 creator) {
-  AddKernelCreator(
-      opcase, [creator](DeviceType, const KernelConf&) { return creator(); });
+  AddKernelCreator(opcase, [creator](const KernelConf&) { return creator(); });
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(
-    DeviceType device_type, const ParallelContext* parallel_ctx,
-    const KernelConf& conf) {
+    const ParallelContext* parallel_ctx, const KernelConf& conf) {
   OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
   auto it = GetCreatorsMap().find(opcase);
   CHECK(it != GetCreatorsMap().end()) << opcase;
-  Kernel* rptr = it->second(device_type, conf);
+  Kernel* rptr = it->second(conf);
   rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }

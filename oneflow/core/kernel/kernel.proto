@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/job/resource.proto";
 
 message ConcatKernelConf {
   required int64 total_cp_num = 1;
@@ -56,6 +57,7 @@ message KernelConf {
   required bool need_do_col_num = 13;
   required bool is_forward = 14;
   required DataType data_type = 15;
+  required DeviceType device_type = 16;
 
   oneof kernel_type {
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
