@@ -59,7 +59,7 @@ message Conv2dOpConf {
   optional int32 dilation_h = 9 [default = 1];
   optional int32 dilation_w = 10 [default = 1];
   optional bool use_cudnn_on_gpu = 11 [default = true];
-  optional InitializerConf kernel_initializer = 12;
+  optional InitializerConf weight_initializer = 12;
   optional InitializerConf bias_initializer = 13;
 }
 
