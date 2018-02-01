@@ -62,8 +62,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   sum_node->BindBnInOpAndRegst(sum_op->SoleIbn(), data_tmp_regst);
   loss_regst->AddLbn(sum_op->Lbn4BnInOp(sum_op->SoleObn()));
   sum_node->BindBnInOpAndRegst(sum_op->SoleObn(), loss_regst);
-  loss_op->InferBlobDescs(loss_node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
-  sum_op->InferBlobDescs(sum_node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
+  loss_op->InferBlobDescs(loss_node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
+                          device_type());
+  sum_op->InferBlobDescs(sum_node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
+                         device_type());
   in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());
 }
 
