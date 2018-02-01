@@ -3,28 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-void InferBasicRnnCellBlobDesc(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    int32_t hidden_size) {
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  int64_t embedding_size = in_blob_desc->shape().Count(1);
-  int64_t data_num = in_blob_desc->shape().At(0);
-  *GetBlobDesc4BnInOp("plus_op_out") =
-      BlobDesc(Shape({embedding_size, hidden_size}),
-               JobDesc::Singleton()->DefaultDataType(), false, true,
-               in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("i2h_weight") =
-      BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("h2h_weight") =
-      BlobDesc(Shape({hidden_size, hidden_size}));
-  *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
-  *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
-}
-
-}  //  namespace
-
 void RecurrentOp::InitFromOpConf() {
   CHECK(op_conf().has_recurrent_conf());
   const RecurrentOpConf& conf = op_conf().recurrent_conf();
@@ -38,18 +16,6 @@ void RecurrentOp::InitFromOpConf() {
   }
   EnrollOutputBn("out");
   EnrollOutputBn("rec_out");
-
-  if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
-    EnrollDataTmpBn("plus_op_out");
-    EnrollModelBn("i2h_weight");
-    EnrollModelBn("h2h_weight");
-    EnrollModelBn("bias");
-    EnrollModelTmpBn("bias_multiplier");
-  } else if (conf.rnn_type_case() == RecurrentOpConf::kBasicLstmCell) {
-    TODO();
-  } else {
-    UNEXPECTED_RUN();
-  }
 }
 
 const PbMessage& RecurrentOp::GetSpecialConf() const {
@@ -89,15 +55,7 @@ void RecurrentOp::InferBlobDescs(
   // recurrent_out
   *GetBlobDesc4BnInOp("rec_out") = out_blob_desc;
 
-  if (op_conf().recurrent_conf().rnn_type_case()
-      == RecurrentOpConf::kBasicRnnCell) {
-    InferBasicRnnCellBlobDesc(GetBlobDesc4BnInOp, hidden_size);
-  } else if (op_conf().recurrent_conf().rnn_type_case()
-             == RecurrentOpConf::kBasicLstmCell) {
-    TODO();
-  } else {
-    UNEXPECTED_RUN();
-  }
+  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
