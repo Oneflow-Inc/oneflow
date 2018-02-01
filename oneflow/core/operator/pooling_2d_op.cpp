@@ -1,8 +1,8 @@
-#include "oneflow/core/operator/pooling_op.h"
+#include "oneflow/core/operator/pooling_2d_op.h"
 
 namespace oneflow {
 
-void PoolingOp::InitFromOpConf() {
+void Pooling2DOp::InitFromOpConf() {
   std::string padding_mthd = GetStringFromSpecialConf("padding");
   std::transform(padding_mthd.begin(), padding_mthd.end(), padding_mthd.begin(),
                  ::tolower);
@@ -16,7 +16,7 @@ void PoolingOp::InitFromOpConf() {
   VirtualEnrollDataTmpBn();
 }
 
-void PoolingOp::InferBlobDescs(
+void Pooling2DOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // in
@@ -36,7 +36,7 @@ void PoolingOp::InferBlobDescs(
   VirtualInferDataTmpBlobDesc(GetBlobDesc4BnInOp);
 }
 
-void PoolingOp::VirtualGenKernelConf(
+void Pooling2DOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   std::string padding_mthd = GetStringFromSpecialConf("padding");
@@ -58,8 +58,8 @@ void PoolingOp::VirtualGenKernelConf(
   }
 }
 
-std::tuple<int32_t, int32_t> PoolingOp::CalcOutSize(int32_t in_h,
-                                                    int32_t in_w) const {
+std::tuple<int32_t, int32_t> Pooling2DOp::CalcOutSize(int32_t in_h,
+                                                      int32_t in_w) const {
   int32_t pool_size_h = GetInt32FromSpecialConf("pool_size_h");
   int32_t pool_size_w = GetInt32FromSpecialConf("pool_size_w");
   int32_t strides_h = GetInt32FromSpecialConf("strides_h");

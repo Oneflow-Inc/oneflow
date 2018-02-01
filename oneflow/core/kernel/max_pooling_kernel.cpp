@@ -35,7 +35,7 @@ MaxPoolingKernel<device_type, T>::GetPoolingKernelConf() const {
 
 template<DeviceType device_type, typename T>
 const PbMessage& MaxPoolingKernel<device_type, T>::GetPoolingOpConf() const {
-  return this->op_conf().average_pooling_conf();
+  return this->op_conf().average_pooling_2d_conf();
 }
 
 template<typename T>
@@ -111,7 +111,7 @@ class MaxPoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPoolingConf, MaxPoolingKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPoolingKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

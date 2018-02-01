@@ -34,7 +34,7 @@ AveragePoolingKernel<device_type, T>::GetPoolingKernelConf() const {
 template<DeviceType device_type, typename T>
 const PbMessage& AveragePoolingKernel<device_type, T>::GetPoolingOpConf()
     const {
-  return this->op_conf().average_pooling_conf();
+  return this->op_conf().average_pooling_2d_conf();
 }
 
 template<typename T>
@@ -126,7 +126,7 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePoolingConf,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf,
                            AveragePoolingKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
