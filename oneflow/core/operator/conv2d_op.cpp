@@ -54,27 +54,27 @@ cudnnConvolutionBwdDataAlgo_t InferCudnnConvBwdDataAlgo(
 
 void SetCudnnConvAlgoForKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const Conv2dOpConf& conv_op_conf, Conv2dKernelConf* conv_kernel_conf) {
+    const Conv2dOpConf& conv2d_op_conf, Conv2dKernelConf* conv2d_kernel_conf) {
   CudaStreamHandle cuda_handle;
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  const BlobDesc* filter_blob_desc = GetBlobDesc4BnInOp("filter");
+  const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
   DataType data_type = in_blob_desc->data_type();
 
   CudnnTensorDesc in_desc(data_type, in_blob_desc->shape());
   CudnnTensorDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterDesc filter_desc(data_type, filter_blob_desc->shape());
-  CudnnConvolutionDesc conv_desc(data_type, conv_op_conf);
+  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape());
+  CudnnConvolutionDesc conv_desc(GetBlobDesc4BnInOp, conv2d_op_conf);
 
-  conv_kernel_conf->set_cudnn_fwd_algo(
+  conv2d_kernel_conf->set_cudnn_fwd_algo(
       InferCudnnConvFwdAlgo(*cuda_handle.cudnn_handle(), &in_desc, &out_desc,
                             &filter_desc, &conv_desc));
-  conv_kernel_conf->set_cudnn_bwd_filter_algo(
+  conv2d_kernel_conf->set_cudnn_bwd_filter_algo(
       InferCudnnConvBwdFilterAlgo(*cuda_handle.cudnn_handle(), &in_desc,
                                   &out_desc, &filter_desc, &conv_desc));
-  conv_kernel_conf->set_cudnn_bwd_data_algo(
+  conv2d_kernel_conf->set_cudnn_bwd_data_algo(
       InferCudnnConvBwdDataAlgo(*cuda_handle.cudnn_handle(), &in_desc,
                                 &out_desc, &filter_desc, &conv_desc));
 }
@@ -90,14 +90,14 @@ size_t InferCudnnWorkspaceSize(
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  const BlobDesc* filter_blob_desc = GetBlobDesc4BnInOp("filter");
+  const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
   DataType data_type = in_blob_desc->data_type();
 
   CudnnTensorDesc in_desc(data_type, in_blob_desc->shape());
   CudnnTensorDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterDesc filter_desc(data_type, filter_blob_desc->shape());
-  CudnnConvolutionDesc conv_desc(data_type, conv_op_conf);
+  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape());
+  CudnnConvolutionDesc conv_desc(GetBlobDesc4BnInOp, conv_op_conf);
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
       InferCudnnConvFwdAlgo(*cuda_handle.cudnn_handle(), &in_desc, &out_desc,
@@ -126,28 +126,58 @@ size_t InferCudnnWorkspaceSize(
 }
 
 }  // namespace
+
+CudnnConvolutionDesc::~CudnnConvolutionDesc() {
+  CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
+}
+
+CudnnConvolutionDesc::CudnnConvolutionDesc(
+    std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const Conv2dOpConf& conv2d_op_conf) {
+  CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
+
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+
+  int pad_h = 0;
+  int pad_w = 0;
+
+  std::string padding = conv2d_op_conf.padding();
+  std::transform(padding.begin(), padding.end(), padding.begin(), std::toupper);
+  if (padding == "SAME") {
+    pad_h = (out_blob_desc->shape().At(2) - 1) * conv2d_op_conf.stride_h()
+            + conv2d_op_conf.kernel_h() - in_blob_desc->shape().At(2);
+    pad_w = (out_blob_desc->shape().At(3) - 1) * conv2d_op_conf.stride_w()
+            + conv2d_op_conf.kernel_w() - in_blob_desc->shape().At(2);
+    pad_h = std::ceil(pad_h / 2.0);
+    pad_w = std::ceil(pad_w / 2.0);
+  } else if (padding == "VALID") {
+    pad_h = 0;
+    pad_w = 0;
+  } else {
+    UNEXPECTED_RUN();
+  }
+
+  CudaCheck(cudnnSetConvolution2dDescriptor(
+      val_, pad_h, pad_w, conv2d_op_conf.stride_h(), conv2d_op_conf.stride_w(),
+      conv2d_op_conf.dilation_h(), conv2d_op_conf.dilation_w(),
+      CUDNN_CROSS_CORRELATION, GetCudnnDataType(in_blob_desc->data_type())));
+}
 #endif  // WITH_CUDNN
 
 void Conv2dOp::InitFromOpConf() {
   CHECK(op_conf().has_conv2d_conf());
-  if (op_conf().conv2d_conf().use_cudnn()) {
-#ifndef WITH_CUDNN
-    LOG(FATAL);
-#endif  // WITH_CUDNN
-  }
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
 
-  EnrollModelBn("filter");
+  EnrollModelBn("weight");
   EnrollModelBn("bias");
-  if (!op_conf().conv2d_conf().use_cudnn()) {
-    EnrollModelTmpBn("bias_multiplier");
-  }
 
-  if (op_conf().conv2d_conf().use_cudnn()) {
+  if (this->UseCudnn()) {
     EnrollDataTmpBn("cudnn_workspace");
   } else {
+    EnrollModelTmpBn("bias_multiplier");
     EnrollDataTmpBn("col_buf");
   }
 }
@@ -159,70 +189,80 @@ const PbMessage& Conv2dOp::GetSpecialConf() const {
 void Conv2dOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const Conv2dOpConf& conf = op_conf().conv2d_conf();
+  const Conv2dOpConf& conv2d_op_conf = op_conf().conv2d_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t c_i = in_blob_desc->shape().At(1);
 
-  int32_t out_num = GetInt32FromSpecialConf("out_num");
+  int32_t filters = GetInt32FromSpecialConf("filters");
   if (parallel_ctx->policy() == kModelParallel) {
-    BalancedSplitter splitter(out_num, parallel_ctx->parallel_num());
-    out_num = splitter.At(parallel_ctx->parallel_id()).size();
+    BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
+    filters = splitter.At(parallel_ctx->parallel_id()).size();
   }
-  int64_t c_o = out_num;
+  int64_t c_o = filters;
 
-  int64_t h_len =
-      (in_blob_desc->shape().At(2) + 2 * conf.pad_h() - conf.kernel_h())
-          / conf.stride_h()
-      + 1;
-  int64_t w_len =
-      (in_blob_desc->shape().At(3) + 2 * conf.pad_w() - conf.kernel_w())
-          / conf.stride_w()
-      + 1;
-  int64_t output_size = h_len * w_len;
-  int64_t kernel = conf.kernel_h() * conf.kernel_w();
+  int64_t out_height;
+  int64_t out_width;
+
+  std::string padding = conv2d_op_conf.padding();
+  std::transform(padding.begin(), padding.end(), padding.begin(), std::toupper);
+  if (padding == "SAME") {
+    out_height = std::ceil(in_blob_desc->shape().At(2)
+                           / (conv2d_op_conf.stride_h() * 1.0));
+    out_width = std::ceil(in_blob_desc->shape().At(3)
+                          / (conv2d_op_conf.stride_w() * 1.0));
+  } else if (padding == "VALID") {
+    out_height =
+        std::ceil((in_blob_desc->shape().At(2) - conv2d_op_conf.kernel_h() + 1)
+                  / (conv2d_op_conf.stride_h() * 1.0));
+    out_width =
+        std::ceil((in_blob_desc->shape().At(3) - conv2d_op_conf.kernel_w() + 1)
+                  / (conv2d_op_conf.stride_w() * 1.0));
+  } else {
+    UNEXPECTED_RUN();
+  }
 
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
-  out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
+  out_blob_desc->mut_shape() = Shape({data_num, c_o, out_height, out_width});
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
-  // filter
-  GetBlobDesc4BnInOp("filter")->mut_shape() =
-      Shape({c_o, c_i, conf.kernel_h(), conf.kernel_w()});
+  // weight
+  GetBlobDesc4BnInOp("weight")->mut_shape() =
+      Shape({c_o, c_i, conv2d_op_conf.kernel_h(), conv2d_op_conf.kernel_w()});
 
   // bias
   GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({c_o});
 
-  if (!conf.use_cudnn()) {
+  if (!UseCudnn()) {
     // bias multiplier
-    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({output_size});
+    GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+        Shape({out_height * out_width});
+
+    // col_buf
+    GetBlobDesc4BnInOp("col_buf")->mut_shape() =
+        Shape({1, out_height * out_width,
+               c_i * conv2d_op_conf.kernel_h() * conv2d_op_conf.kernel_w()});
   }
 
 #ifdef WITH_CUDNN
-  if (conf.use_cudnn()) {
+  if (UseCudnn()) {
     size_t cudnn_workspace_size =
-        InferCudnnWorkspaceSize(GetBlobDesc4BnInOp, conf);
+        InferCudnnWorkspaceSize(GetBlobDesc4BnInOp, conv2d_op_conf);
 
     GetBlobDesc4BnInOp("cudnn_workspace")->mut_shape() =
         Shape({static_cast<int64_t>(cudnn_workspace_size)});
   }
 #endif  // WITH_CUDNN
-
-  if (!conf.use_cudnn()) {
-    // col_buf
-    GetBlobDesc4BnInOp("col_buf")->mut_shape() =
-        Shape({1, output_size, c_i * kernel});
-  }
 }
 
 void Conv2dOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
 #ifdef WITH_CUDNN
-  if (op_conf().conv2d_conf().use_cudnn()) {
+  if (UseCudnn()) {
     SetCudnnConvAlgoForKernelConf(GetBlobDesc4BnInOp, op_conf().conv2d_conf(),
                                   kernel_conf->mutable_conv2d_conf());
   }

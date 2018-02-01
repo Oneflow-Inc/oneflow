@@ -45,6 +45,7 @@ class CudnnTensorDesc final {
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 
  private:
+  void Init(DataType, int, int, int, int);
   cudnnTensorDescriptor_t val_;
 };
 
@@ -60,21 +61,8 @@ class CudnnFilterDesc final {
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 
  private:
+  void Init(DataType, int, int, int, int);
   cudnnFilterDescriptor_t val_;
-};
-
-class CudnnConvolutionDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionDesc);
-  CudnnConvolutionDesc() = delete;
-  ~CudnnConvolutionDesc();
-
-  CudnnConvolutionDesc(DataType, const Conv2dOpConf& conv_conf);
-
-  const cudnnConvolutionDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnConvolutionDescriptor_t val_;
 };
 
 }  // namespace oneflow

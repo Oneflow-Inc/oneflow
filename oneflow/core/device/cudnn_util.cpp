@@ -13,51 +13,43 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
 }  // namespace oneflow
 
 CudnnTensorDesc::~CudnnTensorDesc() {
-  CudaCheck(cudnnDestroyTensorDescriptor(val_));
+  CudaCheck(cudnnDestroyTensorDescriptor(this->val_));
 }
 
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int n, int c, int h,
                                  int w) {
-  CudaCheck(cudnnCreateTensorDescriptor(&val_));
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      val_, CUDNN_TENSOR_NCHW, GetCudnnDataType(data_type), n, c, h, w));
+  Init(data_type, n, c, h, w);
 }
 
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape) {
   CHECK_EQ(shape.NumAxes(), 4);
-  CudnnTensorDesc(data_type, shape.At(0), shape.At(1), shape.At(2),
-                  shape.At(3));
+  Init(data_type, shape.At(0), shape.At(1), shape.At(2), shape.At(3));
+}
+
+void CudnnTensorDesc::Init(DataType data_type, int n, int c, int h, int w) {
+  CudaCheck(cudnnCreateTensorDescriptor(&this->val_));
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      this->val_, CUDNN_TENSOR_NCHW, GetCudnnDataType(data_type), n, c, h, w));
 }
 
 CudnnFilterDesc::~CudnnFilterDesc() {
-  CudaCheck(cudnnDestroyFilterDescriptor(val_));
+  CudaCheck(cudnnDestroyFilterDescriptor(this->val_));
 }
 
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, int k, int c, int h,
                                  int w) {
-  CudaCheck(cudnnCreateFilterDescriptor(&val_));
-  CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type),
-                                       CUDNN_TENSOR_NCHW, k, c, h, w));
+  Init(data_type, k, c, h, w);
 }
 
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape) {
   CHECK_EQ(shape.NumAxes(), 4);
-  CudnnFilterDesc(data_type, shape.At(0), shape.At(1), shape.At(2),
-                  shape.At(3));
+  Init(data_type, shape.At(0), shape.At(1), shape.At(2), shape.At(3));
 }
 
-CudnnConvolutionDesc::~CudnnConvolutionDesc() {
-  CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
-}
-
-CudnnConvolutionDesc::CudnnConvolutionDesc(DataType data_type,
-                                           const Conv2dOpConf& conv2d_conf) {
-  CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  CudaCheck(cudnnSetConvolution2dDescriptor(
-      val_, conv2d_conf.pad_h(), conv2d_conf.pad_w(), conv2d_conf.stride_h(),
-      conv2d_conf.stride_w(), conv2d_conf.dilation_h(),
-      conv2d_conf.dilation_w(), CUDNN_CROSS_CORRELATION,
-      GetCudnnDataType(data_type)));
+void CudnnFilterDesc::Init(DataType data_type, int k, int c, int h, int w) {
+  CudaCheck(cudnnCreateFilterDescriptor(&this->val_));
+  CudaCheck(cudnnSetFilter4dDescriptor(this->val_, GetCudnnDataType(data_type),
+                                       CUDNN_TENSOR_NCHW, k, c, h, w));
 }
 
 }  // namespace oneflow
