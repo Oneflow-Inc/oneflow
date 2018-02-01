@@ -1,3 +1,4 @@
+#include "oneflow/core/kernel/recurrent_kernel.h"
 #include "oneflow/core/kernel/basic_rnn_kernel.h"
 
 namespace oneflow {
@@ -43,38 +44,27 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
                                BnInOp2Blob);
 }
 
-namespace {
-
-#define RECURRENT_KERNEL_PAIR_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(BasicRnnKernel, RecurrentOpConf::kBasicRnnCell)
-
-#define MAKE_RECURRENT_KERNEL_CREATOR_ENTRY(recurrnt_kernel_pair, device_type, \
-                                            data_type_pair)                    \
-  {GetHashKey(OF_PP_PAIR_SECOND(recurrnt_kernel_pair), device_type,            \
-              OF_PP_PAIR_SECOND(data_type_pair)),                              \
-   []() {                                                                      \
-     return new OF_PP_PAIR_FIRST(                                              \
-         recurrnt_kernel_pair)<device_type,                                    \
-                               OF_PP_PAIR_FIRST(data_type_pair)>();            \
-   }},
-
-Kernel* CreateKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-          MAKE_RECURRENT_KERNEL_CREATOR_ENTRY, RECURRENT_KERNEL_PAIR_SEQ,
-          DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
-  return creators.at(GetHashKey(
-      dev_type, kernel_conf.op_conf().recurrent_conf().rnn_type_case(),
-      kernel_conf.data_type()))();
-}
-
-COMMAND(AddKernelCreator(OperatorConf::kRecurrentConf, CreateKernel));
-
-}  // namespace
-
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
   template class RecurrentKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
+
+namespace {
+
+Kernel* CreateRecurrentKernel(const KernelConf& kernel_conf) {
+  const RecurrentOpConf& conf = kernel_conf.op_conf().recurrent_conf();
+  if (conf.has_basic_rnn_cell()) {
+    return CreateBasicRnnKernel(kernel_conf);
+  } else if (conf.has_basic_lstm_cell()) {
+    TODO();
+    return nullptr;
+  } else {
+    UNEXPECTED_RUN();
+  }
+}
+
+}  // namespace
+
+COMMAND(AddKernelCreator(OperatorConf::kRecurrentConf, CreateRecurrentKernel));
 
 }  // namespace oneflow

@@ -34,6 +34,19 @@ class RecurrentKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)>) const {}
 };
 
+#define DECLARE_RECURRENT_KERNEL_CREATOR(x) \
+  Kernel* Create##x##Kernel(const KernelConf&);
+
+#define DEFINE_RECCURENT_KERNEL_CREATOR(x)                                   \
+  Kernel* Create##x##Kernel(const KernelConf& kernel_conf) {                 \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = { \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,          \
+                                         (x##Kernel), DEVICE_TYPE_SEQ,       \
+                                         FLOATING_DATA_TYPE_SEQ)};           \
+    return creators.at(                                                      \
+        GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();   \
+  }
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_RECURRENT_KERNEL_H_

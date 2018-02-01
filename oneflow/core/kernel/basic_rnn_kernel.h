@@ -33,6 +33,8 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
+DECLARE_RECURRENT_KERNEL_CREATOR(BasicRnn);
+
 template<DeviceType device_type, typename T>
 class BasicRnnKernelUtil final {
  public:
