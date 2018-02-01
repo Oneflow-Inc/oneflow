@@ -25,10 +25,11 @@ class PoolingKernel : public KernelIf<device_type> {
 
  protected:
   void VirtualKernelInit(const ParallelContext*) override {
-    pooling_ctx_ = BuildPoolingCtx(this->op_conf(), GetPoolingKernelConf());
+    pooling_ctx_ = BuildPoolingCtx(GetPoolingOpConf(), GetPoolingKernelConf());
   }
   const PoolingCtx& pooling_ctx() const { return pooling_ctx_; }
   virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
+  virtual const PbMessage& GetPoolingOpConf() const = 0;
 
  private:
   PoolingCtx pooling_ctx_;

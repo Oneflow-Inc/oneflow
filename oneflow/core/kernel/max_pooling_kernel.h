@@ -20,6 +20,7 @@ class MaxPoolingKernel final : public PoolingKernel<device_type> {
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
   const PoolingKernelConf& GetPoolingKernelConf() const override;
+  const PbMessage& GetPoolingOpConf() const override;
 };
 
 template<DeviceType device_type, typename T>

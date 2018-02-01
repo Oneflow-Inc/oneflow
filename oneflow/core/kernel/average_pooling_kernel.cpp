@@ -31,6 +31,12 @@ AveragePoolingKernel<device_type, T>::GetPoolingKernelConf() const {
   return this->kernel_conf().average_pooling_conf().pooling_conf();
 }
 
+template<DeviceType device_type, typename T>
+const PbMessage& AveragePoolingKernel<device_type, T>::GetPoolingOpConf()
+    const {
+  return this->op_conf().average_pooling_conf();
+}
+
 template<typename T>
 class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
  public:
