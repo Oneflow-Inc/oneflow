@@ -5,21 +5,33 @@
 
 namespace oneflow {
 
-class PoolingOp final : public Operator {
+class PoolingOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
   PoolingOp() = default;
-  ~PoolingOp() = default;
+  virtual ~PoolingOp() = default;
 
   void InitFromOpConf() override;
 
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
-  const PbMessage& GetSpecialConf() const override;
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
+
+ protected:
+  virtual void VirtualEnrollDataTmpBn() {}
+  virtual void VirtualInferDataTmpBlobDesc(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const {}
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
+  virtual PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const = 0;
+
+ private:
+  std::tuple<int, int> CalcOutSize(int32_t in_h, int32_t in_w) const;
 };
 
 }  // namespace oneflow
