@@ -1,19 +1,19 @@
-#include "oneflow/core/kernel/average_pooling_kernel.h"
+#include "oneflow/core/kernel/average_pooling_2d_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void AveragePoolingKernel<device_type, T>::ForwardDataContent(
+void AveragePooling2DKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  AveragePoolingKernelUtil<device_type, T>::Forward(ctx, in_blob, out_blob,
-                                                    this->pooling_ctx());
+  AveragePooling2DKernelUtil<device_type, T>::Forward(ctx, in_blob, out_blob,
+                                                      this->pooling_2d_ctx());
 }
 
 template<DeviceType device_type, typename T>
-void AveragePoolingKernel<device_type, T>::BackwardDataContent(
+void AveragePooling2DKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
@@ -21,30 +21,30 @@ void AveragePoolingKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  AveragePoolingKernelUtil<device_type, T>::Backward(
-      ctx, out_diff_blob, in_diff_blob, this->pooling_ctx());
+  AveragePooling2DKernelUtil<device_type, T>::Backward(
+      ctx, out_diff_blob, in_diff_blob, this->pooling_2d_ctx());
 }
 
 template<DeviceType device_type, typename T>
-const PoolingKernelConf&
-AveragePoolingKernel<device_type, T>::GetPoolingKernelConf() const {
-  return this->kernel_conf().average_pooling_conf().pooling_conf();
+const Pooling2DKernelConf&
+AveragePooling2DKernel<device_type, T>::GetPooling2DKernelConf() const {
+  return this->kernel_conf().average_pooling_2d_conf().pooling_2d_conf();
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& AveragePoolingKernel<device_type, T>::GetPoolingOpConf()
+const PbMessage& AveragePooling2DKernel<device_type, T>::GetPooling2DOpConf()
     const {
   return this->op_conf().average_pooling_2d_conf();
 }
 
 template<typename T>
-class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
+class AveragePooling2DKernelUtil<DeviceType::kCPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelUtil);
-  AveragePoolingKernelUtil() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(AveragePooling2DKernelUtil);
+  AveragePooling2DKernelUtil() = delete;
 
   static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
-                      const PoolingCtx& pooling_ctx) {
+                      const Pooling2DCtx& pooling_ctx) {
     const T* in_dptr = in_blob->dptr<T>();
     T* out_dptr = out_blob->mut_dptr<T>();
 
@@ -84,7 +84,7 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
   }
 
   static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
-                       Blob* in_diff_blob, const PoolingCtx& pooling_ctx) {
+                       Blob* in_diff_blob, const Pooling2DCtx& pooling_ctx) {
     const T* out_diff_dptr = out_diff_blob->dptr<T>();
     T* in_diff_dptr = in_diff_blob->mut_dptr<T>();
 
@@ -127,6 +127,6 @@ class AveragePoolingKernelUtil<DeviceType::kCPU, T> final {
 };
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf,
-                           AveragePoolingKernel, ARITHMETIC_DATA_TYPE_SEQ);
+                           AveragePooling2DKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -16,9 +16,9 @@ void MaxPooling2DOp::VirtualInferDataTmpBlobDesc(
   idx_blob_desc->set_data_type(DataType::kUInt32);
 }
 
-PoolingKernelConf* MaxPooling2DOp::GetMutPoolingKernelConf(
+Pooling2DKernelConf* MaxPooling2DOp::GetMutPooling2DKernelConf(
     KernelConf* kernel_conf) const {
-  return kernel_conf->mutable_max_pooling_conf()->mutable_pooling_conf();
+  return kernel_conf->mutable_max_pooling_2d_conf()->mutable_pooling_2d_conf();
 }
 
 REGISTER_OP(OperatorConf::kMaxPooling2DConf, MaxPooling2DOp);
