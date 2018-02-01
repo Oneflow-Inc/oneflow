@@ -46,6 +46,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }
+  bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetSpecialConf() const { UNEXPECTED_RUN(); }
 

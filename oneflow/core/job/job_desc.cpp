@@ -73,8 +73,16 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
   resource_ = job_desc.resource();
   placement_ = job_desc.placement();
 #ifndef WITH_RDMA
-  CHECK_EQ(job_conf_.use_rdma(), false) << "Please compile oneflow with rdma";
+  CHECK_EQ(job_conf_.use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
+  if (job_conf_.has_use_cudnn_on_gpu() == false) {
+#ifdef WITH_CUDNN
+    job_conf_.set_use_cudnn_on_gpu(true);
+#else
+    job_conf_.set_use_cudnn_on_gpu(false);
+#endif
+  }
+  CheckUseCudnn(job_conf_.use_cudnn_on_gpu());
   int64_t piece_experiment = job_conf_.piece_num_of_experiment_phase();
   if (job_conf_.has_train_conf()) {
     const TrainConf& train_conf = job_conf_.train_conf();
