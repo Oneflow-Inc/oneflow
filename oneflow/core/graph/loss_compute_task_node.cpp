@@ -33,9 +33,9 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   const std::string& loss_lbn = loss_op->Lbn4BnInOp("loss");
   OperatorConf sum_op_conf;
   sum_op_conf.set_name("sum_op_" + NewUniqueId());
-  sum_op_conf.mutable_sum_conf()->set_in(loss_lbn);
-  sum_op_conf.mutable_sum_conf()->set_out("out");
-  sum_op_conf.mutable_sum_conf()->set_axis(0);
+  sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_lbn);
+  sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
+  sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
   std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
   // exec gph
   ExecNode* loss_node = mut_exec_gph().NewNode();
@@ -62,8 +62,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   sum_node->BindBnInOpAndRegst(sum_op->SoleIbn(), data_tmp_regst);
   loss_regst->AddLbn(sum_op->Lbn4BnInOp(sum_op->SoleObn()));
   sum_node->BindBnInOpAndRegst(sum_op->SoleObn(), loss_regst);
-  loss_op->InferBlobDescs(loss_node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
-  sum_op->InferBlobDescs(sum_node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
+  loss_op->InferBlobDescs(loss_node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
+                          device_type());
+  sum_op->InferBlobDescs(sum_node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
+                         device_type());
   in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());
 }
 

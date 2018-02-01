@@ -46,6 +46,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }
+  bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetSpecialConf() const { UNEXPECTED_RUN(); }
 
@@ -68,6 +69,21 @@ class Operator {
   }
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
+
+#define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
+  void Set##func_name##InSpecialConf(const std::string& field_name,      \
+                                     val_type val) const {               \
+    const PbMessage& special_conf = GetSpecialConf();                    \
+    PbMessage* special_conf_ptr = &const_cast<PbMessage&>(special_conf); \
+    Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
+  }
+
+  DEFINE_SET_VAL_In_SPECIAL_CONF(std::string, String);
+  DEFINE_SET_VAL_In_SPECIAL_CONF(int32_t, Int32);
+  DEFINE_SET_VAL_In_SPECIAL_CONF(int64_t, Int64);
+  DEFINE_SET_VAL_In_SPECIAL_CONF(bool, Bool);
+
+#undef DEFINE_SET_VAL_IN_SPECIAL_CONF
 
   const std::string& SoleIbn() const;
   const std::string& SoleIdbn() const;
@@ -93,23 +109,28 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, DeviceType device_type) const {
+    InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  }
+  virtual void InferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {
     LOG(FATAL) << "UNIMPLEMENTED: " << typeid(*this).name();
   }
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
+  void FixLbnWhenShareModel(const std::string& shared_op_name);
   virtual int32_t ModelSplitAxis() const { return -1; }
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const;
+      bool is_forward, DeviceType, const ParallelContext*, KernelConf*) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {}
+      const ParallelContext*, KernelConf*) const {}
 
   virtual std::string ibn2lbn(const std::string& input_bn) const;
   virtual std::string obn2lbn(const std::string& output_bn) const;

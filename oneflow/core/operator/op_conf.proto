@@ -79,22 +79,26 @@ message BasicDataLoaderOpConf {
   required ShapeProto shape = 5;
 }
 
-message PoolingOpConf {
+message AveragePoolingOpConf {
   required string in = 1;
   required string out = 2;
 
-  enum PoolMethod {
-    kMax = 0;
-    kAve = 1;
-    kStochastic = 2;
-  }
-  required PoolMethod pool = 3;
-  optional int32 pad_h = 4 [default = 0];
-  optional int32 pad_w = 5 [default = 0];
-  required int32 kernel_h = 6;
-  required int32 kernel_w = 7;
-  optional int32 stride_h = 8 [default = 1];
-  optional int32 stride_w = 9 [default = 1];
+  required string padding = 3 ;
+  required int32 pool_size_h = 4;
+  required int32 pool_size_w = 5;
+  optional int32 strides_h = 6 [default = 1];
+  optional int32 strides_w = 7 [default = 1];
+}
+
+message MaxPoolingOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  required int32 pool_size_h = 4;
+  required int32 pool_size_w = 5;
+  optional int32 strides_h = 6 [default = 1];
+  optional int32 strides_w = 7 [default = 1];
 }
 
 message ReluOpConf {
@@ -214,10 +218,11 @@ message PrintOpConf {
 message LossPrintOpConf {
 }
 
-message SumOpConf {
+message ReduceSumOpConf {
   required string in = 1;
   required string out = 2;
-  required int32 axis = 3;
+  optional int32 axis = 3;
+  optional bool keepdims = 4 [default = false];
 }
 
 message BasicRnnCellConf {
@@ -247,11 +252,11 @@ message RecurrentOpConf {
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
+  optional bool use_cudnn_on_gpu = 3;
   oneof op_type {
     Conv2dOpConf conv2d_conf = 100;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
-    PoolingOpConf pooling_conf = 103;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 106;
@@ -266,8 +271,10 @@ message OperatorConf {
     SoftmaxLossOpConf softmax_loss_conf = 117;
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
-    SumOpConf sum_conf = 120;
+    ReduceSumOpConf reduce_sum_conf = 120;
     RecurrentOpConf recurrent_conf = 121; 
+    AveragePoolingOpConf average_pooling_conf = 200;
+    MaxPoolingOpConf max_pooling_conf = 201;
   }
 }
 

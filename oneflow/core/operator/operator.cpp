@@ -18,6 +18,10 @@ DataType GetDataTypeFromBnInOpVec(
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
+  if (op_conf_.has_use_cudnn_on_gpu() == false) {
+    op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnn());
+  }
+  CheckUseCudnn(op_conf_.use_cudnn_on_gpu());
   InitFromOpConf();
 }
 
@@ -84,6 +88,18 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
+void Operator::FixLbnWhenShareModel(const std::string& shared_op_name) {
+  for (const std::string& model_bn : model_bns_) {
+    std::string model_lbn = shared_op_name + "/" + model_bn;
+    bn_in_op2lbn_.at(model_bn) = model_lbn;
+    bn_in_op2lbn_.at(GenDiffBn(model_bn)) = model_lbn;
+  }
+  for (const std::string& model_tmp_bn : model_tmp_bns_) {
+    std::string model_tmp_lbn = shared_op_name + "/" + model_tmp_bn;
+    bn_in_op2lbn_.at(model_tmp_bn) = model_tmp_lbn;
+  }
+}
+
 static bool HasBlobDescWithField(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const std::vector<std::string>& bn_in_ops,
@@ -97,8 +113,8 @@ static bool HasBlobDescWithField(
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, const ParallelContext* parallel_ctx,
-    KernelConf* kernel_conf) const {
+    bool is_forward, DeviceType device_type,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -126,6 +142,7 @@ void Operator::GenKernelConf(
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
   }
   kernel_conf->set_data_type(data_type);
+  kernel_conf->set_device_type(device_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
