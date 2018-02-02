@@ -153,11 +153,16 @@ void RecurrentForwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
 
 void RecurrentForwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  handler(in_regsts_.front());
+  Regst* in_regst = in_regsts_.front();
+  handler(in_regst);
   handler(cur_model_regst_);
-  handler(rec_in_regst_);
-  if (h0_regst_desc_id_ != -1) { handler(h0_regsts_.front()); }
   if (model_tmp_regst_desc_id() != -1) { handler(model_tmp_regst()); }
+  if (h0_regst_desc_id_ != -1 && in_regst->col_id() == 0) {
+    handler(h0_regsts_.front());
+  }
+  if (rec_in_regst_desc_id_ != -1 && in_regst->col_id() > 0) {
+    handler(rec_in_regst_);
+  }
 }
 
 REGISTER_ACTOR(TaskType::kRecurrentForward, RecurrentForwardCompActor);
