@@ -16,7 +16,11 @@ void RecurrentForwardCompActor::VirtualForwardCompActorInit(
   cur_model_regst_ = nullptr;
   rec_in_regst_ = nullptr;
 
-  OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerInitModel);
+  if (random_seed() != -1) {
+    OF_SET_MSG_HANDLER(&RecurrentForwardCompActor::HandlerInitModel);
+  } else {
+    SwitchToHandlerInitModelTmpOrNormal();
+  }
 }
 
 int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
@@ -145,6 +149,15 @@ void RecurrentForwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
   CHECK(h0_regsts_.empty());
   CHECK(!cur_model_regst_);
   CHECK(!rec_in_regst_);
+}
+
+void RecurrentForwardCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(in_regsts_.front());
+  handler(cur_model_regst_);
+  handler(rec_in_regst_);
+  if (h0_regst_desc_id_ != -1) { handler(h0_regsts_.front()); }
+  if (model_tmp_regst_desc_id() != -1) { handler(model_tmp_regst()); }
 }
 
 REGISTER_ACTOR(TaskType::kRecurrentForward, RecurrentForwardCompActor);

@@ -37,8 +37,24 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
-    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
+    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
+                               device_type());
   });
+}
+
+void ForwardCompTaskNode::LockRegsts() {
+  TaskNode::LockRegsts();
+  TryLockConsumedRegst("model");
+  TryLockConsumedRegst("model_tmp");
+}
+
+void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
+  CompTaskNode::ToProto(task_proto);
+  task_proto->set_random_seed(random_seed_);
+}
+
+void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
+  UNEXPECTED_RUN();
 }
 
 void ForwardCompTaskNode::BuildActivationRegst() {
@@ -61,22 +77,20 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
       node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
     }
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(mtbn);
-      model_tmp_regst->AddLbn(lbn);
+      if (!model_tmp_regst->IsLocked()) {
+        const std::string& lbn = node->op()->Lbn4BnInOp(mtbn);
+        model_tmp_regst->AddLbn(lbn);
+      }
       node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
     }
     for (const std::string& mbn : node->op()->model_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(mbn);
-      model_regst->AddLbn(lbn);
+      if (!model_regst->IsLocked()) {
+        const std::string& lbn = node->op()->Lbn4BnInOp(mbn);
+        model_regst->AddLbn(lbn);
+      }
       node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
-}
-
-void ForwardCompTaskNode::LockRegsts() {
-  TaskNode::LockRegsts();
-  TryLockConsumedRegst("model");
-  TryLockConsumedRegst("model_tmp");
 }
 
 void ForwardCompTaskNode::FixRegisterNumRange() {

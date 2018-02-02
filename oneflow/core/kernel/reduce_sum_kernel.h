@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_SUM_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_SUM_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDUCE_SUM_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDUCE_SUM_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SumKernel final : public KernelIf<device_type> {
+class ReduceSumKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SumKernel);
-  SumKernel() = default;
-  ~SumKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceSumKernel);
+  ReduceSumKernel() = default;
+  ~ReduceSumKernel() = default;
 
  private:
   void ForwardDataContent(
@@ -26,4 +26,4 @@ class SumKernel final : public KernelIf<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_SUM_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDUCE_SUM_KERNEL_H_

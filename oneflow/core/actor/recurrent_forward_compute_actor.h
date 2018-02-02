@@ -16,6 +16,8 @@ class RecurrentForwardCompActor final : public ForwardCompActor {
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
+  void ForEachCurReadableRegst(
+      std::function<void(const Regst*)> handler) override;
 
   void VirtualForwardCompActorInit(const TaskProto&) override;
   void TryAsyncReturnModelRegst() override;

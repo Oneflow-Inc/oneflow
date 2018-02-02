@@ -117,9 +117,7 @@ std::string ChainNode::VisualStr() const {
 
 bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
   for (std::shared_ptr<const Operator> op : op_vec_) {
-    if (!op->model_bns().empty() || !op->model_tmp_bns().empty()) {
-      return true;
-    }
+    if (op->HasModelOrModelTmpBlob()) { return true; }
   }
   return false;
 }
@@ -184,7 +182,11 @@ void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
 // ForwardChainNode
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromForward(
     const ChainNode* node) const {
-  return &TaskGraph::BldSubTskGphByBoxing;
+  if (this == node && parallel_desc()->policy() == kDataParallel) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  } else {
+    return &TaskGraph::BldSubTskGphByBoxing;
+  }
 }
 BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSource(
     const ChainNode* node) const {
@@ -196,11 +198,8 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
-  if (this == node) {
-    TODO();
-  } else {
-    return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
-  }
+  if (this == node) { CHECK_EQ(parallel_desc()->policy(), kModelParallel); }
+  return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
     const ChainNode* node) const {
@@ -208,11 +207,7 @@ BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
 }
 std::vector<std::string> ForwardChainNode::FindLbnsFromForward(
     const ChainNode* node) const {
-  if (this == node) {
-    TODO();
-  } else {
-    return FindLbnsBetweenFw(node, this);
-  }
+  return FindLbnsBetweenFw(node, this);
 }
 std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
     const ChainNode* node) const {
@@ -221,7 +216,8 @@ std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
 void ForwardChainNode::set_data_output_lbns() {
   ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
     if (dynamic_cast<const ForwardChainNode*>(to_node)
-        || dynamic_cast<const LossChainNode*>(to_node)) {
+        || dynamic_cast<const LossChainNode*>(to_node)
+        || dynamic_cast<const PrintChainNode*>(to_node)) {
       AddDataOutputLbnsTo(to_node);
     }
   });
@@ -241,8 +237,8 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromForward(
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromBackward(
     const ChainNode* node) const {
-  if (this == node) {
-    TODO();
+  if (this == node && parallel_desc()->policy() == kDataParallel) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
   } else {
     return &TaskGraph::BldSubTskGphByBoxing;
   }
@@ -257,11 +253,8 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromBackward(
     const ChainNode* node) const {
-  if (this == node) {
-    TODO();
-  } else {
-    return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
-  }
+  if (this == node) { CHECK_EQ(parallel_desc()->policy(), kModelParallel); }
+  return GetBldBoxingOpConfMethodByBwParallelPolicy(node, this);
 }
 BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
     const ChainNode* node) const {
@@ -269,11 +262,7 @@ BldBoxingOpConfMthd BackwardChainNode::GetMthdForBldBoxingOpConfFromLoss(
 }
 std::vector<std::string> BackwardChainNode::FindLbnsFromBackward(
     const ChainNode* node) const {
-  if (this == node) {
-    TODO();
-  } else {
-    return FindLbnsBetweenBw(node, this);
-  }
+  return FindLbnsBetweenBw(node, this);
 }
 std::vector<std::string> BackwardChainNode::FindLbnsFromLoss(
     const ChainNode* node) const {
@@ -329,6 +318,15 @@ std::vector<std::string> LossChainNode::FindLbnsFromForward(
 std::vector<std::string> LossChainNode::FindLbnsFromSource(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
+}
+
+void LossChainNode::set_data_output_lbns() {
+  ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
+    if (dynamic_cast<const BackwardChainNode*>(to_node)
+        || dynamic_cast<const PrintChainNode*>(to_node)) {
+      AddDataOutputLbnsTo(to_node);
+    }
+  });
 }
 
 // PrintChainNode

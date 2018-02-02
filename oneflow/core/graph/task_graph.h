@@ -41,12 +41,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* AddCopyH2DTaskIfNotCpu(CompTaskNode*);
   TaskNode* AddCopyD2HTaskIfNotCpu(CompTaskNode*);
   void AddCopyCommNetTask(TaskNode* src, TaskNode* dst);
-  void BuildOutBoxingIfNeed(
-      const ChainNode*, const std::vector<CompTaskNode*>& sorted_comp_tasks,
-      HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
-  void BuildInBoxing(const ChainNode*,
+  void BuildOutBoxing(const ChainNode* chain,
+                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
+                      std::vector<TaskNode*>* sorted_box);
+  void BuildInBoxing(const ChainNode* chain,
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                     std::vector<TaskNode*>* chain2sorted_in_box);
+                     std::vector<TaskNode*>* sorted_box);
 
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

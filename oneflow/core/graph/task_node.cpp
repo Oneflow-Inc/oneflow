@@ -83,7 +83,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false,
-                           parallel_ctx(), task_proto->mutable_exec_sequence());
+                           device_type(), parallel_ctx(),
+                           task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -140,6 +141,7 @@ TaskNode::consumed_regsts() {
 
 bool TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto regst = GetConsumedRegst(name);
+  if (regst->IsLocked()) { return false; }
   if (regst) {
     regst->Lock();
     return true;

@@ -5,7 +5,7 @@ namespace oneflow {
 void NormalForwardCompActor::VirtualForwardCompActorInit(
     const TaskProto& task_proto) {
   model_regst_ = nullptr;
-  if (model_regst_desc_id() != -1) {
+  if (model_regst_desc_id() != -1 && random_seed() != -1) {
     OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModel);
   } else {
     SwitchToHandlerInitModelTmpOrNormal();
@@ -97,6 +97,13 @@ void NormalForwardCompActor::TryAsyncReturnModelRegst() {
 
 void NormalForwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
   CHECK(pending_in_regsts_.empty());
+}
+
+void NormalForwardCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regsts_.front());
+  if (model_regst_desc_id() != -1) { handler(model_regst_); }
+  if (model_tmp_regst_desc_id() != -1) { handler(model_tmp_regst()); }
 }
 
 REGISTER_ACTOR(TaskType::kNormalForward, NormalForwardCompActor);

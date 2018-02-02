@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_
-#define ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_FULLY_CONNECTED_OP_H_
+#define ONEFLOW_CORE_OPERATOR_FULLY_CONNECTED_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class InnerProductOp final : public Operator {
+class FullyConnectedOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(InnerProductOp);
-  InnerProductOp() = default;
-  ~InnerProductOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(FullyConnectedOp);
+  FullyConnectedOp() = default;
+  ~FullyConnectedOp() = default;
 
   void InitFromOpConf() override;
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
@@ -20,7 +20,7 @@ class InnerProductOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
   int32_t ModelSplitAxis() const override { return 1; }
   int32_t MaxModelSplitNum() const override {
-    return op_conf().innerproduct_conf().out_num();
+    return op_conf().fully_connected_conf().units();
   }
 
  private:
@@ -28,4 +28,4 @@ class InnerProductOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_INNERPRODUCT_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_FULLY_CONNECTED_OP_H_

@@ -13,6 +13,7 @@ class ForwardCompActor : public CompActor {
 
  protected:
   bool is_in_eord() const { return is_in_eord_; }
+  int64_t random_seed() const { return random_seed_; }
   int64_t in_regst_desc_id() const { return in_regst_desc_id_; }
   int64_t model_regst_desc_id() const { return model_regst_desc_id_; }
   int64_t model_tmp_regst_desc_id() const { return model_tmp_regst_desc_id_; }
@@ -37,6 +38,7 @@ class ForwardCompActor : public CompActor {
   int64_t in_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
+  int64_t random_seed_;
   Regst* model_tmp_regst_;
 };
 

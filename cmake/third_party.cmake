@@ -8,12 +8,26 @@ include(googletest)
 include(gflags)
 include(glog)
 include(grpc)
-include(cub)
+include(eigen)
+if (BUILD_CUDA)
+  include(cub)
+endif()
 
-find_package(CUDA REQUIRED)
-find_package(CuDNN REQUIRED)
+if (BUILD_CUDA)
+  find_package(CUDA REQUIRED)
+  add_definitions(-DWITH_CUDA)
+endif()
+
+if (BUILD_CUDNN)
+  if (NOT BUILD_CUDA)
+    message(FATAL_ERROR "BUILD_CUDNN without BUILD_CUDA")
+  endif()
+  find_package(CuDNN REQUIRED)
+  add_definitions(-DWITH_CUDNN)
+endif()
 
 if (NOT WIN32)
+  set(BLA_STATIC ON)
   set(BLA_VENDOR "Intel10_64lp_seq")
   find_package(BLAS)
   if (NOT BLAS_FOUND)
@@ -24,21 +38,22 @@ else()
   set(MKL_LIB_PATH "C:/Program Files (x86)/IntelSWTools/compilers_and_libraries_2017/windows/mkl/lib/intel64_win")
   set(BLAS_LIBRARIES ${MKL_LIB_PATH}/mkl_core_dll.lib ${MKL_LIB_PATH}/mkl_sequential_dll.lib ${MKL_LIB_PATH}/mkl_intel_lp64_dll.lib)
 endif()
-message(STATUS "Blas Lib: " ${BLAS_LIBRARIES})
+message(STATUS "Found Blas Lib: " ${BLAS_LIBRARIES})
 
 set(oneflow_third_party_libs
     ${CMAKE_THREAD_LIBS_INIT}
-    ${ZLIB_STATIC_LIBRARIES}
     ${GLOG_STATIC_LIBRARIES}
     ${GFLAGS_STATIC_LIBRARIES}
     ${GOOGLETEST_STATIC_LIBRARIES}
     ${GOOGLEMOCK_STATIC_LIBRARIES}
     ${PROTOBUF_STATIC_LIBRARIES}
     ${GRPC_STATIC_LIBRARIES}
+    ${ZLIB_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
-    ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
+    ${CUDA_CUBLAS_LIBRARIES}
     ${BLAS_LIBRARIES}
+    ${CMAKE_DL_LIBS}
 )
 
 if(WIN32)
@@ -64,6 +79,7 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   cub_copy_headers_to_destination
+  eigen
 )
 
 include_directories(
@@ -76,4 +92,5 @@ include_directories(
     ${GRPC_INCLUDE_DIR}
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
+    ${EIGEN_INCLUDE_DIR}
 )
