@@ -47,4 +47,25 @@ DEFINE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
 DEFINE_GET_VAL_FROM_PBMESSAGE(bool, Bool);
 DEFINE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
 
+#undef DEFINE_GET_VAL_FROM_PBMESSAGE
+
+#define DEFINE_SET_VAL_IN_PBMESSAGE(val_type, func_name)             \
+  void Set##func_name##InPbMessage(                                  \
+      PbMessage* msg, const std::string& field_name, val_type val) { \
+    const Descriptor* d = msg->GetDescriptor();                      \
+    const FieldDescriptor* fd = d->FindFieldByName(field_name);      \
+    CHECK_NOTNULL(fd);                                               \
+    const Reflection* r = msg->GetReflection();                      \
+    r->Set##func_name(msg, fd, val);                                 \
+  }
+
+DEFINE_SET_VAL_IN_PBMESSAGE(std::string, String);
+DEFINE_SET_VAL_IN_PBMESSAGE(int32_t, Int32);
+DEFINE_SET_VAL_IN_PBMESSAGE(uint32_t, UInt32);
+DEFINE_SET_VAL_IN_PBMESSAGE(int64_t, Int64);
+DEFINE_SET_VAL_IN_PBMESSAGE(uint64_t, UInt64);
+DEFINE_SET_VAL_IN_PBMESSAGE(bool, Bool);
+
+#undef DEFINE_SET_VAL_IN_PBMESSAGE
+
 }  // namespace oneflow

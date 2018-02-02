@@ -79,7 +79,8 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
-  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr);
+  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), nullptr,
+                             device_type());
 }
 
 void MdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }
