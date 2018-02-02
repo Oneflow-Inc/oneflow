@@ -27,6 +27,7 @@ if (BUILD_CUDNN)
 endif()
 
 if (NOT WIN32)
+  set(BLA_STATIC ON)
   set(BLA_VENDOR "Intel10_64lp_seq")
   find_package(BLAS)
   if (NOT BLAS_FOUND)
@@ -49,8 +50,8 @@ set(oneflow_third_party_libs
     ${GRPC_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
-    ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
+    ${CUDA_CUBLAS_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${CMAKE_DL_LIBS}
 )
