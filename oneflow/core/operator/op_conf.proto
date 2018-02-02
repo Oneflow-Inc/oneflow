@@ -83,7 +83,7 @@ message BasicDataLoaderOpConf {
   required ShapeProto shape = 5;
 }
 
-message AveragePoolingOpConf {
+message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
@@ -94,7 +94,7 @@ message AveragePoolingOpConf {
   optional int32 strides_w = 7 [default = 1];
 }
 
-message MaxPoolingOpConf {
+message MaxPooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
@@ -277,8 +277,8 @@ message OperatorConf {
     LossPrintOpConf loss_print_conf = 119;
     ReduceSumOpConf reduce_sum_conf = 120;
     RecurrentOpConf recurrent_conf = 121; 
-    AveragePoolingOpConf average_pooling_conf = 200;
-    MaxPoolingOpConf max_pooling_conf = 201;
+    AveragePooling2DOpConf average_pooling_2d_conf = 200;
+    MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }
 }
 
