@@ -1,0 +1,34 @@
+#include "oneflow/core/operator/basic_rnn_op.h"
+
+namespace oneflow {
+
+void BasicRnnOp::VirtualInitFromOpConf() {
+  EnrollDataTmpBn("plus_op_out");
+  EnrollModelBn("i2h_weight");
+  EnrollModelBn("h2h_weight");
+  EnrollModelBn("bias");
+  EnrollModelTmpBn("bias_multiplier");
+}
+
+void BasicRnnOp::VirtualInferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  int64_t embedding_size = in_blob_desc->shape().Count(1);
+  int64_t data_num = in_blob_desc->shape().At(0);
+  *GetBlobDesc4BnInOp("plus_op_out") =
+      BlobDesc(Shape({embedding_size, hidden_size}),
+               JobDesc::Singleton()->DefaultDataType(), false, true,
+               in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("i2h_weight") =
+      BlobDesc(Shape({hidden_size, embedding_size}));
+  *GetBlobDesc4BnInOp("h2h_weight") =
+      BlobDesc(Shape({hidden_size, hidden_size}));
+  *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+  *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
+}
+
+REGISTER_OP(OperatorConf::kBasicRnnOpConf, BasicRnnOp);
+
+}  // namespace oneflow

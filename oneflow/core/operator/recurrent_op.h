@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class RecurrentOp final : public Operator {
+class RecurrentOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecurrentOp);
   RecurrentOp() = default;
-  ~RecurrentOp() = default;
+  virtual ~RecurrentOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
@@ -24,6 +24,12 @@ class RecurrentOp final : public Operator {
   }
 
  private:
+  virtual void VirtualInitFromOpConf() { UNEXPECTED_RUN(); }
+  virtual void VirtualInferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const {
+    UNEXPECTED_RUN();
+  }
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
 };
