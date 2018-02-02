@@ -253,6 +253,12 @@ message RecurrentOpConf {
   }
 }
 
+message ReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -277,6 +283,7 @@ message OperatorConf {
     LossPrintOpConf loss_print_conf = 119;
     ReduceSumOpConf reduce_sum_conf = 120;
     RecurrentOpConf recurrent_conf = 121; 
+    ReshapeOpConf reshape_conf = 122;
     AveragePoolingOpConf average_pooling_conf = 200;
     MaxPoolingOpConf max_pooling_conf = 201;
   }
