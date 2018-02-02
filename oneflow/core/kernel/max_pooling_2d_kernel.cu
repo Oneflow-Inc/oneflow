@@ -1,17 +1,16 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/max_pooling_kernel.h"
+#include "oneflow/core/kernel/max_pooling_2d_kernel.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-__global__ void MaxPoolForward(const int64_t nthreads, const T* in_dptr,
-                               T* out_dptr, uint32_t* mask_dptr,
-                               const int64_t channels, const int64_t height,
-                               const int64_t width, const int64_t pooled_height,
-                               const int64_t pooled_width, PoolingCtx ctx) {
+__global__ void MaxPooling2DForward(
+    const int64_t nthreads, const T* in_dptr, T* out_dptr, uint32_t* mask_dptr,
+    const int64_t channels, const int64_t height, const int64_t width,
+    const int64_t pooled_height, const int64_t pooled_width, Pooling2DCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t pw = index % pooled_width;
     const int64_t ph = (index / pooled_width) % pooled_height;
@@ -43,12 +42,11 @@ __global__ void MaxPoolForward(const int64_t nthreads, const T* in_dptr,
 }
 
 template<typename T>
-__global__ void MaxPoolBackward(const int64_t nthreads, const T* out_diff_dptr,
-                                const uint32_t* mask_dptr, T* in_diff_dptr,
-                                const int64_t channels, const int64_t height,
-                                const int64_t width,
-                                const int64_t pooled_height,
-                                const int64_t pooled_width, PoolingCtx ctx) {
+__global__ void MaxPooling2DBackward(
+    const int64_t nthreads, const T* out_diff_dptr, const uint32_t* mask_dptr,
+    T* in_diff_dptr, const int64_t channels, const int64_t height,
+    const int64_t width, const int64_t pooled_height,
+    const int64_t pooled_width, Pooling2DCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t w = index % width;
     const int64_t h = (index / width) % height;
@@ -88,40 +86,41 @@ __global__ void MaxPoolBackward(const int64_t nthreads, const T* out_diff_dptr,
 }  // namespace
 
 template<typename T>
-class MaxPoolingKernelUtil<DeviceType::kGPU, T> final {
+class MaxPooling2DKernelUtil<DeviceType::kGPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernelUtil);
-  MaxPoolingKernelUtil() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(MaxPooling2DKernelUtil);
+  MaxPooling2DKernelUtil() = delete;
 
   static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
-                      Blob* mask_blob, const PoolingCtx& pooling_ctx) {
+                      Blob* mask_blob, const Pooling2DCtx& pooling_ctx) {
     const int64_t count = out_blob->shape().elem_cnt();
-    PoolingCtx cuda_ctx = pooling_ctx;
-    MaxPoolForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
-                        ctx.device_ctx->cuda_stream()>>>(
-        count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-        mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
-        in_blob->shape().At(2), in_blob->shape().At(3), out_blob->shape().At(2),
-        out_blob->shape().At(3), cuda_ctx);
+    MaxPooling2DForward<T>
+        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
+            count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
+            mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
+            in_blob->shape().At(2), in_blob->shape().At(3),
+            out_blob->shape().At(2), out_blob->shape().At(3), pooling_ctx);
   }
 
   static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
                        const Blob* mask_blob, Blob* in_diff_blob,
-                       const PoolingCtx& pooling_ctx) {
+                       const Pooling2DCtx& pooling_ctx) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
-    PoolingCtx cuda_ctx = pooling_ctx;
-    MaxPoolBackward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock,
-                         0, ctx.device_ctx->cuda_stream()>>>(
-        count, out_diff_blob->dptr<T>(), mask_blob->dptr<uint32_t>(),
-        in_diff_blob->mut_dptr<T>(), in_diff_blob->shape().At(1),
-        in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
-        out_diff_blob->shape().At(2), out_diff_blob->shape().At(3), cuda_ctx);
+    MaxPooling2DBackward<T>
+        <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
+           ctx.device_ctx->cuda_stream()>>>(
+            count, out_diff_blob->dptr<T>(), mask_blob->dptr<uint32_t>(),
+            in_diff_blob->mut_dptr<T>(), in_diff_blob->shape().At(1),
+            in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
+            out_diff_blob->shape().At(2), out_diff_blob->shape().At(3),
+            pooling_ctx);
   }
 };
 
-#define INSTANTIATE_MAX_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
-  template class MaxPoolingKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_MAX_POOLING_KERNEL_UTIL,
+#define INSTANTIATE_MAX_POOLING_2D_KERNEL_UTIL(type_cpp, type_proto) \
+  template class MaxPooling2DKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_MAX_POOLING_2D_KERNEL_UTIL,
                      ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
