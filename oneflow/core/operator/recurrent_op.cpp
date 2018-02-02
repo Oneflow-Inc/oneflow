@@ -83,6 +83,4 @@ std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
   }
 }
 
-REGISTER_OP(OperatorConf::kRecurrentConf, RecurrentOp);
-
 }  // namespace oneflow

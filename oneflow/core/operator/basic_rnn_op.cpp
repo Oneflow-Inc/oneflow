@@ -29,4 +29,6 @@ void BasicRnnOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
 }
 
+REGISTER_OP(OperatorConf::kBasicRnnOpConf, BasicRnnOp);
+
 }  // namespace oneflow

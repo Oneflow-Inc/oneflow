@@ -9,7 +9,7 @@ class RecurrentOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecurrentOp);
   RecurrentOp() = default;
-  ~RecurrentOp() = default;
+  virtual ~RecurrentOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
