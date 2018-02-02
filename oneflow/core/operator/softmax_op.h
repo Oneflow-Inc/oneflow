@@ -11,6 +11,7 @@ class SoftmaxOp final : public Operator {
   SoftmaxOp() = default;
   ~SoftmaxOp() = default;
 
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   void InitFromOpConf() override;
   const PbMessage& GetSpecialConf() const override;
 
