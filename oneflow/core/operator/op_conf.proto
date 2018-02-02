@@ -229,7 +229,7 @@ message ReduceSumOpConf {
   optional bool keepdims = 4 [default = false];
 }
 
-message RecurrentCellConf {
+message BasicRnnOpConf {
   required string in = 1;
   optional string init_hidden = 2;
   required string out = 3;
@@ -237,18 +237,12 @@ message RecurrentCellConf {
   optional ActivationType activation = 6 [default = kTanH];
 
   optional InitializerConf init_hidden_initializer = 7;
-  optional InitializerConf weight_initializer = 8;
-  optional InitializerConf bias_initializer = 9;
-}
-
-message BasicRnnOpConf {
-  optional InitializerConf i2h_weight_initializer = 1;
-  optional InitializerConf h2h_weight_initializer = 2;
-  required RecurrentCellConf recurrent_conf = 3;
+  optional InitializerConf bias_initializer = 8;
+  optional InitializerConf i2h_weight_initializer = 9;
+  optional InitializerConf h2h_weight_initializer = 10;
 }
 
 message BasicLstmOpConf {
-  required RecurrentCellConf recurrent_conf = 1;
 }
 
 message OperatorConf {
