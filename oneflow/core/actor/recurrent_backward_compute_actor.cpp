@@ -170,7 +170,7 @@ void RecurrentBackwardCompActor::Act() {
   AsyncSendRegstMsgToProducer(data_tmp_regsts_.front().top());
   data_tmp_regsts_.front().pop();
 
-  if (!(out_regst->IsMaxCol()) && rec_out_diff_regst_desc_id_ == -1) {
+  if (!(out_regst->IsMaxCol()) && rec_out_diff_regst_desc_id_ != -1) {
     AsyncSendRegstMsgToProducer(rec_out_diff_regst_);
     rec_out_diff_regst_ = nullptr;
   }
@@ -222,6 +222,23 @@ void RecurrentBackwardCompActor::AsyncReturnAllReadableRegst() {
   while (!model_regsts_.empty()) {
     AsyncSendRegstMsgToProducer(model_regsts_.front());
     model_regsts_.pop();
+  }
+}
+
+void RecurrentBackwardCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  Regst* out_regst = out_regsts_.front().back();
+  handler(in_regsts_.front().top());
+  handler(out_regst);
+  handler(data_tmp_regsts_.front().top());
+  handler(out_diff_regsts_.front().back());
+  handler(model_regsts_.front());
+  if (model_tmp_regst_desc_id() != -1) { handler(model_tmp_regst_); }
+  if (rec_out_diff_regst_desc_id_ != -1 && !(out_regst->IsMaxCol())) {
+    handler(rec_out_diff_regst_);
+  }
+  if (h0_regst_desc_id_ != -1 && out_regst->col_id() == 0) {
+    handler(h0_regsts_.front());
   }
 }
 

@@ -20,6 +20,7 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
   void Act() override;
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
   void TryUpdtColIdOrder(const Regst*);
 

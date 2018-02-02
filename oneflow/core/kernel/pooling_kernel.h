@@ -5,34 +5,37 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class PoolingKernel final : public KernelIf<device_type> {
+struct PoolingCtx {
+  int32_t pool_size_h;
+  int32_t pool_size_w;
+  int32_t strides_h;
+  int32_t strides_w;
+  int32_t padding_top;
+  int32_t padding_bottom;
+  int32_t padding_left;
+  int32_t padding_right;
+};
+
+template<DeviceType device_type>
+class PoolingKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernel);
   PoolingKernel() = default;
-  ~PoolingKernel() = default;
+  virtual ~PoolingKernel() = default;
+
+ protected:
+  void VirtualKernelInit(const ParallelContext*) override {
+    pooling_ctx_ = BuildPoolingCtx(this->op_conf(), GetPoolingKernelConf());
+  }
+  const PoolingCtx& pooling_ctx() const { return pooling_ctx_; }
+  virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  PoolingCtx pooling_ctx_;
 };
 
-template<DeviceType device_type, typename T>
-class PoolingKernelUtil {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(PoolingKernelUtil);
-  PoolingKernelUtil() = delete;
-
-  static void PoolingForward(const KernelCtx&, const Blob*, Blob*, Blob*,
-                             const PoolingOpConf&);
-
-  static void PoolingBackward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                              const PoolingOpConf&);
-};
+PoolingCtx BuildPoolingCtx(const PbMessage& op_conf,
+                           const PoolingKernelConf& kernel_conf);
 
 }  // namespace oneflow
 

@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 namespace {
 
 const char* CublasGetErrorString(cublasStatus_t error) {
@@ -57,10 +59,12 @@ void CudaCheck(cudaError_t error) {
   CHECK_EQ(error, cudaSuccess) << cudaGetErrorString(error);
 }
 
+#ifdef WITH_CUDNN
 template<>
 void CudaCheck(cudnnStatus_t error) {
   CHECK_EQ(error, CUDNN_STATUS_SUCCESS) << cudnnGetErrorString(error);
 }
+#endif  // WITH_CUDNN
 
 template<>
 void CudaCheck(cublasStatus_t error) {
@@ -77,5 +81,7 @@ size_t GetAvailableGpuMemSize(int dev_id) {
   cudaGetDeviceProperties(&prop, dev_id);
   return prop.totalGlobalMem;
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

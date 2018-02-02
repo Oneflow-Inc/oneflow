@@ -138,9 +138,14 @@ inline uint32_t NewRandomSeed() {
 #define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
 #define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
+#if defined(WITH_CUDA)
 #define DEVICE_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
   OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
+#else
+#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
+#endif
+
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ \
   (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
@@ -157,6 +162,12 @@ inline double GetCurTime() {
 }
 
 size_t GetAvailableCpuMemSize();
+
+inline void CheckUseCudnn(bool val) {
+#ifndef WITH_CUDNN
+  CHECK_EQ(val, false) << "Please compile ONEFLOW with CUDNN";
+#endif
+}
 
 }  // namespace oneflow
 

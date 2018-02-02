@@ -2,7 +2,9 @@
 cmake_minimum_required(VERSION 3.5)
 
 option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
-option(BUILD_RDMA "Build RDMA components" OFF)
+option(BUILD_RDMA "" ON)
+option(BUILD_CUDA "" ON)
+option(BUILD_CUDNN "" ON)
 
 # Project
 if (BUILD_THIRD_PARTY)
@@ -57,6 +59,8 @@ if (BUILD_RDMA)
     else()
       message(FATAL_ERROR "RDMA library and head file not found")
     endif()
+  else()
+    message(FATAL_ERROR "UNIMPLEMENTED")
   endif()
 endif()
 
@@ -71,8 +75,7 @@ include(proto2cpp)
 include(third_party)
 
 if (BUILD_THIRD_PARTY)
-  add_custom_target(prepare_oneflow_third_party ALL
-  DEPENDS ${oneflow_third_party_dependencies})
+  add_custom_target(prepare_oneflow_third_party ALL DEPENDS ${oneflow_third_party_dependencies})
   set(BUILD_THIRD_PARTY OFF CACHE BOOL "" FORCE)
 else()
   include(oneflow)

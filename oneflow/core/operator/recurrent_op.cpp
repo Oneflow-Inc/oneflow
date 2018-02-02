@@ -11,18 +11,13 @@ void InferBasicRnnCellBlobDesc(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
-  BlobDesc data_tmp_blob_desc =
+  *GetBlobDesc4BnInOp("plus_op_out") =
       BlobDesc(Shape({embedding_size, hidden_size}),
                JobDesc::Singleton()->DefaultDataType(), false, true,
                in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("in_ip_op_out") = data_tmp_blob_desc;
-  *GetBlobDesc4BnInOp("hidden_ip_op_out") = data_tmp_blob_desc;
-  *GetBlobDesc4BnInOp("plus_op_out") = data_tmp_blob_desc;
-  *GetBlobDesc4BnInOp("f_op_out") = data_tmp_blob_desc;
-
-  *GetBlobDesc4BnInOp("in_ip_op_weight") =
+  *GetBlobDesc4BnInOp("i2h_weight") =
       BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("hidden_ip_op_weight") =
+  *GetBlobDesc4BnInOp("h2h_weight") =
       BlobDesc(Shape({hidden_size, hidden_size}));
   *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
   *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
@@ -45,12 +40,9 @@ void RecurrentOp::InitFromOpConf() {
   EnrollOutputBn("rec_out");
 
   if (conf.rnn_type_case() == RecurrentOpConf::kBasicRnnCell) {
-    EnrollDataTmpBn("in_ip_op_out");
-    EnrollDataTmpBn("hidden_ip_op_out");
     EnrollDataTmpBn("plus_op_out");
-    EnrollDataTmpBn("f_op_out");
-    EnrollModelBn("in_ip_op_weight");
-    EnrollModelBn("hidden_ip_op_weight");
+    EnrollModelBn("i2h_weight");
+    EnrollModelBn("h2h_weight");
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   } else if (conf.rnn_type_case() == RecurrentOpConf::kBasicLstmCell) {
@@ -122,7 +114,14 @@ std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
 }
 
 std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + op_conf().recurrent_conf().out();
+  if (output_bn == "out") {
+    return op_name() + "/" + op_conf().recurrent_conf().out();
+  } else if (output_bn == "rec_out") {
+    return op_name() + "/rec_" + op_conf().recurrent_conf().out();
+  } else {
+    UNEXPECTED_RUN();
+    return "";
+  }
 }
 
 REGISTER_OP(OperatorConf::kRecurrentConf, RecurrentOp);

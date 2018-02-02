@@ -17,13 +17,21 @@ Regst::Regst() {
 }
 
 bool Regst::HaveNextPieceColStatusOf(const Regst* rhs) const {
-  return (piece_id() == rhs->piece_id()) && (max_col_id() == rhs->max_col_id())
-         && (col_id() == rhs->col_id() + 1);
+  if (piece_id() == rhs->piece_id()) {
+    CHECK_EQ(max_col_id(), rhs->max_col_id());
+    return col_id() == rhs->col_id() + 1;
+  } else {
+    return false;
+  }
 }
 
 bool Regst::HaveSamePieceColStatusAs(const Regst* rhs) const {
-  return (piece_id() == rhs->piece_id()) && (max_col_id() == rhs->max_col_id())
-         && (col_id() == rhs->col_id());
+  if (piece_id() == rhs->piece_id()) {
+    CHECK_EQ(max_col_id(), rhs->max_col_id());
+    return col_id() == rhs->col_id();
+  } else {
+    return false;
+  }
 }
 
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {

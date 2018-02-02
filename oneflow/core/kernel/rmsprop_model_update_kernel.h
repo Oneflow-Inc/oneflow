@@ -33,6 +33,8 @@ class RMSPropMdUpdateKernelUtil final {
                           T* mean_square, const T* model_diff);
 };
 
+DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_RMSPROP_MODEL_UPDATE_KERNEL_H_

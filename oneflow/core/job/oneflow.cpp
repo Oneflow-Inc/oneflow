@@ -20,11 +20,13 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 }
 
 void PushAvailableMemDescOfThisMachine() {
-  const JobDesc* job_desc = JobDesc::Singleton();
   AvailableMemDescOfMachine this_machine_mem_desc;
+#ifdef WITH_CUDA
+  const JobDesc* job_desc = JobDesc::Singleton();
   FOR_RANGE(int, i, 0, job_desc->GpuDeviceNum()) {
     this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
   }
+#endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
   CtrlClient::Singleton()->PushKV(
       GetAmdCtrlKey(MachineCtx::Singleton()->this_machine_id()),
@@ -50,14 +52,15 @@ class Oneflow final {
   OF_SINGLETON(Oneflow);
 
  private:
-  Oneflow(const JobConf& job_conf, const std::string& this_mchn_name);
+  Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name);
 
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
+Oneflow::Oneflow(const JobDescProto& job_desc,
+                 const std::string& this_mchn_name) {
   // New All Singleton
-  JobDesc::NewSingleton(job_conf);
+  JobDesc::NewSingleton(job_desc);
   IDMgr::NewSingleton();
   MachineCtx::NewSingleton(this_mchn_name);
   const MachineCtx* machine_ctx = MachineCtx::Singleton();
@@ -107,17 +110,31 @@ Oneflow::Oneflow(const JobConf& job_conf, const std::string& this_mchn_name) {
 }  // namespace oneflow
 
 DEFINE_string(job_conf_filepath, "", "");
+DEFINE_string(job_desc_filepath, "", "");
 DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
+  using namespace oneflow;
   google::InitGoogleLogging(argv[0]);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  oneflow::LocalFS()->CreateDirIfNotExist(oneflow::LogDir());
-  oneflow::RedirectStdoutAndStderrToGlogDir();
-  oneflow::JobConf job_conf;
-  oneflow::ParseProtoFromTextFile(FLAGS_job_conf_filepath, &job_conf);
-  oneflow::Oneflow::NewSingleton(job_conf, FLAGS_this_machine_name);
-  oneflow::Oneflow::DeleteSingleton();
-  oneflow::CloseStdoutAndStderr();
+  LocalFS()->CreateDirIfNotExist(LogDir());
+  RedirectStdoutAndStderrToGlogDir();
+  JobDescProto job_desc;
+  if (FLAGS_job_desc_filepath != "") {
+    ParseProtoFromTextFile(FLAGS_job_desc_filepath, &job_desc);
+  } else if (FLAGS_job_conf_filepath != "") {
+    JobConf* jc = job_desc.mutable_job_conf();
+    ParseProtoFromTextFile(FLAGS_job_conf_filepath, jc);
+    ParseProtoFromTextFile(jc->dlnet_filepath(), job_desc.mutable_dlnet_conf());
+    ParseProtoFromTextFile(jc->resource_filepath(),
+                           job_desc.mutable_resource());
+    ParseProtoFromTextFile(jc->placement_filepath(),
+                           job_desc.mutable_placement());
+  } else {
+    LOG(FATAL) << "Please Set job_conf_filepath or job_desc_filepath";
+  }
+  Oneflow::NewSingleton(job_desc, FLAGS_this_machine_name);
+  Oneflow::DeleteSingleton();
+  CloseStdoutAndStderr();
   return 0;
 }

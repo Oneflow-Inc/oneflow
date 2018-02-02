@@ -49,7 +49,19 @@ void TaskGraph::BldSubTskGphByBoxing(
                            sorted_dst_comp_tasks, nullptr, nullptr);
     return;
   }
-  BuildOutBoxingIfNeed(src_chain, sorted_src_comp_tasks, chain2sorted_out_box);
+  std::vector<TaskNode*> sorted_out_box_tmp;
+  std::vector<TaskNode*>* sorted_out_box = nullptr;
+  if (src_chain->HasSoleRecurrentOp()) {
+    BuildOutBoxing(src_chain, sorted_src_comp_tasks, &sorted_out_box_tmp);
+    sorted_out_box = &sorted_out_box_tmp;
+  } else {
+    if (chain2sorted_out_box->find(src_chain) == chain2sorted_out_box->end()) {
+      BuildOutBoxing(src_chain, sorted_src_comp_tasks,
+                     &((*chain2sorted_out_box)[src_chain]));
+    }
+    sorted_out_box = &(chain2sorted_out_box->at(src_chain));
+  }
+
   std::vector<TaskNode*> sorted_in_box_tmp;
   std::vector<TaskNode*>* sorted_in_box = nullptr;
   if (dst_chain->HasSoleRecurrentOp()) {
@@ -62,7 +74,8 @@ void TaskGraph::BldSubTskGphByBoxing(
     }
     sorted_in_box = &(chain2sorted_in_box->at(dst_chain));
   }
-  for (TaskNode* src_box : chain2sorted_out_box->at(src_chain)) {
+
+  for (TaskNode* src_box : *sorted_out_box) {
     for (TaskNode* dst_box : *sorted_in_box) {
       if (src_box->machine_id() == dst_box->machine_id()) {
         Connect<TaskNode>(src_box, NewEdge(), dst_box);
@@ -168,12 +181,9 @@ void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
   Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
 }
 
-void TaskGraph::BuildOutBoxingIfNeed(
+void TaskGraph::BuildOutBoxing(
     const ChainNode* chain, const std::vector<CompTaskNode*>& sorted_comp_tasks,
-    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box) {
-  if (chain2sorted_out_box->find(chain) != chain2sorted_out_box->end()) {
-    return;
-  }
+    std::vector<TaskNode*>* sorted_out_box) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = AddCopyD2HTaskIfNotCpu(comp_task);
@@ -185,7 +195,7 @@ void TaskGraph::BuildOutBoxingIfNeed(
     for (TaskNode* task : pair.second) {
       Connect<TaskNode>(task, NewEdge(), boxing_task);
     }
-    (*chain2sorted_out_box)[chain].push_back(boxing_task);
+    sorted_out_box->push_back(boxing_task);
   }
 }
 

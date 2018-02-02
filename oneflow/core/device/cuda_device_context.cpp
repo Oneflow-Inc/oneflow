@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 namespace {
 
 void CUDART_CB CudaCallBackHandle(cudaStream_t, cudaError_t status,
@@ -19,5 +21,7 @@ void CudaDeviceCtx::AddCallBack(std::function<void()> callback_stack) const {
   CudaCheck(cudaStreamAddCallback(cuda_stream(), &CudaCallBackHandle,
                                   callback_heap, 0));
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
