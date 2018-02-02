@@ -93,27 +93,25 @@ class AveragePooling2DKernelUtil<DeviceType::kGPU, T> final {
   static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
                       const Pooling2DCtx& pooling_ctx) {
     const int64_t count = out_blob->shape().elem_cnt();
-    Pooling2DCtx cuda_ctx = pooling_ctx;
     AveragePooling2DForward<T>
         <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
             in_blob->shape().At(1), in_blob->shape().At(2),
             in_blob->shape().At(3), out_blob->shape().At(2),
-            out_blob->shape().At(3), cuda_ctx);
+            out_blob->shape().At(3), pooling_ctx);
   }
 
   static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
                        Blob* in_diff_blob, const Pooling2DCtx& pooling_ctx) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
-    Pooling2DCtx cuda_ctx = pooling_ctx;
     AveragePooling2DBackward<T>
         <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
             in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
             in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-            out_diff_blob->shape().At(3), cuda_ctx);
+            out_diff_blob->shape().At(3), pooling_ctx);
   }
 };
 
