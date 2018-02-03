@@ -21,11 +21,12 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (NeedExternalH0()) {
+    const InitializerConf& init_hidden_initializer =
+        static_cast<const InitializerConf&>(GetMessageFromPbMessage(
+            GetRecurrentOpConf(), "init_hidden_initializer"));
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx,
-        OF_PB_POINTER_GET(this->op_conf().recurrent_conf(),
-                          init_hidden_initializer),
-        random_seed_gen(), BnInOp2Blob("h0"));
+        ctx.device_ctx, &init_hidden_initializer, random_seed_gen(),
+        BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
 }
@@ -48,23 +49,5 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
   template class RecurrentKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
-
-namespace {
-
-Kernel* CreateRecurrentKernel(const KernelConf& kernel_conf) {
-  const RecurrentOpConf& conf = kernel_conf.op_conf().recurrent_conf();
-  if (conf.has_basic_rnn_cell()) {
-    return CreateBasicRnnKernel(kernel_conf);
-  } else if (conf.has_basic_lstm_cell()) {
-    TODO();
-    return nullptr;
-  } else {
-    UNEXPECTED_RUN();
-  }
-}
-
-}  // namespace
-
-COMMAND(AddKernelCreator(OperatorConf::kRecurrentConf, CreateRecurrentKernel));
 
 }  // namespace oneflow

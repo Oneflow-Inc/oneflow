@@ -3,6 +3,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+const PbMessage& BasicRnnKernel<device_type, T>::GetRecurrentOpConf() const {
+  return this->op_conf().basic_rnn_conf();
+}
+
+template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -28,11 +33,11 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
       static_cast<T>(1), BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias"),
       plus_op_out_blob);
 
-  if (this->op_conf().recurrent_conf().activation() == kTanH) {
+  if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
     BasicRnnKernelUtil<device_type, T>::TanH(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
-  } else if (this->op_conf().recurrent_conf().activation() == kSigmoid) {
+  } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
     BasicRnnKernelUtil<device_type, T>::Sigmoid(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
@@ -64,12 +69,12 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   // reuse memory
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
-  if (this->op_conf().recurrent_conf().activation() == kTanH) {
+  if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
     BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
         ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
         out_diff_blob->dptr<T>(), rec_ht_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
-  } else if (this->op_conf().recurrent_conf().activation() == kSigmoid) {
+  } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
     BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
         ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
         out_diff_blob->dptr<T>(), rec_ht_diff_blob->dptr<T>(),
@@ -111,26 +116,23 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   }
 }
 
-#define INITIALZE_BLOB(initializer, base_initializer, bn)                      \
-  const InitializerConf* bn##initializer_conf = OF_PB_POINTER_GET(             \
-      this->op_conf().recurrent_conf().basic_rnn_cell(), initializer);         \
-  if (bn##initializer_conf == nullptr) {                                       \
-    bn##initializer_conf =                                                     \
-        OF_PB_POINTER_GET(this->op_conf().recurrent_conf(), base_initializer); \
-  }                                                                            \
-  KernelUtil<device_type, T>::InitializeWithProperConf(                        \
-      ctx.device_ctx, bn##initializer_conf, random_seed_gen(),                 \
-      BnInOp2Blob(#bn));
-
 template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  INITIALZE_BLOB(i2h_weight_initializer, weight_initializer, i2h_weight);
-  INITIALZE_BLOB(h2h_weight_initializer, weight_initializer, h2h_weight);
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx.device_ctx,
-      OF_PB_POINTER_GET(this->op_conf().recurrent_conf(), bias_initializer),
+      OF_PB_POINTER_GET(this->op_conf().basic_rnn_conf(),
+                        i2h_weight_initializer),
+      random_seed_gen(), BnInOp2Blob("i2h_weight"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx.device_ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_rnn_conf(),
+                        h2h_weight_initializer),
+      random_seed_gen(), BnInOp2Blob("h2h_weight"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx.device_ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_rnn_conf(), bias_initializer),
       random_seed_gen(), BnInOp2Blob("bias"));
 }
 
@@ -196,6 +198,7 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-DEFINE_RECCURENT_KERNEL_CREATOR(BasicRnn);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicRnnConf, BasicRnnKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -13,6 +13,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   ~BasicRnnKernel() = default;
 
  private:
+  const PbMessage& GetRecurrentOpConf() const override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
@@ -32,8 +33,6 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
-
-DECLARE_RECURRENT_KERNEL_CREATOR(BasicRnn);
 
 template<DeviceType device_type, typename T>
 class BasicRnnKernelUtil final {
