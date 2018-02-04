@@ -9,7 +9,7 @@ template<DeviceType device_type, typename T>
 class MdUpdateKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdateKernel);
-  ~MdUpdateKernel() = default;
+  virtual ~MdUpdateKernel() = default;
 
   void Forward(
       const KernelCtx& ctx,
