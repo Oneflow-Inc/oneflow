@@ -173,12 +173,32 @@ struct KernelUtil<DeviceType::kCPU, T> final {
       y[i] = static_cast<T>(1) / (static_cast<T>(1) + std::exp(-x[i]));
     }
   }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
+                              const T* y, T* x_diff) {
+    for (int64_t i = 0; i != n; ++i) {
+      x_diff[i] = y[i] * (1 - y[i]) * y_diff[i];
+    }
+  }
   static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     T one = static_cast<T>(1);
     T two = static_cast<T>(2);
     for (int64_t i = 0; i != n; ++i) {
       y[i] = two / (one + std::exp(-two * x[i])) - one;
     }
+  }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
+                           const T* y, T* x_diff) {
+    for (int64_t i = 0; i != n; ++i) {
+      x_diff[i] = (1 - y[i] * y[i]) * y_diff[i];
+    }
+  }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T zero = static_cast<T>(0.0);
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+  }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
+                           const T* y, T* x_diff) {
+    for (int64_t i = 0; i != n; ++i) { x_diff[i] = y[i] * y_diff[i]; }
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,

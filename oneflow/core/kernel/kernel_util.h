@@ -82,8 +82,26 @@ struct KernelUtil final {
   // y = sigmoid(x)
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
+  // y = sigmoid(x)
+  // x' = y * (1 - y) * y'
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
+                              const T* y, T* x_diff);
+
   // y = tanh(x)
   static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+
+  // y = tanh(x)
+  // x' = (1 - y^2) * y'
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
+                           const T* y, T* x_diff);
+
+  // y = relu(x)
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+
+  // y = relu(x)
+  // x' = y * y'
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
+                           const T* y, T* x_diff);
 
   // matrix vector multiply
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,

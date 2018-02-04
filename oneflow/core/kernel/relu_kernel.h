@@ -7,18 +7,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ReluKernelUtil final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ReluKernelUtil);
-  ReluKernelUtil() = delete;
-
-  static void Forward(const KernelCtx& ctx, const int64_t n, const T* in,
-                      T* out);
-  static void Backward(const KernelCtx& ctx, const int64_t n, const T* out_diff,
-                       const T* in, T* in_diff);
-};
-
-template<DeviceType device_type, typename T>
 class ReluKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReluKernel);
