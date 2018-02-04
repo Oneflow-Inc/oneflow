@@ -34,11 +34,11 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
       plus_op_out_blob);
 
   if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
-    BasicRnnKernelUtil<device_type, T>::TanH(
+    KernelUtil<device_type, T>::TanH(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
   } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
-    BasicRnnKernelUtil<device_type, T>::Sigmoid(
+    KernelUtil<device_type, T>::Sigmoid(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
   } else {
@@ -170,18 +170,6 @@ void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
 template<typename T>
 class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-    FOR_RANGE(int64_t, i, 0, n) {
-      y[i] = static_cast<T>(1) / (static_cast<T>(1) + std::exp(-x[i]));
-    }
-  }
-  static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-    T one = static_cast<T>(1);
-    T two = static_cast<T>(2);
-    FOR_RANGE(int64_t, i, 0, n) {
-      y[i] = two / (one + std::exp(-two * x[i])) - one;
-    }
-  }
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* ht,
                               const T* ht_diff, const T* rec_ht_diff,
                               T* plus_out_diff) {

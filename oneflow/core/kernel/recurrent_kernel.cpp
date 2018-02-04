@@ -4,9 +4,16 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-bool RecurrentKernel<device_type, T>::NeedExternalH0() const {
+void RecurrentKernel<device_type, T>::VirtualKernelInit(
+    const ParallelContext*) {
   auto& input_bns = this->kernel_conf().input_bns();
-  return std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+  need_external_h0_ =
+      std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+}
+
+template<DeviceType device_type, typename T>
+bool RecurrentKernel<device_type, T>::NeedExternalH0() const {
+  return need_external_h0_;
 }
 
 template<DeviceType device_type, typename T>
