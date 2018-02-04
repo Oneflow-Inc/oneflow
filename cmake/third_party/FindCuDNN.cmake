@@ -17,7 +17,7 @@ find_path(CUDNN_INCLUDE_DIR cudnn.h
     PATHS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
     PATH_SUFFIXES cuda/include include)
 
-find_library(CUDNN_LIBRARY cudnn
+find_library(CUDNN_LIBRARY libcudnn_static.a
     PATHS ${CUDNN_ROOT_DIR} ${CUDA_TOOLKIT_ROOT_DIR}
     PATH_SUFFIXES lib lib64 cuda/lib cuda/lib64 lib/x64)
 

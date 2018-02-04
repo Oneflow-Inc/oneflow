@@ -89,6 +89,8 @@ int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
 
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 
+bool Blob::IsColValid() const { return col_id() <= max_col_id(); }
+
 #define INSTANTIATE_BLOB_FUNC(dev_t)                                       \
   template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
   template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \

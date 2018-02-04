@@ -16,6 +16,17 @@ endif()
 if (BUILD_CUDA)
   find_package(CUDA REQUIRED)
   add_definitions(-DWITH_CUDA)
+  foreach(cuda_lib_path ${CUDA_LIBRARIES})
+    get_filename_component(cuda_lib_name ${cuda_lib_path} NAME)
+    if (${cuda_lib_name} STREQUAL libcudart_static.a)
+      get_filename_component(cuda_lib_dir ${cuda_lib_path} DIRECTORY)
+      break()
+    endif()
+  endforeach()
+  set(extra_cuda_libs libculibos.a libcublas_static.a)
+  foreach(extra_cuda_lib ${extra_cuda_libs})
+    list(APPEND CUDA_LIBRARIES ${cuda_lib_dir}/${extra_cuda_lib})
+  endforeach()
 endif()
 
 if (BUILD_CUDNN)
@@ -27,6 +38,7 @@ if (BUILD_CUDNN)
 endif()
 
 if (NOT WIN32)
+  set(BLA_STATIC ON)
   set(BLA_VENDOR "Intel10_64lp_seq")
   find_package(BLAS)
   if (NOT BLAS_FOUND)
@@ -49,8 +61,8 @@ set(oneflow_third_party_libs
     ${GRPC_STATIC_LIBRARIES}
     ${ZLIB_STATIC_LIBRARIES}
     ${farmhash_STATIC_LIBRARIES}
-    ${CUDA_CUBLAS_LIBRARIES}
     ${CUDNN_LIBRARIES}
+    ${CUDA_LIBRARIES}
     ${BLAS_LIBRARIES}
     ${CMAKE_DL_LIBS}
 )
