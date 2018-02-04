@@ -16,6 +16,24 @@ Regst::Regst() {
   regst_desc_ = nullptr;
 }
 
+bool Regst::HaveNextPieceColStatusOf(const Regst* rhs) const {
+  if (piece_id() == rhs->piece_id()) {
+    CHECK_EQ(max_col_id(), rhs->max_col_id());
+    return col_id() == rhs->col_id() + 1;
+  } else {
+    return false;
+  }
+}
+
+bool Regst::HaveSamePieceColStatusAs(const Regst* rhs) const {
+  if (piece_id() == rhs->piece_id()) {
+    CHECK_EQ(max_col_id(), rhs->max_col_id());
+    return col_id() == rhs->col_id();
+  } else {
+    return false;
+  }
+}
+
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
   if (it != lbn2blob_.end()) {
