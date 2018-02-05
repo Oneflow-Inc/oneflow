@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_POOLING_2D_OP_H_
-#define ONEFLOW_CORE_OPERATOR_POOLING_2D_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_POOLING_3D_OP_H_
+#define ONEFLOW_CORE_OPERATOR_POOLING_3D_OP_H_
 
 #include "oneflow/core/operator/pooling_op.h"
 
 namespace oneflow {
 
-class Pooling2DOp : public PoolingOp {
+class Pooling3DOp : public PoolingOp {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Pooling2DOp);
-  Pooling2DOp() = default;
-  virtual ~Pooling2DOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Pooling3DOp);
+  Pooling3DOp() = default;
+  virtual ~Pooling3DOp() = default;
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
@@ -21,13 +21,15 @@ class Pooling2DOp : public PoolingOp {
       const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
   void VirtualCheckPoolSizeAndStrides() const override;
-  virtual Pooling2DKernelConf* GetMutPooling2DKernelConf(KernelConf*) const = 0;
+  virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
+  int32_t GetPoolSizeD() const;
   int32_t GetPoolSizeH() const;
   int32_t GetPoolSizeW() const;
+  int32_t GetStridesD() const;
   int32_t GetStridesH() const;
   int32_t GetStridesW() const;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_POOLING_2D_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_POOLING_3D_OP_H_

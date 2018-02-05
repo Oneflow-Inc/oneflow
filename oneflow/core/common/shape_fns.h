@@ -53,9 +53,9 @@ namespace oneflow {
 // size and padding of each spatial dimension can be computed by calling
 // GetWindowedOutputSize separately for each dimension.
 //
-void GetWindowedOutputSize(int64_t input_size, int64_t filter_size,
-                           int64_t stride, const std::string& padding_type,
-                           int64_t* output_size, int64_t* padding_size);
+void GetWindowedOutputSize(int32_t input_size, int32_t filter_size,
+                           int32_t stride, const std::string& padding_type,
+                           int32_t* output_size, int32_t* padding_size);
 
 // The V2 version computes the same outputs with arbitrary dilation_rate.
 // The output dimensions are computed as follows:
@@ -78,29 +78,29 @@ void GetWindowedOutputSize(int64_t input_size, int64_t filter_size,
 //     H' = H-K'+1.
 //
 // TODO(b/67112639): Merge V2 versions and the original versions eventually.
-void GetWindowedOutputSizeV2(int64_t input_size, int64_t filter_size,
-                             int64_t dilation_rate, int64_t stride,
+void GetWindowedOutputSizeV2(int32_t input_size, int32_t filter_size,
+                             int32_t dilation_rate, int32_t stride,
                              const std::string& padding_type,
-                             int64_t* output_size, int64_t* padding_size);
+                             int32_t* output_size, int32_t* padding_size);
 
 // Returns the same output dimensions as in GetWindowedOutputSize, but returns
 // verbose padding dimensions (before/after). Any excess padding
 // (caused by an odd padding size value) is added to the 'padding_after'
 // dimension.
-void GetWindowedOutputSizeVerbose(int64_t input_size, int64_t filter_size,
-                                  int64_t stride,
+void GetWindowedOutputSizeVerbose(int32_t input_size, int32_t filter_size,
+                                  int32_t stride,
                                   const std::string& padding_type,
-                                  int64_t* output_size, int64_t* padding_before,
-                                  int64_t* padding_after);
+                                  int32_t* output_size, int32_t* padding_before,
+                                  int32_t* padding_after);
 
 // The V2 version computes the same outputs with arbitrary dilation_rate. For
 // detailed equations, refer to the comments for GetWindowedOutputSizeV2().
-void GetWindowedOutputSizeVerboseV2(int64_t input_size, int64_t filter_size,
-                                    int64_t dilation_rate, int64_t stride,
+void GetWindowedOutputSizeVerboseV2(int32_t input_size, int32_t filter_size,
+                                    int32_t dilation_rate, int32_t stride,
                                     const std::string& padding_type,
-                                    int64_t* output_size,
-                                    int64_t* padding_before,
-                                    int64_t* padding_after);
+                                    int32_t* output_size,
+                                    int32_t* padding_before,
+                                    int32_t* padding_after);
 
 }  // namespace oneflow
 

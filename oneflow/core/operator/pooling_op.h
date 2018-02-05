@@ -1,0 +1,29 @@
+#ifndef ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
+#define ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
+
+#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/shape_fns.h"
+
+namespace oneflow {
+
+class PoolingOp : public Operator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
+  PoolingOp() = default;
+  virtual ~PoolingOp() = default;
+
+  void InitFromOpConf() override;
+
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override { return false; }
+
+ protected:
+  virtual void VirtualEnrollDataTmpBn() = 0;
+  virtual void VirtualInferDataTmpBlobDesc(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const = 0;
+  virtual void VirtualCheckPoolSizeAndStrides() const = 0;
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_OPERATOR_POOLING_OP_H_

@@ -14,6 +14,9 @@ class AveragePooling2DOp final : public Pooling2DOp {
   const PbMessage& GetSpecialConf() const override;
 
  private:
+  void VirtualEnrollDataTmpBn() override {}
+  void VirtualInferDataTmpBlobDesc(std::function<BlobDesc*(const std::string)>
+                                       GetBlobDesc4BnInOp) const override {}
   Pooling2DKernelConf* GetMutPooling2DKernelConf(KernelConf*) const override;
 };
 
