@@ -37,15 +37,12 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
   if (NeedExternalH0()) {
     const PbMessage& recurrent_conf = GetRecurrentOpConf();
     Blob* h0_blob = BnInOp2Blob("h0");
+    const InitializerConf* init_hidden_initializer = nullptr;
     if (GetBoolFromPbMessage(recurrent_conf, "has_init_hidden_initializer")) {
+      init_hidden_initializer = static_cast<const InitializerConf*>(
+          &GetMessageFromPbMessage(recurrent_conf, "init_hidden_initializer"));
       KernelUtil<device_type, T>::InitializeWithProperConf(
-          ctx.device_ctx, nullptr, random_seed_gen(), h0_blob);
-    } else {
-      const InitializerConf& init_hidden_initializer =
-          static_cast<const InitializerConf&>(GetMessageFromPbMessage(
-              recurrent_conf, "init_hidden_initializer"));
-      KernelUtil<device_type, T>::InitializeWithProperConf(
-          ctx.device_ctx, &init_hidden_initializer, random_seed_gen(), h0_blob);
+          ctx.device_ctx, init_hidden_initializer, random_seed_gen(), h0_blob);
     }
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
