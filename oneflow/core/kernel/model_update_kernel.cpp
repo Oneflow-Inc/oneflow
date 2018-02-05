@@ -50,12 +50,6 @@ class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-#define INSTANTIATE_KERNEL_UTIL(data_type_pair)       \
-  template class MdUpdateKernelUtil<DeviceType::kCPU, \
-                                    OF_PP_PAIR_FIRST(data_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL,
-                                 FLOATING_DATA_TYPE_SEQ)
-
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
   template class MdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
@@ -63,15 +57,15 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
 
 namespace {
 
-Kernel* CreateMdUpdtKernel(DeviceType dev_type, const KernelConf& kernel_conf) {
+Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
   const ModelUpdateOpUserConf& user_conf =
       kernel_conf.op_conf().mdupdt_conf().user_conf();
   if (user_conf.has_normal_conf()) {
-    return CreateNormalMdUpdtKernel(dev_type, kernel_conf);
+    return CreateNormalMdUpdtKernel(kernel_conf);
   } else if (user_conf.has_momentum_conf()) {
-    return CreateMomentumMdUpdtKernel(dev_type, kernel_conf);
+    return CreateMomentumMdUpdtKernel(kernel_conf);
   } else if (user_conf.has_rmsprop_conf()) {
-    return CreateRMSPropMdUpdtKernel(dev_type, kernel_conf);
+    return CreateRMSPropMdUpdtKernel(kernel_conf);
   } else {
     UNEXPECTED_RUN();
   }

@@ -26,6 +26,7 @@ class Blob final {
 
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
+  int32_t* mut_col_num() { return col_num_ptr_; }
 
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }
@@ -69,6 +70,7 @@ class Blob final {
   void set_col_id(int32_t val);
   int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
+  bool IsColValid() const;
 
  private:
   template<typename T>
