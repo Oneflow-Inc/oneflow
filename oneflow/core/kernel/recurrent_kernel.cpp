@@ -20,7 +20,7 @@ template<DeviceType device_type, typename T>
 Blob* RecurrentKernel<device_type, T>::GetHiddenBlob(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (BnInOp2Blob("in")->col_id() == 0) { return BnInOp2Blob("h0"); }
-  return BnInOp2Blob("rec_ht");
+  return BnInOp2Blob("rec_in");
 }
 
 template<DeviceType device_type, typename T>
