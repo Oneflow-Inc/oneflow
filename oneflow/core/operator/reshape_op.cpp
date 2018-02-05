@@ -27,6 +27,7 @@ void ReshapeOp::InferBlobDescs(
     dim_vec[i] = conf.shape().dim(i - 1);
   }
   out_blob_desc->mut_shape() = Shape(dim_vec);
+  CHECK_EQ(out_blob_desc->shape().elem_cnt(), in_blob_desc->shape().elem_cnt());
 }
 
 REGISTER_OP(OperatorConf::kReshapeConf, ReshapeOp);
