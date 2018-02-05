@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
-#define ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_POOLING_2D_OP_H_
+#define ONEFLOW_CORE_OPERATOR_POOLING_2D_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class PoolingOp : public Operator {
+class Pooling2DOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(PoolingOp);
-  PoolingOp() = default;
-  virtual ~PoolingOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Pooling2DOp);
+  Pooling2DOp() = default;
+  virtual ~Pooling2DOp() = default;
 
   void InitFromOpConf() override;
 
@@ -28,7 +28,7 @@ class PoolingOp : public Operator {
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
-  virtual PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const = 0;
+  virtual Pooling2DKernelConf* GetMutPooling2DKernelConf(KernelConf*) const = 0;
 
  private:
   std::tuple<int, int> CalcOutSize(int32_t in_h, int32_t in_w) const;
@@ -36,4 +36,4 @@ class PoolingOp : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_POOLING_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_POOLING_2D_OP_H_
