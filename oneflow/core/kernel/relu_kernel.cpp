@@ -3,6 +3,24 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+ReluKernel<device_type, T>::~ReluKernel() {
+  if (!op_conf().use_cudnn_on_gpu()) { return; }
+  CudaCheck(cudnnDestroyTensorDescriptor(in_desc_));
+  CudaCheck(cudnnDestroyTensorDescriptor(out_desc_));
+  CudaCheck(cudnnDestroyActicationDescriptor(activation_desc_));
+}
+
+template<DeviceType device_type, typename T>
+void ReluKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+  if (!op_conf().use_cudnn_on_gpu()) { return; }
+  CudaCheck(cudnnCreateTensorDescriptor(&in_desc_));
+  CudaCheck(cudnnCreateTensorDescriptor(&out_desc_));
+  CudaCheck(cudnnCreateActicationDescriptor(&activation_desc_));
+  CudaCheck(cudnnActicationDescriptor(
+      activation_desc_, CUDNN_ACTIVATION_RELU, CUDNN_PROPOGATE_NAN, 0.0));
+}
+
+template<DeviceType device_type, typename T>
 void ReluKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
