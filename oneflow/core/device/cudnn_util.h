@@ -4,8 +4,10 @@
 #ifdef WITH_CUDNN
 
 #include "cudnn.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -43,6 +45,7 @@ class CudnnTensorDesc final {
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 
  private:
+  void Init(DataType, int, int, int, int);
   cudnnTensorDescriptor_t val_;
 };
 
@@ -58,6 +61,7 @@ class CudnnFilterDesc final {
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 
  private:
+  void Init(DataType, int, int, int, int);
   cudnnFilterDescriptor_t val_;
 };
 

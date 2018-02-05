@@ -47,7 +47,23 @@ message InitializerConf {
   }
 }
 
-message ConvolutionOpConf {
+message Conv2dOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 filters = 3;
+  required string data_format = 4;
+  required string padding = 5;
+  required int32 kernel_h = 6;
+  required int32 kernel_w = 7;
+  optional int32 stride_h = 8 [default = 1];
+  optional int32 stride_w = 9 [default = 1];
+  optional int32 dilation_h = 10 [default = 1];
+  optional int32 dilation_w = 11 [default = 1];
+  optional InitializerConf weight_initializer = 12;
+  optional InitializerConf bias_initializer = 13;
+}
+
+message ConovlutionOpConf {
   required string in = 1;
   required string out = 2;
 
@@ -56,15 +72,12 @@ message ConvolutionOpConf {
 
   optional int32 pad_h = 5 [default = 0];
   optional int32 pad_w = 6 [default = 0];
-  required int32 kernel_h = 7;
+  required int32 kernel_h = 7；
   required int32 kernel_w = 8;
   optional int32 stride_h = 9 [default = 1];
   optional int32 stride_w = 10 [default = 1];
   optional int32 dilation_h = 11 [default = 1];
   optional int32 dilation_w = 12 [default = 1];
-
-  optional InitializerConf weight_initializer = 13;
-  optional InitializerConf bias_initializer = 14;
 }
 
 message FullyConnectedOpConf {
@@ -251,6 +264,7 @@ message OperatorConf {
   optional bool use_cudnn_on_gpu = 3;
   oneof op_type {
     ConvolutionOpConf convolution_conf = 100;
+    Conv2dOpConf conv2d_conf = 1000;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
