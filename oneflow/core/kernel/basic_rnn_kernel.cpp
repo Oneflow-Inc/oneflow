@@ -109,7 +109,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
 
   // hidden_diff = plus_op_out_diff * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(0),
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
       this->GetHiddenDiffBlob(BnInOp2Blob));
 }
