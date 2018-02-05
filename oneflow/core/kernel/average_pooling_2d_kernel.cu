@@ -1,18 +1,17 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/average_pooling_kernel.h"
+#include "oneflow/core/kernel/average_pooling_2d_kernel.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-__global__ void AveragePoolForward(const int64_t nthreads, const T* in_dptr,
-                                   T* out_dptr, const int64_t channels,
-                                   const int64_t height, const int64_t width,
-                                   const int64_t pooled_height,
-                                   const int64_t pooled_width,
-                                   const PoolingCtx ctx) {
+__global__ void AveragePooling2DForward(
+    const int64_t nthreads, const T* in_dptr, T* out_dptr,
+    const int64_t channels, const int64_t height, const int64_t width,
+    const int64_t pooled_height, const int64_t pooled_width,
+    const Pooling2DCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t pw = index % pooled_width;
     const int64_t ph = (index / pooled_width) % pooled_height;
@@ -43,10 +42,10 @@ __global__ void AveragePoolForward(const int64_t nthreads, const T* in_dptr,
 }
 
 template<typename T>
-__global__ void AveragePoolBackward(
+__global__ void AveragePooling2DBackward(
     const int64_t nthreads, const T* out_diff_dptr, T* in_diff_dptr,
     const int64_t channels, const int64_t height, const int64_t width,
-    const int64_t pooled_height, const int64_t pooled_width, PoolingCtx ctx) {
+    const int64_t pooled_height, const int64_t pooled_width, Pooling2DCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t w = index % width + ctx.padding_left;
     const int64_t h = (index / width) % height + ctx.padding_top;
@@ -86,41 +85,39 @@ __global__ void AveragePoolBackward(
 }  // namespace
 
 template<typename T>
-class AveragePoolingKernelUtil<DeviceType::kGPU, T> final {
+class AveragePooling2DKernelUtil<DeviceType::kGPU, T> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelUtil);
-  AveragePoolingKernelUtil() = delete;
+  OF_DISALLOW_COPY_AND_MOVE(AveragePooling2DKernelUtil);
+  AveragePooling2DKernelUtil() = delete;
 
   static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
-                      const PoolingCtx& pooling_ctx) {
+                      const Pooling2DCtx& pooling_ctx) {
     const int64_t count = out_blob->shape().elem_cnt();
-    PoolingCtx cuda_ctx = pooling_ctx;
-    AveragePoolForward<T>
+    AveragePooling2DForward<T>
         <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
             in_blob->shape().At(1), in_blob->shape().At(2),
             in_blob->shape().At(3), out_blob->shape().At(2),
-            out_blob->shape().At(3), cuda_ctx);
+            out_blob->shape().At(3), pooling_ctx);
   }
 
   static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
-                       Blob* in_diff_blob, const PoolingCtx& pooling_ctx) {
+                       Blob* in_diff_blob, const Pooling2DCtx& pooling_ctx) {
     const int64_t count = in_diff_blob->shape().elem_cnt();
-    PoolingCtx cuda_ctx = pooling_ctx;
-    AveragePoolBackward<T>
+    AveragePooling2DBackward<T>
         <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             count, out_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>(),
             in_diff_blob->shape().At(1), in_diff_blob->shape().At(2),
             in_diff_blob->shape().At(3), out_diff_blob->shape().At(2),
-            out_diff_blob->shape().At(3), cuda_ctx);
+            out_diff_blob->shape().At(3), pooling_ctx);
   }
 };
 
-#define INSTANTIATE_AVERAGE_POOLING_KERNEL_UTIL(type_cpp, type_proto) \
-  template class AveragePoolingKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_AVERAGE_POOLING_KERNEL_UTIL,
+#define INSTANTIATE_AVERAGE_POOLING_2D_KERNEL_UTIL(type_cpp, type_proto) \
+  template class AveragePooling2DKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_AVERAGE_POOLING_2D_KERNEL_UTIL,
                      ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

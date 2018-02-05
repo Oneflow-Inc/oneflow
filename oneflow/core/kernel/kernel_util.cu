@@ -18,6 +18,21 @@ __global__ void DivGpu(const int64_t n, T* x, const T* alpha_ptr) {
 }
 
 template<typename T>
+__global__ void SigmoidGpu(const int64_t n, const T* x, T* y) {
+  T one = static_cast<T>(1);
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = one / (one + std::exp(-x[i])); }
+}
+
+template<typename T>
+__global__ void TanHGpu(const int64_t n, const T* x, T* y) {
+  T one = static_cast<T>(1);
+  T two = static_cast<T>(2);
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    y[i] = two / (one + std::exp(-two * x[i])) - one;
+  }
+}
+
+template<typename T>
 __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
@@ -90,6 +105,14 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                   T* z) {
     MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                 ctx->cuda_stream()>>>(n, x, y, z);
+  }
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+    SigmoidGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                    ctx->cuda_stream()>>>(n, x, y);
+  }
+  static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+    TanHGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                 ctx->cuda_stream()>>>(n, x, y);
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
