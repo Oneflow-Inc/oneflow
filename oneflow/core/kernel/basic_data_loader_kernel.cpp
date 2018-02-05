@@ -30,11 +30,24 @@ void BasicDataLoaderKernel<T>::Forward(
 }
 
 template<typename T>
+std::string BasicDataLoaderKernel<T>::PrefixDataPathWithZero(
+    const std::string& parallel_id) const {
+  size_t max_parallel_id = JobDesc::Singleton()->job_conf().data_part_num() - 1;
+  size_t bit_cnt = 0;
+  while (max_parallel_id != 0) {
+    max_parallel_id /= 10;
+    bit_cnt += 1;
+  }
+  return PrefixStringWithZero(parallel_id, bit_cnt - parallel_id.size());
+}
+
+template<typename T>
 void BasicDataLoaderKernel<T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
   const std::string& data_dir = op_conf().basic_data_loader_conf().data_dir();
   std::string parallel_id = std::to_string(parallel_ctx->parallel_id());
-  std::string file_path = JoinPath(data_dir, "part-" + parallel_id);
+  std::string file_postfix = PrefixDataPathWithZero(parallel_id);
+  std::string file_path = JoinPath(data_dir, "part-" + file_postfix);
   if (JobDesc::Singleton()->IsTrain()) {
     in_stream_.reset(new CyclicPersistentInStream(GlobalFS(), file_path));
   } else {

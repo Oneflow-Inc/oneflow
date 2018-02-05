@@ -80,6 +80,11 @@ std::string GetHashKey(const T&... args) {
   return internal::GetHashKeyImpl({args...});
 }
 
+inline std::string PrefixStringWithZero(const std::string& str,
+                                        size_t zero_cnt) {
+  return std::string(zero_cnt, '0') + str;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STR_UTIL_H_
