@@ -42,7 +42,8 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
           &GetMessageFromPbMessage(recurrent_conf, "init_hidden_initializer"));
     }
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx, init_hidden_initializer, random_seed_gen(), BnInOp2Blob("h0"));
+        ctx.device_ctx, init_hidden_initializer, random_seed_gen(),
+        BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
 }
