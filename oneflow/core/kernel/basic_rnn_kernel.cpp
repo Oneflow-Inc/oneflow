@@ -47,7 +47,7 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
 
   // rec_out = out
   BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                          out_blob);
+                                                           out_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -55,7 +55,7 @@ void BasicRnnKernel<device_type, T>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("out")->CopyDataIdFrom<device_type>(ctx.device_ctx,
-                                                     BnInOp2Blob("in"));
+                                                  BnInOp2Blob("in"));
 }
 
 template<DeviceType device_type, typename T>
@@ -174,14 +174,16 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
                               const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff) {
     FOR_RANGE(int64_t, i, 0, n) {
-      plus_out_diff[i] = (1 - out[i] * out[i]) * (out_diff[i] + rec_out_diff[i]);
+      plus_out_diff[i] =
+          (1 - out[i] * out[i]) * (out_diff[i] + rec_out_diff[i]);
     }
   }
   static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
                                  const T* out_diff, const T* rec_out_diff,
                                  T* plus_out_diff) {
     FOR_RANGE(int64_t, i, 0, n) {
-      plus_out_diff[i] = out[i] * (1 - out[i]) * (out_diff[i] + rec_out_diff[i]);
+      plus_out_diff[i] =
+          out[i] * (1 - out[i]) * (out_diff[i] + rec_out_diff[i]);
     }
   }
 };
