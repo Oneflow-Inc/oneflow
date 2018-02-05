@@ -168,6 +168,18 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                   T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    for (int64_t i = 0; i != n; ++i) {
+      y[i] = static_cast<T>(1) / (static_cast<T>(1) + std::exp(-x[i]));
+    }
+  }
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T one = static_cast<T>(1);
+    T two = static_cast<T>(2);
+    for (int64_t i = 0; i != n; ++i) {
+      y[i] = two / (one + std::exp(-two * x[i])) - one;
+    }
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
