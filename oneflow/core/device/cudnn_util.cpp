@@ -13,7 +13,7 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
 }  // namespace oneflow
 
 CudnnTensorDesc::~CudnnTensorDesc() {
-  CudaCheck(cudnnDestroyTensorDescriptor(this->val_));
+  CudaCheck(cudnnDestroyTensorDescriptor(val_));
 }
 
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int n, int c, int h,
@@ -27,13 +27,13 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape) {
 }
 
 void CudnnTensorDesc::Init(DataType data_type, int n, int c, int h, int w) {
-  CudaCheck(cudnnCreateTensorDescriptor(&this->val_));
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
   CudaCheck(cudnnSetTensor4dDescriptor(
-      this->val_, CUDNN_TENSOR_NCHW, GetCudnnDataType(data_type), n, c, h, w));
+      val_, CUDNN_TENSOR_NCHW, GetCudnnDataType(data_type), n, c, h, w));
 }
 
 CudnnFilterDesc::~CudnnFilterDesc() {
-  CudaCheck(cudnnDestroyFilterDescriptor(this->val_));
+  CudaCheck(cudnnDestroyFilterDescriptor(val_));
 }
 
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, int k, int c, int h,
@@ -47,8 +47,8 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape) {
 }
 
 void CudnnFilterDesc::Init(DataType data_type, int k, int c, int h, int w) {
-  CudaCheck(cudnnCreateFilterDescriptor(&this->val_));
-  CudaCheck(cudnnSetFilter4dDescriptor(this->val_, GetCudnnDataType(data_type),
+  CudaCheck(cudnnCreateFilterDescriptor(&val_));
+  CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type),
                                        CUDNN_TENSOR_NCHW, k, c, h, w));
 }
 

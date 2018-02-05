@@ -1,9 +1,7 @@
 #include "oneflow/core/operator/conv2d_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
-#ifdef WITH_CUDNN
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/device/cudnn_util.h"
-#endif  // WITH_CUDNN
 
 namespace oneflow {
 
@@ -174,7 +172,7 @@ void Conv2dOp::InitFromOpConf() {
   EnrollModelBn("weight");
   EnrollModelBn("bias");
 
-  if (this->UseCudnn()) {
+  if (UseCudnn()) {
     EnrollDataTmpBn("cudnn_workspace");
   } else {
     EnrollModelTmpBn("bias_multiplier");
