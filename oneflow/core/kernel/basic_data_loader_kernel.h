@@ -30,6 +30,7 @@ class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
                                      Blob* out_blob) const;
   const char* ReadOneDataId(const char* line_ptr, Blob*, int64_t index) const;
   int32_t ReadOneDataContent(const char* line_ptr, Blob*, int64_t index) const;
+  std::string PrefixDataPathWithZero(const std::string& parallel_id) const;
 
   std::unique_ptr<PersistentInStream> in_stream_;
 };
