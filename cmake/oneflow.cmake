@@ -130,8 +130,8 @@ endforeach()
 
 # build test
 if(BUILD_TESTING)
-  if(NOT BUILD_CUDA or NOT BUILD_CUDNN)
-    message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA and BUILD_CUDNN")
+  if(NOT BUILD_CUDA)
+    message(FATAL_ERROR "BUILD_TESTING without BUILD_CUDA")
   endif()
   oneflow_add_executable(oneflow_testexe ${of_all_test_cc})
   target_link_libraries(oneflow_testexe ${of_libs} ${oneflow_third_party_libs})
