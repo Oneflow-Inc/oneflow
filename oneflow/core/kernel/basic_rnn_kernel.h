@@ -14,6 +14,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
 
  private:
   const PbMessage& GetRecurrentOpConf() const override;
+  bool HasInitHiddenInitializer() const override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

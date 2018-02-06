@@ -15,6 +15,7 @@ class RecurrentKernel : public KernelIf<device_type> {
   RecurrentKernel() = default;
 
   virtual const PbMessage& GetRecurrentOpConf() const = 0;
+  virtual bool HasInitHiddenInitializer() const = 0;
   bool NeedExternalH0() const;
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
   Blob* GetHiddenDiffBlob(std::function<Blob*(const std::string&)>) const;

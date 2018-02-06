@@ -37,7 +37,7 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
   if (NeedExternalH0()) {
     const PbMessage& recurrent_conf = GetRecurrentOpConf();
     const InitializerConf* init_hidden_initializer = nullptr;
-    if (GetBoolFromPbMessage(recurrent_conf, "has_init_hidden_initializer")) {
+    if (HasInitHiddenInitializer()) {
       init_hidden_initializer = static_cast<const InitializerConf*>(
           &GetMessageFromPbMessage(recurrent_conf, "init_hidden_initializer"));
     }

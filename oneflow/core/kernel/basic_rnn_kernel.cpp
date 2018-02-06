@@ -8,6 +8,11 @@ const PbMessage& BasicRnnKernel<device_type, T>::GetRecurrentOpConf() const {
 }
 
 template<DeviceType device_type, typename T>
+bool BasicRnnKernel<device_type, T>::HasInitHiddenInitializer() const {
+  return this->op_conf().basic_rnn_conf().has_init_hidden_initializer();
+}
+
+template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
