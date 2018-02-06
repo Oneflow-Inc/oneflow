@@ -1,5 +1,3 @@
-#ifdef WITH_CUDNN
-
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 
@@ -45,5 +43,3 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape)
 }
 
 }  // namespace oneflow
-
-#endif  // WITH_CUDNN

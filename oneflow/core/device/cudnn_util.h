@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_
 
-#ifdef WITH_CUDNN
-
 #include "cudnn.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
@@ -62,7 +60,5 @@ class CudnnFilterDesc final {
 };
 
 }  // namespace oneflow
-
-#endif  // WITH_CUDNN
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_

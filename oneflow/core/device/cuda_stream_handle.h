@@ -14,19 +14,14 @@ class CudaStreamHandle final {
 
   const cudaStream_t* cuda_stream();
   const cublasHandle_t* cublas_handle();
-
-#ifdef WITH_CUDNN
   const cudnnHandle_t* cudnn_handle();
-#endif
 
   ~CudaStreamHandle();
 
  private:
   std::unique_ptr<cudaStream_t> cuda_stream_;
   std::unique_ptr<cublasHandle_t> cublas_handle_;
-#ifdef WITH_CUDNN
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
-#endif
 };
 
 #endif  // WITH_CUDA
