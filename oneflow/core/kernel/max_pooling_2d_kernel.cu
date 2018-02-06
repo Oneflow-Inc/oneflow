@@ -8,7 +8,7 @@ namespace {
 
 template<typename T>
 __global__ void MaxPooling2DForward(
-    const int64_t nthreads, const T* in_dptr, T* out_dptr, uint32_t* mask_dptr,
+    const int64_t nthreads, const T* in_dptr, T* out_dptr, int32_t* mask_dptr,
     const int64_t channels, const int64_t height, const int64_t width,
     const int64_t pooled_height, const int64_t pooled_width, Pooling2DCtx ctx) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
@@ -27,7 +27,7 @@ __global__ void MaxPooling2DForward(
     wstart = (wstart > 0) ? wstart : 0;
     const T* const in_slice = in_dptr + (n * channels + c) * height * width;
     T maxval = in_slice[hstart * width + wstart];
-    uint32_t maxidx = hstart * width + wstart;
+    int32_t maxidx = hstart * width + wstart;
     for (int64_t h = hstart; h < hend; ++h) {
       for (int64_t w = wstart; w < wend; ++w) {
         if (in_slice[h * width + w] > maxval) {
@@ -43,7 +43,7 @@ __global__ void MaxPooling2DForward(
 
 template<typename T>
 __global__ void MaxPooling2DBackward(
-    const int64_t nthreads, const T* out_diff_dptr, const uint32_t* mask_dptr,
+    const int64_t nthreads, const T* out_diff_dptr, const int32_t* mask_dptr,
     T* in_diff_dptr, const int64_t channels, const int64_t height,
     const int64_t width, const int64_t pooled_height,
     const int64_t pooled_width, Pooling2DCtx ctx) {
@@ -71,7 +71,7 @@ __global__ void MaxPooling2DBackward(
     T gradient = 0;
     const int64_t offset = (n * channels + c) * pooled_height * pooled_width;
     const T* const out_diff_slice = out_diff_dptr + offset;
-    const uint32_t* const mask_slice = mask_dptr + offset;
+    const int32_t* const mask_slice = mask_dptr + offset;
     for (int64_t ph = phstart; ph < phend; ++ph) {
       for (int64_t pw = pwstart; pw < pwend; ++pw) {
         if (mask_slice[ph * pooled_width + pw] == h * width + w) {
@@ -98,7 +98,7 @@ class MaxPooling2DKernelUtil<DeviceType::kGPU, T> final {
         <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
             count, in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-            mask_blob->mut_dptr<uint32_t>(), in_blob->shape().At(1),
+            mask_blob->mut_dptr<int32_t>(), in_blob->shape().At(1),
             in_blob->shape().At(2), in_blob->shape().At(3),
             out_blob->shape().At(2), out_blob->shape().At(3), pooling_ctx);
   }
@@ -110,7 +110,7 @@ class MaxPooling2DKernelUtil<DeviceType::kGPU, T> final {
     MaxPooling2DBackward<T>
         <<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
            ctx.device_ctx->cuda_stream()>>>(
-            count, out_diff_blob->dptr<T>(), mask_blob->dptr<uint32_t>(),
+            count, out_diff_blob->dptr<T>(), mask_blob->dptr<int32_t>(),
             in_diff_blob->mut_dptr<T>(), in_diff_blob->shape().At(1),
             in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
             out_diff_blob->shape().At(2), out_diff_blob->shape().At(3),

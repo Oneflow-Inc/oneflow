@@ -5,6 +5,7 @@
 #include "oneflow/core/blas/cublas_template.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
@@ -84,24 +85,24 @@ struct KernelUtil final {
 
   // y = sigmoid(x)
   // x' = y * (1 - y) * y'
-  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
-                              const T* y, T* x_diff);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx);
 
   // y = tanh(x)
   static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
   // y = tanh(x)
   // x' = (1 - y^2) * y'
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
-                           const T* y, T* x_diff);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx);
 
   // y = relu(x)
   static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
   // y = relu(x)
   // x' = y * y'
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* y_diff,
-                           const T* y, T* x_diff);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx);
 
   // matrix vector multiply
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,

@@ -18,44 +18,6 @@ __global__ void DivGpu(const int64_t n, T* x, const T* alpha_ptr) {
 }
 
 template<typename T>
-__global__ void SigmoidGpu(const int64_t n, const T* x, T* y) {
-  T one = static_cast<T>(1);
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = one / (one + std::exp(-x[i])); }
-}
-
-template<typename T>
-__global__ void SigmoidBackwardGpu(const int64_t n, const T* y_diff, const T* y,
-                                   T* x_diff) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x_diff[i] = y[i] * (1 - y[i]) * y_diff[i]; }
-}
-
-template<typename T>
-__global__ void TanHGpu(const int64_t n, const T* x, T* y) {
-  T one = static_cast<T>(1);
-  T two = static_cast<T>(2);
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    y[i] = two / (one + std::exp(-two * x[i])) - one;
-  }
-}
-
-template<typename T>
-__global__ void TanHBackwardGpu(const int64_t n, const T* y_diff, const T* y,
-                                T* x_diff) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x_diff[i] = (1 - y[i] * y[i]) * y_diff[i]; }
-}
-
-template<typename T>
-__global__ void ReluGpu(const int64_t n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
-}
-
-template<typename T>
-__global__ void ReluBackwardGpu(const int64_t n, const T* y_diff, const T* y,
-                                T* x_diff) {
-  CUDA_1D_KERNEL_LOOP(i, n) { x_diff[i] = y[i] * y_diff[i]; }
-}
-
-template<typename T>
 __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
@@ -129,32 +91,49 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                 ctx->cuda_stream()>>>(n, x, y, z);
   }
+#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
+  CudnnTensorDesc x_desc(GetDataType<T>::val, n, 1, 1, 1);    \
+  CudnnTensorDesc y_desc(GetDataType<T>::val, n, 1, 1, 1);    \
+  CudnnActivationDesc act_desc(mode, CUDNN_PROPAGATE_NAN, 0.0);
+
+#define FORWARD_COMPUTE_ACTIVATION(mode)                         \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \
+  cudnnActivationForward(ctx->cudnn_handle(), act_desc.Get(),    \
+                         CudnnDataType<T>::one, x_desc.Get(), x, \
+                         CudnnDataType<T>::zero, y_desc.Get(), y);
+
+#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);       \
+  CudnnTensorDesc dx_desc(GetDataType<T>::val, n, 1, 1, 1);    \
+  CudnnTensorDesc dy_desc(GetDataType<T>::val, n, 1, 1, 1);
+
+#define BACKWARD_COMPUTE_ACTIVATION(mode)                         \
+  CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \
+  cudnnActivationBackward(ctx->cudnn_handle(), act_desc.Get(),    \
+                          CudnnDataType<T>::one, y_desc.Get(), y, \
+                          dy_desc.Get(), dy, x_desc.Get(), x,     \
+                          CudnnDataType<T>::zero, dx_desc.Get(), dx);
+
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-    SigmoidGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                    ctx->cuda_stream()>>>(n, x, y);
+    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID)
   }
-  static void SigmoidBackward(const KernelCtx& ctx, const int64_t n,
-                              const T* y_diff, const T* y, T* x_diff) {
-    ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                         ctx.device_ctx->cuda_stream()>>>(n, y_diff, y, x_diff);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx) {
+    BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID);
   }
   static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-    TanHGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                 ctx->cuda_stream()>>>(n, x, y);
+    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
   }
-  static void TanHBackward(const KernelCtx& ctx, const int64_t n,
-                           const T* y_diff, const T* y, T* x_diff) {
-    ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                         ctx.device_ctx->cuda_stream()>>>(n, y_diff, y, x_diff);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
   }
   static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-    ReluGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                 ctx->cuda_stream()>>>(n, x, y);
+    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
   }
-  static void ReluBackward(const KernelCtx& ctx, const int64_t n,
-                           const T* y_diff, const T* y, T* x_diff) {
-    ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                         ctx.device_ctx->cuda_stream()>>>(n, y_diff, y, x_diff);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
@@ -223,7 +202,21 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   template void KernelUtil<DeviceType::kGPU, T>::Sum(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
-                                                                              \
+  template void KernelUtil<DeviceType::kGPU, T>::Sigmoid(                     \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kGPU, T>::TanH(                        \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kGPU, T>::Relu(                        \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kGPU, T>::SigmoidBackward(             \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
+  template void KernelUtil<DeviceType::kGPU, T>::TanHBackward(                \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
+  template void KernelUtil<DeviceType::kGPU, T>::ReluBackward(                \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
   template<>                                                                  \
   void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
