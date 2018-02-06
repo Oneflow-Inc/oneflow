@@ -1,10 +1,10 @@
-#include "oneflow/core/kernel/max_pooling_2d_kernel.h"
+#include "oneflow/core/kernel/max_pooling_1d_kernel.h"
 #include "oneflow/core/kernel/max_pooling_3d_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void MaxPooling2DKernel<device_type, T>::ForwardDataContent(
+void MaxPooling1DKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -15,7 +15,7 @@ void MaxPooling2DKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void MaxPooling2DKernel<device_type, T>::BackwardDataContent(
+void MaxPooling1DKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
@@ -29,18 +29,18 @@ void MaxPooling2DKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-const Pooling2DKernelConf&
-MaxPooling2DKernel<device_type, T>::GetPooling2DKernelConf() const {
-  return this->kernel_conf().max_pooling_2d_conf().pooling_2d_conf();
+const Pooling1DKernelConf&
+MaxPooling1DKernel<device_type, T>::GetPooling1DKernelConf() const {
+  return this->kernel_conf().max_pooling_1d_conf().pooling_1d_conf();
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& MaxPooling2DKernel<device_type, T>::GetPooling2DOpConf()
+const PbMessage& MaxPooling1DKernel<device_type, T>::GetPooling1DOpConf()
     const {
-  return this->op_conf().max_pooling_2d_conf();
+  return this->op_conf().max_pooling_1d_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPooling2DKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling1DConf, MaxPooling1DKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

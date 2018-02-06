@@ -1,10 +1,9 @@
-#include "oneflow/core/kernel/max_pooling_2d_kernel.h"
 #include "oneflow/core/kernel/max_pooling_3d_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void MaxPooling2DKernel<device_type, T>::ForwardDataContent(
+void MaxPooling3DKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -15,7 +14,7 @@ void MaxPooling2DKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void MaxPooling2DKernel<device_type, T>::BackwardDataContent(
+void MaxPooling3DKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
@@ -29,18 +28,37 @@ void MaxPooling2DKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-const Pooling2DKernelConf&
-MaxPooling2DKernel<device_type, T>::GetPooling2DKernelConf() const {
-  return this->kernel_conf().max_pooling_2d_conf().pooling_2d_conf();
+const Pooling3DKernelConf&
+MaxPooling3DKernel<device_type, T>::GetPooling3DKernelConf() const {
+  return this->kernel_conf().max_pooling_3d_conf().pooling_3d_conf();
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& MaxPooling2DKernel<device_type, T>::GetPooling2DOpConf()
+const PbMessage& MaxPooling3DKernel<device_type, T>::GetPooling3DOpConf()
     const {
-  return this->op_conf().max_pooling_2d_conf();
+  return this->op_conf().max_pooling_3d_conf();
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPooling2DKernel,
+template<typename T>
+class MaxPooling3DKernelUtil<DeviceType::kCPU, T> final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(MaxPooling3DKernelUtil);
+  MaxPooling3DKernelUtil() = delete;
+
+  static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
+                      Blob* idx_blob, const Pooling3DCtx& pooling_ctx) {
+    // mkl
+    TODO();
+  }
+
+  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
+                       const Blob* idx_blob, Blob* in_diff_blob,
+                       const Pooling3DCtx& pooling_ctx) {
+    TODO();
+  }
+};
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling3DConf, MaxPooling3DKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

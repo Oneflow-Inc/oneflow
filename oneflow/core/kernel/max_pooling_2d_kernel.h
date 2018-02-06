@@ -23,19 +23,6 @@ class MaxPooling2DKernel final : public Pooling2DKernel<device_type> {
   const PbMessage& GetPooling2DOpConf() const override;
 };
 
-template<DeviceType device_type, typename T>
-class MaxPooling2DKernelUtil {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MaxPooling2DKernelUtil);
-  MaxPooling2DKernelUtil() = delete;
-
-  static void Forward(const KernelCtx&, const Blob*, Blob*, Blob*,
-                      const Pooling2DCtx&);
-
-  static void Backward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                       const Pooling2DCtx&);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_MAX_POOLING_2D_KERNEL_H_

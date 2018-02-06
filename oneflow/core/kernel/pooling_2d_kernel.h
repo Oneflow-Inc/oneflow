@@ -1,23 +1,12 @@
 #ifndef ONEFLOW_CORE_KERNEL_POOLING_2D_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_POOLING_2D_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/pooling_kernel.h"
 
 namespace oneflow {
 
-struct Pooling2DCtx {
-  int32_t pool_size_h;
-  int32_t pool_size_w;
-  int32_t strides_h;
-  int32_t strides_w;
-  int32_t padding_top;
-  int32_t padding_bottom;
-  int32_t padding_left;
-  int32_t padding_right;
-};
-
 template<DeviceType device_type>
-class Pooling2DKernel : public KernelIf<device_type> {
+class Pooling2DKernel : public PoolingKernel<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Pooling2DKernel);
   Pooling2DKernel() = default;
@@ -25,19 +14,27 @@ class Pooling2DKernel : public KernelIf<device_type> {
 
  protected:
   void VirtualKernelInit(const ParallelContext*) override {
-    pooling_2d_ctx_ =
-        BuildPooling2DCtx(GetPooling2DOpConf(), GetPooling2DKernelConf());
+    Pooling3DCtx* pooling_3d_ctx = this->mut_pooling_3d_ctx();
+    const PbMessage& op_conf = GetPooling2DOpConf();
+    const PbRpf<int32_t>& pool_size = dynamic_cast<const PbRpf<int32_t>&>(
+        (GetMessageFromPbMessage(op_conf, "pool_size")));
+    pooling_3d_ctx->pool_size_d = 0;
+    pooling_3d_ctx->pool_size_h = pool_size.Get(0);
+    pooling_3d_ctx->pool_size_w = pool_size.Get(1);
+    const PbRpf<int32_t>& strides = dynamic_cast<const PbRpf<int32_t>&>(
+        (GetMessageFromPbMessage(op_conf, "strides")));
+    pooling_3d_ctx->strides_d = 0;
+    pooling_3d_ctx->strides_h = strides.Get(0);
+    pooling_3d_ctx->strides_w = strides.Get(1);
+
+    const Pooling2DKernelConf& kernel_conf = GetPooling2DKernelConf();
+    pooling_3d_ctx->padding_d = 0;
+    pooling_3d_ctx->padding_h = kernel_conf.padding_h();
+    pooling_3d_ctx->padding_w = kernel_conf.padding_w();
   }
-  const Pooling2DCtx& pooling_2d_ctx() const { return pooling_2d_ctx_; }
   virtual const Pooling2DKernelConf& GetPooling2DKernelConf() const = 0;
   virtual const PbMessage& GetPooling2DOpConf() const = 0;
-
- private:
-  Pooling2DCtx pooling_2d_ctx_;
 };
-
-Pooling2DCtx BuildPooling2DCtx(const PbMessage& op_conf,
-                               const Pooling2DKernelConf& kernel_conf);
 
 }  // namespace oneflow
 
