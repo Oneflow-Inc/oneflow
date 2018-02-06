@@ -13,7 +13,7 @@ void Pooling3DOp::InferBlobDescs(
   // out
   int32_t in_d = in_blob_desc->shape().At(2);
   int32_t pool_size_d = GetPoolSizeD();
-  int32_t strides_d = GetStridesd();
+  int32_t strides_d = GetStridesD();
   int32_t padding_d_unused, out_d;
   GetWindowedOutputSize(in_d, pool_size_d, strides_d,
                         GetStringFromSpecialConf("padding"), &out_d,
@@ -34,8 +34,9 @@ void Pooling3DOp::InferBlobDescs(
                         &padding_w_unused);
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  out_blob_desc->mut_shape() = Shape(
-      {in_blob_desc->shape().At(0), in_blob_desc->shape().At(1), out_d, out_h, out_w});
+  out_blob_desc->mut_shape() =
+      Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1), out_d,
+             out_h, out_w});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
@@ -49,7 +50,7 @@ void Pooling3DOp::VirtualGenKernelConf(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int32_t in_d = in_blob_desc->shape().At(2);
   int32_t pool_size_d = GetPoolSizeD();
-  int32_t strides_d = GetStridesd();
+  int32_t strides_d = GetStridesD();
   int32_t padding_d, out_d_unused;
   GetWindowedOutputSize(in_d, pool_size_d, strides_d,
                         GetStringFromSpecialConf("padding"), &out_d_unused,
