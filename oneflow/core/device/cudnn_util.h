@@ -7,6 +7,8 @@
 
 namespace oneflow {
 
+enum PoolingMode { kAveragePooling, kMaxPooling };
+
 #define CUDNN_DATA_TYPE_SEQ                       \
   OF_PP_MAKE_TUPLE_SEQ(float, CUDNN_DATA_FLOAT)   \
   OF_PP_MAKE_TUPLE_SEQ(double, CUDNN_DATA_DOUBLE) \
@@ -42,6 +44,36 @@ class CudnnTensorDesc final {
 
  private:
   cudnnTensorDescriptor_t val_;
+};
+
+class CudnnTensorNdDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnTensorNdDesc);
+  CudnnTensorNdDesc() = delete;
+  ~CudnnTensorNdDesc();
+
+  CudnnTensorNdDesc(DataType, const std::vector<int>&, const std::vector<int>&);
+
+  const cudnnTensorDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnTensorDescriptor_t val_;
+};
+
+class CudnnPoolingNdDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolingNdDesc);
+  CudnnPoolingNdDesc() = delete;
+  ~CudnnPoolingNdDesc();
+
+  CudnnPoolingNdDesc(PoolingMode pooling_mode, const std::vector<int>& window,
+                     const std::vector<int>& padding,
+                     const std::vector<int>& stride);
+
+  const cudnnPoolingDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnPoolingDescriptor_t val_;
 };
 
 class CudnnFilterDesc final {

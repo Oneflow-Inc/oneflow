@@ -26,6 +26,36 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape)
   CHECK_EQ(shape.NumAxes(), 4);
 }
 
+CudnnTensorNdDesc::~CudnnTensorNdDesc() {
+  CudaCheck(cudnnDestroyTensorDescriptor(val_));
+}
+
+CudnnTensorNdDesc::CudnnTensorNdDesc(DataType data_type,
+                                     const std::vector<int>& dim,
+                                     const std::vector<int>& stride) {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type),
+                                       dim.size(), dim.data(), stride.data()));
+}
+
+CudnnPoolingNdDesc::~CudnnPoolingNdDesc() {
+  CudaCheck(cudnnDestroyPoolingDescriptor(val_));
+}
+
+CudnnPoolingNdDesc::CudnnPoolingNdDesc(PoolingMode pooling_mode,
+                                       const std::vector<int>& window,
+                                       const std::vector<int>& padding,
+                                       const std::vector<int>& stride) {
+  CudaCheck(cudnnCreatePoolingDescriptor(&val_));
+  CudaCheck(cudnnSetPoolingNdDescriptor(
+      val_,
+      (pooling_mode == PoolingMode::kAveragePooling
+           ? CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING
+           : CUDNN_POOLING_MAX),
+      CUDNN_NOT_PROPAGATE_NAN, window.size(), window.data(), padding.data(),
+      stride.data()));
+}
+
 CudnnFilterDesc::~CudnnFilterDesc() {
   CudaCheck(cudnnDestroyFilterDescriptor(val_));
 }
