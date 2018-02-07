@@ -21,7 +21,6 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
     op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnn());
   }
-  CheckUseCudnn(op_conf_.use_cudnn_on_gpu());
   InitFromOpConf();
 }
 
@@ -70,9 +69,8 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
-  if (model_bns_.empty() && model_tmp_bns_.empty()) {
-    LOG_IF(WARNING, pr_desc->policy() == ParallelPolicy::kModelParallel)
-        << op_name() << " doesn't have any model, so fix it with DataParallel";
+  if (model_bns_.empty()) {
+    CHECK(model_tmp_bns_.empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (IsDataLoaderOp() == false && IsPrintOp() == false) {

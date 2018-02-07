@@ -163,12 +163,6 @@ inline double GetCurTime() {
 
 size_t GetAvailableCpuMemSize();
 
-inline void CheckUseCudnn(bool val) {
-#ifndef WITH_CUDNN
-  CHECK_EQ(val, false) << "Please compile ONEFLOW with CUDNN";
-#endif
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

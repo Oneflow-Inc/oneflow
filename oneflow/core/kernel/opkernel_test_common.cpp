@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-#if defined(WITH_CUDA) && defined(WITH_CUDNN)
+#if defined(WITH_CUDA)
 
 namespace test {
 

@@ -173,12 +173,28 @@ struct KernelUtil<DeviceType::kCPU, T> final {
       y[i] = static_cast<T>(1) / (static_cast<T>(1) + std::exp(-x[i]));
     }
   }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
+  }
   static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     T one = static_cast<T>(1);
     T two = static_cast<T>(2);
     for (int64_t i = 0; i != n; ++i) {
       y[i] = two / (one + std::exp(-two * x[i])) - one;
     }
+  }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
+  }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T zero = static_cast<T>(0.0);
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+  }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
@@ -241,7 +257,11 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
-                                                                              \
+  template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \
