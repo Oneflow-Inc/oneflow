@@ -49,7 +49,7 @@ class MaxPooling2DKernelUtil<DeviceType::kCPU, T> final {
                       Blob* idx_blob, const Pooling2DCtx& pooling_ctx) {
     const T* in_dptr = in_blob->dptr<T>();
     T* out_dptr = out_blob->mut_dptr<T>();
-    uint32_t* idx_dptr = idx_blob->mut_dptr<uint32_t>();
+    int32_t* idx_dptr = idx_blob->mut_dptr<int32_t>();
 
     FOR_RANGE(int64_t, n, 0, out_blob->shape().At(0)) {
       FOR_RANGE(int64_t, c, 0, out_blob->shape().At(1)) {
@@ -71,7 +71,7 @@ class MaxPooling2DKernelUtil<DeviceType::kCPU, T> final {
             idx_dptr[out_index] = hstart * in_blob->shape().At(3) + wstart;
             FOR_RANGE(int64_t, h, hstart, hend) {
               FOR_RANGE(int64_t, w, wstart, wend) {
-                const uint32_t index = h * in_blob->shape().At(3) + w;
+                const int32_t index = h * in_blob->shape().At(3) + w;
                 if (in_dptr[index] > out_dptr[out_index]) {
                   out_dptr[out_index] = in_dptr[index];
                   idx_dptr[out_index] = index;
@@ -91,7 +91,7 @@ class MaxPooling2DKernelUtil<DeviceType::kCPU, T> final {
                        const Blob* idx_blob, Blob* in_diff_blob,
                        const Pooling2DCtx& pooling_ctx) {
     const T* out_diff_dptr = out_diff_blob->dptr<T>();
-    const uint32_t* idx_dptr = idx_blob->dptr<uint32_t>();
+    const int32_t* idx_dptr = idx_blob->dptr<int32_t>();
     T* in_diff_dptr = in_diff_blob->mut_dptr<T>();
 
     FOR_RANGE(int64_t, n, 0, out_diff_blob->shape().At(0)) {
@@ -100,7 +100,7 @@ class MaxPooling2DKernelUtil<DeviceType::kCPU, T> final {
           FOR_RANGE(int64_t, out_w, 0, out_diff_blob->shape().At(3)) {
             const int64_t out_diff_index =
                 out_h * out_diff_blob->shape().At(3) + out_w;
-            const uint32_t in_diff_index = idx_dptr[out_diff_index];
+            const int32_t in_diff_index = idx_dptr[out_diff_index];
             in_diff_dptr[in_diff_index] += out_diff_dptr[out_diff_index];
           }
         }
