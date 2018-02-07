@@ -21,18 +21,24 @@ message SoftmaxLossKernelConf {
 }
 
 message Pooling1DKernelConf {
-  optional int32 padding_length = 1 [default = 0];
+  repeated int32 in_shape = 1;
+  repeated int32 out_shape = 2;
+  optional int32 padding_length = 3 [default = 0];
 }
 
 message Pooling2DKernelConf {
-  optional int32 padding_h = 1 [default = 0];
-  optional int32 padding_w = 2 [default = 0];
+  repeated int32 in_shape = 1;
+  repeated int32 out_shape = 2;
+  optional int32 padding_h = 3 [default = 0];
+  optional int32 padding_w = 4 [default = 0];
 }
 
 message Pooling3DKernelConf {
-  optional int32 padding_d = 1 [default = 0];
-  optional int32 padding_h = 2 [default = 0];
-  optional int32 padding_w = 3 [default = 0];
+  repeated int32 in_shape = 1;
+  repeated int32 out_shape = 2;
+  optional int32 padding_d = 3 [default = 0];
+  optional int32 padding_h = 4 [default = 0];
+  optional int32 padding_w = 5 [default = 0];
 }
 
 message AveragePooling1DKernelConf {

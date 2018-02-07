@@ -6,6 +6,11 @@
 namespace oneflow {
 
 struct Pooling3DCtx {
+  int32_t in_n;
+  int32_t in_c;
+  int32_t in_d;
+  int32_t in_h;
+  int32_t in_w;
   int32_t pool_size_d;
   int32_t pool_size_h;
   int32_t pool_size_w;
@@ -15,6 +20,11 @@ struct Pooling3DCtx {
   int32_t padding_d;
   int32_t padding_h;
   int32_t padding_w;
+  int32_t out_n;
+  int32_t out_c;
+  int32_t out_d;
+  int32_t out_h;
+  int32_t out_w;
 };
 
 template<DeviceType device_type>

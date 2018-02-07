@@ -36,13 +36,21 @@ void Pooling1DOp::VirtualGenKernelConf(
   int32_t in_length = in_blob_desc->shape().At(2);
   int32_t pool_size_length = GetPoolSizeLength();
   int32_t strides_length = GetStridesLength();
-  int32_t padding_length, out_length_unused;
+  int32_t padding_length, out_length;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
-                        GetStringFromSpecialConf("padding"), &out_length_unused,
+                        GetStringFromSpecialConf("padding"), &out_length,
                         &padding_length);
 
   Pooling1DKernelConf* pooling_conf = GetMutPooling1DKernelConf(kernel_conf);
   pooling_conf->set_padding_length(padding_length);
+
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(0));
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(2));
+
+  pooling_conf->add_out_shape(in_blob_desc->shape().At(0));
+  pooling_conf->add_out_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_out_shape(out_length);
 }
 
 void Pooling1DOp::VirtualCheckPoolSizeAndStrides() const {

@@ -4,16 +4,6 @@
 
 namespace oneflow {
 
-namespace {
-
-std::vector<int> Int64VecToIntVec(const std::vector<int64_t>& vec) {
-  std::vector<int> ret;
-  for (auto item : vec) { ret.push_back(static_cast<int>(item)); }
-  return ret;
-}
-
-}  // namespace
-
 template<typename T>
 class AveragePooling3DKernelUtil<DeviceType::kGPU, T> final {
  public:
@@ -28,8 +18,12 @@ class AveragePooling3DKernelUtil<DeviceType::kGPU, T> final {
                              pooling_ctx.padding_w};
     std::vector<int> stride{pooling_ctx.strides_d, pooling_ctx.strides_h,
                             pooling_ctx.strides_w};
-    std::vector<int> in_dim = Int64VecToIntVec(in_blob->shape().dim_vec());
-    std::vector<int> out_dim = Int64VecToIntVec(out_blob->shape().dim_vec());
+    std::vector<int> in_dim{pooling_ctx.in_n, pooling_ctx.in_c,
+                            pooling_ctx.in_d, pooling_ctx.in_h,
+                            pooling_ctx.in_w};
+    std::vector<int> out_dim{pooling_ctx.out_n, pooling_ctx.out_c,
+                             pooling_ctx.out_d, pooling_ctx.out_h,
+                             pooling_ctx.out_w};
     CudnnPoolingNdDesc pooling_desc(PoolingMode ::kAveragePooling, window,
                                     padding, stride);
     CudnnTensorNdDesc in_tensor_desc(GetDataType<T>::val, in_dim, stride);
@@ -43,9 +37,35 @@ class AveragePooling3DKernelUtil<DeviceType::kGPU, T> final {
              CUDNN_STATUS_SUCCESS);
   }
 
-  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
+  static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
                        Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
-    TODO();
+    std::vector<int> window{pooling_ctx.pool_size_d, pooling_ctx.pool_size_h,
+                            pooling_ctx.pool_size_w};
+    std::vector<int> padding{pooling_ctx.padding_d, pooling_ctx.padding_h,
+                             pooling_ctx.padding_w};
+    std::vector<int> stride{pooling_ctx.strides_d, pooling_ctx.strides_h,
+                            pooling_ctx.strides_w};
+    std::vector<int> in_diff_dim{pooling_ctx.in_n, pooling_ctx.in_c,
+                                 pooling_ctx.in_d, pooling_ctx.in_h,
+                                 pooling_ctx.in_w};
+    std::vector<int> out_diff_dim{pooling_ctx.out_n, pooling_ctx.out_c,
+                                  pooling_ctx.out_d, pooling_ctx.out_h,
+                                  pooling_ctx.out_w};
+    CudnnPoolingNdDesc pooling_desc(PoolingMode ::kAveragePooling, window,
+                                    padding, stride);
+    CudnnTensorNdDesc in_diff_tensor_desc(GetDataType<T>::val, in_diff_dim,
+                                          stride);
+    CudnnTensorNdDesc out_diff_tensor_desc(GetDataType<T>::val, out_diff_dim,
+                                           stride);
+    cudnnTensorDescriptor_t desc_unused;
+    double alpha = 1.0;
+    double beta = 0.0;
+    CHECK_EQ(cudnnPoolingBackward(
+                 kernel_ctx.device_ctx->cudnn_handle(), pooling_desc.Get(),
+                 &alpha, desc_unused, nullptr, out_diff_tensor_desc.Get(),
+                 out_diff_blob->dptr(), desc_unused, nullptr, &beta,
+                 in_diff_tensor_desc.Get(), in_diff_blob->mut_dptr()),
+             CUDNN_STATUS_SUCCESS);
   }
 };
 

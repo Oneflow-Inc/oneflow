@@ -31,6 +31,18 @@ class Pooling1DKernel : public PoolingKernel<device_type> {
     pooling_3d_ctx->padding_d = 0;
     pooling_3d_ctx->padding_h = 0;
     pooling_3d_ctx->padding_w = kernel_conf.padding_length();
+
+    pooling_3d_ctx->in_n = kernel_conf.in_shape(0);
+    pooling_3d_ctx->in_c = kernel_conf.in_shape(1);
+    pooling_3d_ctx->in_d = 1;
+    pooling_3d_ctx->in_h = 1;
+    pooling_3d_ctx->in_w = kernel_conf.in_shape(2);
+
+    pooling_3d_ctx->out_n = kernel_conf.out_shape(0);
+    pooling_3d_ctx->out_c = kernel_conf.out_shape(1);
+    pooling_3d_ctx->out_d = 1;
+    pooling_3d_ctx->out_h = 1;
+    pooling_3d_ctx->out_w = kernel_conf.out_shape(2);
   }
   virtual const Pooling1DKernelConf& GetPooling1DKernelConf() const = 0;
   virtual const PbMessage& GetPooling1DOpConf() const = 0;

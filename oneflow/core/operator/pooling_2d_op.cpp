@@ -43,20 +43,30 @@ void Pooling2DOp::VirtualGenKernelConf(
   int32_t in_h = in_blob_desc->shape().At(2);
   int32_t pool_size_h = GetPoolSizeH();
   int32_t strides_h = GetStridesH();
-  int32_t padding_h, out_h_unused;
+  int32_t padding_h, out_h;
   GetWindowedOutputSize(in_h, pool_size_h, strides_h,
-                        GetStringFromSpecialConf("padding"), &out_h_unused,
+                        GetStringFromSpecialConf("padding"), &out_h,
                         &padding_h);
   int32_t in_w = in_blob_desc->shape().At(3);
   int32_t pool_size_w = GetPoolSizeW();
   int32_t strides_w = GetStridesW();
-  int32_t padding_w, out_w_unused;
+  int32_t padding_w, out_w;
   GetWindowedOutputSize(in_w, pool_size_w, strides_w,
-                        GetStringFromSpecialConf("padding"), &out_w_unused,
+                        GetStringFromSpecialConf("padding"), &out_w,
                         &padding_w);
   Pooling2DKernelConf* pooling_conf = GetMutPooling2DKernelConf(kernel_conf);
   pooling_conf->set_padding_h(padding_h);
   pooling_conf->set_padding_w(padding_w);
+
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(0));
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(2));
+  pooling_conf->add_in_shape(in_blob_desc->shape().At(3));
+
+  pooling_conf->add_out_shape(in_blob_desc->shape().At(0));
+  pooling_conf->add_out_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_out_shape(out_h);
+  pooling_conf->add_out_shape(out_w);
 }
 
 void Pooling2DOp::VirtualCheckPoolSizeAndStrides() const {
