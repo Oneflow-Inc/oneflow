@@ -96,11 +96,11 @@ struct KernelUtil<DeviceType::kGPU, T> final {
   CudnnTensorDesc y_desc(GetDataType<T>::val, n, 1, 1, 1);    \
   CudnnActivationDesc act_desc(mode, CUDNN_PROPAGATE_NAN, 0.0);
 
-#define FORWARD_COMPUTE_ACTIVATION(mode)                         \
-  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \
-  cudnnActivationForward(ctx->cudnn_handle(), act_desc.Get(),    \
-                         CudnnDataType<T>::one, x_desc.Get(), x, \
-                         CudnnDataType<T>::zero, y_desc.Get(), y);
+#define FORWARD_COMPUTE_ACTIVATION(mode)                                   \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                   \
+  CudaCheck(cudnnActivationForward(ctx->cudnn_handle(), act_desc.Get(),    \
+                                   CudnnDataType<T>::one, x_desc.Get(), x, \
+                                   CudnnDataType<T>::zero, y_desc.Get(), y));
 
 #define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
   CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);       \
@@ -109,10 +109,10 @@ struct KernelUtil<DeviceType::kGPU, T> final {
 
 #define BACKWARD_COMPUTE_ACTIVATION(mode)                         \
   CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \
-  cudnnActivationBackward(ctx->cudnn_handle(), act_desc.Get(),    \
-                          CudnnDataType<T>::one, y_desc.Get(), y, \
-                          dy_desc.Get(), dy, x_desc.Get(), x,     \
-                          CudnnDataType<T>::zero, dx_desc.Get(), dx);
+  CudaCheck(cudnnActivationBackward(                              \
+      ctx->cudnn_handle(), act_desc.Get(), CudnnDataType<T>::one, \
+      y_desc.Get(), y, dy_desc.Get(), dy, x_desc.Get(), x,        \
+      CudnnDataType<T>::zero, dx_desc.Get(), dx));
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
     FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID)
@@ -202,18 +202,8 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   template void KernelUtil<DeviceType::kGPU, T>::Sum(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
-  template void KernelUtil<DeviceType::kGPU, T>::Sigmoid(                     \
-      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
-  template void KernelUtil<DeviceType::kGPU, T>::TanH(                        \
-      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
   template void KernelUtil<DeviceType::kGPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
-  template void KernelUtil<DeviceType::kGPU, T>::SigmoidBackward(             \
-      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
-      T* dx);                                                                 \
-  template void KernelUtil<DeviceType::kGPU, T>::TanHBackward(                \
-      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
-      T* dx);                                                                 \
   template void KernelUtil<DeviceType::kGPU, T>::ReluBackward(                \
       DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
       T* dx);                                                                 \

@@ -257,18 +257,8 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
-  template void KernelUtil<DeviceType::kCPU, T>::Sigmoid(                     \
-      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
-  template void KernelUtil<DeviceType::kCPU, T>::TanH(                        \
-      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
   template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
-  template void KernelUtil<DeviceType::kCPU, T>::SigmoidBackward(             \
-      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
-      T* dx);                                                                 \
-  template void KernelUtil<DeviceType::kCPU, T>::TanHBackward(                \
-      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
-      T* dx);                                                                 \
   template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \
       DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
       T* dx);                                                                 \

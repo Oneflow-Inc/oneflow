@@ -20,16 +20,16 @@ cudnnDataType_t GetCudnnDataType(DataType);
 template<typename T>
 struct CudnnDataType;
 
-#define DEFINE_CUDNN_DATA_TYPE(type_cpp, type_cudnn) \
-  template<>                                         \
-  struct CudnnDataType<type_cpp> {                   \
-    static const cudnnDataType_t val;                \
-    static const type_cpp oneval;                    \
-    static const type_cpp zeroval;                   \
-    static const void* one;                          \
-    static const void* zero;                         \
+#define DECLARE_CUDNN_DATA_TYPE(type_cpp, type_cudnn) \
+  template<>                                          \
+  struct CudnnDataType<type_cpp> {                    \
+    static const cudnnDataType_t val;                 \
+    static const type_cpp oneval;                     \
+    static const type_cpp zeroval;                    \
+    static const void* one;                           \
+    static const void* zero;                          \
   };
-OF_PP_FOR_EACH_TUPLE(DEFINE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DECLARE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
 
 class CudnnTensorDesc final {
  public:
@@ -68,7 +68,7 @@ class CudnnActivationDesc final {
   ~CudnnActivationDesc();
 
   CudnnActivationDesc(cudnnActivationMode_t mode,
-                      cudnnNanPropagation_t reluNanOpt, double coef);
+                      cudnnNanPropagation_t relu_nan_opt, double coef);
 
   const cudnnActivationDescriptor_t& Get() const { return val_; }
 
