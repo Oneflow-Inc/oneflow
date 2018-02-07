@@ -19,6 +19,6 @@ void TanHOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 
-REGISTER_OP(OperatorConf::kTanHConf, TanHOp);
+REGISTER_OP(OperatorConf::kTanhConf, TanHOp);
 
 }  // namespace oneflow

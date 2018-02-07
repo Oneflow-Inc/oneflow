@@ -23,7 +23,7 @@ void TanHKernel<device_type, T>::BackwardDataContent(
       BnInOp2Blob("in_diff")->mut_dptr<T>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTanHConf, TanHKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kTanhConf, TanHKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
