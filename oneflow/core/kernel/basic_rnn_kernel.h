@@ -18,8 +18,6 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  void ForwardDataId(const KernelCtx&,
-                     std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
