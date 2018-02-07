@@ -1,6 +1,6 @@
 include (ExternalProject)
 
-set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen/include)
+set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen/include/eigen3)
 set(EIGEN_INSTALL_DIR ${THIRD_PARTY_DIR}/eigen)
 
 set(eigen_URL https://github.com/RLovelett/eigen.git)

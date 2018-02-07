@@ -32,8 +32,8 @@ class Blob final {
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }
 
-  Tensor tensor() { return tensor_; }
-  ConstTensor const_tensor() { return const_tensor_; }
+  TensorBase* tensor() { return tensor_; }
+  TensorBase* const_tensor() { return const_tensor_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -93,8 +93,8 @@ class Blob final {
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
-  TensorBase tensor_;
-  TensorBase const_tensor_;
+  std::<unique_ptr> TensorBase tensor_;
+  std::<unique_ptr> TensorBase const_tensor_;
 };
 
 }  // namespace oneflow
