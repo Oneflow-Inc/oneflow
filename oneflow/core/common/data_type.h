@@ -17,11 +17,13 @@ namespace oneflow {
 
 #define INT_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ
 
+#define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
+
 #define ARITHMETIC_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ         \
   INT_DATA_TYPE_SEQ
 
-#define ALL_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ
+#define ALL_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ
 
 bool IsIntegral(DataType data_type);
 bool IsFloatingPoint(DataType data_type);
