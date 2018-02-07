@@ -39,6 +39,16 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
 
+template<typename T>
+const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
+                                    const std::string& field_name) {
+  const google::protobuf::Descriptor* d = msg.GetDescriptor();
+  const google::protobuf::FieldDescriptor* fd = d->FindFieldByName(field_name);
+  CHECK_NOTNULL(fd);
+  const google::protobuf::Reflection* r = msg.GetReflection();
+  return r->GetRepeatedField<T>(msg, fd);
+}
+
 // Set In PbMessage
 
 #define DECLARE_SET_VAL_IN_PBMESSAGE(val_type, func_name) \

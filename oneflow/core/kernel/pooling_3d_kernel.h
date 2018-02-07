@@ -16,13 +16,13 @@ class Pooling3DKernel : public PoolingKernel<device_type> {
   void VirtualKernelInit(const ParallelContext*) override {
     Pooling3DCtx* pooling_3d_ctx = this->mut_pooling_3d_ctx();
     const PbMessage& op_conf = GetPooling3DOpConf();
-    const PbRpf<int32_t>& pool_size = dynamic_cast<const PbRpf<int32_t>&>(
-        (GetMessageFromPbMessage(op_conf, "pool_size")));
+    const PbRf<int32_t>& pool_size =
+        GetPbRfFromPbMessage<int32_t>(op_conf, "pool_size");
     pooling_3d_ctx->pool_size_d = pool_size.Get(0);
     pooling_3d_ctx->pool_size_h = pool_size.Get(1);
     pooling_3d_ctx->pool_size_w = pool_size.Get(2);
-    const PbRpf<int32_t>& strides = dynamic_cast<const PbRpf<int32_t>&>(
-        (GetMessageFromPbMessage(op_conf, "strides")));
+    const PbRf<int32_t>& strides =
+        GetPbRfFromPbMessage<int32_t>(op_conf, "strides");
     pooling_3d_ctx->strides_d = strides.Get(0);
     pooling_3d_ctx->strides_h = strides.Get(1);
     pooling_3d_ctx->strides_w = strides.Get(2);

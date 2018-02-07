@@ -89,36 +89,36 @@ void Pooling3DOp::VirtualGenKernelConf(
 }
 
 void Pooling3DOp::VirtualCheckPoolSizeAndStrides() const {
-  PbRf<int32_t> pool_size = GetMsgFromSpecialConf<PbRf<int32_t>>("pool_size");
+  const PbRf<int32_t>& pool_size = GetPbRfFromSpecialConf<int32_t>("pool_size");
   CHECK_EQ(pool_size.size(), 3);
   for (auto item : pool_size) { CHECK_GT(item, 0); }
-  PbRf<int32_t> strides = GetMsgFromSpecialConf<PbRf<int32_t>>("strides");
+  const PbRf<int32_t>& strides = GetPbRfFromSpecialConf<int32_t>("strides");
   CHECK_EQ(strides.size(), 3);
   for (auto item : strides) { CHECK_GT(item, 0); }
 }
 
 int32_t Pooling3DOp::GetPoolSizeD() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("pool_size").Get(0);
+  return GetPbRfFromSpecialConf<int32_t>("pool_size").Get(0);
 }
 
 int32_t Pooling3DOp::GetPoolSizeH() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("pool_size").Get(1);
+  return GetPbRfFromSpecialConf<int32_t>("pool_size").Get(1);
 }
 
 int32_t Pooling3DOp::GetPoolSizeW() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("pool_size").Get(2);
+  return GetPbRfFromSpecialConf<int32_t>("pool_size").Get(2);
 }
 
 int32_t Pooling3DOp::GetStridesD() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("strides").Get(0);
+  return GetPbRfFromSpecialConf<int32_t>("strides").Get(0);
 }
 
 int32_t Pooling3DOp::GetStridesH() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("strides").Get(1);
+  return GetPbRfFromSpecialConf<int32_t>("strides").Get(1);
 }
 
 int32_t Pooling3DOp::GetStridesW() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("strides").Get(2);
+  return GetPbRfFromSpecialConf<int32_t>("strides").Get(2);
 }
 
 }  // namespace oneflow

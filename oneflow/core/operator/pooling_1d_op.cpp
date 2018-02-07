@@ -54,20 +54,20 @@ void Pooling1DOp::VirtualGenKernelConf(
 }
 
 void Pooling1DOp::VirtualCheckPoolSizeAndStrides() const {
-  PbRf<int32_t> pool_size = GetMsgFromSpecialConf<PbRf<int32_t>>("pool_size");
+  const PbRf<int32_t>& pool_size = GetPbRfFromSpecialConf<int32_t>("pool_size");
   CHECK_EQ(pool_size.size(), 1);
   for (auto item : pool_size) { CHECK_GT(item, 0); }
-  PbRf<int32_t> strides = GetMsgFromSpecialConf<PbRf<int32_t>>("strides");
+  const PbRf<int32_t>& strides = GetPbRfFromSpecialConf<int32_t>("strides");
   CHECK_EQ(strides.size(), 1);
   for (auto item : strides) { CHECK_GT(item, 0); }
 }
 
 int32_t Pooling1DOp::GetPoolSizeLength() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("pool_size").Get(0);
+  return GetPbRfFromSpecialConf<int32_t>("pool_size").Get(0);
 }
 
 int32_t Pooling1DOp::GetStridesLength() const {
-  return GetMsgFromSpecialConf<PbRf<int32_t>>("strides").Get(0);
+  return GetPbRfFromSpecialConf<int32_t>("strides").Get(0);
 }
 
 }  // namespace oneflow

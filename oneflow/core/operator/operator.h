@@ -65,7 +65,12 @@ class Operator {
 
   template<typename T>
   const T& GetMsgFromSpecialConf(const std::string& field_name) const {
-    return dynamic_cast<const T&>(GetMessageFromSpecialConf(field_name));
+    return static_cast<const T&>(GetMessageFromSpecialConf(field_name));
+  }
+
+  template<typename T>
+  const PbRf<T>& GetPbRfFromSpecialConf(const std::string& field_name) const {
+    return GetPbRfFromPbMessage<T>(GetSpecialConf(), field_name);
   }
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
