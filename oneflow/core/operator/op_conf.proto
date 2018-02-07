@@ -255,6 +255,12 @@ message BasicRnnOpConf {
 message BasicLstmOpConf {
 }
 
+message ReshapeOpConf {
+  required string in = 1;
+  required string out = 2;
+  required ShapeProto shape = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -279,8 +285,9 @@ message OperatorConf {
     LossPrintOpConf loss_print_conf = 119;
     ReduceSumOpConf reduce_sum_conf = 120;
     BasicRnnOpConf basic_rnn_conf = 121;
-    SigmoidOpConf sigmoid_conf = 122;
-    TanHOpConf tanh_conf = 123;
+    ReshapeOpConf reshape_conf = 122;
+    SigmoidOpConf sigmoid_conf = 123;
+    TanHOpConf tanh_conf = 124;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }
