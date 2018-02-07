@@ -56,14 +56,6 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyDataIdFrom<device_type>(ctx.device_ctx,
-                                                  BnInOp2Blob("in"));
-}
-
-template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
