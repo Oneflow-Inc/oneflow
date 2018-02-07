@@ -24,6 +24,6 @@ void SigmoidKernel<device_type, T>::BackwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSigmoidConf, SigmoidKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
