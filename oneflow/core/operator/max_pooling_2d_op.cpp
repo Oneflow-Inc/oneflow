@@ -13,7 +13,7 @@ void MaxPooling2DOp::VirtualInferDataTmpBlobDesc(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   BlobDesc* idx_blob_desc = GetBlobDesc4BnInOp("idx");
   idx_blob_desc->mut_shape() = out_blob_desc->shape();
-  idx_blob_desc->set_data_type(DataType::kUInt32);
+  idx_blob_desc->set_data_type(DataType::kInt32);
 }
 
 Pooling2DKernelConf* MaxPooling2DOp::GetMutPooling2DKernelConf(
