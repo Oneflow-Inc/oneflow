@@ -6,7 +6,7 @@ template<DeviceType device_type, typename T>
 void TanHKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_blob = BnInOp2Blob("in");
+  const Blob* in_blob = BnInOp2Blob("in");
   KernelUtil<device_type, T>::TanH(ctx.device_ctx, in_blob->shape().elem_cnt(),
                                    in_blob->dptr<T>(),
                                    BnInOp2Blob("out")->mut_dptr<T>());
@@ -16,7 +16,7 @@ template<DeviceType device_type, typename T>
 void TanHKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_blob = BnInOp2Blob("in");
+  const Blob* in_blob = BnInOp2Blob("in");
   KernelUtil<device_type, T>::TanHBackward(
       ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(),
       BnInOp2Blob("out")->dptr<T>(), BnInOp2Blob("out_diff")->dptr<T>(),
