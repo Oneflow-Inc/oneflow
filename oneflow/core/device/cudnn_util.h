@@ -23,11 +23,11 @@ struct CudnnDataType;
 #define DECLARE_CUDNN_DATA_TYPE(type_cpp, type_cudnn) \
   template<>                                          \
   struct CudnnDataType<type_cpp> {                    \
-    static const cudnnDataType_t val = type_cudnn;    \
-    static const constexpr type_cpp oneval = 1;       \
-    static const constexpr type_cpp zeroval = 0;      \
-    static const constexpr void* one = &oneval;       \
-    static const constexpr void* zero = &zeroval;     \
+    static const cudnnDataType_t val;                 \
+    static const type_cpp oneval;                     \
+    static const type_cpp zeroval;                    \
+    static const void* one;                           \
+    static const void* zero;                          \
   };
 OF_PP_FOR_EACH_TUPLE(DECLARE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
 
@@ -89,6 +89,21 @@ class CudnnFilterDesc final {
 
  private:
   cudnnFilterDescriptor_t val_;
+};
+
+class CudnnActivationDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnActivationDesc);
+  CudnnActivationDesc() = delete;
+  ~CudnnActivationDesc();
+
+  CudnnActivationDesc(cudnnActivationMode_t mode,
+                      cudnnNanPropagation_t relu_nan_opt, double coef);
+
+  const cudnnActivationDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnActivationDescriptor_t val_;
 };
 
 }  // namespace oneflow

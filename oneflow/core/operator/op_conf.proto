@@ -142,6 +142,16 @@ message ReluOpConf {
   required string out = 2;
 }
 
+message SigmoidOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message TanHOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
@@ -308,6 +318,8 @@ message OperatorConf {
     ReduceSumOpConf reduce_sum_conf = 120;
     BasicRnnOpConf basic_rnn_conf = 121;
     ReshapeOpConf reshape_conf = 122;
+    SigmoidOpConf sigmoid_conf = 123;
+    TanHOpConf tanh_conf = 124;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;
