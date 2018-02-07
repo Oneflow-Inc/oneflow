@@ -45,7 +45,7 @@ class AveragePooling3DKernelUtil<DeviceType::kCPU, T> final {
 
   static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
                       const Pooling3DCtx& pooling_ctx) {
-    // mkl
+    // eigen
     TODO();
   }
 

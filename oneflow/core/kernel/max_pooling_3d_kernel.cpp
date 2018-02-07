@@ -23,8 +23,11 @@ void MaxPooling3DKernel<device_type, T>::BackwardDataContent(
                       in_diff_blob->ByteSizeOfDataContentField());
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* idx_blob = BnInOp2Blob("idx");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_blob = BnInOp2Blob("out");
   MaxPooling3DKernelUtil<device_type, T>::Backward(
-      ctx, out_diff_blob, idx_blob, in_diff_blob, this->pooling_3d_ctx());
+      ctx, out_diff_blob, idx_blob, in_diff_blob, out_blob, in_blob,
+      this->pooling_3d_ctx());
 }
 
 template<DeviceType device_type, typename T>
@@ -45,14 +48,16 @@ class MaxPooling3DKernelUtil<DeviceType::kCPU, T> final {
   OF_DISALLOW_COPY_AND_MOVE(MaxPooling3DKernelUtil);
   MaxPooling3DKernelUtil() = delete;
 
-  static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
-                      Blob* idx_blob, const Pooling3DCtx& pooling_ctx) {
-    // mkl
+  static void Forward(const KernelCtx& kernel_ctx, const Blob* in_blob,
+                      Blob* out_blob, Blob* idx_blob,
+                      const Pooling3DCtx& pooling_ctx) {
+    // eigen
     TODO();
   }
 
-  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
+  static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
                        const Blob* idx_blob, Blob* in_diff_blob,
+                       const Blob* out_blob, const Blob* in_blob,
                        const Pooling3DCtx& pooling_ctx) {
     TODO();
   }

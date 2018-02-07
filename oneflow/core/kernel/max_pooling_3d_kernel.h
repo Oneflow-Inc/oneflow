@@ -33,7 +33,7 @@ class MaxPooling3DKernelUtil {
                       const Pooling3DCtx&);
 
   static void Backward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                       const Pooling3DCtx&);
+                       const Blob*, const Blob*, const Pooling3DCtx&);
 };
 
 }  // namespace oneflow

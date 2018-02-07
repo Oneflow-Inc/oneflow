@@ -58,7 +58,7 @@ class AveragePooling3DKernelUtil<DeviceType::kGPU, T> final {
                                   pooling_ctx.out_w};
     CudnnPoolingNdDesc pooling_desc(PoolingMode ::kAveragePooling, window,
                                     padding, stride);
-    // In fact, for average pooling in_tensor_desc and out_tensor_desc are 
+    // In fact, for average pooling in_tensor_desc and out_tensor_desc are
     // useless.
     CudnnTensorNdDesc in_tensor_desc(GetDataType<T>::val, in_diff_dim,
                                      full_stride);

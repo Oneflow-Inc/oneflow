@@ -24,8 +24,11 @@ void MaxPooling2DKernel<device_type, T>::BackwardDataContent(
                       in_diff_blob->ByteSizeOfDataContentField());
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* idx_blob = BnInOp2Blob("idx");
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_blob = BnInOp2Blob("out");
   MaxPooling3DKernelUtil<device_type, T>::Backward(
-      ctx, out_diff_blob, idx_blob, in_diff_blob, this->pooling_3d_ctx());
+      ctx, out_diff_blob, idx_blob, in_diff_blob, out_blob, in_blob,
+      this->pooling_3d_ctx());
 }
 
 template<DeviceType device_type, typename T>
