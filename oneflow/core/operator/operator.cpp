@@ -69,6 +69,10 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
+  if (model_bns_.empty()) {
+    CHECK(model_tmp_bns_.empty());
+    pr_desc->set_policy(ParallelPolicy::kDataParallel);
+  }
   if (IsDataLoaderOp() == false && IsPrintOp() == false) {
     pr_desc->RemoveInvalidDevice(op_name());
   }
