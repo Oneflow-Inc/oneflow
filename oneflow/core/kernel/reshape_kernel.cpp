@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<DeviceType device_type>
-void ReshapeKernel<device_type>::ForwardDataContent(
+void ReshapeKernel<device_type>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -14,7 +14,7 @@ void ReshapeKernel<device_type>::ForwardDataContent(
 }
 
 template<DeviceType device_type>
-void ReshapeKernel<device_type>::BackwardDataContent(
+void ReshapeKernel<device_type>::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
@@ -28,11 +28,11 @@ void ReshapeKernel<device_type>::BackwardDataContent(
 namespace {
 
 Kernel* CreateReshapeKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
+  static const HashMap<int32_t, std::function<Kernel*()>> creators = {
 #define RESHAPE_KERNEL_ENTRY(device_type) \
-  {GetHashKey(device_type), []() { return new ReshapeKernel<device_type>; }},
+  {device_type, []() { return new ReshapeKernel<device_type>; }},
       OF_PP_FOR_EACH_TUPLE(RESHAPE_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(GetHashKey(kernel_conf.device_type()))();
+  return creators.at(kernel_conf.device_type())();
 }
 
 }  // namespace
