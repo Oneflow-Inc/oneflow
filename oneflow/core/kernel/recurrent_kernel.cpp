@@ -31,6 +31,14 @@ Blob* RecurrentKernel<device_type, T>::GetHiddenDiffBlob(
 }
 
 template<DeviceType device_type, typename T>
+void RecurrentKernel<device_type, T>::ForwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyColNumFrom<device_type>(ctx.device_ctx,
+                                                  BnInOp2Blob("in"));
+}
+
+template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {

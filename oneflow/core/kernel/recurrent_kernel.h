@@ -20,6 +20,8 @@ class RecurrentKernel : public KernelIf<device_type> {
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
   Blob* GetHiddenDiffBlob(std::function<Blob*(const std::string&)>) const;
 
+  void ForwardColNum(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(
       const KernelCtx& ctx, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
