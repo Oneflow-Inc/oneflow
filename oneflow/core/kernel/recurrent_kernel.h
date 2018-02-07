@@ -24,6 +24,8 @@ class RecurrentKernel : public KernelIf<device_type> {
                      std::function<Blob*(const std::string&)>) const override;
   void ForwardDataId(const KernelCtx&,
                      std::function<Blob*(const std::string&)>) const override;
+  void BackwardColNum(const KernelCtx&,
+                      std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(
       const KernelCtx& ctx, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
