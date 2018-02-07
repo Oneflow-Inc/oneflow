@@ -32,8 +32,8 @@ CudnnFilterDesc::~CudnnFilterDesc() {
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, int k, int c, int h,
                                  int w) {
   CudaCheck(cudnnCreateFilterDescriptor(&val_));
-  cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type),
-                             CUDNN_TENSOR_NCHW, k, c, h, w);
+  CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type),
+                                       CUDNN_TENSOR_NCHW, k, c, h, w));
 }
 
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape)
