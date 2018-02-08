@@ -53,7 +53,9 @@ void RecurrentOp::InferBlobDescs(
   out_blob_desc.mut_shape() = Shape({data_num, hidden_size});
   *GetBlobDesc4BnInOp("out") = out_blob_desc;
   // recurrent_out
-  *GetBlobDesc4BnInOp("rec_out") = out_blob_desc;
+  BlobDesc rec_out_blob_desc = out_blob_desc;
+  rec_out_blob_desc.set_max_col_num(1);
+  *GetBlobDesc4BnInOp("rec_out") = rec_out_blob_desc;
 
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
