@@ -9,8 +9,10 @@ void RecurrentOp::InitFromOpConf() {
   if (!GetStringFromSpecialConf("init_hidden").empty()) {
     CHECK(!GetBoolFromSpecialConf("has_init_hidden_initializer"));
     EnrollInputBn("h0");
-  } else {
+  } else if (GetBoolFromSpecialConf("is_init_hidden_trainable")) {
     EnrollModelBn("h0");
+  } else {
+    EnrollModelTmpBn("h0");
   }
   EnrollOutputBn("out");
   EnrollOutputBn("rec_out");
