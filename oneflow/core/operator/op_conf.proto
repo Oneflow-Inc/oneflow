@@ -253,7 +253,7 @@ message BasicRnnOpConf {
   optional InitializerConf h2h_weight_initializer = 10;
 
   optional bool need_train_init_hidden = 11 [default = true];
-  optional bool has_bias_term = 12 [default = true];
+  optional bool use_bias = 12 [default = true];
 }
 
 message BasicLstmOpConf {
