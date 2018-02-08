@@ -10,8 +10,10 @@ void BasicRnnOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("plus_op_out");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
-  EnrollModelBn("bias");
-  EnrollModelTmpBn("bias_multiplier");
+  if (GetBoolFromSpecialConf("has_bias_term")) {
+    EnrollModelBn("bias");
+    EnrollModelTmpBn("bias_multiplier");
+  }
 }
 
 void BasicRnnOp::VirtualInferBlobDescs(
@@ -29,8 +31,10 @@ void BasicRnnOp::VirtualInferBlobDescs(
       BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_weight") =
       BlobDesc(Shape({hidden_size, hidden_size}));
-  *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
-  *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
+  if (GetBoolFromSpecialConf("has_bias_term")) {
+    *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
+  }
 }
 
 REGISTER_OP(OperatorConf::kBasicRnnConf, BasicRnnOp);

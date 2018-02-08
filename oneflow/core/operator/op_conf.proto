@@ -251,6 +251,9 @@ message BasicRnnOpConf {
   optional InitializerConf bias_initializer = 8;
   optional InitializerConf i2h_weight_initializer = 9;
   optional InitializerConf h2h_weight_initializer = 10;
+
+  optional bool need_train_init_hidden = 11 [default = true];
+  optional bool has_bias_term = 12 [default = true];
 }
 
 message BasicLstmOpConf {
