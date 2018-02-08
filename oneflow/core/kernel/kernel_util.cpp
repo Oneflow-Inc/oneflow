@@ -169,8 +169,9 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T half = static_cast<T>(0.5);
     for (int64_t i = 0; i != n; ++i) {
-      y[i] = static_cast<T>(1) / (static_cast<T>(1) + std::exp(-x[i]));
+      y[i] = half * std::tanh(half * x[i]) + half;
     }
   }
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
@@ -178,11 +179,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
   }
   static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-    T one = static_cast<T>(1);
-    T two = static_cast<T>(2);
-    for (int64_t i = 0; i != n; ++i) {
-      y[i] = two / (one + std::exp(-two * x[i])) - one;
-    }
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
   }
   static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx) {
