@@ -19,6 +19,7 @@ class SourceCompTaskNode final : public CompTaskNode {
   void FixThrdId() override;
 
  private:
+  void FixRegisterNumRange() override;
 };
 
 }  // namespace oneflow

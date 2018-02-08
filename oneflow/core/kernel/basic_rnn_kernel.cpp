@@ -56,14 +56,6 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyDataIdFrom<device_type>(ctx.device_ctx,
-                                                  BnInOp2Blob("in"));
-}
-
-template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -112,11 +104,14 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
       static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
       BnInOp2Blob("bias_diff"));
 
-  // hidden_diff = plus_op_out_diff * h2h_weight
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
-      this->GetHiddenDiffBlob(BnInOp2Blob));
+  if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
+      || this->op_conf().basic_rnn_conf().is_init_hidden_trainable()) {
+    // hidden_diff = plus_op_out_diff * h2h_weight
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
+        this->GetHiddenDiffBlob(BnInOp2Blob));
+  }
 }
 
 template<DeviceType device_type, typename T>
