@@ -41,9 +41,8 @@ void SourceCompTaskNode::FixThrdId() {
 }
 
 void SourceCompTaskNode::FixRegisterNumRange() {
-  int32_t max_col_num = GetProducedRegst("out")->MaxColNum();
-  GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
-  GetProducedRegst("out")->set_min_register_num(max_col_num);
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  out_regst->set_min_register_num(out_regst->MaxColNum());
 }
 
 }  // namespace oneflow
