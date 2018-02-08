@@ -229,29 +229,13 @@ void SetBlobsColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
 void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& input_bns,
                       const PbRpf<std::string>& output_bns) {
-  auto in_iter = input_bns.begin();
-  auto out_iter = output_bns.begin();
-  int64_t in_data_num = BnInOp2Blob(*in_iter)->shape().At(0);
-  int64_t out_data_num = BnInOp2Blob(*out_iter)->shape().At(0);
-  int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
-  while (in_iter != input_bns.end() && out_iter != input_bns.end()) {
-    if (in_data_num < out_data_num) {
-      ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
-      max_col_id = std::max(max_col_id, BnInOp2Blob(*in_iter)->col_id());
-    } else if (in_data_num > out_data_num) {
-      BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
-      max_col_id = BnInOp2Blob(*in_iter)->col_id();
-      ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
-    } else {
-      BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
-      ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
-      max_col_id = BnInOp2Blob(*in_iter)->col_id();
-      ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
-    }
+  int32_t max_col_id_of_in = -1;
+  for (const auto& ibn : input_bns) {
+    max_col_id_of_in = std::max(max_col_id_of_in, BnInOp2Blob(ibn)->col_id());
+  }
+  CHECK_GT(max_col_id_of_in, -1);
+  for (const auto& obn : output_bns) {
+    BnInOp2Blob(obn)->set_col_id(max_col_id_of_in);
   }
 }
 
