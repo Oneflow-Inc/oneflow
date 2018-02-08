@@ -10,14 +10,14 @@ namespace oneflow {
 
 class Regst;
 
-class Blob final {
+class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
       : Blob(regst, blob_desc, mem_ptr, nullptr) {}
   Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
        const void* comm_net_token);
-  ~Blob() = default;
+  virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
@@ -32,8 +32,9 @@ class Blob final {
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }
 
-  TensorBase* tensor() { return tensor_; }
-  TensorBase* const_tensor() { return const_tensor_; }
+  virtual void Transpose(Blob* out_blob, std::vector<int32_t> permutation) {
+    UNEXPECTED_RUN();
+  };
 
   template<typename T = void>
   const T* dptr() const {
@@ -93,8 +94,6 @@ class Blob final {
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
-  std::<unique_ptr> TensorBase tensor_;
-  std::<unique_ptr> TensorBase const_tensor_;
 };
 
 }  // namespace oneflow
