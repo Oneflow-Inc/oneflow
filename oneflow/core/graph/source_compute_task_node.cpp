@@ -40,4 +40,9 @@ void SourceCompTaskNode::FixThrdId() {
   set_thrd_id(IDMgr::Singleton()->AllocatePersistenceThrdId(machine_id()));
 }
 
+void SourceCompTaskNode::FixRegisterNumRange() {
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  out_regst->set_min_register_num(out_regst->MaxColNum());
+}
+
 }  // namespace oneflow
