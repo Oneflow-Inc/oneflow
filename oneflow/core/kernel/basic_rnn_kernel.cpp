@@ -104,7 +104,8 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
       static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
       BnInOp2Blob("bias_diff"));
 
-  if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()) {
+  if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
+      || this->op_conf().basic_rnn_conf().is_init_hidden_trainable()) {
     // hidden_diff = plus_op_out_diff * h2h_weight
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
