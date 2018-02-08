@@ -28,7 +28,6 @@ class ForwardCompTaskNode : public CompTaskNode {
  private:
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
-  void FixRegisterNumRange() override;
 
   int64_t random_seed_;
 };
