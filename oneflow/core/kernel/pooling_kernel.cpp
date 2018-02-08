@@ -32,14 +32,28 @@ Pooling3DCtx::~Pooling3DCtx() {
 #endif  // WITH_CUDA
 }
 
+void Pooling3DCtx::InitFromKernelConf(const Pooling3DKernelConf& kernel_conf) {
+  kernel_conf_ = kernel_conf;
+}
+
 void Pooling3DCtx::BuildCudnnDescs(PoolingMode mode, DataType type) {
 #ifdef WITH_CUDA
-  std::vector<int> window{pool_size_d_, pool_size_h_, pool_size_w_};
-  std::vector<int> padding{padding_d_, padding_h_, padding_w_};
-  std::vector<int> stride{strides_d_, strides_h_, strides_w_};
-  std::vector<int> full_stride{1, 1, strides_d_, strides_h_, strides_w_};
-  std::vector<int> in_dim{in_n_, in_c_, in_d_, in_h_, in_w_};
-  std::vector<int> out_dim{out_n_, out_c_, out_d_, out_h_, out_w_};
+  std::vector<int> window{kernel_conf_.pool_size_d(),
+                          kernel_conf_.pool_size_h(),
+                          kernel_conf_.pool_size_w()};
+  std::vector<int> padding{kernel_conf_.padding_d(), kernel_conf_.padding_h(),
+                           kernel_conf_.padding_w()};
+  std::vector<int> stride{kernel_conf_.strides_d(), kernel_conf_.strides_h(),
+                          kernel_conf_.strides_w()};
+  std::vector<int> full_stride{1, 1, kernel_conf_.strides_d(),
+                               kernel_conf_.strides_h(),
+                               kernel_conf_.strides_w()};
+  std::vector<int> in_dim{kernel_conf_.in_shape(0), kernel_conf_.in_shape(1),
+                          kernel_conf_.in_shape(2), kernel_conf_.in_shape(3),
+                          kernel_conf_.in_shape(4)};
+  std::vector<int> out_dim{kernel_conf_.out_shape(0), kernel_conf_.out_shape(1),
+                           kernel_conf_.out_shape(2), kernel_conf_.out_shape(3),
+                           kernel_conf_.out_shape(4)};
 
   pooling_desc_ = new CudnnPoolingNdDesc(mode, window, padding, stride);
   in_desc_ = new CudnnTensorNdDesc(type, in_dim, full_stride);
