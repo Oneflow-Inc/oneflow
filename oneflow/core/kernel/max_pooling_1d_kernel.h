@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class MaxPooling1DKernel final : public Pooling1DKernel<device_type> {
+class MaxPooling1DKernel final : public Pooling1DKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MaxPooling1DKernel);
   MaxPooling1DKernel() = default;
@@ -21,6 +21,7 @@ class MaxPooling1DKernel final : public Pooling1DKernel<device_type> {
       std::function<Blob*(const std::string&)>) const override;
   const Pooling1DKernelConf& GetPooling1DKernelConf() const override;
   const PbMessage& GetPooling1DOpConf() const override;
+  PoolingMode GetPoolingMode() override { return PoolingMode::kMaxPooling; }
 };
 
 }  // namespace oneflow

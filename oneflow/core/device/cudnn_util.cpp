@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 #define DEFINE_CUDNN_DATA_TYPE(type_cpp, type_cudnn)                          \
   const cudnnDataType_t CudnnDataType<type_cpp>::val = type_cudnn;            \
   const type_cpp CudnnDataType<type_cpp>::oneval = static_cast<type_cpp>(1);  \
@@ -90,5 +92,7 @@ CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
 CudnnActivationDesc::~CudnnActivationDesc() {
   CudaCheck(cudnnDestroyActivationDescriptor(val_));
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

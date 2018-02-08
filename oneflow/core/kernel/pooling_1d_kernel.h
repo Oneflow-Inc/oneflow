@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class Pooling1DKernel : public PoolingKernel<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Pooling1DKernel);
@@ -18,31 +18,34 @@ class Pooling1DKernel : public PoolingKernel<device_type> {
     const PbMessage& op_conf = GetPooling1DOpConf();
     const PbRf<int32_t>& pool_size =
         GetPbRfFromPbMessage<int32_t>(op_conf, "pool_size");
-    pooling_3d_ctx->pool_size_d = 1;
-    pooling_3d_ctx->pool_size_h = 1;
-    pooling_3d_ctx->pool_size_w = pool_size.Get(0);
+    pooling_3d_ctx->set_pool_size_d(1);
+    pooling_3d_ctx->set_pool_size_h(1);
+    pooling_3d_ctx->set_pool_size_w(pool_size.Get(0));
     const PbRf<int32_t>& strides =
         GetPbRfFromPbMessage<int32_t>(op_conf, "strides");
-    pooling_3d_ctx->strides_d = 1;
-    pooling_3d_ctx->strides_h = 1;
-    pooling_3d_ctx->strides_w = strides.Get(0);
+    pooling_3d_ctx->set_strides_d(1);
+    pooling_3d_ctx->set_strides_h(1);
+    pooling_3d_ctx->set_strides_w(strides.Get(0));
 
     const Pooling1DKernelConf& kernel_conf = GetPooling1DKernelConf();
-    pooling_3d_ctx->padding_d = 0;
-    pooling_3d_ctx->padding_h = 0;
-    pooling_3d_ctx->padding_w = kernel_conf.padding_length();
+    pooling_3d_ctx->set_padding_d(0);
+    pooling_3d_ctx->set_padding_h(0);
+    pooling_3d_ctx->set_padding_w(kernel_conf.padding_length());
 
-    pooling_3d_ctx->in_n = kernel_conf.in_shape(0);
-    pooling_3d_ctx->in_c = kernel_conf.in_shape(1);
-    pooling_3d_ctx->in_d = 1;
-    pooling_3d_ctx->in_h = 1;
-    pooling_3d_ctx->in_w = kernel_conf.in_shape(2);
+    pooling_3d_ctx->set_in_n(kernel_conf.in_shape(0));
+    pooling_3d_ctx->set_in_c(kernel_conf.in_shape(1));
+    pooling_3d_ctx->set_in_d(1);
+    pooling_3d_ctx->set_in_h(1);
+    pooling_3d_ctx->set_in_w(kernel_conf.in_shape(2));
 
-    pooling_3d_ctx->out_n = kernel_conf.out_shape(0);
-    pooling_3d_ctx->out_c = kernel_conf.out_shape(1);
-    pooling_3d_ctx->out_d = 1;
-    pooling_3d_ctx->out_h = 1;
-    pooling_3d_ctx->out_w = kernel_conf.out_shape(2);
+    pooling_3d_ctx->set_out_n(kernel_conf.out_shape(0));
+    pooling_3d_ctx->set_out_c(kernel_conf.out_shape(1));
+    pooling_3d_ctx->set_out_d(1);
+    pooling_3d_ctx->set_out_h(1);
+    pooling_3d_ctx->set_out_w(kernel_conf.out_shape(2));
+
+    pooling_3d_ctx->BuildCudnnDescs(this->GetPoolingMode(),
+                                    GetDataType<T>::val);
   }
   virtual const Pooling1DKernelConf& GetPooling1DKernelConf() const = 0;
   virtual const PbMessage& GetPooling1DOpConf() const = 0;
