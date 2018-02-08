@@ -9,7 +9,7 @@ void RecurrentOp::InitFromOpConf() {
   if (!GetStringFromSpecialConf("init_hidden").empty()) {
     CHECK(!GetBoolFromSpecialConf("has_init_hidden_initializer"));
     EnrollInputBn("h0");
-  } else if (GetBoolFromSpecialConf("need_train_init_hidden")) {
+  } else if (GetBoolFromSpecialConf("is_init_hidden_trainable")) {
     EnrollModelBn("h0");
   } else {
     EnrollModelTmpBn("h0");

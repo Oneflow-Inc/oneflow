@@ -252,7 +252,7 @@ message BasicRnnOpConf {
   optional InitializerConf i2h_weight_initializer = 9;
   optional InitializerConf h2h_weight_initializer = 10;
 
-  optional bool need_train_init_hidden = 11 [default = true];
+  optional bool is_init_hidden_trainable = 11 [default = true];
   optional bool use_bias = 12 [default = true];
 }
 
