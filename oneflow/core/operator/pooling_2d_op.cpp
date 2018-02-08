@@ -54,17 +54,28 @@ void Pooling2DOp::VirtualGenKernelConf(
   GetWindowedOutputSize(in_w, pool_size_w, strides_w,
                         GetStringFromSpecialConf("padding"), &out_w,
                         &padding_w);
-  Pooling2DKernelConf* pooling_conf = GetMutPooling2DKernelConf(kernel_conf);
+  Pooling3DKernelConf* pooling_conf = GetMutPooling3DKernelConf(kernel_conf);
+  pooling_conf->set_pool_size_d(1);
+  pooling_conf->set_pool_size_h(pool_size_h);
+  pooling_conf->set_pool_size_w(pool_size_w);
+
+  pooling_conf->set_strides_d(1);
+  pooling_conf->set_strides_h(strides_h);
+  pooling_conf->set_strides_w(strides_w);
+
+  pooling_conf->set_padding_d(0);
   pooling_conf->set_padding_h(padding_h);
   pooling_conf->set_padding_w(padding_w);
 
   pooling_conf->add_in_shape(in_blob_desc->shape().At(0));
   pooling_conf->add_in_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_in_shape(1);
   pooling_conf->add_in_shape(in_blob_desc->shape().At(2));
   pooling_conf->add_in_shape(in_blob_desc->shape().At(3));
 
   pooling_conf->add_out_shape(in_blob_desc->shape().At(0));
   pooling_conf->add_out_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_out_shape(1);
   pooling_conf->add_out_shape(out_h);
   pooling_conf->add_out_shape(out_w);
 }

@@ -20,7 +20,6 @@ class AveragePooling3DKernel final : public Pooling3DKernel<device_type, T> {
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
   const Pooling3DKernelConf& GetPooling3DKernelConf() const override;
-  const PbMessage& GetPooling3DOpConf() const override;
   PoolingMode GetPoolingMode() override { return PoolingMode::kAveragePooling; }
 };
 

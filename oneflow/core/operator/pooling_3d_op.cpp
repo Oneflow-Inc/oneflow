@@ -71,6 +71,14 @@ void Pooling3DOp::VirtualGenKernelConf(
                         &padding_w);
 
   Pooling3DKernelConf* pooling_conf = GetMutPooling3DKernelConf(kernel_conf);
+  pooling_conf->set_pool_size_d(pool_size_d);
+  pooling_conf->set_pool_size_h(pool_size_h);
+  pooling_conf->set_pool_size_w(pool_size_w);
+
+  pooling_conf->set_strides_d(strides_d);
+  pooling_conf->set_strides_h(strides_h);
+  pooling_conf->set_strides_w(strides_w);
+
   pooling_conf->set_padding_d(padding_d);
   pooling_conf->set_padding_h(padding_h);
   pooling_conf->set_padding_w(padding_w);

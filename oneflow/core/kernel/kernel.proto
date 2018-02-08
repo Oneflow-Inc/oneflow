@@ -20,41 +20,18 @@ message SoftmaxLossKernelConf {
   required DataType label_type = 2;
 }
 
-message Pooling1DKernelConf {
-  repeated int32 in_shape = 1;
-  repeated int32 out_shape = 2;
-  optional int32 padding_length = 3 [default = 0];
-}
-
-message Pooling2DKernelConf {
-  repeated int32 in_shape = 1;
-  repeated int32 out_shape = 2;
-  optional int32 padding_h = 3 [default = 0];
-  optional int32 padding_w = 4 [default = 0];
-}
-
 message Pooling3DKernelConf {
   repeated int32 in_shape = 1;
   repeated int32 out_shape = 2;
   optional int32 padding_d = 3 [default = 0];
   optional int32 padding_h = 4 [default = 0];
   optional int32 padding_w = 5 [default = 0];
-}
-
-message AveragePooling1DKernelConf {
-  required Pooling1DKernelConf pooling_1d_conf = 1;
-}
-
-message MaxPooling1DKernelConf {
-  required Pooling1DKernelConf pooling_1d_conf = 1;
-}
-
-message AveragePooling2DKernelConf {
-  required Pooling2DKernelConf pooling_2d_conf = 1;
-}
-
-message MaxPooling2DKernelConf {
-  required Pooling2DKernelConf pooling_2d_conf = 1;
+  required int32 pool_size_d = 6;
+  required int32 pool_size_h = 7;
+  required int32 pool_size_w = 8;
+  required int32 strides_d = 9;
+  required int32 strides_h = 10;
+  required int32 strides_w = 11;
 }
 
 message AveragePooling3DKernelConf {
@@ -94,10 +71,6 @@ message KernelConf {
     ConcatKernelConf concat_conf = 113;
     SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    AveragePooling1DKernelConf average_pooling_1d_conf = 200;
-    MaxPooling1DKernelConf max_pooling_1d_conf = 201;
-    AveragePooling2DKernelConf average_pooling_2d_conf = 202;
-    MaxPooling2DKernelConf max_pooling_2d_conf = 203;
     AveragePooling3DKernelConf average_pooling_3d_conf = 204;
     MaxPooling3DKernelConf max_pooling_3d_conf = 205;
   }

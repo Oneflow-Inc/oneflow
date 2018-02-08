@@ -21,7 +21,6 @@ class Pooling2DOp : public PoolingOp {
       const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
   void VirtualCheckPoolSizeAndStrides() const override;
-  virtual Pooling2DKernelConf* GetMutPooling2DKernelConf(KernelConf*) const = 0;
   int32_t GetPoolSizeH() const;
   int32_t GetPoolSizeW() const;
   int32_t GetStridesH() const;

@@ -31,12 +31,6 @@ AveragePooling3DKernel<device_type, T>::GetPooling3DKernelConf() const {
   return this->kernel_conf().average_pooling_3d_conf().pooling_3d_conf();
 }
 
-template<DeviceType device_type, typename T>
-const PbMessage& AveragePooling3DKernel<device_type, T>::GetPooling3DOpConf()
-    const {
-  return this->op_conf().average_pooling_3d_conf();
-}
-
 template<typename T>
 class AveragePooling3DKernelUtil<DeviceType::kCPU, T> final {
  public:
@@ -55,7 +49,23 @@ class AveragePooling3DKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+namespace {
+
+namespace AveragePooling1D {
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf,
+                           AveragePooling3DKernel, ARITHMETIC_DATA_TYPE_SEQ);
+}
+
+namespace AveragePooling2D {
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf,
+                           AveragePooling3DKernel, ARITHMETIC_DATA_TYPE_SEQ);
+}
+
+namespace AveragePooling3D {
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling3DConf,
                            AveragePooling3DKernel, ARITHMETIC_DATA_TYPE_SEQ);
+}
+
+}  // namespace
 
 }  // namespace oneflow

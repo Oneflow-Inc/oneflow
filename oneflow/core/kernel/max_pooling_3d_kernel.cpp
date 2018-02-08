@@ -36,12 +36,6 @@ MaxPooling3DKernel<device_type, T>::GetPooling3DKernelConf() const {
   return this->kernel_conf().max_pooling_3d_conf().pooling_3d_conf();
 }
 
-template<DeviceType device_type, typename T>
-const PbMessage& MaxPooling3DKernel<device_type, T>::GetPooling3DOpConf()
-    const {
-  return this->op_conf().max_pooling_3d_conf();
-}
-
 template<typename T>
 class MaxPooling3DKernelUtil<DeviceType::kCPU, T> final {
  public:
@@ -63,7 +57,23 @@ class MaxPooling3DKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
+namespace {
+
+namespace MaxPooling1D {
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling1DConf, MaxPooling3DKernel,
+                           ARITHMETIC_DATA_TYPE_SEQ);
+}
+
+namespace MaxPooling2D {
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPooling3DKernel,
+                           ARITHMETIC_DATA_TYPE_SEQ);
+}
+
+namespace MaxPooling3D {
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling3DConf, MaxPooling3DKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
+}
+
+}  // namespace
 
 }  // namespace oneflow

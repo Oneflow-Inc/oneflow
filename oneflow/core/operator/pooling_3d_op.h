@@ -21,7 +21,6 @@ class Pooling3DOp : public PoolingOp {
       const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
   void VirtualCheckPoolSizeAndStrides() const override;
-  virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
   int32_t GetPoolSizeD() const;
   int32_t GetPoolSizeH() const;
   int32_t GetPoolSizeW() const;

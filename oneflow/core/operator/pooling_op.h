@@ -22,6 +22,7 @@ class PoolingOp : public Operator {
   virtual void VirtualInferDataTmpBlobDesc(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const = 0;
   virtual void VirtualCheckPoolSizeAndStrides() const = 0;
+  virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
 };
 
 }  // namespace oneflow

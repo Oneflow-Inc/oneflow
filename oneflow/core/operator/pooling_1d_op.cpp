@@ -41,15 +41,29 @@ void Pooling1DOp::VirtualGenKernelConf(
                         GetStringFromSpecialConf("padding"), &out_length,
                         &padding_length);
 
-  Pooling1DKernelConf* pooling_conf = GetMutPooling1DKernelConf(kernel_conf);
-  pooling_conf->set_padding_length(padding_length);
+  Pooling3DKernelConf* pooling_conf = GetMutPooling3DKernelConf(kernel_conf);
+  pooling_conf->set_pool_size_d(1);
+  pooling_conf->set_pool_size_h(1);
+  pooling_conf->set_pool_size_w(pool_size_length);
+
+  pooling_conf->set_strides_d(1);
+  pooling_conf->set_strides_h(1);
+  pooling_conf->set_strides_w(strides_length);
+
+  pooling_conf->set_padding_d(0);
+  pooling_conf->set_padding_h(0);
+  pooling_conf->set_padding_w(padding_length);
 
   pooling_conf->add_in_shape(in_blob_desc->shape().At(0));
   pooling_conf->add_in_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_in_shape(1);
+  pooling_conf->add_in_shape(1);
   pooling_conf->add_in_shape(in_blob_desc->shape().At(2));
 
   pooling_conf->add_out_shape(in_blob_desc->shape().At(0));
   pooling_conf->add_out_shape(in_blob_desc->shape().At(1));
+  pooling_conf->add_out_shape(1);
+  pooling_conf->add_out_shape(1);
   pooling_conf->add_out_shape(out_length);
 }
 
