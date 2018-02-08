@@ -55,28 +55,13 @@ class CudnnTensorNdDesc final {
   CudnnTensorNdDesc() = delete;
   ~CudnnTensorNdDesc();
 
-  CudnnTensorNdDesc(DataType, const std::vector<int>&, const std::vector<int>&);
+  CudnnTensorNdDesc(DataType, const std::vector<int>& dim,
+                    const std::vector<int>& stride);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 
  private:
   cudnnTensorDescriptor_t val_;
-};
-
-class CudnnPoolingNdDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolingNdDesc);
-  CudnnPoolingNdDesc() = delete;
-  ~CudnnPoolingNdDesc();
-
-  CudnnPoolingNdDesc(PoolingMode pooling_mode, const std::vector<int>& window,
-                     const std::vector<int>& padding,
-                     const std::vector<int>& stride);
-
-  const cudnnPoolingDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnPoolingDescriptor_t val_;
 };
 
 class CudnnFilterDesc final {

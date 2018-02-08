@@ -2,6 +2,26 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+CudnnPoolingNdDesc::~CudnnPoolingNdDesc() {
+  CudaCheck(cudnnDestroyPoolingDescriptor(val_));
+}
+
+CudnnPoolingNdDesc::CudnnPoolingNdDesc(PoolingMode pooling_mode,
+                                       const std::vector<int>& window,
+                                       const std::vector<int>& padding,
+                                       const std::vector<int>& stride) {
+  CudaCheck(cudnnCreatePoolingDescriptor(&val_));
+  CudaCheck(cudnnSetPoolingNdDescriptor(
+      val_,
+      (pooling_mode == PoolingMode::kAveragePooling
+           ? CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING
+           : CUDNN_POOLING_MAX),
+      CUDNN_NOT_PROPAGATE_NAN, window.size(), window.data(), padding.data(),
+      stride.data()));
+}
+#endif
+
 Pooling3DCtx::~Pooling3DCtx() {
 #ifdef WITH_CUDA
   delete in_desc_;

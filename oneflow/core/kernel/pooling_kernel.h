@@ -6,6 +6,24 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+class CudnnPoolingNdDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnPoolingNdDesc);
+  CudnnPoolingNdDesc() = delete;
+  ~CudnnPoolingNdDesc();
+
+  CudnnPoolingNdDesc(PoolingMode pooling_mode, const std::vector<int>& window,
+                     const std::vector<int>& padding,
+                     const std::vector<int>& stride);
+
+  const cudnnPoolingDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnPoolingDescriptor_t val_;
+};
+#endif
+
 class Pooling3DCtx {
  public:
   Pooling3DCtx() = default;
