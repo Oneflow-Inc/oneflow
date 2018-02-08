@@ -16,13 +16,15 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
                                        static_cast<T>(1.0), static_cast<T>(0.0),
                                        in_blob, weight_blob, out_blob);
 
-  const Blob* bias_blob = BnInOp2Blob("bias");
-  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    const Blob* bias_blob = BnInOp2Blob("bias");
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
-  // out = bias_multiplier * bias + out
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
-      static_cast<T>(1.0), bias_mul_blob, bias_blob, out_blob);
+    // out = bias_multiplier * bias + out
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
+        static_cast<T>(1.0), bias_mul_blob, bias_blob, out_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -48,14 +50,16 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
         static_cast<T>(0.0), out_diff_blob, weight_blob, in_diff_blob);
   }
 
-  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-  Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
-  // bias_diff = bias_multiplier * out_diff
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0),
-      static_cast<T>(0.0), bias_mul_blob, out_diff_blob, bias_diff_blob);
-}  // namespace oneflow
+    // bias_diff = bias_multiplier * out_diff
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0),
+        static_cast<T>(0.0), bias_mul_blob, out_diff_blob, bias_diff_blob);
+  }
+}
 
 template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
@@ -66,12 +70,13 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
       OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
                         weight_initializer),
       random_seed_gen(), BnInOp2Blob("weight"));
-
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx.device_ctx,
-      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
-                        bias_initializer),
-      random_seed_gen(), BnInOp2Blob("bias"));
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    KernelUtil<device_type, T>::InitializeWithProperConf(
+        ctx.device_ctx,
+        OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
+                          bias_initializer),
+        random_seed_gen(), BnInOp2Blob("bias"));
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -84,15 +89,18 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
       dim_num, weight_blob->shape().Count(1));
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
-      "bias", dim_num, 1);
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    KernelUtil<device_type, T>::InitializeWithModelDir(
+        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
+        "bias", dim_num, 1);
+  }
 }
 
 template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (!this->op_conf().fully_connected_conf().use_bias()) { return; }
   InitializerConf bias_multiplier_initializer_conf;
   bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
   KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
