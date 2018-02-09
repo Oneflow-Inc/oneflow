@@ -63,7 +63,6 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   const Blob* out_blob = BnInOp2Blob("out");
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
   // reuse memory
   const Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
@@ -75,6 +74,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
           plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
           out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
     } else {
+      const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
       BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
           ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
           out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
@@ -87,6 +87,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
           plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
           out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
     } else {
+      const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
       BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
           ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
           out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
