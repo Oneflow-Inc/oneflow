@@ -44,7 +44,7 @@ void MultinomialLogisticLossKernel<device_type, PredType, LabelType>::
     ForwardColNum(const KernelCtx& ctx,
                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob(GenDiffBn("prediction"))
-      ->CopyDataIdFrom<device_type>(ctx.device_ctx, BnInOp2Blob("prediction"));
+      ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<typename PredType, typename LabelType>
