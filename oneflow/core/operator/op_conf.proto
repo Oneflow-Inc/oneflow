@@ -84,15 +84,31 @@ message BasicDataLoaderOpConf {
   required ShapeProto shape = 5;
 }
 
+message AveragePooling1DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
+}
+
+message MaxPooling1DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
+}
+
 message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3 ;
-  required int32 pool_size_h = 4;
-  required int32 pool_size_w = 5;
-  optional int32 strides_h = 6 [default = 1];
-  optional int32 strides_w = 7 [default = 1];
+  required string padding = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
 }
 
 message MaxPooling2DOpConf {
@@ -100,10 +116,26 @@ message MaxPooling2DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  required int32 pool_size_h = 4;
-  required int32 pool_size_w = 5;
-  optional int32 strides_h = 6 [default = 1];
-  optional int32 strides_w = 7 [default = 1];
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
+}
+
+message AveragePooling3DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
+}
+
+message MaxPooling3DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  repeated int32 pool_size = 4;
+  repeated int32 strides = 5;
 }
 
 message ReluOpConf {
@@ -292,8 +324,12 @@ message OperatorConf {
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
-    AveragePooling2DOpConf average_pooling_2d_conf = 200;
-    MaxPooling2DOpConf max_pooling_2d_conf = 201;
+    AveragePooling1DOpConf average_pooling_1d_conf = 200;
+    MaxPooling1DOpConf max_pooling_1d_conf = 201;
+    AveragePooling2DOpConf average_pooling_2d_conf = 202;
+    MaxPooling2DOpConf max_pooling_2d_conf = 203;
+    AveragePooling3DOpConf average_pooling_3d_conf = 204;
+    MaxPooling3DOpConf max_pooling_3d_conf = 205;
   }
 }
 

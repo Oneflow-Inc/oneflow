@@ -1,0 +1,87 @@
+#include "oneflow/core/operator/pooling_1d_op.h"
+
+namespace oneflow {
+
+void Pooling1DOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  // in
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  CHECK_EQ(in_blob_desc->shape().NumAxes(), 3);
+  CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
+  // out
+  int32_t in_length = in_blob_desc->shape().At(2);
+  int32_t pool_size_length = GetPoolSizeW();
+  int32_t strides_length = GetStridesW();
+  int32_t out_length;
+  GetWindowedOutputSize(in_length, pool_size_length, strides_length,
+                        GetStringFromSpecialConf("padding"), &out_length,
+                        nullptr);
+
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  out_blob_desc->mut_shape() = Shape(
+      {in_blob_desc->shape().At(0), in_blob_desc->shape().At(1), out_length});
+  out_blob_desc->set_data_type(in_blob_desc->data_type());
+  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
+
+  VirtualInferDataTmpBlobDesc(GetBlobDesc4BnInOp);
+}
+
+void Pooling1DOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  std::string padding_mthd = GetStringFromSpecialConf("padding");
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  int32_t in_length = in_blob_desc->shape().At(2);
+  int32_t pool_size_length = GetPoolSizeW();
+  int32_t strides_length = GetStridesW();
+  int32_t padding_length;
+  int32_t out_length;
+  GetWindowedOutputSize(in_length, pool_size_length, strides_length,
+                        GetStringFromSpecialConf("padding"), &out_length,
+                        &padding_length);
+
+  Pooling3DKernelConf* pooling_conf = GetMutPooling3DKernelConf(kernel_conf);
+  pooling_conf->set_pool_size_d(1);
+  pooling_conf->set_pool_size_h(1);
+  pooling_conf->set_pool_size_w(pool_size_length);
+
+  pooling_conf->set_strides_d(1);
+  pooling_conf->set_strides_h(1);
+  pooling_conf->set_strides_w(strides_length);
+
+  pooling_conf->set_padding_d(0);
+  pooling_conf->set_padding_h(0);
+  pooling_conf->set_padding_w(padding_length);
+
+  pooling_conf->mutable_in()->add_dim(in_blob_desc->shape().At(0));
+  pooling_conf->mutable_in()->add_dim(in_blob_desc->shape().At(1));
+  pooling_conf->mutable_in()->add_dim(1);
+  pooling_conf->mutable_in()->add_dim(1);
+  pooling_conf->mutable_in()->add_dim(in_blob_desc->shape().At(2));
+
+  pooling_conf->mutable_out()->add_dim(in_blob_desc->shape().At(0));
+  pooling_conf->mutable_out()->add_dim(in_blob_desc->shape().At(1));
+  pooling_conf->mutable_out()->add_dim(1);
+  pooling_conf->mutable_out()->add_dim(1);
+  pooling_conf->mutable_out()->add_dim(out_length);
+}
+
+void Pooling1DOp::VirtualCheckPoolSizeAndStrides() const {
+  const PbRf<int32_t>& pool_size = GetPbRfFromSpecialConf<int32_t>("pool_size");
+  CHECK_EQ(pool_size.size(), 1);
+  for (auto item : pool_size) { CHECK_GT(item, 0); }
+  const PbRf<int32_t>& strides = GetPbRfFromSpecialConf<int32_t>("strides");
+  CHECK_EQ(strides.size(), 1);
+  for (auto item : strides) { CHECK_GT(item, 0); }
+}
+
+int32_t Pooling1DOp::GetPoolSizeW() const {
+  return GetPbRfFromSpecialConf<int32_t>("pool_size").Get(0);
+}
+
+int32_t Pooling1DOp::GetStridesW() const {
+  return GetPbRfFromSpecialConf<int32_t>("strides").Get(0);
+}
+
+}  // namespace oneflow
