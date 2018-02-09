@@ -14,24 +14,21 @@ void Pooling3DOp::InferBlobDescs(
   int32_t in_d = in_blob_desc->shape().At(2);
   int32_t pool_size_d = GetPoolSizeD();
   int32_t strides_d = GetStridesD();
-  int32_t padding_d_unused, out_d;
+  int32_t out_d;
   GetWindowedOutputSize(in_d, pool_size_d, strides_d,
-                        GetStringFromSpecialConf("padding"), &out_d,
-                        &padding_d_unused);
+                        GetStringFromSpecialConf("padding"), &out_d, nullptr);
   int32_t in_h = in_blob_desc->shape().At(3);
   int32_t pool_size_h = GetPoolSizeH();
   int32_t strides_h = GetStridesH();
-  int32_t padding_h_unused, out_h;
+  int32_t out_h;
   GetWindowedOutputSize(in_h, pool_size_h, strides_h,
-                        GetStringFromSpecialConf("padding"), &out_h,
-                        &padding_h_unused);
+                        GetStringFromSpecialConf("padding"), &out_h, nullptr);
   int32_t in_w = in_blob_desc->shape().At(4);
   int32_t pool_size_w = GetPoolSizeW();
   int32_t strides_w = GetStridesW();
-  int32_t padding_w_unused, out_w;
+  int32_t out_w;
   GetWindowedOutputSize(in_w, pool_size_w, strides_w,
-                        GetStringFromSpecialConf("padding"), &out_w,
-                        &padding_w_unused);
+                        GetStringFromSpecialConf("padding"), &out_w, nullptr);
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() =
@@ -51,21 +48,24 @@ void Pooling3DOp::VirtualGenKernelConf(
   int32_t in_d = in_blob_desc->shape().At(2);
   int32_t pool_size_d = GetPoolSizeD();
   int32_t strides_d = GetStridesD();
-  int32_t padding_d, out_d;
+  int32_t padding_d;
+  int32_t out_d;
   GetWindowedOutputSize(in_d, pool_size_d, strides_d,
                         GetStringFromSpecialConf("padding"), &out_d,
                         &padding_d);
   int32_t in_h = in_blob_desc->shape().At(3);
   int32_t pool_size_h = GetPoolSizeH();
   int32_t strides_h = GetStridesH();
-  int32_t padding_h, out_h;
+  int32_t padding_h;
+  int32_t out_h;
   GetWindowedOutputSize(in_h, pool_size_h, strides_h,
                         GetStringFromSpecialConf("padding"), &out_h,
                         &padding_h);
   int32_t in_w = in_blob_desc->shape().At(4);
   int32_t pool_size_w = GetPoolSizeW();
   int32_t strides_w = GetStridesW();
-  int32_t padding_w, out_w;
+  int32_t padding_w;
+  int32_t out_w;
   GetWindowedOutputSize(in_w, pool_size_w, strides_w,
                         GetStringFromSpecialConf("padding"), &out_w,
                         &padding_w);

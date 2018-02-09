@@ -5,7 +5,6 @@ namespace oneflow {
 void Pooling1DOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  // NCL
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 3);
@@ -14,10 +13,10 @@ void Pooling1DOp::InferBlobDescs(
   int32_t in_length = in_blob_desc->shape().At(2);
   int32_t pool_size_length = GetPoolSizeLength();
   int32_t strides_length = GetStridesLength();
-  int32_t padding_length_unused, out_length;
+  int32_t out_length;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
                         GetStringFromSpecialConf("padding"), &out_length,
-                        &padding_length_unused);
+                        nullptr);
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(
@@ -36,7 +35,8 @@ void Pooling1DOp::VirtualGenKernelConf(
   int32_t in_length = in_blob_desc->shape().At(2);
   int32_t pool_size_length = GetPoolSizeLength();
   int32_t strides_length = GetStridesLength();
-  int32_t padding_length, out_length;
+  int32_t padding_length;
+  int32_t out_length;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
                         GetStringFromSpecialConf("padding"), &out_length,
                         &padding_length);
