@@ -11,8 +11,8 @@ void Pooling1DOp::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   // out
   int32_t in_length = in_blob_desc->shape().At(2);
-  int32_t pool_size_length = GetPoolSizeLength();
-  int32_t strides_length = GetStridesLength();
+  int32_t pool_size_length = GetPoolSizeW();
+  int32_t strides_length = GetStridesW();
   int32_t out_length;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
                         GetStringFromSpecialConf("padding"), &out_length,
@@ -33,8 +33,8 @@ void Pooling1DOp::VirtualGenKernelConf(
   std::string padding_mthd = GetStringFromSpecialConf("padding");
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int32_t in_length = in_blob_desc->shape().At(2);
-  int32_t pool_size_length = GetPoolSizeLength();
-  int32_t strides_length = GetStridesLength();
+  int32_t pool_size_length = GetPoolSizeW();
+  int32_t strides_length = GetStridesW();
   int32_t padding_length;
   int32_t out_length;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
@@ -76,11 +76,11 @@ void Pooling1DOp::VirtualCheckPoolSizeAndStrides() const {
   for (auto item : strides) { CHECK_GT(item, 0); }
 }
 
-int32_t Pooling1DOp::GetPoolSizeLength() const {
+int32_t Pooling1DOp::GetPoolSizeW() const {
   return GetPbRfFromSpecialConf<int32_t>("pool_size").Get(0);
 }
 
-int32_t Pooling1DOp::GetStridesLength() const {
+int32_t Pooling1DOp::GetStridesW() const {
   return GetPbRfFromSpecialConf<int32_t>("strides").Get(0);
 }
 

@@ -21,8 +21,8 @@ class Pooling1DOp : public PoolingOp {
       const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
   void VirtualCheckPoolSizeAndStrides() const override;
-  int32_t GetPoolSizeLength() const;
-  int32_t GetStridesLength() const;
+  int32_t GetPoolSizeW() const override;
+  int32_t GetStridesW() const override;
 };
 
 }  // namespace oneflow
