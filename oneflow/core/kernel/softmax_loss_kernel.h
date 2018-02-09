@@ -18,6 +18,8 @@ class SoftmaxLossKernel final : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)>) const override;
   void ForwardDataId(const KernelCtx&,
                      std::function<Blob*(const std::string&)>) const override;
+  void ForwardColNum(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename PredType, typename LabelType>
