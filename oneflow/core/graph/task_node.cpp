@@ -41,6 +41,12 @@ void TaskNode::Build() {
   FixRegisterNumRange();
 }
 
+void TaskNode::FixRegisterNumRange() {
+  for (auto& pair : produced_regsts_) {
+    pair.second->set_min_register_num(pair.second->MaxColNum());
+  }
+}
+
 void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(

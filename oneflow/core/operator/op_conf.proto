@@ -71,8 +71,9 @@ message FullyConnectedOpConf {
   required string in = 1;
   required string out = 2;
   required int32 units = 3;
-  optional InitializerConf weight_initializer = 4;
-  optional InitializerConf bias_initializer = 5;
+  required bool use_bias = 4 [default = true];
+  optional InitializerConf weight_initializer = 5;
+  optional InitializerConf bias_initializer = 6;
 }
 
 message BasicDataLoaderOpConf {
@@ -106,6 +107,16 @@ message MaxPooling2DOpConf {
 }
 
 message ReluOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message SigmoidOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
+message TanHOpConf {
   required string in = 1;
   required string out = 2;
 }
@@ -240,6 +251,9 @@ message BasicRnnOpConf {
   optional InitializerConf bias_initializer = 8;
   optional InitializerConf i2h_weight_initializer = 9;
   optional InitializerConf h2h_weight_initializer = 10;
+
+  optional bool is_init_hidden_trainable = 11 [default = true];
+  optional bool use_bias = 12 [default = true];
 }
 
 message BasicLstmOpConf {
@@ -276,6 +290,8 @@ message OperatorConf {
     ReduceSumOpConf reduce_sum_conf = 120;
     BasicRnnOpConf basic_rnn_conf = 121;
     ReshapeOpConf reshape_conf = 122;
+    SigmoidOpConf sigmoid_conf = 123;
+    TanHOpConf tanh_conf = 124;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }

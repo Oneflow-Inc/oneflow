@@ -69,9 +69,8 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
-  if (model_bns_.empty() && model_tmp_bns_.empty()) {
-    LOG_IF(WARNING, pr_desc->policy() == ParallelPolicy::kModelParallel)
-        << op_name() << " doesn't have any model, so fix it with DataParallel";
+  if (model_bns_.empty()) {
+    CHECK(model_tmp_bns_.empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (IsDataLoaderOp() == false && IsPrintOp() == false) {
@@ -130,10 +129,13 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+  const std::vector<std::string>* bns = &output_bns_;
+  if (IsLossOp()) { bns = &input_bns_; }
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
                            &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
   }
+
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =
       GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
