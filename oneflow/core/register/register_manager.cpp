@@ -2,6 +2,7 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/register/blob_implement.h"
 
 namespace oneflow {
 
