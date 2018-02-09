@@ -145,7 +145,7 @@ void Operator::GenKernelConf(
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
-}  // namespace oneflow
+}
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
   return GetStringFromSpecialConf(input_bn);
