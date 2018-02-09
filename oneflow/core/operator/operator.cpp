@@ -129,10 +129,18 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
-                           &BlobDesc::has_col_num_field)) {
-    kernel_conf->set_need_do_col_num(true);
+  if (IsLossOp()) {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, input_bns_,
+                             &BlobDesc::has_col_num_field)) {
+      kernel_conf->set_need_do_col_num(true);
+    }
+  } else {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+                             &BlobDesc::has_col_num_field)) {
+      kernel_conf->set_need_do_col_num(true);
+    }
   }
+
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =
       GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
