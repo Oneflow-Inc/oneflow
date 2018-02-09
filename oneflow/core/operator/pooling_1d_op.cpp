@@ -13,7 +13,7 @@ void Pooling1DOp::InferBlobDescs(
   int32_t in_length = in_blob_desc->shape().At(2);
   int32_t pool_size_length = GetPoolSizeW();
   int32_t strides_length = GetStridesW();
-  int32_t out_length;
+  int32_t out_length = 0;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
                         GetStringFromSpecialConf("padding"), &out_length,
                         nullptr);
@@ -35,8 +35,8 @@ void Pooling1DOp::VirtualGenKernelConf(
   int32_t in_length = in_blob_desc->shape().At(2);
   int32_t pool_size_length = GetPoolSizeW();
   int32_t strides_length = GetStridesW();
-  int32_t padding_length;
-  int32_t out_length;
+  int32_t padding_length = 0;
+  int32_t out_length = 0;
   GetWindowedOutputSize(in_length, pool_size_length, strides_length,
                         GetStringFromSpecialConf("padding"), &out_length,
                         &padding_length);
