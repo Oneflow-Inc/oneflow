@@ -6,6 +6,8 @@
 
 namespace oneflow {
 
+enum PoolingMode { kAveragePooling, kMaxPooling };
+
 #ifdef WITH_CUDA
 class CudnnPoolingNdDesc final {
  public:
@@ -33,20 +35,20 @@ class Pooling3DCtx {
   void BuildCudnnDescs(PoolingMode mode, DataType type);
 
 #ifdef WITH_CUDA
-  CudnnTensorNdDesc* in_desc_ptr() const { return in_desc_; }
-  CudnnTensorNdDesc* in_diff_desc_ptr() const { return in_diff_desc_; }
-  CudnnTensorNdDesc* out_desc_ptr() const { return out_desc_; }
-  CudnnTensorNdDesc* out_diff_desc_ptr() const { return out_diff_desc_; }
+  CudnnTensorDesc* in_desc_ptr() const { return in_desc_; }
+  CudnnTensorDesc* in_diff_desc_ptr() const { return in_diff_desc_; }
+  CudnnTensorDesc* out_desc_ptr() const { return out_desc_; }
+  CudnnTensorDesc* out_diff_desc_ptr() const { return out_diff_desc_; }
   CudnnPoolingNdDesc* pooling_desc_ptr() const { return pooling_desc_; }
 #endif  // WITH_CUDA
 
  private:
   Pooling3DKernelConf kernel_conf_;
 #ifdef WITH_CUDA
-  CudnnTensorNdDesc* in_desc_;
-  CudnnTensorNdDesc* in_diff_desc_;
-  CudnnTensorNdDesc* out_desc_;
-  CudnnTensorNdDesc* out_diff_desc_;
+  CudnnTensorDesc* in_desc_;
+  CudnnTensorDesc* in_diff_desc_;
+  CudnnTensorDesc* out_desc_;
+  CudnnTensorDesc* out_diff_desc_;
   CudnnPoolingNdDesc* pooling_desc_;
 #endif  // WITH_CUDA
 };

@@ -36,13 +36,9 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape)
   CHECK_EQ(shape.NumAxes(), 4);
 }
 
-CudnnTensorNdDesc::~CudnnTensorNdDesc() {
-  CudaCheck(cudnnDestroyTensorDescriptor(val_));
-}
-
-CudnnTensorNdDesc::CudnnTensorNdDesc(DataType data_type,
-                                     const std::vector<int>& dim,
-                                     const std::vector<int>& stride) {
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type,
+                                 const std::vector<int>& dim,
+                                 const std::vector<int>& stride) {
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
   CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type),
                                        dim.size(), dim.data(), stride.data()));
