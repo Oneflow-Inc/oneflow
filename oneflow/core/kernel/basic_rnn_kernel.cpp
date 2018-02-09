@@ -59,23 +59,40 @@ template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
   // reuse memory
+  const Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
   if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
-    BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
-        ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
-        out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
-        plus_op_out_diff_blob->mut_dptr<T>());
+    if (in_blob->col_id() == in_blob->max_col_id()) {
+      KernelUtil<device_type, T>::TanHBackward(
+          ctx.device_ctx, out_blob->shape().elem_cnt(),
+          plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
+          out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
+    } else {
+      const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
+      BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
+          ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
+          out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
+          plus_op_out_diff_blob->mut_dptr<T>());
+    }
   } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
-    BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
-        ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
-        out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
-        plus_op_out_diff_blob->mut_dptr<T>());
+    if (in_blob->col_id() == in_blob->max_col_id()) {
+      KernelUtil<device_type, T>::SigmoidBackward(
+          ctx.device_ctx, out_blob->shape().elem_cnt(),
+          plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
+          out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
+    } else {
+      const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
+      BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
+          ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
+          out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
+          plus_op_out_diff_blob->mut_dptr<T>());
+    }
   } else {
     UNEXPECTED_RUN();
   }
