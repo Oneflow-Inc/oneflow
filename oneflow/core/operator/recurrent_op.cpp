@@ -9,8 +9,10 @@ void RecurrentOp::InitFromOpConf() {
   if (!GetStringFromSpecialConf("init_hidden").empty()) {
     CHECK(!GetBoolFromSpecialConf("has_init_hidden_initializer"));
     EnrollInputBn("h0");
-  } else {
+  } else if (GetBoolFromSpecialConf("is_init_hidden_trainable")) {
     EnrollModelBn("h0");
+  } else {
+    EnrollModelTmpBn("h0");
   }
   EnrollOutputBn("out");
   EnrollOutputBn("rec_out");
@@ -47,11 +49,13 @@ void RecurrentOp::InferBlobDescs(
     hidden_size = splitter.At(parallel_ctx->parallel_id()).size();
   }
   // out
-  BlobDesc out_blob_desc = *in_blob_desc;
-  out_blob_desc.mut_shape() = Shape({data_num, hidden_size});
-  *GetBlobDesc4BnInOp("out") = out_blob_desc;
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() = Shape({data_num, hidden_size});
   // recurrent_out
-  *GetBlobDesc4BnInOp("rec_out") = out_blob_desc;
+  BlobDesc* rec_out_blob_desc = GetBlobDesc4BnInOp("rec_out");
+  *rec_out_blob_desc = *out_blob_desc;
+  rec_out_blob_desc->set_max_col_num(1);
 
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
