@@ -48,12 +48,14 @@ void Pooling3DCtx::BuildCudnnDescs(PoolingMode mode, DataType type) {
   std::vector<int> full_stride{1, 1, kernel_conf_.strides_d(),
                                kernel_conf_.strides_h(),
                                kernel_conf_.strides_w()};
-  std::vector<int> in_dim{kernel_conf_.in_shape(0), kernel_conf_.in_shape(1),
-                          kernel_conf_.in_shape(2), kernel_conf_.in_shape(3),
-                          kernel_conf_.in_shape(4)};
-  std::vector<int> out_dim{kernel_conf_.out_shape(0), kernel_conf_.out_shape(1),
-                           kernel_conf_.out_shape(2), kernel_conf_.out_shape(3),
-                           kernel_conf_.out_shape(4)};
+  const PbRf<int64_t>& in =
+      GetPbRfFromPbMessage<int64_t>(kernel_conf_.in(), "dim");
+  std::vector<int> in_dim{in.Get(0), in.Get(1), in.Get(2), in.Get(3),
+                          in.Get(4)};
+  const PbRf<int64_t>& out =
+      GetPbRfFromPbMessage<int64_t>(kernel_conf_.out(), "dim");
+  std::vector<int> out_dim{out.Get(0), out.Get(1), out.Get(2), out.Get(3),
+                           out.Get(4)};
 
   pooling_desc_ = new CudnnPoolingNdDesc(mode, window, padding, stride);
   in_desc_ = new CudnnTensorNdDesc(type, in_dim, full_stride);

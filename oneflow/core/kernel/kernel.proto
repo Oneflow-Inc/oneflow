@@ -1,6 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/common/shape.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
@@ -21,8 +22,8 @@ message SoftmaxLossKernelConf {
 }
 
 message Pooling3DKernelConf {
-  repeated int32 in_shape = 1;
-  repeated int32 out_shape = 2;
+  required ShapeProto in= 1;
+  required ShapeProto out= 2;
   optional int32 padding_d = 3 [default = 0];
   optional int32 padding_h = 4 [default = 0];
   optional int32 padding_w = 5 [default = 0];

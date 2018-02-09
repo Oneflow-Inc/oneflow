@@ -54,17 +54,17 @@ void Pooling1DOp::VirtualGenKernelConf(
   pooling_conf->set_padding_h(0);
   pooling_conf->set_padding_w(padding_length);
 
-  pooling_conf->add_in_shape(in_blob_desc->shape().At(0));
-  pooling_conf->add_in_shape(in_blob_desc->shape().At(1));
-  pooling_conf->add_in_shape(1);
-  pooling_conf->add_in_shape(1);
-  pooling_conf->add_in_shape(in_blob_desc->shape().At(2));
+  pooling_conf->mutable_in()->add_dim(in_blob_desc->shape().At(0));
+  pooling_conf->mutable_in()->add_dim(in_blob_desc->shape().At(1));
+  pooling_conf->mutable_in()->add_dim(1);
+  pooling_conf->mutable_in()->add_dim(1);
+  pooling_conf->mutable_in()->add_dim(in_blob_desc->shape().At(2));
 
-  pooling_conf->add_out_shape(in_blob_desc->shape().At(0));
-  pooling_conf->add_out_shape(in_blob_desc->shape().At(1));
-  pooling_conf->add_out_shape(1);
-  pooling_conf->add_out_shape(1);
-  pooling_conf->add_out_shape(out_length);
+  pooling_conf->mutable_out()->add_dim(in_blob_desc->shape().At(0));
+  pooling_conf->mutable_out()->add_dim(in_blob_desc->shape().At(1));
+  pooling_conf->mutable_out()->add_dim(1);
+  pooling_conf->mutable_out()->add_dim(1);
+  pooling_conf->mutable_out()->add_dim(out_length);
 }
 
 void Pooling1DOp::VirtualCheckPoolSizeAndStrides() const {
