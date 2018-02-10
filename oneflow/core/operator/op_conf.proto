@@ -47,6 +47,20 @@ message InitializerConf {
   }
 }
 
+message Conv3dOpConf {
+  required string in = 1;
+  required string out = 2;
+  required int32 filters = 3;
+  required string padding = 4;
+  required string data_format = 5;
+  required bool use_bias = 6;
+  repeated int32 kernel_size = 7;
+  repeated int32 strides = 8;
+  repeated int32 dilation_rate = 9;
+  optional InitializerConf weight_initializer = 10;
+  optional InitializerConf bias_initializer = 11;
+}
+
 message ConvolutionOpConf {
   required string in = 1;
   required string out = 2;
@@ -250,7 +264,8 @@ message OperatorConf {
   optional string model_load_dir = 2;
   optional bool use_cudnn_on_gpu = 3;
   oneof op_type {
-    ConvolutionOpConf convolution_conf = 100;
+    Conv3dOpConf conv_3d_conf = 100;
+    ConvolutionOpConf convolution_conf = 1000;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;

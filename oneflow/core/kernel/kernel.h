@@ -124,6 +124,14 @@ void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
                                               const KernelConf&);
 
+template<OperatorConf::OpTypeCase op_type_case>
+class CudnnKernelCreatorHelper final {
+ public:
+  static bool IsUseCudnn(const OperatorConf& op_conf) { return false; }
+
+  static Kernel* CreateKernel(const KernelConf& kernel_conf) { return nullptr; }
+};
+
 }  // namespace oneflow
 
 #define MAKE_KERNEL_CREATOR_ENTRY(kernel_class, device_type, data_type_pair)   \
@@ -135,15 +143,40 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
   namespace {                                                                 \
                                                                               \
   Kernel* CreateKernel(const KernelConf& kernel_conf) {                       \
+    if (CudnnKernelCreatorHelper<op_type_case>::IsUseCudnn(                   \
+            kernel_conf.op_conf())) {                                         \
+      return CudnnKernelCreatorHelper<op_type_case>::CreateKernel(            \
+          kernel_conf);                                                       \
+    }                                                                         \
     static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
                                          (kernel_class), DEVICE_TYPE_SEQ,     \
                                          data_type_seq)};                     \
-    return creators.at(                                                       \
-        GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();    \
+    return creators.at(GetHashKey(kernel_conf.data_type()))();                \
   }                                                                           \
                                                                               \
   COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
+  }
+
+#define MAKE_CUDNN_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
+  {OF_PP_PAIR_SECOND(data_type_pair),                                 \
+   []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
+
+#define ADD_DEFAULT_CUDNN_KERNEL_CREATOR(op_type_case, op_type_field,     \
+                                         kernel_class, data_type_seq)     \
+  template<>                                                              \
+  bool CudnnKernelCreatorHelper<op_type_case>::IsUseCudnn(                \
+      const OperatorConf& op_conf) {                                      \
+    CHECK(op_conf.has_##op_type_field());                                 \
+    return false;                                                         \
+  }                                                                       \
+  template<>                                                              \
+  Kernel* CudnnKernelCreatorHelper<op_type_case>::CreateKernel(           \
+      const KernelConf& kernel_conf) {                                    \
+    static const HashMap<int, std::function<Kernel*()>> creators = {      \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CUDNN_KERNEL_CREATOR_ENTRY, \
+                                         (kernel_class), data_type_seq)}; \
+    return creators.at(kernel_conf.data_type())();                        \
   }
 
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
