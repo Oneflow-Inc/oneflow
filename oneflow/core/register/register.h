@@ -35,6 +35,8 @@ class Regst final {
   Blob* packed_blob() { return packed_blob_.get(); }
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
+  bool HaveNextPieceColStatusOf(const Regst* rhs) const;
+  bool HaveSamePieceColStatusAs(const Regst* rhs) const;
 
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
