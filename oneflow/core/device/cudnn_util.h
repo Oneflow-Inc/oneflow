@@ -33,6 +33,36 @@ struct CudnnDataType;
   };
 OF_PP_FOR_EACH_TUPLE(DECLARE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
 
+class CudnnTensorDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnTensorDesc);
+  CudnnTensorDesc() = delete;
+  ~CudnnTensorDesc();
+
+  CudnnTensorDesc(DataType, int n, int c, int h, int w);
+  CudnnTensorDesc(DataType, const Shape&);
+
+  const cudnnTensorDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnTensorDescriptor_t val_;
+};
+
+class CudnnFilterDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnFilterDesc);
+  CudnnFilterDesc() = delete;
+  ~CudnnFilterDesc();
+
+  CudnnFilterDesc(DataType, int k, int c, int h, int w);
+  CudnnFilterDesc(DataType, const Shape&);
+
+  const cudnnFilterDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnFilterDescriptor_t val_;
+};
+
 class CudnnTensorNdDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnTensorNdDesc);
