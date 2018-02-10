@@ -6,6 +6,16 @@
 
 namespace oneflow {
 
+namespace {
+
+Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+              const void* comm_net_token) {
+  TODO();
+  return nullptr;
+}
+
+}  // namespace
+
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          std::function<void(Regst*)> OneRegstDone) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
@@ -29,7 +39,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }
-    regst->packed_blob_.reset(new Blob(
+    regst->packed_blob_.reset(GenBlob(
         regst, runtime_regst_desc->packed_blob_desc(),
         std::get<0>(allocation_result), std::get<1>(allocation_result)));
     regst->deleter_ = std::get<2>(allocation_result);
