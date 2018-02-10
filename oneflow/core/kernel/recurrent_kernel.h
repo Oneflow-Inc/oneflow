@@ -15,9 +15,17 @@ class RecurrentKernel : public KernelIf<device_type> {
   RecurrentKernel() = default;
 
   virtual const PbMessage& GetRecurrentOpConf() const = 0;
+  virtual bool HasInitHiddenInitializer() const = 0;
   bool NeedExternalH0() const;
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
+  Blob* GetHiddenDiffBlob(std::function<Blob*(const std::string&)>) const;
 
+  void ForwardColNum(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataId(const KernelCtx&,
+                     std::function<Blob*(const std::string&)>) const override;
+  void BackwardColNum(const KernelCtx&,
+                      std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(
       const KernelCtx& ctx, std::mt19937 random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;

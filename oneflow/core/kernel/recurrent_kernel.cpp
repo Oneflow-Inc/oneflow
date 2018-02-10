@@ -20,7 +20,42 @@ template<DeviceType device_type, typename T>
 Blob* RecurrentKernel<device_type, T>::GetHiddenBlob(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (BnInOp2Blob("in")->col_id() == 0) { return BnInOp2Blob("h0"); }
-  return BnInOp2Blob("rec_ht");
+  return BnInOp2Blob("rec_in");
+}
+
+template<DeviceType device_type, typename T>
+Blob* RecurrentKernel<device_type, T>::GetHiddenDiffBlob(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (BnInOp2Blob("in")->col_id() == 0) { return BnInOp2Blob("h0_diff"); }
+  return BnInOp2Blob("rec_in_diff");
+}
+
+template<DeviceType device_type, typename T>
+void RecurrentKernel<device_type, T>::ForwardDataId(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyDataIdFrom<device_type>(ctx.device_ctx,
+                                                  BnInOp2Blob("in"));
+}
+
+template<DeviceType device_type, typename T>
+void RecurrentKernel<device_type, T>::ForwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyColNumFrom<device_type>(ctx.device_ctx,
+                                                  BnInOp2Blob("in"));
+  BnInOp2Blob("rec_out")->CopyColNumFrom<device_type>(ctx.device_ctx,
+                                                      BnInOp2Blob("in"));
+}
+
+template<DeviceType device_type, typename T>
+void RecurrentKernel<device_type, T>::BackwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("in_diff")->CopyColNumFrom<device_type>(ctx.device_ctx,
+                                                      BnInOp2Blob("out_diff"));
+  BnInOp2Blob("rec_in_diff")
+      ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
 }
 
 template<DeviceType device_type, typename T>
@@ -28,11 +63,14 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (NeedExternalH0()) {
-    const InitializerConf& init_hidden_initializer =
-        static_cast<const InitializerConf&>(GetMessageFromPbMessage(
-            GetRecurrentOpConf(), "init_hidden_initializer"));
+    const InitializerConf* init_hidden_initializer = nullptr;
+    if (HasInitHiddenInitializer()) {
+      init_hidden_initializer =
+          static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
+              GetRecurrentOpConf(), "init_hidden_initializer"));
+    }
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx, &init_hidden_initializer, random_seed_gen(),
+        ctx.device_ctx, init_hidden_initializer, random_seed_gen(),
         BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);

@@ -8,10 +8,15 @@ const PbMessage& BasicRnnKernel<device_type, T>::GetRecurrentOpConf() const {
 }
 
 template<DeviceType device_type, typename T>
+bool BasicRnnKernel<device_type, T>::HasInitHiddenInitializer() const {
+  return this->op_conf().basic_rnn_conf().has_init_hidden_initializer();
+}
+
+template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* rec_ht_blob = this->GetHiddenBlob(BnInOp2Blob);
+  const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* out_blob = BnInOp2Blob("out");
 
@@ -21,10 +26,10 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
       static_cast<T>(0), BnInOp2Blob("in"), BnInOp2Blob("i2h_weight"),
       plus_op_out_blob);
 
-  // plus_op_out += rec_ht * h2h_weight
+  // plus_op_out += hidden * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(1),
-                                       rec_ht_blob, BnInOp2Blob("h2h_weight"),
+                                       hidden_blob, BnInOp2Blob("h2h_weight"),
                                        plus_op_out_blob);
 
   // plus_op_out += bias_multiplier * bias
@@ -45,17 +50,9 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
     UNEXPECTED_RUN();
   }
 
-  // rec_ht = out
-  BnInOp2Blob("rec_ht")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                          out_blob);
-}
-
-template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("rec_ht")->CopyDataIdFrom<device_type>(ctx.device_ctx,
-                                                     BnInOp2Blob("in"));
+  // rec_out = out
+  BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
+                                                           out_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -63,30 +60,30 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_blob = BnInOp2Blob("out");
-  const Blob* rec_ht_blob = this->GetHiddenBlob(BnInOp2Blob);
+  const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* rec_ht_diff_blob = BnInOp2Blob("rec_ht_diff");
+  const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
   // reuse memory
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
   if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
     BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
         ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
-        out_diff_blob->dptr<T>(), rec_ht_diff_blob->dptr<T>(),
+        out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
   } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
     BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
         ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
-        out_diff_blob->dptr<T>(), rec_ht_diff_blob->dptr<T>(),
+        out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
   } else {
     UNEXPECTED_RUN();
   }
 
-  // h2h_weight_diff = plus_op_out_diff * rec_ht
+  // h2h_weight_diff = plus_op_out_diff * hidden
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
-                                       plus_op_out_diff_blob, rec_ht_blob,
+                                       plus_op_out_diff_blob, hidden_blob,
                                        BnInOp2Blob("h2h_weight_diff"));
 
   // i2h_weight_diff = plus_op_out_diff * in
@@ -107,12 +104,13 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
       static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
       BnInOp2Blob("bias_diff"));
 
-  if (this->NeedExternalH0() && BnInOp2Blob("rec_ht_diff")->col_id() == 0) {
-    // h0_diff = plus_op_out_diff * h2h_weight
+  if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
+      || this->op_conf().basic_rnn_conf().is_init_hidden_trainable()) {
+    // hidden_diff = plus_op_out_diff * h2h_weight
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(0),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
-        BnInOp2Blob("h0_diff"));
+        this->GetHiddenDiffBlob(BnInOp2Blob));
   }
 }
 
@@ -170,18 +168,20 @@ void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
 template<typename T>
 class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* ht,
-                              const T* ht_diff, const T* rec_ht_diff,
+  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff) {
     FOR_RANGE(int64_t, i, 0, n) {
-      plus_out_diff[i] = (1 - ht[i] * ht[i]) * (ht_diff[i] + rec_ht_diff[i]);
+      plus_out_diff[i] =
+          (1 - out[i] * out[i]) * (out_diff[i] + rec_out_diff[i]);
     }
   }
-  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* ht,
-                                 const T* ht_diff, const T* rec_ht_diff,
+  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                                 const T* out_diff, const T* rec_out_diff,
                                  T* plus_out_diff) {
     FOR_RANGE(int64_t, i, 0, n) {
-      plus_out_diff[i] = ht[i] * (1 - ht[i]) * (ht_diff[i] + rec_ht_diff[i]);
+      plus_out_diff[i] =
+          out[i] * (1 - out[i]) * (out_diff[i] + rec_out_diff[i]);
     }
   }
 };
