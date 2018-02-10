@@ -11,18 +11,8 @@ class Pooling1DOp : public PoolingOp {
   Pooling1DOp() = default;
   virtual ~Pooling1DOp() = default;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
-
  protected:
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
-  void VirtualCheckPoolSizeAndStrides() const override;
-  int32_t GetPoolSizeW() const override;
-  int32_t GetStridesW() const override;
+  int32_t GetDim() const override { return 1; }
 };
 
 }  // namespace oneflow
