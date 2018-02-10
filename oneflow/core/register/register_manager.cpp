@@ -45,7 +45,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }
-    regst->packed_blob_.reset(GenBlob(
+    // new Blob(   ->   GenBlob(
+    regst->packed_blob_.reset(new Blob(
         regst, runtime_regst_desc->packed_blob_desc(),
         std::get<0>(allocation_result), std::get<1>(allocation_result)));
     regst->deleter_ = std::get<2>(allocation_result);
