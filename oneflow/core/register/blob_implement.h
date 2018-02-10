@@ -19,14 +19,15 @@ class BlobImpl : Blob {
     for (int32_t d = 0; d < NDIMS; ++d) {
       dsizes_[d] = blob_desc_ptr()->shape().At(d);
     }
-    tensor_ = Tensor<T, NDIMS>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
-    const_tensor_ = ConstTensor<T, NDIMS>(
+    tensor_ =
+        EigenTensor<T, NDIMS>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
+    const_tensor_ = EigenConstTensor<T, NDIMS>(
         reinterpret_cast<const T*>(memory_ptr()), dsizes_);
   }
   ~BlobImpl() = default;
 
   void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                 std::vector<int32_t> permutation) override {
+                 const std::vector<int32_t>& permutation) override {
     CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
     CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
              out_blob->blob_desc_ptr()->shape().elem_cnt());
@@ -48,8 +49,9 @@ class BlobImpl : Blob {
       UNEXPECTED_RUN();
     }
   }
-  Tensor<T, NDIMS> tensor_;
-  ConstTensor<T, NDIMS> const_tensor_;
+
+  EigenTensor<T, NDIMS> tensor_;
+  EigenConstTensor<T, NDIMS> const_tensor_;
   Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;
 };
 

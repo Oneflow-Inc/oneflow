@@ -17,7 +17,8 @@ class RegstMgr final {
   OF_SINGLETON(RegstMgr);
 
   void NewRegsts(const RegstDescProto& regst_desc_proto,
-                 std::function<void(Regst*)> OneRegstDone);
+                 std::function<void(Regst*)> OneRegstDone,
+                 DeviceType device_type);
 
  private:
   RegstMgr() = default;

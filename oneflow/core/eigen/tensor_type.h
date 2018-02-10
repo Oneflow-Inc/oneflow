@@ -6,12 +6,12 @@
 namespace oneflow {
 
 template<typename T, int NDIMS = 1, typename IndexType = Eigen::DenseIndex>
-using Tensor =
+using EigenTensor =
     Eigen::TensorMap<Eigen::Tensor<T, NDIMS, Eigen::RowMajor, IndexType>,
                      Eigen::Aligned>;
 
 template<typename T, int NDIMS = 1, typename IndexType = Eigen::DenseIndex>
-using ConstTensor =
+using EigenConstTensor =
     Eigen::TensorMap<Eigen::Tensor<const T, NDIMS, Eigen::RowMajor, IndexType>,
                      Eigen::Aligned>;
 

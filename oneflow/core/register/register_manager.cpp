@@ -9,7 +9,7 @@ namespace oneflow {
 namespace {
 
 Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              const void* comm_net_token) {
+              const void* comm_net_token, DeviceType device_type) {
   // like this:
   // if (devie_type == kCPU && blob_desc->shape().NumAxes() == 1 &&
   //       blob_desc->data_type() == kFloat ) {
@@ -23,7 +23,8 @@ Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
 }  // namespace
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
-                         std::function<void(Regst*)> OneRegstDone) {
+                         std::function<void(Regst*)> OneRegstDone,
+                         DeviceType device_type) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
   rt_regst_descs_.emplace_back(runtime_regst_desc);
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
@@ -45,10 +46,10 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }
-    // new Blob(   ->   GenBlob(
-    regst->packed_blob_.reset(new Blob(
-        regst, runtime_regst_desc->packed_blob_desc(),
-        std::get<0>(allocation_result), std::get<1>(allocation_result)));
+    regst->packed_blob_.reset(
+        GenBlob(regst, runtime_regst_desc->packed_blob_desc(),
+                std::get<0>(allocation_result), std::get<1>(allocation_result),
+                device_type));
     regst->deleter_ = std::get<2>(allocation_result);
     OneRegstDone(regst);
   }

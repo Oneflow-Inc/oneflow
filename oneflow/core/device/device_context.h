@@ -9,10 +9,7 @@ namespace oneflow {
 class DeviceCtx {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
-  virtual ~DeviceCtx() {
-    eigen_gpu_device_.reset();
-    eigen_cuda_stream_.reset();
-  }
+  virtual ~DeviceCtx();
 
   int64_t work_stream_id() const { return work_stream_id_; }
 
