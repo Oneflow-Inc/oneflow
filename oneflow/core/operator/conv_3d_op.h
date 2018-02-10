@@ -6,14 +6,14 @@
 
 namespace oneflow {
 
-class CudnnConvolutionDesc final {
+class CudnnConvNdDesc final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnConvolutionDesc);
-  CudnnConvolutionDesc() = delete;
-  ~CudnnConvolutionDesc();
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvNdDesc);
+  CudnnConvNdDesc() = delete;
+  ~CudnnConvNdDesc();
 
-  CudnnConvolutionDesc(std::function<const BlobDesc*(const std::string)>,
-                       const Conv3dOpConf&);
+  CudnnConvNdDesc(std::function<const BlobDesc*(const std::string)>,
+                  const Conv3dOpConf&);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 

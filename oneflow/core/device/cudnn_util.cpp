@@ -13,11 +13,11 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   UNEXPECTED_RUN();
 }  // namespace oneflow
 
-CudnnTensorDesc::~CudnnTensorDesc() {
+CudnnTensorNdDesc::~CudnnTensorNdDesc() {
   CudaCheck(cudnnDestroyTensorDescriptor(val_));
 }
 
-CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape) {
+CudnnTensorNdDesc::CudnnTensorNdDesc(DataType data_type, const Shape& shape) {
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
   std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
   CudaCheck(cudnnSetTensorNdDescriptor(
@@ -26,12 +26,13 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape) {
       stride_of_tensor.data()));
 }
 
-CudnnFilterDesc::~CudnnFilterDesc() {
+CudnnFilterNdDesc::~CudnnFilterNdDesc() {
   CudaCheck(cudnnDestroyFilterDescriptor(val_));
 }
 
-CudnnFilterDesc::CudnnFilterDesc(DataType data_type, std::string data_format,
-                                 const Shape& shape) {
+CudnnFilterNdDesc::CudnnFilterNdDesc(DataType data_type,
+                                     std::string data_format,
+                                     const Shape& shape) {
   std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
   cudnnTensorFormat_t cudnn_data_format;
   if (data_format == "NCHW" || data_format == "NCDHW") {

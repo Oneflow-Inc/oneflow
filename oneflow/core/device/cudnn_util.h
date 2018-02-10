@@ -33,13 +33,13 @@ struct CudnnDataType;
   };
 OF_PP_FOR_EACH_TUPLE(DECLARE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
 
-class CudnnTensorDesc final {
+class CudnnTensorNdDesc final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnTensorDesc);
-  CudnnTensorDesc() = delete;
-  ~CudnnTensorDesc();
+  OF_DISALLOW_COPY_AND_MOVE(CudnnTensorNdDesc);
+  CudnnTensorNdDesc() = delete;
+  ~CudnnTensorNdDesc();
 
-  CudnnTensorDesc(DataType, const Shape&);
+  CudnnTensorNdDesc(DataType, const Shape&);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 
@@ -47,13 +47,13 @@ class CudnnTensorDesc final {
   cudnnTensorDescriptor_t val_;
 };
 
-class CudnnFilterDesc final {
+class CudnnFilterNdDesc final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnFilterDesc);
-  CudnnFilterDesc() = delete;
-  ~CudnnFilterDesc();
+  OF_DISALLOW_COPY_AND_MOVE(CudnnFilterNdDesc);
+  CudnnFilterNdDesc() = delete;
+  ~CudnnFilterNdDesc();
 
-  CudnnFilterDesc(DataType, std::string, const Shape&);
+  CudnnFilterNdDesc(DataType, std::string, const Shape&);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 

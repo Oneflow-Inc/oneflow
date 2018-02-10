@@ -9,9 +9,9 @@ namespace oneflow {
 namespace {
 
 cudnnConvolutionFwdAlgo_t InferCudnnConvFwdAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
-    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
-    CudnnConvolutionDesc* conv_desc) {
+    const cudnnHandle_t& cudnn_handle, CudnnTensorNdDesc* in_desc,
+    CudnnTensorNdDesc* out_desc, CudnnFilterNdDesc* filter_desc,
+    CudnnConvNdDesc* conv_desc) {
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
 
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(
@@ -23,9 +23,9 @@ cudnnConvolutionFwdAlgo_t InferCudnnConvFwdAlgo(
 }
 
 cudnnConvolutionBwdFilterAlgo_t InferCudnnConvBwdFilterAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
-    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
-    CudnnConvolutionDesc* conv_desc) {
+    const cudnnHandle_t& cudnn_handle, CudnnTensorNdDesc* in_desc,
+    CudnnTensorNdDesc* out_desc, CudnnFilterNdDesc* filter_desc,
+    CudnnConvNdDesc* conv_desc) {
   cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
 
   CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
@@ -37,9 +37,9 @@ cudnnConvolutionBwdFilterAlgo_t InferCudnnConvBwdFilterAlgo(
 }
 
 cudnnConvolutionBwdDataAlgo_t InferCudnnConvBwdDataAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
-    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
-    CudnnConvolutionDesc* conv_desc) {
+    const cudnnHandle_t& cudnn_handle, CudnnTensorNdDesc* in_desc,
+    CudnnTensorNdDesc* out_desc, CudnnFilterNdDesc* filter_desc,
+    CudnnConvNdDesc* conv_desc) {
   cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
 
   CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
@@ -62,11 +62,11 @@ void SetCudnnConvAlgoForKernelConf(
 
   DataType data_type = in_blob_desc->data_type();
 
-  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape());
-  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterDesc filter_desc(data_type, conv_3d_op_conf.data_format(),
-                              weight_blob_desc->shape());
-  CudnnConvolutionDesc conv_desc(GetBlobDesc4BnInOp, conv_3d_op_conf);
+  CudnnTensorNdDesc in_desc(data_type, in_blob_desc->shape());
+  CudnnTensorNdDesc out_desc(data_type, out_blob_desc->shape());
+  CudnnFilterNdDesc filter_desc(data_type, conv_3d_op_conf.data_format(),
+                                weight_blob_desc->shape());
+  CudnnConvNdDesc conv_desc(GetBlobDesc4BnInOp, conv_3d_op_conf);
 
   conv_3d_kernel_conf->set_cudnn_fwd_algo(
       InferCudnnConvFwdAlgo(*cuda_handle.cudnn_handle(), &in_desc, &out_desc,
@@ -94,11 +94,11 @@ size_t InferCudnnWorkspaceSize(
 
   DataType data_type = in_blob_desc->data_type();
 
-  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape());
-  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterDesc filter_desc(data_type, conv_3d_op_conf.data_format(),
-                              weight_blob_desc->shape());
-  CudnnConvolutionDesc conv_desc(GetBlobDesc4BnInOp, conv_3d_op_conf);
+  CudnnTensorNdDesc in_desc(data_type, in_blob_desc->shape());
+  CudnnTensorNdDesc out_desc(data_type, out_blob_desc->shape());
+  CudnnFilterNdDesc filter_desc(data_type, conv_3d_op_conf.data_format(),
+                                weight_blob_desc->shape());
+  CudnnConvNdDesc conv_desc(GetBlobDesc4BnInOp, conv_3d_op_conf);
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
       InferCudnnConvFwdAlgo(*cuda_handle.cudnn_handle(), &in_desc, &out_desc,
@@ -128,11 +128,11 @@ size_t InferCudnnWorkspaceSize(
 
 }  // namespace
 
-CudnnConvolutionDesc::~CudnnConvolutionDesc() {
+CudnnConvNdDesc::~CudnnConvNdDesc() {
   CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
 }
 
-CudnnConvolutionDesc::CudnnConvolutionDesc(
+CudnnConvNdDesc::CudnnConvNdDesc(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const Conv3dOpConf& conv_3d_op_conf) {
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
