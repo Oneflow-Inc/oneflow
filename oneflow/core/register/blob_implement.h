@@ -3,13 +3,11 @@
 
 #include "oneflow/core/eigen/tensor_type.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/eigen/eigen_tensor_interface.h"
-#include "oneflow/core/eigen/eigen_tensor_implement.h"
 
 namespace oneflow {
 
 template<typename T, int32_t NDIMS, DeviceType device_type>
-class BlobImpl<T, NDIMS> : Blob {
+class BlobImpl : Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
@@ -21,9 +19,9 @@ class BlobImpl<T, NDIMS> : Blob {
     for (int32_t d = 0; d < NDIMS; ++d) {
       dsizes_[d] = blob_desc_ptr()->shape().At(d);
     }
-    tensor_ = Tensor<T, NDIMS>(reinterpret_cast<T*> mut_memory_ptr(), dsizes_);
-    const_tensor_ =
-        ConstTensor<T, NDIMS>(reinterpret_cast<const T*> mem_ptr(), dsizes_);
+    tensor_ = Tensor<T, NDIMS>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
+    const_tensor_ = ConstTensor<T, NDIMS>(
+        reinterpret_cast<const T*>(memory_ptr()), dsizes_);
   }
   ~BlobImpl() = default;
 
@@ -34,27 +32,26 @@ class BlobImpl<T, NDIMS> : Blob {
              out_blob->blob_desc_ptr()->shape().elem_cnt());
     Eigen::array<int32_t, NDIMS> p;
     for (int32_t i = 0; i < NDIMS; ++i) { p[i] = permutation[i]; }
-    auto out_blob_impl = reinterpret_cast<BlobImpl<T, NDIMS>*> out_blob;
-    *(GenEigenTensorIf<device_type>(ctx)) = const_tensor_.shuffle(p);
+    auto out_blob_impl =
+        reinterpret_cast<BlobImpl<T, NDIMS, device_type>*>(out_blob);
+    out_blob_impl->Assgin(&(const_tensor_.shuffle(p)));
   }
 
  private:
-  std::unique_ptr<EigenTensorIf> GenEigenTensorIf(DeviceCtx* ctx) {
+  template<typename TD>
+  void Assign(TD* rhs, DeviceCtx* ctx) {
     if (device_type == DeviceType::kCPU) {
-      return new EigenTensorImpl<Tensor<T, NDIMS>>(&tensor_);
+      tensor_ = *rhs;
     } else if (device_type == DeviceType::kGPU) {
-      return new EigenTensorImpl<
-          TensorDevice<Tensor<T, NDIMS>, Eigen::GpuDevice>>(
-          &(tensor_.device(ctx->eigen_gpu_device())));
+      tensor_.device(ctx->eigen_gpu_device()) = *rhs;
     } else {
       UNEXPECTED_RUN();
     }
   }
-
   Tensor<T, NDIMS> tensor_;
   ConstTensor<T, NDIMS> const_tensor_;
   Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;
-}
+};
 
 }  // namespace oneflow
 
