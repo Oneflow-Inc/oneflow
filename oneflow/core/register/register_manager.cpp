@@ -10,6 +10,12 @@ namespace {
 
 Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               const void* comm_net_token) {
+  // like this:
+  // if (devie_type == kCPU && blob_desc->shape().NumAxes() == 1 &&
+  //       blob_desc->data_type() == kFloat ) {
+  //   return new BlobImpl<kFloat, 1, kCPU>(
+  //       regst, blob_desc, mem_ptr, comm_net_token);
+  // }
   TODO();
   return nullptr;
 }
