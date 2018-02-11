@@ -52,8 +52,8 @@ cudnnConvolutionBwdDataAlgo_t InferCudnnConvBwdDataAlgo(
 
 void SetCudnnConvAlgoForKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const Conv3dOpConf& conv_3d_op_conf,
-    Conv3dKernelConf* conv_3d_kernel_conf) {
+    const Conv3DOpConf& conv_3d_op_conf,
+    Conv3DKernelConf* conv_3d_kernel_conf) {
   CudaStreamHandle cuda_handle;
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -81,7 +81,7 @@ void SetCudnnConvAlgoForKernelConf(
 
 size_t InferCudnnWorkspaceSize(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const Conv3dOpConf& conv_3d_op_conf) {
+    const Conv3DOpConf& conv_3d_op_conf) {
   size_t fwd_workspace_size = 0;
   size_t bwd_filter_workspace_size = 0;
   size_t bwd_data_workspace_size = 0;
@@ -134,7 +134,7 @@ CudnnConvNdDesc::~CudnnConvNdDesc() {
 
 CudnnConvNdDesc::CudnnConvNdDesc(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const Conv3dOpConf& conv_3d_op_conf) {
+    const Conv3DOpConf& conv_3d_op_conf) {
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t in[3];
@@ -147,7 +147,7 @@ CudnnConvNdDesc::CudnnConvNdDesc(
   for (size_t i = 0; i < 3; ++i) {
     in[i] = (conv_3d_op_conf.data_format() == "NCDHW")
                 ? (in_blob_desc->shape().At(2 + i))
-                : (in_blob_desc->shape().At(1 - i));
+                : (in_blob_desc->shape().At(1 + i));
     dilation_rate[i] = conv_3d_op_conf.dilation_rate(i);
     strides[i] = conv_3d_op_conf.strides(i);
     GetWindowedOutputSize(in[i], conv_3d_op_conf.kernel_size(i),
@@ -161,7 +161,7 @@ CudnnConvNdDesc::CudnnConvNdDesc(
       GetCudnnDataType(in_blob_desc->data_type())));
 }
 
-void Conv3dOp::InitFromOpConf() {
+void Conv3DOp::InitFromOpConf() {
   auto mutable_conv_3d_op_conf = mut_op_conf().mutable_conv_3d_conf();
   std::transform(mutable_conv_3d_op_conf->data_format().begin(),
                  mutable_conv_3d_op_conf->data_format().end(),
@@ -179,14 +179,14 @@ void Conv3dOp::InitFromOpConf() {
   if (UseCudnn()) { EnrollDataTmpBn("cudnn_workspace"); }
 }
 
-const PbMessage& Conv3dOp::GetSpecialConf() const {
+const PbMessage& Conv3DOp::GetSpecialConf() const {
   return op_conf().conv_3d_conf();
 }
 
-void Conv3dOp::InferBlobDescs(
+void Conv3DOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const Conv3dOpConf& conv_3d_op_conf = op_conf().conv_3d_conf();
+  const Conv3DOpConf& conv_3d_op_conf = op_conf().conv_3d_conf();
   std::string data_format = GetStringFromSpecialConf("data_format");
 
   // in
@@ -210,7 +210,7 @@ void Conv3dOp::InferBlobDescs(
   for (size_t i = 0; i < 3; ++i) {
     in[i] = (conv_3d_op_conf.data_format() == "NCDHW")
                 ? (in_blob_desc->shape().At(2 + i))
-                : (in_blob_desc->shape().At(1 - i));
+                : (in_blob_desc->shape().At(1 + i));
     GetWindowedOutputSize(
         in[i], conv_3d_op_conf.kernel_size(i), conv_3d_op_conf.dilation_rate(i),
         conv_3d_op_conf.strides(i), GetStringFromSpecialConf("padding"),
@@ -249,7 +249,7 @@ void Conv3dOp::InferBlobDescs(
   }
 }
 
-void Conv3dOp::VirtualGenKernelConf(
+void Conv3DOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   auto conv_3d_op_conf = op_conf().conv_3d_conf();
@@ -263,7 +263,7 @@ void Conv3dOp::VirtualGenKernelConf(
   for (size_t i = 0; i < 3; ++i) {
     in[i] = (conv_3d_op_conf.data_format() == "NCDHW")
                 ? (in_blob_desc->shape().At(2 + i))
-                : (in_blob_desc->shape().At(1 - i));
+                : (in_blob_desc->shape().At(1 + i));
     GetWindowedOutputSize(
         in[i], conv_3d_op_conf.kernel_size(i), conv_3d_op_conf.dilation_rate(i),
         conv_3d_op_conf.strides(i), GetStringFromSpecialConf("padding"),
@@ -281,6 +281,6 @@ void Conv3dOp::VirtualGenKernelConf(
   }
 }
 
-REGISTER_OP(OperatorConf::kConv3DConf, Conv3dOp);
+REGISTER_OP(OperatorConf::kConv3DConf, Conv3DOp);
 
 }  // namespace oneflow

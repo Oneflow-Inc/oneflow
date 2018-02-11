@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CONV3D_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CONV3D_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/device/cudnn_util.h"
@@ -13,7 +13,7 @@ class CudnnConvNdDesc final {
   ~CudnnConvNdDesc();
 
   CudnnConvNdDesc(std::function<const BlobDesc*(const std::string)>,
-                  const Conv3dOpConf&);
+                  const Conv3DOpConf&);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -21,11 +21,11 @@ class CudnnConvNdDesc final {
   cudnnConvolutionDescriptor_t val_;
 };
 
-class Conv3dOp final : public Operator {
+class Conv3DOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Conv3dOp);
-  Conv3dOp() = default;
-  ~Conv3dOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Conv3DOp);
+  Conv3DOp() = default;
+  ~Conv3DOp() = default;
 
   void InitFromOpConf() override;
 
@@ -50,4 +50,4 @@ class Conv3dOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CONV3D_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_

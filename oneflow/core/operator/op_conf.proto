@@ -47,7 +47,7 @@ message InitializerConf {
   }
 }
 
-message Conv3dOpConf {
+message Conv3DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
@@ -284,7 +284,7 @@ message OperatorConf {
   optional string model_load_dir = 2;
   optional bool use_cudnn_on_gpu = 3;
   oneof op_type {
-    Conv3dOpConf conv_3d_conf = 100;
+    Conv3DOpConf conv_3d_conf = 100;
     ConvolutionOpConf convolution_conf = 1000;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
