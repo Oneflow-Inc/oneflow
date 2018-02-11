@@ -96,6 +96,12 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
       ConsumeRegst("in", regst);
     } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
       ConsumeRegst("h0", regst);
+    } else if (lbns.find(op->Lbn4BnInOp("rec_in")) != lbns.end()) {
+      if (parallel_ctx()->policy() == kModelParallel) {
+        ConsumeRegst("rec_in", regst);
+      }
+    } else {
+      UNEXPECTED_RUN();
     }
   }
 }
