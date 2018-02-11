@@ -82,9 +82,9 @@ int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
 Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
                              const std::vector<int64_t>& out) const {
   if (GetDim() == 1) {
-    return Shape({in_n, in_c, out.at(0)});
+    return Shape({in_n, in_c, out.at(2)});
   } else if (GetDim() == 2) {
-    return Shape({in_n, in_c, out.at(0), out.at(1)});
+    return Shape({in_n, in_c, out.at(1), out.at(2)});
   } else if (GetDim() == 3) {
     return Shape({in_n, in_c, out.at(0), out.at(1), out.at(2)});
   } else {
