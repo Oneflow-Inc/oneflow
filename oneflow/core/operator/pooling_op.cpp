@@ -28,10 +28,8 @@ void PoolingOp::InferBlobDescs(
   // out
   std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
                              GetInDim(in_shape, 2)};
-  std::vector<int64_t> pool_size =
-      PbRf2StdVec<int64_t>(GetPbRfFromSpecialConf<int64_t>("pool_size"));
-  std::vector<int64_t> strides =
-      PbRf2StdVec<int64_t>(GetPbRfFromSpecialConf<int64_t>("strides"));
+  std::vector<int64_t> pool_size = GetTensorInOpConf("pool_size");
+  std::vector<int64_t> strides = GetTensorInOpConf("strides");
   std::vector<int64_t> out;
   Get3DOutputSize(in, pool_size, strides, GetStringFromSpecialConf("padding"),
                   &out, nullptr);
@@ -63,6 +61,15 @@ int64_t PoolingOp::GetTensorDimInOpConf(const std::string& field_name,
   }
 }
 
+std::vector<int64_t> PoolingOp::GetTensorInOpConf(
+    const std::string& field_name) const {
+  std::vector<int64_t> vec;
+  FOR_RANGE(uint8_t, dim, 0, 3) {
+    vec.push_back(GetTensorDimInOpConf(field_name, dim));
+  }
+  return vec;
+}
+
 int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
   int64_t index = 2 + static_cast<int64_t>(dim) - (3 - GetDim());
   if (index < 2) {
@@ -91,10 +98,8 @@ void PoolingOp::VirtualGenKernelConf(
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
                              GetInDim(in_shape, 2)};
-  std::vector<int64_t> pool_size =
-      PbRf2StdVec<int64_t>(GetPbRfFromSpecialConf<int64_t>("pool_size"));
-  std::vector<int64_t> strides =
-      PbRf2StdVec<int64_t>(GetPbRfFromSpecialConf<int64_t>("strides"));
+  std::vector<int64_t> pool_size = GetTensorInOpConf("pool_size");
+  std::vector<int64_t> strides = GetTensorInOpConf("strides");
   std::vector<int64_t> out;
   std::vector<int64_t> padding;
   Get3DOutputSize(in, pool_size, strides, GetStringFromSpecialConf("padding"),
@@ -104,8 +109,9 @@ void PoolingOp::VirtualGenKernelConf(
   Shape(pool_size).ToProto(pooling_conf->mutable_pool_size());
   Shape(strides).ToProto(pooling_conf->mutable_strides());
   Shape(padding).ToProto(pooling_conf->mutable_padding());
-  in_shape.ToProto(pooling_conf->mutable_in());
-  GetOutShape(in_shape.At(0), in_shape.At(1), out)
+  Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
+      .ToProto(pooling_conf->mutable_in());
+  Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
       .ToProto(pooling_conf->mutable_out());
 }
 
