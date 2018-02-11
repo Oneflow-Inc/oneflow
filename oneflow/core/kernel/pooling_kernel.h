@@ -44,6 +44,7 @@ class Pooling3DCtx {
 
  private:
   Pooling3DKernelConf kernel_conf_;
+  std::vector<int> GetShapeInStdVec(const std::string& field_name) const;
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_;
   CudnnTensorDesc* in_diff_desc_;

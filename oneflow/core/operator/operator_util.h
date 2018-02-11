@@ -5,20 +5,26 @@
 
 namespace oneflow {
 
-void GetWindowedOutputSize(int32_t input_size, int32_t filter_size,
-                           int32_t stride, const std::string& padding_type,
-                           int32_t* output_size, int32_t* padding_before,
-                           int32_t* padding_after);
+void GetWindowedOutputSize(int64_t input_size, int64_t filter_size,
+                           int64_t stride, const std::string& padding_type,
+                           int64_t* output_size, int64_t* padding_before,
+                           int64_t* padding_after);
 
-void GetWindowedOutputSize(int32_t input_size, int32_t filter_size,
-                           int32_t stride, const std::string& padding_type,
-                           int32_t* output_size, int32_t* padding_size);
+void GetWindowedOutputSize(int64_t input_size, int64_t filter_size,
+                           int64_t stride, const std::string& padding_type,
+                           int64_t* output_size, int64_t* padding_size);
 
-void GetWindowedOutputSize(int32_t input_size, int32_t filter_size,
-                           int32_t dilation_rate, int32_t stride,
+void GetWindowedOutputSize(int64_t input_size, int64_t filter_size,
+                           int64_t dilation_rate, int64_t stride,
                            const std::string& padding_type,
-                           int32_t* output_size, int32_t* padding_before,
-                           int32_t* padding_after);
+                           int64_t* output_size, int64_t* padding_before,
+                           int64_t* padding_after);
+
+void Get3DOutputSize(const std::vector<int64_t>& in,
+                     const std::vector<int64_t>& pool_size,
+                     const std::vector<int64_t>& strides,
+                     const std::string& padding_type, std::vector<int64_t>* out,
+                     std::vector<int64_t>* padding);
 
 }  // namespace oneflow
 

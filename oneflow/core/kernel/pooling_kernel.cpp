@@ -38,28 +38,12 @@ void Pooling3DCtx::InitFromKernelConf(const Pooling3DKernelConf& kernel_conf) {
 
 void Pooling3DCtx::BuildCudnnDescs(PoolingMode mode, DataType type) {
 #ifdef WITH_CUDA
-  std::vector<int> window{kernel_conf_.pool_size_d(),
-                          kernel_conf_.pool_size_h(),
-                          kernel_conf_.pool_size_w()};
-  std::vector<int> padding{kernel_conf_.padding_d(), kernel_conf_.padding_h(),
-                           kernel_conf_.padding_w()};
-  std::vector<int> stride{kernel_conf_.strides_d(), kernel_conf_.strides_h(),
-                          kernel_conf_.strides_w()};
-  std::vector<int> full_stride{1, 1, kernel_conf_.strides_d(),
-                               kernel_conf_.strides_h(),
-                               kernel_conf_.strides_w()};
-  const PbRf<int64_t>& in =
-      GetPbRfFromPbMessage<int64_t>(kernel_conf_.in(), "dim");
-  std::vector<int> in_dim{
-      static_cast<int>(in.Get(0)), static_cast<int>(in.Get(1)),
-      static_cast<int>(in.Get(2)), static_cast<int>(in.Get(3)),
-      static_cast<int>(in.Get(4))};
-  const PbRf<int64_t>& out =
-      GetPbRfFromPbMessage<int64_t>(kernel_conf_.out(), "dim");
-  std::vector<int> out_dim{
-      static_cast<int>(out.Get(0)), static_cast<int>(out.Get(1)),
-      static_cast<int>(out.Get(2)), static_cast<int>(out.Get(3)),
-      static_cast<int>(out.Get(4))};
+  std::vector<int> window = GetShapeInStdVec("pool_size");
+  std::vector<int> padding = GetShapeInStdVec("padding");
+  std::vector<int> stride = GetShapeInStdVec("strides");
+  std::vector<int> full_stride{1, 1, stride.at(0), stride.at(1), stride.at(2)};
+  std::vector<int> in_dim = GetShapeInStdVec("in");
+  std::vector<int> out_dim = GetShapeInStdVec("out");
 
   pooling_desc_ = new CudnnPoolingNdDesc(mode, window, padding, stride);
   in_desc_ = new CudnnTensorDesc(type, in_dim, full_stride);
@@ -67,6 +51,15 @@ void Pooling3DCtx::BuildCudnnDescs(PoolingMode mode, DataType type) {
   in_diff_desc_ = new CudnnTensorDesc(type, in_dim, full_stride);
   out_diff_desc_ = new CudnnTensorDesc(type, out_dim, full_stride);
 #endif  // WITH_CUDA
+}
+
+std::vector<int> Pooling3DCtx::GetShapeInStdVec(
+    const std::string& field_name) const {
+  PbRf<int64_t> shape = GetPbRfFromPbMessage<int64_t>(
+      GetMessageFromPbMessage(kernel_conf_, field_name), "dim");
+  std::vector<int> ret;
+  FOR_RANGE(size_t, i, 0, shape.size()) { ret.push_back(shape.Get(i)); }
+  return ret;
 }
 
 }  // namespace oneflow

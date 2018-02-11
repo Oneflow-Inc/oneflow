@@ -17,18 +17,28 @@ class PoolingOp : public Operator {
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
 
+  void InferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
+
  protected:
   virtual void VirtualEnrollDataTmpBn() = 0;
   virtual void VirtualInferDataTmpBlobDesc(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const = 0;
-  virtual void VirtualCheckPoolSizeAndStrides() const = 0;
   virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
-  virtual int32_t GetPoolSizeD() const { UNEXPECTED_RUN(); }
-  virtual int32_t GetPoolSizeH() const { UNEXPECTED_RUN(); }
-  virtual int32_t GetPoolSizeW() const { UNEXPECTED_RUN(); }
-  virtual int32_t GetStridesD() const { UNEXPECTED_RUN(); }
-  virtual int32_t GetStridesH() const { UNEXPECTED_RUN(); }
-  virtual int32_t GetStridesW() const { UNEXPECTED_RUN(); }
+  virtual int32_t GetDim() const = 0;
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx,
+      KernelConf* kernel_conf) const override;
+
+ private:
+  int64_t GetTensorDimInOpConf(const std::string& field_name,
+                               uint8_t dim) const;
+  int64_t GetInDim(const Shape& in_shape, uint8_t dim) const;
+  void CheckPoolSizeAndStrides() const;
+  Shape GetOutShape(int64_t in_n, int64_t in_c,
+                    const std::vector<int64_t>& out) const;
 };
 
 }  // namespace oneflow
