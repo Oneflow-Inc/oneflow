@@ -46,6 +46,7 @@ class Conv3DOp final : public Operator {
       KernelConf* kernel_conf) const override;
 
  private:
+  const int32_t kDimSize = 3;
 };
 
 }  // namespace oneflow

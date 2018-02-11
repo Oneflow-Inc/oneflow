@@ -81,7 +81,7 @@ class CudnnFilterNdDesc final {
   CudnnFilterNdDesc() = delete;
   ~CudnnFilterNdDesc();
 
-  CudnnFilterNdDesc(DataType, std::string, const Shape&);
+  CudnnFilterNdDesc(DataType, const std::string&, const Shape&);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 

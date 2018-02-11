@@ -135,16 +135,17 @@ CudnnConvNdDesc::~CudnnConvNdDesc() {
 CudnnConvNdDesc::CudnnConvNdDesc(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const Conv3DOpConf& conv_3d_op_conf) {
+  const int kDimSize = 3;
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  int64_t in[3];
-  int64_t out[3];
-  int32_t dilation_rate[3];
-  int32_t strides[3];
-  int32_t pad_small_side[3];
-  int32_t pad_large_side[3];
+  std::vector<int64_t> in(kDimSize, 0);
+  std::vector<int64_t> out(kDimSize, 0);
+  std::vector<int32_t> dilation_rate(kDimSize, 0);
+  std::vector<int32_t> strides(kDimSize, 0);
+  std::vector<int32_t> pad_small_side(kDimSize, 0);
+  std::vector<int32_t> pad_large_side(kDimSize, 0);
 
-  for (size_t i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < kDimSize; ++i) {
     in[i] = (conv_3d_op_conf.data_format() == "NCDHW")
                 ? (in_blob_desc->shape().At(2 + i))
                 : (in_blob_desc->shape().At(1 + i));
@@ -157,8 +158,8 @@ CudnnConvNdDesc::CudnnConvNdDesc(
   }
 
   CudaCheck(cudnnSetConvolutionNdDescriptor(
-      val_, 5, pad_large_side, strides, dilation_rate, CUDNN_CROSS_CORRELATION,
-      GetCudnnDataType(in_blob_desc->data_type())));
+      val_, 5, pad_large_side.data(), strides.data(), dilation_rate.data(),
+      CUDNN_CROSS_CORRELATION, GetCudnnDataType(in_blob_desc->data_type())));
 }
 
 void Conv3DOp::InitFromOpConf() {
@@ -187,7 +188,7 @@ void Conv3DOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const Conv3DOpConf& conv_3d_op_conf = op_conf().conv_3d_conf();
-  std::string data_format = GetStringFromSpecialConf("data_format");
+  const std::string& data_format = GetStringFromSpecialConf("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
@@ -202,12 +203,12 @@ void Conv3DOp::InferBlobDescs(
     filters = splitter.At(parallel_ctx->parallel_id()).size();
   }
 
-  int64_t in[3];
-  int64_t out[3];
-  int32_t pad_small_side[3];
-  int32_t pad_large_side[3];
+  std::vector<int64_t> in(kDimSize, 0);
+  std::vector<int64_t> out(kDimSize, 0);
+  std::vector<int32_t> pad_small_side(kDimSize, 0);
+  std::vector<int32_t> pad_large_side(kDimSize, 0);
 
-  for (size_t i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < kDimSize; ++i) {
     in[i] = (conv_3d_op_conf.data_format() == "NCDHW")
                 ? (in_blob_desc->shape().At(2 + i))
                 : (in_blob_desc->shape().At(1 + i));
@@ -255,12 +256,12 @@ void Conv3DOp::VirtualGenKernelConf(
   auto conv_3d_op_conf = op_conf().conv_3d_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
 
-  int64_t in[3];
-  int64_t out[3];
-  int32_t pad_small_side[3];
-  int32_t pad_large_side[3];
+  std::vector<int64_t> in(kDimSize, 0);
+  std::vector<int64_t> out(kDimSize, 0);
+  std::vector<int32_t> pad_small_side(kDimSize, 0);
+  std::vector<int32_t> pad_large_side(kDimSize, 0);
 
-  for (size_t i = 0; i < 3; ++i) {
+  for (size_t i = 0; i < kDimSize; ++i) {
     in[i] = (conv_3d_op_conf.data_format() == "NCDHW")
                 ? (in_blob_desc->shape().At(2 + i))
                 : (in_blob_desc->shape().At(1 + i));

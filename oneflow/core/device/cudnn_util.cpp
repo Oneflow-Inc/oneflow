@@ -68,9 +68,8 @@ CudnnFilterNdDesc::~CudnnFilterNdDesc() {
 }
 
 CudnnFilterNdDesc::CudnnFilterNdDesc(DataType data_type,
-                                     std::string data_format,
+                                     const std::string& data_format,
                                      const Shape& shape) {
-  std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
   cudnnTensorFormat_t cudnn_data_format;
   if (data_format == "NCHW" || data_format == "NCDHW") {
     cudnn_data_format = CUDNN_TENSOR_NCHW;
