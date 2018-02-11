@@ -89,8 +89,8 @@ message AveragePooling1DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
+  repeated int64 pool_size = 4;
+  repeated int64 strides = 5;
 }
 
 message MaxPooling1DOpConf {
@@ -98,8 +98,8 @@ message MaxPooling1DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
+  repeated int64 pool_size = 4;
+  repeated int64 strides = 5;
 }
 
 message AveragePooling2DOpConf {
@@ -107,8 +107,8 @@ message AveragePooling2DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
+  repeated int64 pool_size = 4;
+  repeated int64 strides = 5;
 }
 
 message MaxPooling2DOpConf {
@@ -116,8 +116,8 @@ message MaxPooling2DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
+  repeated int64 pool_size = 4;
+  repeated int64 strides = 5;
 }
 
 message AveragePooling3DOpConf {
@@ -125,8 +125,8 @@ message AveragePooling3DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
+  repeated int64 pool_size = 4;
+  repeated int64 strides = 5;
 }
 
 message MaxPooling3DOpConf {
@@ -134,8 +134,8 @@ message MaxPooling3DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int32 pool_size = 4;
-  repeated int32 strides = 5;
+  repeated int64 pool_size = 4;
+  repeated int64 strides = 5;
 }
 
 message ReluOpConf {

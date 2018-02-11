@@ -24,15 +24,9 @@ message SoftmaxLossKernelConf {
 message Pooling3DKernelConf {
   required ShapeProto in= 1;
   required ShapeProto out= 2;
-  optional int32 padding_d = 3 [default = 0];
-  optional int32 padding_h = 4 [default = 0];
-  optional int32 padding_w = 5 [default = 0];
-  required int32 pool_size_d = 6;
-  required int32 pool_size_h = 7;
-  required int32 pool_size_w = 8;
-  required int32 strides_d = 9;
-  required int32 strides_h = 10;
-  required int32 strides_w = 11;
+  required ShapeProto padding = 3;
+  required ShapeProto pool_size = 4;
+  required ShapeProto strides = 5;
 }
 
 message AveragePooling3DKernelConf {
