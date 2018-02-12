@@ -7,7 +7,7 @@
 namespace oneflow {
 
 template<typename T, int32_t NDIMS, DeviceType device_type>
-class BlobImpl : Blob {
+class BlobImpl : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
@@ -19,9 +19,9 @@ class BlobImpl : Blob {
     for (int32_t d = 0; d < NDIMS; ++d) {
       dsizes_[d] = blob_desc_ptr()->shape().At(d);
     }
-    tensor_ =
-        EigenTensor<T, NDIMS>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
-    const_tensor_ = EigenConstTensor<T, NDIMS>(
+    tensor_ = of_make_unique<EigenTensor<T, NDIMS>>(
+        reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
+    const_tensor_ = of_make_unique<EigenConstTensor<T, NDIMS>>(
         reinterpret_cast<const T*>(memory_ptr()), dsizes_);
   }
   ~BlobImpl() = default;
@@ -36,18 +36,19 @@ class BlobImpl : Blob {
     auto out_blob_impl =
         reinterpret_cast<BlobImpl<T, NDIMS, device_type>*>(out_blob);
     if (device_type == DeviceType::kCPU) {
-      tensor_ = out_blob_impl->const_tensor_.shuffle(p);
+      *tensor_ = out_blob_impl->const_tensor_->shuffle(p);
     } else if (device_type == DeviceType::kGPU) {
-      tensor_.device(ctx->eigen_gpu_device()) =
-          out_blob_impl->const_tensor_.shuffle(p);
+      // TODO();
+      tensor_->device(ctx->eigen_gpu_device()) =
+          out_blob_impl->const_tensor_->shuffle(p);
     } else {
       UNEXPECTED_RUN();
     }
   }
 
  private:
-  EigenTensor<T, NDIMS> tensor_;
-  EigenConstTensor<T, NDIMS> const_tensor_;
+  std::unique_ptr<EigenTensor<T, NDIMS>> tensor_;
+  std::unique_ptr<EigenConstTensor<T, NDIMS>> const_tensor_;
   Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;
 };
 

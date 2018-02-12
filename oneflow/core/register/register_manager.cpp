@@ -69,4 +69,10 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   }
 }
 
+#define INSTANTIATE_BLOB_IMPL(data_type_pair, ndims, device_type) \
+  template class BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims, device_type>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BLOB_IMPL, ALL_DATA_TYPE_SEQ,
+                                 DIMS_SEQ, DEVICE_TYPE_SEQ)
+
 }  // namespace oneflow
