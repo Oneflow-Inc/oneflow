@@ -35,21 +35,17 @@ class BlobImpl : Blob {
     for (int32_t i = 0; i < NDIMS; ++i) { p[i] = permutation[i]; }
     auto out_blob_impl =
         reinterpret_cast<BlobImpl<T, NDIMS, device_type>*>(out_blob);
-    out_blob_impl->Assgin(&(const_tensor_.shuffle(p)));
-  }
-
- private:
-  template<typename TD>
-  void Assign(TD* rhs, DeviceCtx* ctx) {
     if (device_type == DeviceType::kCPU) {
-      tensor_ = *rhs;
+      tensor_ = out_blob_impl->const_tensor_.shuffle(p);
     } else if (device_type == DeviceType::kGPU) {
-      tensor_.device(ctx->eigen_gpu_device()) = *rhs;
+      tensor_.device(ctx->eigen_gpu_device()) =
+          out_blob_impl->const_tensor_.shuffle(p);
     } else {
       UNEXPECTED_RUN();
     }
   }
 
+ private:
   EigenTensor<T, NDIMS> tensor_;
   EigenConstTensor<T, NDIMS> const_tensor_;
   Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;

@@ -3,10 +3,21 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/register/blob_implement.h"
+#include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
 namespace {
+
+#define DIMS_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
+
+#define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                   \
+  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type), [=]() { \
+     return new BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims,             \
+                         device_type>(regst, blob_desc, mem_ptr,              \
+                                      comm_net_token);                        \
+   }},
 
 Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               const void* comm_net_token, DeviceType device_type) {
@@ -16,8 +27,11 @@ Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
   //   return new BlobImpl<kFloat, 1, kCPU>(
   //       regst, blob_desc, mem_ptr, comm_net_token);
   // }
-  TODO();
-  return nullptr;
+  static const HashMap<std::string, std::function<Blob*()>> creators = {
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ,
+                                       DIMS_SEQ, DEVICE_TYPE_SEQ)};
+  return creators.at(GetHashKey(blob_desc->data_type(),
+                                blob_desc->shape().NumAxes(), device_type))();
 }
 
 }  // namespace
