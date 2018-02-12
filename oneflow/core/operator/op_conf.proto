@@ -53,10 +53,10 @@ message Conv3DOpConf {
   required int32 filters = 3;
   required string padding = 4;
   required string data_format = 5;
-  required bool use_bias = 6;
-  repeated int32 kernel_size = 7;
-  repeated int32 strides = 8;
-  repeated int32 dilation_rate = 9;
+  repeated int32 kernel_size = 6;
+  repeated int32 strides = 7;
+  repeated int32 dilation_rate = 8;
+  optional bool use_bias = 9 [default = true];
   optional InitializerConf weight_initializer = 10;
   optional InitializerConf bias_initializer = 11;
 }
