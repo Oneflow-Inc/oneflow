@@ -23,19 +23,6 @@ class AveragePooling3DKernel final : public Pooling3DKernel<device_type, T> {
   PoolingMode GetPoolingMode() override { return PoolingMode::kAveragePooling; }
 };
 
-template<DeviceType device_type, typename T>
-class AveragePooling3DKernelUtil {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePooling3DKernelUtil);
-  AveragePooling3DKernelUtil() = delete;
-
-  static void Forward(const KernelCtx&, const Blob*, Blob*,
-                      const Pooling3DCtx&);
-
-  static void Backward(const KernelCtx&, const Blob*, Blob*,
-                       const Pooling3DCtx&);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_AVERAGE_POOLING_3D_KERNEL_H_

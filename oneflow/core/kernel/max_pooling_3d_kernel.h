@@ -23,19 +23,6 @@ class MaxPooling3DKernel final : public Pooling3DKernel<device_type, T> {
   PoolingMode GetPoolingMode() override { return PoolingMode::kMaxPooling; }
 };
 
-template<DeviceType device_type, typename T>
-class MaxPooling3DKernelUtil {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(MaxPooling3DKernelUtil);
-  MaxPooling3DKernelUtil() = delete;
-
-  static void Forward(const KernelCtx&, const Blob*, Blob*,
-                      const Pooling3DCtx&);
-
-  static void Backward(const KernelCtx&, const Blob*, const Blob*, const Blob*,
-                       Blob*, const Pooling3DCtx&);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_MAX_POOLING_3D_KERNEL_H_

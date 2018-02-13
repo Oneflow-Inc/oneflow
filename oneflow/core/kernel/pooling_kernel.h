@@ -69,6 +69,19 @@ class PoolingKernel : public KernelIf<device_type> {
   Pooling3DCtx pooling_3d_ctx_;
 };
 
+template<DeviceType device_type, typename T>
+class Pooling3DKernelUtil {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Pooling3DKernelUtil);
+  Pooling3DKernelUtil() = delete;
+
+  static void Forward(const KernelCtx&, const Blob*, Blob*,
+                      const Pooling3DCtx&);
+
+  static void Backward(const KernelCtx&, const Blob*, const Blob*, const Blob*,
+                       Blob*, const Pooling3DCtx&);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_POOLING_KERNEL_H_
