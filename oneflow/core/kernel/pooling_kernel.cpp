@@ -138,6 +138,80 @@ void ForwardOnCPUWithOrderNCDHW(const Pooling3DCtx& ctx, const Blob* in_blob,
 }
 
 template<typename T>
+class AveragePoolBackward {
+ public:
+  static void ProcessGrad(const T&, const T&, const T& dy, const T& scale,
+                          T& dx) {
+    dx += (scale * dy);
+  }
+};
+
+template<typename T>
+class MaxPoolBackward {
+ public:
+  static void ProcessGrad(const T& x, const T& y, const T& dy, const T&,
+                          T& dx) {
+    if (x == y) { dx += dy; }
+  }
+};
+
+template<typename T, typename PoolType>
+void BackwardOnCPUWithOrderNCDHW(const Pooling3DCtx& ctx,
+                                 const Blob* out_diff_blob,
+                                 const Blob* out_blob, const Blob* in_blob,
+                                 Blob* in_diff_blob) {
+  Shape in(ctx.kernel_conf().in());
+  Shape out(ctx.kernel_conf().out());
+  Shape pool_size(ctx.kernel_conf().pool_size());
+  Shape strides(ctx.kernel_conf().strides());
+  Shape padding_before(ctx.kernel_conf().padding_before());
+  Shape padding_after(ctx.kernel_conf().padding_after());
+
+  const T* output_diff = out_diff_blob->dptr<T>();
+  const T* output = out_blob->dptr<T>();
+  const T* input = in_blob->dptr<T>();
+  T* input_diff = in_diff_blob->mut_dptr<T>();
+  FOR_RANGE(int64_t, n, 0, in.At(0)) {
+    FOR_RANGE(int64_t, c, 0, in.At(1)) {
+      FOR_RANGE(int64_t, pd, 0, out.At(2)) {
+        int64_t dstart = pd * strides.At(0) - padding_before.At(0);
+        int64_t dend = std::min(dstart + pool_size.At(0), in.At(2));
+        dstart = std::max(dstart, static_cast<int64_t>(0));
+        FOR_RANGE(int64_t, ph, 0, out.At(3)) {
+          int64_t hstart = ph * strides.At(1) - padding_before.At(1);
+          int64_t hend = std::min(hstart + pool_size.At(1), in.At(3));
+          hstart = std::max(hstart, static_cast<int64_t>(0));
+          FOR_RANGE(int64_t, pw, 0, out.At(4)) {
+            int64_t wstart = pw * strides.At(2) - padding_before.At(2);
+            int64_t wend = std::min(wstart + pool_size.At(2), in.At(4));
+            wstart = std::max(wstart, static_cast<int64_t>(0));
+
+            float scale =
+                1. / (hend - hstart) / (wend - wstart) / (dend - dstart);
+            const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
+            FOR_RANGE(int64_t, d, dstart, dend) {
+              FOR_RANGE(int64_t, h, hstart, hend) {
+                FOR_RANGE(int64_t, w, wstart, wend) {
+                  const int64_t index = d * in.Count(3) + h * in.At(4) + w;
+                  PoolType::ProcessGrad(input[index], output[pool_index],
+                                        output_diff[pool_index], scale,
+                                        input_diff[index]);
+                }
+              }
+            }
+          }
+        }
+      }
+      // offset
+      input += in.Count(2);
+      input_diff += in.Count(2);
+      output += out.Count(2);
+      output_diff += out.Count(2);
+    }
+  }
+}
+
+template<typename T>
 class Pooling3DKernelUtil<DeviceType::kCPU, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Pooling3DKernelUtil);
@@ -159,7 +233,15 @@ class Pooling3DKernelUtil<DeviceType::kCPU, T> final {
   static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
                        const Blob* out_blob, const Blob* in_blob,
                        Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
-    TODO();
+    if (pooling_ctx.pooling_mode() == PoolingMode::kAveragePooling) {
+      BackwardOnCPUWithOrderNCDHW<T, AveragePoolBackward<T>>(
+          pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+    } else if (pooling_ctx.pooling_mode() == PoolingMode::kMaxPooling) {
+      BackwardOnCPUWithOrderNCDHW<T, MaxPoolBackward<T>>(
+          pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+    } else {
+      UNEXPECTED_RUN();
+    }
   }
 };
 
