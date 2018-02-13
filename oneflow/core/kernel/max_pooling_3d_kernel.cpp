@@ -8,9 +8,8 @@ void MaxPooling3DKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* idx_blob = BnInOp2Blob("idx");
-  MaxPooling3DKernelUtil<device_type, T>::Forward(
-      ctx, in_blob, out_blob, idx_blob, this->pooling_3d_ctx());
+  MaxPooling3DKernelUtil<device_type, T>::Forward(ctx, in_blob, out_blob,
+                                                  this->pooling_3d_ctx());
 }
 
 template<DeviceType device_type, typename T>
@@ -22,12 +21,11 @@ void MaxPooling3DKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* idx_blob = BnInOp2Blob("idx");
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
-  MaxPooling3DKernelUtil<device_type, T>::Backward(
-      ctx, out_diff_blob, idx_blob, in_diff_blob, out_blob, in_blob,
-      this->pooling_3d_ctx());
+  MaxPooling3DKernelUtil<device_type, T>::Backward(ctx, out_diff_blob, out_blob,
+                                                   in_blob, in_diff_blob,
+                                                   this->pooling_3d_ctx());
 }
 
 template<DeviceType device_type, typename T>
@@ -43,16 +41,14 @@ class MaxPooling3DKernelUtil<DeviceType::kCPU, T> final {
   MaxPooling3DKernelUtil() = delete;
 
   static void Forward(const KernelCtx& kernel_ctx, const Blob* in_blob,
-                      Blob* out_blob, Blob* idx_blob,
-                      const Pooling3DCtx& pooling_ctx) {
+                      Blob* out_blob, const Pooling3DCtx& pooling_ctx) {
     // eigen
     TODO();
   }
 
   static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
-                       const Blob* idx_blob, Blob* in_diff_blob,
                        const Blob* out_blob, const Blob* in_blob,
-                       const Pooling3DCtx& pooling_ctx) {
+                       Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
     TODO();
   }
 };

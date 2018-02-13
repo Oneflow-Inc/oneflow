@@ -13,7 +13,6 @@ void PoolingOp::InitFromOpConf() {
   CheckPoolSizeAndStrides();
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  VirtualEnrollDataTmpBn();
 }
 
 void PoolingOp::InferBlobDescs(
@@ -38,8 +37,6 @@ void PoolingOp::InferBlobDescs(
   out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_shape.At(1), out);
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
-
-  VirtualInferDataTmpBlobDesc(GetBlobDesc4BnInOp);
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {

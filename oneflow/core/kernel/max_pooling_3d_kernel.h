@@ -29,11 +29,11 @@ class MaxPooling3DKernelUtil {
   OF_DISALLOW_COPY_AND_MOVE(MaxPooling3DKernelUtil);
   MaxPooling3DKernelUtil() = delete;
 
-  static void Forward(const KernelCtx&, const Blob*, Blob*, Blob*,
+  static void Forward(const KernelCtx&, const Blob*, Blob*,
                       const Pooling3DCtx&);
 
-  static void Backward(const KernelCtx&, const Blob*, const Blob*, Blob*,
-                       const Blob*, const Blob*, const Pooling3DCtx&);
+  static void Backward(const KernelCtx&, const Blob*, const Blob*, const Blob*,
+                       Blob*, const Pooling3DCtx&);
 };
 
 }  // namespace oneflow

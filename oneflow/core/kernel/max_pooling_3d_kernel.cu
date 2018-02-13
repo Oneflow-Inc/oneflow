@@ -10,8 +10,7 @@ class MaxPooling3DKernelUtil<DeviceType::kGPU, T> final {
   MaxPooling3DKernelUtil() = delete;
 
   static void Forward(const KernelCtx& kernel_ctx, const Blob* in_blob,
-                      Blob* out_blob, Blob* idx_blob,
-                      const Pooling3DCtx& pooling_ctx) {
+                      Blob* out_blob, const Pooling3DCtx& pooling_ctx) {
     double alpha = 1.0;
     double beta = 0.0;
     CHECK_EQ(cudnnPoolingForward(
@@ -23,9 +22,8 @@ class MaxPooling3DKernelUtil<DeviceType::kGPU, T> final {
   }
 
   static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
-                       const Blob* idx_blob, Blob* in_diff_blob,
                        const Blob* out_blob, const Blob* in_blob,
-                       const Pooling3DCtx& pooling_ctx) {
+                       Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
     double alpha = 1.0;
     double beta = 0.0;
     CHECK_EQ(
