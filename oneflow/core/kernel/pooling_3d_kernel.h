@@ -17,9 +17,8 @@ class Pooling3DKernel : public PoolingKernel<device_type> {
     Pooling3DCtx* pooling_3d_ctx = this->mut_pooling_3d_ctx();
     const Pooling3DKernelConf& kernel_conf = GetPooling3DKernelConf();
 
-    pooling_3d_ctx->InitFromKernelConf(kernel_conf);
-    pooling_3d_ctx->BuildCudnnDescs(this->GetPoolingMode(),
-                                    GetDataType<T>::val);
+    pooling_3d_ctx->Init(kernel_conf, this->GetPoolingMode());
+    pooling_3d_ctx->BuildCudnnDescs(GetDataType<T>::val);
   }
   virtual const Pooling3DKernelConf& GetPooling3DKernelConf() const = 0;
 };

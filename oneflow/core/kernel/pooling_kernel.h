@@ -31,8 +31,10 @@ class Pooling3DCtx {
   Pooling3DCtx() = default;
   ~Pooling3DCtx();
 
-  void InitFromKernelConf(const Pooling3DKernelConf& kernel_conf);
-  void BuildCudnnDescs(PoolingMode mode, DataType type);
+  void Init(const Pooling3DKernelConf& kernel_conf, PoolingMode mode);
+  void BuildCudnnDescs(DataType type);
+  PoolingMode pooling_mode() const { return pooling_mode_; }
+  const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
 
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_ptr() const { return in_desc_; }
@@ -44,6 +46,7 @@ class Pooling3DCtx {
 
  private:
   Pooling3DKernelConf kernel_conf_;
+  PoolingMode pooling_mode_;
   std::vector<int> GetShapeInStdVec(const std::string& field_name) const;
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_;
@@ -81,6 +84,10 @@ class Pooling3DKernelUtil {
   static void Backward(const KernelCtx&, const Blob*, const Blob*, const Blob*,
                        Blob*, const Pooling3DCtx&);
 };
+
+template<typename T, typename PoolType>
+void ForwardOnCPUWithOrderNCDHW(const Pooling3DCtx& pooling_ctx,
+                                const Blob* in_blob, Blob* out_blob);
 
 }  // namespace oneflow
 
