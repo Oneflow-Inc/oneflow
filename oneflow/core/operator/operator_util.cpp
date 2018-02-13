@@ -50,18 +50,35 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::vector<int64_t>& strides,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int64_t>* padding) {
+  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding, nullptr);
+}
+
+void Get3DOutputSize(const std::vector<int64_t>& in,
+                     const std::vector<int64_t>& pool_size,
+                     const std::vector<int64_t>& strides,
+                     const std::string& padding_type, std::vector<int64_t>* out,
+                     std::vector<int64_t>* padding_before,
+                     std::vector<int64_t>* padding_after) {
   CHECK(out);
   out->clear();
   out->resize(3);
-  if (padding) {
-    padding->clear();
-    padding->resize(3);
+  if (padding_before) {
+    padding_before->clear();
+    padding_before->resize(3);
+  }
+  if (padding_after) {
+    padding_after->clear();
+    padding_after->resize(3);
   }
   FOR_RANGE(size_t, i, 0, 3) {
     int64_t* out_ptr = &(*out).at(i);
-    int64_t* padding_ptr = padding ? (&(*padding).at(i)) : nullptr;
+    int64_t* padding_before_ptr =
+        padding_before ? (&(*padding_before).at(i)) : nullptr;
+    int64_t* padding_after_ptr =
+        padding_after ? (&(*padding_after).at(i)) : nullptr;
     GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i),
-                          padding_type, out_ptr, padding_ptr);
+                          padding_type, out_ptr, padding_before_ptr,
+                          padding_after_ptr);
   }
 }
 

@@ -39,7 +39,7 @@ void Pooling3DCtx::InitFromKernelConf(const Pooling3DKernelConf& kernel_conf) {
 void Pooling3DCtx::BuildCudnnDescs(PoolingMode mode, DataType type) {
 #ifdef WITH_CUDA
   std::vector<int> window = GetShapeInStdVec("pool_size");
-  std::vector<int> padding = GetShapeInStdVec("padding");
+  std::vector<int> padding = GetShapeInStdVec("padding_before");
   std::vector<int> stride = GetShapeInStdVec("strides");
   std::vector<int> full_stride{1, 1, stride.at(0), stride.at(1), stride.at(2)};
   std::vector<int> in_dim = GetShapeInStdVec("in");

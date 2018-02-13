@@ -98,14 +98,16 @@ void PoolingOp::VirtualGenKernelConf(
   std::vector<int64_t> pool_size = GetTensorInOpConf("pool_size");
   std::vector<int64_t> strides = GetTensorInOpConf("strides");
   std::vector<int64_t> out;
-  std::vector<int64_t> padding;
+  std::vector<int64_t> padding_before;
+  std::vector<int64_t> padding_after;
   Get3DOutputSize(in, pool_size, strides, GetStringFromSpecialConf("padding"),
-                  &out, &padding);
+                  &out, &padding_before, &padding_after);
 
   Pooling3DKernelConf* pooling_conf = GetMutPooling3DKernelConf(kernel_conf);
   Shape(pool_size).ToProto(pooling_conf->mutable_pool_size());
   Shape(strides).ToProto(pooling_conf->mutable_strides());
-  Shape(padding).ToProto(pooling_conf->mutable_padding());
+  Shape(padding_before).ToProto(pooling_conf->mutable_padding_before());
+  Shape(padding_after).ToProto(pooling_conf->mutable_padding_after());
   Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
       .ToProto(pooling_conf->mutable_in());
   Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
