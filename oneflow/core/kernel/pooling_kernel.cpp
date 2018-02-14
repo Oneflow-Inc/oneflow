@@ -2,6 +2,18 @@
 
 namespace oneflow {
 
+namespace {
+
+std::vector<int> CalcCudnnStrides(const std::vector<int>& shape) {
+  size_t dims = shape.size();
+  std::vector<int> ret(dims);
+  ret[dims - 1] = 1;
+  for (size_t i = dims - 2; i >= 0; --i) { ret[i] = ret[i + 1] * shape[i + 1]; }
+  return ret;
+}
+
+}  // namespace
+
 #ifdef WITH_CUDA
 CudnnPoolingNdDesc::~CudnnPoolingNdDesc() {
   CudaCheck(cudnnDestroyPoolingDescriptor(val_));
@@ -43,16 +55,17 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   std::vector<int> window = GetShapeInStdVec("pool_size");
   std::vector<int> padding = GetShapeInStdVec("padding_before");
   std::vector<int> stride = GetShapeInStdVec("strides");
-  std::vector<int> full_stride{1, 1, stride.at(0), stride.at(1), stride.at(2)};
   std::vector<int> in_dim = GetShapeInStdVec("in");
+  std::vector<int> in_stride = CalcCudnnStrides(in_dim);
   std::vector<int> out_dim = GetShapeInStdVec("out");
+  std::vector<int> out_stride = CalcCudnnStrides(out_dim);
 
   pooling_desc_ =
       new CudnnPoolingNdDesc(pooling_mode_, window, padding, stride);
-  in_desc_ = new CudnnTensorDesc(type, in_dim, full_stride);
-  out_desc_ = new CudnnTensorDesc(type, out_dim, full_stride);
-  in_diff_desc_ = new CudnnTensorDesc(type, in_dim, full_stride);
-  out_diff_desc_ = new CudnnTensorDesc(type, out_dim, full_stride);
+  in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
+  out_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
+  in_diff_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
+  out_diff_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
 #endif  // WITH_CUDA
 }
 
