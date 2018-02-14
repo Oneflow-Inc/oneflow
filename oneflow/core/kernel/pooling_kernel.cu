@@ -11,8 +11,8 @@ class Pooling3DKernelUtil<DeviceType::kGPU, T> final {
 
   static void Forward(const KernelCtx& kernel_ctx, const Blob* in_blob,
                       Blob* out_blob, const Pooling3DCtx& pooling_ctx) {
-    double alpha = 1.0;
-    double beta = 0.0;
+    T alpha = 1.0;
+    T beta = 0.0;
     CHECK_EQ(cudnnPoolingForward(
                  kernel_ctx.device_ctx->cudnn_handle(),
                  pooling_ctx.pooling_desc_ptr()->Get(), &alpha,
@@ -24,17 +24,16 @@ class Pooling3DKernelUtil<DeviceType::kGPU, T> final {
   static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
                        const Blob* out_blob, const Blob* in_blob,
                        Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
-    double alpha = 1.0;
-    double beta = 0.0;
-    CHECK_EQ(
-        cudnnPoolingBackward(
-            kernel_ctx.device_ctx->cudnn_handle(),
-            pooling_ctx.pooling_desc_ptr()->Get(), &alpha,
-            pooling_ctx.out_desc_ptr()->Get(), out_blob->dptr(),
-            pooling_ctx.out_diff_desc_ptr()->Get(), out_diff_blob->dptr(),
-            pooling_ctx.in_desc_ptr()->Get(), in_blob->dptr(), &beta,
-            pooling_ctx.in_diff_desc_ptr()->Get(), in_diff_blob->mut_dptr()),
-        CUDNN_STATUS_SUCCESS);
+    T alpha = 1.0;
+    T beta = 0.0;
+    CHECK_EQ(cudnnPoolingBackward(
+                 kernel_ctx.device_ctx->cudnn_handle(),
+                 pooling_ctx.pooling_desc_ptr()->Get(), &alpha,
+                 pooling_ctx.out_desc_ptr()->Get(), out_blob->dptr(),
+                 pooling_ctx.out_desc_ptr()->Get(), out_diff_blob->dptr(),
+                 pooling_ctx.in_desc_ptr()->Get(), in_blob->dptr(), &beta,
+                 pooling_ctx.in_desc_ptr()->Get(), in_diff_blob->mut_dptr()),
+             CUDNN_STATUS_SUCCESS);
   }
 };
 

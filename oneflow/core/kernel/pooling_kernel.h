@@ -38,9 +38,7 @@ class Pooling3DCtx {
 
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_ptr() const { return in_desc_; }
-  CudnnTensorDesc* in_diff_desc_ptr() const { return in_diff_desc_; }
   CudnnTensorDesc* out_desc_ptr() const { return out_desc_; }
-  CudnnTensorDesc* out_diff_desc_ptr() const { return out_diff_desc_; }
   CudnnPoolingNdDesc* pooling_desc_ptr() const { return pooling_desc_; }
 #endif  // WITH_CUDA
 
@@ -50,9 +48,7 @@ class Pooling3DCtx {
   std::vector<int> GetShapeInStdVec(const std::string& field_name) const;
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_;
-  CudnnTensorDesc* in_diff_desc_;
   CudnnTensorDesc* out_desc_;
-  CudnnTensorDesc* out_diff_desc_;
   CudnnPoolingNdDesc* pooling_desc_;
 #endif  // WITH_CUDA
 };
