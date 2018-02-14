@@ -31,25 +31,24 @@ class Pooling3DCtx {
   Pooling3DCtx() = default;
   ~Pooling3DCtx();
 
-  void InitFromKernelConf(const Pooling3DKernelConf& kernel_conf);
-  void BuildCudnnDescs(PoolingMode mode, DataType type);
+  void Init(const Pooling3DKernelConf& kernel_conf, PoolingMode mode);
+  void BuildCudnnDescs(DataType type);
+  PoolingMode pooling_mode() const { return pooling_mode_; }
+  const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
 
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_ptr() const { return in_desc_; }
-  CudnnTensorDesc* in_diff_desc_ptr() const { return in_diff_desc_; }
   CudnnTensorDesc* out_desc_ptr() const { return out_desc_; }
-  CudnnTensorDesc* out_diff_desc_ptr() const { return out_diff_desc_; }
   CudnnPoolingNdDesc* pooling_desc_ptr() const { return pooling_desc_; }
 #endif  // WITH_CUDA
 
  private:
   Pooling3DKernelConf kernel_conf_;
+  PoolingMode pooling_mode_;
   std::vector<int> GetShapeInStdVec(const std::string& field_name) const;
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_;
-  CudnnTensorDesc* in_diff_desc_;
   CudnnTensorDesc* out_desc_;
-  CudnnTensorDesc* out_diff_desc_;
   CudnnPoolingNdDesc* pooling_desc_;
 #endif  // WITH_CUDA
 };
@@ -68,6 +67,29 @@ class PoolingKernel : public KernelIf<device_type> {
 
   Pooling3DCtx pooling_3d_ctx_;
 };
+
+template<DeviceType device_type, typename T>
+class Pooling3DKernelUtil {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Pooling3DKernelUtil);
+  Pooling3DKernelUtil() = delete;
+
+  static void Forward(const KernelCtx&, const Blob*, Blob*,
+                      const Pooling3DCtx&);
+
+  static void Backward(const KernelCtx&, const Blob*, const Blob*, const Blob*,
+                       Blob*, const Pooling3DCtx&);
+};
+
+template<typename T, typename PoolType>
+void ForwardOnCPUWithOrderNCDHW(const Pooling3DCtx& pooling_ctx,
+                                const Blob* in_blob, Blob* out_blob);
+
+template<typename T, typename PoolType>
+void BackwardOnCPUWithOrderNCDHW(const Pooling3DCtx& pooling_ctx,
+                                 const Blob* out_diff_blob,
+                                 const Blob* out_blob, const Blob* in_blob,
+                                 Blob* in_diff_blob);
 
 }  // namespace oneflow
 

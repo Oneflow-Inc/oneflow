@@ -8,8 +8,8 @@ void AveragePooling3DKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  AveragePooling3DKernelUtil<device_type, T>::Forward(ctx, in_blob, out_blob,
-                                                      this->pooling_3d_ctx());
+  Pooling3DKernelUtil<device_type, T>::Forward(ctx, in_blob, out_blob,
+                                               this->pooling_3d_ctx());
 }
 
 template<DeviceType device_type, typename T>
@@ -21,8 +21,11 @@ void AveragePooling3DKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  AveragePooling3DKernelUtil<device_type, T>::Backward(
-      ctx, out_diff_blob, in_diff_blob, this->pooling_3d_ctx());
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* out_blob = BnInOp2Blob("out");
+  Pooling3DKernelUtil<device_type, T>::Backward(ctx, out_diff_blob, out_blob,
+                                                in_blob, in_diff_blob,
+                                                this->pooling_3d_ctx());
 }
 
 template<DeviceType device_type, typename T>
@@ -30,24 +33,6 @@ const Pooling3DKernelConf&
 AveragePooling3DKernel<device_type, T>::GetPooling3DKernelConf() const {
   return this->kernel_conf().average_pooling_3d_conf().pooling_3d_conf();
 }
-
-template<typename T>
-class AveragePooling3DKernelUtil<DeviceType::kCPU, T> final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePooling3DKernelUtil);
-  AveragePooling3DKernelUtil() = delete;
-
-  static void Forward(const KernelCtx& ctx, const Blob* in_blob, Blob* out_blob,
-                      const Pooling3DCtx& pooling_ctx) {
-    // eigen
-    TODO();
-  }
-
-  static void Backward(const KernelCtx& ctx, const Blob* out_diff_blob,
-                       Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
-    TODO();
-  }
-};
 
 namespace {
 

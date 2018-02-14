@@ -22,9 +22,6 @@ class PoolingOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  protected:
-  virtual void VirtualEnrollDataTmpBn() = 0;
-  virtual void VirtualInferDataTmpBlobDesc(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const = 0;
   virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
   virtual int32_t GetDim() const = 0;
   void VirtualGenKernelConf(
