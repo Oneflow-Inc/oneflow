@@ -41,15 +41,26 @@ void Pooling3DCtx::BuildCudnnDescs(PoolingMode mode, DataType type) {
   std::vector<int> window = GetShapeInStdVec("pool_size");
   std::vector<int> padding = GetShapeInStdVec("padding");
   std::vector<int> stride = GetShapeInStdVec("strides");
-  std::vector<int> full_stride{1, 1, stride.at(0), stride.at(1), stride.at(2)};
+  // std::vector<int> full_stride{1, 1, stride.at(0), stride.at(1),
+  // stride.at(2)};
   std::vector<int> in_dim = GetShapeInStdVec("in");
+  Shape in_shape(kernel_conf_.in());
+  std::vector<int> in_stride{static_cast<int>(in_shape.Count(1)),
+                             static_cast<int>(in_shape.Count(2)),
+                             static_cast<int>(in_shape.Count(3)),
+                             static_cast<int>(in_shape.Count(4)), 1};
   std::vector<int> out_dim = GetShapeInStdVec("out");
+  Shape out_shape(kernel_conf_.in());
+  std::vector<int> out_stride{static_cast<int>(out_shape.Count(1)),
+                              static_cast<int>(out_shape.Count(2)),
+                              static_cast<int>(out_shape.Count(3)),
+                              static_cast<int>(out_shape.Count(4)), 1};
 
   pooling_desc_ = new CudnnPoolingNdDesc(mode, window, padding, stride);
-  in_desc_ = new CudnnTensorDesc(type, in_dim, full_stride);
-  out_desc_ = new CudnnTensorDesc(type, out_dim, full_stride);
-  in_diff_desc_ = new CudnnTensorDesc(type, in_dim, full_stride);
-  out_diff_desc_ = new CudnnTensorDesc(type, out_dim, full_stride);
+  in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
+  out_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
+  in_diff_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
+  out_diff_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
 #endif  // WITH_CUDA
 }
 
