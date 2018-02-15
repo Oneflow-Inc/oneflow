@@ -10,6 +10,13 @@ void PoolingOp::InitFromOpConf() {
     LOG(FATAL) << "Invalid padding method in " << op_name();
   }
   SetStringInSpecialConf("padding", padding_mthd);
+  std::string data_format = GetStringFromSpecialConf("data_format");
+  std::transform(data_format.begin(), data_format.end(), data_format.begin(),
+                 ::tolower);
+  if (data_format != "channels_last" && data_format != "channels_first") {
+    LOG(FATAL) << "Invalid data format in " << op_name();
+  }
+  SetStringInSpecialConf("data_format", data_format);
   CheckPoolSizeAndStrides();
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -68,8 +75,17 @@ std::vector<int64_t> PoolingOp::GetTensorInOpConf(
 }
 
 int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
-  int64_t index = 2 + static_cast<int64_t>(dim) - (3 - GetDim());
-  if (index < 2) {
+  int64_t offset = 0;
+  std::string data_format = GetStringFromSpecialConf("data_format");
+  if (data_format == "channels_last") {
+    offset = 1;
+  } else if (data_format == "channels_first") {
+    offset = 2;
+  } else {
+    UNEXPECTED_RUN();
+  }
+  int64_t index = offset + static_cast<int64_t>(dim) - (3 - GetDim());
+  if (index < offset) {
     return 1;
   } else {
     return in_shape.At(index);
@@ -78,15 +94,26 @@ int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
 
 Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
                              const std::vector<int64_t>& out) const {
+  std::vector<int64_t> out_shape;
   if (GetDim() == 1) {
-    return Shape({in_n, in_c, out.at(2)});
+    out_shape = {out.at(2)};
   } else if (GetDim() == 2) {
-    return Shape({in_n, in_c, out.at(1), out.at(2)});
+    out_shape = {out.at(1), out.at(2)};
   } else if (GetDim() == 3) {
-    return Shape({in_n, in_c, out.at(0), out.at(1), out.at(2)});
+    out_shape = {out.at(0), out.at(1), out.at(2)};
   } else {
     UNEXPECTED_RUN();
   }
+  std::string data_format = GetStringFromSpecialConf("data_format");
+  if (data_format == "channels_first") {
+    out_shape.insert(out_shape.begin(), in_c);
+  } else if (data_format == "channels_last") {
+    out_shape.insert(out_shape.end(), in_c);
+  } else {
+    UNEXPECTED_RUN();
+  }
+  out_shape.insert(out_shape.begin(), in_n);
+  return Shape(out_shape);
 }
 
 void PoolingOp::VirtualGenKernelConf(
@@ -108,10 +135,20 @@ void PoolingOp::VirtualGenKernelConf(
   Shape(strides).ToProto(pooling_conf->mutable_strides());
   Shape(padding_before).ToProto(pooling_conf->mutable_padding_before());
   Shape(padding_after).ToProto(pooling_conf->mutable_padding_after());
-  Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
-      .ToProto(pooling_conf->mutable_in());
-  Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
-      .ToProto(pooling_conf->mutable_out());
+  std::string data_format = GetStringFromSpecialConf("data_format");
+  if (data_format == "channels_first") {
+    Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
+        .ToProto(pooling_conf->mutable_in());
+    Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
+        .ToProto(pooling_conf->mutable_out());
+  } else if (data_format == "channels_last") {
+    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2), in_shape.At(1)})
+        .ToProto(pooling_conf->mutable_in());
+    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2), in_shape.At(1)})
+        .ToProto(pooling_conf->mutable_out());
+  } else {
+    UNEXPECTED_RUN();
+  }
 }
 
 }  // namespace oneflow
