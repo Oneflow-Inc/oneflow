@@ -46,13 +46,23 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   std::vector<int> in_dim = GetShapeInStdVec("in");
   std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
                              in_dim[2] * in_dim[3] * in_dim[4],
-                             in_dim[3] * in_dim[4], in_dim[4], 1};
+                             in_dim[3] * in_dim[4], in_dim[4]};
   std::vector<int> out_dim = GetShapeInStdVec("out");
   std::vector<int> out_stride = {
       out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4],
-      out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4], out_dim[4],
-      1};
+      out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4],
+      out_dim[4]};
 
+  const std::string& data_format = kernel_conf_.data_format();
+  if (data_format == "channels_first") {
+    in_stride.insert(in_stride.end(), 1);
+    out_stride.insert(out_stride.end(), 1);
+  } else if (data_format == "channels_last") {
+    in_stride.insert(in_stride.end(), 1);
+    out_stride.insert(out_stride.begin() + 1, 1);
+  } else {
+    UNEXPECTED_RUN();
+  }
   pooling_desc_ =
       new CudnnPoolingNdDesc(pooling_mode_, window, padding, stride);
   in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
