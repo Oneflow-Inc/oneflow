@@ -149,6 +149,7 @@ void PoolingOp::VirtualGenKernelConf(
   } else {
     UNEXPECTED_RUN();
   }
+  pooling_conf->set_data_format(GetStringFromSpecialConf("data_format"));
 }
 
 }  // namespace oneflow

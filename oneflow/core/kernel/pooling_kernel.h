@@ -91,6 +91,16 @@ void BackwardOnCPUWithOrderNCDHW(const Pooling3DCtx& pooling_ctx,
                                  const Blob* out_blob, const Blob* in_blob,
                                  Blob* in_diff_blob);
 
+template<typename T, typename PoolType>
+void ForwardOnCPUWithOrderNDHWC(const Pooling3DCtx& pooling_ctx,
+                                const Blob* in_blob, Blob* out_blob);
+
+template<typename T, typename PoolType>
+void BackwardOnCPUWithOrderNDHWC(const Pooling3DCtx& pooling_ctx,
+                                 const Blob* out_diff_blob,
+                                 const Blob* out_blob, const Blob* in_blob,
+                                 Blob* in_diff_blob);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_POOLING_KERNEL_H_

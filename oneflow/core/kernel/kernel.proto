@@ -28,6 +28,7 @@ message Pooling3DKernelConf {
   required ShapeProto padding_after = 4;
   required ShapeProto pool_size = 5;
   required ShapeProto strides = 6;
+  required string data_format = 7;
 }
 
 message AveragePooling3DKernelConf {
