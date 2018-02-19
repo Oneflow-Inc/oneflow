@@ -58,7 +58,7 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
     in_stride.insert(in_stride.end(), 1);
     out_stride.insert(out_stride.end(), 1);
   } else if (data_format == "channels_last") {
-    in_stride.insert(in_stride.end(), 1);
+    in_stride.insert(in_stride.begin() + 1, 1);
     out_stride.insert(out_stride.begin() + 1, 1);
   } else {
     UNEXPECTED_RUN();
