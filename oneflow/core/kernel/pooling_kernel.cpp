@@ -1,4 +1,6 @@
 #include "oneflow/core/kernel/pooling_kernel.h"
+#include "eigen3/Eigen/Core"
+#include "eigen3/Eigen/Dense"
 
 namespace oneflow {
 
@@ -44,13 +46,23 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   std::vector<int> in_dim = GetShapeInStdVec("in");
   std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
                              in_dim[2] * in_dim[3] * in_dim[4],
-                             in_dim[3] * in_dim[4], in_dim[4], 1};
+                             in_dim[3] * in_dim[4], in_dim[4]};
   std::vector<int> out_dim = GetShapeInStdVec("out");
   std::vector<int> out_stride = {
       out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4],
-      out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4], out_dim[4],
-      1};
+      out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4],
+      out_dim[4]};
 
+  const std::string& data_format = kernel_conf_.data_format();
+  if (data_format == "channels_first") {
+    in_stride.insert(in_stride.end(), 1);
+    out_stride.insert(out_stride.end(), 1);
+  } else if (data_format == "channels_last") {
+    in_stride.insert(in_stride.begin() + 1, 1);
+    out_stride.insert(out_stride.begin() + 1, 1);
+  } else {
+    UNEXPECTED_RUN();
+  }
   pooling_desc_ =
       new CudnnPoolingNdDesc(pooling_mode_, window, padding, stride);
   in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
@@ -72,9 +84,23 @@ class AveragePoolForward {
  public:
   static T Initialize() { return static_cast<T>(0); }
 
-  static void Process(const T& x_data, T& y_data) { y_data += x_data; }
+  static void Process(const T& lhs, T& rhs) { rhs += lhs; }
 
-  static void Finalize(const int size, T& y_data) { y_data /= size; }
+  static void Process(
+      const int64_t in_col, const int64_t out_col,
+      Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>&
+          in_mat,
+      Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat) {
+    out_mat.col(out_col) += in_mat.col(in_col);
+  }
+
+  static void Finalize(const int64_t size, T& out) { out /= size; }
+
+  static void Finalize(
+      const int64_t size, const int64_t col,
+      Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat) {
+    out_mat.col(col) /= size;
+  }
 };
 
 template<typename T>
@@ -82,11 +108,23 @@ class MaxPoolForward {
  public:
   static T Initialize() { return std::numeric_limits<T>::min(); }
 
-  static void Process(const T& x_data, T& y_data) {
-    if (x_data > y_data) { y_data = x_data; }
+  static void Process(const T& lhs, T& rhs) {
+    if (lhs > rhs) { rhs = lhs; }
   }
 
-  static void Finalize(const int size, T& y_data) {}
+  static void Process(
+      const int64_t in_col, const int64_t out_col,
+      Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>&
+          in_mat,
+      Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat) {
+    out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
+  }
+
+  static void Finalize(const int64_t size, T& out) {}
+
+  static void Finalize(
+      const int64_t size, const int64_t col,
+      Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat) {}
 };
 
 template<typename T, typename PoolType>
@@ -97,7 +135,6 @@ void ForwardOnCPUWithOrderNCDHW(const Pooling3DCtx& ctx, const Blob* in_blob,
   Shape pool_size(ctx.kernel_conf().pool_size());
   Shape strides(ctx.kernel_conf().strides());
   Shape padding_before(ctx.kernel_conf().padding_before());
-  Shape padding_after(ctx.kernel_conf().padding_after());
 
   const T* input = in_blob->dptr<T>();
   T* output = out_blob->mut_dptr<T>();
@@ -139,21 +176,97 @@ void ForwardOnCPUWithOrderNCDHW(const Pooling3DCtx& ctx, const Blob* in_blob,
   }
 }
 
+template<typename T, typename PoolType>
+void ForwardOnCPUWithOrderNDHWC(const Pooling3DCtx& ctx, const Blob* in_blob,
+                                Blob* out_blob) {
+  Shape in(ctx.kernel_conf().in());
+  Shape out(ctx.kernel_conf().out());
+  Shape pool_size(ctx.kernel_conf().pool_size());
+  Shape strides(ctx.kernel_conf().strides());
+  Shape padding_before(ctx.kernel_conf().padding_before());
+
+  Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>> in_mat(
+      in_blob->dptr<T>(), in.At(4), in.elem_cnt() / in.At(4));
+  Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>> out_mat(
+      out_blob->mut_dptr<T>(), out.At(4), out.elem_cnt() / out.At(4));
+  FOR_RANGE(int64_t, n, 0, in.At(0)) {
+    FOR_RANGE(int64_t, pd, 0, out.At(1)) {
+      int64_t dstart = pd * strides.At(0) - padding_before.At(0);
+      int64_t dend = std::min(dstart + pool_size.At(0), in.At(1));
+      dstart = std::max(dstart, static_cast<int64_t>(0));
+      FOR_RANGE(int64_t, ph, 0, out.At(2)) {
+        int64_t hstart = ph * strides.At(1) - padding_before.At(1);
+        int64_t hend = std::min(hstart + pool_size.At(1), in.At(2));
+        hstart = std::max(hstart, static_cast<int64_t>(0));
+        FOR_RANGE(int64_t, pw, 0, out.At(3)) {
+          int64_t wstart = pw * strides.At(2) - padding_before.At(2);
+          int64_t wend = std::min(wstart + pool_size.At(2), in.At(3));
+          wstart = std::max(wstart, static_cast<int64_t>(0));
+          const int out_col =
+              ((n * out.At(1) + pd) * out.At(2) + ph) * out.At(3) + pw;
+          out_mat.col(out_col).setConstant(PoolType::Initialize());
+          FOR_RANGE(int64_t, d, dstart, dend) {
+            FOR_RANGE(int64_t, h, hstart, hend) {
+              FOR_RANGE(int64_t, w, wstart, wend) {
+                const int in_col =
+                    ((n * in.At(1) + d) * in.At(2) + h) * in.At(3) + w;
+                PoolType::Process(in_col, out_col, in_mat, out_mat);
+              }
+            }
+          }
+          PoolType::Finalize(
+              (hend - hstart) * (wend - wstart) * (dend - dstart), out_col,
+              out_mat);
+        }
+      }
+    }
+  }
+}
+
 template<typename T>
 class AveragePoolBackward {
  public:
-  static void ProcessGrad(const T&, const T&, const T& dy, const T& scale,
-                          T& dx) {
-    dx += (scale * dy);
+  static void ProcessGrad(const T&, const T&, const T& out_diff,
+                          const float scale, T& in_diff) {
+    in_diff += (scale * out_diff);
+  }
+
+  static void ProcessGrad(
+      const int64_t out_col, const int64_t in_col, const float scale,
+      Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          in_arr,
+      Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          out_arr,
+      Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          out_diff_arr,
+      Eigen::Map<Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          in_diff_arr) {
+    in_diff_arr.col(in_col) += scale * out_diff_arr.col(out_col);
   }
 };
 
 template<typename T>
 class MaxPoolBackward {
  public:
-  static void ProcessGrad(const T& x, const T& y, const T& dy, const T&,
-                          T& dx) {
-    if (x == y) { dx += dy; }
+  static void ProcessGrad(const T& in, const T& out, const T& out_diff,
+                          const float, T& in_diff) {
+    if (in == out) { in_diff += out_diff; }
+  }
+
+  static void ProcessGrad(
+      const int64_t out_col, const int64_t in_col, const float scale,
+      Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          out_arr,
+      Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          in_arr,
+      Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          out_diff_arr,
+      Eigen::Map<Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
+          in_diff_arr) {
+    in_diff_arr.col(in_col) += out_diff_arr.col(out_col)
+                               * (in_arr.col(in_col)
+                                      .cwiseEqual(out_arr.col(out_col))
+                                      .template cast<float>());
   }
 };
 
@@ -167,7 +280,6 @@ void BackwardOnCPUWithOrderNCDHW(const Pooling3DCtx& ctx,
   Shape pool_size(ctx.kernel_conf().pool_size());
   Shape strides(ctx.kernel_conf().strides());
   Shape padding_before(ctx.kernel_conf().padding_before());
-  Shape padding_after(ctx.kernel_conf().padding_after());
 
   const T* output_diff = out_diff_blob->dptr<T>();
   const T* output = out_blob->dptr<T>();
@@ -213,6 +325,60 @@ void BackwardOnCPUWithOrderNCDHW(const Pooling3DCtx& ctx,
   }
 }
 
+template<typename T, typename PoolType>
+void BackwardOnCPUWithOrderNDHWC(const Pooling3DCtx& ctx,
+                                 const Blob* out_diff_blob,
+                                 const Blob* out_blob, const Blob* in_blob,
+                                 Blob* in_diff_blob) {
+  Shape in(ctx.kernel_conf().in());
+  Shape out(ctx.kernel_conf().out());
+  Shape pool_size(ctx.kernel_conf().pool_size());
+  Shape strides(ctx.kernel_conf().strides());
+  Shape padding_before(ctx.kernel_conf().padding_before());
+
+  // caffe2 implementation: need check
+  Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> out_mat(
+      out_blob->dptr<float>(), out.At(4), out.elem_cnt() / out.At(4));
+  Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> in_mat(
+      in_blob->dptr<float>(), in.At(4), in.elem_cnt() / in.At(4));
+  Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>
+  out_diff_mat(out_diff_blob->dptr<float>(), out.At(4),
+               out.elem_cnt() / out.At(4));
+  Eigen::Map<Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> in_diff_mat(
+      in_diff_blob->mut_dptr<float>(), in.At(4), in.elem_cnt() / in.At(4));
+  FOR_RANGE(int64_t, n, 0, in.At(0)) {
+    FOR_RANGE(int64_t, pd, 0, out.At(1)) {
+      int64_t dstart = pd * strides.At(0) - padding_before.At(0);
+      int64_t dend = std::min(dstart + pool_size.At(0), in.At(1));
+      dstart = std::max(dstart, static_cast<int64_t>(0));
+      FOR_RANGE(int64_t, ph, 0, out.At(2)) {
+        int64_t hstart = ph * strides.At(1) - padding_before.At(1);
+        int64_t hend = std::min(hstart + pool_size.At(1), in.At(2));
+        hstart = std::max(hstart, static_cast<int64_t>(0));
+        FOR_RANGE(int64_t, pw, 0, out.At(3)) {
+          int64_t wstart = pw * strides.At(2) - padding_before.At(2);
+          int64_t wend = std::min(wstart + pool_size.At(2), in.At(3));
+          wstart = std::max(wstart, static_cast<int64_t>(0));
+          const int64_t pool_index =
+              ((n * out.At(1) + pd) * out.At(2) + ph) * out.At(3) + pw;
+          const float scale =
+              1. / (hend - hstart) / (wend - wstart) / (dend - dstart);
+          FOR_RANGE(int64_t, d, dstart, dend) {
+            FOR_RANGE(int64_t, h, hstart, hend) {
+              FOR_RANGE(int64_t, w, wstart, wend) {
+                const int64_t input_index =
+                    ((n * in.At(1) + d) * in.At(2) + h) * in.At(3) + w;
+                PoolType::ProcessGrad(pool_index, input_index, scale, out_mat,
+                                      in_mat, out_diff_mat, in_diff_mat);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 template<typename T>
 class Pooling3DKernelUtil<DeviceType::kCPU, T> final {
  public:
@@ -221,12 +387,27 @@ class Pooling3DKernelUtil<DeviceType::kCPU, T> final {
 
   static void Forward(const KernelCtx& kernel_ctx, const Blob* in_blob,
                       Blob* out_blob, const Pooling3DCtx& pooling_ctx) {
+    const std::string& data_format = pooling_ctx.kernel_conf().data_format();
     if (pooling_ctx.pooling_mode() == PoolingMode::kAveragePooling) {
-      ForwardOnCPUWithOrderNCDHW<T, AveragePoolForward<T>>(pooling_ctx, in_blob,
-                                                           out_blob);
+      if (data_format == "channels_first") {
+        ForwardOnCPUWithOrderNCDHW<T, AveragePoolForward<T>>(pooling_ctx,
+                                                             in_blob, out_blob);
+      } else if (data_format == "channels_last") {
+        ForwardOnCPUWithOrderNDHWC<T, AveragePoolForward<T>>(pooling_ctx,
+                                                             in_blob, out_blob);
+      } else {
+        UNEXPECTED_RUN();
+      }
     } else if (pooling_ctx.pooling_mode() == PoolingMode::kMaxPooling) {
-      ForwardOnCPUWithOrderNCDHW<T, MaxPoolForward<T>>(pooling_ctx, in_blob,
-                                                       out_blob);
+      if (data_format == "channels_first") {
+        ForwardOnCPUWithOrderNCDHW<T, MaxPoolForward<T>>(pooling_ctx, in_blob,
+                                                         out_blob);
+      } else if (data_format == "channels_last") {
+        ForwardOnCPUWithOrderNDHWC<T, MaxPoolForward<T>>(pooling_ctx, in_blob,
+                                                         out_blob);
+      } else {
+        UNEXPECTED_RUN();
+      }
     } else {
       UNEXPECTED_RUN();
     }
@@ -235,12 +416,27 @@ class Pooling3DKernelUtil<DeviceType::kCPU, T> final {
   static void Backward(const KernelCtx& kernel_ctx, const Blob* out_diff_blob,
                        const Blob* out_blob, const Blob* in_blob,
                        Blob* in_diff_blob, const Pooling3DCtx& pooling_ctx) {
+    const std::string& data_format = pooling_ctx.kernel_conf().data_format();
     if (pooling_ctx.pooling_mode() == PoolingMode::kAveragePooling) {
-      BackwardOnCPUWithOrderNCDHW<T, AveragePoolBackward<T>>(
-          pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+      if (data_format == "channels_first") {
+        BackwardOnCPUWithOrderNCDHW<T, AveragePoolBackward<T>>(
+            pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+      } else if (data_format == "channels_last") {
+        BackwardOnCPUWithOrderNDHWC<T, AveragePoolBackward<T>>(
+            pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+      } else {
+        UNEXPECTED_RUN();
+      }
     } else if (pooling_ctx.pooling_mode() == PoolingMode::kMaxPooling) {
-      BackwardOnCPUWithOrderNCDHW<T, MaxPoolBackward<T>>(
-          pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+      if (data_format == "channels_first") {
+        BackwardOnCPUWithOrderNCDHW<T, MaxPoolBackward<T>>(
+            pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+      } else if (data_format == "channels_last") {
+        BackwardOnCPUWithOrderNDHWC<T, MaxPoolBackward<T>>(
+            pooling_ctx, out_diff_blob, out_blob, in_blob, in_diff_blob);
+      } else {
+        UNEXPECTED_RUN();
+      }
     } else {
       UNEXPECTED_RUN();
     }

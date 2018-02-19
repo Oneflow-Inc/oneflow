@@ -89,8 +89,9 @@ message AveragePooling1DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int64 pool_size = 4;
-  repeated int64 strides = 5;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message MaxPooling1DOpConf {
@@ -98,8 +99,9 @@ message MaxPooling1DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int64 pool_size = 4;
-  repeated int64 strides = 5;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message AveragePooling2DOpConf {
@@ -107,8 +109,9 @@ message AveragePooling2DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int64 pool_size = 4;
-  repeated int64 strides = 5;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message MaxPooling2DOpConf {
@@ -116,8 +119,9 @@ message MaxPooling2DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int64 pool_size = 4;
-  repeated int64 strides = 5;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message AveragePooling3DOpConf {
@@ -125,8 +129,9 @@ message AveragePooling3DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int64 pool_size = 4;
-  repeated int64 strides = 5;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message MaxPooling3DOpConf {
@@ -134,8 +139,9 @@ message MaxPooling3DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  repeated int64 pool_size = 4;
-  repeated int64 strides = 5;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message ReluOpConf {
