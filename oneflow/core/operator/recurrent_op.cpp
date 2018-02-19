@@ -55,7 +55,9 @@ void RecurrentOp::InferBlobDescs(
   // recurrent_out
   BlobDesc* rec_out_blob_desc = GetBlobDesc4BnInOp("rec_out");
   *rec_out_blob_desc = *out_blob_desc;
-  rec_out_blob_desc->set_max_col_num(1);
+  if (parallel_ctx->policy() == kDataParallel) {
+    rec_out_blob_desc->set_max_col_num(1);
+  }
 
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }

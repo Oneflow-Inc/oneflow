@@ -14,9 +14,6 @@ class MaxPooling2DOp final : public Pooling2DOp {
   const PbMessage& GetSpecialConf() const override;
 
  private:
-  void VirtualEnrollDataTmpBn() override;
-  void VirtualInferDataTmpBlobDesc(std::function<BlobDesc*(const std::string)>
-                                       GetBlobDesc4BnInOp) const override;
   Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const override;
 };
 
