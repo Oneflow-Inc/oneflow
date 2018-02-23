@@ -47,6 +47,9 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
   rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("rec_in"));
   exec_node->BindBnInOpAndRegst("rec_in_diff", rec_in_diff_regst);
+  if (parallel_ctx()->policy() == kModelParallel) {
+    exec_node->BindBnInOpAndRegst("rec_in", GetConsumedRegst("rec_in"));
+  }
 
   if (std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0")) {
     exec_node->BindBnInOpAndRegst("h0", h0_regst);
