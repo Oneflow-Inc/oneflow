@@ -43,17 +43,6 @@ class BlobImpl : public Blob {
         reinterpret_cast<BlobImpl<T, NDIMS, device_type>*>(out_blob);
     BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
         ctx, tensor_.get(), out_blob_impl->const_tensor_.get(), permutation);
-    /*
-    if (device_type == DeviceType::kCPU) {
-      *tensor_ = out_blob_impl->const_tensor_->shuffle(p);
-    } else if (device_type == DeviceType::kGPU) {
-      // TODO();
-      tensor_->device(ctx->eigen_gpu_device()) =
-          out_blob_impl->const_tensor_->shuffle(p);
-    } else {
-      UNEXPECTED_RUN();
-    }
-    */
   }
 
  private:
