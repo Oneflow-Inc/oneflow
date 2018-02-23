@@ -34,8 +34,8 @@ void PoolingOp::InferBlobDescs(
   // out
   std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
                              GetInDim(in_shape, 2)};
-  std::vector<int64_t> pool_size = GetTensorInOpConf("pool_size");
-  std::vector<int64_t> strides = GetTensorInOpConf("strides");
+  std::vector<int64_t> pool_size = Get3DVecInOpConf("pool_size");
+  std::vector<int64_t> strides = Get3DVecInOpConf("strides");
   std::vector<int64_t> out;
   Get3DOutputSize(in, pool_size, strides, GetStringFromSpecialConf("padding"),
                   &out, nullptr);
@@ -49,27 +49,22 @@ void PoolingOp::InferBlobDescs(
 void PoolingOp::CheckPoolSizeAndStrides() const {
   const PbRf<int64_t>& pool_size = GetPbRfFromSpecialConf<int64_t>("pool_size");
   CHECK_EQ(pool_size.size(), GetDim());
-  for (auto item : pool_size) { CHECK_GT(item, 0); }
+  for (int64_t pool_dim : pool_size) { CHECK_GT(pool_dim, 0); }
   const PbRf<int64_t>& strides = GetPbRfFromSpecialConf<int64_t>("strides");
   CHECK_EQ(strides.size(), GetDim());
-  for (auto item : strides) { CHECK_GT(item, 0); }
+  for (int64_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
 
-int64_t PoolingOp::GetTensorDimInOpConf(const std::string& field_name,
-                                        uint8_t dim) const {
-  int64_t index = static_cast<int64_t>(dim) - (3 - GetDim());
-  if (index < 0) {
-    return 1;
-  } else {
-    return GetPbRfFromSpecialConf<int64_t>(field_name).Get(index);
-  }
-}
-
-std::vector<int64_t> PoolingOp::GetTensorInOpConf(
+std::vector<int64_t> PoolingOp::Get3DVecInOpConf(
     const std::string& field_name) const {
   std::vector<int64_t> vec;
   FOR_RANGE(uint8_t, dim, 0, 3) {
-    vec.push_back(GetTensorDimInOpConf(field_name, dim));
+    int64_t index = static_cast<int64_t>(dim) - (3 - GetDim());
+    if (index < 0) {
+      vec.push_back(1);
+    } else {
+      vec.push_back(GetPbRfFromSpecialConf<int64_t>(field_name).Get(index));
+    }
   }
   return vec;
 }
@@ -122,8 +117,8 @@ void PoolingOp::VirtualGenKernelConf(
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
                              GetInDim(in_shape, 2)};
-  std::vector<int64_t> pool_size = GetTensorInOpConf("pool_size");
-  std::vector<int64_t> strides = GetTensorInOpConf("strides");
+  std::vector<int64_t> pool_size = Get3DVecInOpConf("pool_size");
+  std::vector<int64_t> strides = Get3DVecInOpConf("strides");
   std::vector<int64_t> out;
   std::vector<int64_t> padding_before;
   std::vector<int64_t> padding_after;

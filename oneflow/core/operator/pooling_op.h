@@ -30,9 +30,7 @@ class PoolingOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  private:
-  int64_t GetTensorDimInOpConf(const std::string& field_name,
-                               uint8_t dim) const;
-  std::vector<int64_t> GetTensorInOpConf(const std::string& field_name) const;
+  std::vector<int64_t> Get3DVecInOpConf(const std::string& field_name) const;
   int64_t GetInDim(const Shape& in_shape, uint8_t dim) const;
   void CheckPoolSizeAndStrides() const;
   Shape GetOutShape(int64_t in_n, int64_t in_c,
