@@ -13,10 +13,6 @@ class Regst;
 class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-       const void* comm_net_token);
   virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -77,6 +73,12 @@ class Blob {
   int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
   bool IsColValid() const;
+
+ protected:
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+       const void* comm_net_token);
 
  private:
   template<typename T>

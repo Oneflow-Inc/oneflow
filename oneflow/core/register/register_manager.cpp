@@ -8,8 +8,6 @@
 
 namespace oneflow {
 
-namespace {
-
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                   \
   {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type), [=]() { \
      return new BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims,             \
@@ -22,16 +20,14 @@ Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
   static const HashMap<std::string, std::function<Blob*()>> creators = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ,
                                        DIM_SEQ, DEVICE_TYPE_SEQ)};
-  return creators.at(GetHashKey(blob_desc->data_type(),
-                                (int32_t)blob_desc->shape().NumAxes(),
-                                device_type))();
+  return creators.at(GetHashKey(
+      blob_desc->data_type(),
+      static_cast<int32_t>(blob_desc->shape().NumAxes()), device_type))();
 }
 
-}  // namespace
-
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
-                         std::function<void(Regst*)> OneRegstDone,
-                         DeviceType device_type) {
+                         DeviceType device_type,
+                         std::function<void(Regst*)> OneRegstDone) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
   rt_regst_descs_.emplace_back(runtime_regst_desc);
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
@@ -49,7 +45,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     char* cur_pointer = std::get<0>(allocation_result);
     for (const std::string& lbn : lbns) {
       const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
-      auto blob_ptr = of_make_unique<Blob>(regst, blob_desc, cur_pointer);
+      std::unique_ptr<Blob> blob_ptr;
+      blob_ptr.reset(
+          GenBlob(regst, blob_desc, cur_pointer, nullptr, device_type));
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }

@@ -16,14 +16,16 @@ class RegstMgr final {
 
   OF_SINGLETON(RegstMgr);
 
-  void NewRegsts(const RegstDescProto& regst_desc_proto,
-                 std::function<void(Regst*)> OneRegstDone,
-                 DeviceType device_type);
+  void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
+                 std::function<void(Regst*)> OneRegstDone);
 
  private:
   RegstMgr() = default;
   std::list<std::unique_ptr<const RtRegstDesc>> rt_regst_descs_;
 };
+
+Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+              const void* comm_net_token, DeviceType device_type);
 
 }  // namespace oneflow
 

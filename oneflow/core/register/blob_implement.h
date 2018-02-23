@@ -7,8 +7,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T, int32_t NDIMS>
-class BlobImplUtil final {
- public:
+struct BlobImplUtil {
   static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
                           EigenConstTensor<T, NDIMS>* const_tensor,
                           const std::vector<int32_t>& permutation);
