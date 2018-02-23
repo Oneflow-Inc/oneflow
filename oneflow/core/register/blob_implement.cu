@@ -4,11 +4,8 @@
 namespace oneflow {
 
 template<typename T, int32_t NDIMS>
-class BlobImplUtil<T, NDIMS, DeviceType::kGPU> final {
+class BlobImplUtil<DeviceType::kGPU, T, NDIMS> final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BlobImplUtil);
-  BlobImplUtil() = delete;
-
   static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
                           EigenConstTensor<T, NDIMS>* const_tensor,
                           Eigen::array<int32_t, NDIMS>* p) {
@@ -16,11 +13,11 @@ class BlobImplUtil<T, NDIMS, DeviceType::kGPU> final {
   }
 };
 
-#define INSTANTIATE_GPU_BLOB_IMPL_UTIL(data_type_pair, ndims)          \
-  template class BlobImplUtil<OF_PP_PAIR_FIRST(data_type_pair), ndims, \
-                              DeviceType::kGPU>;
+#define INSTANTIATE_CPU_BLOB_IMPL_UTIL(data_type_pair, ndims) \
+  template class BlobImplUtil<DeviceType::kGPU,               \
+                              OF_PP_PAIR_FIRST(data_type_pair), ndims>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GPU_BLOB_IMPL_UTIL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CPU_BLOB_IMPL_UTIL,
                                  ALL_DATA_TYPE_SEQ, DIM_SEQ)
 
 }  // namespace oneflow

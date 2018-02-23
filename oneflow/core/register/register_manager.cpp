@@ -27,7 +27,6 @@ Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
   // }
   // return new BlobImpl<float, 1, DeviceType::kGPU>(regst, blob_desc, mem_ptr,
   //                                                comm_net_token);
-  
   static const HashMap<std::string, std::function<Blob*()>> creators = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ,
                                        DIM_SEQ, DEVICE_TYPE_SEQ)};
@@ -70,11 +69,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     OneRegstDone(regst);
   }
 }
-
+/*
 #define INSTANTIATE_BLOB_IMPL(data_type_pair, ndims, device_type) \
   template class BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims, device_type>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BLOB_IMPL, ALL_DATA_TYPE_SEQ,
                                  DIMS_SEQ, DEVICE_TYPE_SEQ)
-
+*/
 }  // namespace oneflow
