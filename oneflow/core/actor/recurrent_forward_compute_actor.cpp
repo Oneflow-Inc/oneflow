@@ -34,6 +34,7 @@ int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
       int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
       if (cur_regst_desc_id == in_regst_desc_id()) {
+        Blob* blob = msg.regst()->GetBlobByLbn("feature/out");
         in_regsts_.push(cur_regst);
       } else if (cur_regst_desc_id == h0_regst_desc_id_) {
         h0_regsts_.push(cur_regst);

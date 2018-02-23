@@ -83,6 +83,9 @@ class Actor {
   int TrySwitchToZombieOrFinish();
 
   // Async Do on device_ctx_
+  virtual Blob* HandleSpecialBnInOp(const std::string& bn_in_op) {
+    return nullptr;
+  }
   void AsyncLaunchKernel(const KernelCtx&,
                          std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,

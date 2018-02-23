@@ -161,6 +161,8 @@ void Actor::AsyncLaunchKernel(
     std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+      Blob* blob = HandleSpecialBnInOp(bn_in_op);
+      if (blob) { return blob; }
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
         return nullptr;

@@ -21,13 +21,16 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
   void AsyncReturnAllReadableRegst() override;
   void Act() override;
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+  Blob* HandleSpecialBnInOp(const std::string& bn_in_op) override;
 
   void TryUpdtColIdOrder(const Regst*);
 
   int64_t h0_regst_desc_id_;
+  int64_t rec_in_regst_desc_id_;
   int64_t rec_out_diff_regst_desc_id_;
 
   std::queue<Regst*> h0_regsts_;
+  std::deque<std::stack<Regst*>> rec_in_regsts_;
   std::deque<std::stack<Regst*>> in_regsts_;
   std::deque<std::deque<Regst*>> out_regsts_;
   std::deque<std::stack<Regst*>> data_tmp_regsts_;
@@ -38,6 +41,7 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
   Regst* model_tmp_regst_;
 
   ColIdOrder order_;
+  bool has_cur_piece_started_;
 };
 
 }  // namespace oneflow

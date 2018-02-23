@@ -52,10 +52,16 @@ template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in_diff")->CopyColNumFrom<device_type>(ctx.device_ctx,
-                                                      BnInOp2Blob("out_diff"));
-  BnInOp2Blob("rec_in_diff")
-      ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob != nullptr) {
+    in_diff_blob->CopyColNumFrom<device_type>(ctx.device_ctx,
+                                              BnInOp2Blob("out_diff"));
+  }
+
+  if (BnInOp2Blob("in") != 0) {
+    BnInOp2Blob("rec_in_diff")
+        ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
+  }
 }
 
 template<DeviceType device_type, typename T>

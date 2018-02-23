@@ -66,6 +66,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   // reuse memory
   const Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
 
   if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
     if (in_blob->col_id() == in_blob->max_col_id()) {
@@ -110,16 +111,20 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
                                        BnInOp2Blob("i2h_weight_diff"));
 
   // in_diff = plus_op_out_diff * i2h_weight
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
-      BnInOp2Blob("in_diff"));
+  if (in_diff_blob != nullptr) {
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
+        in_diff_blob);
+  }
 
   // bias_diff = bias_multiplier * plus_op_out_diff
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
-      BnInOp2Blob("bias_diff"));
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
+        plus_op_out_diff_blob, BnInOp2Blob("bias_diff"));
+  }
 
   if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
       || this->op_conf().basic_rnn_conf().is_init_hidden_trainable()) {
