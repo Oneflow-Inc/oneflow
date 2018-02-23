@@ -11,13 +11,9 @@ class BlobImplUtil final {
  public:
   static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
                           EigenConstTensor<T, NDIMS>* const_tensor,
-                          Eigen::array<int32_t, NDIMS>* p);
+                          const std::vector<int32_t>& permutation);
 };
-/*
-template<DeviceType device_type, int32_t NDIMS>
-struct BlobImplTest {
-}
-*/
+
 template<typename T, int32_t NDIMS, DeviceType device_type>
 class BlobImpl : public Blob {
  public:
@@ -43,12 +39,10 @@ class BlobImpl : public Blob {
     CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
     CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
              out_blob->blob_desc_ptr()->shape().elem_cnt());
-    std::unique_ptr<Eigen::array<int32_t, NDIMS>> p;
-    for (int32_t i = 0; i < NDIMS; ++i) { (*p)[i] = permutation[i]; }
     auto out_blob_impl =
         reinterpret_cast<BlobImpl<T, NDIMS, device_type>*>(out_blob);
-    // BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
-    //    ctx, tensor_.get(), out_blob_impl->const_tensor_.get(), p.get());
+    BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
+        ctx, tensor_.get(), out_blob_impl->const_tensor_.get(), permutation);
     /*
     if (device_type == DeviceType::kCPU) {
       *tensor_ = out_blob_impl->const_tensor_->shuffle(p);
