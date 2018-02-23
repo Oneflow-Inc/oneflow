@@ -19,5 +19,12 @@ class BlobImplUtil<DeviceType::kCPU, T, NDIMS> final {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CPU_BLOB_IMPL_UTIL,
                                  ALL_DATA_TYPE_SEQ, DIM_SEQ)
+void Test111() {
+  BlobImplUtil<DeviceType::kCPU, float, 1>::DoTranspose(nullptr, nullptr,
+                                                        nullptr, nullptr);
+
+  // BlobImplUtil<DeviceType::kGPU, float, 1>::DoTranspose(nullptr, nullptr,
+  //                                                      nullptr, nullptr);
+}
 
 }  // namespace oneflow

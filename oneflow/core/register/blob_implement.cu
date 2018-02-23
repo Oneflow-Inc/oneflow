@@ -12,12 +12,19 @@ class BlobImplUtil<DeviceType::kGPU, T, NDIMS> final {
     tensor->device(ctx->eigen_gpu_device()) = const_tensor->shuffle((*p));
   }
 };
-
+/*
 #define INSTANTIATE_CPU_BLOB_IMPL_UTIL(data_type_pair, ndims) \
   template class BlobImplUtil<DeviceType::kGPU,               \
                               OF_PP_PAIR_FIRST(data_type_pair), ndims>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CPU_BLOB_IMPL_UTIL,
                                  ALL_DATA_TYPE_SEQ, DIM_SEQ)
+*/
+template class BlobImplUtil<DeviceType::kGPU, float, 1>;
+
+void Test() {
+  BlobImplUtil<DeviceType::kGPU, float, 1>::DoTranspose(nullptr, nullptr,
+                                                        nullptr, nullptr);
+}
 
 }  // namespace oneflow
