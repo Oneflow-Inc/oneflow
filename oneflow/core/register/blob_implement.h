@@ -46,7 +46,7 @@ class BlobImpl : public Blob {
     for (int32_t i = 0; i < NDIMS; ++i) { (*p)[i] = permutation[i]; }
     auto out_blob_impl =
         reinterpret_cast<BlobImpl<T, NDIMS, device_type>*>(out_blob);
-    BlobImplUtil<T, NDIMS, device_type> DoTranspose(
+    BlobImplUtil<T, NDIMS, device_type>::DoTranspose(
         ctx, tensor_.get(), out_blob_impl->const_tensor_.get(), p.get());
     /*
     if (device_type == DeviceType::kCPU) {

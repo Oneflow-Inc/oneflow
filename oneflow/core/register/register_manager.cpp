@@ -22,21 +22,18 @@ Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
   // like this:
   // if (devie_type == kCPU && blob_desc->shape().NumAxes() == 1 &&
   //       blob_desc->data_type() == kFloat ) {
-  //   return new BlobImpl<kFloat, 1, kCPU>(
+  //   return new BlobImpl<float, 1, kCPU>(
   //       regst, blob_desc, mem_ptr, comm_net_token);
   // }
   // return new BlobImpl<float, 1, DeviceType::kGPU>(regst, blob_desc, mem_ptr,
   //                                                comm_net_token);
-  /*
+  
   static const HashMap<std::string, std::function<Blob*()>> creators = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ,
                                        DIM_SEQ, DEVICE_TYPE_SEQ)};
   return creators.at(GetHashKey(blob_desc->data_type(),
                                 (int32_t)blob_desc->shape().NumAxes(),
                                 device_type))();
-*/
-  TODO();
-  return nullptr;
 }
 
 }  // namespace
@@ -73,11 +70,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     OneRegstDone(regst);
   }
 }
-/*
+
 #define INSTANTIATE_BLOB_IMPL(data_type_pair, ndims, device_type) \
   template class BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims, device_type>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BLOB_IMPL, ALL_DATA_TYPE_SEQ,
                                  DIMS_SEQ, DEVICE_TYPE_SEQ)
-*/
+
 }  // namespace oneflow
