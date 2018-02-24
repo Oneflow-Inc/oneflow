@@ -27,11 +27,10 @@ void Pooling2DOp::InferBlobDescs(
   std::tuple<int32_t, int32_t> out_size =
       CalcOutSize(in_blob_desc->shape().At(2), in_blob_desc->shape().At(3));
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() =
       Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().At(1),
              std::get<0>(out_size), std::get<1>(out_size)});
-  out_blob_desc->set_data_type(in_blob_desc->data_type());
-  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   VirtualInferDataTmpBlobDesc(GetBlobDesc4BnInOp);
 }
