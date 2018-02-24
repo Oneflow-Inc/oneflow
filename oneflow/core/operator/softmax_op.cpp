@@ -18,17 +18,16 @@ void SoftmaxOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   // in
-  const BlobDesc* in = GetBlobDesc4BnInOp("in");
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // out
-  BlobDesc* out = GetBlobDesc4BnInOp("out");
-  out->mut_shape() = Shape({in->shape().At(0), in->shape().Count(1)});
-  out->set_data_type(in->data_type());
-  out->set_has_data_id_field(in->has_data_id_field());
-  CHECK_EQ(in->data_type(), out->data_type());
+  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
+  out_blob_desc->mut_shape() =
+      Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().Count(1)});
   // tmp
-  BlobDesc* tmp = GetBlobDesc4BnInOp("tmp");
-  tmp->mut_shape() = Shape({in->shape().At(0)});
-  tmp->set_data_type(in->data_type());
+  BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp");
+  tmp_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0)});
+  tmp_blob_desc->set_data_type(in_blob_desc->data_type());
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
