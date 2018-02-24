@@ -2,7 +2,6 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -164,7 +163,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
     std::unique_ptr<Blob> host_blob;
     host_blob.reset(
-        GenBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+        NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
     // synchronous initialize the host blob
     KernelUtil<DeviceType::kCPU, T>::Initialize(nullptr, initializer_conf,
                                                 random_seed, host_blob.get());
@@ -186,7 +185,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
     std::unique_ptr<Blob> host_blob;
     host_blob.reset(
-        GenBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+        NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
     KernelUtil<DeviceType::kCPU, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
         num_in_each_dim);

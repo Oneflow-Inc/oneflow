@@ -24,9 +24,6 @@ class RegstMgr final {
   std::list<std::unique_ptr<const RtRegstDesc>> rt_regst_descs_;
 };
 
-Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              const void* comm_net_token, DeviceType device_type);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_REGISTER_MANAGER_H_

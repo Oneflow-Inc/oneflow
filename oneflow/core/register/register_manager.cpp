@@ -15,7 +15,7 @@ namespace oneflow {
                                       comm_net_token);                        \
    }},
 
-Blob* GenBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               const void* comm_net_token, DeviceType device_type) {
   static const HashMap<std::string, std::function<Blob*()>> creators = {
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ,
@@ -47,12 +47,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
       std::unique_ptr<Blob> blob_ptr;
       blob_ptr.reset(
-          GenBlob(regst, blob_desc, cur_pointer, nullptr, device_type));
+          NewBlob(regst, blob_desc, cur_pointer, nullptr, device_type));
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }
     regst->packed_blob_.reset(
-        GenBlob(regst, runtime_regst_desc->packed_blob_desc(),
+        NewBlob(regst, runtime_regst_desc->packed_blob_desc(),
                 std::get<0>(allocation_result), std::get<1>(allocation_result),
                 device_type));
     regst->deleter_ = std::get<2>(allocation_result);

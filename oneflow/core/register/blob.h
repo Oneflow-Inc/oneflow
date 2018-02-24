@@ -29,9 +29,7 @@ class Blob {
   void* mut_memory_ptr() { return mem_ptr_; }
 
   virtual void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                         const std::vector<int32_t>& permutation) {
-    UNEXPECTED_RUN();
-  };
+                         const std::vector<int32_t>& permutation) = 0;
 
   template<typename T = void>
   const T* dptr() const {
@@ -99,6 +97,8 @@ class Blob {
   Regst* regst_;
 };
 
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+              const void* comm_net_token, DeviceType device_type);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_BLOB_H_

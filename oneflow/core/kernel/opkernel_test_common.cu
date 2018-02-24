@@ -1,7 +1,6 @@
 #include <random>
 #include "oneflow/core/device/cuda_device_context.h"
 #include "oneflow/core/kernel/opkernel_test_common.h"
-#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -13,7 +12,7 @@ template<>
 Blob* CreateBlob<DeviceType::kGPU>(const BlobDesc* blob_desc) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMalloc(&mem_ptr, blob_desc->TotalByteSize()));
-  return GenBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
                  DeviceType::kGPU);
 }
 
