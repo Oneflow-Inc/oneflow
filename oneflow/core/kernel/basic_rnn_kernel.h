@@ -6,6 +6,30 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+class BasicRnnKernelUtil final {
+ public:
+  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff);
+  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                                 const T* out_diff, const T* rec_out_diff,
+                                 T* plus_out_diff);
+};
+
+template<DeviceType device_type, typename T>
+using LastColNumBpActivationFunc = void (*)(DeviceCtx* ctx, int64_t n,
+                                            const T* out, const T* out_diff,
+                                            const T* rec_out_diff,
+                                            T* plus_op_out_diff);
+template<DeviceType device_type, typename T>
+using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+
+template<DeviceType device_type, typename T>
+using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* out,
+                                  const T* out_diff, const T* rec_out_diff,
+                                  T* plus_out_diff);
+
+template<DeviceType device_type, typename T>
 class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BasicRnnKernel);
@@ -13,6 +37,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   ~BasicRnnKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override;
   const PbMessage& GetRecurrentOpConf() const override;
   bool HasInitHiddenInitializer() const override;
   void ForwardDataContent(
@@ -31,17 +56,12 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   void InitModelTmpBlobs(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-};
 
-template<DeviceType device_type, typename T>
-class BasicRnnKernelUtil final {
- public:
-  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                              const T* out_diff, const T* rec_out_diff,
-                              T* plus_out_diff);
-  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                                 const T* out_diff, const T* rec_out_diff,
-                                 T* plus_out_diff);
+ private:
+  FwActivationFunc<device_type, T> ComputeActivationFunc;
+  BwActivationFunc<device_type, T> ComputeActivationDiffFunc;
+  LastColNumBpActivationFunc<device_type, T>
+      ComputeLastColNumActivationDiffFunc;
 };
 
 }  // namespace oneflow

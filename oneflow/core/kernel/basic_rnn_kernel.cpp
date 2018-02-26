@@ -3,6 +3,26 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void BasicRnnKernel<device_type, T>::VirtualKernelInit(
+    const ParallelContext* parallel_ctx) {
+  ActivationType activation_type =
+      this->op_conf().basic_rnn_conf().activation();
+  if (activation_type == kTanH) {
+    ComputeActivationFunc = &KernelUtil<device_type, T>::TanH;
+    ComputeActivationDiffFunc = &KernelUtil<device_type, T>::TanHBackward;
+    ComputeLastColNumActivationDiffFunc =
+        &BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff;
+  } else if (activation_type == kSigmoid) {
+    ComputeActivationFunc = &KernelUtil<device_type, T>::Sigmoid;
+    ComputeActivationDiffFunc = &KernelUtil<device_type, T>::SigmoidBackward;
+    ComputeLastColNumActivationDiffFunc =
+        &BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff;
+  } else {
+    UNEXPECTED_RUN()
+  }
+}
+
+template<DeviceType device_type, typename T>
 const PbMessage& BasicRnnKernel<device_type, T>::GetRecurrentOpConf() const {
   return this->op_conf().basic_rnn_conf();
 }
@@ -38,17 +58,10 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
       static_cast<T>(1), BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias"),
       plus_op_out_blob);
 
-  if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
-    KernelUtil<device_type, T>::TanH(
-        ctx.device_ctx, out_blob->shape().elem_cnt(),
-        plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
-  } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
-    KernelUtil<device_type, T>::Sigmoid(
-        ctx.device_ctx, out_blob->shape().elem_cnt(),
-        plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
-  } else {
-    UNEXPECTED_RUN();
-  }
+  // out = activation(plus_op_out)
+  (*ComputeActivationFunc)(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                           plus_op_out_blob->dptr<T>(),
+                           out_blob->mut_dptr<T>());
 
   // rec_out = out
   BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
@@ -67,34 +80,16 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   const Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
-  if (this->op_conf().basic_rnn_conf().activation() == kTanH) {
-    if (in_blob->col_id() == in_blob->max_col_id()) {
-      KernelUtil<device_type, T>::TanHBackward(
-          ctx.device_ctx, out_blob->shape().elem_cnt(),
-          plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
-    } else {
-      const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
-      BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff(
-          ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
-          plus_op_out_diff_blob->mut_dptr<T>());
-    }
-  } else if (this->op_conf().basic_rnn_conf().activation() == kSigmoid) {
-    if (in_blob->col_id() == in_blob->max_col_id()) {
-      KernelUtil<device_type, T>::SigmoidBackward(
-          ctx.device_ctx, out_blob->shape().elem_cnt(),
-          plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
-    } else {
-      const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
-      BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff(
-          ctx.device_ctx, out_blob->shape().elem_cnt(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
-          plus_op_out_diff_blob->mut_dptr<T>());
-    }
+  if (in_blob->col_id() == in_blob->max_col_id()) {
+    (*ComputeLastColNumActivationDiffFunc)(
+        ctx.device_ctx, out_blob->shape().elem_cnt(),
+        plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
+        out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
   } else {
-    UNEXPECTED_RUN();
+    (*ComputeActivationDiffFunc)(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                 out_blob->dptr<T>(), out_diff_blob->dptr<T>(),
+                                 BnInOp2Blob("rec_out_diff")->dptr<T>(),
+                                 plus_op_out_diff_blob->mut_dptr<T>());
   }
 
   // h2h_weight_diff = plus_op_out_diff * hidden
@@ -129,7 +124,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
         static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
         this->GetHiddenDiffBlob(BnInOp2Blob));
   }
-}
+}  // namespace oneflow
 
 template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
