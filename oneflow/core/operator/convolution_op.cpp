@@ -51,8 +51,8 @@ void ConvolutionOp::InferBlobDescs(
 
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
+  *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
-  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // col_buf
   GetBlobDesc4BnInOp("col_buf")->mut_shape() =

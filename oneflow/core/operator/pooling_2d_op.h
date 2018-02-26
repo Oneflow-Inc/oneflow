@@ -5,13 +5,13 @@
 
 namespace oneflow {
 
-class Pooling2DOp : public PoolingOp {
+class Pooling2DOp : virtual public PoolingOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Pooling2DOp);
   Pooling2DOp() = default;
   virtual ~Pooling2DOp() = default;
 
- protected:
+ private:
   int32_t GetDim() const override { return 2; }
 };
 
