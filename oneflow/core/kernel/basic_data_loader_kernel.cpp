@@ -87,10 +87,10 @@ void BasicDataLoaderKernel<T>::ReadOneColFromBufferToOutBlob(
     DeviceCtx* device_ctx, int32_t col_id, const Blob* buffer_blob,
     Blob* out_blob) const {
   if (out_blob->has_data_id_field()) {
-    out_blob->CopyDataIdFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
+    out_blob->CopyDataIdFrom(device_ctx, buffer_blob);
   }
   if (out_blob->has_col_num_field()) {
-    out_blob->CopyColNumFrom<DeviceType::kCPU>(device_ctx, buffer_blob);
+    out_blob->CopyColNumFrom(device_ctx, buffer_blob);
   }
   FOR_RANGE(int64_t, i, 0, out_blob->shape().At(0)) {
     T* out_dptr = out_blob->mut_dptr<T>() + i * out_blob->shape().Count(1);

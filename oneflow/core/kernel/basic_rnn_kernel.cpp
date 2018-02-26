@@ -51,8 +51,7 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
   }
 
   // rec_out = out
-  BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                           out_blob);
+  BnInOp2Blob("rec_out")->CopyDataContentFrom(ctx.device_ctx, out_blob);
 }
 
 template<DeviceType device_type, typename T>
