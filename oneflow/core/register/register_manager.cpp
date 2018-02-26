@@ -2,28 +2,9 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
-#include "oneflow/core/register/blob_implement.h"
-#include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
-
-#define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                   \
-  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type), [=]() { \
-     return new BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims,             \
-                         device_type>(regst, blob_desc, mem_ptr,              \
-                                      comm_net_token);                        \
-   }},
-
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              const void* comm_net_token, DeviceType device_type) {
-  static const HashMap<std::string, std::function<Blob*()>> creators = {
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ,
-                                       DIM_SEQ, DEVICE_TYPE_SEQ)};
-  return creators.at(GetHashKey(
-      blob_desc->data_type(),
-      static_cast<int32_t>(blob_desc->shape().NumAxes()), device_type))();
-}
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          DeviceType device_type,
