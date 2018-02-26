@@ -6,15 +6,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-using LastColNumBpActivationFunc = void (*)(DeviceCtx* ctx, int64_t n,
-                                            const T* out, const T* out_diff,
-                                            const T* rec_out_diff,
-                                            T* plus_op_out_diff);
+using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, T*);
+
 template<DeviceType device_type, typename T>
-using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* x, T* y); 
-template<DeviceType device_type, typename T>
-using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* x,
-                                  const T* y, const T* dy, T* dx);
+using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, const T*,
+                                  const T*, T*);
 
 template<DeviceType device_type, typename T>
 class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
@@ -47,7 +43,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
  private:
   FwActivationFunc<device_type, T> activation_fw_func_;
   BwActivationFunc<device_type, T> activation_bw_func_;
-  LastColNumBpActivationFunc<device_type, T> last_colnum_activation_bw_func_;
+  BwActivationFunc<device_type, T> last_colnum_activation_bw_func_;
 };
 
 template<DeviceType device_type, typename T>

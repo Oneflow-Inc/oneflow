@@ -9,14 +9,14 @@ void BasicRnnKernel<device_type, T>::VirtualKernelInit(
       this->op_conf().basic_rnn_conf().activation();
   if (activation_type == kTanH) {
     activation_fw_func_ = &KernelUtil<device_type, T>::TanH;
-    activation_bw_func_ = &KernelUtil<device_type, T>::TanHBackward;
-    last_colnum_activation_bw_func_ =
-        &BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff;
+    activation_bw_func_ = &BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff;
+    last_colnum_activation_bw_func_ = &KernelUtil<device_type, T>::TanHBackward;
   } else if (activation_type == kSigmoid) {
     activation_fw_func_ = &KernelUtil<device_type, T>::Sigmoid;
-    activation_bw_func_ = &KernelUtil<device_type, T>::SigmoidBackward;
-    last_colnum_activation_bw_func_ =
+    activation_bw_func_ =
         &BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff;
+    last_colnum_activation_bw_func_ =
+        &KernelUtil<device_type, T>::SigmoidBackward;
   } else {
     UNEXPECTED_RUN()
   }
