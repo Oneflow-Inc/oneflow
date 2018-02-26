@@ -97,6 +97,7 @@ class Blob {
 
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               const void* comm_net_token, DeviceType device_type);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_BLOB_H_
