@@ -47,10 +47,9 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
  private:
-  FwActivationFunc<device_type, T> ComputeActivationFunc;
-  BwActivationFunc<device_type, T> ComputeActivationDiffFunc;
-  LastColNumBpActivationFunc<device_type, T>
-      ComputeLastColNumActivationDiffFunc;
+  FwActivationFunc<device_type, T> activation_fw_func_;
+  BwActivationFunc<device_type, T> activation_bw_func_;
+  LastColNumBpActivationFunc<device_type, T> last_colnum_activation_bw_func_;
 };
 
 template<DeviceType device_type, typename T>

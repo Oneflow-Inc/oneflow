@@ -8,14 +8,14 @@ void BasicRnnKernel<device_type, T>::VirtualKernelInit(
   ActivationType activation_type =
       this->op_conf().basic_rnn_conf().activation();
   if (activation_type == kTanH) {
-    ComputeActivationFunc = &KernelUtil<device_type, T>::TanH;
-    ComputeActivationDiffFunc = &KernelUtil<device_type, T>::TanHBackward;
-    ComputeLastColNumActivationDiffFunc =
+    activation_fw_func_ = &KernelUtil<device_type, T>::TanH;
+    activation_bw_func_ = &KernelUtil<device_type, T>::TanHBackward;
+    last_colnum_activation_bw_func_ =
         &BasicRnnKernelUtil<device_type, T>::ComputeTanHDiff;
   } else if (activation_type == kSigmoid) {
-    ComputeActivationFunc = &KernelUtil<device_type, T>::Sigmoid;
-    ComputeActivationDiffFunc = &KernelUtil<device_type, T>::SigmoidBackward;
-    ComputeLastColNumActivationDiffFunc =
+    activation_fw_func_ = &KernelUtil<device_type, T>::Sigmoid;
+    activation_bw_func_ = &KernelUtil<device_type, T>::SigmoidBackward;
+    last_colnum_activation_bw_func_ =
         &BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff;
   } else {
     UNEXPECTED_RUN()
@@ -59,15 +59,12 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
       plus_op_out_blob);
 
   // out = activation(plus_op_out)
-  (*ComputeActivationFunc)(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                           plus_op_out_blob->dptr<T>(),
-                           out_blob->mut_dptr<T>());
+  (*activation_fw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
 
-  if (BnInOp2Blob("rec_out")) {
-    // rec_out = out
-    BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                             out_blob);
-  }
+  // rec_out = out
+  BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
+                                                           out_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -83,15 +80,15 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
 
   if (in_blob->col_id() == in_blob->max_col_id()) {
-    (*ComputeLastColNumActivationDiffFunc)(
+    (*last_colnum_activation_bw_func_)(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->dptr<T>(),
         out_diff_blob->dptr<T>(), plus_op_out_diff_blob->mut_dptr<T>());
   } else {
-    (*ComputeActivationDiffFunc)(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                                 out_blob->dptr<T>(), out_diff_blob->dptr<T>(),
-                                 BnInOp2Blob("rec_out_diff")->dptr<T>(),
-                                 plus_op_out_diff_blob->mut_dptr<T>());
+    (*activation_bw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                           out_blob->dptr<T>(), out_diff_blob->dptr<T>(),
+                           BnInOp2Blob("rec_out_diff")->dptr<T>(),
+                           plus_op_out_diff_blob->mut_dptr<T>());
   }
 
   // h2h_weight_diff = plus_op_out_diff * hidden
