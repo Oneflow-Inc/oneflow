@@ -11,12 +11,10 @@ using LastColNumBpActivationFunc = void (*)(DeviceCtx* ctx, int64_t n,
                                             const T* rec_out_diff,
                                             T* plus_op_out_diff);
 template<DeviceType device_type, typename T>
-using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* x, T* y);
-
+using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* x, T* y); 
 template<DeviceType device_type, typename T>
-using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* out,
-                                  const T* out_diff, const T* rec_out_diff,
-                                  T* plus_out_diff);
+using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T* x,
+                                  const T* y, const T* dy, T* dx);
 
 template<DeviceType device_type, typename T>
 class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
