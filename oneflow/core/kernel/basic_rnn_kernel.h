@@ -6,17 +6,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class BasicRnnKernelUtil final {
- public:
-  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                              const T* out_diff, const T* rec_out_diff,
-                              T* plus_out_diff);
-  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                                 const T* out_diff, const T* rec_out_diff,
-                                 T* plus_out_diff);
-};
-
-template<DeviceType device_type, typename T>
 using LastColNumBpActivationFunc = void (*)(DeviceCtx* ctx, int64_t n,
                                             const T* out, const T* out_diff,
                                             const T* rec_out_diff,
@@ -62,6 +51,17 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   BwActivationFunc<device_type, T> ComputeActivationDiffFunc;
   LastColNumBpActivationFunc<device_type, T>
       ComputeLastColNumActivationDiffFunc;
+};
+
+template<DeviceType device_type, typename T>
+class BasicRnnKernelUtil final {
+ public:
+  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff);
+  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                                 const T* out_diff, const T* rec_out_diff,
+                                 T* plus_out_diff);
 };
 
 }  // namespace oneflow
