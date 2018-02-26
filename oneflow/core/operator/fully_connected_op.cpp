@@ -16,7 +16,7 @@ void FullyConnectedOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& FullyConnectedOp::GetSpecialConf() const {
+const PbMessage& FullyConnectedOp::GetCustomizedConf() const {
   return op_conf().fully_connected_conf();
 }
 

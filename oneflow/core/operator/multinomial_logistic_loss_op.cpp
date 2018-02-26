@@ -19,7 +19,7 @@ void MultinomialLogisticLossOp::VirtualGenKernelConf(
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
 }
 
-const PbMessage& MultinomialLogisticLossOp::GetSpecialConf() const {
+const PbMessage& MultinomialLogisticLossOp::GetCustomizedConf() const {
   return op_conf().multinomial_logistic_loss_conf();
 }
 

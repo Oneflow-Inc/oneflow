@@ -11,7 +11,7 @@ void ReduceSumOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& ReduceSumOp::GetSpecialConf() const {
+const PbMessage& ReduceSumOp::GetCustomizedConf() const {
   return op_conf().reduce_sum_conf();
 }
 

@@ -3,20 +3,20 @@
 namespace oneflow {
 
 void PoolingOp::InitFromOpConf() {
-  std::string padding_mthd = GetStringFromSpecialConf("padding");
+  std::string padding_mthd = GetStringFromCustomizedConf("padding");
   std::transform(padding_mthd.begin(), padding_mthd.end(), padding_mthd.begin(),
                  ::tolower);
   if (padding_mthd != "same" && padding_mthd != "valid") {
     LOG(FATAL) << "Invalid padding method in " << op_name();
   }
-  SetStringInSpecialConf("padding", padding_mthd);
-  std::string data_format = GetStringFromSpecialConf("data_format");
+  SetStringInCustomizedConf("padding", padding_mthd);
+  std::string data_format = GetStringFromCustomizedConf("data_format");
   std::transform(data_format.begin(), data_format.end(), data_format.begin(),
                  ::tolower);
   if (data_format != "channels_last" && data_format != "channels_first") {
     LOG(FATAL) << "Invalid data format in " << op_name();
   }
-  SetStringInSpecialConf("data_format", data_format);
+  SetStringInCustomizedConf("data_format", data_format);
   CheckPoolSizeAndStrides();
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -37,8 +37,8 @@ void PoolingOp::InferBlobDescs(
   std::vector<int64_t> pool_size = Get3DVecInOpConf("pool_size");
   std::vector<int64_t> strides = Get3DVecInOpConf("strides");
   std::vector<int64_t> out;
-  Get3DOutputSize(in, pool_size, strides, GetStringFromSpecialConf("padding"),
-                  &out, nullptr);
+  Get3DOutputSize(in, pool_size, strides,
+                  GetStringFromCustomizedConf("padding"), &out, nullptr);
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_shape.At(1), out);
@@ -47,10 +47,11 @@ void PoolingOp::InferBlobDescs(
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {
-  const PbRf<int64_t>& pool_size = GetPbRfFromSpecialConf<int64_t>("pool_size");
+  const PbRf<int64_t>& pool_size =
+      GetPbRfFromCustomizedConf<int64_t>("pool_size");
   CHECK_EQ(pool_size.size(), GetDim());
   for (int64_t pool_dim : pool_size) { CHECK_GT(pool_dim, 0); }
-  const PbRf<int64_t>& strides = GetPbRfFromSpecialConf<int64_t>("strides");
+  const PbRf<int64_t>& strides = GetPbRfFromCustomizedConf<int64_t>("strides");
   CHECK_EQ(strides.size(), GetDim());
   for (int64_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
@@ -63,7 +64,7 @@ std::vector<int64_t> PoolingOp::Get3DVecInOpConf(
     if (index < 0) {
       vec.push_back(1);
     } else {
-      vec.push_back(GetPbRfFromSpecialConf<int64_t>(field_name).Get(index));
+      vec.push_back(GetPbRfFromCustomizedConf<int64_t>(field_name).Get(index));
     }
   }
   return vec;
@@ -71,7 +72,7 @@ std::vector<int64_t> PoolingOp::Get3DVecInOpConf(
 
 int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
   int64_t offset = 0;
-  std::string data_format = GetStringFromSpecialConf("data_format");
+  std::string data_format = GetStringFromCustomizedConf("data_format");
   if (data_format == "channels_last") {
     offset = 1;
   } else if (data_format == "channels_first") {
@@ -99,7 +100,7 @@ Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
   } else {
     UNEXPECTED_RUN();
   }
-  std::string data_format = GetStringFromSpecialConf("data_format");
+  std::string data_format = GetStringFromCustomizedConf("data_format");
   if (data_format == "channels_first") {
     out_shape.insert(out_shape.begin(), in_c);
   } else if (data_format == "channels_last") {
@@ -122,15 +123,16 @@ void PoolingOp::VirtualGenKernelConf(
   std::vector<int64_t> out;
   std::vector<int64_t> padding_before;
   std::vector<int64_t> padding_after;
-  Get3DOutputSize(in, pool_size, strides, GetStringFromSpecialConf("padding"),
-                  &out, &padding_before, &padding_after);
+  Get3DOutputSize(in, pool_size, strides,
+                  GetStringFromCustomizedConf("padding"), &out, &padding_before,
+                  &padding_after);
 
   Pooling3DKernelConf* pooling_conf = GetMutPooling3DKernelConf(kernel_conf);
   Shape(pool_size).ToProto(pooling_conf->mutable_pool_size());
   Shape(strides).ToProto(pooling_conf->mutable_strides());
   Shape(padding_before).ToProto(pooling_conf->mutable_padding_before());
   Shape(padding_after).ToProto(pooling_conf->mutable_padding_after());
-  std::string data_format = GetStringFromSpecialConf("data_format");
+  std::string data_format = GetStringFromCustomizedConf("data_format");
   if (data_format == "channels_first") {
     Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
         .ToProto(pooling_conf->mutable_in());
@@ -144,7 +146,7 @@ void PoolingOp::VirtualGenKernelConf(
   } else {
     UNEXPECTED_RUN();
   }
-  pooling_conf->set_data_format(GetStringFromSpecialConf("data_format"));
+  pooling_conf->set_data_format(GetStringFromCustomizedConf("data_format"));
 }
 
 }  // namespace oneflow

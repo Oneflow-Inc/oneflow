@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-const PbMessage& AveragePooling1DOp::GetSpecialConf() const {
+const PbMessage& AveragePooling1DOp::GetCustomizedConf() const {
   return op_conf().average_pooling_1d_conf();
 }
 

@@ -9,7 +9,7 @@ void TanHOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& TanHOp::GetSpecialConf() const {
+const PbMessage& TanHOp::GetCustomizedConf() const {
   return op_conf().tanh_conf();
 }
 
