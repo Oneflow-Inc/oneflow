@@ -4,19 +4,16 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/eigen/tensor_type.h"
 
 namespace oneflow {
 
 class Regst;
 
-class Blob final {
+class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-       const void* comm_net_token);
-  ~Blob() = default;
+  virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
@@ -30,6 +27,9 @@ class Blob final {
 
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }
+
+  virtual void Transpose(DeviceCtx* ctx, Blob* out_blob,
+                         const std::vector<int32_t>& permutation) = 0;
 
   template<typename T = void>
   const T* dptr() const {
@@ -72,6 +72,12 @@ class Blob final {
   void set_max_col_id(int32_t val);
   bool IsColValid() const;
 
+ protected:
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+       const void* comm_net_token);
+
  private:
   template<typename T>
   void CheckDataType() const {
@@ -91,6 +97,8 @@ class Blob final {
   Regst* regst_;
 };
 
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+              const void* comm_net_token, DeviceType device_type);
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_BLOB_H_
