@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 #define DEFINE_CUDNN_DATA_TYPE(type_cpp, type_cudnn)                          \
   const cudnnDataType_t CudnnDataType<type_cpp>::val = type_cudnn;            \
   const type_cpp CudnnDataType<type_cpp>::oneval = static_cast<type_cpp>(1);  \
@@ -34,6 +36,14 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape)
   CHECK_EQ(shape.NumAxes(), 4);
 }
 
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type,
+                                 const std::vector<int>& dim,
+                                 const std::vector<int>& stride) {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type),
+                                       dim.size(), dim.data(), stride.data()));
+}
+
 CudnnFilterDesc::~CudnnFilterDesc() {
   CudaCheck(cudnnDestroyFilterDescriptor(val_));
 }
@@ -60,5 +70,7 @@ CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
 CudnnActivationDesc::~CudnnActivationDesc() {
   CudaCheck(cudnnDestroyActivationDescriptor(val_));
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

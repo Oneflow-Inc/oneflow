@@ -68,6 +68,11 @@ class Operator {
     return static_cast<const T&>(GetMessageFromSpecialConf(field_name));
   }
 
+  template<typename T>
+  const PbRf<T>& GetPbRfFromSpecialConf(const std::string& field_name) const {
+    return GetPbRfFromPbMessage<T>(GetSpecialConf(), field_name);
+  }
+
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
 #define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
