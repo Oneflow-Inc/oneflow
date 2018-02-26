@@ -72,34 +72,6 @@ size_t Blob::ByteSizeOfDataContentField() const {
   return blob_desc_->ByteSizeOfDataContentField();
 }
 
-template<DeviceType device_type>
-void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, dptr_, rhs->dptr_,
-                      ByteSizeOfDataContentField());
-}
-
-template<DeviceType device_type>
-void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, data_id_ptr_, rhs->data_id_ptr_,
-                      ByteSizeOfDataIdField());
-}
-
-template<DeviceType device_type>
-void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, col_num_ptr_, rhs->col_num_ptr_,
-                      ByteSizeOfColNumField());
-}
-
-template<DeviceType device_type>
-void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  Memcpy<device_type>(device_ctx, mut_memory_ptr(), rhs->memory_ptr(),
-                      TotalByteSize());
-}
-
 int32_t Blob::col_id() const { return regst_->col_id(); }
 
 void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
@@ -109,13 +81,5 @@ int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 
 bool Blob::IsColValid() const { return col_id() <= max_col_id(); }
-
-#define INSTANTIATE_BLOB_FUNC(dev_t)                                       \
-  template void Blob::CopyDataContentFrom<dev_t>(DeviceCtx*, const Blob*); \
-  template void Blob::CopyDataIdFrom<dev_t>(DeviceCtx*, const Blob*);      \
-  template void Blob::CopyColNumFrom<dev_t>(DeviceCtx*, const Blob*);      \
-  template void Blob::CopyFrom<dev_t>(DeviceCtx*, const Blob*);
-
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_BLOB_FUNC, DEVICE_TYPE_SEQ);
 
 }  // namespace oneflow

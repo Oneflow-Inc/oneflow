@@ -23,6 +23,8 @@ class Blob {
 
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
+
+  const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
   const void* memory_ptr() const { return mem_ptr_; }
@@ -57,14 +59,10 @@ class Blob {
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
-  template<DeviceType device_type>
-  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  template<DeviceType device_type>
-  void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  template<DeviceType device_type>
-  void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  template<DeviceType device_type>
-  void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
 
   int32_t col_id() const;
   void set_col_id(int32_t val);

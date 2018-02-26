@@ -103,7 +103,7 @@ class DataContentIterator final {
   }
 
   static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyDataContentFrom<DeviceType::kCPU>;
+    return &Blob::CopyDataContentFrom;
   }
 
  private:
@@ -167,7 +167,7 @@ class DataIdIterator final : public FieldIterator {
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
   static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyDataIdFrom<DeviceType::kCPU>;
+    return &Blob::CopyDataIdFrom;
   }
 
  private:
@@ -184,7 +184,7 @@ class ColNumIterator final : public FieldIterator {
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
   static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyColNumFrom<DeviceType::kCPU>;
+    return &Blob::CopyColNumFrom;
   }
 
  private:
