@@ -146,6 +146,8 @@ inline uint32_t NewRandomSeed() {
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif
 
+#define DIM_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
+
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ \
   (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)

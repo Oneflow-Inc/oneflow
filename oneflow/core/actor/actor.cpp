@@ -25,9 +25,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
-      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-    });
+    RegstMgr::Singleton()->NewRegsts(
+        pair.second, GetDeviceType(), [this](Regst* regst) {
+          produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+        });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.emplace(pair.first, regst_desc_id).second);
   }
@@ -72,7 +73,8 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
     case DeviceType::kGPU: {
       device_ctx_.reset(new CudaDeviceCtx(
           NewWorkStreamId(), cuda_handle_.cuda_stream(),
-          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
+          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle(),
+          cuda_handle_.eigen_gpu_device()));
       break;
     }
 #endif
