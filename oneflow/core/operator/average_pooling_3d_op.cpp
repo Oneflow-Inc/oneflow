@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-const PbMessage& AveragePooling3DOp::GetSpecialConf() const {
+const PbMessage& AveragePooling3DOp::GetCustomizedConf() const {
   return op_conf().average_pooling_3d_conf();
 }
 

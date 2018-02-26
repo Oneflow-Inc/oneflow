@@ -10,7 +10,7 @@ void SoftmaxOp::InitFromOpConf() {
   EnrollDataTmpBn("tmp");
 }
 
-const PbMessage& SoftmaxOp::GetSpecialConf() const {
+const PbMessage& SoftmaxOp::GetCustomizedConf() const {
   return op_conf().softmax_conf();
 }
 

@@ -12,7 +12,7 @@ class AveragePooling2DOp final : public Pooling2DOp, public AveragePoolingOp {
   AveragePooling2DOp() = default;
   ~AveragePooling2DOp() = default;
 
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow

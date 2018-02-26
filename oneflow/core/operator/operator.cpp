@@ -148,10 +148,10 @@ void Operator::GenKernelConf(
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromSpecialConf(input_bn);
+  return GetStringFromCustomizedConf(input_bn);
 }
 std::string Operator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+  return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
 }
 std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
   return op_name() + "/" + model_tmp_bn;

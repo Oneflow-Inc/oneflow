@@ -12,7 +12,7 @@ class MaxPooling3DOp final : public Pooling3DOp, public MaxPoolingOp {
   MaxPooling3DOp() = default;
   ~MaxPooling3DOp() = default;
 
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow
