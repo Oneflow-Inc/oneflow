@@ -2,8 +2,10 @@
 #define ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_
 
 #include "cudnn.h"
+#include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -52,6 +54,34 @@ class CudnnFilterDesc final {
 
   CudnnFilterDesc(DataType, int k, int c, int h, int w);
   CudnnFilterDesc(DataType, const Shape&);
+
+  const cudnnFilterDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnFilterDescriptor_t val_;
+};
+
+class CudnnTensorNdDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnTensorNdDesc);
+  CudnnTensorNdDesc() = delete;
+  ~CudnnTensorNdDesc();
+
+  CudnnTensorNdDesc(DataType, const Shape&);
+
+  const cudnnTensorDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnTensorDescriptor_t val_;
+};
+
+class CudnnFilterNdDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnFilterNdDesc);
+  CudnnFilterNdDesc() = delete;
+  ~CudnnFilterNdDesc();
+
+  CudnnFilterNdDesc(DataType, const std::string&, const Shape&);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 

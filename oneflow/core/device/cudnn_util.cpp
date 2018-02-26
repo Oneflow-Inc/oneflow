@@ -50,6 +50,40 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape)
   CHECK_EQ(shape.NumAxes(), 4);
 }
 
+CudnnTensorNdDesc::~CudnnTensorNdDesc() {
+  CudaCheck(cudnnDestroyTensorDescriptor(val_));
+}
+
+CudnnTensorNdDesc::CudnnTensorNdDesc(DataType data_type, const Shape& shape) {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  std::vector<int> stride_of_tensor(shape.NumAxes(), 1);
+  CudaCheck(cudnnSetTensorNdDescriptor(
+      val_, GetCudnnDataType(data_type), static_cast<int>(shape.NumAxes()),
+      reinterpret_cast<const int*>(shape.dim_vec().data()),
+      stride_of_tensor.data()));
+}
+
+CudnnFilterNdDesc::~CudnnFilterNdDesc() {
+  CudaCheck(cudnnDestroyFilterDescriptor(val_));
+}
+
+CudnnFilterNdDesc::CudnnFilterNdDesc(DataType data_type,
+                                     const std::string& data_format,
+                                     const Shape& shape) {
+  cudnnTensorFormat_t cudnn_data_format;
+  if (data_format == "NCHW" || data_format == "NCDHW") {
+    cudnn_data_format = CUDNN_TENSOR_NCHW;
+  } else if (data_format == "NHWC" || data_format == "NDHWC") {
+    cudnn_data_format = CUDNN_TENSOR_NHWC;
+  } else {
+    UNEXPECTED_RUN();
+  }
+  CudaCheck(cudnnSetFilterNdDescriptor(
+      val_, GetCudnnDataType(data_type), cudnn_data_format,
+      static_cast<int>(shape.NumAxes()),
+      reinterpret_cast<const int*>(shape.dim_vec().data())));
+}
+
 CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
                                          cudnnNanPropagation_t relu_nan_opt,
                                          double coef) {
