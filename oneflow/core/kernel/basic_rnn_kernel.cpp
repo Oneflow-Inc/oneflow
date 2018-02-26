@@ -63,9 +63,11 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
                            plus_op_out_blob->dptr<T>(),
                            out_blob->mut_dptr<T>());
 
-  // rec_out = out
-  BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                           out_blob);
+  if (BnInOp2Blob("rec_out")) {
+    // rec_out = out
+    BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
+                                                             out_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -104,17 +106,21 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
                                        plus_op_out_diff_blob, BnInOp2Blob("in"),
                                        BnInOp2Blob("i2h_weight_diff"));
 
-  // in_diff = plus_op_out_diff * i2h_weight
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
-      BnInOp2Blob("in_diff"));
+  if (BnInOp2Blob("in_diff") != nullptr) {
+    // in_diff = plus_op_out_diff * i2h_weight
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
+        BnInOp2Blob("in_diff"));
+  }
 
-  // bias_diff = bias_multiplier * plus_op_out_diff
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), BnInOp2Blob("bias_multiplier"), plus_op_out_diff_blob,
-      BnInOp2Blob("bias_diff"));
+  if (BnInOp2Blob("bias_diff") != nullptr) {
+    // bias_diff = bias_multiplier * plus_op_out_diff
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
+        plus_op_out_diff_blob, BnInOp2Blob("bias_diff"));
+  }
 
   if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
       || this->op_conf().basic_rnn_conf().is_init_hidden_trainable()) {
@@ -124,7 +130,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
         static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
         this->GetHiddenDiffBlob(BnInOp2Blob));
   }
-}  // namespace oneflow
+}
 
 template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
