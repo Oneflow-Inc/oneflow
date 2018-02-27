@@ -34,7 +34,7 @@ int MdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     init_remaining_cnt_ -= 1;
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   if (init_remaining_cnt_ == 0) {
     OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerSendInitialModel);
@@ -71,7 +71,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }

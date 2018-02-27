@@ -78,7 +78,7 @@ int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
   } else if (data_format == "channels_first") {
     offset = 2;
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   int64_t index = offset + static_cast<int64_t>(dim) - (3 - GetDim());
   if (index < offset) {
@@ -98,7 +98,7 @@ Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
   } else if (GetDim() == 3) {
     out_shape = {out.at(0), out.at(1), out.at(2)};
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   std::string data_format = GetStringFromCustomizedConf("data_format");
   if (data_format == "channels_first") {
@@ -106,7 +106,7 @@ Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
   } else if (data_format == "channels_last") {
     out_shape.insert(out_shape.end(), in_c);
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   out_shape.insert(out_shape.begin(), in_n);
   return Shape(out_shape);
@@ -144,7 +144,7 @@ void PoolingOp::VirtualGenKernelConf(
     Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2), in_shape.At(1)})
         .ToProto(pooling_conf->mutable_out());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   pooling_conf->set_data_format(GetStringFromCustomizedConf("data_format"));
 }

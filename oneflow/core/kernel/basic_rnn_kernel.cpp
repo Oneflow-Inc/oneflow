@@ -47,7 +47,7 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 
   // rec_out = out
@@ -76,7 +76,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
         out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 
   // h2h_weight_diff = plus_op_out_diff * hidden

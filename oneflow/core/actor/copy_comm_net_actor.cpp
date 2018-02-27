@@ -62,7 +62,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }

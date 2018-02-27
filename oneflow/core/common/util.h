@@ -37,7 +37,7 @@ namespace oneflow {
   OF_DISALLOW_COPY(ClassName)                \
   OF_DISALLOW_MOVE(ClassName)
 
-#define UNEXPECTED_RUN() LOG(FATAL) << "Unexpected Run";
+#define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
 #define TODO() LOG(FATAL) << "TODO";
 

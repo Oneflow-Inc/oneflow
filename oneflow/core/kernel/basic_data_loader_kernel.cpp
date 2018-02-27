@@ -141,7 +141,7 @@ int32_t BasicDataLoaderKernel<T>::ReadOneDataContent(const char* line_ptr,
            (blob->shape().Count(1) - offset)
                * GetSizeOfDataType(blob->data_type()));
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return col_num;
 }
