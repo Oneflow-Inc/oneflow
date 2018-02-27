@@ -67,7 +67,7 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
   } else if (user_conf.has_rmsprop_conf()) {
     return CreateRMSPropMdUpdtKernel(kernel_conf);
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

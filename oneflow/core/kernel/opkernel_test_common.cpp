@@ -85,7 +85,7 @@ class KTCommon<DeviceType::kCPU, T> final {
     } else if (initializer_conf.has_random_normal_conf()) {
       TODO();
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
 };

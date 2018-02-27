@@ -23,8 +23,8 @@ class IOEventPoller final {
  private:
   struct IOHandler {
     IOHandler() {
-      read_handler = []() { UNEXPECTED_RUN(); };
-      write_handler = []() { UNEXPECTED_RUN(); };
+      read_handler = []() { UNIMPLEMENTED(); };
+      write_handler = []() { UNIMPLEMENTED(); };
       fd = -1;
     }
     std::function<void()> read_handler;

@@ -284,7 +284,7 @@ void BoxingKernel<T>::ForwardDataContent(
                                 kernel_conf().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -300,10 +300,10 @@ void BoxingKernel<T>::ForwardDataContent(
                                 kernel_conf().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 
@@ -327,7 +327,7 @@ void BoxingKernel<T>::ForwardField(
                                 kernel_conf().output_bns(),
                                 Iter::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -338,10 +338,10 @@ void BoxingKernel<T>::ForwardField(
       CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
                 kernel_conf().output_bns(), Iter::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

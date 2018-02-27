@@ -25,7 +25,7 @@ void GetWindowedOutputSize(int64_t input_size, int64_t filter_size,
     if (padding_before) { *padding_before = padding_needed / 2; }
     if (padding_after) { *padding_after = padding_needed - *padding_before; }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   CHECK_GE((*output_size), 0);
 }

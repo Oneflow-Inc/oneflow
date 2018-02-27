@@ -17,19 +17,19 @@ class BackwardCompTaskNode : public CompTaskNode {
   CompTaskNode* GetRelatedFwTaskNode();
 
  protected:
-  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNIMPLEMENTED(); }
   virtual void VirtualBuildActivationDiffRegst() {}
-  virtual void VirtualBuildInDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBuildInDiffRegst() { UNIMPLEMENTED(); }
   virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   };
   virtual void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   virtual void VirtualProduceActivationDiff() {}
   virtual void VirtualConsumeActivation(TaskEdge* edge) {}
-  virtual void VirtualConsumeDiffRegst(TaskEdge* edge) { UNEXPECTED_RUN(); }
-  virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
+  virtual void VirtualConsumeDiffRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualConsumeInRegst() { UNIMPLEMENTED(); };
   virtual void VirtualInferBlobDescInActivationDiff() {}
   virtual void VirtualInferBlobDescInHiddenDiff() {}
 

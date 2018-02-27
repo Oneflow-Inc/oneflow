@@ -108,7 +108,7 @@ void NormalBackwardCompTaskNode::VirtualConsumeInRegst() {
       return;
     }
   }
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
 }
 
 }  // namespace oneflow

@@ -19,7 +19,7 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
     cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4,
                           cudaMemcpyDeviceToDevice);
 #else
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
 #endif
   }
   OF_SET_MSG_HANDLER(&AccumulateCompActor::HandlerNormal);
@@ -39,7 +39,7 @@ int AccumulateCompActor::HandlerNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }

@@ -72,7 +72,7 @@ void BoxingOp::InferBlobDescs(
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

@@ -70,7 +70,7 @@ std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
   } else if (input_bn == "in") {
     return GetStringFromCustomizedConf("in");
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
     return "";
   }
 }
@@ -81,7 +81,7 @@ std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
   } else if (output_bn == "rec_out") {
     return op_name() + "/rec_" + GetStringFromCustomizedConf("out");
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
     return "";
   }
 }

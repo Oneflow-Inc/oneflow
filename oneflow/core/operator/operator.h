@@ -48,7 +48,7 @@ class Operator {
   const std::string& op_name() const { return op_conf_.name(); }
   bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
-  virtual const PbMessage& GetCustomizedConf() const { UNEXPECTED_RUN(); }
+  virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
 #define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)                \
   ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
@@ -121,7 +121,7 @@ class Operator {
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {
-    LOG(FATAL) << "UNIMPLEMENTED: " << typeid(*this).name();
+    UNIMPLEMENTED() << typeid(*this).name();
   }
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;

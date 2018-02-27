@@ -27,7 +27,7 @@ int64_t GetMachineId(const sockaddr_in& sa) {
       return i;
     }
   }
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
 }
 
 std::string GenPortKey(int64_t machine_id) {
