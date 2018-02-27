@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CONV_1D_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CONV_1D_OP_H_
 
 #include "oneflow/core/operator/conv_base_op.h"
 
 namespace oneflow {
 
-class Conv3DOp : public ConvBaseOp {
+class Conv1DOp : public ConvBaseOp {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Conv3DOp);
-  Conv3DOp() = default;
-  ~Conv3DOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(Conv1DOp);
+  Conv1DOp() = default;
+  ~Conv1DOp() = default;
 
   void InitFromOpConf() override;
 
@@ -17,14 +17,14 @@ class Conv3DOp : public ConvBaseOp {
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override {
-    return op_conf().conv_3d_conf().filters();
+    return op_conf().conv_1d_conf().filters();
   }
 
  private:
   PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) override;
-  const int32_t kDimSize = 3;
+  const int32_t kDimSize = 1;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CONV_1D_OP_H_
