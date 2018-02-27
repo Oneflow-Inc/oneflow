@@ -9,7 +9,7 @@ void ReshapeOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& ReshapeOp::GetSpecialConf() const {
+const PbMessage& ReshapeOp::GetCustomizedConf() const {
   return op_conf().reshape_conf();
 }
 

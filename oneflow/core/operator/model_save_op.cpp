@@ -9,7 +9,7 @@ void ModelSaveOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& ModelSaveOp::GetSpecialConf() const {
+const PbMessage& ModelSaveOp::GetCustomizedConf() const {
   return op_conf().model_save_conf();
 }
 

@@ -36,7 +36,8 @@ template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(nullptr, blob_desc, static_cast<char*>(mem_ptr));
+  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+                 DeviceType::kCPU);
 }
 
 template<>

@@ -6,7 +6,13 @@ namespace oneflow {
 
 void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
     TaskEdge* edge) {
-  edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, 1));
+  if (parallel_ctx()->policy() == kModelParallel) {
+    edge->AddRegst("rec_out", ProduceRegst("rec_out"));
+  } else if (parallel_ctx()->policy() == kDataParallel) {
+    edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, 1));
+  } else {
+    UNEXPECTED_RUN();
+  }
 }
 
 void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {

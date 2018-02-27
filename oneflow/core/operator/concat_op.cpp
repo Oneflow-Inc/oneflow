@@ -13,7 +13,7 @@ void ConcatOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& ConcatOp::GetSpecialConf() const {
+const PbMessage& ConcatOp::GetCustomizedConf() const {
   return op_conf().concat_conf();
 }
 

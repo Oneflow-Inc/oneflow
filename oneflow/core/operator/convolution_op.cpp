@@ -11,13 +11,13 @@ void ConvolutionOp::InitFromOpConf() {
   EnrollDataTmpBn("col_buf");
 
   EnrollModelBn("weight");
-  if (GetBoolFromSpecialConf("has_bias_term")) {
+  if (GetBoolFromCustomizedConf("has_bias_term")) {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   }
 }
 
-const PbMessage& ConvolutionOp::GetSpecialConf() const {
+const PbMessage& ConvolutionOp::GetCustomizedConf() const {
   return op_conf().convolution_conf();
 }
 
@@ -31,7 +31,7 @@ void ConvolutionOp::InferBlobDescs(
   int64_t data_num = in_blob_desc->shape().At(0);
   int64_t c_i = in_blob_desc->shape().At(1);
 
-  int32_t out_num = GetInt32FromSpecialConf("out_num");
+  int32_t out_num = GetInt32FromCustomizedConf("out_num");
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(out_num, parallel_ctx->parallel_num());
     out_num = splitter.At(parallel_ctx->parallel_id()).size();
@@ -51,8 +51,8 @@ void ConvolutionOp::InferBlobDescs(
 
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
+  *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape({data_num, c_o, h_len, w_len});
-  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // col_buf
   GetBlobDesc4BnInOp("col_buf")->mut_shape() =

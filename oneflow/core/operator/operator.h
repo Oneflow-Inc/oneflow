@@ -48,13 +48,13 @@ class Operator {
   const std::string& op_name() const { return op_conf_.name(); }
   bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
-  virtual const PbMessage& GetSpecialConf() const { UNEXPECTED_RUN(); }
+  virtual const PbMessage& GetCustomizedConf() const { UNEXPECTED_RUN(); }
 
-#define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)             \
-  ret_type Get##func_name##FromSpecialConf(const std::string& field_name) \
-      const {                                                             \
-    const PbMessage& special_conf = GetSpecialConf();                     \
-    return Get##func_name##FromPbMessage(special_conf, field_name);       \
+#define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)                \
+  ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
+      const {                                                                \
+    const PbMessage& special_conf = GetCustomizedConf();                     \
+    return Get##func_name##FromPbMessage(special_conf, field_name);          \
   }
 
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
@@ -64,16 +64,22 @@ class Operator {
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
 
   template<typename T>
-  const T& GetMsgFromSpecialConf(const std::string& field_name) const {
-    return static_cast<const T&>(GetMessageFromSpecialConf(field_name));
+  const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
+    return static_cast<const T&>(GetMessageFromCustomizedConf(field_name));
+  }
+
+  template<typename T>
+  const PbRf<T>& GetPbRfFromCustomizedConf(
+      const std::string& field_name) const {
+    return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
 #define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
-  void Set##func_name##InSpecialConf(const std::string& field_name,      \
-                                     val_type val) const {               \
-    const PbMessage& special_conf = GetSpecialConf();                    \
+  void Set##func_name##InCustomizedConf(const std::string& field_name,   \
+                                        val_type val) const {            \
+    const PbMessage& special_conf = GetCustomizedConf();                 \
     PbMessage* special_conf_ptr = &const_cast<PbMessage&>(special_conf); \
     Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
   }

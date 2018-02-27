@@ -129,10 +129,13 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+  const std::vector<std::string>* bns = &output_bns_;
+  if (IsLossOp()) { bns = &input_bns_; }
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
                            &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
   }
+
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =
       GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
@@ -145,10 +148,10 @@ void Operator::GenKernelConf(
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromSpecialConf(input_bn);
+  return GetStringFromCustomizedConf(input_bn);
 }
 std::string Operator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+  return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
 }
 std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
   return op_name() + "/" + model_tmp_bn;

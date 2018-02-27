@@ -7,7 +7,7 @@ void CopyHdOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& CopyHdOp::GetSpecialConf() const {
+const PbMessage& CopyHdOp::GetCustomizedConf() const {
   return op_conf().copy_hd_conf();
 }
 

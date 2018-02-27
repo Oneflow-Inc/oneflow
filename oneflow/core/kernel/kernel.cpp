@@ -83,7 +83,7 @@ void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-            kernel_conf().output_bns(), &Blob::CopyDataIdFrom<device_type>);
+            kernel_conf().output_bns(), &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
@@ -91,7 +91,7 @@ void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-            kernel_conf().output_bns(), &Blob::CopyColNumFrom<device_type>);
+            kernel_conf().output_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
@@ -106,23 +106,21 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
-            kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom<device_type>);
+            kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::CopyDataId(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns,
-            &Blob::CopyDataIdFrom<device_type>);
+  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::CopyColNum(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns,
-            &Blob::CopyColNumFrom<device_type>);
+  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>

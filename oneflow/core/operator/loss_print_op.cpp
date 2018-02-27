@@ -7,7 +7,7 @@ void LossPrintOp::InitFromOpConf() {
   EnrollInputBn("loss_acc");
 }
 
-const PbMessage& LossPrintOp::GetSpecialConf() const {
+const PbMessage& LossPrintOp::GetCustomizedConf() const {
   return op_conf().loss_print_conf();
 }
 
