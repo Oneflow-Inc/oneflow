@@ -37,7 +37,12 @@ void Pooling3DCtx::set_cudnn_pooling_mode(cudnnPoolingMode_t pooling_mode) {
 
 void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   std::vector<int> window = GetShapeInStdVec("pool_size");
-  std::vector<int> padding = GetShapeInStdVec("padding_before");
+  std::vector<int> padding_before = GetShapeInStdVec("padding_before");
+  std::vector<int> padding_after = GetShapeInStdVec("padding_after");
+  std::vector<int> padding;
+  FOR_RANGE(size_t, i, 0, padding_before.size()) {
+    padding.push_back(std::max(padding_before[i], padding_after[i]));
+  }
   std::vector<int> stride = GetShapeInStdVec("strides");
   std::vector<int> in_dim = GetShapeInStdVec("in");
   std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
