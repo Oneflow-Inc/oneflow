@@ -78,7 +78,7 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
       break;
     }
 #endif
-    default: { UNEXPECTED_RUN(); }
+    default: { UNIMPLEMENTED(); }
   }
 }
 
@@ -101,7 +101,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
       AsyncSendRegstMsgToProducer(msg.regst());
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;

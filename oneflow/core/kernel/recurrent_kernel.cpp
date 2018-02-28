@@ -57,7 +57,7 @@ void RecurrentKernel<device_type, T>::BackwardColNum(
 
 template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    const KernelCtx& ctx, std::mt19937 random_seed_gen,
+    DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (NeedExternalH0()) {
     const InitializerConf* init_hidden_initializer = nullptr;
@@ -67,21 +67,20 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
               GetRecurrentOpConf(), "init_hidden_initializer"));
     }
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx.device_ctx, init_hidden_initializer, random_seed_gen(),
-        BnInOp2Blob("h0"));
+        ctx, init_hidden_initializer, (*random_seed_gen)(), BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
-    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+    DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (NeedExternalH0()) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
-        ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"),
-        "h0", BnInOp2Blob("h0")->shape().At(0), 1);
+        ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"), "h0",
+        BnInOp2Blob("h0")->shape().At(0), 1);
   }
   VirtualInitModelBlobsWithDir(ctx, part_id, part_num, model_load_dir,
                                BnInOp2Blob);

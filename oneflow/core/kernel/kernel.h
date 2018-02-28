@@ -18,13 +18,9 @@ class Kernel {
 
   void Init(const ParallelContext*, const KernelConf&);
 
-  void InitModelBlobs(
+  void InitModelAndModelTmp(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       const Snapshot*,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-
-  virtual void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx,
@@ -38,13 +34,16 @@ class Kernel {
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
+  virtual void InitModelTmpBlobs(
+      DeviceCtx* ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
-      const KernelCtx& ctx, std::mt19937 random_seed_gen,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      DeviceCtx* ctx, std::mt19937* random_seed_gen,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      DeviceCtx* ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
   virtual void Forward(
       const KernelCtx& ctx,
