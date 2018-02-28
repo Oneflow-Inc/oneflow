@@ -2,32 +2,6 @@
 
 namespace oneflow {
 
-// template<DeviceType device_type, typename T>
-// void AveragePooling3DKernel<device_type, T>::ForwardDataContent(
-//     const KernelCtx& ctx,
-//     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-//   const Blob* in_blob = BnInOp2Blob("in");
-//   Blob* out_blob = BnInOp2Blob("out");
-//   Pooling3DKernelUtil<device_type, T>::Forward(ctx, in_blob, out_blob,
-//                                                this->pooling_3d_ctx());
-// }
-//
-// template<DeviceType device_type, typename T>
-// void AveragePooling3DKernel<device_type, T>::BackwardDataContent(
-//     const KernelCtx& ctx,
-//     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-//   Blob* in_diff_blob = BnInOp2Blob("in_diff");
-//   if (in_diff_blob == nullptr) { return; }
-//   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-//                       in_diff_blob->ByteSizeOfDataContentField());
-//   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-//   const Blob* in_blob = BnInOp2Blob("in");
-//   const Blob* out_blob = BnInOp2Blob("out");
-//   Pooling3DKernelUtil<device_type, T>::Backward(ctx, out_diff_blob, out_blob,
-//                                                 in_blob, in_diff_blob,
-//                                                 this->pooling_3d_ctx());
-// }
-
 template<typename T>
 void AveragePooling<DeviceType::kCPU, T>::ForwardOnCPU(
     const Pooling3DCtx& pooling_ctx, const Blob* in_blob,

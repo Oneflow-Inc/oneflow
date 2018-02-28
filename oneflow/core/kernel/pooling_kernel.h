@@ -25,7 +25,7 @@ class CudnnPoolingNdDesc final {
  private:
   cudnnPoolingDescriptor_t val_;
 };
-#endif
+#endif  // WITH_CUDA
 
 class Pooling3DCtx {
  public:
@@ -33,11 +33,11 @@ class Pooling3DCtx {
   ~Pooling3DCtx();
 
   void set_kernel_conf(const Pooling3DKernelConf& kernel_conf);
+  const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
 #ifdef WITH_CUDA
   void set_cudnn_pooling_mode(cudnnPoolingMode_t pooling_mode);
   void BuildCudnnDescs(DataType type);
 #endif  // WITH_CUDA
-  const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
 
 #ifdef WITH_CUDA
   CudnnTensorDesc* in_desc_ptr() const { return in_desc_; }

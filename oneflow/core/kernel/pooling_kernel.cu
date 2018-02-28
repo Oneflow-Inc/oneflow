@@ -9,7 +9,7 @@ void Pooling<DeviceType::kGPU, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
-  Pooling3DCtx pooling_ctx = this->pooling_3d_ctx();
+  const Pooling3DCtx& pooling_ctx = this->pooling_3d_ctx();
   T alpha = 1.0;
   T beta = 0.0;
   CudaCheck(cudnnPoolingForward(
@@ -30,7 +30,7 @@ void Pooling<DeviceType::kGPU, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
-  Pooling3DCtx pooling_ctx = this->pooling_3d_ctx();
+  const Pooling3DCtx& pooling_ctx = this->pooling_3d_ctx();
   T alpha = 1.0;
   T beta = 0.0;
   CudaCheck(cudnnPoolingBackward(

@@ -20,7 +20,7 @@ class AveragePoolingIf : public Pooling<device_type, T> {
   cudnnPoolingMode_t GetCudnnPoolingMode() override {
     return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
   }
-#endif
+#endif  // WITH_CUDA
 };
 
 template<DeviceType device_type, typename T>

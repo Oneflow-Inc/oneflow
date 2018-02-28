@@ -84,7 +84,7 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* weight_blob = BnInOp2Blob("weightes");
+  Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->op_conf().fully_connected_conf().units();
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
