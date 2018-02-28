@@ -6,11 +6,6 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
 
-message Pad {
-  required int32 small_side = 1;
-  required int32 large_side = 2;
-}
-
 message Conv1DKernelConf {
   repeated int32 pad_small_side = 1;
   repeated int32 pad_large_side = 2;
@@ -33,11 +28,6 @@ message Conv3DKernelConf {
   optional int32 cudnn_fwd_algo = 3 [default = 0];
   optional int32 cudnn_bwd_filter_algo = 4 [default = 0];
   optional int32 cudnn_bwd_data_algo = 5 [default = 0];
-}
-
-message ConcatKernelConf {
-  required int64 total_cp_num = 1;
-  repeated int64 per_cp_bytesize = 2;
 }
 
 message MultinomialLogisticLossKernelConf { 
@@ -94,7 +84,6 @@ message KernelConf {
 
   oneof kernel_type {
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
-    ConcatKernelConf concat_conf = 113;
     SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     Conv1DKernelConf conv_1d_conf = 125;

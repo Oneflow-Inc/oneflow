@@ -89,26 +89,6 @@ message Conv3DOpConf {
   optional InitializerConf bias_initializer = 11;
 }
 
-message ConvolutionOpConf {
-  required string in = 1;
-  required string out = 2;
-
-  optional int32 out_num = 3 [default = 1];
-  optional bool has_bias_term = 4 [default = true];
-
-  optional int32 pad_h = 5 [default = 0];
-  optional int32 pad_w = 6 [default = 0];
-  required int32 kernel_h = 7;
-  required int32 kernel_w = 8;
-  optional int32 stride_h = 9 [default = 1];
-  optional int32 stride_w = 10 [default = 1];
-  optional int32 dilation_h = 11 [default = 1];
-  optional int32 dilation_w = 12 [default = 1];
-
-  optional InitializerConf weight_initializer = 13;
-  optional InitializerConf bias_initializer = 14;
-}
-
 message FullyConnectedOpConf {
   required string in = 1;
   required string out = 2;
@@ -349,8 +329,8 @@ message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
   optional bool use_cudnn_on_gpu = 3;
+  optional bool trainable = 4 [default = true];
   oneof op_type {
-    ConvolutionOpConf convolution_conf = 1000;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
