@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/concat_kernel.h"
-#include "oneflow/core/kernel/iter_util.h"
 
 namespace oneflow {
 
@@ -11,8 +10,7 @@ void ConcatKernel<device_type>::ForwardDataContent(
                                this->op_conf().concat_conf().axis());
   DataContentIterator output_it(BnInOp2Blob, &this->kernel_conf().output_bns(),
                                 0);
-  CopyFromIterToIter<DataContentIterator, device_type>(ctx.device_ctx, input_it,
-                                                       output_it);
+  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
 template<DeviceType device_type>
@@ -22,8 +20,7 @@ void ConcatKernel<device_type>::ForwardDataId(
   DataIdIterator input_it(BnInOp2Blob, &this->kernel_conf().input_bns(),
                           this->op_conf().concat_conf().axis());
   DataIdIterator output_it(BnInOp2Blob, &this->kernel_conf().output_bns(), 0);
-  CopyFromIterToIter<DataIdIterator, device_type>(ctx.device_ctx, input_it,
-                                                  output_it);
+  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
 template<DeviceType device_type>
@@ -33,8 +30,7 @@ void ConcatKernel<device_type>::ForwardColNum(
   ColNumIterator input_it(BnInOp2Blob, &this->kernel_conf().input_bns(),
                           this->op_conf().concat_conf().axis());
   ColNumIterator output_it(BnInOp2Blob, &this->kernel_conf().output_bns(), 0);
-  CopyFromIterToIter<ColNumIterator, device_type>(ctx.device_ctx, input_it,
-                                                  output_it);
+  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
 template<DeviceType device_type>
@@ -46,8 +42,7 @@ void ConcatKernel<device_type>::BackwardDataContent(
   DataContentIterator output_it(BnInOp2Blob,
                                 &this->kernel_conf().input_diff_bns(),
                                 this->op_conf().concat_conf().axis());
-  CopyFromIterToIter<DataContentIterator, device_type>(ctx.device_ctx, input_it,
-                                                       output_it);
+  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
 namespace {

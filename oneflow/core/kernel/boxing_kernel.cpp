@@ -1,6 +1,5 @@
 #include "oneflow/core/kernel/boxing_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/iter_util.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
@@ -46,8 +45,7 @@ void ConcatSplitDataContent(
     const PbRpf<std::string>& split_bns, int32_t split_axis) {
   DataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis);
   DataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter<DataContentIterator, DeviceType::kCPU>(ctx, concat_it,
-                                                            split_it);
+  CopyFromIterToIter<DeviceType::kCPU>(ctx, concat_it, split_it);
 }
 
 template<typename Iter>
@@ -57,7 +55,7 @@ void ConcatSplitField(DeviceCtx* ctx,
                       const PbRpf<std::string>& split_bns, int32_t split_axis) {
   Iter concat_it(BnInOp2Blob, &concat_bns, concat_axis);
   Iter split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter<Iter, DeviceType::kCPU>(ctx, concat_it, split_it);
+  CopyFromIterToIter<DeviceType::kCPU>(ctx, concat_it, split_it);
   if (split_axis != 0) {
     CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, split_bns,
                               Iter::GetCopyBlobFieldMthd());
