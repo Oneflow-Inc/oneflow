@@ -83,7 +83,6 @@ message BasicDataLoaderOpConf {
   optional int32 max_sequence_size = 4 [default = 1];
   required ShapeProto shape = 5;
 }
-
 message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
@@ -301,6 +300,17 @@ message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
   required ShapeProto shape = 3;
+}
+
+message EltwiseOpConf {
+  enum EltwiseOp {
+    SUM = 0;
+    MAX = 1;
+  }
+  repeated string in = 1;
+  required string out = 2;
+  optional EltwiseOp operation = 3 [default = SUM]; // element-wise operation
+  // repeated float coeff = 4; // blob-wise coefficient for SUM operation
 }
 
 message OperatorConf {
