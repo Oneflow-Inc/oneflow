@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::ForwardOnCPU(
+void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardOnCPU(
     const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
     Blob* out_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
@@ -17,18 +17,18 @@ void AveragePooling<DeviceType::kCPU, T>::ForwardOnCPU(
 }
 
 template<typename T>
-T AveragePooling<DeviceType::kCPU, T>::ForwardInitialize() const {
+T AveragePoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
   return static_cast<T>(0);
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::ForwardProcess(const T& lhs,
-                                                         T& rhs) const {
+void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardProcess(const T& lhs,
+                                                               T& rhs) const {
   rhs += lhs;
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::ForwardProcess(
+void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardProcess(
     const int64_t in_col, const int64_t out_col,
     Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& in_mat,
     Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
@@ -37,13 +37,13 @@ void AveragePooling<DeviceType::kCPU, T>::ForwardProcess(
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::ForwardFinalize(const int64_t size,
-                                                          T& out) const {
+void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardFinalize(
+    const int64_t size, T& out) const {
   out /= size;
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::ForwardFinalize(
+void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardFinalize(
     const int64_t size, const int64_t col,
     Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
     const {
@@ -51,7 +51,7 @@ void AveragePooling<DeviceType::kCPU, T>::ForwardFinalize(
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::BackwardOnCPU(
+void AveragePoolingKernel<DeviceType::kCPU, T>::BackwardOnCPU(
     const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
     const Blob* out_blob, const Blob* in_blob, Blob* in_diff_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
@@ -67,14 +67,14 @@ void AveragePooling<DeviceType::kCPU, T>::BackwardOnCPU(
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::BackwardProcessGrad(
+void AveragePoolingKernel<DeviceType::kCPU, T>::BackwardProcessGrad(
     const T& in, const T& out, const T& out_diff, const float scale,
     T& in_diff) const {
   in_diff += (scale * out_diff);
 }
 
 template<typename T>
-void AveragePooling<DeviceType::kCPU, T>::BackwardProcessGrad(
+void AveragePoolingKernel<DeviceType::kCPU, T>::BackwardProcessGrad(
     const int64_t out_col, const int64_t in_col, const float scale,
     Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
         out_arr,
@@ -87,13 +87,13 @@ void AveragePooling<DeviceType::kCPU, T>::BackwardProcessGrad(
   in_diff_arr.col(in_col) += scale * out_diff_arr.col(out_col);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf, AveragePooling,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf,
+                           AveragePoolingKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf, AveragePooling,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling2DConf,
+                           AveragePoolingKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling3DConf, AveragePooling,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling3DConf,
+                           AveragePoolingKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

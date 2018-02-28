@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<typename T>
-void MaxPooling<DeviceType::kCPU, T>::ForwardOnCPU(
+void MaxPoolingKernel<DeviceType::kCPU, T>::ForwardOnCPU(
     const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
     Blob* out_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
@@ -17,18 +17,18 @@ void MaxPooling<DeviceType::kCPU, T>::ForwardOnCPU(
 }
 
 template<typename T>
-T MaxPooling<DeviceType::kCPU, T>::ForwardInitialize() const {
+T MaxPoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
   return std::numeric_limits<T>::min();
 }
 
 template<typename T>
-void MaxPooling<DeviceType::kCPU, T>::ForwardProcess(const T& lhs,
-                                                     T& rhs) const {
+void MaxPoolingKernel<DeviceType::kCPU, T>::ForwardProcess(const T& lhs,
+                                                           T& rhs) const {
   if (lhs > rhs) { rhs = lhs; }
 }
 
 template<typename T>
-void MaxPooling<DeviceType::kCPU, T>::ForwardProcess(
+void MaxPoolingKernel<DeviceType::kCPU, T>::ForwardProcess(
     const int64_t in_col, const int64_t out_col,
     Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& in_mat,
     Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
@@ -37,7 +37,7 @@ void MaxPooling<DeviceType::kCPU, T>::ForwardProcess(
 }
 
 template<typename T>
-void MaxPooling<DeviceType::kCPU, T>::BackwardOnCPU(
+void MaxPoolingKernel<DeviceType::kCPU, T>::BackwardOnCPU(
     const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
     const Blob* out_blob, const Blob* in_blob, Blob* in_diff_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
@@ -53,16 +53,14 @@ void MaxPooling<DeviceType::kCPU, T>::BackwardOnCPU(
 }
 
 template<typename T>
-void MaxPooling<DeviceType::kCPU, T>::BackwardProcessGrad(const T& in,
-                                                          const T& out,
-                                                          const T& out_diff,
-                                                          const float scale,
-                                                          T& in_diff) const {
+void MaxPoolingKernel<DeviceType::kCPU, T>::BackwardProcessGrad(
+    const T& in, const T& out, const T& out_diff, const float scale,
+    T& in_diff) const {
   if (in == out) { in_diff += out_diff; }
 }
 
 template<typename T>
-void MaxPooling<DeviceType::kCPU, T>::BackwardProcessGrad(
+void MaxPoolingKernel<DeviceType::kCPU, T>::BackwardProcessGrad(
     const int64_t out_col, const int64_t in_col, const float scale,
     Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
         out_arr,
@@ -78,13 +76,13 @@ void MaxPooling<DeviceType::kCPU, T>::BackwardProcessGrad(
                                     .template cast<float>());
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling1DConf, MaxPooling,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling1DConf, MaxPoolingKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPooling,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling2DConf, MaxPoolingKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling3DConf, MaxPooling,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaxPooling3DConf, MaxPoolingKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

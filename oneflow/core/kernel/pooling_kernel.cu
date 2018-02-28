@@ -4,7 +4,7 @@
 namespace oneflow {
 
 template<typename T>
-void Pooling<DeviceType::kGPU, T>::ForwardDataContent(
+void PoolingKernel<DeviceType::kGPU, T>::ForwardDataContent(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -20,7 +20,7 @@ void Pooling<DeviceType::kGPU, T>::ForwardDataContent(
 }
 
 template<typename T>
-void Pooling<DeviceType::kGPU, T>::BackwardDataContent(
+void PoolingKernel<DeviceType::kGPU, T>::BackwardDataContent(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
@@ -42,8 +42,8 @@ void Pooling<DeviceType::kGPU, T>::BackwardDataContent(
       pooling_ctx.in_desc_ptr()->Get(), in_diff_blob->mut_dptr()));
 }
 
-#define INSTANTIATE_POOLING(type_cpp, type_proto) \
-  template class Pooling<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING, ARITHMETIC_DATA_TYPE_SEQ)
+#define INSTANTIATE_POOLING_KERNEL(type_cpp, type_proto) \
+  template class PoolingKernel<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

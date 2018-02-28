@@ -3,20 +3,31 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
-CudnnPoolingNdDesc::~CudnnPoolingNdDesc() {
+CudnnPoolingDesc::~CudnnPoolingDesc() {
   CudaCheck(cudnnDestroyPoolingDescriptor(val_));
 }
 
-CudnnPoolingNdDesc::CudnnPoolingNdDesc(cudnnPoolingMode_t pooling_mode,
-                                       const std::vector<int>& window,
-                                       const std::vector<int>& padding,
-                                       const std::vector<int>& stride) {
+CudnnPoolingDesc::CudnnPoolingDesc(cudnnPoolingMode_t pooling_mode,
+                                   const std::vector<int>& window,
+                                   const std::vector<int>& padding,
+                                   const std::vector<int>& stride) {
   CudaCheck(cudnnCreatePoolingDescriptor(&val_));
   CudaCheck(cudnnSetPoolingNdDescriptor(
       val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, window.size(), window.data(),
       padding.data(), stride.data()));
 }
 #endif
+
+Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf)
+    : kernel_conf_(kernel_conf) {}
+
+#ifdef WITH_CUDA
+Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf,
+                           cudnnPoolingMode_t pooling_mode, DataType type)
+    : kernel_conf_(kernel_conf), pooling_mode_(pooling_mode) {
+  BuildCudnnDescs(type);
+}
+#endif  // WITH_CUDA
 
 Pooling3DCtx::~Pooling3DCtx() {
 #ifdef WITH_CUDA
@@ -26,15 +37,7 @@ Pooling3DCtx::~Pooling3DCtx() {
 #endif  // WITH_CUDA
 }
 
-void Pooling3DCtx::set_kernel_conf(const Pooling3DKernelConf& kernel_conf) {
-  kernel_conf_ = kernel_conf;
-}
-
 #ifdef WITH_CUDA
-void Pooling3DCtx::set_cudnn_pooling_mode(cudnnPoolingMode_t pooling_mode) {
-  pooling_mode_ = pooling_mode;
-}
-
 void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   std::vector<int> window = GetShapeInStdVec("pool_size");
   std::vector<int> padding_before = GetShapeInStdVec("padding_before");
@@ -64,8 +67,7 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   } else {
     UNEXPECTED_RUN();
   }
-  pooling_desc_ =
-      new CudnnPoolingNdDesc(pooling_mode_, window, padding, stride);
+  pooling_desc_ = new CudnnPoolingDesc(pooling_mode_, window, padding, stride);
   in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
   out_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
 }
@@ -81,7 +83,7 @@ std::vector<int> Pooling3DCtx::GetShapeInStdVec(
 }
 
 template<typename T>
-void Pooling<DeviceType::kCPU, T>::ForwardDataContent(
+void PoolingKernel<DeviceType::kCPU, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -90,7 +92,7 @@ void Pooling<DeviceType::kCPU, T>::ForwardDataContent(
 }
 
 template<typename T>
-void Pooling<DeviceType::kCPU, T>::BackwardDataContent(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
@@ -105,7 +107,7 @@ void Pooling<DeviceType::kCPU, T>::BackwardDataContent(
 }
 
 template<typename T>
-void Pooling<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNCDHW(
+void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNCDHW(
     const Pooling3DCtx& ctx, const Blob* in_blob, Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
@@ -154,7 +156,7 @@ void Pooling<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNCDHW(
 }
 
 template<typename T>
-void Pooling<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNCDHW(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNCDHW(
     const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
@@ -208,7 +210,7 @@ void Pooling<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNCDHW(
 }
 
 template<typename T>
-void Pooling<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNDHWC(
+void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNDHWC(
     const Pooling3DCtx& ctx, const Blob* in_blob, Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
@@ -254,7 +256,7 @@ void Pooling<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNDHWC(
 }
 
 template<typename T>
-void Pooling<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNDHWC(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNDHWC(
     const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
@@ -306,8 +308,8 @@ void Pooling<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNDHWC(
   }
 }
 
-#define INSTANTIATE_POOLING(type_cpp, type_proto) \
-  template class Pooling<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING, ARITHMETIC_DATA_TYPE_SEQ)
+#define INSTANTIATE_POOLING_KERNEL(type_cpp, type_proto) \
+  template class PoolingKernel<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_POOLING_KERNEL, ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

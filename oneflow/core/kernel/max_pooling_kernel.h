@@ -6,11 +6,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class MaxPoolingIf : public Pooling<device_type, T> {
+class MaxPoolingKernelIf : public PoolingKernel<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MaxPoolingIf);
-  MaxPoolingIf() = default;
-  virtual ~MaxPoolingIf() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernelIf);
+  MaxPoolingKernelIf() = default;
+  virtual ~MaxPoolingKernelIf() = default;
 
  private:
   const Pooling3DKernelConf& GetPooling3DKernelConf() const override {
@@ -24,20 +24,20 @@ class MaxPoolingIf : public Pooling<device_type, T> {
 };
 
 template<DeviceType device_type, typename T>
-class MaxPooling : public MaxPoolingIf<device_type, T> {
+class MaxPoolingKernel final : public MaxPoolingKernelIf<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MaxPooling);
-  MaxPooling() = default;
-  ~MaxPooling() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernel);
+  MaxPoolingKernel() = default;
+  ~MaxPoolingKernel() = default;
 };
 
 template<typename T>
-class MaxPooling<DeviceType::kCPU, T>
-    : public MaxPoolingIf<DeviceType::kCPU, T> {
+class MaxPoolingKernel<DeviceType::kCPU, T> final
+    : public MaxPoolingKernelIf<DeviceType::kCPU, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MaxPooling);
-  MaxPooling() = default;
-  virtual ~MaxPooling() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MaxPoolingKernel);
+  MaxPoolingKernel() = default;
+  virtual ~MaxPoolingKernel() = default;
 
  private:
   void ForwardOnCPU(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,

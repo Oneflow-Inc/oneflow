@@ -6,11 +6,11 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class AveragePoolingIf : public Pooling<device_type, T> {
+class AveragePoolingKernelIf : public PoolingKernel<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingIf);
-  AveragePoolingIf() = default;
-  virtual ~AveragePoolingIf() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernelIf);
+  AveragePoolingKernelIf() = default;
+  virtual ~AveragePoolingKernelIf() = default;
 
  private:
   const Pooling3DKernelConf& GetPooling3DKernelConf() const override {
@@ -24,20 +24,21 @@ class AveragePoolingIf : public Pooling<device_type, T> {
 };
 
 template<DeviceType device_type, typename T>
-class AveragePooling : public AveragePoolingIf<device_type, T> {
+class AveragePoolingKernel final
+    : public AveragePoolingKernelIf<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePooling);
-  AveragePooling() = default;
-  ~AveragePooling() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernel);
+  AveragePoolingKernel() = default;
+  ~AveragePoolingKernel() = default;
 };
 
 template<typename T>
-class AveragePooling<DeviceType::kCPU, T>
-    : public AveragePoolingIf<DeviceType::kCPU, T> {
+class AveragePoolingKernel<DeviceType::kCPU, T> final
+    : public AveragePoolingKernelIf<DeviceType::kCPU, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AveragePooling);
-  AveragePooling() = default;
-  virtual ~AveragePooling() = default;
+  OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernel);
+  AveragePoolingKernel() = default;
+  virtual ~AveragePoolingKernel() = default;
 
  private:
   void ForwardOnCPU(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
