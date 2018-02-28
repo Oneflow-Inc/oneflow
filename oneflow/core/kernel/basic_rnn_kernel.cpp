@@ -47,12 +47,11 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
         ctx.device_ctx, out_blob->shape().elem_cnt(),
         plus_op_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 
   // rec_out = out
-  BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                           out_blob);
+  BnInOp2Blob("rec_out")->CopyDataContentFrom(ctx.device_ctx, out_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -77,7 +76,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
         out_diff_blob->dptr<T>(), rec_out_diff_blob->dptr<T>(),
         plus_op_out_diff_blob->mut_dptr<T>());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 
   // h2h_weight_diff = plus_op_out_diff * hidden
@@ -115,54 +114,51 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
+void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
+    DeviceCtx* ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitializerConf bias_multiplier_fill_conf;
+  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_fill_conf, 0,
+                                         BnInOp2Blob("bias_multiplier"));
+}
+
+template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
-    const KernelCtx& ctx, std::mt19937 random_seed_gen,
+    DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx.device_ctx,
+      ctx,
       OF_PB_POINTER_GET(this->op_conf().basic_rnn_conf(),
                         i2h_weight_initializer),
-      random_seed_gen(), BnInOp2Blob("i2h_weight"));
+      (*random_seed_gen)(), BnInOp2Blob("i2h_weight"));
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx.device_ctx,
+      ctx,
       OF_PB_POINTER_GET(this->op_conf().basic_rnn_conf(),
                         h2h_weight_initializer),
-      random_seed_gen(), BnInOp2Blob("h2h_weight"));
+      (*random_seed_gen)(), BnInOp2Blob("h2h_weight"));
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx.device_ctx,
+      ctx,
       OF_PB_POINTER_GET(this->op_conf().basic_rnn_conf(), bias_initializer),
-      random_seed_gen(), BnInOp2Blob("bias"));
+      (*random_seed_gen)(), BnInOp2Blob("bias"));
 }
 
 template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
-    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+    DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* i2h_weight_blob = BnInOp2Blob("i2h_weight");
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, i2h_weight_blob,
-      "i2h_weight", i2h_weight_blob->shape().At(0),
-      i2h_weight_blob->shape().Count(1));
+      ctx, part_id, part_num, model_load_dir, i2h_weight_blob, "i2h_weight",
+      i2h_weight_blob->shape().At(0), i2h_weight_blob->shape().Count(1));
   Blob* h2h_weight_blob = BnInOp2Blob("h2h_weight");
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, h2h_weight_blob,
-      "h2h_weight", h2h_weight_blob->shape().At(0),
-      h2h_weight_blob->shape().Count(1));
+      ctx, part_id, part_num, model_load_dir, h2h_weight_blob, "h2h_weight",
+      h2h_weight_blob->shape().At(0), h2h_weight_blob->shape().Count(1));
   KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
-      "bias", BnInOp2Blob("bias")->shape().At(0), 1);
-}
-
-template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf bias_multiplier_fill_conf;
-  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
-  KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                         bias_multiplier_fill_conf, 0,
-                                         BnInOp2Blob("bias_multiplier"));
+      ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
+      BnInOp2Blob("bias")->shape().At(0), 1);
 }
 
 template<typename T>

@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-const PbMessage& MaxPooling1DOp::GetSpecialConf() const {
+const PbMessage& MaxPooling1DOp::GetCustomizedConf() const {
   return op_conf().max_pooling_1d_conf();
 }
 

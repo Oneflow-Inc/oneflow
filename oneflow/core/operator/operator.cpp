@@ -148,10 +148,10 @@ void Operator::GenKernelConf(
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromSpecialConf(input_bn);
+  return GetStringFromCustomizedConf(input_bn);
 }
 std::string Operator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+  return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
 }
 std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
   return op_name() + "/" + model_tmp_bn;
@@ -185,6 +185,10 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   }
 }
 void Operator::EnrollModelBn(const std::string& mbn) {
+  if (op_conf_.trainable() == false) {
+    EnrollModelTmpBn(mbn);
+    return;
+  }
   std::string lbn = mbn2lbn(mbn);
   model_bns_.push_back(mbn);
   CHECK(bn_in_op2lbn_.emplace(mbn, lbn).second);

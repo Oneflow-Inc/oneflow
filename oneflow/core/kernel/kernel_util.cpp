@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -76,7 +77,7 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
   } else if (variance_norm == VarianceNorm::kFanOut) {
     fan = fan_out;
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return fan;
 }
@@ -226,7 +227,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     } else if (initializer_conf.has_msra_conf()) {
       MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
   static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,

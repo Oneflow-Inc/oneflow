@@ -12,7 +12,7 @@ class TanHOp final : public Operator {
   ~TanHOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
   bool IsElemWiseOp() const override { return true; }
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }

@@ -27,18 +27,18 @@ class RecurrentKernel : public KernelIf<device_type> {
   void BackwardColNum(const KernelCtx&,
                       std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithRandomSeed(
-      const KernelCtx& ctx, std::mt19937 random_seed_gen,
+      DeviceCtx*, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)>) const override;
   void VirtualKernelInit(const ParallelContext*) override;
   virtual void VirtualInitModelBlobsWithRandomSeed(
-      const KernelCtx& ctx, std::mt19937 random_seed_gen,
+      DeviceCtx*, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)>) const {}
   virtual void VirtualInitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)>) const {}
 

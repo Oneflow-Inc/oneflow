@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-const PbMessage& BasicRnnOp::GetSpecialConf() const {
+const PbMessage& BasicRnnOp::GetCustomizedConf() const {
   return op_conf().basic_rnn_conf();
 }
 
@@ -10,7 +10,7 @@ void BasicRnnOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("plus_op_out");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
-  if (GetBoolFromSpecialConf("use_bias")) {
+  if (GetBoolFromCustomizedConf("use_bias")) {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   }
@@ -30,7 +30,7 @@ void BasicRnnOp::VirtualInferBlobDescs(
       BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_weight") =
       BlobDesc(Shape({hidden_size, hidden_size}));
-  if (GetBoolFromSpecialConf("use_bias")) {
+  if (GetBoolFromCustomizedConf("use_bias")) {
     *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
   }

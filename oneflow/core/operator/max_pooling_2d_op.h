@@ -12,7 +12,7 @@ class MaxPooling2DOp final : public Pooling2DOp, public MaxPoolingOp {
   MaxPooling2DOp() = default;
   ~MaxPooling2DOp() = default;
 
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow

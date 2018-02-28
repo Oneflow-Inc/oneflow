@@ -12,7 +12,7 @@ void NormalMdUpdateKernel<device_type, T>::UpdateModel(
       this->op_conf().mdupdt_conf().user_conf().normal_conf().learning_rate();
 
   if (pre_model_blob != model_blob) {
-    model_blob->CopyDataContentFrom<device_type>(ctx, pre_model_blob);
+    model_blob->CopyDataContentFrom(ctx, pre_model_blob);
   }
 
   // model = model - alpha * model_diff

@@ -23,7 +23,7 @@ REGISTER_OP_CREATOR(OperatorConf::kMdupdtConf,
                       } else if (user_conf.has_rmsprop_conf()) {
                         return new RMSPropModelUpdateOp;
                       } else {
-                        UNEXPECTED_RUN();
+                        UNIMPLEMENTED();
                       }
                     });
 

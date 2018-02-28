@@ -18,7 +18,7 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   if (val == GetDataType<type_cpp>::val) { return type_cudnn; }
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDNN_DATA_TYPE_SEQ);
 #undef MAKE_ENTRY
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
 }
 
 CudnnTensorDesc::~CudnnTensorDesc() {

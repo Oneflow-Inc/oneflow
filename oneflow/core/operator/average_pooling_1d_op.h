@@ -12,7 +12,7 @@ class AveragePooling1DOp final : public Pooling1DOp, public AveragePoolingOp {
   AveragePooling1DOp() = default;
   ~AveragePooling1DOp() = default;
 
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow
