@@ -13,16 +13,15 @@ class NormalBackwardCompActor final : public BackwardCompActor {
 
  private:
   void VirtualBackwardCompActorInit(const TaskProto&) override;
+  void CheckBeforeAsyncReturnAllReadableRegst() override;
+
   int HandlerNormal(const ActorMsg&) override;
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
   void Act() override;
 
-  HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
-  int64_t readable_regst_cnt_;
+  HashMap<int64_t, std::deque<std::deque<Regst*>>> readable_deq_regsts_;
 };
 
 }  // namespace oneflow

@@ -16,26 +16,7 @@ void RecurrentBackwardCompActor::VirtualBackwardCompActorInit(
   }
 
   rec_out_diff_regst_ = nullptr;
-  model_tmp_regst_ = nullptr;
-  order_ = ColIdOrder::kUnCertain;
-  has_cur_piece_started_ = false;
   OF_SET_MSG_HANDLER(&RecurrentBackwardCompActor::HandlerNormal);
-}
-
-void RecurrentBackwardCompActor::TryUpdtColIdOrder(const Regst* cur_regst) {
-  if (order_ == ColIdOrder::kUnCertain) {
-    if (cur_regst->col_id() == 0) {
-      if (!(cur_regst->IsMaxCol())) {
-        order_ = ColIdOrder::kAscending;
-      } else {
-        CHECK_EQ(0, cur_regst->max_col_id());
-      }
-    } else if (cur_regst->IsMaxCol()) {
-      order_ = ColIdOrder::kDescending;
-    } else {
-      UNEXPECTED_RUN();
-    }
-  }
 }
 
 int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
@@ -58,7 +39,7 @@ int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
           out_regsts_.push_back(std::deque<Regst*>{cur_regst});
           if (out_regsts_.size() == 1) {
             AsyncReturnModelRegstUntilMatchCurOutRegst(
-                cur_regst->model_version_id(), model_regsts_);
+                cur_regst->model_version_id());
           }
         } else {
           out_regsts_.back().push_back(cur_regst);
@@ -66,21 +47,8 @@ int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
       } else if (cur_regst_desc_id == h0_regst_desc_id_) {
         h0_regsts_.push(cur_regst);
       } else if (cur_regst_desc_id == out_diff_regst_desc_id()) {
-        TryUpdtColIdOrder(cur_regst);
-        if ((order_ == ColIdOrder::kUnCertain)
-            || IsFirstRegstInPieceWithOrder(cur_regst, order_)) {
-          out_diff_regsts_.push_back(std::deque<Regst*>());
-        }
-        if (order_ == ColIdOrder::kUnCertain) {
-          CHECK_EQ(0, cur_regst->max_col_id());
-          out_diff_regsts_.back().push_back(cur_regst);
-        } else if (order_ == ColIdOrder::kAscending) {
-          out_diff_regsts_.back().push_back(cur_regst);
-        } else {
-          out_diff_regsts_.back().push_front(cur_regst);
-        }
+        HandleOutDiffRegsts(cur_regst, &out_diff_regsts_);
       } else if (cur_regst_desc_id == rec_in_regst_desc_id_) {
-        TryUpdtColIdOrder(cur_regst);
         if (cur_regst->IsMaxCol()) {
           AsyncSendRegstMsgToProducer(cur_regst);
         } else {
@@ -97,10 +65,10 @@ int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
           rec_out_diff_regst_ = cur_regst;
         }
       } else if (cur_regst_desc_id == model_regst_desc_id()) {
-        model_regsts_.push(cur_regst);
+        model_regsts()->push(cur_regst);
       } else if (cur_regst_desc_id == model_tmp_regst_desc_id()) {
-        CHECK(!model_tmp_regst_);
-        model_tmp_regst_ = cur_regst;
+        CHECK(!model_tmp_regst());
+        set_model_tmp_regst(cur_regst);
       } else if (cur_regst_desc_id == data_tmp_regst_desc_id()) {
         if (cur_col_id == 0) {
           data_tmp_regsts_.push_back(std::stack<Regst*>());
@@ -119,10 +87,10 @@ int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
 
 bool RecurrentBackwardCompActor::IsReadReady() {
   if (in_regsts_.empty() || out_regsts_.empty() || out_diff_regsts_.empty()
-      || model_regsts_.empty() || data_tmp_regsts_.empty()) {
+      || model_regsts()->empty() || data_tmp_regsts_.empty()) {
     return false;
   }
-  if (model_tmp_regst_desc_id() != -1 && !model_tmp_regst_) { return false; }
+  if (model_tmp_regst_desc_id() != -1 && !model_tmp_regst()) { return false; }
 
   Regst* out_regst = out_regsts_.front().back();
   if (out_regst->col_id() == 0) {
@@ -143,7 +111,7 @@ bool RecurrentBackwardCompActor::IsReadReady() {
       }
     }
   } else {
-    if (!has_cur_piece_started_) { return false; }
+    if (!has_cur_piece_started()) { return false; }
     CHECK(in_regsts_.front().top()->HaveSamePieceColStatusAs(out_regst));
     CHECK(out_diff_regsts_.front().back()->HaveSamePieceColStatusAs(out_regst));
     CHECK(data_tmp_regsts_.front().top()->HaveSamePieceColStatusAs(out_regst));
@@ -187,9 +155,9 @@ void RecurrentBackwardCompActor::Act() {
                       } else if (regst_desc_id == rec_out_diff_regst_desc_id_) {
                         return rec_out_diff_regst_;
                       } else if (regst_desc_id == model_regst_desc_id()) {
-                        return model_regsts_.front();
+                        return model_regsts()->front();
                       } else if (regst_desc_id == model_tmp_regst_desc_id()) {
-                        return model_tmp_regst_;
+                        return model_tmp_regst();
                       } else {
                         return GetCurWriteableRegst(regst_desc_id);
                       }
@@ -244,15 +212,13 @@ void RecurrentBackwardCompActor::Act() {
     }
 
     if (out_regsts_.empty()) {
-      AsyncReturnModelRegstUntilLastPieceIdGreaterThan(out_regst->piece_id(),
-                                                       model_regsts_);
+      AsyncReturnModelRegstUntilLastPieceIdGreaterThan(out_regst->piece_id());
     } else {
-      AsyncReturnModelRegstUntilMatchCurOutRegst(out_regst->model_version_id(),
-                                                 model_regsts_);
+      AsyncReturnModelRegstUntilMatchCurOutRegst(out_regst->model_version_id());
     }
   }
-  if (out_regst->IsMaxCol()) { has_cur_piece_started_ = true; }
-  if (out_regst->col_id() == 0) { has_cur_piece_started_ = false; }
+  if (out_regst->IsMaxCol()) { set_has_cur_piece_started(true); }
+  if (out_regst->col_id() == 0) { set_has_cur_piece_started(false); }
   AsyncSendRegstMsgToProducer(out_regst);
 }
 
@@ -260,34 +226,23 @@ bool RecurrentBackwardCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_out_diff_eord() && out_diff_regsts_.empty();
 }
 
-void RecurrentBackwardCompActor::AsyncReturnAllReadableRegst() {
+void RecurrentBackwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
   CHECK(in_regsts_.empty());
   CHECK(out_regsts_.empty());
   CHECK(data_tmp_regsts_.empty());
   CHECK(out_diff_regsts_.empty());
   CHECK(h0_regsts_.empty());
   CHECK(!rec_out_diff_regst_);
-
-  if (model_tmp_regst_) {
-    AsyncSendRegstMsgToProducer(model_tmp_regst_);
-    model_tmp_regst_ = nullptr;
-  }
-
-  while (!model_regsts_.empty()) {
-    AsyncSendRegstMsgToProducer(model_regsts_.front());
-    model_regsts_.pop();
-  }
 }
 
 void RecurrentBackwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
+  ForCurReadableModelAndModelTmp(handler);
   Regst* out_regst = out_regsts_.front().back();
   handler(in_regsts_.front().top());
   handler(out_regst);
   handler(data_tmp_regsts_.front().top());
   handler(out_diff_regsts_.front().back());
-  handler(model_regsts_.front());
-  if (model_tmp_regst_desc_id() != -1) { handler(model_tmp_regst_); }
   if (rec_out_diff_regst_desc_id_ != -1 && !(out_regst->IsMaxCol())) {
     handler(rec_out_diff_regst_);
   }

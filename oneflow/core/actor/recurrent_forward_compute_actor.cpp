@@ -34,7 +34,6 @@ int RecurrentForwardCompActor::HandlerNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
       int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
       if (cur_regst_desc_id == in_regst_desc_id()) {
-        Blob* blob = msg.regst()->GetBlobByLbn("feature/out");
         in_regsts_.push(cur_regst);
       } else if (cur_regst_desc_id == h0_regst_desc_id_) {
         h0_regsts_.push(cur_regst);
@@ -76,8 +75,13 @@ bool RecurrentForwardCompActor::IsReadReady() {
     cur_model_regst_ = latest_model_regst_;
     return true;
   } else {
-    if (rec_in_regst_desc_id_ != -1 && !rec_in_regst_) { return false; }
-    CHECK(in_regst->HaveNextPieceColStatusOf(rec_in_regst_));
+    if (parallel_ctx()->policy() == kModelParallel) {
+      if (rec_in_regst_) {
+        CHECK(in_regst->HaveNextPieceColStatusOf(rec_in_regst_));
+      } else {
+        return false;
+      }
+    }
     return true;
   }
 }

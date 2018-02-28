@@ -3,11 +3,19 @@
 namespace oneflow {
 
 bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  if (order == ColIdOrder::kUnCertain) {
+    CHECK_EQ(0, regst->max_col_id());
+    return true;
+  }
   return (order == ColIdOrder::kAscending && regst->col_id() == 0)
          || (order == ColIdOrder::kDescending && regst->IsMaxCol());
 }
 
 bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  if (order == ColIdOrder::kUnCertain) {
+    CHECK_EQ(0, regst->max_col_id());
+    return true;
+  }
   return (order == ColIdOrder::kAscending && regst->IsMaxCol())
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }

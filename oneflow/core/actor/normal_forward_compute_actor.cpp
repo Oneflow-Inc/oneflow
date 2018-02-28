@@ -72,7 +72,7 @@ void NormalForwardCompActor::Act() {
     regst->set_model_version_id(model_version_id);
     return true;
   });
-  if (JobDesc::Singleton()->IsTrain() && model_regst_) {
+  if (JobDesc::Singleton()->IsTrain() && model_regst_ && in_regst->IsMaxCol()) {
     int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
     CHECK_LE(in_regst->piece_id(), last_piece_id);
     if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }

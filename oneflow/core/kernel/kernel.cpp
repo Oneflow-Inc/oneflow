@@ -131,7 +131,8 @@ void KernelIf<device_type>::CopyField(
     const Blob* from_blob, const PbRpf<std::string>& to_bns,
     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
   for (const std::string& to_bn : to_bns) {
-    (BnInOp2Blob(to_bn)->*Copy)(ctx, from_blob);
+    Blob* to_blob = BnInOp2Blob(to_bn);
+    if (to_blob) { (to_blob->*Copy)(ctx, from_blob); }
   }
 }
 

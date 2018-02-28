@@ -14,16 +14,14 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
 
  private:
   void VirtualBackwardCompActorInit(const TaskProto&) override;
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+  Blob* HandleSpecialBnInOp(const std::string& bn_in_op) override;
+  void CheckBeforeAsyncReturnAllReadableRegst() override;
 
   int HandlerNormal(const ActorMsg&) override;
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
   void Act() override;
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-  Blob* HandleSpecialBnInOp(const std::string& bn_in_op) override;
-
-  void TryUpdtColIdOrder(const Regst*);
 
   int64_t h0_regst_desc_id_;
   int64_t rec_in_regst_desc_id_;
@@ -36,12 +34,7 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
   std::deque<std::stack<Regst*>> data_tmp_regsts_;
   // regst in deque is ascending by col_id
   std::deque<std::deque<Regst*>> out_diff_regsts_;
-  std::queue<Regst*> model_regsts_;
   Regst* rec_out_diff_regst_;
-  Regst* model_tmp_regst_;
-
-  ColIdOrder order_;
-  bool has_cur_piece_started_;
 };
 
 }  // namespace oneflow
