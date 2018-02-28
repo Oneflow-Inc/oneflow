@@ -14,9 +14,7 @@ class ForwardCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
 
  private:
-  void SwitchToHandlerInitModelTmpOrNormal();
-  int HandlerInitModel(const ActorMsg&);
-  int HandlerInitModelTmp(const ActorMsg&);
+  int HandlerInitModelAndModelTmp(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
 
   bool IsReadReady() override;

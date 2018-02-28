@@ -185,6 +185,10 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   }
 }
 void Operator::EnrollModelBn(const std::string& mbn) {
+  if (op_conf_.trainable() == false) {
+    EnrollModelTmpBn(mbn);
+    return;
+  }
   std::string lbn = mbn2lbn(mbn);
   model_bns_.push_back(mbn);
   CHECK(bn_in_op2lbn_.emplace(mbn, lbn).second);

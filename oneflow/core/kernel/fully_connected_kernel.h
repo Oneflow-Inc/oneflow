@@ -19,15 +19,15 @@ class FullyConnectedKernel final : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
+  void InitModelTmpBlobs(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithRandomSeed(
-      const KernelCtx&, std::mt19937,
+      DeviceCtx*, std::mt19937*,
       std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
