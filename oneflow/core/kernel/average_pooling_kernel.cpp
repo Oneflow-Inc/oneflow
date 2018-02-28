@@ -12,7 +12,7 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardOnCPU(
   } else if (data_format == "channels_last") {
     this->ForwardOnCPUWithOrderNDHWC(pooling_ctx, in_blob, out_blob);
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 
@@ -62,7 +62,7 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::BackwardOnCPU(
     this->BackwardOnCPUWithOrderNDHWC(pooling_ctx, out_diff_blob, out_blob,
                                       in_blob, in_diff_blob);
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

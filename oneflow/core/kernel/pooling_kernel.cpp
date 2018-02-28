@@ -65,7 +65,7 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
     in_stride.insert(in_stride.begin() + 1, 1);
     out_stride.insert(out_stride.begin() + 1, 1);
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   pooling_desc_ = new CudnnPoolingDesc(pooling_mode_, window, padding, stride);
   in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);

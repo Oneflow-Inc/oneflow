@@ -3,8 +3,8 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/cudnn_util.h"
-#include "eigen3/Eigen/Core"
-#include "eigen3/Eigen/Dense"
+#include "Eigen/Core"
+#include "Eigen/Dense"
 
 namespace oneflow {
 
