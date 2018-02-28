@@ -54,7 +54,7 @@ void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
 }
 
 void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
 }
 
 void ForwardCompTaskNode::BuildActivationRegst() {

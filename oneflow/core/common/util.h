@@ -37,7 +37,7 @@ namespace oneflow {
   OF_DISALLOW_COPY(ClassName)                \
   OF_DISALLOW_MOVE(ClassName)
 
-#define UNEXPECTED_RUN() LOG(FATAL) << "Unexpected Run";
+#define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
 #define TODO() LOG(FATAL) << "TODO";
 
@@ -145,6 +145,8 @@ inline uint32_t NewRandomSeed() {
 #else
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif
+
+#define DIM_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
 
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ \

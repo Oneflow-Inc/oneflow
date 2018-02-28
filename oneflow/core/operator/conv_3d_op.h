@@ -11,19 +11,29 @@ class Conv3DOp : public ConvBaseOp {
   Conv3DOp() = default;
   ~Conv3DOp() = default;
 
-  void InitFromOpConf() override;
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().conv_3d_conf();
+  }
 
-  const PbMessage& GetSpecialConf() const override;
-
-  int32_t ModelSplitAxis() const override;
+  int32_t ModelSplitAxis() const override {
+    if (GetStringFromCustomizedConf("data_format") == "channel_first") {
+      return 1;
+    } else {
+      return 4;
+    }
+  }
   int32_t MaxModelSplitNum() const override {
     return op_conf().conv_3d_conf().filters();
   }
 
  private:
-  PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) override;
+  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+    return kernel_conf->mutable_conv_3d_conf();
+  }
   const int32_t kDimSize = 3;
 };
+
+REGISTER_OP(OperatorConf::kConv3DConf, Conv3DOp);
 
 }  // namespace oneflow
 

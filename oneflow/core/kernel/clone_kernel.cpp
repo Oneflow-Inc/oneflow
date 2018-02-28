@@ -59,7 +59,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
    public:                                                           \
     static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, \
                                Blob* b) {                            \
-      UNEXPECTED_RUN();                                              \
+      UNIMPLEMENTED();                                               \
     }                                                                \
   };
 

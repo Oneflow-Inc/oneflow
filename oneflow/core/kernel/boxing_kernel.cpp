@@ -103,7 +103,7 @@ class DataContentIterator final {
   }
 
   static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyDataContentFrom<DeviceType::kCPU>;
+    return &Blob::CopyDataContentFrom;
   }
 
  private:
@@ -167,7 +167,7 @@ class DataIdIterator final : public FieldIterator {
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
   static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyDataIdFrom<DeviceType::kCPU>;
+    return &Blob::CopyDataIdFrom;
   }
 
  private:
@@ -184,7 +184,7 @@ class ColNumIterator final : public FieldIterator {
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
   static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyColNumFrom<DeviceType::kCPU>;
+    return &Blob::CopyColNumFrom;
   }
 
  private:
@@ -284,7 +284,7 @@ void BoxingKernel<T>::ForwardDataContent(
                                 kernel_conf().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -300,10 +300,10 @@ void BoxingKernel<T>::ForwardDataContent(
                                 kernel_conf().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 
@@ -327,7 +327,7 @@ void BoxingKernel<T>::ForwardField(
                                 kernel_conf().output_bns(),
                                 Iter::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -338,10 +338,10 @@ void BoxingKernel<T>::ForwardField(
       CopyField(ctx.device_ctx, BnInOp2Blob, BnInOp2Blob(ibn_0_.Get(0)),
                 kernel_conf().output_bns(), Iter::GetCopyBlobFieldMthd());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

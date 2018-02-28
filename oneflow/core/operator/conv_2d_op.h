@@ -11,17 +11,29 @@ class Conv2DOp : public ConvBaseOp {
   Conv2DOp() = default;
   ~Conv2DOp() = default;
 
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override {
+    return op_conf().conv_2d_conf();
+  }
 
-  int32_t ModelSplitAxis() const override;
+  int32_t ModelSplitAxis() const override {
+    if (GetStringFromCustomizedConf("data_format") == "channel_first") {
+      return 1;
+    } else {
+      return 3;
+    }
+  }
   int32_t MaxModelSplitNum() const override {
     return op_conf().conv_2d_conf().filters();
   }
 
  private:
-  virtual PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) = 0;
+  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+    return kernel_conf->mutable_conv_2d_conf();
+  }
   const int32_t kDimSize = 2;
 };
+
+REGISTER_OP(OperatorConf::kConv2DConf, Conv2DOp);
 
 }  // namespace oneflow
 

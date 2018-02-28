@@ -11,7 +11,7 @@ void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
   } else if (parallel_ctx()->policy() == kDataParallel) {
     edge->AddRegst("rec_out", ProduceRegst("rec_out", 1, 1));
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 
@@ -29,7 +29,7 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
       ConsumeRegst("rec_in", regst);
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 
@@ -44,7 +44,7 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   } else if (parallel_ctx()->policy() == kDataParallel) {
     exec_node->BindBnInOpAndRegst("rec_in", GetProducedRegst("rec_out"));
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0");
   if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }

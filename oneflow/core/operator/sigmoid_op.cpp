@@ -9,7 +9,7 @@ void SigmoidOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& SigmoidOp::GetSpecialConf() const {
+const PbMessage& SigmoidOp::GetCustomizedConf() const {
   return op_conf().sigmoid_conf();
 }
 

@@ -113,7 +113,7 @@ message FullyConnectedOpConf {
   required string in = 1;
   required string out = 2;
   required int32 units = 3;
-  required bool use_bias = 4 [default = true];
+  optional bool use_bias = 4 [default = true];
   optional InitializerConf weight_initializer = 5;
   optional InitializerConf bias_initializer = 6;
 }
@@ -126,15 +126,34 @@ message BasicDataLoaderOpConf {
   required ShapeProto shape = 5;
 }
 
+message AveragePooling1DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
+}
+
+message MaxPooling1DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
+}
+
 message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3 ;
-  required int32 pool_size_h = 4;
-  required int32 pool_size_w = 5;
-  optional int32 strides_h = 6 [default = 1];
-  optional int32 strides_w = 7 [default = 1];
+  required string padding = 3;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message MaxPooling2DOpConf {
@@ -142,10 +161,29 @@ message MaxPooling2DOpConf {
   required string out = 2;
 
   required string padding = 3;
-  required int32 pool_size_h = 4;
-  required int32 pool_size_w = 5;
-  optional int32 strides_h = 6 [default = 1];
-  optional int32 strides_w = 7 [default = 1];
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
+}
+
+message AveragePooling3DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
+}
+
+message MaxPooling3DOpConf {
+  required string in = 1;
+  required string out = 2;
+
+  required string padding = 3;
+  required string data_format = 4 [default = "channels_last"];
+  repeated int64 pool_size = 5;
+  repeated int64 strides = 6;
 }
 
 message ReluOpConf {
@@ -337,8 +375,12 @@ message OperatorConf {
     Conv1DOpConf conv_1d_conf = 125;
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
-    AveragePooling2DOpConf average_pooling_2d_conf = 200;
-    MaxPooling2DOpConf max_pooling_2d_conf = 201;
+    AveragePooling1DOpConf average_pooling_1d_conf = 200;
+    MaxPooling1DOpConf max_pooling_1d_conf = 201;
+    AveragePooling2DOpConf average_pooling_2d_conf = 202;
+    MaxPooling2DOpConf max_pooling_2d_conf = 203;
+    AveragePooling3DOpConf average_pooling_3d_conf = 204;
+    MaxPooling3DOpConf max_pooling_3d_conf = 205;
   }
 }
 

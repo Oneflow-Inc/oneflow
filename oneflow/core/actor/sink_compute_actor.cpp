@@ -15,7 +15,7 @@ int SinkCompActor::HandlerNormal(const ActorMsg& msg) {
     in_regst_ = msg.regst();
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return 0;
 }
@@ -28,7 +28,7 @@ void SinkCompActor::Act() {
 }
 
 bool SinkCompActor::IsReadAlwaysUnReadyFromNow() {
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
   return false;
 }
 
@@ -37,6 +37,6 @@ void SinkCompActor::ForEachCurReadableRegst(
   handler(in_regst_);
 }
 
-void SinkCompActor::AsyncReturnAllReadableRegst() { UNEXPECTED_RUN(); }
+void SinkCompActor::AsyncReturnAllReadableRegst() { UNIMPLEMENTED(); }
 
 }  // namespace oneflow

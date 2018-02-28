@@ -68,4 +68,23 @@ DEFINE_SET_VAL_IN_PBMESSAGE(bool, Bool);
 
 #undef DEFINE_SET_VAL_IN_PBMESSAGE
 
+#define DEFINE_ADD_VAL_IN_PBRF(val_type, func_name)                          \
+  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
+                              val_type val) {                                \
+    const Descriptor* d = msg->GetDescriptor();                              \
+    const FieldDescriptor* fd = d->FindFieldByName(field_name);              \
+    CHECK_NOTNULL(fd);                                                       \
+    const Reflection* r = msg->GetReflection();                              \
+    r->Add##func_name(msg, fd, val);                                         \
+  }
+
+DEFINE_ADD_VAL_IN_PBRF(std::string, String);
+DEFINE_ADD_VAL_IN_PBRF(int32_t, Int32);
+DEFINE_ADD_VAL_IN_PBRF(uint32_t, UInt32);
+DEFINE_ADD_VAL_IN_PBRF(int64_t, Int64);
+DEFINE_ADD_VAL_IN_PBRF(uint64_t, UInt64);
+DEFINE_ADD_VAL_IN_PBRF(bool, Bool);
+
+#undef DEFINE_ADD_VAL_IN_PBRF
+
 }  // namespace oneflow

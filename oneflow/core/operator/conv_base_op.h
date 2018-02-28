@@ -12,8 +12,8 @@ class CudnnConvNdDesc final {
   CudnnConvNdDesc() = delete;
   ~CudnnConvNdDesc();
 
-  CudnnConvNdDesc(const BlobDesc*, const int, const std::vector<int32_t>&,
-                  const std::vector<int32_t>&, const std::vector<int32_t>&,
+  CudnnConvNdDesc(const BlobDesc*, const int, const std::vector<int>&,
+                  const std::vector<int>&, const std::vector<int>&,
                   const std::string&, const std::string&);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
@@ -42,14 +42,15 @@ class ConvBaseOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  protected:
-  virtual PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) = 0;
+  virtual PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) const = 0;
   void SetCudnnConvAlgoForKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      KernelConf* kernel_conf);
+      KernelConf* kernel_conf) const;
   size_t InferCudnnWorkspaceSize(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp);
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
+      const;
 
-  const int kDimSize = 0;
+  const int kDimSize = -1;
 };
 
 }  // namespace oneflow

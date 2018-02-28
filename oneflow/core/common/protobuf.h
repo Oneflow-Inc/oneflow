@@ -39,6 +39,16 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
 
+template<typename T>
+const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
+                                    const std::string& field_name) {
+  const google::protobuf::Descriptor* d = msg.GetDescriptor();
+  const google::protobuf::FieldDescriptor* fd = d->FindFieldByName(field_name);
+  CHECK_NOTNULL(fd);
+  const google::protobuf::Reflection* r = msg.GetReflection();
+  return r->GetRepeatedField<T>(msg, fd);
+}
+
 // Set In PbMessage
 
 #define DECLARE_SET_VAL_IN_PBMESSAGE(val_type, func_name) \
@@ -53,6 +63,21 @@ DECLARE_SET_VAL_IN_PBMESSAGE(uint64_t, UInt64);
 DECLARE_SET_VAL_IN_PBMESSAGE(bool, Bool);
 
 #undef DECLARE_SET_VAL_IN_PBMESSAGE
+
+// Add In PbMessage RepeatedField
+
+#define DECLARE_ADD_VAL_IN_PBRF(val_type, func_name)                         \
+  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
+                              val_type val);
+
+DECLARE_ADD_VAL_IN_PBRF(std::string, String);
+DECLARE_ADD_VAL_IN_PBRF(int32_t, Int32);
+DECLARE_ADD_VAL_IN_PBRF(uint32_t, UInt32);
+DECLARE_ADD_VAL_IN_PBRF(int64_t, Int64);
+DECLARE_ADD_VAL_IN_PBRF(uint64_t, UInt64);
+DECLARE_ADD_VAL_IN_PBRF(bool, Bool);
+
+#undef DECLARE_ADD_VAL_IN_PBRF
 
 // Alias PbType
 

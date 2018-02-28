@@ -80,7 +80,7 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }

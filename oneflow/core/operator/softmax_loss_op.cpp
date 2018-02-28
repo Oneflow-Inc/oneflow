@@ -20,7 +20,7 @@ void SoftmaxLossOp::VirtualGenKernelConf(
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
 }
 
-const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
+const PbMessage& SoftmaxLossOp::GetCustomizedConf() const {
   return op_conf().softmax_loss_conf();
 }
 

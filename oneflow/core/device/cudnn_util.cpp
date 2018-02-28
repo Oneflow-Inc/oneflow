@@ -3,6 +3,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 #define DEFINE_CUDNN_DATA_TYPE(type_cpp, type_cudnn)                          \
   const cudnnDataType_t CudnnDataType<type_cpp>::val = type_cudnn;            \
   const type_cpp CudnnDataType<type_cpp>::oneval = static_cast<type_cpp>(1);  \
@@ -16,7 +18,7 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   if (val == GetDataType<type_cpp>::val) { return type_cudnn; }
   OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CUDNN_DATA_TYPE_SEQ);
 #undef MAKE_ENTRY
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
 }
 
 CudnnTensorDesc::~CudnnTensorDesc() {
@@ -32,6 +34,14 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape)
     : CudnnTensorDesc(data_type, shape.At(0), shape.At(1), shape.At(2),
                       shape.At(3)) {
   CHECK_EQ(shape.NumAxes(), 4);
+}
+
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type,
+                                 const std::vector<int>& dim,
+                                 const std::vector<int>& stride) {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(data_type),
+                                       dim.size(), dim.data(), stride.data()));
 }
 
 CudnnFilterDesc::~CudnnFilterDesc() {
@@ -76,7 +86,7 @@ CudnnFilterNdDesc::CudnnFilterNdDesc(DataType data_type,
   } else if (data_format == "NHWC" || data_format == "NDHWC") {
     cudnn_data_format = CUDNN_TENSOR_NHWC;
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   CudaCheck(cudnnSetFilterNdDescriptor(
       val_, GetCudnnDataType(data_type), cudnn_data_format,
@@ -94,5 +104,7 @@ CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
 CudnnActivationDesc::~CudnnActivationDesc() {
   CudaCheck(cudnnDestroyActivationDescriptor(val_));
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace oneflow

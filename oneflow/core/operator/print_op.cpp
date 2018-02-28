@@ -12,7 +12,7 @@ void PrintOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& PrintOp::GetSpecialConf() const {
+const PbMessage& PrintOp::GetCustomizedConf() const {
   return op_conf().print_conf();
 }
 

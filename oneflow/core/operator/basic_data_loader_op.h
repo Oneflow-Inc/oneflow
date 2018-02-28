@@ -12,7 +12,7 @@ class BasicDataLoaderOp final : public Operator {
   ~BasicDataLoaderOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
   bool IsDataLoaderOp() const override { return true; }
 
   void InferBlobDescs(

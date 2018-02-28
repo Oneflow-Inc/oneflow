@@ -4,19 +4,16 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/eigen/tensor_type.h"
 
 namespace oneflow {
 
 class Regst;
 
-class Blob final {
+class Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-       const void* comm_net_token);
-  ~Blob() = default;
+  virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
@@ -26,10 +23,15 @@ class Blob final {
 
   int32_t col_num(int32_t no) const;
   void set_col_num(int32_t no, int32_t val);
+
+  const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }
+
+  virtual void Transpose(DeviceCtx* ctx, Blob* out_blob,
+                         const std::vector<int32_t>& permutation) = 0;
 
   template<typename T = void>
   const T* dptr() const {
@@ -57,20 +59,22 @@ class Blob final {
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
-  template<DeviceType device_type>
-  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  template<DeviceType device_type>
-  void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  template<DeviceType device_type>
-  void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
-  template<DeviceType device_type>
-  void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
 
   int32_t col_id() const;
   void set_col_id(int32_t val);
   int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
   bool IsColValid() const;
+
+ protected:
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+       const void* comm_net_token);
 
  private:
   template<typename T>
@@ -90,6 +94,9 @@ class Blob final {
   const BlobDesc* blob_desc_;
   Regst* regst_;
 };
+
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+              const void* comm_net_token, DeviceType device_type);
 
 }  // namespace oneflow
 

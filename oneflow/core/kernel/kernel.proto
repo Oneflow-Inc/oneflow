@@ -1,6 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/common/shape.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
@@ -11,24 +12,27 @@ message Pad {
 }
 
 message Conv1DKernelConf {
-  repeated Pad pad = 1;
-  optional int32 cudnn_fwd_algo = 2 [default = 0];
-  optional int32 cudnn_bwd_filter_algo = 3 [default = 0];
-  optional int32 cudnn_bwd_data_algo = 4 [default = 0];
+  repeated int32 pad_small_side = 1;
+  repeated int32 pad_large_side = 2;
+  optional int32 cudnn_fwd_algo = 3 [default = 0];
+  optional int32 cudnn_bwd_filter_algo = 4 [default = 0];
+  optional int32 cudnn_bwd_data_algo = 5 [default = 0];
 }
 
 message Conv2DKernelConf {
-  repeated Pad pad = 1;
-  optional int32 cudnn_fwd_algo = 2 [default = 0];
-  optional int32 cudnn_bwd_filter_algo = 3 [default = 0];
-  optional int32 cudnn_bwd_data_algo = 4 [default = 0];
+  repeated int32 pad_small_side = 1;
+  repeated int32 pad_large_side = 2;
+  optional int32 cudnn_fwd_algo = 3 [default = 0];
+  optional int32 cudnn_bwd_filter_algo = 4 [default = 0];
+  optional int32 cudnn_bwd_data_algo = 5 [default = 0];
 }
 
 message Conv3DKernelConf {
-  repeated Pad pad = 1;
-  optional int32 cudnn_fwd_algo = 2 [default = 0];
-  optional int32 cudnn_bwd_filter_algo = 3 [default = 0];
-  optional int32 cudnn_bwd_data_algo = 4 [default = 0];
+  repeated int32 pad_small_side = 1;
+  repeated int32 pad_large_side = 2;
+  optional int32 cudnn_fwd_algo = 3 [default = 0];
+  optional int32 cudnn_bwd_filter_algo = 4 [default = 0];
+  optional int32 cudnn_bwd_data_algo = 5 [default = 0];
 }
 
 message ConcatKernelConf {
@@ -46,19 +50,22 @@ message SoftmaxLossKernelConf {
   required DataType label_type = 2;
 }
 
-message Pooling2DKernelConf {
-  optional int32 padding_top = 1 [default = 0];
-  optional int32 padding_bottom = 2 [default = 0];
-  optional int32 padding_left = 3 [default = 0];
-  optional int32 padding_right = 4 [default = 0];
+message Pooling3DKernelConf {
+  required ShapeProto in= 1;
+  required ShapeProto out= 2;
+  required ShapeProto padding_before = 3;
+  required ShapeProto padding_after = 4;
+  required ShapeProto pool_size = 5;
+  required ShapeProto strides = 6;
+  required string data_format = 7;
 }
 
-message AveragePooling2DKernelConf {
-  required Pooling2DKernelConf pooling_2d_conf = 1;
+message AveragePooling3DKernelConf {
+  required Pooling3DKernelConf pooling_3d_conf = 1;
 }
 
-message MaxPooling2DKernelConf {
-  required Pooling2DKernelConf pooling_2d_conf = 1;
+message MaxPooling3DKernelConf {
+  required Pooling3DKernelConf pooling_3d_conf = 1;
 }
 
 message ReduceSumKernelConf {
@@ -93,7 +100,7 @@ message KernelConf {
     Conv1DKernelConf conv_1d_conf = 125;
     Conv2DKernelConf conv_2d_conf = 126;
     Conv3DKernelConf conv_3d_conf = 127;
-    AveragePooling2DKernelConf average_pooling_2d_conf = 200;
-    MaxPooling2DKernelConf max_pooling_2d_conf = 201;
+    AveragePooling3DKernelConf average_pooling_3d_conf = 204;
+    MaxPooling3DKernelConf max_pooling_3d_conf = 205;
   }
 }
