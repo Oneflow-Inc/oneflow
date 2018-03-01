@@ -13,7 +13,7 @@ void EltwiseOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& EltwiseOp::GetSpecialConf() const {
+const PbMessage& EltwiseOp::GetCustomizedConf() const {
   return op_conf().eltwise_conf();
 }
 

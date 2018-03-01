@@ -15,7 +15,7 @@ class EltwiseOp final : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
 
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
