@@ -280,12 +280,12 @@ size_t ConvOp::InferCudnnWorkspaceSize(
                                 &out_desc, &filter_desc, &conv_desc);
 
   ConvOpCtx* conv_op_ctx = new ConvOpCtx;
+  EnrollOpContext(conv_op_ctx);
   conv_op_ctx->set_cudnn_fwd_algo(static_cast<int32_t>(cudnn_fwd_algo));
   conv_op_ctx->set_cudnn_bwd_filter_algo(
       static_cast<int32_t>(cudnn_bwd_filter_algo));
   conv_op_ctx->set_cudnn_bwd_data_algo(
       static_cast<int32_t>(cudnn_bwd_data_algo));
-  EnrollOpContext(conv_op_ctx);
 
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
