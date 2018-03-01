@@ -9,12 +9,14 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
   Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
-  Blob* tmp_blob = BnInOp2Blob(this->kernel_conf().data_tmp_bns(0));
-  const int64_t n = out_blob->shape().At(0);
-  const int64_t w = out_blob->shape().At(1);
+  Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  auto conf = this->kernel_conf().softmax_conf();
+  const int64_t n = conf.transpose_rows();
+  const int64_t w = conf.transpose_cols();
   const T* in = in_blob->dptr<T>();
   T* tmp = tmp_blob->mut_dptr<T>();
   T* out = out_blob->mut_dptr<T>();
+
   SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in, tmp, out);
 }
 
