@@ -16,6 +16,15 @@ namespace oneflow {
 // bn  : blob name
 // lbn : logical blob name
 
+class OpContext {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpContext);
+  virtual ~OpContext() = default;
+
+ protected:
+  OpContext() = default;
+};
+
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
@@ -115,14 +124,14 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type) const {
-    InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-  }
+      const ParallelContext* parallel_ctx, DeviceType device_type,
+      std::unique_ptr<OpContext>*) const;
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {
-    UNIMPLEMENTED() << typeid(*this).name();
-  }
+      const ParallelContext* parallel_ctx, DeviceType device_type) const;
+  virtual void InferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const;
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbnWhenShareModel(const std::string& shared_op_name);
@@ -130,10 +139,14 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, DeviceType, const ParallelContext*, KernelConf*) const;
+      bool is_forward, DeviceType, const ParallelContext*, const OpContext*,
+      KernelConf*) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, const OpContext*, KernelConf*) const;
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const {}

@@ -308,8 +308,8 @@ message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
   optional bool use_cudnn_on_gpu = 3;
+  optional bool trainable = 4 [default = true];
   oneof op_type {
-    ConvolutionOpConf convolution_conf = 100;
     FullyConnectedOpConf fully_connected_conf = 101;
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
