@@ -32,11 +32,11 @@ void PoolingOp::InferBlobDescs(
   CHECK_LE(in_blob_desc->shape().NumAxes(), 5);
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
   // out
-  std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
+  std::vector<int32_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
                              GetInDim(in_shape, 2)};
-  std::vector<int64_t> pool_size = Get3DVecInOpConf("pool_size");
-  std::vector<int64_t> strides = Get3DVecInOpConf("strides");
-  std::vector<int64_t> out;
+  std::vector<int32_t> pool_size = Get3DVecInOpConf("pool_size");
+  std::vector<int32_t> strides = Get3DVecInOpConf("strides");
+  std::vector<int32_t> out;
   Get3DOutputSize(in, pool_size, strides,
                   GetStringFromCustomizedConf("padding"), &out, nullptr);
 
@@ -56,21 +56,21 @@ void PoolingOp::CheckPoolSizeAndStrides() const {
   for (int64_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
 }
 
-std::vector<int64_t> PoolingOp::Get3DVecInOpConf(
+std::vector<int32_t> PoolingOp::Get3DVecInOpConf(
     const std::string& field_name) const {
-  std::vector<int64_t> vec;
+  std::vector<int32_t> vec;
   FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int64_t>(dim) - (3 - GetDim());
+    int64_t index = static_cast<int32_t>(dim) - (3 - GetDim());
     if (index < 0) {
       vec.push_back(1);
     } else {
-      vec.push_back(GetPbRfFromCustomizedConf<int64_t>(field_name).Get(index));
+      vec.push_back(GetPbRfFromCustomizedConf<int32_t>(field_name).Get(index));
     }
   }
   return vec;
 }
 
-int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
+int32_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
   int64_t offset = 0;
   std::string data_format = GetStringFromCustomizedConf("data_format");
   if (data_format == "channels_last") {
@@ -88,9 +88,9 @@ int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
   }
 }
 
-Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
-                             const std::vector<int64_t>& out) const {
-  std::vector<int64_t> out_shape;
+Shape PoolingOp::GetOutShape(int32_t in_n, int32_t in_c,
+                             const std::vector<int32_t>& out) const {
+  std::vector<int32_t> out_shape;
   if (GetDim() == 1) {
     out_shape = {out.at(2)};
   } else if (GetDim() == 2) {
@@ -116,13 +116,13 @@ void PoolingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
-  std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
+  std::vector<int32_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
                              GetInDim(in_shape, 2)};
-  std::vector<int64_t> pool_size = Get3DVecInOpConf("pool_size");
-  std::vector<int64_t> strides = Get3DVecInOpConf("strides");
-  std::vector<int64_t> out;
-  std::vector<int64_t> padding_before;
-  std::vector<int64_t> padding_after;
+  std::vector<int32_t> pool_size = Get3DVecInOpConf("pool_size");
+  std::vector<int32_t> strides = Get3DVecInOpConf("strides");
+  std::vector<int32_t> out;
+  std::vector<int32_t> padding_before;
+  std::vector<int32_t> padding_after;
   Get3DOutputSize(in, pool_size, strides,
                   GetStringFromCustomizedConf("padding"), &out, &padding_before,
                   &padding_after);
