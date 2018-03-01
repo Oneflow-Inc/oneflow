@@ -125,7 +125,7 @@ class Operator {
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, DeviceType device_type,
-      std::unique_ptr<OpContext>*) const;
+      std::function<void(OpContext*)> EnrollOpContext) const;
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, DeviceType device_type) const;
