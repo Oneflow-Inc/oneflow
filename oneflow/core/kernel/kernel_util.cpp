@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -54,7 +55,6 @@ void RandomUniformInitializer(
       blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
       static_cast<T>(initializer_conf.max()), random_seed, blob->mut_dptr<T>());
 }
-
 template<typename T>
 void RandomNormalInitializer(
     const RandomNormalInitializerConf& initializer_conf, uint32_t random_seed,
@@ -77,7 +77,7 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
   } else if (variance_norm == VarianceNorm::kFanOut) {
     fan = fan_out;
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return fan;
 }
@@ -109,7 +109,13 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf,
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
-                              size_t sz, cudaMemcpyKind kind) {
+                              size_t sz
+#ifdef WITH_CUDA
+                              ,
+                              cudaMemcpyKind kind
+#endif
+
+) {
   memcpy(dst, src, sz);
 }
 
@@ -163,6 +169,31 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                   T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T half = static_cast<T>(0.5);
+    for (int64_t i = 0; i != n; ++i) {
+      y[i] = half * std::tanh(half * x[i]) + half;
+    }
+  }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
+  }
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
+  }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
+  }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T zero = static_cast<T>(0.0);
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+  }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
@@ -196,7 +227,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     } else if (initializer_conf.has_msra_conf()) {
       MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
   static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
@@ -221,6 +252,14 @@ struct KernelUtil<DeviceType::kCPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

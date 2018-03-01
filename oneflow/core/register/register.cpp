@@ -11,8 +11,8 @@ Regst::Regst() {
   status_.piece_id = -1;
   status_.model_version_id = -1;
   status_.act_id = -1;
-  status_.col_id = -1;
-  status_.max_col_id = -1;
+  status_.col_id = 0;
+  status_.max_col_id = 0;
   regst_desc_ = nullptr;
 }
 

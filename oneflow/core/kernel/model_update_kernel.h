@@ -9,7 +9,7 @@ template<DeviceType device_type, typename T>
 class MdUpdateKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdateKernel);
-  ~MdUpdateKernel() = default;
+  virtual ~MdUpdateKernel() = default;
 
   void Forward(
       const KernelCtx& ctx,
@@ -23,7 +23,7 @@ class MdUpdateKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
-  void DiffAveragingAndRegularization(
+  Blob* DiffAveragingAndRegularization(
       DeviceCtx* ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
@@ -35,6 +35,19 @@ class MdUpdateKernelUtil final {
                                              float l1, float l2, const T* model,
                                              T* model_diff_acc);
 };
+
+#define DECLARE_MDUPDT_KERNEL_CREATOR(x) \
+  Kernel* Create##x##MdUpdtKernel(const KernelConf&);
+
+#define DEFINE_MDUPDT_KERNEL_CREATOR(x)                                        \
+  Kernel* Create##x##MdUpdtKernel(const KernelConf& kernel_conf) {             \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {   \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,            \
+                                         (x##MdUpdateKernel), DEVICE_TYPE_SEQ, \
+                                         FLOATING_DATA_TYPE_SEQ)};             \
+    return creators.at(                                                        \
+        GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();     \
+  }
 
 }  // namespace oneflow
 

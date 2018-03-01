@@ -12,7 +12,7 @@ class CopyCommNetOp final : public Operator {
   ~CopyCommNetOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override;

@@ -24,6 +24,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
+  std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
 
@@ -53,13 +54,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
-  std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
   const HashMap<std::string, std::weak_ptr<RegstDesc>>& consumed_regsts();
   bool TryLockConsumedRegst(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
-  virtual void FixRegisterNumRange() {}
+  void FixRegisterNumRange();
 
  private:
   void UpdateTaskId();

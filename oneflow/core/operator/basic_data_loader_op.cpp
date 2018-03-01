@@ -12,7 +12,7 @@ void BasicDataLoaderOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& BasicDataLoaderOp::GetSpecialConf() const {
+const PbMessage& BasicDataLoaderOp::GetCustomizedConf() const {
   return op_conf().basic_data_loader_conf();
 }
 

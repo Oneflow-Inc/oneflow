@@ -43,7 +43,15 @@ void SoftmaxLossKernel<device_type, PredType, LabelType>::ForwardDataId(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* prediction_blob = BnInOp2Blob("prediction");
   Blob* loss_blob = BnInOp2Blob("loss");
-  loss_blob->CopyDataIdFrom<device_type>(ctx.device_ctx, prediction_blob);
+  loss_blob->CopyDataIdFrom(ctx.device_ctx, prediction_blob);
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
+void SoftmaxLossKernel<device_type, PredType, LabelType>::ForwardColNum(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("prediction"))
+      ->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<typename PredType, typename LabelType>
@@ -70,8 +78,7 @@ class SoftmaxLossKernelUtil<DeviceType::kCPU, PredType, LabelType> final {
 
 namespace {
 
-Kernel* CreateSoftmaxLossKernel(DeviceType dev_type,
-                                const KernelConf& kernel_conf) {
+Kernel* CreateSoftmaxLossKernel(const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
 #define SOFTMAX_LOSS_KERNEL_ENTRY(device_type, pred_type_pair,          \
                                   label_type_pair)                      \
@@ -86,7 +93,8 @@ Kernel* CreateSoftmaxLossKernel(DeviceType dev_type,
                                        DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
                                        INT_DATA_TYPE_SEQ)};
   return creators.at(
-      GetHashKey(dev_type, kernel_conf.softmax_loss_conf().prediction_type(),
+      GetHashKey(kernel_conf.device_type(),
+                 kernel_conf.softmax_loss_conf().prediction_type(),
                  kernel_conf.softmax_loss_conf().label_type()))();
 }
 

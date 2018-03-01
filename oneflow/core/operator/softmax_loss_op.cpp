@@ -20,7 +20,7 @@ void SoftmaxLossOp::VirtualGenKernelConf(
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
 }
 
-const PbMessage& SoftmaxLossOp::GetSpecialConf() const {
+const PbMessage& SoftmaxLossOp::GetCustomizedConf() const {
   return op_conf().softmax_loss_conf();
 }
 
@@ -43,12 +43,10 @@ void SoftmaxLossOp::InferBlobDescs(
   BlobDesc* tmp_1D_blob_desc = GetBlobDesc4BnInOp("tmp_1D");
   tmp_1D_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   tmp_1D_blob_desc->set_data_type(pred_blob_desc->data_type());
-  tmp_1D_blob_desc->set_has_data_id_field(false);
   // prob
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
-  prob_blob_desc->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxLossConf, SoftmaxLossOp);

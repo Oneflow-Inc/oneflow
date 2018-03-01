@@ -8,10 +8,11 @@ void NormalMdUpdateKernel<device_type, T>::UpdateModel(
     int64_t next_model_vid,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
-  float learning_rate = this->op_conf().normal_mdupdt_conf().learning_rate();
+  float learning_rate =
+      this->op_conf().mdupdt_conf().user_conf().normal_conf().learning_rate();
 
   if (pre_model_blob != model_blob) {
-    model_blob->CopyDataContentFrom<device_type>(ctx, pre_model_blob);
+    model_blob->CopyDataContentFrom(ctx, pre_model_blob);
   }
 
   // model = model - alpha * model_diff
@@ -20,7 +21,6 @@ void NormalMdUpdateKernel<device_type, T>::UpdateModel(
                                    1, model_blob->mut_dptr<T>(), 1);
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf,
-                           NormalMdUpdateKernel, FLOATING_DATA_TYPE_SEQ);
+DEFINE_MDUPDT_KERNEL_CREATOR(Normal);
 
 }  // namespace oneflow

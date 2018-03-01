@@ -2,6 +2,8 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+
 void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
   is_in_eord_ = false;
@@ -23,7 +25,7 @@ int CopyHdActor::HandlerNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }
@@ -55,6 +57,13 @@ void CopyHdActor::AsyncReturnAllReadableRegst() {
   CHECK(pending_in_regst_.empty());
 }
 
+void CopyHdActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regst_.front());
+}
+
 REGISTER_ACTOR(TaskType::kCopyHd, CopyHdActor);
+
+#endif
 
 }  // namespace oneflow

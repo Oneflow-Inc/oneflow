@@ -14,29 +14,27 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  TaskNode* GetRelatedFwTaskNode();
+  CompTaskNode* GetRelatedFwTaskNode();
 
  protected:
-  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNIMPLEMENTED(); }
   virtual void VirtualBuildActivationDiffRegst() {}
-  virtual void VirtualBuildInDiffRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualBuildInDiffRegst() { UNIMPLEMENTED(); }
   virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   };
-  virtual void VirtualProduceRegstOnSelfEdge(TaskEdge* edge) {
-    UNEXPECTED_RUN();
+  virtual void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) {
+    UNIMPLEMENTED();
   }
   virtual void VirtualProduceActivationDiff() {}
-  virtual void VirtualConsumeRegstOnSelfEdge(TaskEdge* edge) {
-    UNEXPECTED_RUN();
-  }
   virtual void VirtualConsumeActivation(TaskEdge* edge) {}
-  virtual void VirtualConsumeInRegst() { UNEXPECTED_RUN(); };
+  virtual void VirtualConsumeDiffRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualConsumeInRegst() { UNIMPLEMENTED(); };
   virtual void VirtualInferBlobDescInActivationDiff() {}
   virtual void VirtualInferBlobDescInHiddenDiff() {}
 
  private:
-  void BuildModelDiffRegst();
+  void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
 };
 

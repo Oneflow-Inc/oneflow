@@ -10,27 +10,35 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
   char* dptr = nullptr;
   const void* comm_net_token = nullptr;
   if (mem_case.has_host_pageable_mem()) {
-    dptr = (char*)malloc(size);
+    dptr = reinterpret_cast<char*>(malloc(size));
     CHECK_NOTNULL(dptr);
     memset(dptr, memset_val, size);
   } else if (mem_case.has_host_pinned_mem()) {
     if (mem_case.host_pinned_mem().used_by_device()) {
+#ifdef WITH_CUDA
       CudaCheck(cudaMallocHost(&dptr, size));
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
-      dptr = (char*)malloc(size);
+      dptr = reinterpret_cast<char*>(malloc(size));
     }
     if (mem_case.host_pinned_mem().used_by_network()) {
       comm_net_token = CommNet::Singleton()->RegisterMemory(dptr, size);
     }
     memset(dptr, memset_val, size);
-  } else if (mem_case.has_device_cuda_mem()) {
+  }
+#ifdef WITH_CUDA
+  else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
     CudaCheck(cudaGetDevice(&current_device_id));
     CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
     CudaCheck(cudaMalloc(&dptr, size));
     CudaCheck(cudaMemset(dptr, memset_val, size));
-  } else {
-    UNEXPECTED_RUN();
+  }
+#endif
+  else {
+    UNIMPLEMENTED();
   }
   return std::make_tuple(dptr, comm_net_token,
                          std::bind(&MemoryAllocator::Deallocate, this, dptr,
@@ -46,15 +54,25 @@ void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
       CommNet::Singleton()->UnRegisterMemory(comm_net_token);
     }
     if (mem_case.host_pinned_mem().used_by_device()) {
+#ifdef WITH_CUDA
       CudaCheck(cudaFreeHost(dptr));
+#else
+      UNIMPLEMENTED();
+#endif
     } else {
       free(dptr);
     }
-  } else if (mem_case.has_device_cuda_mem()) {
+  }
+#ifdef WITH_CUDA
+  else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
     CudaCheck(cudaGetDevice(&current_device_id));
     CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
     CudaCheck(cudaFree(dptr));
+  }
+#endif
+  else {
+    UNIMPLEMENTED();
   }
 }
 

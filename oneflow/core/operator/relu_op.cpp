@@ -9,7 +9,7 @@ void ReluOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& ReluOp::GetSpecialConf() const {
+const PbMessage& ReluOp::GetCustomizedConf() const {
   return op_conf().relu_conf();
 }
 

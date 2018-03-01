@@ -17,6 +17,7 @@ class CopyCommNetActor final : public Actor {
     const void* comm_net_token;
     Regst* regst_raw_ptr;
     int64_t producer;
+    int64_t act_id;
   };
 
   void VirtualActorInit(const TaskProto&) override;
@@ -29,11 +30,15 @@ class CopyCommNetActor final : public Actor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
+
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
   void* actor_read_id_;
   CommNetDeviceCtx* comm_net_device_ctx_;
   int64_t next_piece_id_;
+  int64_t in_regst_desc_id_;
 };
 
 }  // namespace oneflow

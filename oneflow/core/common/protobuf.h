@@ -39,6 +39,31 @@ DECLARE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
 
+template<typename T>
+const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
+                                    const std::string& field_name) {
+  const google::protobuf::Descriptor* d = msg.GetDescriptor();
+  const google::protobuf::FieldDescriptor* fd = d->FindFieldByName(field_name);
+  CHECK_NOTNULL(fd);
+  const google::protobuf::Reflection* r = msg.GetReflection();
+  return r->GetRepeatedField<T>(msg, fd);
+}
+
+// Set In PbMessage
+
+#define DECLARE_SET_VAL_IN_PBMESSAGE(val_type, func_name) \
+  void Set##func_name##InPbMessage(                       \
+      PbMessage* msg, const std::string& field_name, val_type val);
+
+DECLARE_SET_VAL_IN_PBMESSAGE(std::string, String);
+DECLARE_SET_VAL_IN_PBMESSAGE(int32_t, Int32);
+DECLARE_SET_VAL_IN_PBMESSAGE(uint32_t, UInt32);
+DECLARE_SET_VAL_IN_PBMESSAGE(int64_t, Int64);
+DECLARE_SET_VAL_IN_PBMESSAGE(uint64_t, UInt64);
+DECLARE_SET_VAL_IN_PBMESSAGE(bool, Bool);
+
+#undef DECLARE_SET_VAL_IN_PBMESSAGE
+
 // Alias PbType
 
 #define ALIAS_PB_TYPE(type, name) using Pb##name = google::protobuf::type;
