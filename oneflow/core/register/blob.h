@@ -31,7 +31,7 @@ class Blob {
   void* mut_memory_ptr() { return mem_ptr_; }
 
   virtual void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                         const std::vector<int32_t>& permutation) = 0;
+                         const PbRf<int32_t>& permutation) const = 0;
 
   template<typename T = void>
   const T* dptr() const {

@@ -162,6 +162,7 @@ message TanHOpConf {
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
+  optional int32 axis = 3 [default = -1];
 }
 
 message SoftmaxLossOpConf {
