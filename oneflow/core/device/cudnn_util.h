@@ -39,8 +39,8 @@ class CudnnTensorDesc final {
   CudnnTensorDesc() = delete;
   ~CudnnTensorDesc();
 
-  CudnnTensorDesc(DataType, int n, int c, int h, int w);
-  CudnnTensorDesc(DataType, const Shape&);
+  CudnnTensorDesc(DataType, int, int, int, int);
+  CudnnTensorDesc(DataType data_type, const Shape& shape);
   CudnnTensorDesc(DataType data_type, const std::vector<int>& dim,
                   const std::vector<int>& stride);
 
@@ -56,36 +56,8 @@ class CudnnFilterDesc final {
   CudnnFilterDesc() = delete;
   ~CudnnFilterDesc();
 
-  CudnnFilterDesc(DataType, int k, int c, int h, int w);
-  CudnnFilterDesc(DataType, const Shape&);
-
-  const cudnnFilterDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnFilterDescriptor_t val_;
-};
-
-class CudnnTensorNdDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnTensorNdDesc);
-  CudnnTensorNdDesc() = delete;
-  ~CudnnTensorNdDesc();
-
-  CudnnTensorNdDesc(DataType, const Shape&);
-
-  const cudnnTensorDescriptor_t& Get() const { return val_; }
-
- private:
-  cudnnTensorDescriptor_t val_;
-};
-
-class CudnnFilterNdDesc final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnFilterNdDesc);
-  CudnnFilterNdDesc() = delete;
-  ~CudnnFilterNdDesc();
-
-  CudnnFilterNdDesc(DataType, const std::string&, const Shape&);
+  CudnnFilterDesc(DataType data_type, const Shape& shape,
+                  const std::string& data_format = "channel_first");
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 

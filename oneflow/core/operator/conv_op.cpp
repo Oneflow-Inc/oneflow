@@ -9,8 +9,8 @@ namespace oneflow {
 namespace {
 
 cudnnConvolutionFwdAlgo_t InferCudnnConvFwdAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorNdDesc* in_desc,
-    CudnnTensorNdDesc* out_desc, CudnnFilterNdDesc* filter_desc,
+    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
+    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
     CudnnConvDesc* conv_desc) {
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
 
@@ -23,8 +23,8 @@ cudnnConvolutionFwdAlgo_t InferCudnnConvFwdAlgo(
 }
 
 cudnnConvolutionBwdFilterAlgo_t InferCudnnConvBwdFilterAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorNdDesc* in_desc,
-    CudnnTensorNdDesc* out_desc, CudnnFilterNdDesc* filter_desc,
+    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
+    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
     CudnnConvDesc* conv_desc) {
   cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
 
@@ -37,8 +37,8 @@ cudnnConvolutionBwdFilterAlgo_t InferCudnnConvBwdFilterAlgo(
 }
 
 cudnnConvolutionBwdDataAlgo_t InferCudnnConvBwdDataAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorNdDesc* in_desc,
-    CudnnTensorNdDesc* out_desc, CudnnFilterNdDesc* filter_desc,
+    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
+    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
     CudnnConvDesc* conv_desc) {
   cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
 
@@ -229,11 +229,21 @@ void ConvOp::SetCudnnConvAlgoForKernelConf(
 
   DataType data_type = in_blob_desc->data_type();
 
-  CudnnTensorNdDesc in_desc(data_type, in_blob_desc->shape());
-  CudnnTensorNdDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterNdDesc filter_desc(data_type,
-                                GetStringFromCustomizedConf("data_format"),
-                                weight_blob_desc->shape());
+  std::vector<int32_t> in_stride(KernelDimSize(), 1);
+  std::vector<int32_t> out_stride(KernelDimSize(), 1);
+  for (size_t i = KernelDimSize() - 1; i > 0; --i) {
+    for (size_t j = KernelDimSize() - 2; j >= 0; --j) {
+      in_stride[j] *= in_blob_desc->shape().At(i);
+      out_stride[j] *= out_blob_desc->shape().At(i);
+    }
+  }
+
+  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape().dim_vec(),
+                          in_stride);
+  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape().dim_vec(),
+                           out_stride);
+  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
+                              GetStringFromCustomizedConf("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate, strides,
                           kernel_size,
                           GetStringFromCustomizedConf("data_format"),
@@ -278,11 +288,22 @@ size_t ConvOp::InferCudnnWorkspaceSize(
 
   DataType data_type = in_blob_desc->data_type();
 
-  CudnnTensorNdDesc in_desc(data_type, in_blob_desc->shape());
-  CudnnTensorNdDesc out_desc(data_type, out_blob_desc->shape());
-  CudnnFilterNdDesc filter_desc(data_type,
-                                GetStringFromCustomizedConf("data_format"),
-                                weight_blob_desc->shape());
+  std::vector<int32_t> in_stride(KernelDimSize(), 1);
+  std::vector<int32_t> out_stride(KernelDimSize(), 1);
+  for (size_t i = KernelDimSize() - 1; i > 0; --i) {
+    for (size_t j = KernelDimSize() - 2; j >= 0; --j) {
+      in_stride[j] *= in_blob_desc->shape().At(i);
+      out_stride[j] *= out_blob_desc->shape().At(i);
+    }
+  }
+
+  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape().dim_vec(),
+                          in_stride);
+  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape().dim_vec(),
+                           out_stride);
+  CudnnFilterDesc filter_desc(data_type,
+                                weight_blob_desc->shape(),
+                                GetStringFromCustomizedConf("data_format");
   CudnnConvDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate, strides,
                           kernel_size,
                           GetStringFromCustomizedConf("data_format"),
