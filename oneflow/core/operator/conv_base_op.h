@@ -43,14 +43,13 @@ class ConvBaseOp : public Operator {
 
  protected:
   virtual PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) const = 0;
+  virtual int32_t KernelDimSize() const = 0;
   void SetCudnnConvAlgoForKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       KernelConf* kernel_conf) const;
   size_t InferCudnnWorkspaceSize(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
       const;
-
-  const int kDimSize = -1;
 };
 
 }  // namespace oneflow

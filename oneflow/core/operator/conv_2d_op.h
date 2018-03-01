@@ -27,10 +27,10 @@ class Conv2DOp : public ConvBaseOp {
   }
 
  private:
-  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const override {
     return kernel_conf->mutable_conv_2d_conf();
   }
-  const int32_t kDimSize = 2;
+  int32_t KernelDimSize() const override { return 2; }
 };
 
 REGISTER_OP(OperatorConf::kConv2DConf, Conv2DOp);

@@ -129,12 +129,12 @@ void ConvBaseOp::InferBlobDescs(
     filters = splitter.At(parallel_ctx->parallel_id()).size();
   }
 
-  std::vector<int64_t> in(kDimSize, 0);
-  std::vector<int64_t> out(kDimSize, 0);
-  std::vector<int32_t> pad_small_side(kDimSize, 0);
-  std::vector<int32_t> pad_large_side(kDimSize, 0);
+  std::vector<int64_t> in(KernelDimSize(), 0);
+  std::vector<int64_t> out(KernelDimSize(), 0);
+  std::vector<int32_t> pad_small_side(KernelDimSize(), 0);
+  std::vector<int32_t> pad_large_side(KernelDimSize(), 0);
 
-  for (size_t i = 0; i < kDimSize; ++i) {
+  for (size_t i = 0; i < KernelDimSize(); ++i) {
     in[i] = in_blob_desc->shape().At(offset + i);
     GetWindowedOutputSize(
         in[i], GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i),
@@ -145,7 +145,7 @@ void ConvBaseOp::InferBlobDescs(
   }
 
   std::vector<int64_t> out_shape = {data_num, filters};
-  for (size_t i = 0; i < kDimSize; ++i) {
+  for (size_t i = 0; i < KernelDimSize(); ++i) {
     out_shape.insert(out_shape.begin() + offset + i, out[i]);
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
@@ -154,7 +154,7 @@ void ConvBaseOp::InferBlobDescs(
 
   // weight
   std::vector<int64_t> weight_shape = {filters, in_blob_desc->shape().At(1)};
-  for (size_t i = 0; i < kDimSize; ++i) {
+  for (size_t i = 0; i < KernelDimSize(); ++i) {
     weight_shape.insert(
         weight_shape.begin() + offset + i,
         GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i));
@@ -185,12 +185,12 @@ void ConvBaseOp::VirtualGenKernelConf(
     offset = 1;
   }
 
-  std::vector<int64_t> in(kDimSize, 0);
-  std::vector<int64_t> out(kDimSize, 0);
-  std::vector<int32_t> pad_small_side(kDimSize, 0);
-  std::vector<int32_t> pad_large_side(kDimSize, 0);
+  std::vector<int64_t> in(KernelDimSize(), 0);
+  std::vector<int64_t> out(KernelDimSize(), 0);
+  std::vector<int32_t> pad_small_side(KernelDimSize(), 0);
+  std::vector<int32_t> pad_large_side(KernelDimSize(), 0);
 
-  for (size_t i = 0; i < kDimSize; ++i) {
+  for (size_t i = 0; i < KernelDimSize(); ++i) {
     in[i] = in_blob_desc->shape().At(offset + i);
     GetWindowedOutputSize(
         in[i], GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i),
@@ -218,10 +218,10 @@ void ConvBaseOp::SetCudnnConvAlgoForKernelConf(
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
-  std::vector<int32_t> dilation_rate(kDimSize, 0);
-  std::vector<int32_t> strides(kDimSize, 0);
-  std::vector<int32_t> kernel_size(kDimSize, 0);
-  for (size_t i = 0; i < kDimSize; ++i) {
+  std::vector<int32_t> dilation_rate(KernelDimSize(), 0);
+  std::vector<int32_t> strides(KernelDimSize(), 0);
+  std::vector<int32_t> kernel_size(KernelDimSize(), 0);
+  for (size_t i = 0; i < KernelDimSize(); ++i) {
     dilation_rate[i] =
         GetPbRfFromCustomizedConf<int32_t>("dilation_rate").Get(i);
     strides[i] = GetPbRfFromCustomizedConf<int32_t>("strides").Get(i);
@@ -235,8 +235,8 @@ void ConvBaseOp::SetCudnnConvAlgoForKernelConf(
   CudnnFilterNdDesc filter_desc(data_type,
                                 GetStringFromCustomizedConf("data_format"),
                                 weight_blob_desc->shape());
-  CudnnConvNdDesc conv_desc(in_blob_desc, kDimSize, dilation_rate, strides,
-                            kernel_size,
+  CudnnConvNdDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate,
+                            strides, kernel_size,
                             GetStringFromCustomizedConf("data_format"),
                             GetStringFromCustomizedConf("padding"));
 
@@ -267,10 +267,10 @@ size_t ConvBaseOp::InferCudnnWorkspaceSize(
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
-  std::vector<int32_t> dilation_rate(kDimSize, 0);
-  std::vector<int32_t> strides(kDimSize, 0);
-  std::vector<int32_t> kernel_size(kDimSize, 0);
-  for (size_t i = 0; i < kDimSize; ++i) {
+  std::vector<int32_t> dilation_rate(KernelDimSize(), 0);
+  std::vector<int32_t> strides(KernelDimSize(), 0);
+  std::vector<int32_t> kernel_size(KernelDimSize(), 0);
+  for (size_t i = 0; i < KernelDimSize(); ++i) {
     dilation_rate[i] =
         GetPbRfFromCustomizedConf<int32_t>("dilation_rate").Get(i);
     strides[i] = GetPbRfFromCustomizedConf<int32_t>("strides").Get(i);
@@ -284,8 +284,8 @@ size_t ConvBaseOp::InferCudnnWorkspaceSize(
   CudnnFilterNdDesc filter_desc(data_type,
                                 GetStringFromCustomizedConf("data_format"),
                                 weight_blob_desc->shape());
-  CudnnConvNdDesc conv_desc(in_blob_desc, kDimSize, dilation_rate, strides,
-                            kernel_size,
+  CudnnConvNdDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate,
+                            strides, kernel_size,
                             GetStringFromCustomizedConf("data_format"),
                             GetStringFromCustomizedConf("padding"));
 

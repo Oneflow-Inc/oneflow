@@ -27,10 +27,10 @@ class Conv1DOp : public ConvBaseOp {
   }
 
  private:
-  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const override {
     return kernel_conf->mutable_conv_1d_conf();
   }
-  const int32_t kDimSize = 1;
+  int32_t KernelDimSize() const override { return 1; }
 };
 
 REGISTER_OP(OperatorConf::kConv1DConf, Conv1DOp);
