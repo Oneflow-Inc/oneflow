@@ -32,7 +32,7 @@ class RtRegstDesc {
   std::vector<int64_t> consumers_actor_id_;
   int64_t register_num_;
   MemoryCase mem_case_;
-  std::unordered_map<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
+  HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
   BlobDesc packed_blob_desc_;
 };
 

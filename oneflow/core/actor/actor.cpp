@@ -115,6 +115,7 @@ void Actor::ActUntilFail() {
     act_id_ += 1;
     ActEvent* act_event = nullptr;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+      ++act_id_;
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
       act_event->set_act_id(act_id_);
