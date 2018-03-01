@@ -346,6 +346,7 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 203;
     AveragePooling3DOpConf average_pooling_3d_conf = 204;
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
+    EltwiseOpConf eltwise_conf = 302;
   }
 }
 
