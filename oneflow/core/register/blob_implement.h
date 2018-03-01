@@ -11,7 +11,7 @@ template<DeviceType device_type, typename T, int32_t NDIMS>
 struct BlobImplUtil {
   static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
                           EigenConstTensor<T, NDIMS>* const_tensor,
-                          const std::vector<int32_t>& permutation);
+                          const PbRf<int32_t>& permutation);
 };
 
 template<typename T, int32_t NDIMS, DeviceType device_type>
@@ -35,7 +35,7 @@ class BlobImpl final : public Blob {
   ~BlobImpl() = default;
 
   void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                 const std::vector<int32_t>& permutation) const override {
+                 const PbRf<int32_t>& permutation) const override {
     CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
     CHECK_EQ(NDIMS, permutation.size());
     CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
