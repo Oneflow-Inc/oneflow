@@ -10,7 +10,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T, int32_t NDIMS>
 struct BlobImplUtil {
   static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
-                          const EigenConstTensor<T, NDIMS>* const_tensor,
+                          EigenConstTensor<T, NDIMS>* const_tensor,
                           const std::vector<int32_t>& permutation);
 };
 
@@ -34,8 +34,8 @@ class BlobImpl final : public Blob {
   }
   ~BlobImpl() = default;
 
-  void Transpose(DeviceCtx* ctx, const Blob* out_blob,
-                 const std::vector<int32_t>& permutation) override {
+  void Transpose(DeviceCtx* ctx, Blob* out_blob,
+                 const std::vector<int32_t>& permutation) const override {
     CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
     CHECK_EQ(NDIMS, permutation.size());
     CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
@@ -43,7 +43,7 @@ class BlobImpl final : public Blob {
     auto out_blob_impl =
         reinterpret_cast<const BlobImpl<T, NDIMS, device_type>*>(out_blob);
     BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
-        ctx, tensor_.get(), out_blob_impl->const_tensor_.get(), permutation);
+        ctx, out_blob_impl->tensor_.get(), const_tensor_.get(), permutation);
   }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {

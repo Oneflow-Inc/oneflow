@@ -35,11 +35,11 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     Blob* transpose_in_blob = BnInOp2Blob("transpose_in");
     Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
     const std::vector<int32_t>& perm = PbRf2StdVec(conf.perm());
-    transpose_in_blob->Transpose(ctx.device_ctx, in_blob, perm);
+    in_blob->Transpose(ctx.device_ctx, transpose_in_blob, perm);
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w,
                                        transpose_in_blob->dptr<T>(), tmp,
                                        transpose_out_blob->mut_dptr<T>());
-    out_blob->Transpose(ctx.device_ctx, transpose_out_blob, perm);
+    transpose_out_blob->Transpose(ctx.device_ctx, out_blob, perm);
   } else {
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(),
                                        tmp, out_blob->mut_dptr<T>());
@@ -64,12 +64,12 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
     Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
     Blob* transpose_out_diff_blob = BnInOp2Blob("transpose_out_diff");
     const std::vector<int32_t>& perm = PbRf2StdVec(conf.perm());
-    transpose_out_diff_blob->Transpose(ctx.device_ctx, out_diff_blob, perm);
+    out_diff_blob->Transpose(ctx.device_ctx, transpose_out_diff_blob, perm);
     SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w,
                                        transpose_out_diff_blob->dptr<T>(),
                                        transpose_out_blob->dptr<T>(), tmp,
                                        transpose_in_diff_blob->mut_dptr<T>());
-    in_diff_blob->Transpose(ctx.device_ctx, transpose_in_diff_blob, perm);
+    transpose_in_diff_blob->Transpose(ctx.device_ctx, in_diff_blob, perm);
   } else {
     SoftmaxComputeDiff<device_type, T>(
         ctx.device_ctx, n, w, out_diff_blob->dptr<T>(), out_blob->dptr<T>(),

@@ -4,10 +4,10 @@ namespace oneflow {
 
 struct SoftmaxOpCtx : public OpContext {
   int32_t axis;
-  int32_t transpose_rows;
-  int32_t transpose_cols;
+  int64_t transpose_rows;
+  int64_t transpose_cols;
   bool need_transpose;
-  std::vector<int32_t> perm;
+  PbRf<int32_t> perm;
 };
 
 void SoftmaxOp::InitFromOpConf() {
@@ -46,6 +46,7 @@ void SoftmaxOp::InferBlobDescs(
   tmp_blob_desc->mut_shape() = Shape({transpose_rows});
   tmp_blob_desc->set_data_type(in_blob_desc->data_type());
   SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx;
+  EnrollOpContext(op_ctx);
   op_ctx->axis = axis;
   op_ctx->transpose_rows = transpose_rows;
   op_ctx->transpose_cols = transpose_cols;
@@ -61,12 +62,11 @@ void SoftmaxOp::InferBlobDescs(
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
-    op_ctx->perm.reserve(dims);
-    for (size_t i = 0; i < dims; ++i) { op_ctx->perm.push_back(i); }
+    op_ctx->perm.Reserve(dims);
+    for (size_t i = 0; i < dims; ++i) { op_ctx->perm.Add(i); }
     op_ctx->perm[axis] = dims - 1;
     op_ctx->perm[dims - 1] = axis;
   }
-  EnrollOpContext(op_ctx);
 }
 
 void SoftmaxOp::VirtualGenKernelConf(
@@ -79,7 +79,7 @@ void SoftmaxOp::VirtualGenKernelConf(
   conf->set_transpose_rows(softmax_ctx->transpose_rows);
   conf->set_transpose_cols(softmax_ctx->transpose_cols);
   conf->set_need_transpose(softmax_ctx->need_transpose);
-  *(conf->mutable_perm()) = StdVec2PbRf(softmax_ctx->perm);
+  *(conf->mutable_perm()) = softmax_ctx->perm;
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
