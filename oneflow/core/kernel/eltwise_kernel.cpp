@@ -15,15 +15,6 @@ void EltwiseKernel<device_type>::ForwardDataContent(
 }
 
 template<DeviceType device_type>
-void EltwiseKernel<device_type>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
-  const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
-  out_blob->CopyDataIdFrom(ctx.device_ctx, in_blob_0);
-}
-
-template<DeviceType device_type>
 void EltwiseKernel<device_type>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
