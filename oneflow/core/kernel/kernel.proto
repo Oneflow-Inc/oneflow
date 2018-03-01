@@ -40,8 +40,8 @@ message ReduceSumKernelConf {
 
 message SoftmaxKernelConf {
   required int32 axis = 1;
-  required int32 transpose_rows = 2;
-  required int32 transpose_cols = 3;
+  required int64 transpose_rows = 2;
+  required int64 transpose_cols = 3;
   required bool need_transpose = 4;
   repeated int32 perm = 5;
 }

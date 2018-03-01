@@ -39,8 +39,8 @@ void SoftmaxOp::InferBlobDescs(
   CHECK_GE(axis, 0);
   CHECK_LT(axis, dims);
   Shape in_shape = in_blob_desc->shape();
-  int32_t transpose_cols = in_shape.At(axis);
-  int32_t transpose_rows = in_shape.elem_cnt() / transpose_cols;
+  int64_t transpose_cols = in_shape.At(axis);
+  int64_t transpose_rows = in_shape.elem_cnt() / transpose_cols;
   // 1D blob store tmp calculate result
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("softmax_num");
   tmp_blob_desc->mut_shape() = Shape({transpose_rows});
@@ -61,7 +61,7 @@ void SoftmaxOp::InferBlobDescs(
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
-    op_ctx->perm.clear();
+    op_ctx->perm.reserve(dims);
     for (size_t i = 0; i < dims; ++i) { op_ctx->perm.push_back(i); }
     op_ctx->perm[axis] = dims - 1;
     op_ctx->perm[dims - 1] = axis;
@@ -79,7 +79,7 @@ void SoftmaxOp::VirtualGenKernelConf(
   conf->set_transpose_rows(softmax_ctx->transpose_rows);
   conf->set_transpose_cols(softmax_ctx->transpose_cols);
   conf->set_need_transpose(softmax_ctx->need_transpose);
-  // *(conf->mutable_perm()) = StdVec2PbRpf(softmax_ctx->perm);
+  *(conf->mutable_perm()) = StdVec2PbRf(softmax_ctx->perm);
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);

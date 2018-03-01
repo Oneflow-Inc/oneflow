@@ -6,7 +6,7 @@ namespace oneflow {
 template<typename T, int32_t NDIMS>
 struct BlobImplUtil<DeviceType::kGPU, T, NDIMS> {
   static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
-                          EigenConstTensor<T, NDIMS>* const_tensor,
+                          const EigenConstTensor<T, NDIMS>* const_tensor,
                           const std::vector<int32_t>& permutation) {
     Eigen::array<int32_t, NDIMS> p;
     for (int32_t i = 0; i < NDIMS; ++i) { p[i] = permutation[i]; }

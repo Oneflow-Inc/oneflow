@@ -47,10 +47,8 @@ class SoftmaxKernelUtil final {
 template<DeviceType device_type, typename T>
 void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w,
                         const T* in, T* tmp, T* prob) {
-  if (in != tmp) {
-    // copy in blob to prob blob
-    KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
-  }
+  // copy in blob to prob blob
+  KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
   // max | calculate max of every sample vector prob[i], store in tmp[i]
   //       the prob[i] now is store the data of in[i]
   SoftmaxKernelUtil<device_type, T>::ForwardMax(ctx, n, w, prob, tmp);
