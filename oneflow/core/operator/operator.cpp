@@ -65,7 +65,7 @@ const std::string& Operator::SoleDtbn() const {
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type,
-    std::unique_ptr<OpContext>*) const {
+    std::function<void(OpContext*)> EnrollOpContext) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
 }
 void Operator::InferBlobDescs(
