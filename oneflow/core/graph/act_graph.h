@@ -49,28 +49,22 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
                     std::unique_ptr<std::list<ActEvent>>&& act_events);
   ~ActGraph() = default;
 
-  void ForEachRegstDescLifeTime(
+  void ForEachRegstDescDuration(
       const std::function<void(int64_t, double)>& Handler) const;
+  void ForEachRegstDescIIRatio(
+      const std::function<void(int64_t, double)>& Handler) const;
+
   void ToDotFiles(const std::string& dir) const;
 
   const Plan& plan() const { return *plan_; }
 
  private:
-  void ForEachRegstUidLifeTime(
-      const std::function<void(double time, int64_t regst_desc_id,
-                               int64_t act_id)>& Handler) const;
-  void ForEachSubGraphRegstUidLifeTime(
-      const std::list<const ActNode*>& sources,
-      const std::function<void(double time, int64_t regst_desc_id,
-                               int64_t act_id)>& Handler) const;
-  void InitNodes(HashMap<std::string, ActNode*>* regst_uid2producer);
-  void InitEdges(const HashMap<std::string, ActNode*>& regst_uid2producer);
-  void InitConnectedSubGraphSources();
-
+  void ForEachRegstUidDuration(
+      const std::function<void(int64_t regst_desc_id, int64_t act_id,
+                               double time)>& Handler) const;
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_acts_;
-  std::list<std::list<const ActNode*>> connected_subgraph_sources_;
 };
 
 }  // namespace oneflow

@@ -21,16 +21,23 @@ class Improver final {
 
  private:
   explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
-  void MemoryLimitedAllocate(const ActGraph& graph, double base_ii,
-                             HashMap<int64_t, double>* regst_desc_id2num) const;
+  void MemoryLimitedAllocate(
+      const ActGraph& graph, double base_ii,
+      const std::function<void(int64_t, size_t)>& Handler) const;
+
+  //  first dimension index of MemZoneRegstDescs is machine_id
+  //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs =
       std::vector<std::vector<std::list<const RegstDescProto*>>>;
   bool IsAnyZoneOutOfMemory(
       const MemZoneRegstDescs& mz_regst_descs,
-      const HashMap<int64_t, double>& regst_desc_id2life_time, double ii) const;
-  double CalcII(double ii_base,
-                HashMap<int64_t, double> regst_desc_id2life_time,
-                const MemZoneRegstDescs& mz_regst_descs) const;
+      const std::function<double(int64_t)>& Duration4RegstDescId,
+      const std::function<double(int64_t)>& Ratio4RegstDescId, double ii) const;
+  double BinarySearchII(
+      const std::vector<double>& search_space,
+      const std::function<double(int64_t)>& Duration4RegstDescId,
+      const std::function<double(int64_t)>& Ratio4RegstDescId,
+      const MemZoneRegstDescs& mz_regst_descs) const;
   size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
   int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
   void MakeMemZoneRegstDescs(const Plan& plan,
