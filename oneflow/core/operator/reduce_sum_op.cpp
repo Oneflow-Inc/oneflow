@@ -19,7 +19,7 @@ void ReduceSumOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext*) const {
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
-  std::vector<int64_t> out_dim_vec = {1};
+  std::vector<int32_t> out_dim_vec = {1};
   if (op_conf().reduce_sum_conf().has_axis()) {
     out_dim_vec = in_blob->shape().dim_vec();
     int32_t axis = GetCorrectAxis(GetBlobDesc4BnInOp);

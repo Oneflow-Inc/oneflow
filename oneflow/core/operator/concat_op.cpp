@@ -22,7 +22,7 @@ void ConcatOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
-  std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
+  std::vector<int32_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
   int32_t concat_axis = conf.axis();
   if (concat_axis < 0) { concat_axis += out_dim_vec.size(); }
   for (size_t i = 1; i < input_bns().size(); ++i) {

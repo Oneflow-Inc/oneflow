@@ -51,7 +51,7 @@ void BoxingOp::InferBlobDescs(
     }
   }
 
-  std::vector<int64_t> data_tmp_blob_shape_vec =
+  std::vector<int32_t> data_tmp_blob_shape_vec =
       GetBlobDesc4BnInOp(input_bns().front())->shape().dim_vec();
   InferDataTmpBlobDesc(GetBlobDesc4BnInOp, &data_tmp_blob_shape_vec);
 
@@ -78,14 +78,14 @@ void BoxingOp::InferBlobDescs(
 
 void BoxingOp::InferDataTmpBlobDesc(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    std::vector<int64_t>* data_tmp_vec_ptr) const {
+    std::vector<int32_t>* data_tmp_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
     CHECK_GE(concat_axis, 0);
     FOR_RANGE(size_t, ib_idx, 1, input_bns().size()) {
       const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(input_bns().at(ib_idx));
-      const std::vector<int64_t>& in_blob_shape_vec =
+      const std::vector<int32_t>& in_blob_shape_vec =
           in_blob_desc->shape().dim_vec();
       CHECK_LT(concat_axis, in_blob_shape_vec.size());
       FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {

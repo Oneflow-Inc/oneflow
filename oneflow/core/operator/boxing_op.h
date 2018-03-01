@@ -29,7 +29,7 @@ class BoxingOp final : public Operator {
   std::string obn2lbn(const std::string& output_bn) const override;
   void InferDataTmpBlobDesc(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      std::vector<int64_t>* data_temp_shape_vec) const;
+      std::vector<int32_t>* data_temp_shape_vec) const;
 };
 
 }  // namespace oneflow

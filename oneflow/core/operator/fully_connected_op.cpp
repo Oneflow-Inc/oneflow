@@ -39,7 +39,7 @@ void FullyConnectedOp::InferBlobDescs(
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() =
-      Shape({units, in_blob_desc->shape().Count(1)});
+      Shape({units, static_cast<int32_t>(in_blob_desc->shape().Count(1))});
 
   if (op_conf().fully_connected_conf().use_bias()) {
     // bias

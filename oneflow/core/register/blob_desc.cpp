@@ -64,8 +64,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
 }
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
-  int64_t total_byte_size = 0;
-  int64_t total_data_content_byte_size = 0;
+  int32_t total_byte_size = 0;
+  int32_t total_data_content_byte_size = 0;
   HashSet<int> data_type_set;
   bool has_data_id_field = false;
   bool has_col_num_field = false;
@@ -90,7 +90,7 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   if (has_data_id_field == false && has_col_num_field == false
       && data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
-    int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
+    int32_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(total_data_content_byte_size % size_of_one_elem, 0);
     ret.mut_shape() = Shape({total_data_content_byte_size / size_of_one_elem});
     ret.set_data_type(sole_data_type);
