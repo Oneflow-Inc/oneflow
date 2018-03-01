@@ -45,16 +45,18 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
 
-  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
-
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(bool is_forward, DeviceType, const ParallelContext*,
                ExecNodeProto*) const;
 
+  void InferBlobDescs(const ParallelContext* parallel_ctx,
+                      DeviceType device_type);
+
  private:
-  BlobDesc* GetBlobDesc4BnInOp(const std::string&) const;
+  std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
+  std::unique_ptr<OpContext> op_ctx_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };
 

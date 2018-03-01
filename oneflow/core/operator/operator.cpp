@@ -62,6 +62,23 @@ const std::string& Operator::SoleDtbn() const {
   return *(data_tmp_bns_.begin());
 }
 
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
+    std::unique_ptr<OpContext>*) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
+}
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+}
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  UNIMPLEMENTED() << typeid(*this).name();
+}
+
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDataLoaderOp()) {
     CHECK_EQ(pr_desc->parallel_num(),
@@ -112,7 +129,8 @@ static bool HasBlobDescWithField(
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     bool is_forward, DeviceType device_type,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, const OpContext* op_ctx,
+    KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -144,6 +162,13 @@ void Operator::GenKernelConf(
   }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, op_ctx, kernel_conf);
+}
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const OpContext*,
+    KernelConf* kernel_conf) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
