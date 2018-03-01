@@ -27,8 +27,7 @@ const PbMessage& SoftmaxOp::GetCustomizedConf() const {
 
 void SoftmaxOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx,
-    DevictType device_type,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
     std::function<void(OpContext*)> EnrollOpContext) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -46,7 +45,7 @@ void SoftmaxOp::InferBlobDescs(
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("softmax_num");
   tmp_blob_desc->mut_shape() = Shape({transpose_rows});
   tmp_blob_desc->set_data_type(in_blob_desc->data_type());
-  SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx
+  SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx;
   op_ctx->axis = axis;
   op_ctx->transpose_rows = transpose_rows;
   op_ctx->transpose_cols = transpose_cols;
@@ -63,7 +62,7 @@ void SoftmaxOp::InferBlobDescs(
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
     op_ctx->perm.clear();
-    for (size_t i = 0; i < dims; ++i) {(*op_ctx->perm.push_back(i); }
+    for (size_t i = 0; i < dims; ++i) { op_ctx->perm.push_back(i); }
     op_ctx->perm[axis] = dims - 1;
     op_ctx->perm[dims - 1] = axis;
   }
@@ -72,15 +71,15 @@ void SoftmaxOp::InferBlobDescs(
 
 void SoftmaxOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx,
-    const OpContext* op_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, const OpContext* op_ctx,
+    KernelConf* kernel_conf) const {
   auto conf = kernel_conf->mutable_softmax_conf();
-  auto softmax_ctx = static_cast<SoftmaxOpCtx*>op_ctx;
+  auto softmax_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
   conf->set_axis(softmax_ctx->axis);
-  conf->set_transpose_rows(softmax_ctx->transpose_row);
-  conf->set_transpose_cols(softmax_ctx->transpose_col);
+  conf->set_transpose_rows(softmax_ctx->transpose_rows);
+  conf->set_transpose_cols(softmax_ctx->transpose_cols);
   conf->set_need_transpose(softmax_ctx->need_transpose);
-  *(conf->mutable_perm()) = StdVec2PbRpf(softmax_ctx->perm);
+  // *(conf->mutable_perm()) = StdVec2PbRpf(softmax_ctx->perm);
 }
 
 REGISTER_OP(OperatorConf::kSoftmaxConf, SoftmaxOp);
