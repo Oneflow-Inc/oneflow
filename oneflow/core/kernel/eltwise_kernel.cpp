@@ -6,12 +6,12 @@ template<DeviceType device_type>
 void EltwiseKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // const EltwiseOpConf& eltwise_conf = this->op_conf().eltwise_conf();
-  // switch (eltwise_conf.operation) {
-  //   case EltwiseOpConf_EltwiseOp_SUM: break;
-  //   case EltwiseOpConf_EltwiseOp_MAX: break;
-  //   default: UNEXPECTED_RUN();
-  // }
+  const EltwiseOpConf& eltwise_conf = this->op_conf().eltwise_conf();
+  switch (eltwise_conf.operation()) {
+    case EltwiseOpConf_EltwiseOp_SUM: break;
+    case EltwiseOpConf_EltwiseOp_MAX: break;
+    default: break;
+  }
 }
 
 template<DeviceType device_type>
