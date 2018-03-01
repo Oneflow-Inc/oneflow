@@ -29,10 +29,12 @@ class CudnnPoolingDesc final {
 
 class Pooling3DCtx final {
  public:
-  Pooling3DCtx(const Pooling3DKernelConf&);
+  Pooling3DCtx(const Pooling3DKernelConf&
 #ifdef WITH_CUDA
-  Pooling3DCtx(const Pooling3DKernelConf&, cudnnPoolingMode_t, DataType);
+               ,
+               cudnnPoolingMode_t, DataType
 #endif  // WITH_CUDA
+  );
   ~Pooling3DCtx();
 
   const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
@@ -69,13 +71,13 @@ class PoolingKernelIf : public KernelIf<device_type> {
 #endif  // WITH_CUDA
   const Pooling3DCtx& pooling_3d_ctx() const { return *pooling_3d_ctx_; }
   void VirtualKernelInit(const ParallelContext*) override {
-#ifdef WITH_CUDA
     pooling_3d_ctx_ =
-        new Pooling3DCtx(GetPooling3DKernelConf(), this->GetCudnnPoolingMode(),
-                         GetDataType<T>::val);
-#else
-    pooling_3d_ctx_ = new Pooling3DCtx(GetPooling3DKernelConf());
+        new Pooling3DCtx(GetPooling3DKernelConf()
+#ifdef WITH_CUDA
+                             ,
+                         this->GetCudnnPoolingMode(), GetDataType<T>::val
 #endif  // WITH_CUDA
+        );
   }
   virtual const Pooling3DKernelConf& GetPooling3DKernelConf() const = 0;
 
@@ -83,12 +85,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-class PoolingKernel : public PoolingKernelIf<device_type, T> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(PoolingKernel);
-  PoolingKernel() = default;
-  virtual ~PoolingKernel() = default;
-};
+class PoolingKernel;
 
 template<typename T>
 class PoolingKernel<DeviceType::kCPU, T>

@@ -18,16 +18,16 @@ CudnnPoolingDesc::CudnnPoolingDesc(cudnnPoolingMode_t pooling_mode,
 }
 #endif
 
-Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf)
-    : kernel_conf_(kernel_conf) {}
-
+Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
 #ifdef WITH_CUDA
-Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf,
-                           cudnnPoolingMode_t pooling_mode, DataType type)
-    : kernel_conf_(kernel_conf), pooling_mode_(pooling_mode) {
+                           ,
+                           cudnnPoolingMode_t pooling_mode, DataType type
+#endif  // WITH_CUDA
+                           )
+    : kernel_conf_(kernel_conf) {
+  pooling_mode_ = pooling_mode;
   BuildCudnnDescs(type);
 }
-#endif  // WITH_CUDA
 
 Pooling3DCtx::~Pooling3DCtx() {
 #ifdef WITH_CUDA
