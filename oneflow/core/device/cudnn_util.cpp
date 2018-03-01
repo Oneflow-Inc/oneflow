@@ -81,9 +81,9 @@ CudnnFilterNdDesc::CudnnFilterNdDesc(DataType data_type,
                                      const std::string& data_format,
                                      const Shape& shape) {
   cudnnTensorFormat_t cudnn_data_format;
-  if (data_format == "NCHW" || data_format == "NCDHW") {
+  if (data_format == "channel_first") {
     cudnn_data_format = CUDNN_TENSOR_NCHW;
-  } else if (data_format == "NHWC" || data_format == "NDHWC") {
+  } else if (data_format == "channel_last") {
     cudnn_data_format = CUDNN_TENSOR_NHWC;
   } else {
     UNIMPLEMENTED();

@@ -27,7 +27,8 @@ class Conv3DOp : public ConvBaseOp {
   }
 
  private:
-  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const override {
+  PbMessage* MutableCustomizedKernelConf(
+      KernelConf* kernel_conf) const override {
     return kernel_conf->mutable_conv_3d_conf();
   }
   int32_t KernelDimSize() const override { return 3; }
