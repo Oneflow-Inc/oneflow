@@ -25,33 +25,21 @@ Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
 #endif  // WITH_CUDA
                            )
     : kernel_conf_(kernel_conf) {
+#ifdef WITH_CUDA
   pooling_mode_ = pooling_mode;
-  BuildCudnnDescs(type);
-}
-
-Pooling3DCtx::~Pooling3DCtx() {
-#ifdef WITH_CUDA
-  delete in_desc_;
-  delete out_desc_;
-  delete pooling_desc_;
-#endif  // WITH_CUDA
-}
-
-#ifdef WITH_CUDA
-void Pooling3DCtx::BuildCudnnDescs(DataType type) {
-  std::vector<int> window = GetShapeInStdVec("pool_size");
-  std::vector<int> padding_before = GetShapeInStdVec("padding_before");
-  std::vector<int> padding_after = GetShapeInStdVec("padding_after");
+  std::vector<int> window = PbRf2StdVec(kernel_conf_.pool_size());
+  std::vector<int> padding_before = PbRf2StdVec(kernel_conf_.padding_before());
+  std::vector<int> padding_after = PbRf2StdVec(kernel_conf_.padding_after());
   std::vector<int> padding;
   FOR_RANGE(size_t, i, 0, padding_before.size()) {
     padding.push_back(std::max(padding_before[i], padding_after[i]));
   }
-  std::vector<int> stride = GetShapeInStdVec("strides");
-  std::vector<int> in_dim = GetShapeInStdVec("in");
+  std::vector<int> stride = PbRf2StdVec(kernel_conf_.strides());
+  std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
   std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
                              in_dim[2] * in_dim[3] * in_dim[4],
                              in_dim[3] * in_dim[4], in_dim[4]};
-  std::vector<int> out_dim = GetShapeInStdVec("out");
+  std::vector<int> out_dim = GetStdVecFromShapeInKernelConf("out");
   std::vector<int> out_stride = {
       out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4],
       out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4],
@@ -70,66 +58,63 @@ void Pooling3DCtx::BuildCudnnDescs(DataType type) {
   pooling_desc_ = new CudnnPoolingDesc(pooling_mode_, window, padding, stride);
   in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
   out_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
+#endif  // WITH_CUDA
+}
+
+Pooling3DCtx::~Pooling3DCtx() {
+#ifdef WITH_CUDA
+  delete in_desc_;
+  delete out_desc_;
+  delete pooling_desc_;
+#endif  // WITH_CUDA
+}
+
+#ifdef WITH_CUDA
+const cudnnTensorDescriptor_t& Pooling3DCtx::cudnn_in_tensor_desc() const {
+  return in_desc_->Get();
+}
+
+const cudnnTensorDescriptor_t& Pooling3DCtx::cudnn_out_tensor_desc() const {
+  return out_desc_->Get();
+}
+
+const cudnnPoolingDescriptor_t& Pooling3DCtx::cudnn_pooling_desc() const {
+  return pooling_desc_->Get();
 }
 #endif  // WITH_CUDA
 
-std::vector<int> Pooling3DCtx::GetShapeInStdVec(
+std::vector<int> Pooling3DCtx::GetStdVecFromShapeInKernelConf(
     const std::string& field_name) const {
   PbRf<int64_t> shape = GetPbRfFromPbMessage<int64_t>(
       GetMessageFromPbMessage(kernel_conf_, field_name), "dim");
-  std::vector<int> ret;
-  FOR_RANGE(size_t, i, 0, shape.size()) { ret.push_back(shape.Get(i)); }
+  std::vector<int> ret(shape.begin(), shape.end());
   return ret;
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  Blob* out_blob = BnInOp2Blob("out");
-  ForwardOnCPU(this->pooling_3d_ctx(), in_blob, out_blob);
-}
-
-template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::BackwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  if (in_diff_blob == nullptr) { return; }
-  Memset<DeviceType::kCPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                           in_diff_blob->ByteSizeOfDataContentField());
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_blob = BnInOp2Blob("out");
-  BackwardOnCPU(this->pooling_3d_ctx(), out_diff_blob, out_blob, in_blob,
-                in_diff_blob);
-}
-
-template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNCDHW(
+void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNCDHW(
     const Pooling3DCtx& ctx, const Blob* in_blob, Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
-  Shape pool_size(ctx.kernel_conf().pool_size());
-  Shape strides(ctx.kernel_conf().strides());
-  Shape padding_before(ctx.kernel_conf().padding_before());
+  const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
+  const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
+  const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   const T* input = in_blob->dptr<T>();
   T* output = out_blob->mut_dptr<T>();
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, c, 0, in.At(1)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-        int64_t dstart = pd * strides.At(0) - padding_before.At(0);
-        int64_t dend = std::min(dstart + pool_size.At(0), in.At(2));
+        int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
+        int64_t dend = std::min(dstart + pool_size.Get(0), in.At(2));
         dstart = std::max(dstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-          int64_t hstart = ph * strides.At(1) - padding_before.At(1);
-          int64_t hend = std::min(hstart + pool_size.At(1), in.At(3));
+          int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
+          int64_t hend = std::min(hstart + pool_size.Get(1), in.At(3));
           hstart = std::max(hstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-            int64_t wstart = pw * strides.At(2) - padding_before.At(2);
-            int64_t wend = std::min(wstart + pool_size.At(2), in.At(4));
+            int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
+            int64_t wend = std::min(wstart + pool_size.Get(2), in.At(4));
             wstart = std::max(wstart, static_cast<int64_t>(0));
 
             const int64_t pool_index = pd * out.Count(3) + ph * out.At(4) + pw;
@@ -156,14 +141,14 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNCDHW(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNCDHW(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNCDHW(
     const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
-  Shape pool_size(ctx.kernel_conf().pool_size());
-  Shape strides(ctx.kernel_conf().strides());
-  Shape padding_before(ctx.kernel_conf().padding_before());
+  const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
+  const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
+  const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   const T* output_diff = out_diff_blob->dptr<T>();
   const T* output = out_blob->dptr<T>();
@@ -172,16 +157,16 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNCDHW(
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, c, 0, in.At(1)) {
       FOR_RANGE(int64_t, pd, 0, out.At(2)) {
-        int64_t dstart = pd * strides.At(0) - padding_before.At(0);
-        int64_t dend = std::min(dstart + pool_size.At(0), in.At(2));
+        int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
+        int64_t dend = std::min(dstart + pool_size.Get(0), in.At(2));
         dstart = std::max(dstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, ph, 0, out.At(3)) {
-          int64_t hstart = ph * strides.At(1) - padding_before.At(1);
-          int64_t hend = std::min(hstart + pool_size.At(1), in.At(3));
+          int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
+          int64_t hend = std::min(hstart + pool_size.Get(1), in.At(3));
           hstart = std::max(hstart, static_cast<int64_t>(0));
           FOR_RANGE(int64_t, pw, 0, out.At(4)) {
-            int64_t wstart = pw * strides.At(2) - padding_before.At(2);
-            int64_t wend = std::min(wstart + pool_size.At(2), in.At(4));
+            int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
+            int64_t wend = std::min(wstart + pool_size.Get(2), in.At(4));
             wstart = std::max(wstart, static_cast<int64_t>(0));
 
             float scale =
@@ -210,13 +195,13 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNCDHW(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNDHWC(
+void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNDHWC(
     const Pooling3DCtx& ctx, const Blob* in_blob, Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
-  Shape pool_size(ctx.kernel_conf().pool_size());
-  Shape strides(ctx.kernel_conf().strides());
-  Shape padding_before(ctx.kernel_conf().padding_before());
+  const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
+  const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
+  const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>> in_mat(
       in_blob->dptr<T>(), in.At(4), in.elem_cnt() / in.At(4));
@@ -224,16 +209,16 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNDHWC(
       out_blob->mut_dptr<T>(), out.At(4), out.elem_cnt() / out.At(4));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, pd, 0, out.At(1)) {
-      int64_t dstart = pd * strides.At(0) - padding_before.At(0);
-      int64_t dend = std::min(dstart + pool_size.At(0), in.At(1));
+      int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
+      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(1));
       dstart = std::max(dstart, static_cast<int64_t>(0));
       FOR_RANGE(int64_t, ph, 0, out.At(2)) {
-        int64_t hstart = ph * strides.At(1) - padding_before.At(1);
-        int64_t hend = std::min(hstart + pool_size.At(1), in.At(2));
+        int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
+        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(2));
         hstart = std::max(hstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, pw, 0, out.At(3)) {
-          int64_t wstart = pw * strides.At(2) - padding_before.At(2);
-          int64_t wend = std::min(wstart + pool_size.At(2), in.At(3));
+          int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
+          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(3));
           wstart = std::max(wstart, static_cast<int64_t>(0));
           const int out_col =
               ((n * out.At(1) + pd) * out.At(2) + ph) * out.At(3) + pw;
@@ -256,14 +241,14 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardOnCPUWithOrderNDHWC(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNDHWC(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNDHWC(
     const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
-  Shape pool_size(ctx.kernel_conf().pool_size());
-  Shape strides(ctx.kernel_conf().strides());
-  Shape padding_before(ctx.kernel_conf().padding_before());
+  const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
+  const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
+  const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   // caffe2 implementation: need check
   Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> out_mat(
@@ -277,16 +262,16 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardOnCPUWithOrderNDHWC(
       in_diff_blob->mut_dptr<float>(), in.At(4), in.elem_cnt() / in.At(4));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, pd, 0, out.At(1)) {
-      int64_t dstart = pd * strides.At(0) - padding_before.At(0);
-      int64_t dend = std::min(dstart + pool_size.At(0), in.At(1));
+      int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
+      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(1));
       dstart = std::max(dstart, static_cast<int64_t>(0));
       FOR_RANGE(int64_t, ph, 0, out.At(2)) {
-        int64_t hstart = ph * strides.At(1) - padding_before.At(1);
-        int64_t hend = std::min(hstart + pool_size.At(1), in.At(2));
+        int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
+        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(2));
         hstart = std::max(hstart, static_cast<int64_t>(0));
         FOR_RANGE(int64_t, pw, 0, out.At(3)) {
-          int64_t wstart = pw * strides.At(2) - padding_before.At(2);
-          int64_t wend = std::min(wstart + pool_size.At(2), in.At(3));
+          int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
+          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(3));
           wstart = std::max(wstart, static_cast<int64_t>(0));
           const int64_t pool_index =
               ((n * out.At(1) + pd) * out.At(2) + ph) * out.At(3) + pw;

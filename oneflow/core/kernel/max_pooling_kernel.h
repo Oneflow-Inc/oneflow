@@ -40,8 +40,8 @@ class MaxPoolingKernel<DeviceType::kCPU, T> final
   virtual ~MaxPoolingKernel() = default;
 
  private:
-  void ForwardOnCPU(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
-                    Blob* out_blob) const override;
+  void Forward(const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+               const Blob* in_blob, Blob* out_blob) const override;
   T ForwardInitialize() const override;
   void ForwardProcess(const T& lhs, T& rhs) const override;
   void ForwardProcess(
@@ -55,9 +55,9 @@ class MaxPoolingKernel<DeviceType::kCPU, T> final
       const int64_t size, const int64_t col,
       Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
       const override {}
-  void BackwardOnCPU(const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
-                     const Blob* out_blob, const Blob* in_blob,
-                     Blob* in_diff_blob) const override;
+  void Backward(const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+                const Blob* out_diff_blob, const Blob* out_blob,
+                const Blob* in_blob, Blob* in_diff_blob) const override;
   void BackwardProcessGrad(const T& in, const T& out, const T& out_diff,
                            const float scale, T& in_diff) const override;
   void BackwardProcessGrad(

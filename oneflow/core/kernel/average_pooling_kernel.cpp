@@ -3,14 +3,14 @@
 namespace oneflow {
 
 template<typename T>
-void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardOnCPU(
-    const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
-    Blob* out_blob) const {
+void AveragePoolingKernel<DeviceType::kCPU, T>::Forward(
+    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+    const Blob* in_blob, Blob* out_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
   if (data_format == "channels_first") {
-    this->ForwardOnCPUWithOrderNCDHW(pooling_ctx, in_blob, out_blob);
+    this->ForwardWithOrderNCDHW(pooling_ctx, in_blob, out_blob);
   } else if (data_format == "channels_last") {
-    this->ForwardOnCPUWithOrderNDHWC(pooling_ctx, in_blob, out_blob);
+    this->ForwardWithOrderNDHWC(pooling_ctx, in_blob, out_blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -51,16 +51,17 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::ForwardFinalize(
 }
 
 template<typename T>
-void AveragePoolingKernel<DeviceType::kCPU, T>::BackwardOnCPU(
-    const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
-    const Blob* out_blob, const Blob* in_blob, Blob* in_diff_blob) const {
+void AveragePoolingKernel<DeviceType::kCPU, T>::Backward(
+    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+    const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
+    Blob* in_diff_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
   if (data_format == "channels_first") {
-    this->BackwardOnCPUWithOrderNCDHW(pooling_ctx, out_diff_blob, out_blob,
-                                      in_blob, in_diff_blob);
+    this->BackwardWithOrderNCDHW(pooling_ctx, out_diff_blob, out_blob, in_blob,
+                                 in_diff_blob);
   } else if (data_format == "channels_last") {
-    this->BackwardOnCPUWithOrderNDHWC(pooling_ctx, out_diff_blob, out_blob,
-                                      in_blob, in_diff_blob);
+    this->BackwardWithOrderNDHWC(pooling_ctx, out_diff_blob, out_blob, in_blob,
+                                 in_diff_blob);
   } else {
     UNIMPLEMENTED();
   }
