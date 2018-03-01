@@ -25,11 +25,11 @@ class Shape final {
   // Getters and Setters
   const std::vector<int32_t>& dim_vec() const { return dim_vec_; }
   int64_t elem_cnt() const { return elem_cnt_; }
-  int32_t At(int64_t index) const { return dim_vec_[index]; }
-  void Set(int64_t index, int32_t val);
-  int64_t NumAxes() const { return dim_vec_.size(); }
-  int32_t Count(int64_t begin_axis, int64_t end_axis) const;
-  int32_t Count(int64_t begin_axis) const;
+  int32_t At(int32_t index) const { return dim_vec_[index]; }
+  void Set(int32_t index, int32_t val);
+  int32_t NumAxes() const { return dim_vec_.size(); }
+  int64_t Count(int32_t begin_axis, int32_t end_axis) const;
+  int64_t Count(int32_t begin_axis) const;
 
  private:
   void UpdateElemCnt();

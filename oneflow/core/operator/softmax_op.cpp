@@ -23,7 +23,8 @@ void SoftmaxOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() =
-      Shape({in_blob_desc->shape().At(0), in_blob_desc->shape().Count(1)});
+      Shape({in_blob_desc->shape().At(0),
+             static_cast<int32_t>(in_blob_desc->shape().Count(1))});
   // tmp
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp");
   tmp_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0)});

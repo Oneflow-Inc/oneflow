@@ -28,20 +28,20 @@ void Shape::ToProto(ShapeProto* ret) const {
   *(ret->mutable_dim()) = PbRf<PbInt32>(dim_vec_.begin(), dim_vec_.end());
 }
 
-void Shape::Set(int64_t index, int32_t val) {
+void Shape::Set(int32_t index, int32_t val) {
   dim_vec_[index] = val;
   UpdateElemCnt();
 }
 
-int32_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
+int64_t Shape::Count(int32_t begin_axis, int32_t end_axis) const {
   CHECK(0 <= begin_axis && begin_axis <= end_axis && end_axis <= NumAxes())
       << begin_axis << " " << end_axis;
-  int32_t cnt = 1;
-  for (int64_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
+  int64_t cnt = 1;
+  for (int32_t i = begin_axis; i < end_axis; ++i) { cnt *= At(i); }
   return cnt;
 }
 
-int32_t Shape::Count(int64_t begin_axis) const {
+int64_t Shape::Count(int32_t begin_axis) const {
   return Count(begin_axis, NumAxes());
 }
 
