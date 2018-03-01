@@ -49,9 +49,16 @@ class Operator {
   bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
-  PbMessage* MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
-    return nullptr;
+  virtual PbMessage* MutableCustomizedKernelConf(
+      KernelConf* kernel_conf) const {
+    UNIMPLEMENTED();
   }
+
+#define PB_VAL_TYPE_SEQ                     \
+  OF_PP_MAKE_TUPLE_SEQ(std::string, String) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, Int32)      \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
+  OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
 #define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)                \
   ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
@@ -60,10 +67,7 @@ class Operator {
     return Get##func_name##FromPbMessage(special_conf, field_name);          \
   }
 
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(bool, Bool);
+  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_SPECIAL_CONF, PB_VAL_TYPE_SEQ);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
 
   template<typename T>
@@ -79,7 +83,7 @@ class Operator {
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
-#define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
+#define DEFINE_SET_VAL_IN_SPECIAL_CONF(val_type, func_name)              \
   void Set##func_name##InCustomizedConf(const std::string& field_name,   \
                                         val_type val) const {            \
     const PbMessage& special_conf = GetCustomizedConf();                 \
@@ -87,10 +91,7 @@ class Operator {
     Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
   }
 
-  DEFINE_SET_VAL_In_SPECIAL_CONF(std::string, String);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(bool, Bool);
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_SPECIAL_CONF, PB_VAL_TYPE_SEQ);
 
 #undef DEFINE_SET_VAL_IN_SPECIAL_CONF
 
@@ -103,10 +104,7 @@ class Operator {
     Set##func_name##InPbMessage(special_kernel_conf_ptr, field_name, val);  \
   }
 
-  DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF(std::string, String);
-  DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF(int32_t, Int32);
-  DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF(int64_t, Int64);
-  DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF(bool, Bool);
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF, PB_VAL_TYPE_SEQ);
 
 #undef DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF
 
@@ -119,10 +117,8 @@ class Operator {
     Add##func_name##InPbRf(special_kernel_conf_ptr, field_name, val);       \
   }
 
-  DEFINE_ADD_VAL_TO_PBRF_IN_SPECIAL_KERNEL_CONF(std::string, String);
-  DEFINE_ADD_VAL_TO_PBRF_IN_SPECIAL_KERNEL_CONF(int32_t, Int32);
-  DEFINE_ADD_VAL_TO_PBRF_IN_SPECIAL_KERNEL_CONF(int64_t, Int64);
-  DEFINE_ADD_VAL_TO_PBRF_IN_SPECIAL_KERNEL_CONF(bool, Bool);
+  OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_TO_PBRF_IN_SPECIAL_KERNEL_CONF,
+                       PB_VAL_TYPE_SEQ);
 
 #undef DEFINE_SET_VAL_IN_SPECIAL_KERNEL_CONF
 

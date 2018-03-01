@@ -1,20 +1,20 @@
-#ifndef ONEFLOW_CORE_OPERATOR_CONV_BASE_OP_H_
-#define ONEFLOW_CORE_OPERATOR_CONV_BASE_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CONV_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CONV_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
 
-class CudnnConvNdDesc final {
+class CudnnConvDesc final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnConvNdDesc);
-  CudnnConvNdDesc() = delete;
-  ~CudnnConvNdDesc();
+  OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
+  CudnnConvDesc() = delete;
+  ~CudnnConvDesc();
 
-  CudnnConvNdDesc(const BlobDesc*, const int, const std::vector<int>&,
-                  const std::vector<int>&, const std::vector<int>&,
-                  const std::string&, const std::string&);
+  CudnnConvDesc(const BlobDesc*, const int, const std::vector<int>&,
+                const std::vector<int>&, const std::vector<int>&,
+                const std::string&, const std::string&);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -22,11 +22,11 @@ class CudnnConvNdDesc final {
   cudnnConvolutionDescriptor_t val_;
 };
 
-class ConvBaseOp : public Operator {
+class ConvOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvBaseOp);
-  ConvBaseOp() = default;
-  ~ConvBaseOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvOp);
+  ConvOp() = default;
+  ~ConvOp() = default;
 
   void InitFromOpConf() override;
 
@@ -42,7 +42,10 @@ class ConvBaseOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  protected:
-  virtual PbMessage* MutableConvKernelConf(KernelConf* kernel_conf) const = 0;
+  PbMessage* MutableCustomizedKernelConf(
+      KernelConf* kernel_conf) const override {
+    return kernel_conf->mutable_conv_3d_conf();
+  }
   virtual int32_t KernelDimSize() const = 0;
   void SetCudnnConvAlgoForKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -54,4 +57,4 @@ class ConvBaseOp : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_CONV_BASE_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_CONV_OP_H_

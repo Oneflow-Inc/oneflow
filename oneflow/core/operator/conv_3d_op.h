@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
 #define ONEFLOW_CORE_OPERATOR_CONV_3D_OP_H_
 
-#include "oneflow/core/operator/conv_base_op.h"
+#include "oneflow/core/operator/conv_op.h"
 
 namespace oneflow {
 
-class Conv3DOp : public ConvBaseOp {
+class Conv3DOp final : public ConvOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Conv3DOp);
   Conv3DOp() = default;
@@ -27,10 +27,6 @@ class Conv3DOp : public ConvBaseOp {
   }
 
  private:
-  PbMessage* MutableCustomizedKernelConf(
-      KernelConf* kernel_conf) const override {
-    return kernel_conf->mutable_conv_3d_conf();
-  }
   int32_t KernelDimSize() const override { return 3; }
 };
 

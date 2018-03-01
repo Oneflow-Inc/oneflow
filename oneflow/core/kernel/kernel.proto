@@ -6,22 +6,6 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
 
-message Conv1DKernelConf {
-  repeated int32 pad_small_side = 1;
-  repeated int32 pad_large_side = 2;
-  optional int32 cudnn_fwd_algo = 3 [default = 0];
-  optional int32 cudnn_bwd_filter_algo = 4 [default = 0];
-  optional int32 cudnn_bwd_data_algo = 5 [default = 0];
-}
-
-message Conv2DKernelConf {
-  repeated int32 pad_small_side = 1;
-  repeated int32 pad_large_side = 2;
-  optional int32 cudnn_fwd_algo = 3 [default = 0];
-  optional int32 cudnn_bwd_filter_algo = 4 [default = 0];
-  optional int32 cudnn_bwd_data_algo = 5 [default = 0];
-}
-
 message Conv3DKernelConf {
   repeated int32 pad_small_side = 1;
   repeated int32 pad_large_side = 2;
@@ -86,8 +70,6 @@ message KernelConf {
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
     SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    Conv1DKernelConf conv_1d_conf = 125;
-    Conv2DKernelConf conv_2d_conf = 126;
     Conv3DKernelConf conv_3d_conf = 127;
     AveragePooling3DKernelConf average_pooling_3d_conf = 204;
     MaxPooling3DKernelConf max_pooling_3d_conf = 205;

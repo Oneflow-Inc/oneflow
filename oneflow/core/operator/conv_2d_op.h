@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_CONV_2D_OP_H_
 #define ONEFLOW_CORE_OPERATOR_CONV_2D_OP_H_
 
-#include "oneflow/core/operator/conv_base_op.h"
+#include "oneflow/core/operator/conv_op.h"
 
 namespace oneflow {
 
-class Conv2DOp : public ConvBaseOp {
+class Conv2DOp final : public ConvOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Conv2DOp);
   Conv2DOp() = default;
@@ -27,10 +27,6 @@ class Conv2DOp : public ConvBaseOp {
   }
 
  private:
-  PbMessage* MutableCustomizedKernelConf(
-      KernelConf* kernel_conf) const override {
-    return kernel_conf->mutable_conv_2d_conf();
-  }
   int32_t KernelDimSize() const override { return 2; }
 };
 
