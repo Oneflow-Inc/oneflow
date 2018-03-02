@@ -71,7 +71,7 @@ CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
   std::vector<int> pad_large_side(kDimSize, 0);
 
   for (size_t i = 0; i < kDimSize; ++i) {
-    in[i] = (data_format == "channel_first")
+    in[i] = (data_format == "channels_first")
                 ? (in_blob_desc->shape().At(2 + i))
                 : (in_blob_desc->shape().At(1 + i));
     GetWindowedOutputSize(in[i], kernel_size[i], dilation_rate[i], strides[i],
@@ -112,7 +112,7 @@ void ConvOp::InferBlobDescs(
     const ParallelContext* parallel_ctx, DeviceType device_type,
     std::function<void(OpContext*)> EnrollOpContext) const {
   size_t offset = 0;
-  if (GetStringFromCustomizedConf("data_format") == "channel_first") {
+  if (GetStringFromCustomizedConf("data_format") == "channels_first") {
     offset = 2;
   } else {
     offset = 1;
@@ -184,8 +184,15 @@ void ConvOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, const OpContext* op_ctx,
     KernelConf* kernel_conf) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+
+  in_blob_desc->shape().ToProto(
+      kernel_conf->mutable_conv_3d_conf()->mutable_in());
+  out_blob_desc->shape().ToProto(
+      kernel_conf->mutable_conv_3d_conf()->mutable_out());
+
   size_t offset = 0;
-  if (GetStringFromCustomizedConf("data_format") == "channel_first") {
+  if (GetStringFromCustomizedConf("data_format") == "channels_first") {
     offset = 2;
   } else {
     offset = 1;

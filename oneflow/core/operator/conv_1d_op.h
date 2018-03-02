@@ -16,7 +16,7 @@ class Conv1DOp final : public ConvOp {
   }
 
   int32_t ModelSplitAxis() const override {
-    if (GetStringFromCustomizedConf("data_format") == "channel_first") {
+    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
       return 1;
     } else {
       return 2;

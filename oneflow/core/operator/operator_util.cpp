@@ -13,8 +13,8 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   if (padding_type == "valid") {
     *output_size = (input_size - effective_filter_size + stride) / stride;
-    if (pad_small_side) { *pad_small_side = 0; }
-    if (pad_large_side) { *pad_large_side = 0; }
+    if (padding_before) { *padding_before = 0; }
+    if (padding_after) { *padding_after = 0; }
   } else if (padding_type == "same") {
     *output_size = (input_size + stride - 1) / stride;
     const int32_t padding_needed =
@@ -22,11 +22,11 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                                          + effective_filter_size - input_size));
     // For odd values of total padding, add more padding at the 'right'
     // side of the given dimension.
-    if (pad_small_side) {
-      *pad_small_side = static_cast<int64_t>(padding_needed / 2);
+    if (padding_before) {
+      *padding_before = static_cast<int64_t>(padding_needed / 2);
     }
-    if (pad_large_side) {
-      *pad_large_side = static_cast<int64_t>(padding_needed - *pad_large_side);
+    if (padding_after) {
+      *padding_after = static_cast<int64_t>(padding_needed - *padding_before);
     }
   } else {
     UNIMPLEMENTED();
@@ -39,7 +39,7 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                            int64_t* output_size, int32_t* padding_before,
                            int32_t* padding_after) {
   GetWindowedOutputSize(input_size, filter_size, 1, stride, padding_type,
-                        output_size, pad_small_side, pad_large_side);
+                        output_size, padding_before, padding_after);
 }
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
