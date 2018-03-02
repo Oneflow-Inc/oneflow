@@ -6,6 +6,7 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
 class CudnnConvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
@@ -21,6 +22,7 @@ class CudnnConvDesc final {
  private:
   cudnnConvolutionDescriptor_t val_;
 };
+#endif  // WITH_CUDA
 
 class ConvOpCtx final : public OpContext {
  public:
@@ -75,9 +77,11 @@ class ConvOp : public Operator {
     return kernel_conf->mutable_conv_3d_conf();
   }
   virtual int32_t KernelDimSize() const = 0;
+#ifdef WITH_CUDA
   size_t InferCudnnWorkspaceSize(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       std::function<void(OpContext*)> EnrollOpContext) const;
+#endif  // WITH_CUDA
 };
 
 }  // namespace oneflow

@@ -6,6 +6,7 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
 namespace {
 
 cudnnConvolutionFwdAlgo_t InferCudnnConvFwdAlgo(
@@ -82,6 +83,7 @@ CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
       val_, 5, pad_large_side.data(), strides.data(), dilation_rate.data(),
       CUDNN_CROSS_CORRELATION, GetCudnnDataType(in_blob_desc->data_type())));
 }
+#endif  // WITH_CUDA
 
 void ConvOp::InitFromOpConf() {
   std::string data_format = GetStringFromCustomizedConf("data_format");
@@ -167,12 +169,14 @@ void ConvOp::InferBlobDescs(
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
   }
 
+#ifdef WITH_CUDA
   // cudnn_workspace
   if (UseCudnn()) {
     GetBlobDesc4BnInOp("cudnn_workspace")->mut_shape() =
         Shape({static_cast<int64_t>(
             InferCudnnWorkspaceSize(GetBlobDesc4BnInOp, EnrollOpContext))});
   }
+#endif  // WITH_CUDA
 }
 
 void ConvOp::VirtualGenKernelConf(
@@ -206,6 +210,7 @@ void ConvOp::VirtualGenKernelConf(
                                          pad_large_side[i]);
   }
 
+#ifdef WITH_CUDA
   if (UseCudnn()) {
     SetInt32InCustomizedKernelConf(
         kernel_conf, "cudnn_fwd_algo",
@@ -217,8 +222,10 @@ void ConvOp::VirtualGenKernelConf(
         kernel_conf, "cudnn_bwd_data_algo",
         static_cast<const ConvOpCtx*>(op_ctx)->cudnn_bwd_data_algo());
   }
+#endif  // WITH_CUDA
 }
 
+#ifdef WITH_CUDA
 size_t ConvOp::InferCudnnWorkspaceSize(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     std::function<void(OpContext*)> EnrollOpContext) const {
@@ -302,5 +309,6 @@ size_t ConvOp::InferCudnnWorkspaceSize(
   return std::max(
       {fwd_workspace_size, bwd_filter_workspace_size, bwd_data_workspace_size});
 }
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
