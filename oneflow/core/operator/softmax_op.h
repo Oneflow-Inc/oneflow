@@ -17,9 +17,14 @@ class SoftmaxOp final : public Operator {
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+      const ParallelContext* parallel_ctx, DeviceType device_type,
+      std::function<void(OpContext*)> EnrollOpContext) const override;
 
  private:
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, const OpContext* op_ctx,
+      KernelConf*) const override;
 };
 
 }  // namespace oneflow
