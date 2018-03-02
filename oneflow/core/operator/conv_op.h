@@ -13,9 +13,11 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const BlobDesc*, const int, const std::vector<int>&,
-                const std::vector<int>&, const std::vector<int>&,
-                const std::string&, const std::string&);
+  CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
+                const std::vector<int>& dilation_rate,
+                const std::vector<int>& strides,
+                const std::vector<int>& kernel_size,
+                const std::string& data_format, const std::string& padding);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -23,33 +25,6 @@ class CudnnConvDesc final {
   cudnnConvolutionDescriptor_t val_;
 };
 #endif  // WITH_CUDA
-
-class ConvOpCtx final : public OpContext {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvOpCtx);
-  ConvOpCtx() = default;
-  ~ConvOpCtx() = default;
-
-  void set_cudnn_fwd_algo(int32_t cudnn_fwd_algo) {
-    cudnn_fwd_algo_ = cudnn_fwd_algo;
-  }
-  void set_cudnn_bwd_filter_algo(int32_t cudnn_bwd_filter_algo) {
-    cudnn_bwd_filter_algo_ = cudnn_bwd_filter_algo;
-  }
-  void set_cudnn_bwd_data_algo(int32_t cudnn_bwd_data_algo) {
-    cudnn_bwd_data_algo_ = cudnn_bwd_data_algo;
-  }
-  const int32_t& cudnn_fwd_algo() const { return cudnn_fwd_algo_; }
-  const int32_t& cudnn_bwd_filter_algo() const {
-    return cudnn_bwd_filter_algo_;
-  }
-  const int32_t& cudnn_bwd_data_algo() const { return cudnn_bwd_data_algo_; }
-
- private:
-  int32_t cudnn_fwd_algo_;
-  int32_t cudnn_bwd_filter_algo_;
-  int32_t cudnn_bwd_data_algo_;
-};
 
 class ConvOp : public Operator {
  public:

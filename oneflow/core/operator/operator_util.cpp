@@ -22,12 +22,8 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                                          + effective_filter_size - input_size));
     // For odd values of total padding, add more padding at the 'right'
     // side of the given dimension.
-    if (padding_before) {
-      *padding_before = static_cast<int64_t>(padding_needed / 2);
-    }
-    if (padding_after) {
-      *padding_after = static_cast<int64_t>(padding_needed - *padding_before);
-    }
+    if (padding_before) { *padding_before = padding_needed / 2; }
+    if (padding_after) { *padding_after = padding_needed - *padding_before; }
   } else {
     UNIMPLEMENTED();
   }

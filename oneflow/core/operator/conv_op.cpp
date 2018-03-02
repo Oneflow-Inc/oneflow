@@ -85,6 +85,12 @@ CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
 }
 #endif  // WITH_CUDA
 
+struct ConvOpCtx : public OpContext {
+  int32_t cudnn_fwd_algo;
+  int32_t cudnn_bwd_filter_algo;
+  int32_t cudnn_bwd_data_algo;
+};
+
 void ConvOp::InitFromOpConf() {
   std::string data_format = GetStringFromCustomizedConf("data_format");
   std::transform(data_format.begin(), data_format.end(), data_format.begin(),
@@ -221,13 +227,13 @@ void ConvOp::VirtualGenKernelConf(
   if (UseCudnn()) {
     SetInt32InCustomizedKernelConf(
         kernel_conf, "cudnn_fwd_algo",
-        static_cast<const ConvOpCtx*>(op_ctx)->cudnn_fwd_algo());
+        static_cast<const ConvOpCtx*>(op_ctx)->cudnn_fwd_algo);
     SetInt32InCustomizedKernelConf(
         kernel_conf, "cudnn_bwd_filter_algo",
-        static_cast<const ConvOpCtx*>(op_ctx)->cudnn_bwd_filter_algo());
+        static_cast<const ConvOpCtx*>(op_ctx)->cudnn_bwd_filter_algo);
     SetInt32InCustomizedKernelConf(
         kernel_conf, "cudnn_bwd_data_algo",
-        static_cast<const ConvOpCtx*>(op_ctx)->cudnn_bwd_data_algo());
+        static_cast<const ConvOpCtx*>(op_ctx)->cudnn_bwd_data_algo);
   }
 #endif  // WITH_CUDA
 }
@@ -295,11 +301,10 @@ size_t ConvOp::InferCudnnWorkspaceSize(
 
   ConvOpCtx* conv_op_ctx = new ConvOpCtx;
   EnrollOpContext(conv_op_ctx);
-  conv_op_ctx->set_cudnn_fwd_algo(static_cast<int32_t>(cudnn_fwd_algo));
-  conv_op_ctx->set_cudnn_bwd_filter_algo(
-      static_cast<int32_t>(cudnn_bwd_filter_algo));
-  conv_op_ctx->set_cudnn_bwd_data_algo(
-      static_cast<int32_t>(cudnn_bwd_data_algo));
+  conv_op_ctx->cudnn_fwd_algo = static_cast<int32_t>(cudnn_fwd_algo);
+  conv_op_ctx->cudnn_bwd_filter_algo =
+      static_cast<int32_t>(cudnn_bwd_filter_algo);
+  conv_op_ctx->cudnn_bwd_data_algo = static_cast<int32_t>(cudnn_bwd_data_algo);
 
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),

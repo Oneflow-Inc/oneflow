@@ -11,9 +11,9 @@ message Conv3DKernelConf {
   required ShapeProto out = 2;
   repeated int32 pad_small_side = 3;
   repeated int32 pad_large_side = 4;
-  optional int32 cudnn_fwd_algo = 5 [default = 0];
-  optional int32 cudnn_bwd_filter_algo = 6 [default = 0];
-  optional int32 cudnn_bwd_data_algo = 7 [default = 0];
+  optional int32 cudnn_fwd_algo = 5 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 6 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 7 [default = -1];
 }
 
 message MultinomialLogisticLossKernelConf { 

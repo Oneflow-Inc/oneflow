@@ -50,6 +50,7 @@ CudnnFilterDesc::~CudnnFilterDesc() {
 
 CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
                                  const std::string& data_format) {
+  CudaCheck(cudnnCreateFilterDescriptor(&val_));
   cudnnTensorFormat_t cudnn_data_format;
   if (data_format == "channels_first") {
     cudnn_data_format = CUDNN_TENSOR_NCHW;
@@ -58,10 +59,12 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
   } else {
     UNIMPLEMENTED();
   }
-  CudaCheck(cudnnSetFilterNdDescriptor(
-      val_, GetCudnnDataType(data_type), cudnn_data_format,
-      static_cast<int>(shape.NumAxes()),
-      reinterpret_cast<const int*>(shape.dim_vec().data())));
+
+  std::vector<int> dim(shape.NumAxes(), 0);
+  for (size_t i = 0; i < shape.NumAxes(); ++i) { dim[i] = shape.At(i); }
+  CudaCheck(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type),
+                                       cudnn_data_format, dim.size(),
+                                       dim.data()));
 }
 
 CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,

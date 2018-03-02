@@ -71,8 +71,8 @@ class Operator {
   }
 
   OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_SPECIAL_CONF,
-                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
+                           const PbMessage&, Message));
 
   template<typename T>
   const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
