@@ -140,9 +140,11 @@ void PoolingOp::VirtualGenKernelConf(
     Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
         .ToProto(pooling_conf->mutable_out());
   } else if (data_format == "channels_last") {
-    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2), in_shape.At(1)})
+    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2),
+           in_shape.At(in_shape.NumAxes() - 1)})
         .ToProto(pooling_conf->mutable_in());
-    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2), in_shape.At(1)})
+    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2),
+           in_shape.At(in_shape.NumAxes() - 1)})
         .ToProto(pooling_conf->mutable_out());
   } else {
     UNIMPLEMENTED();

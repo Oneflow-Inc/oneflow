@@ -3,7 +3,7 @@
 namespace oneflow {
 
 template<typename T>
-void MaxPoolingKernel<DeviceType::kCPU, T>::Forward(
+void MaxPoolingKernel<DeviceType::kCPU, T>::PoolingForward(
     const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
     const Blob* in_blob, Blob* out_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
@@ -29,15 +29,13 @@ void MaxPoolingKernel<DeviceType::kCPU, T>::NCDHWProcess(const T& lhs,
 
 template<typename T>
 void MaxPoolingKernel<DeviceType::kCPU, T>::NDHWCProcess(
-    const int64_t in_col, const int64_t out_col,
-    Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& in_mat,
-    Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
-    const {
+    const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
+    EigenMatrixMap<T>& out_mat) const {
   out_mat.col(out_col) = out_mat.col(out_col).cwiseMax(in_mat.col(in_col));
 }
 
 template<typename T>
-void MaxPoolingKernel<DeviceType::kCPU, T>::Backward(
+void MaxPoolingKernel<DeviceType::kCPU, T>::PoolingBackward(
     const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
     const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
     Blob* in_diff_blob) const {
@@ -65,14 +63,9 @@ void MaxPoolingKernel<DeviceType::kCPU, T>::NCDHWProcessGrad(const T& in,
 template<typename T>
 void MaxPoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
     const int64_t out_col, const int64_t in_col, const float scale,
-    Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
-        out_arr,
-    Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
-        in_arr,
-    Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
-        out_diff_arr,
-    Eigen::Map<Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
-        in_diff_arr) const {
+    ConstEigenArrayMap<float>& out_arr, ConstEigenArrayMap<float>& in_arr,
+    ConstEigenArrayMap<float>& out_diff_arr,
+    EigenArrayMap<float>& in_diff_arr) const {
   in_diff_arr.col(in_col) += out_diff_arr.col(out_col)
                              * (in_arr.col(in_col)
                                     .cwiseEqual(out_arr.col(out_col))

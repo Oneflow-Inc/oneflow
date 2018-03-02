@@ -7,14 +7,13 @@ CudnnPoolingDesc::~CudnnPoolingDesc() {
   CudaCheck(cudnnDestroyPoolingDescriptor(val_));
 }
 
-CudnnPoolingDesc::CudnnPoolingDesc(cudnnPoolingMode_t pooling_mode,
-                                   const std::vector<int>& window,
-                                   const std::vector<int>& padding,
-                                   const std::vector<int>& stride) {
+CudnnPoolingDesc::CudnnPoolingDesc(cudnnPoolingMode_t pooling_mode, int dims,
+                                   const int* window, const int* padding,
+                                   const int* stride) {
   CudaCheck(cudnnCreatePoolingDescriptor(&val_));
-  CudaCheck(cudnnSetPoolingNdDescriptor(
-      val_, pooling_mode, CUDNN_NOT_PROPAGATE_NAN, window.size(), window.data(),
-      padding.data(), stride.data()));
+  CudaCheck(cudnnSetPoolingNdDescriptor(val_, pooling_mode,
+                                        CUDNN_NOT_PROPAGATE_NAN, dims, window,
+                                        padding, stride));
 }
 #endif
 
@@ -27,18 +26,11 @@ Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
     : kernel_conf_(kernel_conf) {
 #ifdef WITH_CUDA
   pooling_mode_ = pooling_mode;
-  std::vector<int> window(kernel_conf_.pool_size().begin(),
-                          kernel_conf_.pool_size().end());
-  std::vector<int> padding_before(kernel_conf_.padding_before().begin(),
-                                  kernel_conf_.padding_before().end());
-  std::vector<int> padding_after(kernel_conf_.padding_after().begin(),
-                                 kernel_conf_.padding_after().end());
-  std::vector<int> padding;
-  FOR_RANGE(size_t, i, 0, padding_before.size()) {
-    padding.push_back(std::max(padding_before[i], padding_after[i]));
+  std::vector<int> padding(kernel_conf_.padding_before().size());
+  FOR_RANGE(size_t, i, 0, kernel_conf_.padding_before().size()) {
+    padding[i] = std::max(kernel_conf_.padding_before().Get(i),
+                          kernel_conf_.padding_after().Get(i));
   }
-  std::vector<int> stride(kernel_conf_.strides().begin(),
-                          kernel_conf_.strides().end());
   std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
   std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
                              in_dim[2] * in_dim[3] * in_dim[4],
@@ -59,9 +51,11 @@ Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
   } else {
     UNIMPLEMENTED();
   }
-  pooling_desc_ = new CudnnPoolingDesc(pooling_mode_, window, padding, stride);
-  in_desc_ = new CudnnTensorDesc(type, in_dim, in_stride);
-  out_desc_ = new CudnnTensorDesc(type, out_dim, out_stride);
+  pooling_desc_ =
+      new CudnnPoolingDesc(pooling_mode_, 3, kernel_conf_.pool_size().data(),
+                           padding.data(), kernel_conf_.strides().data());
+  in_desc_ = new CudnnTensorDesc(type, 5, in_dim.data(), in_stride.data());
+  out_desc_ = new CudnnTensorDesc(type, 5, out_dim.data(), out_stride.data());
 #endif  // WITH_CUDA
 }
 
@@ -209,10 +203,10 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardNDHWC(const Pooling3DCtx& ctx,
   const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
-  Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>> in_mat(
-      in_blob->dptr<T>(), in.At(4), in.elem_cnt() / in.At(4));
-  Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>> out_mat(
-      out_blob->mut_dptr<T>(), out.At(4), out.elem_cnt() / out.At(4));
+  ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in.At(4),
+                                in.elem_cnt() / in.At(4));
+  EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), out.At(4),
+                            out.elem_cnt() / out.At(4));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, pd, 0, out.At(1)) {
       int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
@@ -257,15 +251,14 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardNDHWC(
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   // caffe2 implementation: need check
-  Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> out_mat(
-      out_blob->dptr<float>(), out.At(4), out.elem_cnt() / out.At(4));
-  Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> in_mat(
-      in_blob->dptr<float>(), in.At(4), in.elem_cnt() / in.At(4));
-  Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>
-  out_diff_mat(out_diff_blob->dptr<float>(), out.At(4),
-               out.elem_cnt() / out.At(4));
-  Eigen::Map<Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>> in_diff_mat(
-      in_diff_blob->mut_dptr<float>(), in.At(4), in.elem_cnt() / in.At(4));
+  ConstEigenArrayMap<float> out_mat(out_blob->dptr<float>(), out.At(4),
+                                    out.elem_cnt() / out.At(4));
+  ConstEigenArrayMap<float> in_mat(in_blob->dptr<float>(), in.At(4),
+                                   in.elem_cnt() / in.At(4));
+  ConstEigenArrayMap<float> out_diff_mat(out_diff_blob->dptr<float>(),
+                                         out.At(4), out.elem_cnt() / out.At(4));
+  EigenArrayMap<float> in_diff_mat(in_diff_blob->mut_dptr<float>(), in.At(4),
+                                   in.elem_cnt() / in.At(4));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
     FOR_RANGE(int64_t, pd, 0, out.At(1)) {
       int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
