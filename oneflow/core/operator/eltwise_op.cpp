@@ -11,6 +11,7 @@ void EltwiseOp::InitFromOpConf() {
     EnrollInputBn(ibn);
   }
   EnrollOutputBn("out");
+  EnrollOutputBn("tmp");
 }
 
 const PbMessage& EltwiseOp::GetCustomizedConf() const {
@@ -32,6 +33,10 @@ void EltwiseOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
+  BlobDesc* tmp_blob = GetBlobDesc4BnInOp("tmp");
+  tmp_blob->mut_shape() = Shape(in_0_blob_desc->shape().dim_vec());
+  tmp_blob->set_data_type(in_0_blob_desc->data_type());
+  tmp_blob->set_has_data_id_field(false);
 }
 
 REGISTER_OP(OperatorConf::kEltwiseConf, EltwiseOp);

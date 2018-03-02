@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T>
 class EltwiseKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EltwiseKernel);
@@ -14,10 +14,6 @@ class EltwiseKernel final : public KernelIf<device_type> {
 
  private:
   void ForwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
-  void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
