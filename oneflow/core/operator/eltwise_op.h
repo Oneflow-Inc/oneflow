@@ -20,13 +20,6 @@ class EltwiseOp final : public Operator {
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
-
- private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return ibn2lbn_.at(input_bn);
-  }
-
-  HashMap<std::string, std::string> ibn2lbn_;
 };
 
 }  // namespace oneflow
