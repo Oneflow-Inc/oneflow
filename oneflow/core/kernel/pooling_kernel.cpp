@@ -27,14 +27,18 @@ Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
     : kernel_conf_(kernel_conf) {
 #ifdef WITH_CUDA
   pooling_mode_ = pooling_mode;
-  std::vector<int> window = PbRf2StdVec(kernel_conf_.pool_size());
-  std::vector<int> padding_before = PbRf2StdVec(kernel_conf_.padding_before());
-  std::vector<int> padding_after = PbRf2StdVec(kernel_conf_.padding_after());
+  std::vector<int> window(kernel_conf_.pool_size().begin(),
+                          kernel_conf_.pool_size().end());
+  std::vector<int> padding_before(kernel_conf_.padding_before().begin(),
+                                  kernel_conf_.padding_before().end());
+  std::vector<int> padding_after(kernel_conf_.padding_after().begin(),
+                                 kernel_conf_.padding_after().end());
   std::vector<int> padding;
   FOR_RANGE(size_t, i, 0, padding_before.size()) {
     padding.push_back(std::max(padding_before[i], padding_after[i]));
   }
-  std::vector<int> stride = PbRf2StdVec(kernel_conf_.strides());
+  std::vector<int> stride(kernel_conf_.strides().begin(),
+                          kernel_conf_.strides().end());
   std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
   std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
                              in_dim[2] * in_dim[3] * in_dim[4],
@@ -92,8 +96,9 @@ std::vector<int> Pooling3DCtx::GetStdVecFromShapeInKernelConf(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNCDHW(
-    const Pooling3DCtx& ctx, const Blob* in_blob, Blob* out_blob) const {
+void PoolingKernel<DeviceType::kCPU, T>::ForwardNCDHW(const Pooling3DCtx& ctx,
+                                                      const Blob* in_blob,
+                                                      Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
@@ -124,12 +129,12 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNCDHW(
                 FOR_RANGE(int64_t, w, wstart, wend) {
                   const int64_t input_index =
                       d * in.Count(3) + h * in.At(4) + w;
-                  ForwardProcess(input[input_index], res);
+                  NCDHWProcess(input[input_index], res);
                 }
               }
             }
-            ForwardFinalize((dend - dstart) * (hend - hstart) * (wend - wstart),
-                            res);
+            NCDHWFinalize((dend - dstart) * (hend - hstart) * (wend - wstart),
+                          res);
             output[pool_index] = res;
           }
         }
@@ -141,7 +146,7 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNCDHW(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNCDHW(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardNCDHW(
     const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
@@ -176,9 +181,9 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNCDHW(
               FOR_RANGE(int64_t, h, hstart, hend) {
                 FOR_RANGE(int64_t, w, wstart, wend) {
                   const int64_t index = d * in.Count(3) + h * in.At(4) + w;
-                  BackwardProcessGrad(input[index], output[pool_index],
-                                      output_diff[pool_index], scale,
-                                      input_diff[index]);
+                  NCDHWProcessGrad(input[index], output[pool_index],
+                                   output_diff[pool_index], scale,
+                                   input_diff[index]);
                 }
               }
             }
@@ -195,8 +200,9 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNCDHW(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNDHWC(
-    const Pooling3DCtx& ctx, const Blob* in_blob, Blob* out_blob) const {
+void PoolingKernel<DeviceType::kCPU, T>::ForwardNDHWC(const Pooling3DCtx& ctx,
+                                                      const Blob* in_blob,
+                                                      Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
   const PbRf<int32_t>& pool_size = ctx.kernel_conf().pool_size();
@@ -228,12 +234,12 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNDHWC(
               FOR_RANGE(int64_t, w, wstart, wend) {
                 const int in_col =
                     ((n * in.At(1) + d) * in.At(2) + h) * in.At(3) + w;
-                ForwardProcess(in_col, out_col, in_mat, out_mat);
+                NDHWCProcess(in_col, out_col, in_mat, out_mat);
               }
             }
           }
-          ForwardFinalize((hend - hstart) * (wend - wstart) * (dend - dstart),
-                          out_col, out_mat);
+          NDHWCFinalize((hend - hstart) * (wend - wstart) * (dend - dstart),
+                        out_col, out_mat);
         }
       }
     }
@@ -241,7 +247,7 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardWithOrderNDHWC(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNDHWC(
+void PoolingKernel<DeviceType::kCPU, T>::BackwardNDHWC(
     const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
@@ -282,8 +288,8 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardWithOrderNDHWC(
               FOR_RANGE(int64_t, w, wstart, wend) {
                 const int64_t input_index =
                     ((n * in.At(1) + d) * in.At(2) + h) * in.At(3) + w;
-                BackwardProcessGrad(pool_index, input_index, scale, out_mat,
-                                    in_mat, out_diff_mat, in_diff_mat);
+                NDHWCProcessGrad(pool_index, input_index, scale, out_mat,
+                                 in_mat, out_diff_mat, in_diff_mat);
               }
             }
           }

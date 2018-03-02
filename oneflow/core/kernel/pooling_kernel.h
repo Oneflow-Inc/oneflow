@@ -124,21 +124,21 @@ class PoolingKernel<DeviceType::kCPU, T>
 
  protected:
   virtual T ForwardInitialize() const = 0;
-  virtual void ForwardProcess(const T& lhs, T& rhs) const = 0;
-  virtual void ForwardProcess(
+  virtual void NCDHWProcess(const T& lhs, T& rhs) const = 0;
+  virtual void NDHWCProcess(
       const int64_t in_col, const int64_t out_col,
       Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>&
           in_mat,
       Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
       const = 0;
-  virtual void ForwardFinalize(const int64_t size, T& out) const = 0;
-  virtual void ForwardFinalize(
+  virtual void NCDHWFinalize(const int64_t size, T& out) const = 0;
+  virtual void NDHWCFinalize(
       const int64_t size, const int64_t col,
       Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
       const = 0;
-  virtual void BackwardProcessGrad(const T& in, const T& out, const T& out_diff,
-                                   const float scale, T& in_diff) const = 0;
-  virtual void BackwardProcessGrad(
+  virtual void NCDHWProcessGrad(const T& in, const T& out, const T& out_diff,
+                                const float scale, T& in_diff) const = 0;
+  virtual void NDHWCProcessGrad(
       const int64_t out_col, const int64_t in_col, const float scale,
       Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
           out_arr,
@@ -148,16 +148,16 @@ class PoolingKernel<DeviceType::kCPU, T>
           out_diff_arr,
       Eigen::Map<Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
           in_diff_arr) const = 0;
-  void ForwardWithOrderNCDHW(const Pooling3DCtx& pooling_ctx,
-                             const Blob* in_blob, Blob* out_blob) const;
-  void BackwardWithOrderNCDHW(const Pooling3DCtx& pooling_ctx,
-                              const Blob* out_diff_blob, const Blob* out_blob,
-                              const Blob* in_blob, Blob* in_diff_blob) const;
-  void ForwardWithOrderNDHWC(const Pooling3DCtx& pooling_ctx,
-                             const Blob* in_blob, Blob* out_blob) const;
-  void BackwardWithOrderNDHWC(const Pooling3DCtx& pooling_ctx,
-                              const Blob* out_diff_blob, const Blob* out_blob,
-                              const Blob* in_blob, Blob* in_diff_blob) const;
+  void ForwardNCDHW(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+                    Blob* out_blob) const;
+  void BackwardNCDHW(const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
+                     const Blob* out_blob, const Blob* in_blob,
+                     Blob* in_diff_blob) const;
+  void ForwardNDHWC(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+                    Blob* out_blob) const;
+  void BackwardNDHWC(const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
+                     const Blob* out_blob, const Blob* in_blob,
+                     Blob* in_diff_blob) const;
 };
 
 template<typename T>

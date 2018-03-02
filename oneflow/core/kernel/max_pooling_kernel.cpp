@@ -8,9 +8,9 @@ void MaxPoolingKernel<DeviceType::kCPU, T>::Forward(
     const Blob* in_blob, Blob* out_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
   if (data_format == "channels_first") {
-    this->ForwardWithOrderNCDHW(pooling_ctx, in_blob, out_blob);
+    this->ForwardNCDHW(pooling_ctx, in_blob, out_blob);
   } else if (data_format == "channels_last") {
-    this->ForwardWithOrderNDHWC(pooling_ctx, in_blob, out_blob);
+    this->ForwardNDHWC(pooling_ctx, in_blob, out_blob);
   } else {
     UNIMPLEMENTED();
   }
@@ -22,13 +22,13 @@ T MaxPoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
 }
 
 template<typename T>
-void MaxPoolingKernel<DeviceType::kCPU, T>::ForwardProcess(const T& lhs,
-                                                           T& rhs) const {
+void MaxPoolingKernel<DeviceType::kCPU, T>::NCDHWProcess(const T& lhs,
+                                                         T& rhs) const {
   if (lhs > rhs) { rhs = lhs; }
 }
 
 template<typename T>
-void MaxPoolingKernel<DeviceType::kCPU, T>::ForwardProcess(
+void MaxPoolingKernel<DeviceType::kCPU, T>::NDHWCProcess(
     const int64_t in_col, const int64_t out_col,
     Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& in_mat,
     Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>& out_mat)
@@ -43,25 +43,27 @@ void MaxPoolingKernel<DeviceType::kCPU, T>::Backward(
     Blob* in_diff_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
   if (data_format == "channels_first") {
-    this->BackwardWithOrderNCDHW(pooling_ctx, out_diff_blob, out_blob, in_blob,
-                                 in_diff_blob);
+    this->BackwardNCDHW(pooling_ctx, out_diff_blob, out_blob, in_blob,
+                        in_diff_blob);
   } else if (data_format == "channels_last") {
-    this->BackwardWithOrderNDHWC(pooling_ctx, out_diff_blob, out_blob, in_blob,
-                                 in_diff_blob);
+    this->BackwardNDHWC(pooling_ctx, out_diff_blob, out_blob, in_blob,
+                        in_diff_blob);
   } else {
     UNIMPLEMENTED();
   }
 }
 
 template<typename T>
-void MaxPoolingKernel<DeviceType::kCPU, T>::BackwardProcessGrad(
-    const T& in, const T& out, const T& out_diff, const float scale,
-    T& in_diff) const {
+void MaxPoolingKernel<DeviceType::kCPU, T>::NCDHWProcessGrad(const T& in,
+                                                             const T& out,
+                                                             const T& out_diff,
+                                                             const float scale,
+                                                             T& in_diff) const {
   if (in == out) { in_diff += out_diff; }
 }
 
 template<typename T>
-void MaxPoolingKernel<DeviceType::kCPU, T>::BackwardProcessGrad(
+void MaxPoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
     const int64_t out_col, const int64_t in_col, const float scale,
     Eigen::Map<const Eigen::Array<float, Eigen::Dynamic, Eigen::Dynamic>>&
         out_arr,
