@@ -62,8 +62,8 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void FullyConnectedKernel<device_type, T>::InitModelTmpBlobs(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
+void FullyConnectedKernel<device_type, T>::InitPureModelTmpBlobs(
+    DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (!this->op_conf().fully_connected_conf().use_bias()) { return; }
   InitializerConf bias_multiplier_initializer_conf;

@@ -8,7 +8,7 @@ void RecurrentKernel<device_type, T>::VirtualKernelInit(
     const ParallelContext*) {
   auto& input_bns = this->kernel_conf().input_bns();
   need_external_h0_ =
-      std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+      std::find(input_bns.begin(), input_bns.end(), "h0") != input_bns.end();
 }
 
 template<DeviceType device_type, typename T>
@@ -56,40 +56,20 @@ void RecurrentKernel<device_type, T>::BackwardColNum(
 }
 
 template<DeviceType device_type, typename T>
-void RecurrentKernel<device_type, T>::InitInitHiddenBlob(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen, Blob* h0_blob) const {
-  const InitializerConf* init_hidden_initializer = nullptr;
-  if (HasInitHiddenInitializer()) {
-    init_hidden_initializer =
-        static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
-            GetRecurrentOpConf(), "init_hidden_initializer"));
-  }
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, init_hidden_initializer, (*random_seed_gen)(), h0_blob);
-}
-
-template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  bool is_init_hidden_trainable =
-      GetBoolFromPbMessage(GetRecurrentOpConf(), "is_init_hidden_trainable");
-  if (!NeedExternalH0() && is_init_hidden_trainable) {
-    InitInitHiddenBlob(ctx, random_seed_gen, BnInOp2Blob("h0"));
+  if (!NeedExternalH0()) {
+    const InitializerConf* init_hidden_initializer = nullptr;
+    if (HasInitHiddenInitializer()) {
+      init_hidden_initializer =
+          static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
+              GetRecurrentOpConf(), "init_hidden_initializer"));
+    }
+    KernelUtil<device_type, T>::InitializeWithProperConf(
+        ctx, init_hidden_initializer, (*random_seed_gen)(), BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
-}
-
-template<DeviceType device_type, typename T>
-void RecurrentKernel<device_type, T>::InitModelTmpBlobs(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  bool is_init_hidden_trainable =
-      GetBoolFromPbMessage(GetRecurrentOpConf(), "is_init_hidden_trainable");
-  if (!NeedExternalH0() && !is_init_hidden_trainable) {
-    InitInitHiddenBlob(ctx, random_seed_gen, BnInOp2Blob("h0"));
-  }
-  VirtualInitModelTmpBlobs(ctx, random_seed_gen, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>

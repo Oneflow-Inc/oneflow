@@ -12,14 +12,14 @@ void Kernel::InitModelAndModelTmp(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  int64_t random_seed = *static_cast<int64_t*>(ctx.other);
-  std::mt19937 random_seed_gen(random_seed);
-  InitModelTmpBlobs(ctx.device_ctx, &random_seed_gen, BnInOp2Blob);
+  InitPureModelTmpBlobs(ctx.device_ctx, BnInOp2Blob);
   std::string model_load_dir = kernel_conf().op_conf().model_load_dir();
   if (model_load_dir == "" && snapshot) {
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
   }
   if (model_load_dir == "") {
+    int64_t random_seed = *static_cast<int64_t*>(ctx.other);
+    std::mt19937 random_seed_gen(random_seed);
     InitModelBlobsWithRandomSeed(ctx.device_ctx, &random_seed_gen, BnInOp2Blob);
   } else {
     int32_t part_id = -1;
