@@ -49,6 +49,9 @@ class RecurrentKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)>) const {}
 
  private:
+  void InitInitHiddenBlob(DeviceCtx* ctx, std::mt19937* random_seed_gen,
+                          Blob* h0_blob) const;
+
   bool need_external_h0_;
 };
 

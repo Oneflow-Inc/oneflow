@@ -56,20 +56,26 @@ void RecurrentKernel<device_type, T>::BackwardColNum(
 }
 
 template<DeviceType device_type, typename T>
+void RecurrentKernel<device_type, T>::InitInitHiddenBlob(
+    DeviceCtx* ctx, std::mt19937* random_seed_gen, Blob* h0_blob) const {
+  const InitializerConf* init_hidden_initializer = nullptr;
+  if (HasInitHiddenInitializer()) {
+    init_hidden_initializer =
+        static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
+            GetRecurrentOpConf(), "init_hidden_initializer"));
+  }
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx, init_hidden_initializer, (*random_seed_gen)(), h0_blob);
+}
+
+template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   bool is_init_hidden_trainable =
       GetBoolFromPbMessage(GetRecurrentOpConf(), "is_init_hidden_trainable");
   if (!NeedExternalH0() && is_init_hidden_trainable) {
-    const InitializerConf* init_hidden_initializer = nullptr;
-    if (HasInitHiddenInitializer()) {
-      init_hidden_initializer =
-          static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
-              GetRecurrentOpConf(), "init_hidden_initializer"));
-    }
-    KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, init_hidden_initializer, (*random_seed_gen)(), BnInOp2Blob("h0"));
+    InitInitHiddenBlob(ctx, random_seed_gen, BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
 }
@@ -81,14 +87,7 @@ void RecurrentKernel<device_type, T>::InitModelTmpBlobs(
   bool is_init_hidden_trainable =
       GetBoolFromPbMessage(GetRecurrentOpConf(), "is_init_hidden_trainable");
   if (!NeedExternalH0() && !is_init_hidden_trainable) {
-    const InitializerConf* init_hidden_initializer = nullptr;
-    if (HasInitHiddenInitializer()) {
-      init_hidden_initializer =
-          static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
-              GetRecurrentOpConf(), "init_hidden_initializer"));
-    }
-    KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, init_hidden_initializer, (*random_seed_gen)(), BnInOp2Blob("h0"));
+    InitInitHiddenBlob(ctx, random_seed_gen, BnInOp2Blob("h0"));
   }
   VirtualInitModelTmpBlobs(ctx, random_seed_gen, BnInOp2Blob);
 }
