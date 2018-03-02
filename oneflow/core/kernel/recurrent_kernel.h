@@ -33,6 +33,9 @@ class RecurrentKernel : public KernelIf<device_type> {
       DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)>) const override;
+  void InitModelTmpBlobs(
+      DeviceCtx*, std::mt19937* random_seed_gen,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void VirtualKernelInit(const ParallelContext*) override;
   virtual void VirtualInitModelBlobsWithRandomSeed(
       DeviceCtx*, std::mt19937* random_seed_gen,
@@ -40,6 +43,9 @@ class RecurrentKernel : public KernelIf<device_type> {
   virtual void VirtualInitModelBlobsWithDir(
       DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
+      std::function<Blob*(const std::string&)>) const {}
+  virtual void VirtualInitModelTmpBlobs(
+      DeviceCtx*, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)>) const {}
 
  private:

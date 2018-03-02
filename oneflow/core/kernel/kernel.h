@@ -35,7 +35,7 @@ class Kernel {
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
   virtual void InitModelTmpBlobs(
-      DeviceCtx* ctx,
+      DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,

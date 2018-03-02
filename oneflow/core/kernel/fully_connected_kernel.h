@@ -20,7 +20,7 @@ class FullyConnectedKernel final : public KernelIf<device_type> {
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
   void InitModelTmpBlobs(
-      DeviceCtx*,
+      DeviceCtx*, std::mt19937*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithRandomSeed(
       DeviceCtx*, std::mt19937*,
