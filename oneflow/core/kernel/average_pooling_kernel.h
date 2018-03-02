@@ -41,9 +41,6 @@ class AveragePoolingKernel<DeviceType::kCPU, T> final
   virtual ~AveragePoolingKernel() = default;
 
  private:
-  void PoolingForward(const KernelCtx& kernel_ctx,
-                      const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
-                      Blob* out_blob) const override;
   T ForwardInitialize() const override;
   void NCDHWProcess(const T& lhs, T& rhs) const override;
   void NDHWCProcess(const int64_t in_col, const int64_t out_col,
@@ -52,17 +49,13 @@ class AveragePoolingKernel<DeviceType::kCPU, T> final
   void NCDHWFinalize(const int64_t size, T& out) const override;
   void NDHWCFinalize(const int64_t size, const int64_t col,
                      EigenMatrixMap<T>& out_mat) const override;
-  void PoolingBackward(const KernelCtx& kernel_ctx,
-                       const Pooling3DCtx& pooling_ctx,
-                       const Blob* out_diff_blob, const Blob* out_blob,
-                       const Blob* in_blob, Blob* in_diff_blob) const override;
   void NCDHWProcessGrad(const T& in, const T& out, const T& out_diff,
-                        const float scale, T& in_diff) const override;
+                        const int64_t size, T& in_diff) const override;
   void NDHWCProcessGrad(const int64_t out_col, const int64_t in_col,
-                        const float scale, ConstEigenArrayMap<float>& out_arr,
-                        ConstEigenArrayMap<float>& in_arr,
-                        ConstEigenArrayMap<float>& out_diff_arr,
-                        EigenArrayMap<float>& in_diff_arr) const override;
+                        const int64_t size, ConstEigenArrayMap<T>& out_arr,
+                        ConstEigenArrayMap<T>& in_arr,
+                        ConstEigenArrayMap<T>& out_diff_arr,
+                        EigenArrayMap<T>& in_diff_arr) const override;
 };
 
 }  // namespace oneflow

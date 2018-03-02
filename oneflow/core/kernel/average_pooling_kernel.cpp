@@ -3,20 +3,6 @@
 namespace oneflow {
 
 template<typename T>
-void AveragePoolingKernel<DeviceType::kCPU, T>::PoolingForward(
-    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
-    const Blob* in_blob, Blob* out_blob) const {
-  const std::string& data_format = pooling_ctx.kernel_conf().data_format();
-  if (data_format == "channels_first") {
-    this->ForwardNCDHW(pooling_ctx, in_blob, out_blob);
-  } else if (data_format == "channels_last") {
-    this->ForwardNDHWC(pooling_ctx, in_blob, out_blob);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename T>
 T AveragePoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
   return static_cast<T>(0);
 }
@@ -47,36 +33,18 @@ void AveragePoolingKernel<DeviceType::kCPU, T>::NDHWCFinalize(
 }
 
 template<typename T>
-void AveragePoolingKernel<DeviceType::kCPU, T>::PoolingBackward(
-    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
-    const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
-    Blob* in_diff_blob) const {
-  const std::string& data_format = pooling_ctx.kernel_conf().data_format();
-  if (data_format == "channels_first") {
-    this->BackwardNCDHW(pooling_ctx, out_diff_blob, out_blob, in_blob,
-                        in_diff_blob);
-  } else if (data_format == "channels_last") {
-    this->BackwardNDHWC(pooling_ctx, out_diff_blob, out_blob, in_blob,
-                        in_diff_blob);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<typename T>
 void AveragePoolingKernel<DeviceType::kCPU, T>::NCDHWProcessGrad(
-    const T& in, const T& out, const T& out_diff, const float scale,
+    const T& in, const T& out, const T& out_diff, const int64_t size,
     T& in_diff) const {
-  in_diff += (scale * out_diff);
+  in_diff += (out_diff / static_cast<T>(size));
 }
 
 template<typename T>
 void AveragePoolingKernel<DeviceType::kCPU, T>::NDHWCProcessGrad(
-    const int64_t out_col, const int64_t in_col, const float scale,
-    ConstEigenArrayMap<float>& out_arr, ConstEigenArrayMap<float>& in_arr,
-    ConstEigenArrayMap<float>& out_diff_arr,
-    EigenArrayMap<float>& in_diff_arr) const {
-  in_diff_arr.col(in_col) += scale * out_diff_arr.col(out_col);
+    const int64_t out_col, const int64_t in_col, const int64_t size,
+    ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
+    ConstEigenArrayMap<T>& out_diff_arr, EigenArrayMap<T>& in_diff_arr) const {
+  in_diff_arr.col(in_col) += out_diff_arr.col(out_col) / static_cast<T>(size);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAveragePooling1DConf,

@@ -3,23 +3,9 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/device/cudnn_util.h"
-#include "Eigen/Core"
-#include "Eigen/Dense"
+#include "oneflow/core/common/eigen_util.h"
 
 namespace oneflow {
-
-template<typename T>
-using EigenMatrixMap =
-    Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>;
-template<typename T>
-using EigenArrayMap =
-    Eigen::Map<Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>>;
-template<typename T>
-using ConstEigenMatrixMap =
-    Eigen::Map<const Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>;
-template<typename T>
-using ConstEigenArrayMap =
-    Eigen::Map<const Eigen::Array<T, Eigen::Dynamic, Eigen::Dynamic>>;
 
 #ifdef WITH_CUDA
 class CudnnPoolingDesc final {
@@ -46,7 +32,7 @@ class Pooling3DCtx final {
                cudnnPoolingMode_t, DataType
 #endif  // WITH_CUDA
   );
-  ~Pooling3DCtx();
+  ~Pooling3DCtx() = default;
 
   const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
 
@@ -63,9 +49,9 @@ class Pooling3DCtx final {
 
 #ifdef WITH_CUDA
   cudnnPoolingMode_t pooling_mode_;
-  CudnnTensorDesc* in_desc_;
-  CudnnTensorDesc* out_desc_;
-  CudnnPoolingDesc* pooling_desc_;
+  std::unique_ptr<CudnnTensorDesc> in_desc_;
+  std::unique_ptr<CudnnTensorDesc> out_desc_;
+  std::unique_ptr<CudnnPoolingDesc> pooling_desc_;
 #endif  // WITH_CUDA
 };
 
@@ -82,13 +68,13 @@ class PoolingKernelIf : public KernelIf<device_type> {
 #endif  // WITH_CUDA
   const Pooling3DCtx& pooling_3d_ctx() const { return *pooling_3d_ctx_; }
   void VirtualKernelInit(const ParallelContext*) override {
-    pooling_3d_ctx_ =
-        new Pooling3DCtx(GetPooling3DKernelConf()
+    pooling_3d_ctx_.reset(new Pooling3DCtx(GetPooling3DKernelConf()
 #ifdef WITH_CUDA
-                             ,
-                         this->GetCudnnPoolingMode(), GetDataType<T>::val
+                                               ,
+                                           this->GetCudnnPoolingMode(),
+                                           GetDataType<T>::val
 #endif  // WITH_CUDA
-        );
+                                           ));
   }
   virtual const Pooling3DKernelConf& GetPooling3DKernelConf() const = 0;
   void ForwardDataContent(
@@ -120,7 +106,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
                                const Blob* in_blob,
                                Blob* in_diff_blob) const = 0;
 
-  Pooling3DCtx* pooling_3d_ctx_;
+  std::unique_ptr<Pooling3DCtx> pooling_3d_ctx_;
 };
 
 template<DeviceType device_type, typename T>
@@ -135,6 +121,13 @@ class PoolingKernel<DeviceType::kCPU, T>
   virtual ~PoolingKernel() = default;
 
  protected:
+  void PoolingForward(const KernelCtx& kernel_ctx,
+                      const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+                      Blob* out_blob) const override;
+  void PoolingBackward(const KernelCtx& kernel_ctx,
+                       const Pooling3DCtx& pooling_ctx,
+                       const Blob* out_diff_blob, const Blob* out_blob,
+                       const Blob* in_blob, Blob* in_diff_blob) const override;
   virtual T ForwardInitialize() const = 0;
   virtual void NCDHWProcess(const T& lhs, T& rhs) const = 0;
   virtual void NDHWCProcess(const int64_t in_col, const int64_t out_col,
@@ -144,13 +137,13 @@ class PoolingKernel<DeviceType::kCPU, T>
   virtual void NDHWCFinalize(const int64_t size, const int64_t col,
                              EigenMatrixMap<T>& out_mat) const = 0;
   virtual void NCDHWProcessGrad(const T& in, const T& out, const T& out_diff,
-                                const float scale, T& in_diff) const = 0;
+                                const int64_t size, T& in_diff) const = 0;
   virtual void NDHWCProcessGrad(const int64_t out_col, const int64_t in_col,
-                                const float scale,
-                                ConstEigenArrayMap<float>& out_arr,
-                                ConstEigenArrayMap<float>& in_arr,
-                                ConstEigenArrayMap<float>& out_diff_arr,
-                                EigenArrayMap<float>& in_diff_arr) const = 0;
+                                const int64_t size,
+                                ConstEigenArrayMap<T>& out_arr,
+                                ConstEigenArrayMap<T>& in_arr,
+                                ConstEigenArrayMap<T>& out_diff_arr,
+                                EigenArrayMap<T>& in_diff_arr) const = 0;
   void ForwardNCDHW(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
                     Blob* out_blob) const;
   void BackwardNCDHW(const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
