@@ -21,11 +21,11 @@ class RecurrentOp : public Operator {
   int32_t MaxModelSplitNum() const override;
 
  private:
-  virtual void VirtualInitFromOpConf() { UNEXPECTED_RUN(); }
+  virtual void VirtualInitFromOpConf() { UNIMPLEMENTED(); }
   virtual void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-#if defined(WITH_CUDA) && defined(WITH_CUDNN)
+#if defined(WITH_CUDA)
 
 namespace test {
 
@@ -36,7 +36,8 @@ template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(nullptr, blob_desc, static_cast<char*>(mem_ptr));
+  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+                 DeviceType::kCPU);
 }
 
 template<>
@@ -84,7 +85,7 @@ class KTCommon<DeviceType::kCPU, T> final {
     } else if (initializer_conf.has_random_normal_conf()) {
       TODO();
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
 };

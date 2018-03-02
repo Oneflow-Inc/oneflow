@@ -10,7 +10,7 @@ class BasicRnnOp final : public RecurrentOp {
   OF_DISALLOW_COPY_AND_MOVE(BasicRnnOp);
   BasicRnnOp() = default;
   ~BasicRnnOp() = default;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 
  private:
   void VirtualInitFromOpConf();

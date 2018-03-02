@@ -156,17 +156,17 @@ void ChainNode::GenSortedCompTaskNodes(CompTaskNodeHandler Handler) const {
   }                                                                           \
   BldSubTskGphMthd ChainNode::GetMthdForBldSubTskGphFrom##x(const ChainNode*) \
       const {                                                                 \
-    UNEXPECTED_RUN();                                                         \
+    UNIMPLEMENTED();                                                          \
     return nullptr;                                                           \
   }                                                                           \
   BldBoxingOpConfMthd ChainNode::GetMthdForBldBoxingOpConfFrom##x(            \
       const ChainNode*) const {                                               \
-    UNEXPECTED_RUN();                                                         \
+    UNIMPLEMENTED();                                                          \
     return nullptr;                                                           \
   }                                                                           \
   std::vector<std::string> ChainNode::FindLbnsFrom##x(const ChainNode*)       \
       const {                                                                 \
-    UNEXPECTED_RUN();                                                         \
+    UNIMPLEMENTED();                                                          \
     return {};                                                                \
   }                                                                           \
   CompTaskNode* x##ChainNode::NewCompTaskNodeWithSameName() const {           \
@@ -395,7 +395,7 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 BldBoxingOpConfMthd MdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
@@ -414,7 +414,7 @@ void MdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
     mdupdt_node->set_random_seed(NewRandomSeed());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

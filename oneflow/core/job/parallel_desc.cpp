@@ -152,7 +152,7 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
     return std::make_tuple(parallel_ctx->parallel_id(),
                            parallel_ctx->parallel_num());
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

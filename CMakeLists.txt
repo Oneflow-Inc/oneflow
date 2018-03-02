@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.5)
 option(BUILD_THIRD_PARTY "Build third party or oneflow" OFF)
 option(BUILD_RDMA "" ON)
 option(BUILD_CUDA "" ON)
-option(BUILD_CUDNN "" ON)
 
 # Project
 if (BUILD_THIRD_PARTY)

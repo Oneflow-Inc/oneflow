@@ -16,13 +16,15 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
                                        static_cast<T>(1.0), static_cast<T>(0.0),
                                        in_blob, weight_blob, out_blob);
 
-  const Blob* bias_blob = BnInOp2Blob("bias");
-  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    const Blob* bias_blob = BnInOp2Blob("bias");
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
 
-  // out = bias_multiplier * bias + out
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
-      static_cast<T>(1.0), bias_mul_blob, bias_blob, out_blob);
+    // out = bias_multiplier * bias + out
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
+        static_cast<T>(1.0), bias_mul_blob, bias_blob, out_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -48,56 +50,61 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
         static_cast<T>(0.0), out_diff_blob, weight_blob, in_diff_blob);
   }
 
-  const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-  Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
 
-  // bias_diff = bias_multiplier * out_diff
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0),
-      static_cast<T>(0.0), bias_mul_blob, out_diff_blob, bias_diff_blob);
-}  // namespace oneflow
-
-template<DeviceType device_type, typename T>
-void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
-    const KernelCtx& ctx, std::mt19937 random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx.device_ctx,
-      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
-                        weight_initializer),
-      random_seed_gen(), BnInOp2Blob("weight"));
-
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx.device_ctx,
-      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
-                        bias_initializer),
-      random_seed_gen(), BnInOp2Blob("bias"));
-}
-
-template<DeviceType device_type, typename T>
-void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
-    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-    const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* weight_blob = BnInOp2Blob("weightes");
-  int32_t dim_num = this->op_conf().fully_connected_conf().units();
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, weight_blob, "weight",
-      dim_num, weight_blob->shape().Count(1));
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"),
-      "bias", dim_num, 1);
+    // bias_diff = bias_multiplier * out_diff
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0),
+        static_cast<T>(0.0), bias_mul_blob, out_diff_blob, bias_diff_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+    DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (!this->op_conf().fully_connected_conf().use_bias()) { return; }
   InitializerConf bias_multiplier_initializer_conf;
   bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                         bias_multiplier_initializer_conf, 0,
-                                         BnInOp2Blob("bias_multiplier"));
+  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_initializer_conf,
+                                         0, BnInOp2Blob("bias_multiplier"));
+}
+
+template<DeviceType device_type, typename T>
+void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
+    DeviceCtx* ctx, std::mt19937* random_seed_gen,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
+                        weight_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("weight"));
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    KernelUtil<device_type, T>::InitializeWithProperConf(
+        ctx,
+        OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
+                          bias_initializer),
+        (*random_seed_gen)(), BnInOp2Blob("bias"));
+  }
+}
+
+template<DeviceType device_type, typename T>
+void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
+    DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+    const std::string& model_load_dir,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* weight_blob = BnInOp2Blob("weight");
+  int32_t dim_num = this->op_conf().fully_connected_conf().units();
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, weight_blob, "weight", dim_num,
+      weight_blob->shape().Count(1));
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+    KernelUtil<device_type, T>::InitializeWithModelDir(
+        ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
+        dim_num, 1);
+  }
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFullyConnectedConf,

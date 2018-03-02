@@ -21,14 +21,13 @@ class ForwardCompTaskNode : public CompTaskNode {
 
  protected:
   virtual void VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge);
-  virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNEXPECTED_RUN(); }
-  virtual void BuildExecGphStructAndBindInRegst() { UNEXPECTED_RUN(); }
-  virtual void BuildOutRegst() { UNEXPECTED_RUN(); }
+  virtual void VirtualConsumeInRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void BuildExecGphStructAndBindInRegst() { UNIMPLEMENTED(); }
+  virtual void BuildOutRegst() { UNIMPLEMENTED(); }
 
  private:
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
-  void FixRegisterNumRange() override;
 
   int64_t random_seed_;
 };

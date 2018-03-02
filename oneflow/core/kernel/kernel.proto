@@ -1,14 +1,10 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/common/shape.proto";
 import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
-
-message ConcatKernelConf {
-  required int64 total_cp_num = 1;
-  repeated int64 per_cp_bytesize = 2;
-}
 
 message MultinomialLogisticLossKernelConf { 
   required DataType prediction_type = 1;
@@ -20,23 +16,34 @@ message SoftmaxLossKernelConf {
   required DataType label_type = 2;
 }
 
-message Pooling2DKernelConf {
-  optional int32 padding_top = 1 [default = 0];
-  optional int32 padding_bottom = 2 [default = 0];
-  optional int32 padding_left = 3 [default = 0];
-  optional int32 padding_right = 4 [default = 0];
+message Pooling3DKernelConf {
+  required ShapeProto in= 1;
+  required ShapeProto out= 2;
+  repeated int32 padding_before = 3;
+  repeated int32 padding_after = 4;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
+  required string data_format = 7;
 }
 
-message AveragePooling2DKernelConf {
-  required Pooling2DKernelConf pooling_2d_conf = 1;
+message AveragePooling3DKernelConf {
+  required Pooling3DKernelConf pooling_3d_conf = 1;
 }
 
-message MaxPooling2DKernelConf {
-  required Pooling2DKernelConf pooling_2d_conf = 1;
+message MaxPooling3DKernelConf {
+  required Pooling3DKernelConf pooling_3d_conf = 1;
 }
 
 message ReduceSumKernelConf {
   optional int32 axis = 1;
+}
+
+message SoftmaxKernelConf {
+  required int32 axis = 1;
+  required int64 transpose_rows = 2;
+  required int64 transpose_cols = 3;
+  required bool need_transpose = 4;
+  repeated int32 perm = 5;
 }
 
 message KernelConf {
@@ -61,10 +68,10 @@ message KernelConf {
 
   oneof kernel_type {
     MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
-    ConcatKernelConf concat_conf = 113;
+    SoftmaxKernelConf softmax_conf = 116;
     SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    AveragePooling2DKernelConf average_pooling_2d_conf = 200;
-    MaxPooling2DKernelConf max_pooling_2d_conf = 201;
+    AveragePooling3DKernelConf average_pooling_3d_conf = 204;
+    MaxPooling3DKernelConf max_pooling_3d_conf = 205;
   }
 }

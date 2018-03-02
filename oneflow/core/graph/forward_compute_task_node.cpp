@@ -37,8 +37,7 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
-    node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
-                               device_type());
+    node->InferBlobDescs(parallel_ctx(), device_type());
   });
 }
 
@@ -54,7 +53,7 @@ void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
 }
 
 void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
-  UNEXPECTED_RUN();
+  UNIMPLEMENTED();
 }
 
 void ForwardCompTaskNode::BuildActivationRegst() {
@@ -91,13 +90,6 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
       node->BindBnInOpAndRegst(mbn, model_regst);
     }
   });
-}
-
-void ForwardCompTaskNode::FixRegisterNumRange() {
-  int32_t max_col_num = GetConsumedRegst("in")->MaxColNum();
-  GetProducedRegst("activation")->set_min_register_num(max_col_num);
-  GetProducedRegst("data_tmp")->set_min_register_num(max_col_num);
-  GetProducedRegst("out")->set_min_register_num(max_col_num);
 }
 
 }  // namespace oneflow

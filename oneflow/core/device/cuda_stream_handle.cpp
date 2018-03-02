@@ -22,7 +22,6 @@ const cublasHandle_t* CudaStreamHandle::cublas_handle() {
   return cublas_handle_.get();
 }
 
-#ifdef WITH_CUDNN
 const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   if (!cudnn_handle_) {
     cudnn_handle_.reset(new cudnnHandle_t);
@@ -31,14 +30,21 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   }
   return cudnn_handle_.get();
 }
-#endif  // WITH_CUDNN
+
+const Eigen::GpuDevice* CudaStreamHandle::eigen_gpu_device() {
+  if (!eigen_gpu_device_) {
+    eigen_cuda_stream_.reset(new Eigen::CudaStreamDevice(cuda_stream()));
+    eigen_gpu_device_.reset(new Eigen::GpuDevice(eigen_cuda_stream_.get()));
+  }
+  return eigen_gpu_device_.get();
+}
 
 CudaStreamHandle::~CudaStreamHandle() {
-#ifdef WITH_CUDNN
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
-#endif  // WITH_CUDNN
   if (cublas_handle_) { CudaCheck(cublasDestroy(*cublas_handle_)); }
   if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
+  eigen_gpu_device_.reset();
+  eigen_cuda_stream_.reset();
 }
 
 #endif  // WITH_CUDA

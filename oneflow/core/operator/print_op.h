@@ -12,7 +12,7 @@ class PrintOp final : public Operator {
   ~PrintOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
   bool IsPrintOp() const override { return true; }
 
   void InferBlobDescs(

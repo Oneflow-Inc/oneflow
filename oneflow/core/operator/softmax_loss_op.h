@@ -12,7 +12,7 @@ class SoftmaxLossOp final : public Operator {
   ~SoftmaxLossOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
   bool IsLossOp() const override { return true; }
 
   void InferBlobDescs(

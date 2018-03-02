@@ -18,7 +18,7 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
 #ifdef WITH_CUDA
       CudaCheck(cudaMallocHost(&dptr, size));
 #else
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
 #endif
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
@@ -38,7 +38,7 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
   }
 #endif
   else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return std::make_tuple(dptr, comm_net_token,
                          std::bind(&MemoryAllocator::Deallocate, this, dptr,
@@ -57,7 +57,7 @@ void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
 #ifdef WITH_CUDA
       CudaCheck(cudaFreeHost(dptr));
 #else
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
 #endif
     } else {
       free(dptr);
@@ -72,7 +72,7 @@ void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
   }
 #endif
   else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

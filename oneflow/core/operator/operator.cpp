@@ -21,7 +21,6 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
     op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnn());
   }
-  CheckUseCudnn(op_conf_.use_cudnn_on_gpu());
   InitFromOpConf();
 }
 
@@ -63,6 +62,23 @@ const std::string& Operator::SoleDtbn() const {
   return *(data_tmp_bns_.begin());
 }
 
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
+    std::function<void(OpContext*)> EnrollOpContext) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
+}
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+}
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  UNIMPLEMENTED() << typeid(*this).name();
+}
+
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDataLoaderOp()) {
     CHECK_EQ(pr_desc->parallel_num(),
@@ -70,9 +86,8 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
-  if (model_bns_.empty() && model_tmp_bns_.empty()) {
-    LOG_IF(WARNING, pr_desc->policy() == ParallelPolicy::kModelParallel)
-        << op_name() << " doesn't have any model, so fix it with DataParallel";
+  if (model_bns_.empty()) {
+    CHECK(model_tmp_bns_.empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (IsDataLoaderOp() == false && IsPrintOp() == false) {
@@ -114,7 +129,8 @@ static bool HasBlobDescWithField(
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     bool is_forward, DeviceType device_type,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, const OpContext* op_ctx,
+    KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -131,10 +147,13 @@ void Operator::GenKernelConf(
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+  const std::vector<std::string>* bns = &output_bns_;
+  if (IsLossOp()) { bns = &input_bns_; }
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
                            &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
   }
+
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =
       GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
@@ -143,14 +162,21 @@ void Operator::GenKernelConf(
   }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, op_ctx, kernel_conf);
+}
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const OpContext*,
+    KernelConf* kernel_conf) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromSpecialConf(input_bn);
+  return GetStringFromCustomizedConf(input_bn);
 }
 std::string Operator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetStringFromSpecialConf(output_bn);
+  return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
 }
 std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
   return op_name() + "/" + model_tmp_bn;
@@ -184,6 +210,10 @@ void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   }
 }
 void Operator::EnrollModelBn(const std::string& mbn) {
+  if (op_conf_.trainable() == false) {
+    EnrollModelTmpBn(mbn);
+    return;
+  }
   std::string lbn = mbn2lbn(mbn);
   model_bns_.push_back(mbn);
   CHECK(bn_in_op2lbn_.emplace(mbn, lbn).second);

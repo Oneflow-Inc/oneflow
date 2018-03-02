@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_DEVICE_CUDA_DEVICE_CONTEXT_H_
 
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/device/device_context.h"
 
 namespace oneflow {
 
@@ -14,19 +15,16 @@ class CudaDeviceCtx final : public DeviceCtx {
   ~CudaDeviceCtx() = default;
 
   CudaDeviceCtx(int64_t work_stream_id, const cudaStream_t* cuda_stream,
-                const cublasHandle_t* cublas_handle = nullptr
-#ifdef WITH_CUDNN
-                ,
-                const cudnnHandle_t* cudnn_handle = nullptr
-#endif
+                const cublasHandle_t* cublas_handle = nullptr,
+                const cudnnHandle_t* cudnn_handle = nullptr,
+                const Eigen::GpuDevice* eigen_gpu_device = nullptr
 
   ) {
     set_work_stream_id(work_stream_id);
     set_cuda_stream(cuda_stream);
     set_cublas_handle(cublas_handle);
-#ifdef WITH_CUDNN
     set_cudnn_handle(cudnn_handle);
-#endif
+    set_eigen_gpu_device(eigen_gpu_device);
   }
 
   void AddCallBack(std::function<void()> callback) const override;
