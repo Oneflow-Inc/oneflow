@@ -6,71 +6,26 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
-namespace {
-
-cudnnConvolutionFwdAlgo_t InferCudnnConvFwdAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
-    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
-    CudnnConvDesc* conv_desc) {
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
-
-  CudaCheck(cudnnGetConvolutionForwardAlgorithm(
-      cudnn_handle, in_desc->Get(), filter_desc->Get(), conv_desc->Get(),
-      out_desc->Get(), CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0,
-      &cudnn_fwd_algo));
-
-  return cudnn_fwd_algo;
-}
-
-cudnnConvolutionBwdFilterAlgo_t InferCudnnConvBwdFilterAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
-    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
-    CudnnConvDesc* conv_desc) {
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
-
-  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
-      cudnn_handle, in_desc->Get(), out_desc->Get(), conv_desc->Get(),
-      filter_desc->Get(), CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0,
-      &cudnn_bwd_filter_algo));
-
-  return cudnn_bwd_filter_algo;
-}
-
-cudnnConvolutionBwdDataAlgo_t InferCudnnConvBwdDataAlgo(
-    const cudnnHandle_t& cudnn_handle, CudnnTensorDesc* in_desc,
-    CudnnTensorDesc* out_desc, CudnnFilterDesc* filter_desc,
-    CudnnConvDesc* conv_desc) {
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
-
-  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
-      cudnn_handle, filter_desc->Get(), out_desc->Get(), conv_desc->Get(),
-      in_desc->Get(), CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST, 0,
-      &cudnn_bwd_data_algo));
-
-  return cudnn_bwd_data_algo;
-}
-
-}  // namespace
 
 CudnnConvDesc::~CudnnConvDesc() {
   CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
 }
 
 CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc,
-                             const int kKernelDimSize,
+                             const int kernel_dim_size,
                              const std::vector<int>& dilation_rate,
                              const std::vector<int>& strides,
                              const std::vector<int>& kernel_size,
                              const std::string& data_format,
                              const std::string& padding) {
-  CHECK(in_blob_desc->shape().NumAxes() == kKernelDimSize + 2);
+  CHECK_EQ(in_blob_desc->shape().NumAxes(), kernel_dim_size + 2);
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  std::vector<int64_t> in(kKernelDimSize, 0);
-  std::vector<int64_t> out(kKernelDimSize, 0);
-  std::vector<int> pad_small_side(kKernelDimSize, 0);
-  std::vector<int> pad_large_side(kKernelDimSize, 0);
+  std::vector<int64_t> in(kernel_dim_size, 0);
+  std::vector<int64_t> out(kernel_dim_size, 0);
+  std::vector<int> pad_small_side(kernel_dim_size, 0);
+  std::vector<int> pad_large_side(kernel_dim_size, 0);
 
-  for (size_t i = 0; i < kKernelDimSize; ++i) {
+  for (size_t i = 0; i < kernel_dim_size; ++i) {
     in[i] = (data_format == "channels_first")
                 ? (in_blob_desc->shape().At(2 + i))
                 : (in_blob_desc->shape().At(1 + i));
@@ -93,20 +48,11 @@ struct ConvOpCtx : public OpContext {
 };
 
 void ConvOp::InitFromOpConf() {
-  std::string data_format = GetStringFromCustomizedConf("data_format");
-  std::transform(data_format.begin(), data_format.end(), data_format.begin(),
-                 ::tolower);
-  if (data_format != "channels_last" && data_format != "channels_first") {
-    LOG(FATAL) << "Invalid data format in " << op_name();
-  }
-  SetStringInCustomizedConf("data_format", data_format);
+  SetBoolInCustomizedConf("use_cudnn_on_gpu", true);
+  CHECK(UseCudnn());
 
-  std::string padding = GetStringFromCustomizedConf("padding");
-  std::transform(padding.begin(), padding.end(), padding.begin(), ::tolower);
-  if (padding != "same" && padding != "valid") {
-    LOG(FATAL) << "Invalid padding method in " << op_name();
-  }
-  SetStringInCustomizedConf("padding", padding);
+  StrFieldTolower("data_format");
+  StrFieldTolower("padding");
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -290,15 +236,21 @@ size_t ConvOp::InferCudnnWorkspaceSize(
                           GetStringFromCustomizedConf("data_format"),
                           GetStringFromCustomizedConf("padding"));
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
-      InferCudnnConvFwdAlgo(*cuda_handle.cudnn_handle(), &in_desc, &out_desc,
-                            &filter_desc, &conv_desc);
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
-      InferCudnnConvBwdFilterAlgo(*cuda_handle.cudnn_handle(), &in_desc,
-                                  &out_desc, &filter_desc, &conv_desc);
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
-      InferCudnnConvBwdDataAlgo(*cuda_handle.cudnn_handle(), &in_desc,
-                                &out_desc, &filter_desc, &conv_desc);
+  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
+  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
+  CudaCheck(cudnnGetConvolutionForwardAlgorithm(
+      *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
+      conv_desc.Get(), out_desc.Get(), CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0,
+      &cudnn_fwd_algo));
+  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
+      *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(),
+      conv_desc.Get(), filter_desc.Get(),
+      CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0, &cudnn_bwd_filter_algo));
+  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
+      *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(),
+      conv_desc.Get(), in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
+      0, &cudnn_bwd_data_algo));
 
   ConvOpCtx* conv_op_ctx = new ConvOpCtx;
   EnrollOpContext(conv_op_ctx);

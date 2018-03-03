@@ -38,8 +38,8 @@ class CudnnTensorDesc final {
   CudnnTensorDesc() = delete;
   ~CudnnTensorDesc();
 
-  CudnnTensorDesc(DataType data_type, int n, int c, int h, int w);
-  CudnnTensorDesc(DataType data_type, const Shape& shape);
+  CudnnTensorDesc(DataType, int n, int c, int h, int w);
+  CudnnTensorDesc(DataType, const Shape&);
   CudnnTensorDesc(DataType data_type, const std::vector<int>& dim,
                   const std::vector<int>& stride);
 
