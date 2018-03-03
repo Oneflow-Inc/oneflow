@@ -27,12 +27,14 @@ class ActNode final : public Node<ActNode, ActEdge> {
   void ForEachProducedRegstDescId(
       const std::function<void(int64_t)>& Handler) const;
 
+  static double GetDuration(const ActEvent& act_event) {
+    return act_event.stop_time() - act_event.start_time();
+  }
+
   // Getters
   int64_t actor_id() const { return act_event_->actor_id(); }
   int64_t act_id() const { return act_event_->act_id(); }
-  double time() const {
-    return act_event_->stop_time() - act_event_->start_time();
-  }
+  double Duration() const { return GetDuration(*act_event_); }
   const ActEvent& act_event() const { return *act_event_; }
   TaskType task_type() const { return task_proto_->task_type(); }
   std::string VisualStr() const override;
@@ -49,9 +51,9 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
                     std::unique_ptr<std::list<ActEvent>>&& act_events);
   ~ActGraph() = default;
 
-  void ForEachRegstDescDuration(
+  void ForEachRegstDescMeanDuration(
       const std::function<void(int64_t, double)>& Handler) const;
-  void ForEachRegstDescIIRatio(
+  void ForEachRegstDescIIScale(
       const std::function<void(int64_t, double)>& Handler) const;
 
   void ToDotFiles(const std::string& dir) const;

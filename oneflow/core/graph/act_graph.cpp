@@ -24,7 +24,7 @@ void ActNode::ForEachProducedRegstDescId(
   }
 }
 
-void ActGraph::ForEachRegstDescDuration(
+void ActGraph::ForEachRegstDescMeanDuration(
     const std::function<void(int64_t, double)>& Handler) const {
   HashMap<int64_t, double> regst_desc_id2duration;
   HashMap<int64_t, int> regst_desc_id2cnt;
@@ -37,7 +37,7 @@ void ActGraph::ForEachRegstDescDuration(
   }
 }
 
-void ActGraph::ForEachRegstDescIIRatio(
+void ActGraph::ForEachRegstDescIIScale(
     const std::function<void(int64_t, double)>& Handler) const {
   TODO();
 }

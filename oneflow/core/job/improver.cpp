@@ -8,24 +8,22 @@ namespace oneflow {
 
 namespace {
 
-double RegstNum4RegstDescInfo(double regst_desc_duration, double ii,
-                              double ii_ratio) {
-  return ((ii_ratio - 1) * ii + regst_desc_duration) / (ii_ratio * ii);
+double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
+  return ((ii_scale - 1) * ii + regst_desc_duration) / (ii_scale * ii);
 }
 
-double II4RegstDescInfo(double regst_desc_duration, size_t regst_num,
-                        double ii_ratio) {
-  return regst_desc_duration / ((regst_num - 1) * ii_ratio + 1);
+double CalcII(double regst_desc_duration, size_t regst_num, double ii_scale) {
+  return regst_desc_duration / ((regst_num - 1) * ii_scale + 1);
 }
 
-size_t RegstNum4RegstDescInfo(
-    const RegstDescProto& regst_desc,
-    const std::function<double(int64_t)>& Duration4RegstDescId, double ii,
-    const std::function<double(int64_t)>& IIRatio4RegstDescId) {
+size_t CalcRegstNum(const RegstDescProto& regst_desc,
+                    const std::function<double(int64_t)>& Duration4RegstDescId,
+                    double ii,
+                    const std::function<double(int64_t)>& IIScale4RegstDescId) {
   int64_t regst_desc_id = regst_desc.regst_desc_id();
   double duration = Duration4RegstDescId(regst_desc_id);
-  double ratio = IIRatio4RegstDescId(regst_desc_id);
-  size_t regst_num = ceil(RegstNum4RegstDescInfo(duration, ii, ratio));
+  double ratio = IIScale4RegstDescId(regst_desc_id);
+  size_t regst_num = ceil(CalcRegstNum(duration, ii, ratio));
   regst_num =
       std::max(regst_num, static_cast<size_t>(regst_desc.min_register_num()));
   regst_num =
@@ -38,9 +36,9 @@ void ForEachStreamCalcTimePerAct(const std::list<ActEvent>& act_events,
   HashMap<int64_t, double> stream_id2time;
   HashMap<int64_t, std::unordered_set<int64_t>> stream_id2act_ids;
   for (const ActEvent& act_event : act_events) {
-    stream_id2time[act_event.work_stream_id()] +=
-        act_event.stop_time() - act_event.start_time();
-    stream_id2act_ids[act_event.work_stream_id()].insert(act_event.act_id());
+    auto stream_id = act_event.work_stream_id();
+    stream_id2time[stream_id] += ActNode::GetDuration(act_event);
+    stream_id2act_ids[stream_id].insert(act_event.act_id());
   }
   for (const auto& pair : stream_id2time) {
     Handler(pair.second / stream_id2act_ids.at(pair.first).size());
@@ -68,14 +66,14 @@ void ParseActEvents(const std::string& act_event_filepath,
   }
 }
 
-size_t MemoryConsuming(
+size_t CalcMemoryConsumed(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<double(int64_t)>& Duration4RegstDescId,
-    const std::function<double(int64_t)>& IIRatio4RegstDescId, double ii) {
+    const std::function<double(int64_t)>& IIScale4RegstDescId, double ii) {
   size_t mem_consuming = 0;
   for (const RegstDescProto* regst_desc : regst_descs) {
-    size_t regst_num = RegstNum4RegstDescInfo(*regst_desc, Duration4RegstDescId,
-                                              ii, IIRatio4RegstDescId);
+    size_t regst_num = CalcRegstNum(*regst_desc, Duration4RegstDescId, ii,
+                                    IIScale4RegstDescId);
     RtRegstDesc runtime_regst_desc(*regst_desc);
     mem_consuming +=
         regst_num * runtime_regst_desc.packed_blob_desc()->TotalByteSize();
@@ -85,14 +83,14 @@ size_t MemoryConsuming(
 
 std::vector<double> MakeIISearchSpace(
     const HashMap<int64_t, double>& regst_desc_id2duration,
-    const std::function<double(int64_t)>& IIRatio4RegstDescId, double base_ii) {
-  CHECK(base_ii > 0);
+    const std::function<double(int64_t)>& IIScale4RegstDescId, double base_ii) {
+  CHECK_GT(base_ii, 0);
   std::vector<double> search_space;
   for (const auto& pair : regst_desc_id2duration) {
-    double ii_ratio = IIRatio4RegstDescId(pair.first);
+    double ii_ratio = IIScale4RegstDescId(pair.first);
     int max_register_num = ceil(pair.second / base_ii);
     for (int num = 1; num <= max_register_num; ++num) {
-      double ii = II4RegstDescInfo(pair.second, num, ii_ratio);
+      double ii = CalcII(pair.second, num, ii_ratio);
       search_space.push_back(ii);
     }
   }
@@ -119,7 +117,7 @@ std::function<void(int64_t, size_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
 
 std::function<double(int64_t)> MakeGetterDuration4RegstDescId(
     const ActGraph& graph, HashMap<int64_t, double>* regst_desc_id2duration) {
-  graph.ForEachRegstDescDuration([&](int64_t regst_desc_id, double time) {
+  graph.ForEachRegstDescMeanDuration([&](int64_t regst_desc_id, double time) {
     regst_desc_id2duration->insert({regst_desc_id, time});
   });
   return [regst_desc_id2duration](int64_t regst_desc_id) {
@@ -132,10 +130,10 @@ std::function<double(int64_t)> MakeGetterDuration4RegstDescId(
   };
 }
 
-std::function<double(int64_t)> MakeGetterIIRatio4RegstDescId(
+std::function<double(int64_t)> MakeGetterIIScale4RegstDescId(
     const ActGraph& graph) {
   HashMap<int64_t, double> regst_desc_id2ii_ratio;
-  graph.ForEachRegstDescIIRatio([&](int64_t regst_desc_id, double ratio) {
+  graph.ForEachRegstDescIIScale([&](int64_t regst_desc_id, double ratio) {
     regst_desc_id2ii_ratio.insert({regst_desc_id, ratio});
   });
   return [regst_desc_id2ii_ratio](int64_t regst_desc_id) {
@@ -183,12 +181,13 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan,
 bool Improver::IsAnyZoneOutOfMemory(
     const MemZoneRegstDescs& mz_regst_descs,
     const std::function<double(int64_t)>& Duration4RegstDescId,
-    const std::function<double(int64_t)>& Ratio4RegstDescId, double ii) const {
+    const std::function<double(int64_t)>& IIScale4RegstDescId,
+    double ii) const {
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
-      if (MemoryConsuming(regst_descs, Duration4RegstDescId, Ratio4RegstDescId,
-                          ii)
+      if (CalcMemoryConsumed(regst_descs, Duration4RegstDescId,
+                             IIScale4RegstDescId, ii)
           >= AvailableMemSize(machine_id, mem_zone_id)) {
         return true;
       }
@@ -200,19 +199,20 @@ bool Improver::IsAnyZoneOutOfMemory(
 double Improver::BinarySearchII(
     const std::vector<double>& search_space,
     const std::function<double(int64_t)>& Duration4RegstDescId,
-    const std::function<double(int64_t)>& Ratio4RegstDescId,
+    const std::function<double(int64_t)>& IIScale4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
-                              Ratio4RegstDescId,
+                              IIScale4RegstDescId,
                               search_space.at(search_space.size() - 1)));
   auto SearchDirection = [&](int index) {
     bool is_cur_ii_ok =
         !IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
-                              Ratio4RegstDescId, search_space.at(index));
+                              IIScale4RegstDescId, search_space.at(index));
     bool is_prev_ii_ok =
         index > 0
         && !IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
-                                 Ratio4RegstDescId, search_space.at(index - 1));
+                                 IIScale4RegstDescId,
+                                 search_space.at(index - 1));
     if (!is_cur_ii_ok) { return 1; }
     if (is_prev_ii_ok) { return -1; }
     return 0;
@@ -240,17 +240,17 @@ void Improver::MemoryLimitedAllocate(
   HashMap<int64_t, double> regst_desc_id2duration;
   auto Duration4RegstDescId =
       MakeGetterDuration4RegstDescId(graph, &regst_desc_id2duration);
-  auto IIRatio4RegstDescId = MakeGetterIIRatio4RegstDescId(graph);
+  auto IIScale4RegstDescId = MakeGetterIIScale4RegstDescId(graph);
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
   const auto& search_space =
-      MakeIISearchSpace(regst_desc_id2duration, IIRatio4RegstDescId, base_ii);
+      MakeIISearchSpace(regst_desc_id2duration, IIScale4RegstDescId, base_ii);
   double ii = BinarySearchII(search_space, Duration4RegstDescId,
-                             IIRatio4RegstDescId, mz_regst_descs);
+                             IIScale4RegstDescId, mz_regst_descs);
   for (const auto& task_proto : graph.plan().task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      size_t regst_num = RegstNum4RegstDescInfo(
-          pair.second, Duration4RegstDescId, ii, IIRatio4RegstDescId);
+      size_t regst_num = CalcRegstNum(pair.second, Duration4RegstDescId, ii,
+                                      IIScale4RegstDescId);
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }
