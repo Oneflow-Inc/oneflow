@@ -145,6 +145,31 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
   COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
   }
 
+#define MAKE_CUDNN_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
+  {OF_PP_PAIR_SECOND(data_type_pair),                                 \
+   []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
+
+#define ADD_DEFAULT_CUDNN_KERNEL_CREATOR(op_type_case, kernel_type_field, \
+                                         kernel_class, data_type_seq)     \
+  template<>                                                              \
+  bool CudnnKernelCreatorHelper<op_type_case>::IsUseCudnn(                \
+      const KernelConf& kernel_conf) {                                    \
+    CHECK(kernel_conf.has_##kernel_type_field());                         \
+    if (kernel_conf.kernel_type_field().has_use_cudnn()) {                \
+      return kernel_conf.kernel_type_field().use_cudnn();                 \
+    } else {                                                              \
+      return fasle;                                                       \
+    }                                                                     \
+  }                                                                       \
+  template<>                                                              \
+  Kernel* CudnnKernelCreatorHelper<op_type_case>::CreateKernel(           \
+      DeviceType dev_type, const KernelConf& kernel_conf) {               \
+    static const HashMap<int, std::function<Kernel*()>> creators = {      \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CUDNN_KERNEL_CREATOR_ENTRY, \
+                                         (kernel_class), data_type_seq)}; \
+    return creators.at(kernel_conf.data_type())();                        \
+  }
+
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
   {OF_PP_PAIR_SECOND(data_type_pair),                               \
    []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},

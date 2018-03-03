@@ -5,32 +5,48 @@
 namespace oneflow {
 
 template<typename T>
+void CudnnConvKernel<T>::VirtualKernelInit(const ParallelContext*) {
+  // TODO()
+  in_desc_ = new CudnnTensorDesc();
+  out_desc_ = new CudnnTensorDesc();
+  filter_desc_ = new CudnnFilterDesc();
+  conv_desc_ = new CudnnConvDesc();
+
+  if (GetBoolFromPbMessage(GetCustomizedOpConf(), "use_bias")) {
+    bias_desc_ = new CudnnTensorDesc();
+  }
+}
+
+template<typename T>
 void CudnnConvKernel<T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto conv_conf = this->op_conf().convolution_conf();
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* weight_blob = BnInOp2Blob("weight");
-  const Blob* bias_blob = BnInOp2Blob("bias");
   Blob* out_blob = BnInOp2Blob("out");
   Blob* cudnn_workspace = BnInOp2Blob("cudnn_workspace");
 
-  this->cudnn_conv_desc_.InitFromBlobDescAndOpConf(
-      in_blob->blob_desc_ptr(), out_blob->blob_desc_ptr(), conv_conf);
+  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
+    static_cast<cudnnConvolutionFwdAlgo_t>(kernel_conf().conv_conf().cudnn_fwd_algo());
+  CudaCheck(cudnnConvolutionForward(
+        ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, in_desc_->Get(),
+        in_blob->dptr<T>(), filter_desc_->Get(), weight_blob->dptr<T>(),
+        conv_desc_->Get(), cudnn_fwd_algo, cudnn_workspace->mut_dptr<T>(),
+        cudnn_workspace->shape().At(0), CudnnDataType<T>::zero,
+        out_desc_->Get(), out_blob->mut_dptr<T>()));
 
-  this->cudnn_conv_desc_.Forward<T>(
-      ctx.device_ctx->cudnn_handle(), in_blob, weight_blob, bias_blob, out_blob,
-      cudnn_workspace,
-      static_cast<cudnnConvolutionFwdAlgo_t>(
-          this->kernel_conf().convolution_conf().cudnn_fwd_algo()),
-      conv_conf.has_bias_term());
+  if (GetBoolFromPbMessage(GetCustomizedOpConf(), "use_bias")) {
+    const Blob* bias_blob = BnInOp2Blob("bias");
+    CudaCheck(cudnnAddTensor(ctx.device_ctx->cudnn_handle(),
+          CudnnDataType<T>::one, bias_desc_->Get(), bias_blob->dptr<T>(),
+          CudnnDataType<T>::one, out_desc_->Get(), out_blob->mut_dptr<T>()));
+  }
 }
 
 template<typename T>
 void CudnnConvKernel<T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  auto conv_conf = this->op_conf().convolution_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
 
   // compute bias_diff
@@ -38,8 +54,11 @@ void CudnnConvKernel<T>::BackwardDataContent(
     Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
     Memset<DeviceType::kGPU>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
                              bias_diff_blob->ByteSizeOfDataContentField());
-    this->cudnn_conv_desc_.BackwardBias<T>(ctx.device_ctx->cudnn_handle(),
-                                           out_diff_blob, bias_diff_blob);
+  
+    CudaCheck(cudnnConvolutionBackwardBias(
+          ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, out_desc_->Get(),
+          out_diff_blob->dptr<T>(), CudnnDataType<T>::one, bias_desc_->Get(),
+          bias_diff_blob->mut_dptr<T>()));
   }
 
   // compute weight_diff
@@ -48,11 +67,17 @@ void CudnnConvKernel<T>::BackwardDataContent(
   Blob* cudnn_workspace = BnInOp2Blob("cudnn_workspace");
   Memset<DeviceType::kGPU>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
                            weight_diff_blob->ByteSizeOfDataContentField());
-  this->cudnn_conv_desc_.BackwardFilter<T>(
-      ctx.device_ctx->cudnn_handle(), in_blob, out_diff_blob, weight_diff_blob,
-      cudnn_workspace,
-      static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-          this->kernel_conf().convolution_conf().cudnn_bwd_filter_algo()));
+
+  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
+    static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+        kernel_conf().conv_conf().cudnn_bwd_filter_algo());
+
+  CudaCheck(cudnnConvolutionBackwardFilter(
+        ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, in_desc_->Get(),
+        in_blob->dptr<T>(), out_desc_->Get(), out_diff_blob->dptr<T>(),
+        conv_desc_->Get(), cudnn_bwd_filter_algo, cudnn_workspace->mut_dptr<T>(),
+        cudnn_workspace->shape().At(0), CudnnDataType<T>::one, filter_desc_->Get(),
+        weight_diff_blob->mut_dptr<T>()));
 
   // compute in_diff
   const Blob* weight_blob = BnInOp2Blob("weight");
@@ -60,11 +85,17 @@ void CudnnConvKernel<T>::BackwardDataContent(
   if (in_diff_blob == nullptr) { return; }
   Memset<DeviceType::kGPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                            in_diff_blob->ByteSizeOfDataContentField());
-  this->cudnn_conv_desc_.BackwardData<T>(
-      ctx.device_ctx->cudnn_handle(), weight_blob, out_diff_blob, in_diff_blob,
-      cudnn_workspace,
-      static_cast<cudnnConvolutionBwdDataAlgo_t>(
-          this->kernel_conf().convolution_conf().cudnn_bwd_data_algo()));
+
+  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo = 
+    static_cast<cudnnConvolutionBwdDataAlgo_t>(
+        kernel_conf().conv_conf().cudnn_bwd_data_algo());
+
+  CudaCheck(cudnnConvolutionBackwardData(
+        ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one, filter_desc_->Get(),
+        weight_blob->dptr<T>(), out_desc_->Get(), out_diff_blob->dptr<T>(),
+        conv_desc_->Get(), cudnn_bwd_data_algo, cudnn_workspace->mut_dptr<T>(),
+        cudnn_workspace->shape().At(0), CudnnDataType<T>::zero, in_desc_->Get(),
+        in_diff_blob->mut_dptr<T>()));
 }
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \

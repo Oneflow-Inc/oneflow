@@ -30,7 +30,7 @@ class ConvKernel : public KernelIf<device_type> {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
- private:
+  const PbMessage& GetCustromizedOpConf() const;
 };
 
 #ifdef WITH_CUDA
@@ -51,11 +51,11 @@ class CudnnConvKernel final : public ConvKernel<DeviceType::kGPU, T> {
       std::function<Blob*(const std::string&)>) const override;
 
  private:
-  std::unique_ptr<CudnnTensorDesc*> in_desc_;
-  std::unique_ptr<CudnnTensorDesc*> out_desc_;
-  std::unique_ptr<CudnnFilterDesc*> filter_desc_;
-  std::unique_ptr<CudnnConvDesc*> conv_desc_;
-}
+  std::unique_ptr<CudnnTensorDesc> in_desc_;
+  std::unique_ptr<CudnnTensorDesc> out_desc_;
+  std::unique_ptr<CudnnFilterDesc> filter_desc_;
+  std::unique_ptr<CudnnConvDesc> conv_desc_;
+};
 #undef  // WITH_CUDA
 
 }  // namespace oneflow

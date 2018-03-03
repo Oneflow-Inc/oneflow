@@ -11,14 +11,14 @@ void ConvKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::BackwardDataContent(
+void ConvKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::InitModelBlobsWithRandomSeed(
+void ConvKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
@@ -35,7 +35,7 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithRandomSeed(
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
+void ConvKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -52,7 +52,7 @@ void ConvolutionKernel<device_type, T>::InitModelBlobsWithDir(
 }
 
 template<DeviceType device_type, typename T>
-void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
+void ConvKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->op_conf().conv_?d_conf().has_bias_term()) {
@@ -64,11 +64,26 @@ void ConvolutionKernel<device_type, T>::InitModelTmpBlobs(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1dConf, conv_1d_conf, CudnnConvKernel,
+template<DeviceType device_type, typename T>
+const PbMessage& ConvKernel<device_type, T>::GetCustromizedConf() const {
+  CHECK(kernel_conf().has_conv_conf());
+  switch (kernel_conf().conv_conf().kernel_dim_size()) {
+    case 1:
+      return op_conf().conv_1d_conf();
+    case 2:
+      return op_conf().conv_2d_conf();
+    case 3:
+      return op_conf().conv_3d_conf();
+    default:
+      UNIMPLEMENTED();
+  }
+}
+
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1dConf, conv_conf, CudnnConvKernel,
     FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2dConf, conv_2d_conf, CudnnConvKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2dConf, conv_conf, CudnnConvKernel,
     FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3dConf, conv_3d_conf, CudnnConvKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3dConf, conv_conf, CudnnConvKernel,
     FLOATING_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1dConf, ConvKernel, FLOATING_DATA_TYPE_SEQ);
