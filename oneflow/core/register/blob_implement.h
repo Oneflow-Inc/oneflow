@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_IMPLEMENT_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_IMPLEMENT_H_
 
-#include "oneflow/core/eigen/tensor_type.h"
+#include "oneflow/core/common/eigen_util.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
 

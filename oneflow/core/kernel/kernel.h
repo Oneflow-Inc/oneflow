@@ -133,7 +133,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
 #define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq) \
   namespace {                                                                 \
                                                                               \
-  Kernel* CreateKernel(const KernelConf& kernel_conf) {                       \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {  \
     static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
                                          (kernel_class), DEVICE_TYPE_SEQ,     \
@@ -142,7 +142,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
         GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();    \
   }                                                                           \
                                                                               \
-  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
+  COMMAND(AddKernelCreator(op_type_case, OF_PP_CAT(CreateKernel, __LINE__))); \
   }
 
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
