@@ -76,7 +76,7 @@ const cudnnPoolingDescriptor_t& Pooling3DCtx::cudnn_pooling_desc() const {
 
 std::vector<int> Pooling3DCtx::GetStdVecFromShapeInKernelConf(
     const std::string& field_name) const {
-  PbRf<int64_t> shape = GetPbRfFromPbMessage<int64_t>(
+  const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
       GetMessageFromPbMessage(kernel_conf_, field_name), "dim");
   std::vector<int> ret(shape.begin(), shape.end());
   return ret;

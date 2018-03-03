@@ -4,7 +4,7 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/eigen/tensor_type.h"
+#include "oneflow/core/common/eigen_util.h"
 
 namespace oneflow {
 
