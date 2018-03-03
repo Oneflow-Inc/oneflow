@@ -3,7 +3,6 @@
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/operator/op_conf.pb.h"
 
 #ifdef WITH_CUDA
 

@@ -1,7 +1,6 @@
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/operator/operator_util.h"
 
 namespace oneflow {
@@ -57,20 +56,21 @@ CudnnConvDesc::~CudnnConvDesc() {
   CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
 }
 
-CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
+CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc,
+                             const int kKernelDimSize,
                              const std::vector<int>& dilation_rate,
                              const std::vector<int>& strides,
                              const std::vector<int>& kernel_size,
                              const std::string& data_format,
                              const std::string& padding) {
-  CHECK(in_blob_desc->shape().NumAxes() == kDimSize + 2);
+  CHECK(in_blob_desc->shape().NumAxes() == kKernelDimSize + 2);
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  std::vector<int64_t> in(kDimSize, 0);
-  std::vector<int64_t> out(kDimSize, 0);
-  std::vector<int> pad_small_side(kDimSize, 0);
-  std::vector<int> pad_large_side(kDimSize, 0);
+  std::vector<int64_t> in(kKernelDimSize, 0);
+  std::vector<int64_t> out(kKernelDimSize, 0);
+  std::vector<int> pad_small_side(kKernelDimSize, 0);
+  std::vector<int> pad_large_side(kKernelDimSize, 0);
 
-  for (size_t i = 0; i < kDimSize; ++i) {
+  for (size_t i = 0; i < kKernelDimSize; ++i) {
     in[i] = (data_format == "channels_first")
                 ? (in_blob_desc->shape().At(2 + i))
                 : (in_blob_desc->shape().At(1 + i));
@@ -80,8 +80,9 @@ CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
   }
 
   CudaCheck(cudnnSetConvolutionNdDescriptor(
-      val_, 5, pad_large_side.data(), strides.data(), dilation_rate.data(),
-      CUDNN_CROSS_CORRELATION, GetCudnnDataType(in_blob_desc->data_type())));
+      val_, in_blob_desc->shape().NumAxes(), pad_large_side.data(),
+      strides.data(), dilation_rate.data(), CUDNN_CROSS_CORRELATION,
+      GetCudnnDataType(in_blob_desc->data_type())));
 }
 #endif  // WITH_CUDA
 
@@ -105,6 +106,7 @@ void ConvOp::InitFromOpConf() {
   if (padding != "same" && padding != "valid") {
     LOG(FATAL) << "Invalid padding method in " << op_name();
   }
+  SetStringInCustomizedConf("padding", padding);
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
@@ -126,7 +128,7 @@ void ConvOp::InferBlobDescs(
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), 5);
+  CHECK_EQ(in_blob_desc->shape().NumAxes(), KernelDimSize() + 2);
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
 
   // out
@@ -161,11 +163,11 @@ void ConvOp::InferBlobDescs(
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 
   // weight
-  std::vector<int64_t> weight_shape = {filters, in_blob_desc->shape().At(1)};
+  std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
+  weight_shape[0] = filters;
   for (size_t i = 0; i < KernelDimSize(); ++i) {
-    weight_shape.insert(
-        weight_shape.begin() + offset + i,
-        GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i));
+    weight_shape[offset + i] =
+        GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
   BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
   weight_blob_desc->mut_shape() = Shape(weight_shape);
@@ -264,15 +266,14 @@ size_t ConvOp::InferCudnnWorkspaceSize(
 
   DataType data_type = in_blob_desc->data_type();
 
-  std::vector<int32_t> in_stride(KernelDimSize(), 1);
-  std::vector<int32_t> out_stride(KernelDimSize(), 1);
+  std::vector<int32_t> stride_of_in_tensor(KernelDimSize(), 1);
+  std::vector<int32_t> stride_of_out_tensor(KernelDimSize(), 1);
   for (size_t i = KernelDimSize() - 1; i > 0; --i) {
     for (size_t j = KernelDimSize() - 2; j >= 0; --j) {
-      in_stride[j] *= in_blob_desc->shape().At(i);
-      out_stride[j] *= out_blob_desc->shape().At(i);
+      stride_of_in_tensor[j] *= in_blob_desc->shape().At(i);
+      stride_of_out_tensor[j] *= out_blob_desc->shape().At(i);
     }
   }
-
   std::vector<int32_t> in_dim(KernelDimSize(), 0);
   std::vector<int32_t> out_dim(KernelDimSize(), 0);
   for (size_t i = 0; i < KernelDimSize(); ++i) {
@@ -280,8 +281,8 @@ size_t ConvOp::InferCudnnWorkspaceSize(
     out_dim[i] = out_blob_desc->shape().At(i);
   }
 
-  CudnnTensorDesc in_desc(data_type, in_dim, in_stride);
-  CudnnTensorDesc out_desc(data_type, out_dim, out_stride);
+  CudnnTensorDesc in_desc(data_type, in_dim, stride_of_in_tensor);
+  CudnnTensorDesc out_desc(data_type, out_dim, stride_of_out_tensor);
   CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
                               GetStringFromCustomizedConf("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate, strides,
