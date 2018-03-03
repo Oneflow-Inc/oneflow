@@ -21,6 +21,20 @@ using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
 void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
+void ModifyOpLbn4BnInChainNode(HashMap<std::string, std::string>& olbn2ilbn,
+                               ChainNode* chain_node) {
+  for (auto op : chain_node->op_vec()) {
+    for (const std::string& ibn : op->input_bns()) {
+      const std::string& lbn = op->Lbn4BnInOp(ibn);
+      auto olbn2ilbn_it = olbn2ilbn.find(lbn);
+      if (olbn2ilbn_it == olbn2ilbn.end()) { continue; }
+      Operator* mut_op = const_cast<Operator*>(op.get());
+      mut_op->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
+      olbn2ilbn.erase(olbn2ilbn_it);
+    }
+  }
+}
+
 void InitChains(std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
@@ -213,6 +227,7 @@ ChainGraph::ChainGraph(bool is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
   }
+  RemoveReductantCloneOp();
   BuildModelStruct(is_train, chain2first_shared);
   BuildRecurrentStruct();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
@@ -437,6 +452,32 @@ void ChainGraph::BuildRecurrentStruct() {
   ForEachNode([&](ChainNode* chain_node) {
     if (chain_node->HasSoleRecurrentOp()) {
       Connect(chain_node, NewEdge(), chain_node);
+    }
+  });
+}
+
+void ChainGraph::RemoveReductantCloneOp() {
+  TopoForEachNode([&](ChainNode* chain_node) {
+    HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
+    std::vector<std::shared_ptr<const Operator>> clone_ops;
+    auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
+    if (fw_chain_node == nullptr) { return; }
+    for (auto op : fw_chain_node->op_vec()) {
+      if (!op->IsCloneOp()) { continue; }
+      clone_ops.push_back(op);
+      auto ilbn = op->Lbn4BnInOp(op->SoleIbn());
+      for (auto obn : op->output_bns()) {
+        olbn2ilbn_in_clone_op.insert({op->Lbn4BnInOp(obn), ilbn});
+      }
+    }
+    ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, chain_node);
+    if (olbn2ilbn_in_clone_op.empty()) { return; }
+    fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* child_chain_node) {
+      ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, child_chain_node);
+    });
+    for (auto clone_op : clone_ops) {
+      const_cast<std::vector<std::string>&>(clone_op->input_bns()).clear();
+      const_cast<std::vector<std::string>&>(clone_op->output_bns()).clear();
     }
   });
 }
