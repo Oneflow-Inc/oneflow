@@ -14,6 +14,7 @@ class SparseCrossEntropyLossOp final : public LossOp {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
+  LossKernelConf* GetMutLossKernelConf(KernelConf*) const override;
 };
 
 }  // namespace oneflow

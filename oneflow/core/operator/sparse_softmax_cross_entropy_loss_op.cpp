@@ -10,6 +10,12 @@ const PbMessage& SparseSoftmaxCrossEntropyLossOp::GetCustomizedConf() const {
   return op_conf().sparse_softmax_cross_entropy_loss_conf();
 }
 
+LossKernelConf* SparseSoftmaxCrossEntropyLossOp::GetMutLossKernelConf(
+    KernelConf* kernel_conf) const {
+  return kernel_conf->mutable_sparse_softmax_cross_entropy_loss_conf()
+      ->mutable_loss_conf();
+}
+
 void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

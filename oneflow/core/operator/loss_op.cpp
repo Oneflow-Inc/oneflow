@@ -17,7 +17,7 @@ void LossOp::InitFromOpConf() {
 void LossOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  auto conf = kernel_conf->mutable_loss_conf();
+  LossKernelConf* conf = GetMutLossKernelConf(kernel_conf);
   conf->set_prediction_type(GetBlobDesc4BnInOp("prediction")->data_type());
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
 }
