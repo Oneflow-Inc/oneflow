@@ -106,16 +106,14 @@ class KernelIf : public Kernel {
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF_TYPE
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedOpConf(
+  const PbRf<int32_t>& GetInt32PbRfFromCustomizedOpConf(
       const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedOpConf(), field_name);
+    return GetPbRfFromPbMessage<int32_t>(GetCustomizedOpConf(), field_name);
   }
 
-  template<typename T>
-  const PbRf<T>& GetRbRfFromCustomizedKernelConf(
+  const PbRf<int32_t>& GetInt32RbRfFromCustomizedKernelConf(
       const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedKernelConf(), field_name);
+    return GetPbRfFromPbMessage<int32_t>(GetCustomizedKernelConf(), field_name);
   }
 
   virtual void ForwardDataId(

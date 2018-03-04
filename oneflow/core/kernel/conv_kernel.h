@@ -3,6 +3,7 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/operator/conv_op.h"
+#include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
 
@@ -67,6 +68,7 @@ class CudnnConvKernel final : public ConvKernel<DeviceType::kGPU, T> {
   std::unique_ptr<CudnnTensorDesc> out_desc_;
   std::unique_ptr<CudnnFilterDesc> filter_desc_;
   std::unique_ptr<CudnnConvDesc> conv_desc_;
+  std::unique_ptr<CudnnTensorDesc> bias_desc_;
 };
 #endif  // WITH_CUDA
 

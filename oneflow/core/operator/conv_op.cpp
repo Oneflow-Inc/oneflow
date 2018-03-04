@@ -11,14 +11,14 @@ CudnnConvDesc::~CudnnConvDesc() {
   CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
 }
 
-CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc,
+CudnnConvDesc::CudnnConvDesc(const DataType& data_type,
+                             const Shape& in_blob_shape,
                              const int kernel_dim_size,
-                             const std::vector<int>& dilation_rate,
-                             const std::vector<int>& strides,
-                             const std::vector<int>& kernel_size,
+                             const int* dilation_rate, const int* strides,
+                             const int* kernel_size,
                              const std::string& data_format,
                              const std::string& padding) {
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), kernel_dim_size + 2);
+  CHECK_EQ(in_blob_shape.NumAxes(), kernel_dim_size + 2);
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
   std::vector<int64_t> in(kernel_dim_size, 0);
   std::vector<int64_t> out(kernel_dim_size, 0);
@@ -26,18 +26,17 @@ CudnnConvDesc::CudnnConvDesc(const BlobDesc* in_blob_desc,
   std::vector<int> pad_large_side(kernel_dim_size, 0);
 
   for (size_t i = 0; i < kernel_dim_size; ++i) {
-    in[i] = (data_format == "channels_first")
-                ? (in_blob_desc->shape().At(2 + i))
-                : (in_blob_desc->shape().At(1 + i));
+    in[i] = (data_format == "channels_first") ? (in_blob_shape.At(2 + i))
+                                              : (in_blob_shape.At(1 + i));
     GetWindowedOutputSize(in[i], kernel_size[i], dilation_rate[i], strides[i],
                           padding, &out[i], &pad_small_side[i],
                           &pad_large_side[i]);
   }
 
   CudaCheck(cudnnSetConvolutionNdDescriptor(
-      val_, in_blob_desc->shape().NumAxes(), pad_large_side.data(),
-      strides.data(), dilation_rate.data(), CUDNN_CROSS_CORRELATION,
-      GetCudnnDataType(in_blob_desc->data_type())));
+      val_, in_blob_shape.NumAxes(), pad_large_side.data(), strides,
+      dilation_rate, CUDNN_CROSS_CORRELATION,
+      GetCudnnDataType(data_type)));
 }
 #endif  // WITH_CUDA
 
@@ -204,16 +203,6 @@ size_t ConvOp::InferCudnnWorkspaceSize(
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
-  std::vector<int32_t> dilation_rate(KernelDimSize(), 0);
-  std::vector<int32_t> strides(KernelDimSize(), 0);
-  std::vector<int32_t> kernel_size(KernelDimSize(), 0);
-  for (size_t i = 0; i < KernelDimSize(); ++i) {
-    dilation_rate[i] =
-        GetPbRfFromCustomizedConf<int32_t>("dilation_rate").Get(i);
-    strides[i] = GetPbRfFromCustomizedConf<int32_t>("strides").Get(i);
-    kernel_size[i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
-  }
-
   DataType data_type = in_blob_desc->data_type();
 
   std::vector<int32_t> stride_of_in_tensor(KernelDimSize(), 1);
@@ -235,10 +224,13 @@ size_t ConvOp::InferCudnnWorkspaceSize(
   CudnnTensorDesc out_desc(data_type, out_dim, stride_of_out_tensor);
   CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
                               GetStringFromCustomizedConf("data_format"));
-  CudnnConvDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate, strides,
-                          kernel_size,
-                          GetStringFromCustomizedConf("data_format"),
-                          GetStringFromCustomizedConf("padding"));
+  CudnnConvDesc conv_desc(
+      in_blob_desc, KernelDimSize(),
+      GetPbRfFromCustomizedConf<int32_t>("dilation_rate").data(),
+      GetPbRfFromCustomizedConf<int32_t>("strides").data(),
+      GetPbRfFromCustomizedConf<int32_t>("kernel_size").data(),
+      GetStringFromCustomizedConf("data_format"),
+      GetStringFromCustomizedConf("padding"));
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
   cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;

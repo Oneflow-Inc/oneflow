@@ -65,18 +65,18 @@ void ConvKernel<device_type, T>::InitModelBlobsWithDir(
 template<DeviceType device_type, typename T>
 const PbMessage& ConvKernel<device_type, T>::GetCustomizedOpConf() const {}
 
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1dConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2dConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2DConf, conv_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3dConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3DConf, conv_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1dConf, ConvKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2dConf, ConvKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3dConf, ConvKernel,
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

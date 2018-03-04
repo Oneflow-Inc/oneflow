@@ -13,10 +13,9 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const BlobDesc* in_blob_desc, const int kernel_dim_size,
-                const std::vector<int>& dilation_rate,
-                const std::vector<int>& strides,
-                const std::vector<int>& kernel_size,
+  CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
+                const int kernel_dim_size, const int* dilation_rate,
+                const int* strides, const int* kernel_size,
                 const std::string& data_format, const std::string& padding);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
