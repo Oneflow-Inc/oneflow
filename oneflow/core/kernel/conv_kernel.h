@@ -30,7 +30,10 @@ class ConvKernel : public KernelIf<device_type> {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  const PbMessage& GetCustromizedOpConf() const;
+  const PbMessage& GetCustromizedOpConf() const override;
+  const PbMessage& GetCustromizedKernelConf() const override {
+    return kernel_conf().conv_conf();
+  }
 };
 
 #ifdef WITH_CUDA

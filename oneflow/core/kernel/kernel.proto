@@ -9,12 +9,14 @@ import "oneflow/core/job/resource.proto";
 message ConvKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
-  required int32 kernel_dim_size = 3;
-  repeated int32 pad_small_side = 4;
-  repeated int32 pad_large_side = 5;
-  optional int32 cudnn_fwd_algo = 6 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+  required ShapeProto kernel = 3;
+  optional ShapeProto bias = 4;
+  required int32 kernel_dim_size = 5;
+  repeated int32 pad_small_side = 6;
+  repeated int32 pad_large_side = 7;
+  optional int32 cudnn_fwd_algo = 8 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 9 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 10 [default = -1];
 }
 
 message MultinomialLogisticLossKernelConf { 

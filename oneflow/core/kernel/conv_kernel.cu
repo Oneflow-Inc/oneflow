@@ -6,14 +6,27 @@ namespace oneflow {
 
 template<typename T>
 void CudnnConvKernel<T>::VirtualKernelInit(const ParallelContext*) {
-  // TODO()
-  in_desc_ = new CudnnTensorDesc();
-  out_desc_ = new CudnnTensorDesc();
-  filter_desc_ = new CudnnFilterDesc();
-  conv_desc_ = new CudnnConvDesc();
+  const int kernel_dim_size = GetInt32FromCustomizedKernelConf("kernel_dim_size"); 
+
+  in_desc_ = new CudnnTensorDesc(
+      CudnnDataType<T>::val, GetCustomizedKernelConf().in());
+  out_desc_ = new CudnnTensorDesc(
+      CudnnDataType<T>::val, GetCustomizedKernelConf().out());
+  filter_desc_ = new CudnnFilterDesc(
+      CudnnDataType<T>::val, GetCustomizedKernelConf.kernel(),
+      GetStringFromCustomizedOpConf("data_format"));
+  conv_desc_ = new CudnnConvDesc(
+      CudnnDataType<T>::val,
+      GetInt32FromCustomizedKernelConf("kernel_dim_size"),
+      GetPbRfFromCustomizedOpConf("dilation_rate").data(),
+      GetPbRfFromCustomizedOpConf("strides").data(),
+      GetPbRfFromCustomizedOpConf("kernel_size").data(),
+      GetStringFromCustomizedOpConf("data_format"),
+      GetStringFromCustomizedOpConf("padding"));
 
   if (GetBoolFromPbMessage(GetCustomizedOpConf(), "use_bias")) {
-    bias_desc_ = new CudnnTensorDesc();
+    bias_desc_ = new CudnnTensorDesc(
+        CudnnDataType<T>::val, GetCustomizedKernelConf().bias());
   }
 }
 
