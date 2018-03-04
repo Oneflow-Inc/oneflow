@@ -13,7 +13,7 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const BlobDesc* in_blob_desc, const int kDimSize,
+  CudnnConvDesc(const BlobDesc* in_blob_desc, const int kernel_dim_size,
                 const std::vector<int>& dilation_rate,
                 const std::vector<int>& strides,
                 const std::vector<int>& kernel_size,
@@ -30,7 +30,7 @@ class ConvOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvOp);
   ConvOp() = default;
-  ~ConvOp() = default;
+  virtual ~ConvOp() = default;
 
   void InitFromOpConf() override;
 
@@ -49,7 +49,7 @@ class ConvOp : public Operator {
  protected:
   PbMessage* MutableCustomizedKernelConf(
       KernelConf* kernel_conf) const override {
-    return kernel_conf->mutable_conv_3d_conf();
+    return kernel_conf->mutable_conv_conf();
   }
   virtual int32_t KernelDimSize() const = 0;
 #ifdef WITH_CUDA

@@ -60,8 +60,7 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
     UNIMPLEMENTED();
   }
 
-  std::vector<int> dim(shape.NumAxes(), 0);
-  for (size_t i = 0; i < shape.NumAxes(); ++i) { dim[i] = shape.At(i); }
+  std::vector<int> dim(shape.dim_vec().begin(), shape.dim_vec().end());
   CudaCheck(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type),
                                        cudnn_data_format, dim.size(),
                                        dim.data()));

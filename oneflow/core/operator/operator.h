@@ -198,6 +198,8 @@ class Operator {
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
 
+  void StrFieldTolower(const std::string& field_name);
+
  private:
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;
 
