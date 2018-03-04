@@ -37,7 +37,7 @@ void ForEachStreamCalcTimePerAct(const std::list<ActEvent>& act_events,
   HashMap<int64_t, std::unordered_set<int64_t>> stream_id2act_ids;
   for (const ActEvent& act_event : act_events) {
     auto stream_id = act_event.work_stream_id();
-    stream_id2time[stream_id] += ActNode::GetDuration(act_event);
+    stream_id2time[stream_id] += Duration4ActEvent(act_event);
     stream_id2act_ids[stream_id].insert(act_event.act_id());
   }
   for (const auto& pair : stream_id2time) {

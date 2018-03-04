@@ -17,6 +17,10 @@ class ActEdge final : public Edge<ActNode, ActEdge> {
   ~ActEdge() = default;
 };
 
+inline double Duration4ActEvent(const ActEvent& act_event) {
+  return act_event.stop_time() - act_event.start_time();
+}
+
 class ActNode final : public Node<ActNode, ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActNode);
@@ -27,14 +31,10 @@ class ActNode final : public Node<ActNode, ActEdge> {
   void ForEachProducedRegstDescId(
       const std::function<void(int64_t)>& Handler) const;
 
-  static double GetDuration(const ActEvent& act_event) {
-    return act_event.stop_time() - act_event.start_time();
-  }
-
   // Getters
   int64_t actor_id() const { return act_event_->actor_id(); }
   int64_t act_id() const { return act_event_->act_id(); }
-  double Duration() const { return GetDuration(*act_event_); }
+  double Duration() const { return Duration4ActEvent(*act_event_); }
   const ActEvent& act_event() const { return *act_event_; }
   TaskType task_type() const { return task_proto_->task_type(); }
   std::string VisualStr() const override;
