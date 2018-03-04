@@ -19,14 +19,17 @@ message ConvKernelConf {
   optional int32 cudnn_bwd_data_algo = 10 [default = -1];
 }
 
-message MultinomialLogisticLossKernelConf { 
+message LossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
 
-message SoftmaxLossKernelConf { 
-  required DataType prediction_type = 1;
-  required DataType label_type = 2;
+message SparseSoftmaxCrossEntropyLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
+message SparseCrossEntropyLossKernelConf {
+  required LossKernelConf loss_conf = 1;
 }
 
 message Pooling3DKernelConf {
@@ -80,9 +83,9 @@ message KernelConf {
   required DeviceType device_type = 16;
 
   oneof kernel_type {
-    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
+    SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
+    SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     SoftmaxKernelConf softmax_conf = 116;
-    SoftmaxLossKernelConf softmax_loss_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     ConvKernelConf conv_conf = 127;
     AveragePooling3DKernelConf average_pooling_3d_conf = 204;

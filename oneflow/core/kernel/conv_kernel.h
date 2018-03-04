@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_CONV_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/operator/conv_op.h"
 
 namespace oneflow {
 
@@ -19,20 +20,28 @@ class ConvKernel : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
+  void InitPureModelTmpBlobs(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithRandomSeed(
-      const KernelCtx&, std::mt19937 random_seed_gen,
+      DeviceCtx*, std::mt19937*,
       std::function<Blob*(const std::string&)>) const override;
   void InitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  const PbMessage& GetCustromizedOpConf() const override;
-  const PbMessage& GetCustromizedKernelConf() const override {
-    return kernel_conf().conv_conf();
+  const PbMessage& GetCustomizedOpConf() const override {
+    CHECK(this->kernel_conf().has_conv_conf());
+    switch (this->GetInt32FromCustomizedKernelConf("kernel_dim_size")) {
+      case 1: return this->op_conf().conv_1d_conf();
+      case 2: return this->op_conf().conv_2d_conf();
+      case 3: return this->op_conf().conv_3d_conf();
+      default: UNIMPLEMENTED();
+    }
+  }
+  const PbMessage& GetCustomizedKernelConf() const override {
+    return this->kernel_conf().conv_conf();
   }
 };
 
@@ -59,7 +68,7 @@ class CudnnConvKernel final : public ConvKernel<DeviceType::kGPU, T> {
   std::unique_ptr<CudnnFilterDesc> filter_desc_;
   std::unique_ptr<CudnnConvDesc> conv_desc_;
 };
-#undef  // WITH_CUDA
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
 

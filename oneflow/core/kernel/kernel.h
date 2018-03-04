@@ -8,6 +8,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -34,7 +35,7 @@ class Kernel {
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
-  virtual void InitModelTmpBlobs(
+  virtual void InitPureModelTmpBlobs(
       DeviceCtx* ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
@@ -71,6 +72,19 @@ class Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
+ private:
+  KernelConf kernel_conf_;
+};
+
+template<DeviceType device_type>
+class KernelIf : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIf);
+  virtual ~KernelIf() = default;
+
+ protected:
+  KernelIf() = default;
+
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
 
@@ -89,6 +103,9 @@ class Kernel {
                        PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
                            const PbMessage&, Message));
 
+#undef DEFINE_GET_VAL_FROM_SPECIAL_CONF_TYPE
+#undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
+
   template<typename T>
   const PbRf<T>& GetPbRfFromCustomizedOpConf(
       const std::string& field_name) const {
@@ -100,19 +117,6 @@ class Kernel {
       const std::string& field_name) const {
     return GetPbRfFromPbMessage<T>(GetCustomizedKernelConf(), field_name);
   }
-
- private:
-  KernelConf kernel_conf_;
-};
-
-template<DeviceType device_type>
-class KernelIf : public Kernel {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KernelIf);
-  virtual ~KernelIf() = default;
-
- protected:
-  KernelIf() = default;
 
   virtual void ForwardDataId(
       const KernelCtx& ctx,
@@ -163,7 +167,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
 #define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq) \
   namespace {                                                                 \
                                                                               \
-  Kernel* CreateKernel(const KernelConf& kernel_conf) {                       \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {  \
     static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
                                          (kernel_class), DEVICE_TYPE_SEQ,     \
@@ -172,7 +176,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
         GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();    \
   }                                                                           \
                                                                               \
-  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
+  COMMAND(AddKernelCreator(op_type_case, OF_PP_CAT(CreateKernel, __LINE__))); \
   }
 
 #define MAKE_CUDNN_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \

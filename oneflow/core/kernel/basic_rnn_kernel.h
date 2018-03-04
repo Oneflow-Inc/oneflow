@@ -21,8 +21,8 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelTmpBlobs(
-      DeviceCtx* ctx,
+  void InitPureModelTmpBlobs(
+      DeviceCtx*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void VirtualInitModelBlobsWithRandomSeed(
       DeviceCtx*, std::mt19937*,
