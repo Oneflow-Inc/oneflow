@@ -119,7 +119,7 @@ void ConvOp::InferBlobDescs(
   weight_blob_desc->mut_shape() = Shape(weight_shape);
 
   // bias
-  if (op_conf().conv_3d_conf().use_bias()) {
+  if (GetBoolFromCustomizedConf("use_bias")) {
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
   }
 
@@ -137,13 +137,16 @@ void ConvOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const OpContext* op_ctx,
     KernelConf* kernel_conf) const {
-  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-
-  in_blob_desc->shape().ToProto(
-      kernel_conf->mutable_conv_3d_conf()->mutable_in());
-  out_blob_desc->shape().ToProto(
-      kernel_conf->mutable_conv_3d_conf()->mutable_out());
+  GetBlobDesc4BnInOp("in")->shape().ToProto(
+      kernel_conf->mutable_conv_conf()->mutable_in());
+  GetBlobDesc4BnInOp("out")->shape().ToProto(
+      kernel_conf->mutable_conv_conf()->mutable_out());
+  GetBlobDesc4BnInOp("weight")->shape().ToProto(
+      kernel_conf->mutable_conv_conf()->mutable_weight());
+  GetBlobDesc4BnInOp("bias")->shape().ToProto(
+      kernel_conf->mutable_conv_conf()->mutable_weight());
+  SetInt32InCustomizedKernelConf(kernel_conf, "kernel_dim_size",
+                                 KernelDimSize());
 
   size_t offset = 0;
   if (GetStringFromCustomizedConf("data_format") == "channels_first") {
@@ -152,6 +155,7 @@ void ConvOp::VirtualGenKernelConf(
     offset = 1;
   }
 
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> in(KernelDimSize(), 0);
   std::vector<int64_t> out(KernelDimSize(), 0);
   std::vector<int32_t> pad_small_side(KernelDimSize(), 0);

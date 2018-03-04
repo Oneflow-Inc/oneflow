@@ -49,7 +49,7 @@ class ConvOp : public Operator {
  protected:
   PbMessage* MutableCustomizedKernelConf(
       KernelConf* kernel_conf) const override {
-    return kernel_conf->mutable_conv_3d_conf();
+    return kernel_conf->mutable_conv_conf();
   }
   virtual int32_t KernelDimSize() const = 0;
 #ifdef WITH_CUDA
