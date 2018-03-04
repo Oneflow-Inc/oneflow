@@ -10,7 +10,7 @@ class ConvKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
   ConvKernel() = default;
-  ~ConvKernel() = default;
+  virtual ~ConvKernel() = default;
 
  protected:
   void ForwardDataContent(
