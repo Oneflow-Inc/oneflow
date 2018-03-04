@@ -7,13 +7,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SigmoidKernel final : public KernelIf<device_type> {
+class SigmoidKernel final : public KernelIf<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SigmoidKernel);
   SigmoidKernel() = default;
   ~SigmoidKernel() = default;
 
  private:
+  bool NeedModelUpdate() const override { return false; }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

@@ -13,6 +13,7 @@ class ConcatKernel final : public KernelIf<device_type> {
   ~ConcatKernel() = default;
 
  private:
+  bool NeedModelUpdate() const override { return false; }
   void ConcatKernelWork(
       const KernelCtx& ctx, const std::string& obn,
       const PbRpf<std::string>& ibns,

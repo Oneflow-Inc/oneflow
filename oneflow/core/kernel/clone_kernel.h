@@ -6,13 +6,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class CloneKernel final : public KernelIf<device_type> {
+class CloneKernel final : public KernelIf<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CloneKernel);
   CloneKernel() = default;
   ~CloneKernel() = default;
 
  private:
+  bool NeedModelUpdate() const override { return false; }
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(

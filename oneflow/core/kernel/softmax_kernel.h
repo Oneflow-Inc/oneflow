@@ -6,13 +6,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SoftmaxKernel final : public KernelIf<device_type> {
+class SoftmaxKernel final : public KernelIf<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernel);
   SoftmaxKernel() = default;
   ~SoftmaxKernel() = default;
 
  private:
+  bool NeedModelUpdate() const override { return false; }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

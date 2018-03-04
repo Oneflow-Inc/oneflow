@@ -14,6 +14,7 @@ class ReshapeKernel final : public KernelIf<device_type> {
   ~ReshapeKernel() = default;
 
  private:
+  bool NeedModelUpdate() const override { return false; }
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
   void Backward(const KernelCtx&,

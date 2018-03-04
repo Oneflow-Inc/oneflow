@@ -59,55 +59,78 @@ void Kernel::Backward(
   BackwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+  if (NeedModelUpdate() && JobDesc::Singleton()->L2()) {
+    OtherTaskInBackward(ctx, BnInOp2Blob);
+  }
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardDataId(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
             kernel_conf().output_bns(), &Blob::CopyDataIdFrom);
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::ForwardColNum(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
             kernel_conf().output_bns(), &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardDataId(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::BackwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::BackwardColNum(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
             kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyDataId(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::OtherTaskInBackward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  L2Regularization(ctx, BnInOp2Blob);
+}
+
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::L2Regularization(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const std::string& mbn : kernel_conf().model_bns()) {
+    const Blob* model_blob = BnInOp2Blob(mbn);
+    KernelUtil<device_type, T>::Axpy(
+        ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()),
+        JobDesc::Singleton()->L2(), model_blob->dptr<T>(), 1,
+        BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<T>(), 1);
+  }
+}
+
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::CopyDataId(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
   CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyDataIdFrom);
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyColNum(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::CopyColNum(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
   CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyField(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::CopyField(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns,
     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
@@ -116,8 +139,8 @@ void KernelIf<device_type>::CopyField(
   }
 }
 
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyField(
+template<DeviceType device_type, typename T>
+void KernelIf<device_type, T>::CopyField(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
@@ -163,5 +186,11 @@ std::unique_ptr<const Kernel> ConstructKernel(
 #define INSTANTIATE_KERNEL_IF(x) template class KernelIf<x>;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
+
+#define INSTANTIATE_KERNEL_IF(device_type, data_type_pair) \
+  template class KernelIf<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ,
+                                 ARITHMETIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -14,6 +14,7 @@ class TanHKernel final : public KernelIf<device_type> {
   ~TanHKernel() = default;
 
  private:
+  bool NeedModelUpdate() const override { return false; }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

@@ -56,7 +56,7 @@ class Pooling3DCtx final {
 };
 
 template<DeviceType device_type, typename T>
-class PoolingKernelIf : public KernelIf<device_type> {
+class PoolingKernelIf : public KernelIf<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PoolingKernelIf);
   PoolingKernelIf() = default;
@@ -77,6 +77,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
                                            ));
   }
   virtual const Pooling3DKernelConf& GetPooling3DKernelConf() const = 0;
+  bool NeedModelUpdate() const override { return false; }
   void ForwardDataContent(
       const KernelCtx& kernel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override {

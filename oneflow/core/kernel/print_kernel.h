@@ -13,6 +13,7 @@ class PrintKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
+  bool NeedModelUpdate() const override { return false; }
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
