@@ -214,8 +214,8 @@ size_t ConvOp::InferCudnnWorkspaceSize(
 
   std::vector<int32_t> stride_of_in_tensor(KernelDimSize(), 1);
   std::vector<int32_t> stride_of_out_tensor(KernelDimSize(), 1);
-  for (size_t i = KernelDimSize() - 1; i > 0; --i) {
-    for (size_t j = KernelDimSize() - 2; j >= 0; --j) {
+  for (int32_t i = KernelDimSize() - 1; i > 0; --i) {
+    for (int32_t j = KernelDimSize() - 2; j >= 0; --j) {
       stride_of_in_tensor[j] *= in_blob_desc->shape().At(i);
       stride_of_out_tensor[j] *= out_blob_desc->shape().At(i);
     }
