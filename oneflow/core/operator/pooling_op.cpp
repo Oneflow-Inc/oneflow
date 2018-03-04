@@ -41,9 +41,8 @@ void PoolingOp::InferBlobDescs(
                   GetStringFromCustomizedConf("padding"), &out, nullptr);
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+  *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_shape.At(1), out);
-  out_blob_desc->set_data_type(in_blob_desc->data_type());
-  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {
@@ -141,9 +140,11 @@ void PoolingOp::VirtualGenKernelConf(
     Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
         .ToProto(pooling_conf->mutable_out());
   } else if (data_format == "channels_last") {
-    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2), in_shape.At(1)})
+    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2),
+           in_shape.At(in_shape.NumAxes() - 1)})
         .ToProto(pooling_conf->mutable_in());
-    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2), in_shape.At(1)})
+    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2),
+           in_shape.At(in_shape.NumAxes() - 1)})
         .ToProto(pooling_conf->mutable_out());
   } else {
     UNIMPLEMENTED();

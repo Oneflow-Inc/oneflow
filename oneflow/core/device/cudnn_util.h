@@ -40,8 +40,8 @@ class CudnnTensorDesc final {
 
   CudnnTensorDesc(DataType, int n, int c, int h, int w);
   CudnnTensorDesc(DataType, const Shape&);
-  CudnnTensorDesc(DataType data_type, const std::vector<int>& dim,
-                  const std::vector<int>& stride);
+  CudnnTensorDesc(DataType data_type, int dims, const int* dim,
+                  const int* stride);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 

@@ -216,23 +216,22 @@ size_t ConvOp::InferCudnnWorkspaceSize(
 
   DataType data_type = in_blob_desc->data_type();
 
-  std::vector<int32_t> stride_of_in_tensor(KernelDimSize(), 1);
-  std::vector<int32_t> stride_of_out_tensor(KernelDimSize(), 1);
-  for (int32_t i = KernelDimSize() - 1; i > 0; --i) {
-    for (int32_t j = KernelDimSize() - 2; j >= 0; --j) {
+  std::vector<int32_t> stride_of_in_tensor(KernelDimSize() + 2, 1);
+  std::vector<int32_t> stride_of_out_tensor(KernelDimSize() + 2, 1);
+  for (int32_t i = KernelDimSize() + 2 - 1; i > 0; --i) {
+    for (int32_t j = KernelDimSize() + 2 - 2; j >= 0; --j) {
       stride_of_in_tensor[j] *= in_blob_desc->shape().At(i);
       stride_of_out_tensor[j] *= out_blob_desc->shape().At(i);
     }
   }
-  std::vector<int32_t> in_dim(KernelDimSize(), 0);
-  std::vector<int32_t> out_dim(KernelDimSize(), 0);
-  for (size_t i = 0; i < KernelDimSize(); ++i) {
-    in_dim[i] = in_blob_desc->shape().At(i);
-    out_dim[i] = out_blob_desc->shape().At(i);
-  }
-
-  CudnnTensorDesc in_desc(data_type, in_dim, stride_of_in_tensor);
-  CudnnTensorDesc out_desc(data_type, out_dim, stride_of_out_tensor);
+  std::vector<int32_t> in_dim(in_blob_desc->shape().dim_vec().begin(),
+                              in_blob_desc->shape().dim_vec().end());
+  std::vector<int32_t> out_dim(out_blob_desc->shape().dim_vec().begin(),
+                               out_blob_desc->shape().dim_vec().end());
+  CudnnTensorDesc in_desc(data_type, in_dim.size(), in_dim.data(),
+                          stride_of_in_tensor.data());
+  CudnnTensorDesc out_desc(data_type, out_dim.size(), out_dim.data(),
+                           stride_of_out_tensor.data());
   CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
                               GetStringFromCustomizedConf("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc, KernelDimSize(), dilation_rate, strides,

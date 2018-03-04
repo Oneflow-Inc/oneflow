@@ -8,7 +8,7 @@ void RecurrentKernel<device_type, T>::VirtualKernelInit(
     const ParallelContext*) {
   auto& input_bns = this->kernel_conf().input_bns();
   need_external_h0_ =
-      std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+      std::find(input_bns.begin(), input_bns.end(), "h0") != input_bns.end();
 }
 
 template<DeviceType device_type, typename T>
@@ -59,7 +59,7 @@ template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (NeedExternalH0()) {
+  if (!NeedExternalH0()) {
     const InitializerConf* init_hidden_initializer = nullptr;
     if (HasInitHiddenInitializer()) {
       init_hidden_initializer =
