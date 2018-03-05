@@ -14,7 +14,7 @@ class CudnnConvDesc final {
   ~CudnnConvDesc();
 
   CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                const int kernel_dim_size, const int* dilation_rate,
+                const int kernel_dim, const int* dilation_rate,
                 const int* strides, const int* kernel_size,
                 const std::string& data_format, const std::string& padding);
 
@@ -67,7 +67,7 @@ class ConvOp : public Operator {
 
   int32_t KernelDim() const { return NDims; }
 
-  const size_t& offset() const {
+  const size_t offset() const {
     if (GetStringFromCustomizedConf("data_format") == "channels_first") {
       return 2;
     } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {

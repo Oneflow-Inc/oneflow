@@ -11,12 +11,8 @@ class Conv3DOp final : public ConvOp<3> {
   Conv3DOp() = default;
   ~Conv3DOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().conv_3d_conf();
-  }
+  const PbMessage& GetCustomizedConf() const override;
 };
-
-REGISTER_OP(OperatorConf::kConv3DConf, Conv3DOp);
 
 }  // namespace oneflow
 

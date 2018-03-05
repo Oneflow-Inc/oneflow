@@ -6,26 +6,24 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
-
 CudnnConvDesc::~CudnnConvDesc() {
   CudaCheck(cudnnDestroyConvolutionDescriptor(val_));
 }
 
 CudnnConvDesc::CudnnConvDesc(const DataType& data_type,
-                             const Shape& in_blob_shape,
-                             const int kernel_dim_size,
+                             const Shape& in_blob_shape, const int kernel_dim,
                              const int* dilation_rate, const int* strides,
                              const int* kernel_size,
                              const std::string& data_format,
                              const std::string& padding) {
-  CHECK_EQ(in_blob_shape.NumAxes(), kernel_dim_size + 2);
+  CHECK_EQ(in_blob_shape.NumAxes(), kernel_dim + 2);
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
-  std::vector<int64_t> in(kernel_dim_size, 0);
-  std::vector<int64_t> out(kernel_dim_size, 0);
-  std::vector<int> pad_small_side(kernel_dim_size, 0);
-  std::vector<int> pad_large_side(kernel_dim_size, 0);
+  std::vector<int64_t> in(kernel_dim, 0);
+  std::vector<int64_t> out(kernel_dim, 0);
+  std::vector<int> pad_small_side(kernel_dim, 0);
+  std::vector<int> pad_large_side(kernel_dim, 0);
 
-  for (size_t i = 0; i < kernel_dim_size; ++i) {
+  for (size_t i = 0; i < kernel_dim; ++i) {
     in[i] = (data_format == "channels_first") ? (in_blob_shape.At(2 + i))
                                               : (in_blob_shape.At(1 + i));
     GetWindowedOutputSize(in[i], kernel_size[i], dilation_rate[i], strides[i],
@@ -246,5 +244,9 @@ size_t ConvOp<NDim>::InferCudnnWorkspaceSize(
       {fwd_workspace_size, bwd_filter_workspace_size, bwd_data_workspace_size});
 }
 #endif  // WITH_CUDA
+
+template class ConvOp<1>;
+template class ConvOp<2>;
+template class ConvOp<3>;
 
 }  // namespace oneflow

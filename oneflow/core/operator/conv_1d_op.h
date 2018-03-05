@@ -11,12 +11,8 @@ class Conv1DOp final : public ConvOp<1> {
   Conv1DOp() = default;
   ~Conv1DOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().conv_1d_conf();
-  }
+  const PbMessage& GetCustomizedConf() const override;
 };
-
-REGISTER_OP(OperatorConf::kConv1DConf, Conv1DOp);
 
 }  // namespace oneflow
 
