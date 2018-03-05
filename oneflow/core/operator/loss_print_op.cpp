@@ -5,6 +5,7 @@ namespace oneflow {
 void LossPrintOp::InitFromOpConf() {
   CHECK(op_conf().has_loss_print_conf());
   EnrollInputBn("loss_acc");
+  EnrollInputBn("reduction_acc");
 }
 
 const PbMessage& LossPrintOp::GetCustomizedConf() const {

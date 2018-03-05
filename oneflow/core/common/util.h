@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
+#include "oneflow/core/common/preprocessor.h"
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
@@ -61,12 +63,12 @@ namespace oneflow {
     }                                                              \
   }
 
-#define COMMAND(...)            \
-  namespace {                   \
-  struct CommandT {             \
-    CommandT() { __VA_ARGS__; } \
-  };                            \
-  CommandT g_command_var;       \
+#define COMMAND(...)                                                \
+  namespace {                                                       \
+  struct OF_PP_CAT(CommandT, __LINE__) {                            \
+    OF_PP_CAT(CommandT, __LINE__)() { __VA_ARGS__; }                \
+  };                                                                \
+  OF_PP_CAT(CommandT, __LINE__) OF_PP_CAT(g_command_var, __LINE__); \
   }
 
 template<typename T>
