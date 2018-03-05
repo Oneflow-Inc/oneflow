@@ -73,10 +73,10 @@ void EltwiseKernel<device_type, T>::BackwardDataContent(
         for (int idx = 0; idx < count; ++idx) {
           std::string ibn = "in_" + std::to_string(i) + "_diff";
           Blob* in_diff_blob = BnInOp2Blob(ibn);
+          Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                      in_diff_blob->ByteSizeOfDataContentField());
           if (i == mask_blob->dptr<T>()[idx]) {
             in_diff_blob->mut_dptr<T>()[idx] = out_diff_blob->dptr<T>()[idx];
-          } else {
-            in_diff_blob->mut_dptr<T>()[idx] = 0;
           }
         }
       }
