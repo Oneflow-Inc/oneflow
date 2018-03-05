@@ -17,12 +17,12 @@ CudnnPoolingDesc::CudnnPoolingDesc(cudnnPoolingMode_t pooling_mode, int dims,
 }
 #endif
 
-Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
+PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
 #ifdef WITH_CUDA
-                           ,
-                           cudnnPoolingMode_t pooling_mode, DataType type
+                       ,
+                       cudnnPoolingMode_t pooling_mode, DataType type
 #endif  // WITH_CUDA
-                           )
+                       )
     : kernel_conf_(kernel_conf) {
 #ifdef WITH_CUDA
   pooling_mode_ = pooling_mode;
@@ -61,20 +61,20 @@ Pooling3DCtx::Pooling3DCtx(const Pooling3DKernelConf& kernel_conf
 }
 
 #ifdef WITH_CUDA
-const cudnnTensorDescriptor_t& Pooling3DCtx::cudnn_in_tensor_desc() const {
+const cudnnTensorDescriptor_t& PoolingCtx::cudnn_in_tensor_desc() const {
   return in_desc_->Get();
 }
 
-const cudnnTensorDescriptor_t& Pooling3DCtx::cudnn_out_tensor_desc() const {
+const cudnnTensorDescriptor_t& PoolingCtx::cudnn_out_tensor_desc() const {
   return out_desc_->Get();
 }
 
-const cudnnPoolingDescriptor_t& Pooling3DCtx::cudnn_pooling_desc() const {
+const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
   return pooling_desc_->Get();
 }
 #endif  // WITH_CUDA
 
-std::vector<int> Pooling3DCtx::GetStdVecFromShapeInKernelConf(
+std::vector<int> PoolingCtx::GetStdVecFromShapeInKernelConf(
     const std::string& field_name) const {
   const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
       GetMessageFromPbMessage(kernel_conf_, field_name), "dim");
@@ -84,7 +84,7 @@ std::vector<int> Pooling3DCtx::GetStdVecFromShapeInKernelConf(
 
 template<typename T>
 void PoolingKernel<DeviceType::kCPU, T>::PoolingForward(
-    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+    const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
     const Blob* in_blob, Blob* out_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
   if (data_format == "channels_first") {
@@ -98,7 +98,7 @@ void PoolingKernel<DeviceType::kCPU, T>::PoolingForward(
 
 template<typename T>
 void PoolingKernel<DeviceType::kCPU, T>::PoolingBackward(
-    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+    const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
     const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
     Blob* in_diff_blob) const {
   const std::string& data_format = pooling_ctx.kernel_conf().data_format();
@@ -114,7 +114,7 @@ void PoolingKernel<DeviceType::kCPU, T>::PoolingBackward(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardNCDHW(const Pooling3DCtx& ctx,
+void PoolingKernel<DeviceType::kCPU, T>::ForwardNCDHW(const PoolingCtx& ctx,
                                                       const Blob* in_blob,
                                                       Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
@@ -165,7 +165,7 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardNCDHW(const Pooling3DCtx& ctx,
 
 template<typename T>
 void PoolingKernel<DeviceType::kCPU, T>::BackwardNCDHW(
-    const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
+    const PoolingCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
@@ -218,7 +218,7 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardNCDHW(
 }
 
 template<typename T>
-void PoolingKernel<DeviceType::kCPU, T>::ForwardNDHWC(const Pooling3DCtx& ctx,
+void PoolingKernel<DeviceType::kCPU, T>::ForwardNDHWC(const PoolingCtx& ctx,
                                                       const Blob* in_blob,
                                                       Blob* out_blob) const {
   Shape in(ctx.kernel_conf().in());
@@ -266,7 +266,7 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardNDHWC(const Pooling3DCtx& ctx,
 
 template<typename T>
 void PoolingKernel<DeviceType::kCPU, T>::BackwardNDHWC(
-    const Pooling3DCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
+    const PoolingCtx& ctx, const Blob* out_diff_blob, const Blob* out_blob,
     const Blob* in_blob, Blob* in_diff_blob) const {
   Shape in(ctx.kernel_conf().in());
   Shape out(ctx.kernel_conf().out());
