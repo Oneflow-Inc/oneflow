@@ -89,8 +89,8 @@ message AveragePooling1DOpConf {
 
   required string padding = 3;
   required string data_format = 4 [default = "channels_last"];
-  repeated int64 pool_size = 5;
-  repeated int64 strides = 6;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
 }
 
 message MaxPooling1DOpConf {
@@ -99,8 +99,8 @@ message MaxPooling1DOpConf {
 
   required string padding = 3;
   required string data_format = 4 [default = "channels_last"];
-  repeated int64 pool_size = 5;
-  repeated int64 strides = 6;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
 }
 
 message AveragePooling2DOpConf {
@@ -109,8 +109,8 @@ message AveragePooling2DOpConf {
 
   required string padding = 3;
   required string data_format = 4 [default = "channels_last"];
-  repeated int64 pool_size = 5;
-  repeated int64 strides = 6;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
 }
 
 message MaxPooling2DOpConf {
@@ -119,8 +119,8 @@ message MaxPooling2DOpConf {
 
   required string padding = 3;
   required string data_format = 4 [default = "channels_last"];
-  repeated int64 pool_size = 5;
-  repeated int64 strides = 6;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
 }
 
 message AveragePooling3DOpConf {
@@ -129,8 +129,8 @@ message AveragePooling3DOpConf {
 
   required string padding = 3;
   required string data_format = 4 [default = "channels_last"];
-  repeated int64 pool_size = 5;
-  repeated int64 strides = 6;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
 }
 
 message MaxPooling3DOpConf {
@@ -139,8 +139,8 @@ message MaxPooling3DOpConf {
 
   required string padding = 3;
   required string data_format = 4 [default = "channels_last"];
-  repeated int64 pool_size = 5;
-  repeated int64 strides = 6;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
 }
 
 message ReluOpConf {
@@ -161,18 +161,32 @@ message TanHOpConf {
 message SoftmaxOpConf {
   required string in = 1;
   required string out = 2;
+  optional int32 axis = 3 [default = -1];
 }
 
-message SoftmaxLossOpConf {
+enum LossReductionType {
+  kSumOverOne = 0;
+  kSumOverWeight = 1;
+  kSumOverN = 2;
+  kSumOverNonZeroWeight = 3;
+}
+
+message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
+  optional LossReductionType reduction = 4 [default = kSumOverN]; 
+  optional float weight_scalar = 5 [default = 1.0];
+  optional string weight = 6;
 }
 
-message MultinomialLogisticLossOpConf {
+message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
+  optional LossReductionType reduction = 4 [default = kSumOverN]; 
+  optional float weight_scalar = 5 [default = 1.0];
+  optional string weight = 6;
 }
 
 message ConcatOpConf {
@@ -323,7 +337,7 @@ message OperatorConf {
     BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
-    MultinomialLogisticLossOpConf multinomial_logistic_loss_conf = 106;
+    SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
@@ -332,7 +346,7 @@ message OperatorConf {
     AccumulateOpConf accumulate_conf = 112;
     ConcatOpConf concat_conf = 113;
     CopyCommNetOpConf copy_comm_net_conf = 114;
-    SoftmaxLossOpConf softmax_loss_conf = 117;
+    SparseSoftmaxCrossEntropyLossOpConf sparse_softmax_cross_entropy_loss_conf = 117;
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
     ReduceSumOpConf reduce_sum_conf = 120;

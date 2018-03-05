@@ -6,36 +6,47 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
 
-message MultinomialLogisticLossKernelConf { 
+message LossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
 
-message SoftmaxLossKernelConf { 
-  required DataType prediction_type = 1;
-  required DataType label_type = 2;
+message SparseSoftmaxCrossEntropyLossKernelConf {
+  required LossKernelConf loss_conf = 1;
 }
 
-message Pooling3DKernelConf {
+message SparseCrossEntropyLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
+message PoolingKernelConf {
   required ShapeProto in= 1;
   required ShapeProto out= 2;
-  required ShapeProto padding_before = 3;
-  required ShapeProto padding_after = 4;
-  required ShapeProto pool_size = 5;
-  required ShapeProto strides = 6;
+  repeated int32 padding_before = 3;
+  repeated int32 padding_after = 4;
+  repeated int32 pool_size = 5;
+  repeated int32 strides = 6;
   required string data_format = 7;
 }
 
-message AveragePooling3DKernelConf {
-  required Pooling3DKernelConf pooling_3d_conf = 1;
+message AveragePoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
 }
 
-message MaxPooling3DKernelConf {
-  required Pooling3DKernelConf pooling_3d_conf = 1;
+message MaxPoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
 }
 
 message ReduceSumKernelConf {
   optional int32 axis = 1;
+}
+
+message SoftmaxKernelConf {
+  required int32 axis = 1;
+  required int64 transpose_rows = 2;
+  required int64 transpose_cols = 3;
+  required bool need_transpose = 4;
+  repeated int32 perm = 5;
 }
 
 message KernelConf {
@@ -59,10 +70,11 @@ message KernelConf {
   required DeviceType device_type = 16;
 
   oneof kernel_type {
-    MultinomialLogisticLossKernelConf multinomial_logistic_loss_conf = 106;
-    SoftmaxLossKernelConf softmax_loss_conf = 117;
+    SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
+    SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
+    SoftmaxKernelConf softmax_conf = 116;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    AveragePooling3DKernelConf average_pooling_3d_conf = 204;
-    MaxPooling3DKernelConf max_pooling_3d_conf = 205;
+    AveragePoolingKernelConf average_pooling_conf = 204;
+    MaxPoolingKernelConf max_pooling_conf = 205;
   }
 }

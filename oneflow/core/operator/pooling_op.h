@@ -22,7 +22,7 @@ class PoolingOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  protected:
-  virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
+  virtual PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const = 0;
   virtual int32_t GetDim() const = 0;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -30,7 +30,7 @@ class PoolingOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  private:
-  std::vector<int64_t> Get3DVecInOpConf(const std::string& field_name) const;
+  std::vector<int32_t> Get3DVecInOpConf(const std::string& field_name) const;
   int64_t GetInDim(const Shape& in_shape, uint8_t dim) const;
   void CheckPoolSizeAndStrides() const;
   Shape GetOutShape(int64_t in_n, int64_t in_c,
