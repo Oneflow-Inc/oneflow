@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/conv_kernel.h"
+#include "oneflow/core/kernel/conv_3d_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -8,9 +8,9 @@ void CudnnConvKernel<T>::VirtualKernelInit(const ParallelContext*) {
   const int kernel_dim_size = static_cast<int>(
       this->GetInt32FromCustomizedKernelConf("kernel_dim_size"));
 
-  Shape in_shape(this->kernel_conf().conv_conf().in());
-  Shape out_shape(this->kernel_conf().conv_conf().out());
-  Shape weight_shape(this->kernel_conf().conv_conf().weight());
+  Shape in_shape(this->kernel_conf().conv_3d_conf().in());
+  Shape out_shape(this->kernel_conf().conv_3d_conf().out());
+  Shape weight_shape(this->kernel_conf().conv_3d_conf().weight());
 
   std::vector<int32_t> stride_of_in_tensor(kernel_dim_size, 1);
   std::vector<int32_t> stride_of_out_tensor(kernel_dim_size, 1);
@@ -62,7 +62,7 @@ void CudnnConvKernel<T>::ForwardDataContent(
 
   cudnnConvolutionFwdAlgo_t cudnn_fwd_algo =
       static_cast<cudnnConvolutionFwdAlgo_t>(
-          this->kernel_conf().conv_conf().cudnn_fwd_algo());
+          this->kernel_conf().conv_3d_conf().cudnn_fwd_algo());
   CudaCheck(cudnnConvolutionForward(
       ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one,
       this->in_desc_->Get(), in_blob->dptr<T>(), this->filter_desc_->Get(),
@@ -106,7 +106,7 @@ void CudnnConvKernel<T>::BackwardDataContent(
 
   cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo =
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-          this->kernel_conf().conv_conf().cudnn_bwd_filter_algo());
+          this->kernel_conf().conv_3d_conf().cudnn_bwd_filter_algo());
 
   CudaCheck(cudnnConvolutionBackwardFilter(
       ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one,
@@ -125,7 +125,7 @@ void CudnnConvKernel<T>::BackwardDataContent(
 
   cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo =
       static_cast<cudnnConvolutionBwdDataAlgo_t>(
-          this->kernel_conf().conv_conf().cudnn_bwd_data_algo());
+          this->kernel_conf().conv_3d_conf().cudnn_bwd_data_algo());
 
   CudaCheck(cudnnConvolutionBackwardData(
       ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one,

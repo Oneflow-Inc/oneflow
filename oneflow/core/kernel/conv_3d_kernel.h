@@ -33,7 +33,7 @@ class ConvKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   const PbMessage& GetCustomizedOpConf() const override {
-    CHECK(this->kernel_conf().has_conv_conf());
+    CHECK(this->kernel_conf().has_conv_3d_conf());
     switch (this->GetInt32FromCustomizedKernelConf("kernel_dim_size")) {
       case 1: return this->op_conf().conv_1d_conf();
       case 2: return this->op_conf().conv_2d_conf();
@@ -42,7 +42,7 @@ class ConvKernel : public KernelIf<device_type> {
     }
   }
   const PbMessage& GetCustomizedKernelConf() const override {
-    return this->kernel_conf().conv_conf();
+    return this->kernel_conf().conv_3d_conf();
   }
 };
 

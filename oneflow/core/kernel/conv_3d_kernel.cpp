@@ -1,4 +1,4 @@
-#include "oneflow/core/kernel/conv_kernel.h"
+#include "oneflow/core/kernel/conv_3d_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -66,11 +66,11 @@ void ConvKernel<device_type, T>::InitModelBlobsWithDir(
   }
 }
 
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_3d_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2DConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2DConf, conv_3d_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3DConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3DConf, conv_3d_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,
