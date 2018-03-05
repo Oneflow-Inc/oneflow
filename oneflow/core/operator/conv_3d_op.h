@@ -14,10 +14,6 @@ class Conv3DOp final : public ConvOp<3> {
   const PbMessage& GetCustomizedConf() const override {
     return op_conf().conv_3d_conf();
   }
-
-  int32_t MaxModelSplitNum() const override {
-    return op_conf().conv_3d_conf().filters();
-  }
 };
 
 REGISTER_OP(OperatorConf::kConv3DConf, Conv3DOp);

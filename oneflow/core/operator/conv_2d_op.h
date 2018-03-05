@@ -14,10 +14,6 @@ class Conv2DOp final : public ConvOp<2> {
   const PbMessage& GetCustomizedConf() const override {
     return op_conf().conv_2d_conf();
   }
-
-  int32_t MaxModelSplitNum() const override {
-    return op_conf().conv_2d_conf().filters();
-  }
 };
 
 REGISTER_OP(OperatorConf::kConv2DConf, Conv2DOp);

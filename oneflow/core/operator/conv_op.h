@@ -61,6 +61,9 @@ class ConvOp : public Operator {
       UNIMPLEMENTED();
     }
   }
+  int32_t MaxModelSplitNum() const override {
+    return GetInt32FromCustomizedConf("filters");
+  }
 
   int32_t KernelDim() const { return NDims; }
 

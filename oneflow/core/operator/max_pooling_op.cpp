@@ -2,9 +2,9 @@
 
 namespace oneflow {
 
-Pooling3DKernelConf* MaxPoolingOp::GetMutPooling3DKernelConf(
+PoolingKernelConf* MaxPoolingOp::GetMutPoolingKernelConf(
     KernelConf* kernel_conf) const {
-  return kernel_conf->mutable_max_pooling_3d_conf()->mutable_pooling_3d_conf();
+  return kernel_conf->mutable_max_pooling_conf()->mutable_pooling_conf();
 }
 
 }  // namespace oneflow

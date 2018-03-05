@@ -122,14 +122,14 @@ void ConvOp<NDim>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const OpContext* op_ctx,
     KernelConf* kernel_conf) const {
-  GetBlobDesc4BnInOp("in")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_in());
-  GetBlobDesc4BnInOp("out")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_out());
+  auto mut_conv_conf = kernel_conf->mutable_conv_conf();
+  GetBlobDesc4BnInOp("in")->shape().ToProto(mut_conv_conf->mutable_in());
+  GetBlobDesc4BnInOp("out")->shape().ToProto(mut_conv_conf->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_weight());
-  GetBlobDesc4BnInOp("bias")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_weight());
+      mut_conv_conf->mutable_weight());
+  if (GetBoolFromCustomizedConf("use_bias")) {
+    GetBlobDesc4BnInOp("bias")->shape().ToProto(mut_conv_conf->mutable_bias());
+  }
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> in(NDim, 0);
