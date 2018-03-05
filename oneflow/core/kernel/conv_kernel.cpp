@@ -21,7 +21,7 @@ template<DeviceType device_type, typename T>
 void ConvKernel<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (GetBoolFromCustomizedOpConf("use_bias")) {
+  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::Initialize(ctx,
@@ -35,12 +35,16 @@ void ConvKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, OF_PB_POINTER_GET(GetCustomizedOpConf(), weight_initializer),
+      ctx,
+      static_cast<const InitializerConf*>(
+          &this->GetMessageFromCustomizedOpConf("weight_initializer")),
       (*random_seed_gen)(), BnInOp2Blob("weight"));
 
-  if (GetBoolFromCustomizedOpConf("use_bias")) {
+  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, OF_PB_POINTER_GET(GetCustomizedOpConf(), bias_initializer),
+        ctx,
+        static_cast<const InitializerConf*>(
+            &this->GetMessageFromCustomizedOpConf("bias_initializer")),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }
@@ -51,19 +55,16 @@ void ConvKernel<device_type, T>::InitModelBlobsWithDir(
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
-  int32_t dim_num = GetInt32FromCustomizedOpConf("filters");
+  int32_t dim_num = this->GetInt32FromCustomizedOpConf("filters");
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx, part_id, part_num, model_load_dir, weight_blob, "weight", dim_num,
       weight_blob->shape().Count(1));
-  if (GetBoolFromCustomizedOpConf("use_bias")) {
+  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
         dim_num, 1);
   }
 }
-
-template<DeviceType device_type, typename T>
-const PbMessage& ConvKernel<device_type, T>::GetCustomizedOpConf() const {}
 
 ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
