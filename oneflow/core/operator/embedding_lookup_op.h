@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_LOOKUP_OP_H_
-#define ONEFLOW_CORE_OPERATOR_LOOKUP_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_EMBEDDING_LOOKUP_OP_H_
+#define ONEFLOW_CORE_OPERATOR_EMBEDDING_LOOKUP_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class LookupOp final : public Operator {
+class EmbeddingLookupOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(LookupOp);
-  LookupOp() = default;
-  ~LookupOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(EmbeddingLookupOp);
+  EmbeddingLookupOp() = default;
+  ~EmbeddingLookupOp() = default;
 
   void InitFromOpConf() override;
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
@@ -20,7 +20,7 @@ class LookupOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
   int32_t ModelSplitAxis() const override { return 1; }
   int32_t MaxModelSplitNum() const override {
-    return op_conf().lookup_conf().units();
+    return op_conf().embedding_lookup_conf().units();
   }
 
  private:
@@ -28,4 +28,4 @@ class LookupOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_LOOKUP_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_EMBEDDING_LOOKUP_OP_H_
