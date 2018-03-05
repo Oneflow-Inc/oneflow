@@ -10,7 +10,6 @@ void EltwiseOp::InitFromOpConf() {
     EnrollInputBn(ibn);
   }
   EnrollOutputBn("out");
-  EnrollOutputBn("tmp");
   EnrollOutputBn("mask");
 }
 
