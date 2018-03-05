@@ -20,7 +20,8 @@ class Improver final {
   Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
 
  private:
-  explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
+  explicit Improver(const AvailableMemDesc& amd)
+      : amd_(amd), ii_search_threshold_(1) {}
   void MemoryLimitedAllocate(
       const ActGraph& graph, double base_ii,
       const std::function<void(int64_t, size_t)>& Handler) const;
@@ -34,15 +35,20 @@ class Improver final {
       const std::function<double(int64_t)>& Duration4RegstDescId,
       const std::function<double(int64_t)>& Ratio4RegstDescId, double ii) const;
   double BinarySearchII(
-      const std::vector<double>& search_space,
       const std::function<double(int64_t)>& Duration4RegstDescId,
       const std::function<double(int64_t)>& Ratio4RegstDescId,
-      const MemZoneRegstDescs& mz_regst_descs) const;
+      const MemZoneRegstDescs& mz_regst_descs, double ii) const;
   size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
   int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
   void MakeMemZoneRegstDescs(const Plan& plan,
                              MemZoneRegstDescs* mz2regst_desc) const;
+  double CalcMaxRegstDescDuration(
+      const std::function<double(int64_t)>& Duration4RegstDescId,
+
+      const MemZoneRegstDescs& mz_regst_descs) const;
+
   AvailableMemDesc amd_;
+  const double ii_search_threshold_;
 };
 
 }  // namespace oneflow
