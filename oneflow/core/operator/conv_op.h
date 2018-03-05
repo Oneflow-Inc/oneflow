@@ -25,6 +25,7 @@ class CudnnConvDesc final {
 };
 #endif  // WITH_CUDA
 
+template<int32_t NDims>
 class ConvOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvOp);
@@ -48,9 +49,31 @@ class ConvOp : public Operator {
  protected:
   PbMessage* MutableCustomizedKernelConf(
       KernelConf* kernel_conf) const override {
-    return kernel_conf->mutable_conv_3d_conf();
+    return kernel_conf->mutable_conv_conf();
   }
-  virtual int32_t KernelDimSize() const = 0;
+
+  int32_t ModelSplitAxis() const override {
+    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
+      return 1;
+    } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {
+      return NDims + 1;
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+
+  int32_t KernelDim() const { return NDims; }
+
+  const size_t& offset() const {
+    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
+      return 2;
+    } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {
+      return 1;
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+
 #ifdef WITH_CUDA
   size_t InferCudnnWorkspaceSize(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

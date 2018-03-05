@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class Conv2DOp final : public ConvOp {
+class Conv2DOp final : public ConvOp<2> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Conv2DOp);
   Conv2DOp() = default;
@@ -15,19 +15,9 @@ class Conv2DOp final : public ConvOp {
     return op_conf().conv_2d_conf();
   }
 
-  int32_t ModelSplitAxis() const override {
-    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
-      return 1;
-    } else {
-      return 3;
-    }
-  }
   int32_t MaxModelSplitNum() const override {
     return op_conf().conv_2d_conf().filters();
   }
-
- private:
-  int32_t KernelDimSize() const override { return 2; }
 };
 
 REGISTER_OP(OperatorConf::kConv2DConf, Conv2DOp);

@@ -56,7 +56,7 @@ class CudnnFilterDesc final {
   ~CudnnFilterDesc();
 
   CudnnFilterDesc(DataType data_type, const Shape& shape,
-                  const std::string& data_format = "channels_first");
+                  const std::string& data_format);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 
