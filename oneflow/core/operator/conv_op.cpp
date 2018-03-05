@@ -46,8 +46,7 @@ struct ConvOpCtx : public OpContext {
 };
 
 void ConvOp::InitFromOpConf() {
-  SetBoolInCustomizedConf("use_cudnn_on_gpu", true);
-  CHECK(UseCudnn());
+  CHECK_EQ(UseCudnn(), true);
 
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
@@ -74,7 +73,6 @@ void ConvOp::InferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   CHECK_EQ(in_blob_desc->shape().NumAxes(), KernelDimSize() + 2);
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
-
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetInt32FromCustomizedConf("filters");
@@ -82,12 +80,10 @@ void ConvOp::InferBlobDescs(
     BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
     filters = splitter.At(parallel_ctx->parallel_id()).size();
   }
-
   std::vector<int64_t> in(KernelDimSize(), 0);
   std::vector<int64_t> out(KernelDimSize(), 0);
   std::vector<int32_t> pad_small_side(KernelDimSize(), 0);
   std::vector<int32_t> pad_large_side(KernelDimSize(), 0);
-
   for (size_t i = 0; i < KernelDimSize(); ++i) {
     in[i] = in_blob_desc->shape().At(offset + i);
     GetWindowedOutputSize(
@@ -97,15 +93,13 @@ void ConvOp::InferBlobDescs(
         GetStringFromCustomizedConf("padding"), &out[i], &pad_small_side[i],
         &pad_large_side[i]);
   }
-
   std::vector<int64_t> out_shape = {data_num, filters};
   for (size_t i = 0; i < KernelDimSize(); ++i) {
     out_shape.insert(out_shape.begin() + offset + i, out[i]);
   }
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
-  out_blob_desc->mut_shape() = Shape(out_shape);
-  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
-
+  GetBlobDesc4BnInOp(SoleObn())->mut_shape() = Shape(out_shape);
+  GetBlobDesc4BnInOp(SoleObn())->set_has_data_id_field(
+      in_blob_desc->has_data_id_field());
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
@@ -113,14 +107,11 @@ void ConvOp::InferBlobDescs(
     weight_shape[offset + i] =
         GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
-  weight_blob_desc->mut_shape() = Shape(weight_shape);
-
+  GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
   // bias
   if (GetBoolFromCustomizedConf("use_bias")) {
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
   }
-
 #ifdef WITH_CUDA
   // cudnn_workspace
   if (UseCudnn()) {
@@ -136,13 +127,13 @@ void ConvOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, const OpContext* op_ctx,
     KernelConf* kernel_conf) const {
   GetBlobDesc4BnInOp("in")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_in());
+      kernel_conf->mutable_conv_3d_conf()->mutable_in());
   GetBlobDesc4BnInOp("out")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_out());
+      kernel_conf->mutable_conv_3d_conf()->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_weight());
+      kernel_conf->mutable_conv_3d_conf()->mutable_weight());
   GetBlobDesc4BnInOp("bias")->shape().ToProto(
-      kernel_conf->mutable_conv_conf()->mutable_weight());
+      kernel_conf->mutable_conv_3d_conf()->mutable_weight());
   SetInt32InCustomizedKernelConf(kernel_conf, "kernel_dim_size",
                                  KernelDimSize());
 
