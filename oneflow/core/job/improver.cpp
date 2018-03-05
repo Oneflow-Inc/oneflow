@@ -99,13 +99,14 @@ std::function<void(int64_t, size_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
 }
 
 std::function<double(int64_t)> MakeGetterDuration4RegstDescId(
-    const ActGraph& graph, HashMap<int64_t, double>* regst_desc_id2duration) {
+    const ActGraph& graph) {
+  HashMap<int64_t, double> regst_desc_id2duration;
   graph.ForEachRegstDescMeanDuration([&](int64_t regst_desc_id, double time) {
-    regst_desc_id2duration->insert({regst_desc_id, time});
+    regst_desc_id2duration.insert({regst_desc_id, time});
   });
   return [regst_desc_id2duration](int64_t regst_desc_id) {
-    const auto& it = regst_desc_id2duration->find(regst_desc_id);
-    if (it == regst_desc_id2duration->end()) {
+    const auto& it = regst_desc_id2duration.find(regst_desc_id);
+    if (it == regst_desc_id2duration.end()) {
       return 0.0;
     } else {
       return it->second;
@@ -202,10 +203,11 @@ double Improver::BinarySearchII(
       CalcMaxRegstDescDuration(Duration4RegstDescId, mz_regst_descs);
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
                               IIScale4RegstDescId, max_duration));
+  const double ii_search_threshold = 1;
   double r = max_duration;
   double l = base_ii;
   double mid = base_ii;
-  while ((r - l) > ii_search_threshold_) {
+  while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
     if (IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
                              IIScale4RegstDescId, mid)) {
@@ -220,9 +222,7 @@ double Improver::BinarySearchII(
 void Improver::MemoryLimitedAllocate(
     const ActGraph& graph, double base_ii,
     const std::function<void(int64_t, size_t)>& Handler) const {
-  HashMap<int64_t, double> regst_desc_id2duration;
-  auto Duration4RegstDescId =
-      MakeGetterDuration4RegstDescId(graph, &regst_desc_id2duration);
+  auto Duration4RegstDescId = MakeGetterDuration4RegstDescId(graph);
   auto IIScale4RegstDescId = MakeGetterIIScale4RegstDescId(graph);
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
