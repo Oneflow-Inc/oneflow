@@ -31,12 +31,12 @@ void EltwiseOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_dim_vec);
-  // this is for GPU implementation
+  // this blob is for GPU implementation
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp");
   *tmp_blob_desc = *in_0_blob_desc;
   tmp_blob_desc->mut_shape() = Shape(out_dim_vec);
   tmp_blob_desc->set_has_data_id_field(false);
-  // this is for mask
+  // this blob is for mask recording in blob index of a max value
   BlobDesc* mask_blob_desc = GetBlobDesc4BnInOp("mask");
   *mask_blob_desc = *in_0_blob_desc;
   mask_blob_desc->mut_shape() = Shape(out_dim_vec);
