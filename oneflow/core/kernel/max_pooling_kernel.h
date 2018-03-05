@@ -13,8 +13,8 @@ class MaxPoolingKernelIf : public PoolingKernel<device_type, T> {
   virtual ~MaxPoolingKernelIf() = default;
 
  private:
-  const Pooling3DKernelConf& GetPooling3DKernelConf() const override {
-    return this->kernel_conf().max_pooling_3d_conf().pooling_3d_conf();
+  const PoolingKernelConf& GetPoolingKernelConf() const override {
+    return this->kernel_conf().max_pooling_conf().pooling_conf();
   }
 #ifdef WITH_CUDA
   cudnnPoolingMode_t GetCudnnPoolingMode() override {

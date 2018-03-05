@@ -22,7 +22,7 @@ class PoolingOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  protected:
-  virtual Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const = 0;
+  virtual PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const = 0;
   virtual int32_t GetDim() const = 0;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

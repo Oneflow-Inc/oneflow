@@ -19,7 +19,7 @@ message SparseCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
-message Pooling3DKernelConf {
+message PoolingKernelConf {
   required ShapeProto in= 1;
   required ShapeProto out= 2;
   repeated int32 padding_before = 3;
@@ -29,12 +29,12 @@ message Pooling3DKernelConf {
   required string data_format = 7;
 }
 
-message AveragePooling3DKernelConf {
-  required Pooling3DKernelConf pooling_3d_conf = 1;
+message AveragePoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
 }
 
-message MaxPooling3DKernelConf {
-  required Pooling3DKernelConf pooling_3d_conf = 1;
+message MaxPoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
 }
 
 message ReduceSumKernelConf {
@@ -74,7 +74,7 @@ message KernelConf {
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     SoftmaxKernelConf softmax_conf = 116;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    AveragePooling3DKernelConf average_pooling_3d_conf = 204;
-    MaxPooling3DKernelConf max_pooling_3d_conf = 205;
+    AveragePoolingKernelConf average_pooling_conf = 204;
+    MaxPoolingKernelConf max_pooling_conf = 205;
   }
 }
