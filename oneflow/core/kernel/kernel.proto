@@ -6,7 +6,7 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
 
-message ConvKernelConf {
+message Conv3DKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
   required ShapeProto weight = 3;
@@ -88,7 +88,7 @@ message KernelConf {
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     SoftmaxKernelConf softmax_conf = 116;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    ConvKernelConf conv_conf = 127;
+    Conv3DKernelConf conv_3d_conf = 127;
     AveragePooling3DKernelConf average_pooling_3d_conf = 204;
     MaxPooling3DKernelConf max_pooling_3d_conf = 205;
   }
