@@ -51,7 +51,39 @@ void EltwiseKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void EltwiseKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* mask_blob = BnInOp2Blob("mask");
+  Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  const EltwiseOpConf& eltwise_conf = this->op_conf().eltwise_conf();
+  const int count = mask_blob->shape().elem_cnt();
+  switch (eltwise_conf.operation()) {
+    case EltwiseOpConf_EltwiseOp_SUM:
+      // in_diff = out_diff
+      for (int i = 0; i < eltwise_conf.in_size(); ++i) {
+        std::string ibn = "in_" + std::to_string(i) + "_diff";
+        Blob* in_diff_blob = BnInOp2Blob(ibn);
+        Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
+                            out_diff_blob->dptr<T>(),
+                            out_diff_blob->ByteSizeOfDataContentField());
+      }
+      break;
+    case EltwiseOpConf_EltwiseOp_MAX:
+      // in_diff = out_diff if it is the max one
+      for (int i = 0; i < eltwise_conf.in_size(); ++i) {
+        for (int idx = 0; idx < count; ++idx) {
+          std::string ibn = "in_" + std::to_string(i) + "_diff";
+          Blob* in_diff_blob = BnInOp2Blob(ibn);
+          if (i == mask_blob->dptr<T>()[idx]) {
+            in_diff_blob->mut_dptr<T>()[idx] = out_diff_blob->dptr<T>()[idx];
+          } else {
+            in_diff_blob->mut_dptr<T>()[idx] = 0;
+          }
+        }
+      }
+      break;
+    default: break;
+  }
+}
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kEltwiseConf, EltwiseKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
