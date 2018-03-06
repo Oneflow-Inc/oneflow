@@ -5,32 +5,14 @@
 
 namespace oneflow {
 
-class Conv3DOp final : public ConvOp {
+class Conv3DOp final : public ConvOp<3> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Conv3DOp);
   Conv3DOp() = default;
   ~Conv3DOp() = default;
 
-  const PbMessage& GetCustomizedConf() const override {
-    return op_conf().conv_3d_conf();
-  }
-
-  int32_t ModelSplitAxis() const override {
-    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
-      return 1;
-    } else {
-      return 4;
-    }
-  }
-  int32_t MaxModelSplitNum() const override {
-    return op_conf().conv_3d_conf().filters();
-  }
-
- private:
-  int32_t KernelDimSize() const override { return 3; }
+  const PbMessage& GetCustomizedConf() const override;
 };
-
-REGISTER_OP(OperatorConf::kConv3DConf, Conv3DOp);
 
 }  // namespace oneflow
 

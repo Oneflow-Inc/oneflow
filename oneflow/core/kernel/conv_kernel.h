@@ -15,6 +15,10 @@ class ConvKernel : public KernelIf<device_type> {
   virtual ~ConvKernel() = default;
 
  protected:
+  void VirtualKernelInit(const ParallelContext*) override {
+    Shape in_blob_shape(this->GetMessageFromCustomizedKernelConf("in"));
+    kernel_dim_ = in_blob_shape.NumAxes() - 2;
+  }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
@@ -33,8 +37,8 @@ class ConvKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   const PbMessage& GetCustomizedOpConf() const override {
-    CHECK(this->kernel_conf().has_conv_3d_conf());
-    switch (this->GetInt32FromCustomizedKernelConf("kernel_dim_size")) {
+    CHECK(this->kernel_conf().has_conv_conf());
+    switch (kernel_dim()) {
       case 1: return this->op_conf().conv_1d_conf();
       case 2: return this->op_conf().conv_2d_conf();
       case 3: return this->op_conf().conv_3d_conf();
@@ -42,8 +46,11 @@ class ConvKernel : public KernelIf<device_type> {
     }
   }
   const PbMessage& GetCustomizedKernelConf() const override {
-    return this->kernel_conf().conv_3d_conf();
+    return this->kernel_conf().conv_conf();
   }
+  const int32_t kernel_dim() const { return kernel_dim_; }
+
+  int32_t kernel_dim_;
 };
 
 #ifdef WITH_CUDA
