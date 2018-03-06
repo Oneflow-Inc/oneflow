@@ -60,8 +60,8 @@ void EltwiseKernel<device_type, T>::BackwardDataContent(
     case EltwiseOpConf_EltwiseOp_SUM:
       // in_diff = out_diff
       for (int i = 0; i < eltwise_conf.in_size(); ++i) {
-        std::string ibn = "in_" + std::to_string(i) + "_diff";
-        Blob* in_diff_blob = BnInOp2Blob(ibn);
+        std::string idbn = GenDiffBn("in_" + std::to_string(i));
+        Blob* in_diff_blob = BnInOp2Blob(idbn);
         Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
                             out_diff_blob->dptr<T>(),
                             out_diff_blob->ByteSizeOfDataContentField());
@@ -71,8 +71,8 @@ void EltwiseKernel<device_type, T>::BackwardDataContent(
       // in_diff = out_diff if it is the max one
       for (int i = 0; i < eltwise_conf.in_size(); ++i) {
         for (int idx = 0; idx < count; ++idx) {
-          std::string ibn = "in_" + std::to_string(i) + "_diff";
-          Blob* in_diff_blob = BnInOp2Blob(ibn);
+          std::string idbn = GenDiffBn("in_" + std::to_string(i));
+          Blob* in_diff_blob = BnInOp2Blob(idbn);
           Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
           if (i == mask_blob->dptr<T>()[idx]) {

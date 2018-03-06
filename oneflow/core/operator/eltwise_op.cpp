@@ -23,7 +23,7 @@ void EltwiseOp::InferBlobDescs(
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
   for (size_t i = 1; i < input_bns().size(); ++i) {
-    CHECK(*in_i_blob_desc == *GetBlobDesc4BnInOp(input_bns().at(i)));
+    CHECK(*in_0_blob_desc == *GetBlobDesc4BnInOp(input_bns().at(i)));
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;
