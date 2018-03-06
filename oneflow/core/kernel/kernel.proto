@@ -10,12 +10,11 @@ message ConvKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
   required ShapeProto weight = 3;
-  optional ShapeProto bias = 4;
-  repeated int32 pad_small_side = 5;
-  repeated int32 pad_large_side = 6;
-  optional int32 cudnn_fwd_algo = 7 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 8 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 9 [default = -1];
+  repeated int32 pad_small_side = 4;
+  repeated int32 pad_large_side = 5;
+  optional int32 cudnn_fwd_algo = 6 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
 }
 
 message LossKernelConf { 

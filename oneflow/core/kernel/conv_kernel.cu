@@ -4,17 +4,21 @@
 namespace oneflow {
 
 template<typename T>
-void CudnnConvKernel<T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void CudnnConvKernel<T>::VirtualKernelInit(
+    const ParallelContext* parallel_ctx) {
   ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
 
-  Shape in_shape(this->GetMessageFromCustomizedKernelConf("in"));
-  Shape out_shape(this->GetMessageFromCustomizedKernelConf("out"));
-  Shape weight_shape(this->GetMessageFromCustomizedKernelConf("weight"));
+  Shape in_shape(static_cast<const ShapeProto&>(
+      this->GetMessageFromCustomizedKernelConf("in")));
+  Shape out_shape(static_cast<const ShapeProto&>(
+      this->GetMessageFromCustomizedKernelConf("out")));
+  Shape weight_shape(static_cast<const ShapeProto&>(
+      this->GetMessageFromCustomizedKernelConf("weight")));
 
-  std::vector<int32_t> stride_of_in_tensor(kernel_dim(), 1);
-  std::vector<int32_t> stride_of_out_tensor(kernel_dim(), 1);
-  for (int32_t i = kernel_dim() + 2 - 1; i > 0; --i) {
-    for (int32_t j = kernel_dim() + 2 - 2; j >= 0; --j) {
+  std::vector<int32_t> stride_of_in_tensor(this->kernel_dim(), 1);
+  std::vector<int32_t> stride_of_out_tensor(this->kernel_dim(), 1);
+  for (int32_t i = this->kernel_dim() + 2 - 1; i > 0; --i) {
+    for (int32_t j = this->kernel_dim() + 2 - 2; j >= 0; --j) {
       stride_of_in_tensor[j] *= in_shape.At(i);
       stride_of_out_tensor[j] *= out_shape.At(i);
     }
@@ -24,12 +28,12 @@ void CudnnConvKernel<T>::VirtualKernelInit(const ParallelContext* parallel_ctx) 
   std::vector<int32_t> out_dim(out_shape.dim_vec().begin(),
                                out_shape.dim_vec().end());
 
-  this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::val,
-                                           kernel_dim() + 2, in_dim.data(),
-                                           stride_of_in_tensor.data()));
-  this->out_desc_.reset(new CudnnTensorDesc(GetDataType<T>::val,
-                                            kernel_dim() + 2, out_dim.data(),
-                                            stride_of_out_tensor.data()));
+  this->in_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::val, this->kernel_dim() + 2,
+                          in_dim.data(), stride_of_in_tensor.data()));
+  this->out_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::val, this->kernel_dim() + 2,
+                          out_dim.data(), stride_of_out_tensor.data()));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<T>::val, weight_shape,
                           this->GetStringFromCustomizedOpConf("data_format")));
@@ -64,7 +68,7 @@ void CudnnConvKernel<T>::ForwardDataContent(
       this->in_desc_->Get(), in_blob->dptr<T>(), this->filter_desc_->Get(),
       weight_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(
-        this->GetInt32FromCustomizedKernelConf("cudnn_fwd_algo")),
+          this->GetInt32FromCustomizedKernelConf("cudnn_fwd_algo")),
       cudnn_workspace->mut_dptr<T>(), cudnn_workspace->shape().At(0),
       CudnnDataType<T>::zero, this->out_desc_->Get(), out_blob->mut_dptr<T>()));
 
@@ -107,7 +111,7 @@ void CudnnConvKernel<T>::BackwardDataContent(
       this->in_desc_->Get(), in_blob->dptr<T>(), this->out_desc_->Get(),
       out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-        this->GetInt32FromCustomizedKernelConf("cudnn_bwd_filter_algo")),
+          this->GetInt32FromCustomizedKernelConf("cudnn_bwd_filter_algo")),
       cudnn_workspace->mut_dptr<T>(), cudnn_workspace->shape().At(0),
       CudnnDataType<T>::one, this->filter_desc_->Get(),
       weight_diff_blob->mut_dptr<T>()));
@@ -124,7 +128,7 @@ void CudnnConvKernel<T>::BackwardDataContent(
       this->filter_desc_->Get(), weight_blob->dptr<T>(), this->out_desc_->Get(),
       out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdDataAlgo_t>(
-        this->GetInt32FromCustomizedKernelConf("cudnn_bwd_data_algo")),
+          this->GetInt32FromCustomizedKernelConf("cudnn_bwd_data_algo")),
       cudnn_workspace->mut_dptr<T>(), cudnn_workspace->shape().At(0),
       CudnnDataType<T>::zero, this->in_desc_->Get(),
       in_diff_blob->mut_dptr<T>()));

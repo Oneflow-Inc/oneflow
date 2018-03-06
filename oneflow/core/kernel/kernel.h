@@ -159,7 +159,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
 template<OperatorConf::OpTypeCase op_type_case>
 class CudnnKernelCreatorHelper final {
  public:
-  static bool IsUseCudnn(const KernelConf& kernel_conf) { return false; }
+  static bool IsUseCudnn(const OperatorConf& op_conf) { return false; }
   static Kernel* CreateKernel(const KernelConf& kernel_conf) { return nullptr; }
 };
 
@@ -174,7 +174,8 @@ class CudnnKernelCreatorHelper final {
   namespace {                                                                 \
                                                                               \
   Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {  \
-    if (CudnnKernelCreatorHelper<op_type_case>::IsUseCudnn(kernel_conf)) {    \
+    if (CudnnKernelCreatorHelper<op_type_case>::IsUseCudnn(                   \
+            kernel_conf.op_conf())) {                                         \
       return CudnnKernelCreatorHelper<op_type_case>::CreateKernel(            \
           kernel_conf);                                                       \
     }                                                                         \
@@ -193,17 +194,13 @@ class CudnnKernelCreatorHelper final {
   {OF_PP_PAIR_SECOND(data_type_pair),                                 \
    []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
 
-#define ADD_DEFAULT_CUDNN_KERNEL_CREATOR(op_type_case, kernel_type_field, \
+#define ADD_DEFAULT_CUDNN_KERNEL_CREATOR(op_type_case, op_type_field,     \
                                          kernel_class, data_type_seq)     \
   template<>                                                              \
   bool CudnnKernelCreatorHelper<op_type_case>::IsUseCudnn(                \
-      const KernelConf& kernel_conf) {                                    \
-    CHECK(kernel_conf.has_##kernel_type_field());                         \
-    if (kernel_conf.kernel_type_field().has_use_cudnn_on_gpu()) {         \
-      return kernel_conf.kernel_type_field().use_cudnn_on_gpu();          \
-    } else {                                                              \
-      return false;                                                       \
-    }                                                                     \
+      const OperatorConf& op_conf) {                                      \
+    CHECK(op_conf.has_##op_type_field());                                 \
+    return op_conf.use_cudnn_on_gpu();                                    \
   }                                                                       \
   template<>                                                              \
   Kernel* CudnnKernelCreatorHelper<op_type_case>::CreateKernel(           \

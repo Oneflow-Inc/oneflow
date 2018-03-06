@@ -4,6 +4,13 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void ConvKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+  Shape in_blob_shape(static_cast<const ShapeProto&>(
+      this->GetMessageFromCustomizedKernelConf("in")));
+  kernel_dim_ = in_blob_shape.NumAxes() - 2;
+}
+
+template<DeviceType device_type, typename T>
 void ConvKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -66,11 +73,27 @@ void ConvKernel<device_type, T>::InitModelBlobsWithDir(
   }
 }
 
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_conf,
+template<DeviceType device_type, typename T>
+const PbMessage& ConvKernel<device_type, T>::GetCustomizedOpConf() const {
+  CHECK(this->kernel_conf().has_conv_conf());
+  switch (kernel_dim()) {
+    case 1: return this->op_conf().conv_1d_conf();
+    case 2: return this->op_conf().conv_2d_conf();
+    case 3: return this->op_conf().conv_3d_conf();
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type, typename T>
+const PbMessage& ConvKernel<device_type, T>::GetCustomizedKernelConf() const {
+  return this->kernel_conf().conv_conf();
+}
+
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_1d_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2DConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2DConf, conv_2d_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3DConf, conv_conf,
+ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3DConf, conv_3d_conf,
                                  CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,

@@ -58,8 +58,8 @@ struct ConvOpCtx : public OpContext {
   int32_t cudnn_bwd_data_algo;
 };
 
-template<int32_t NDim>
-void ConvOp<NDim>::InitFromOpConf() {
+template<int32_t NDims>
+void ConvOp<NDims>::InitFromOpConf() {
   CHECK(UseCudnn());
 
   StrFieldTolower("data_format");
@@ -72,8 +72,8 @@ void ConvOp<NDim>::InitFromOpConf() {
   if (UseCudnn()) { EnrollDataTmpBn("cudnn_workspace"); }
 }
 
-template<int32_t NDim>
-void ConvOp<NDim>::InferBlobDescs(
+template<int32_t NDims>
+void ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type,
     std::function<void(OpContext*)> EnrollOpContext) const {
@@ -81,7 +81,7 @@ void ConvOp<NDim>::InferBlobDescs(
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDim + 2);
+  CHECK_EQ(in_blob_desc->shape().NumAxes(), NDims + 2);
   CHECK_EQ(in_blob_desc->data_type(), JobDesc::Singleton()->DefaultDataType());
 
   // out
@@ -91,9 +91,9 @@ void ConvOp<NDim>::InferBlobDescs(
     BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
     filters = splitter.At(parallel_ctx->parallel_id()).size();
   }
-  std::vector<int64_t> out(NDim, 0);
-  std::vector<int32_t> pad_small_side(NDim, 0);
-  std::vector<int32_t> pad_large_side(NDim, 0);
+  std::vector<int64_t> out(NDims, 0);
+  std::vector<int32_t> pad_small_side(NDims, 0);
+  std::vector<int32_t> pad_large_side(NDims, 0);
   GetOutAndPad(in_blob_desc->shape(), data_format,
                GetStringFromCustomizedConf("padding"),
                GetPbRfFromCustomizedConf<int32_t>("dilation_rate").data(),
@@ -102,7 +102,7 @@ void ConvOp<NDim>::InferBlobDescs(
                pad_small_side, pad_large_side);
 
   std::vector<int64_t> out_shape = {data_num, filters};
-  for (size_t i = 0; i < NDim; ++i) {
+  for (size_t i = 0; i < NDims; ++i) {
     out_shape.insert(out_shape.begin() + DhwOffset(data_format) + i, out[i]);
   }
   GetBlobDesc4BnInOp(SoleObn())->mut_shape() = Shape(out_shape);
@@ -112,7 +112,7 @@ void ConvOp<NDim>::InferBlobDescs(
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
-  for (size_t i = 0; i < NDim; ++i) {
+  for (size_t i = 0; i < NDims; ++i) {
     weight_shape[DhwOffset(data_format) + i] =
         GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
@@ -132,8 +132,8 @@ void ConvOp<NDim>::InferBlobDescs(
 #endif  // WITH_CUDA
 }
 
-template<int32_t NDim>
-void ConvOp<NDim>::VirtualGenKernelConf(
+template<int32_t NDims>
+void ConvOp<NDims>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, const OpContext* op_ctx,
     KernelConf* kernel_conf) const {
@@ -142,13 +142,10 @@ void ConvOp<NDim>::VirtualGenKernelConf(
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_conv_conf->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(
       mut_conv_conf->mutable_weight());
-  if (GetBoolFromCustomizedConf("use_bias")) {
-    GetBlobDesc4BnInOp("bias")->shape().ToProto(mut_conv_conf->mutable_bias());
-  }
 
-  std::vector<int64_t> out(NDim, 0);
-  std::vector<int32_t> pad_small_side(NDim, 0);
-  std::vector<int32_t> pad_large_side(NDim, 0);
+  std::vector<int64_t> out(NDims, 0);
+  std::vector<int32_t> pad_small_side(NDims, 0);
+  std::vector<int32_t> pad_large_side(NDims, 0);
   GetOutAndPad(GetBlobDesc4BnInOp("in")->shape(),
                GetStringFromCustomizedConf("data_format"),
                GetStringFromCustomizedConf("padding"),
@@ -157,7 +154,7 @@ void ConvOp<NDim>::VirtualGenKernelConf(
                GetPbRfFromCustomizedConf<int32_t>("kernel_size").data(), out,
                pad_small_side, pad_large_side);
 
-  for (size_t i = 0; i < NDim; ++i) {
+  for (size_t i = 0; i < NDims; ++i) {
     AddInt32ToPbRfInCustomizedKernelConf(kernel_conf, "pad_small_side",
                                          pad_small_side[i]);
     AddInt32ToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side",
@@ -177,9 +174,31 @@ void ConvOp<NDim>::VirtualGenKernelConf(
 #endif  // WITH_CUDA
 }
 
+template<int32_t NDims>
+PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(
+    KernelConf* kernel_conf) const {
+  return kernel_conf->mutable_conv_conf();
+}
+
+template<int32_t NDims>
+int32_t ConvOp<NDims>::ModelSplitAxis() const {
+  if (GetStringFromCustomizedConf("data_format") == "channels_first") {
+    return 1;
+  } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {
+    return NDims + 1;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<int32_t NDims>
+int32_t ConvOp<NDims>::MaxModelSplitNum() const {
+  return GetInt32FromCustomizedConf("filters");
+}
+
 #ifdef WITH_CUDA
-template<int32_t NDim>
-size_t ConvOp<NDim>::InferCudnnWorkspaceSize(
+template<int32_t NDims>
+size_t ConvOp<NDims>::InferCudnnWorkspaceSize(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     std::function<void(OpContext*)> EnrollOpContext) const {
   size_t fwd_workspace_size = 0;
@@ -194,10 +213,10 @@ size_t ConvOp<NDim>::InferCudnnWorkspaceSize(
 
   DataType data_type = in_blob_desc->data_type();
 
-  std::vector<int32_t> stride_of_in_tensor(NDim + 2, 1);
-  std::vector<int32_t> stride_of_out_tensor(NDim + 2, 1);
-  for (int32_t i = NDim + 2 - 1; i > 0; --i) {
-    for (int32_t j = NDim + 2 - 2; j >= 0; --j) {
+  std::vector<int32_t> stride_of_in_tensor(NDims + 2, 1);
+  std::vector<int32_t> stride_of_out_tensor(NDims + 2, 1);
+  for (int32_t i = NDims + 2 - 1; i > 0; --i) {
+    for (int32_t j = NDims + 2 - 2; j >= 0; --j) {
       stride_of_in_tensor[j] *= in_blob_desc->shape().At(i);
       stride_of_out_tensor[j] *= out_blob_desc->shape().At(i);
     }
@@ -213,7 +232,7 @@ size_t ConvOp<NDim>::InferCudnnWorkspaceSize(
   CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
                               GetStringFromCustomizedConf("data_format"));
   CudnnConvDesc conv_desc(
-      in_blob_desc->data_type(), in_blob_desc->shape(), NDim,
+      in_blob_desc->data_type(), in_blob_desc->shape(), NDims,
       GetPbRfFromCustomizedConf<int32_t>("dilation_rate").data(),
       GetPbRfFromCustomizedConf<int32_t>("strides").data(),
       GetPbRfFromCustomizedConf<int32_t>("kernel_size").data(),
