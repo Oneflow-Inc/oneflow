@@ -4,9 +4,9 @@
 namespace oneflow {
 
 template<typename T>
-void CudnnConvKernel<T>::VirtualKernelInit(
+void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
-  ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
+  ConvKernelIf<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
 
   Shape in_shape(static_cast<const ShapeProto&>(
       this->GetMessageFromCustomizedKernelConf("in")));
@@ -38,8 +38,7 @@ void CudnnConvKernel<T>::VirtualKernelInit(
       new CudnnFilterDesc(GetDataType<T>::val, weight_shape,
                           this->GetStringFromCustomizedOpConf("data_format")));
   this->conv_desc_.reset(new CudnnConvDesc(
-      GetDataType<T>::val, in_shape,
-      this->GetInt32FromCustomizedKernelConf("kernel_dim_size"),
+      GetDataType<T>::val, in_shape, this->kernel_dim(),
       this->GetInt32PbRfFromCustomizedOpConf("dilation_rate").data(),
       this->GetInt32PbRfFromCustomizedOpConf("strides").data(),
       this->GetInt32PbRfFromCustomizedOpConf("kernel_size").data(),
@@ -55,7 +54,7 @@ void CudnnConvKernel<T>::VirtualKernelInit(
 }
 
 template<typename T>
-void CudnnConvKernel<T>::ForwardDataContent(
+void ConvKernel<DeviceType::kGPU, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -82,7 +81,7 @@ void CudnnConvKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
-void CudnnConvKernel<T>::BackwardDataContent(
+void ConvKernel<DeviceType::kGPU, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
@@ -135,7 +134,7 @@ void CudnnConvKernel<T>::BackwardDataContent(
 }
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
-  template class CudnnConvKernel<type_cpp>;
+  template class ConvKernel<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

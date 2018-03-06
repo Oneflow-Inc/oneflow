@@ -4,28 +4,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ConvKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+void ConvKernelIf<device_type, T>::VirtualKernelInit(const ParallelContext*) {
   Shape in_blob_shape(static_cast<const ShapeProto&>(
       this->GetMessageFromCustomizedKernelConf("in")));
-  kernel_dim_ = in_blob_shape.NumAxes() - 2;
+  this->kernel_dim_ = in_blob_shape.NumAxes() - 2;
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename T>
-void ConvKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename T>
-void ConvKernel<device_type, T>::InitPureModelTmpBlobs(
+void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
@@ -38,7 +24,7 @@ void ConvKernel<device_type, T>::InitPureModelTmpBlobs(
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernel<device_type, T>::InitModelBlobsWithRandomSeed(
+void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
@@ -57,7 +43,7 @@ void ConvKernel<device_type, T>::InitModelBlobsWithRandomSeed(
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernel<device_type, T>::InitModelBlobsWithDir(
+void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -74,7 +60,7 @@ void ConvKernel<device_type, T>::InitModelBlobsWithDir(
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& ConvKernel<device_type, T>::GetCustomizedOpConf() const {
+const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
   CHECK(this->kernel_conf().has_conv_conf());
   switch (kernel_dim()) {
     case 1: return this->op_conf().conv_1d_conf();
@@ -85,16 +71,27 @@ const PbMessage& ConvKernel<device_type, T>::GetCustomizedOpConf() const {
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& ConvKernel<device_type, T>::GetCustomizedKernelConf() const {
+const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedKernelConf() const {
   return this->kernel_conf().conv_conf();
 }
 
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv1DConf, conv_1d_conf,
-                                 CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv2DConf, conv_2d_conf,
-                                 CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
-ADD_DEFAULT_CUDNN_KERNEL_CREATOR(OperatorConf::kConv3DConf, conv_3d_conf,
-                                 CudnnConvKernel, FLOATING_DATA_TYPE_SEQ);
+template<typename T>
+void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  UNIMPLEMENTED();
+}
+
+template<typename T>
+void ConvKernel<DeviceType::kCPU, T>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  UNIMPLEMENTED();
+}
+
+#define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
+  template class ConvKernel<DeviceType::kCPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL, FLOATING_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv1DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);

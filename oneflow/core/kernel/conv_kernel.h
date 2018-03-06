@@ -8,20 +8,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ConvKernel : public KernelIf<device_type> {
+class ConvKernelIf : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
-  ConvKernel() = default;
-  virtual ~ConvKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernelIf);
+  ConvKernelIf() = default;
+  virtual ~ConvKernelIf() = default;
 
  protected:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
   void InitPureModelTmpBlobs(
       DeviceCtx*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -37,17 +31,36 @@ class ConvKernel : public KernelIf<device_type> {
   const PbMessage& GetCustomizedKernelConf() const override;
   const int32_t kernel_dim() const { return kernel_dim_; }
 
- private:
   int32_t kernel_dim_;
 };
 
-#ifdef WITH_CUDA
+template<DeviceType device_type, typename T>
+class ConvKernel;
+
 template<typename T>
-class CudnnConvKernel final : public ConvKernel<DeviceType::kGPU, T> {
+class ConvKernel<DeviceType::kCPU, T> final
+    : public ConvKernelIf<DeviceType::kCPU, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CudnnConvKernel);
-  CudnnConvKernel() = default;
-  ~CudnnConvKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
+
+ protected:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+};
+
+template<typename T>
+class ConvKernel<DeviceType::kGPU, T> final
+    : public ConvKernelIf<DeviceType::kGPU, T> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
 
  protected:
   void VirtualKernelInit(const ParallelContext*) override;
@@ -65,7 +78,6 @@ class CudnnConvKernel final : public ConvKernel<DeviceType::kGPU, T> {
   std::unique_ptr<CudnnConvDesc> conv_desc_;
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
 };
-#endif  // WITH_CUDA
 
 }  // namespace oneflow
 
