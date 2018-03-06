@@ -47,23 +47,9 @@ class ConvOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  protected:
-  PbMessage* MutableCustomizedKernelConf(
-      KernelConf* kernel_conf) const override {
-    return kernel_conf->mutable_conv_conf();
-  }
-
-  int32_t ModelSplitAxis() const override {
-    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
-      return 1;
-    } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {
-      return NDims + 1;
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-  int32_t MaxModelSplitNum() const override {
-    return GetInt32FromCustomizedConf("filters");
-  }
+  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
+  int32_t ModelSplitAxis() const override;
+  int32_t MaxModelSplitNum() const override;
 
 #ifdef WITH_CUDA
   size_t InferCudnnWorkspaceSize(
