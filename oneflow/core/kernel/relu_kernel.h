@@ -7,7 +7,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ReluKernel final : public KernelIf<device_type, T> {
+class ReluKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReluKernel);
   ReluKernel() = default;

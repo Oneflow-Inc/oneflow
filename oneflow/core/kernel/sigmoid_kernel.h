@@ -7,7 +7,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class SigmoidKernel final : public KernelIf<device_type, T> {
+class SigmoidKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SigmoidKernel);
   SigmoidKernel() = default;

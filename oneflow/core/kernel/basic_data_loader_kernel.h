@@ -13,7 +13,7 @@ struct DataLoadStatus {
 };
 
 template<typename T>
-class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU, T> {
+class BasicDataLoaderKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BasicDataLoaderKernel);
   BasicDataLoaderKernel() = default;
