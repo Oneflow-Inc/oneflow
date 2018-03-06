@@ -1,0 +1,35 @@
+#ifndef ONEFLOW_CORE_KERNEL_LOSS_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_LOSS_KERNEL_H_
+
+#include "oneflow/core/kernel/kernel.h"
+
+namespace oneflow {
+
+template<DeviceType device_type, typename PredType, typename LabelType>
+class LossKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(LossKernel);
+  LossKernel() = default;
+  virtual ~LossKernel() = default;
+
+ protected:
+  virtual void VirtualLossForwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const = 0;
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_LOSS_KERNEL_H_
