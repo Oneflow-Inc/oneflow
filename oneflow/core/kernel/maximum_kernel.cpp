@@ -46,7 +46,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
       std::string idbn = GenDiffBn("in_" + std::to_string(i));
       Blob* in_diff_blob = BnInOp2Blob(idbn);
       Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                  in_diff_blob->ByteSizeOfDataContentField());
+                          in_diff_blob->ByteSizeOfDataContentField());
       if (i == mask_blob->dptr<T>()[idx]) {
         in_diff_blob->mut_dptr<T>()[idx] = out_diff_blob->dptr<T>()[idx];
       }

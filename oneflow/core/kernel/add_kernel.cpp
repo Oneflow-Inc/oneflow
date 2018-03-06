@@ -21,8 +21,8 @@ void AddKernel<device_type, T>::ForwardDataContent(
     std::string ibn = "in_" + std::to_string(i);
     const Blob* in_blob = BnInOp2Blob(ibn);
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, count, 1.0f,
-                                      in_blob->dptr<T>(), 1,
-                                      out_blob->mut_dptr<T>(), 1);
+                                     in_blob->dptr<T>(), 1,
+                                     out_blob->mut_dptr<T>(), 1);
   }
 }
 
