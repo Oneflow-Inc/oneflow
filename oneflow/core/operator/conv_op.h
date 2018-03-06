@@ -65,18 +65,6 @@ class ConvOp : public Operator {
     return GetInt32FromCustomizedConf("filters");
   }
 
-  int32_t KernelDim() const { return NDims; }
-
-  const size_t offset() const {
-    if (GetStringFromCustomizedConf("data_format") == "channels_first") {
-      return 2;
-    } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {
-      return 1;
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-
 #ifdef WITH_CUDA
   size_t InferCudnnWorkspaceSize(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
