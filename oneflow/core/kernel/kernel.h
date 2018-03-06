@@ -94,14 +94,16 @@ class Kernel {
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
-  const PbRf<int32_t>& GetInt32PbRfFromCustomizedOpConf(
+  template<typename T>
+  const PbRf<T>& GetPbRfFromCustomizedOpConf(
       const std::string& field_name) const {
-    return GetPbRfFromPbMessage<int32_t>(GetCustomizedOpConf(), field_name);
+    return GetPbRfFromPbMessage<T>(GetCustomizedOpConf(), field_name);
   }
 
-  const PbRf<int32_t>& GetInt32RbRfFromCustomizedKernelConf(
+  template<typename T>
+  const PbRf<T>& GetPbRfFromCustomizedKernelConf(
       const std::string& field_name) const {
-    return GetPbRfFromPbMessage<int32_t>(GetCustomizedKernelConf(), field_name);
+    return GetPbRfFromPbMessage<T>(GetCustomizedKernelConf(), field_name);
   }
 
  private:

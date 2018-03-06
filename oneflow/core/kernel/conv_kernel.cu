@@ -39,9 +39,10 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
                           this->GetStringFromCustomizedOpConf("data_format")));
   this->conv_desc_.reset(new CudnnConvDesc(
       GetDataType<T>::val, in_shape, this->kernel_dim(),
-      this->GetInt32PbRfFromCustomizedOpConf("dilation_rate").data(),
-      this->GetInt32PbRfFromCustomizedOpConf("strides").data(),
-      this->GetInt32PbRfFromCustomizedOpConf("kernel_size").data(),
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
+          .data(),
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("kernel_size").data(),
       this->GetStringFromCustomizedOpConf("data_format"),
       this->GetStringFromCustomizedOpConf("padding")));
 
