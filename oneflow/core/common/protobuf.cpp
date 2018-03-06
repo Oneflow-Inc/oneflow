@@ -5,67 +5,47 @@
 
 namespace oneflow {
 
-using google::protobuf::Descriptor;
-using google::protobuf::FieldDescriptor;
-using google::protobuf::Reflection;
-using google::protobuf::io::CodedInputStream;
-using google::protobuf::io::CodedOutputStream;
-using google::protobuf::io::IstreamInputStream;
-using google::protobuf::io::OstreamOutputStream;
-using google::protobuf::io::ZeroCopyInputStream;
-using google::protobuf::io::ZeroCopyOutputStream;
-
 // txt file
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
-  IstreamInputStream input(&in_stream);
+  google::protobuf::io::IstreamInputStream input(&in_stream);
   CHECK(google::protobuf::TextFormat::Parse(&input, proto));
 }
 void PrintProtoToTextFile(const PbMessage& proto,
                           const std::string& file_path) {
   std::ofstream out_stream(file_path.c_str(),
                            std::ofstream::out | std::ofstream::trunc);
-  OstreamOutputStream output(&out_stream);
+  google::protobuf::io::OstreamOutputStream output(&out_stream);
   CHECK(google::protobuf::TextFormat::Print(proto, &output));
 }
 
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(ret_type, func_name)                \
   ret_type Get##func_name##FromPbMessage(const PbMessage& msg,            \
                                          const std::string& field_name) { \
-    const Descriptor* d = msg.GetDescriptor();                            \
-    const FieldDescriptor* fd = d->FindFieldByName(field_name);           \
-    CHECK_NOTNULL(fd);                                                    \
-    const Reflection* r = msg.GetReflection();                            \
+    PROTOBUF_REFLECTION(msg, field_name);                                 \
     return r->Get##func_name(msg, fd);                                    \
   }
 
-DEFINE_GET_VAL_FROM_PBMESSAGE(std::string, String);
-DEFINE_GET_VAL_FROM_PBMESSAGE(int32_t, Int32);
-DEFINE_GET_VAL_FROM_PBMESSAGE(uint32_t, UInt32);
-DEFINE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
-DEFINE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
-DEFINE_GET_VAL_FROM_PBMESSAGE(bool, Bool);
-DEFINE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
-
-#undef DEFINE_GET_VAL_FROM_PBMESSAGE
+OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_PBMESSAGE,
+                     PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
+                         const PbMessage&, Message))
 
 #define DEFINE_SET_VAL_IN_PBMESSAGE(val_type, func_name)             \
   void Set##func_name##InPbMessage(                                  \
       PbMessage* msg, const std::string& field_name, val_type val) { \
-    const Descriptor* d = msg->GetDescriptor();                      \
-    const FieldDescriptor* fd = d->FindFieldByName(field_name);      \
-    CHECK_NOTNULL(fd);                                               \
-    const Reflection* r = msg->GetReflection();                      \
+    PROTOBUF_REFLECTION((*msg), field_name);                         \
     r->Set##func_name(msg, fd, val);                                 \
   }
 
-DEFINE_SET_VAL_IN_PBMESSAGE(std::string, String);
-DEFINE_SET_VAL_IN_PBMESSAGE(int32_t, Int32);
-DEFINE_SET_VAL_IN_PBMESSAGE(uint32_t, UInt32);
-DEFINE_SET_VAL_IN_PBMESSAGE(int64_t, Int64);
-DEFINE_SET_VAL_IN_PBMESSAGE(uint64_t, UInt64);
-DEFINE_SET_VAL_IN_PBMESSAGE(bool, Bool);
+OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
-#undef DEFINE_SET_VAL_IN_PBMESSAGE
+#define DEFINE_ADD_VAL_IN_PBRF(val_type, func_name)                          \
+  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
+                              val_type val) {                                \
+    PROTOBUF_REFLECTION((*msg), field_name);                                 \
+    r->Add##func_name(msg, fd, val);                                         \
+  }
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

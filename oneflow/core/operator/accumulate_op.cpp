@@ -9,7 +9,7 @@ void AccumulateOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-const PbMessage& AccumulateOp::GetSpecialConf() const {
+const PbMessage& AccumulateOp::GetCustomizedConf() const {
   return op_conf().accumulate_conf();
 }
 

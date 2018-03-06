@@ -27,16 +27,16 @@ void BoxingOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& BoxingOp::GetSpecialConf() const {
+const PbMessage& BoxingOp::GetCustomizedConf() const {
   return op_conf().boxing_conf();
 }
 
 std::string BoxingOp::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromSpecialConf("lbn");
+  return GetStringFromCustomizedConf("lbn");
 }
 
 std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
-  return GetStringFromSpecialConf("lbn");
+  return GetStringFromCustomizedConf("lbn");
 }
 
 void BoxingOp::InferBlobDescs(
@@ -72,7 +72,7 @@ void BoxingOp::InferBlobDescs(
       out_blob_desc->mut_shape() = Shape(data_tmp_blob_shape_vec);
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 

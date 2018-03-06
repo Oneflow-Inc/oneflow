@@ -1,9 +1,12 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_
 
-#include "cudnn.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+
+#ifdef WITH_CUDA
+
+#include "cudnn.h"
 
 namespace oneflow {
 
@@ -37,6 +40,8 @@ class CudnnTensorDesc final {
 
   CudnnTensorDesc(DataType, int n, int c, int h, int w);
   CudnnTensorDesc(DataType, const Shape&);
+  CudnnTensorDesc(DataType data_type, int dims, const int* dim,
+                  const int* stride);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 
@@ -50,8 +55,8 @@ class CudnnFilterDesc final {
   CudnnFilterDesc() = delete;
   ~CudnnFilterDesc();
 
-  CudnnFilterDesc(DataType, int k, int c, int h, int w);
-  CudnnFilterDesc(DataType, const Shape&);
+  CudnnFilterDesc(DataType data_type, const Shape& shape,
+                  const std::string& data_format);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 
@@ -75,5 +80,7 @@ class CudnnActivationDesc final {
 };
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDNN_UTIL_H_

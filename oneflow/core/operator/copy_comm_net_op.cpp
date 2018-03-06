@@ -7,7 +7,7 @@ void CopyCommNetOp::InitFromOpConf() {
   EnrollOutputBn("out", false);
 }
 
-const PbMessage& CopyCommNetOp::GetSpecialConf() const {
+const PbMessage& CopyCommNetOp::GetCustomizedConf() const {
   return op_conf().copy_comm_net_conf();
 }
 

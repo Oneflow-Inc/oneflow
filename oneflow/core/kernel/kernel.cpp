@@ -8,10 +8,11 @@ void Kernel::Init(const ParallelContext* parallel_ctx,
   VirtualKernelInit(parallel_ctx);
 }
 
-void Kernel::InitModelBlobs(
+void Kernel::InitModelAndModelTmp(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitPureModelTmpBlobs(ctx.device_ctx, BnInOp2Blob);
   std::string model_load_dir = kernel_conf().op_conf().model_load_dir();
   if (model_load_dir == "" && snapshot) {
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
@@ -19,20 +20,15 @@ void Kernel::InitModelBlobs(
   if (model_load_dir == "") {
     int64_t random_seed = *static_cast<int64_t*>(ctx.other);
     std::mt19937 random_seed_gen(random_seed);
-    InitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
+    InitModelBlobsWithRandomSeed(ctx.device_ctx, &random_seed_gen, BnInOp2Blob);
   } else {
     int32_t part_id = -1;
     int32_t part_num = -1;
     std::tie(part_id, part_num) =
         GetPartIdAndPartNumFromParallelCtx(parallel_ctx);
-    InitModelBlobsWithDir(ctx, part_id, part_num, model_load_dir, BnInOp2Blob);
+    InitModelBlobsWithDir(ctx.device_ctx, part_id, part_num, model_load_dir,
+                          BnInOp2Blob);
   }
-}
-
-void Kernel::InitModelTmpBlobs(
-    const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_EQ(kernel_conf().model_tmp_bns().size(), 0);
 }
 
 void Kernel::Launch(
@@ -47,19 +43,6 @@ void Kernel::Launch(
 
 const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
   return kernel_conf_.bn_in_op2lbn().at(bn_in_op);
-}
-
-void Kernel::InitModelBlobsWithRandomSeed(
-    const KernelCtx& ctx, std::mt19937 random_seed_gen,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_EQ(kernel_conf().model_bns().size(), 0);
-}
-
-void Kernel::InitModelBlobsWithDir(
-    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
-    const std::string& model_load_dir,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CHECK_EQ(kernel_conf().model_bns().size(), 0);
 }
 
 void Kernel::Forward(
@@ -83,7 +66,7 @@ void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-            kernel_conf().output_bns(), &Blob::CopyDataIdFrom<device_type>);
+            kernel_conf().output_bns(), &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
@@ -91,7 +74,7 @@ void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-            kernel_conf().output_bns(), &Blob::CopyColNumFrom<device_type>);
+            kernel_conf().output_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
@@ -106,23 +89,21 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
-            kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom<device_type>);
+            kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::CopyDataId(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns,
-            &Blob::CopyDataIdFrom<device_type>);
+  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::CopyColNum(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns,
-            &Blob::CopyColNumFrom<device_type>);
+  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>

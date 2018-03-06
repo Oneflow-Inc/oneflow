@@ -28,7 +28,7 @@ void RecurrentBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
   } else if (parallel_ctx()->policy() == kModelParallel) {
     rec_out_diff_regst = GetConsumedRegst("rec_out_diff");
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   exec_node->BindBnInOpAndRegst("rec_out_diff", rec_out_diff_regst);
 }
@@ -47,6 +47,9 @@ void RecurrentBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   auto rec_in_diff_regst = GetProducedRegst("rec_in_diff");
   rec_in_diff_regst->AddLbn(op->Lbn4BnInOp("rec_in"));
   exec_node->BindBnInOpAndRegst("rec_in_diff", rec_in_diff_regst);
+  if (parallel_ctx()->policy() == kModelParallel) {
+    exec_node->BindBnInOpAndRegst("rec_in", GetConsumedRegst("rec_in"));
+  }
 
   if (std::shared_ptr<RegstDesc> h0_regst = GetConsumedRegst("h0")) {
     exec_node->BindBnInOpAndRegst("h0", h0_regst);
@@ -81,7 +84,7 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
       ConsumeRegst("rec_out_diff", regst);
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
 }
 
@@ -96,6 +99,12 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
       ConsumeRegst("in", regst);
     } else if (lbns.find(op->Lbn4BnInOp("h0")) != lbns.end()) {
       ConsumeRegst("h0", regst);
+    } else if (lbns.find(op->Lbn4BnInOp("rec_in")) != lbns.end()) {
+      if (parallel_ctx()->policy() == kModelParallel) {
+        ConsumeRegst("rec_in", regst);
+      }
+    } else {
+      UNIMPLEMENTED();
     }
   }
 }
@@ -110,7 +119,7 @@ void RecurrentBackwardCompTaskNode::VirtualInferBlobDescInHiddenDiff() {
   } else if (parallel_ctx()->policy() == kModelParallel) {
     rec_in_regst = fw_node->GetConsumedRegst("rec_in");
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   rec_in_diff_regst->CopyBlobDescWithoutAddLbn(rec_in_regst.get());
   if (std::shared_ptr<RegstDesc> h0_diff_regst = GetConsumedRegst("h0")) {

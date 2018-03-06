@@ -18,13 +18,9 @@ class Kernel {
 
   void Init(const ParallelContext*, const KernelConf&);
 
-  void InitModelBlobs(
+  void InitModelAndModelTmp(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       const Snapshot*,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-
-  virtual void InitModelTmpBlobs(
-      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void Launch(const KernelCtx& ctx,
@@ -38,13 +34,16 @@ class Kernel {
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
 
+  virtual void InitPureModelTmpBlobs(
+      DeviceCtx* ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
-      const KernelCtx& ctx, std::mt19937 random_seed_gen,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      DeviceCtx* ctx, std::mt19937* random_seed_gen,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithDir(
-      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
+      DeviceCtx* ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
   virtual void Forward(
       const KernelCtx& ctx,
@@ -134,7 +133,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
 #define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq) \
   namespace {                                                                 \
                                                                               \
-  Kernel* CreateKernel(const KernelConf& kernel_conf) {                       \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {  \
     static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
                                          (kernel_class), DEVICE_TYPE_SEQ,     \
@@ -143,7 +142,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
         GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();    \
   }                                                                           \
                                                                               \
-  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                      \
+  COMMAND(AddKernelCreator(op_type_case, OF_PP_CAT(CreateKernel, __LINE__))); \
   }
 
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \

@@ -1,6 +1,8 @@
 #ifndef ONEFLOW_CORE_COMMON_UTIL_H_
 #define ONEFLOW_CORE_COMMON_UTIL_H_
 
+#include "oneflow/core/common/preprocessor.h"
+
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
@@ -37,7 +39,7 @@ namespace oneflow {
   OF_DISALLOW_COPY(ClassName)                \
   OF_DISALLOW_MOVE(ClassName)
 
-#define UNEXPECTED_RUN() LOG(FATAL) << "Unexpected Run";
+#define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
 #define TODO() LOG(FATAL) << "TODO";
 
@@ -61,12 +63,12 @@ namespace oneflow {
     }                                                              \
   }
 
-#define COMMAND(...)            \
-  namespace {                   \
-  struct CommandT {             \
-    CommandT() { __VA_ARGS__; } \
-  };                            \
-  CommandT g_command_var;       \
+#define COMMAND(...)                                                \
+  namespace {                                                       \
+  struct OF_PP_CAT(CommandT, __LINE__) {                            \
+    OF_PP_CAT(CommandT, __LINE__)() { __VA_ARGS__; }                \
+  };                                                                \
+  OF_PP_CAT(CommandT, __LINE__) OF_PP_CAT(g_command_var, __LINE__); \
   }
 
 template<typename T>
@@ -145,6 +147,8 @@ inline uint32_t NewRandomSeed() {
 #else
 #define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
 #endif
+
+#define DIM_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
 
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ \

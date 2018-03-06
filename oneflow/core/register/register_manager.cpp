@@ -2,10 +2,12 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
+                         DeviceType device_type,
                          std::function<void(Regst*)> OneRegstDone) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
   rt_regst_descs_.emplace_back(runtime_regst_desc);
@@ -24,13 +26,16 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     char* cur_pointer = std::get<0>(allocation_result);
     for (const std::string& lbn : lbns) {
       const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
-      auto blob_ptr = of_make_unique<Blob>(regst, blob_desc, cur_pointer);
+      std::unique_ptr<Blob> blob_ptr;
+      blob_ptr.reset(
+          NewBlob(regst, blob_desc, cur_pointer, nullptr, device_type));
       CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
       cur_pointer += blob_desc->TotalByteSize();
     }
-    regst->packed_blob_.reset(new Blob(
-        regst, runtime_regst_desc->packed_blob_desc(),
-        std::get<0>(allocation_result), std::get<1>(allocation_result)));
+    regst->packed_blob_.reset(
+        NewBlob(regst, runtime_regst_desc->packed_blob_desc(),
+                std::get<0>(allocation_result), std::get<1>(allocation_result),
+                device_type));
     regst->deleter_ = std::get<2>(allocation_result);
     OneRegstDone(regst);
   }

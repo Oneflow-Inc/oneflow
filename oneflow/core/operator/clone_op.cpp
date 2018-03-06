@@ -9,7 +9,7 @@ void CloneOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& CloneOp::GetSpecialConf() const {
+const PbMessage& CloneOp::GetCustomizedConf() const {
   return op_conf().clone_conf();
 }
 
