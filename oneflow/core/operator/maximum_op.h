@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_ELTWISE_OP_H_
-#define ONEFLOW_CORE_OPERATOR_ELTWISE_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
+#define ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class EltwiseOp final : public Operator {
+class MaximumOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(EltwiseOp);
-  EltwiseOp() = default;
-  ~EltwiseOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(MaximumOp);
+  MaximumOp() = default;
+  ~MaximumOp() = default;
 
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
@@ -24,4 +24,4 @@ class EltwiseOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_ELTWISE_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
