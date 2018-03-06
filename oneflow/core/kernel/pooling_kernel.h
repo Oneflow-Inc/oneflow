@@ -77,7 +77,6 @@ class PoolingKernelIf : public KernelIf<device_type, T> {
                                            ));
   }
   virtual const Pooling3DKernelConf& GetPooling3DKernelConf() const = 0;
-  bool NeedModelUpdate() const override { return false; }
   void ForwardDataContent(
       const KernelCtx& kernel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override {

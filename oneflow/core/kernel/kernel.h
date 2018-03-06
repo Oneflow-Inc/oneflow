@@ -101,7 +101,7 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  bool NeedModelUpdate() const override { return true; }
+  bool NeedModelUpdate() const override { return false; }
   void OtherTaskInBackward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;

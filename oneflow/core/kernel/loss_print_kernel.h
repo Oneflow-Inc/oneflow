@@ -12,7 +12,6 @@ class LossPrintKernel final : public KernelIf<DeviceType::kCPU> {
   LossPrintKernel() = default;
   ~LossPrintKernel() = default;
 
-  bool NeedModelUpdate() const override { return false; }
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 

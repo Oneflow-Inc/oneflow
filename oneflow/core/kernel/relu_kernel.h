@@ -14,7 +14,6 @@ class ReluKernel final : public KernelIf<device_type, T> {
   ~ReluKernel() = default;
 
  private:
-  bool NeedModelUpdate() const override { return false; }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

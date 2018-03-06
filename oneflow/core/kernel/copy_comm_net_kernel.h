@@ -11,7 +11,6 @@ class CopyCommNetKernel final : public KernelIf<DeviceType::kCPU> {
   CopyCommNetKernel() = default;
   ~CopyCommNetKernel() = default;
 
-  bool NeedModelUpdate() const override { return false; }
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override {
     UNIMPLEMENTED();

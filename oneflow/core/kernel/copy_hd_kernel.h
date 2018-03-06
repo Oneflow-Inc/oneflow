@@ -15,7 +15,6 @@ class CopyHdKernel final : public KernelIf<DeviceType::kGPU> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  bool NeedModelUpdate() const override { return false; }
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
