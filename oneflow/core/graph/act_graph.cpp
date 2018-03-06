@@ -13,7 +13,7 @@ std::string GenRegstUid(int64_t regst_desc_id, int64_t producer_act_id) {
 int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
   std::stringstream ss;
   ss << regst_uid;
-  int64_t regst_desc_id;
+  int64_t regst_desc_id = 0;
   ss >> regst_desc_id;
   return regst_desc_id;
 }
@@ -23,11 +23,10 @@ int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
 class RegstActSubGraph final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstActSubGraph);
-  RegstActSubGraph(
-      const std::string& regst_uid, const ActNode* producer_node,
-      const std::unordered_set<const ActNode*>& partial_producer_outs,
-      const std::unordered_set<const ActNode*>& partial_consumer_nodes,
-      const std::list<const ActNode*>& fake_sources_super_set)
+  RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
+                   const HashSet<const ActNode*>& partial_producer_outs,
+                   const HashSet<const ActNode*>& partial_consumer_nodes,
+                   const std::list<const ActNode*>& fake_sources_super_set)
       : regst_uid_(regst_uid),
         producer_node_(producer_node),
         partial_producer_outs_(partial_producer_outs),
@@ -55,12 +54,12 @@ class RegstActSubGraph final {
   void InitMaxDepth();
   std::string regst_uid_;
   const ActNode* producer_node_;
-  std::unordered_set<const ActNode*> partial_producer_outs_;
-  std::unordered_set<const ActNode*> partial_consumer_nodes_;
+  HashSet<const ActNode*> partial_producer_outs_;
+  HashSet<const ActNode*> partial_consumer_nodes_;
   // the duration of ActNode in fake_sources_ will be
   // std::numeric_limits<double>::min(), in order to exclude paths
   // not starting from producer_node_
-  std::unordered_set<const ActNode*> fake_sources_;
+  HashSet<const ActNode*> fake_sources_;
   int64_t max_depth_;
 };
 
@@ -240,17 +239,17 @@ void ActGraph::InitEdges() {
 }
 
 void ActGraph::TopoForEachActNode(
-    const std::list<const ActNode*>& starts,
-    const std::function<void(const ActNode*)>& Handler) const {
+    const std::list<ActNode*>& starts,
+    const std::function<void(ActNode*)>& Handler) const {
   TODO();
 }
 
 void ActGraph::InitDepth() {
-  std::list<const ActNode*> sources;
-  ForEachNode([&](const ActNode* node) {
+  std::list<ActNode*> sources;
+  ForEachNode([&](ActNode* node) {
     if (node->in_edges().empty()) { sources.push_back(node); }
   });
-  TopoForEachActNode(sources, [&](const ActNode* act_node) {
+  TopoForEachActNode(sources, [&](ActNode* act_node) {
     int64_t depth = -1;
     act_node->ForEachNodeOnInEdge([&](const ActNode* in_node) {
       depth = std::max(depth, in_node->depth());

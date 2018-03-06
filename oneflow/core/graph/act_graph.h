@@ -49,14 +49,12 @@ class ActNode final : public Node<ActNode, ActEdge> {
   // Setters
   void AddConsumerNode(const std::string& regst_uid,
                        const ActNode* consumer_node);
+  void set_depth(int64_t depth) { depth_ = depth; }
 
  private:
-  friend class ActGraph;
-  void set_depth(int64_t depth) const { depth_ = depth; }
-
   const ActEvent* act_event_;
   const TaskProto* task_proto_;
-  mutable int64_t depth_;
+  int64_t depth_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_nodes_;
 };
 
@@ -77,15 +75,7 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
 
   const Plan& plan() const { return *plan_; }
 
- private:
-  friend class DepthRangeActSubGraph;
-  void ForEachRegstUidDuration(
-      const std::function<void(const std::string&, double)>& Handler) const;
-
-  void InitNodes();
-  void InitEdges();
-  void InitDepth();
-
+  // Getters
   const std::list<const ActNode*>& Nodes4Depth(int64_t depth) const {
     return depth2nodes_.at(depth);
   }
@@ -97,15 +87,23 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
       const std::string& regst_uid) const {
     return regst_uid2consumer_nodes_.at(regst_uid);
   }
+
+ private:
+  void ForEachRegstUidDuration(
+      const std::function<void(const std::string&, double)>& Handler) const;
+
+  void InitNodes();
+  void InitEdges();
+  void InitDepth();
+
   void ForEachDepthRangeRegstUids(
       const std::function<void(const Range& range,
                                const std::list<std::string>& regst_uids)>&
           Handler) const;
   void ForEachRegstActSubGraph(
       const std::function<void(const RegstActSubGraph&)>& Handler) const;
-  void TopoForEachActNode(
-      const std::list<const ActNode*>& starts,
-      const std::function<void(const ActNode*)>& Handler) const;
+  void TopoForEachActNode(const std::list<ActNode*>& starts,
+                          const std::function<void(ActNode*)>& Handler) const;
 
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
