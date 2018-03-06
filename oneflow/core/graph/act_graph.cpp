@@ -26,14 +26,7 @@ class RegstActSubGraph final {
   RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
                    const HashSet<const ActNode*>& partial_producer_outs,
                    const HashSet<const ActNode*>& partial_consumer_nodes,
-                   const std::list<const ActNode*>& fake_sources_super_set)
-      : regst_uid_(regst_uid),
-        producer_node_(producer_node),
-        partial_producer_outs_(partial_producer_outs),
-        partial_consumer_nodes_(partial_consumer_nodes) {
-    InitFakeSources(fake_sources_super_set);
-    InitMaxDepth();
-  }
+                   const std::list<const ActNode*>& fake_sources_super_set);
   ~RegstActSubGraph() = default;
 
   double CalcLongestPathDuration() const;
@@ -48,34 +41,34 @@ class RegstActSubGraph final {
                      const std::function<void(const ActNode*)>& Handler) const;
   void ForEachOutNode(const ActNode* node,
                       const std::function<void(const ActNode*)>& Handler) const;
-  void InitFakeSources(const std::list<const ActNode*>& fake_sources_super_set);
   std::list<const ActNode*> CalcSources() const;
   bool IsSource(const ActNode* node) const;
-  void InitMaxDepth();
+
   std::string regst_uid_;
   const ActNode* producer_node_;
   HashSet<const ActNode*> partial_producer_outs_;
   HashSet<const ActNode*> partial_consumer_nodes_;
-  // the duration of ActNode in fake_sources_ will be
-  // std::numeric_limits<double>::min(), in order to exclude paths
-  // not starting from producer_node_
   HashSet<const ActNode*> fake_sources_;
   int64_t max_depth_;
 };
 
-void RegstActSubGraph::InitMaxDepth() {
-  max_depth_ = 0;
-  for (const ActNode* node : partial_consumer_nodes_) {
-    max_depth_ = std::max(max_depth_, node->depth());
-  }
-}
-
-void RegstActSubGraph::InitFakeSources(
-    const std::list<const ActNode*>& fake_sources_super_set) {
+RegstActSubGraph::RegstActSubGraph(
+    const std::string& regst_uid, const ActNode* producer_node,
+    const HashSet<const ActNode*>& partial_producer_outs,
+    const HashSet<const ActNode*>& partial_consumer_nodes,
+    const std::list<const ActNode*>& fake_sources_super_set)
+    : regst_uid_(regst_uid),
+      producer_node_(producer_node),
+      partial_producer_outs_(partial_producer_outs),
+      partial_consumer_nodes_(partial_consumer_nodes) {
   for (const ActNode* node : fake_sources_super_set) {
     if (partial_producer_outs_.find(node) == partial_producer_outs_.end()) {
       fake_sources_.insert(node);
     }
+  }
+  max_depth_ = 0;
+  for (const ActNode* node : partial_consumer_nodes_) {
+    max_depth_ = std::max(max_depth_, node->depth());
   }
 }
 

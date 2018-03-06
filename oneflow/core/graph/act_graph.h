@@ -40,7 +40,6 @@ class ActNode final : public Node<ActNode, ActEdge> {
   TaskType task_type() const { return task_proto_->task_type(); }
   std::string VisualStr() const override;
   int64_t depth() const { return depth_; }
-
   const std::list<const ActNode*>& ConsumerNodes4RegstInfo(
       const std::string& regst_uid) const {
     return regst_uid2consumer_nodes_.at(regst_uid);
@@ -70,12 +69,10 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
       const std::function<void(int64_t, double)>& Handler) const;
   void ForEachRegstDescIIScale(
       const std::function<void(int64_t, double)>& Handler) const;
-
   void ToDotFiles(const std::string& dir) const;
 
-  const Plan& plan() const { return *plan_; }
-
   // Getters
+  const Plan& plan() const { return *plan_; }
   const std::list<const ActNode*>& Nodes4Depth(int64_t depth) const {
     return depth2nodes_.at(depth);
   }
@@ -91,11 +88,9 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
  private:
   void ForEachRegstUidDuration(
       const std::function<void(const std::string&, double)>& Handler) const;
-
   void InitNodes();
   void InitEdges();
   void InitDepth();
-
   void ForEachDepthRangeRegstUids(
       const std::function<void(const Range& range,
                                const std::list<std::string>& regst_uids)>&
