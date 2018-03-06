@@ -83,6 +83,7 @@ message BasicDataLoaderOpConf {
   optional int32 max_sequence_size = 4 [default = 1];
   required ShapeProto shape = 5;
 }
+
 message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
