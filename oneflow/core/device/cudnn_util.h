@@ -55,8 +55,8 @@ class CudnnFilterDesc final {
   CudnnFilterDesc() = delete;
   ~CudnnFilterDesc();
 
-  CudnnFilterDesc(DataType, int k, int c, int h, int w);
-  CudnnFilterDesc(DataType, const Shape&);
+  CudnnFilterDesc(DataType data_type, const Shape& shape,
+                  const std::string& data_format);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 

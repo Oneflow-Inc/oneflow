@@ -226,6 +226,13 @@ void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);
 }
 
+void Operator::StrFieldTolower(const std::string& field_name) {
+  std::string field_val = GetStringFromCustomizedConf(field_name);
+  std::transform(field_val.begin(), field_val.end(), field_val.begin(),
+                 ::tolower);
+  SetStringInCustomizedConf(field_name, field_val);
+}
+
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
   return op_name() + "/" + data_tmp_bn;
 }
