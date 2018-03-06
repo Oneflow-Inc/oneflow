@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+const size_t DhwOffset(const std::string& data_format);
+
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                            int32_t stride, const std::string& padding_type,
                            int64_t* output_size, int32_t* padding_before,

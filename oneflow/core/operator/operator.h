@@ -58,21 +58,21 @@ class Operator {
   bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
-
-#define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)                \
-  ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
-      const {                                                                \
-    const PbMessage& special_conf = GetCustomizedConf();                     \
-    return Get##func_name##FromPbMessage(special_conf, field_name);          \
+  virtual PbMessage* MutableCustomizedKernelConf(
+      KernelConf* kernel_conf) const {
+    UNIMPLEMENTED();
   }
 
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(bool, Bool);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(float, Float);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, EnumValue);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name)             \
+  ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
+      const {                                                                \
+    const PbMessage& customized_conf = GetCustomizedConf();                  \
+    return Get##func_name##FromPbMessage(customized_conf, field_name);       \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
+                           const PbMessage&, Message));
 
   template<typename T>
   const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
@@ -85,23 +85,48 @@ class Operator {
     return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
-#undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
+#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
-#define DEFINE_SET_VAL_IN_SPECIAL_CONF(val_type, func_name)              \
-  void Set##func_name##InCustomizedConf(const std::string& field_name,   \
-                                        val_type val) const {            \
-    const PbMessage& special_conf = GetCustomizedConf();                 \
-    PbMessage* special_conf_ptr = &const_cast<PbMessage&>(special_conf); \
-    Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_CONF(val_type, func_name)                 \
+  void Set##func_name##InCustomizedConf(const std::string& field_name,         \
+                                        val_type val) const {                  \
+    const PbMessage& customized_conf = GetCustomizedConf();                    \
+    PbMessage* customized_conf_ptr = &const_cast<PbMessage&>(customized_conf); \
+    Set##func_name##InPbMessage(customized_conf_ptr, field_name, val);         \
   }
 
-  DEFINE_SET_VAL_IN_SPECIAL_CONF(std::string, String);
-  DEFINE_SET_VAL_IN_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_SET_VAL_IN_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_SET_VAL_IN_SPECIAL_CONF(bool, Bool);
-  DEFINE_SET_VAL_IN_SPECIAL_CONF(float, Float);
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
 
-#undef DEFINE_SET_VAL_IN_SPECIAL_CONF
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_CONF
+
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name)         \
+  void Set##func_name##InCustomizedKernelConf(                                \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
+      const {                                                                 \
+    PbMessage* customized_kernel_conf_ptr =                                   \
+        MutableCustomizedKernelConf(kernel_conf);                             \
+    Set##func_name##InPbMessage(customized_kernel_conf_ptr, field_name, val); \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
+
+#define DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name) \
+  void Add##func_name##ToPbRfInCustomizedKernelConf(                          \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
+      const {                                                                 \
+    PbMessage* customized_kernel_conf_ptr =                                   \
+        MutableCustomizedKernelConf(kernel_conf);                             \
+    Add##func_name##InPbRf(customized_kernel_conf_ptr, field_name, val);      \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
 
   const std::string& SoleIbn() const;
   const std::string& SoleIdbn() const;
@@ -172,6 +197,8 @@ class Operator {
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
+
+  void StrFieldTolower(const std::string& field_name);
 
  private:
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;

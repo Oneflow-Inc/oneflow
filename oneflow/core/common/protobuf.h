@@ -70,6 +70,16 @@ OF_PP_FOR_EACH_TUPLE(DECLARE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
 #undef DECLARE_SET_VAL_IN_PBMESSAGE
 
+// Add In PbMessage RepeatedField
+
+#define DECLARE_ADD_VAL_IN_PBRF(val_type, func_name)                         \
+  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
+                              val_type val);
+
+OF_PP_FOR_EACH_TUPLE(DECLARE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
+
+#undef DECLARE_ADD_VAL_IN_PBRF
+
 // PbRf <-> std::vector
 
 template<typename T>
