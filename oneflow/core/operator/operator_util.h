@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_OPERATOR_UTIL_H_
-#define ONEFLOW_CORE_COMMON_OPERATOR_UTIL_H_
+#ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_
+#define ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -35,4 +35,4 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OPERATOR_UTIL_H_
+#endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_
