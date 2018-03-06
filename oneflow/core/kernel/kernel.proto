@@ -6,6 +6,18 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
 
+message ConvKernelConf {
+  required ShapeProto in = 1;
+  required ShapeProto out = 2;
+  required ShapeProto weight = 3;
+  optional ShapeProto bias = 4;
+  repeated int32 pad_small_side = 5;
+  repeated int32 pad_large_side = 6;
+  optional int32 cudnn_fwd_algo = 7 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 8 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 9 [default = -1];
+}
+
 message LossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
@@ -74,6 +86,7 @@ message KernelConf {
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     SoftmaxKernelConf softmax_conf = 116;
     ReduceSumKernelConf reduce_sum_conf = 120;
+    ConvKernelConf conv_conf = 127;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
   }
