@@ -20,6 +20,10 @@ void LossOp::VirtualGenKernelConf(
   LossKernelConf* conf = GetMutLossKernelConf(kernel_conf);
   conf->set_prediction_type(GetBlobDesc4BnInOp("prediction")->data_type());
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
+  conf->set_need_weight_blob(!GetStringFromCustomizedConf("weight").empty());
+  conf->set_weight_scalar(GetFloatFromCustomizedConf("weight_scalar"));
+  conf->set_reduction(static_cast<LossReductionType>(
+      GetEnumValueFromCustomizedConf("reduction")));
 }
 
 void LossOp::InferBlobDescs(

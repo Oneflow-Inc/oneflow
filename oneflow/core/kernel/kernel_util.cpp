@@ -143,6 +143,10 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int incx) {
     cblas_scal(n, alpha, x, incx);
   }
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
+                   const int incx) {
+    Scal(ctx, n, *alpha, x, incx);
+  }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
   }

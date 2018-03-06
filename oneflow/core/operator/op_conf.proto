@@ -283,6 +283,9 @@ message PrintOpConf {
 }
 
 message LossPrintOpConf {
+  required bool need_weight_blob = 1;
+  optional float weight_scalar = 2 [default = 1.0];
+  optional LossReductionType reduction = 3 [default = kSumOverN]; 
 }
 
 message ReduceSumOpConf {

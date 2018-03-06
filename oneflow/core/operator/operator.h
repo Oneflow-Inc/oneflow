@@ -70,6 +70,8 @@ class Operator {
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(bool, Bool);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(float, Float);
+  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, EnumValue);
   DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
 
   template<typename T>
@@ -85,7 +87,7 @@ class Operator {
 
 #undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
 
-#define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
+#define DEFINE_SET_VAL_IN_SPECIAL_CONF(val_type, func_name)              \
   void Set##func_name##InCustomizedConf(const std::string& field_name,   \
                                         val_type val) const {            \
     const PbMessage& special_conf = GetCustomizedConf();                 \
@@ -93,10 +95,11 @@ class Operator {
     Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
   }
 
-  DEFINE_SET_VAL_In_SPECIAL_CONF(std::string, String);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(bool, Bool);
+  DEFINE_SET_VAL_IN_SPECIAL_CONF(std::string, String);
+  DEFINE_SET_VAL_IN_SPECIAL_CONF(int32_t, Int32);
+  DEFINE_SET_VAL_IN_SPECIAL_CONF(int64_t, Int64);
+  DEFINE_SET_VAL_IN_SPECIAL_CONF(bool, Bool);
+  DEFINE_SET_VAL_IN_SPECIAL_CONF(float, Float);
 
 #undef DEFINE_SET_VAL_IN_SPECIAL_CONF
 

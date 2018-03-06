@@ -66,7 +66,11 @@ struct KernelUtil<DeviceType::kGPU, T> final {
   }
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
                    const int incx) {
-    cublas_scal(ctx->cublas_handle(), n, &alpha, x, incx);
+    Scal(ctx, n, &alpha, x, incx);
+  }
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
+                   const int incx) {
+    cublas_scal(ctx->cublas_handle(), n, alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
