@@ -20,7 +20,6 @@ class RecurrentKernel : public KernelIf<device_type, T> {
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
   Blob* GetHiddenDiffBlob(std::function<Blob*(const std::string&)>) const;
 
-  bool NeedModelUpdate() const override { return true; }
   void ForwardColNum(const KernelCtx&,
                      std::function<Blob*(const std::string&)>) const override;
   void ForwardDataId(const KernelCtx&,

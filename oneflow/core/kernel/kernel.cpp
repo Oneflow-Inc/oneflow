@@ -59,9 +59,13 @@ void Kernel::Backward(
   BackwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (NeedModelUpdate() && JobDesc::Singleton()->L2()) {
+  if (HasModelBns() && JobDesc::Singleton()->L2()) {
     OtherTaskInBackward(ctx, BnInOp2Blob);
   }
+}
+
+bool Kernel::HasModelBns() const {
+  return kernel_conf().model_bns().size() == 0;
 }
 
 template<DeviceType device_type, typename T>

@@ -13,7 +13,6 @@ class FullyConnectedKernel final : public KernelIf<device_type, T> {
   ~FullyConnectedKernel() = default;
 
  private:
-  bool NeedModelUpdate() const override { return true; }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
