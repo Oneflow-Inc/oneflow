@@ -11,12 +11,12 @@ void MdUpdateKernel<device_type, T>::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
   UpdateModel(ctx.device_ctx, std::get<1>(*tpl),
-              DiffAveragingAndRegularization(ctx.device_ctx, BnInOp2Blob),
+              DiffAveragingAndL1Regularization(ctx.device_ctx, BnInOp2Blob),
               std::get<0>(*tpl), BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
-Blob* MdUpdateKernel<device_type, T>::DiffAveragingAndRegularization(
+Blob* MdUpdateKernel<device_type, T>::DiffAveragingAndL1Regularization(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
@@ -28,9 +28,8 @@ Blob* MdUpdateKernel<device_type, T>::DiffAveragingAndRegularization(
   }
   const Blob* model = BnInOp2Blob("model");
   float l1 = JobDesc::Singleton()->L1();
-  float l2 = JobDesc::Singleton()->L2();
-  MdUpdateKernelUtil<device_type, T>::DiffAveragingAndRegularization(
-      ctx, model->shape().elem_cnt(), l1, l2, model->dptr<T>(),
+  MdUpdateKernelUtil<device_type, T>::DiffAveragingAndL1Regularization(
+      ctx, model->shape().elem_cnt(), l1, model->dptr<T>(),
       in_0->mut_dptr<T>());
   return in_0;
 }
@@ -38,14 +37,13 @@ Blob* MdUpdateKernel<device_type, T>::DiffAveragingAndRegularization(
 template<typename T>
 class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void DiffAveragingAndRegularization(DeviceCtx* ctx, int64_t n,
-                                             float l1, float l2, const T* model,
-                                             T* model_diff_acc) {
+  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n,
+                                               float l1, const T* model,
+                                               T* model_diff_acc) {
     T zero = static_cast<T>(0);
     for (int64_t i = 0; i != n; ++i) {
       model_diff_acc[i] /= JobDesc::Singleton()->BatchSize();
-      model_diff_acc[i] +=
-          l1 * ((model[i] >= zero) - (model[i] <= zero)) + l2 * model[i];
+      model_diff_acc[i] += l1 * ((model[i] >= zero) - (model[i] <= zero));
     }
   }
 };

@@ -70,12 +70,17 @@ class Kernel {
   virtual void BackwardColNum(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void OtherTaskInBackward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual bool NeedModelUpdate() const = 0;
 
  private:
+  bool HasModelBlob() const;
   KernelConf kernel_conf_;
 };
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T = char>
 class KernelIf : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIf);
@@ -96,6 +101,13 @@ class KernelIf : public Kernel {
   virtual void BackwardColNum(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void OtherTaskInBackward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void L2Regularization(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void CopyDataId(DeviceCtx* ctx,
                   std::function<Blob*(const std::string&)> BnInOp2Blob,

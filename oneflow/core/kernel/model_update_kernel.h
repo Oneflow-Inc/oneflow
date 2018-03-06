@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class MdUpdateKernel : public KernelIf<device_type> {
+class MdUpdateKernel : public KernelIf<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdateKernel);
   virtual ~MdUpdateKernel() = default;
@@ -23,7 +23,7 @@ class MdUpdateKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
  private:
-  Blob* DiffAveragingAndRegularization(
+  Blob* DiffAveragingAndL1Regularization(
       DeviceCtx* ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
@@ -31,9 +31,9 @@ class MdUpdateKernel : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 class MdUpdateKernelUtil final {
  public:
-  static void DiffAveragingAndRegularization(DeviceCtx* ctx, const int64_t n,
-                                             float l1, float l2, const T* model,
-                                             T* model_diff_acc);
+  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, const int64_t n,
+                                               float l1, const T* model,
+                                               T* model_diff_acc);
 };
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) \
