@@ -4,7 +4,7 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/eigen/tensor_type.h"
+#include "oneflow/core/common/eigen_util.h"
 
 namespace oneflow {
 
@@ -31,7 +31,7 @@ class Blob {
   void* mut_memory_ptr() { return mem_ptr_; }
 
   virtual void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                         const std::vector<int32_t>& permutation) = 0;
+                         const PbRf<int32_t>& permutation) const = 0;
 
   template<typename T = void>
   const T* dptr() const {

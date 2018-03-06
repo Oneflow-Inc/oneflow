@@ -7,16 +7,11 @@ void ExecNode::BindBnInOpAndRegst(const std::string& bn_in_op,
   CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
 }
 
-std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
-    const {
-  return std::bind(&ExecNode::GetBlobDesc4BnInOp, this, std::placeholders::_1);
-}
-
 void ExecNode::ToProto(bool is_forward, DeviceType device_type,
                        const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, device_type,
-                     parallel_ctx, ret->mutable_kernel_conf());
+                     parallel_ctx, op_ctx_.get(), ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second.lock();
@@ -26,13 +21,22 @@ void ExecNode::ToProto(bool is_forward, DeviceType device_type,
   }
 }
 
-BlobDesc* ExecNode::GetBlobDesc4BnInOp(const std::string& bn_in_op) const {
-  auto it = bn_in_op2regst_.find(bn_in_op);
-  if (it == bn_in_op2regst_.end()) { return nullptr; }
-  std::shared_ptr<RegstDesc> regst = it->second.lock();
-  if (!regst) { return nullptr; }
-  const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
-  return regst->MutBlobDesc(lbn);
+void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx,
+                              DeviceType device_type) {
+  op_->InferBlobDescs(GetBlobDesc4BnInOpFunc(), parallel_ctx, device_type,
+                      [this](OpContext* val) { op_ctx_.reset(val); });
+}
+
+std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
+    const {
+  return [this](const std::string& bn_in_op) -> BlobDesc* {
+    auto it = bn_in_op2regst_.find(bn_in_op);
+    if (it == bn_in_op2regst_.end()) { return nullptr; }
+    std::shared_ptr<RegstDesc> regst = it->second.lock();
+    if (!regst) { return nullptr; }
+    const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
+    return regst->MutBlobDesc(lbn);
+  };
 }
 
 void ExecGraph::ToExecSequence(bool is_forward, DeviceType device_type,

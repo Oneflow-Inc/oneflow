@@ -8,6 +8,7 @@
 #include <google/protobuf/map.h>
 #include <google/protobuf/message.h>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
 
@@ -19,6 +20,21 @@ using PbRpf = google::protobuf::RepeatedPtrField<T>;
 template<typename T1, typename T2>
 using PbMapPair = google::protobuf::MapPair<T1, T2>;
 
+#define PROTOBUF_BASIC_DATA_TYPE_SEQ        \
+  OF_PP_MAKE_TUPLE_SEQ(std::string, String) \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, Int32)      \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, UInt32)    \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
+  OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
+
+#define PROTOBUF_REFLECTION(msg, field_name)                               \
+  auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
+  auto fd = const_cast<google::protobuf::FieldDescriptor*>(                \
+      d->FindFieldByName(field_name));                                     \
+  CHECK_NOTNULL(fd);                                                       \
+  auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
+
 // Prototxt <-> File
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
@@ -29,23 +45,16 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
   ret_type Get##func_name##FromPbMessage(const PbMessage& msg, \
                                          const std::string& field_name);
 
-DECLARE_GET_VAL_FROM_PBMESSAGE(std::string, String);
-DECLARE_GET_VAL_FROM_PBMESSAGE(int32_t, Int32);
-DECLARE_GET_VAL_FROM_PBMESSAGE(uint32_t, UInt32);
-DECLARE_GET_VAL_FROM_PBMESSAGE(int64_t, Int64);
-DECLARE_GET_VAL_FROM_PBMESSAGE(uint64_t, UInt64);
-DECLARE_GET_VAL_FROM_PBMESSAGE(bool, Bool);
-DECLARE_GET_VAL_FROM_PBMESSAGE(const PbMessage&, Message);
+OF_PP_FOR_EACH_TUPLE(DECLARE_GET_VAL_FROM_PBMESSAGE,
+                     PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
+                         const PbMessage&, Message))
 
 #undef DECLARE_GET_VAL_FROM_PBMESSAGE
 
 template<typename T>
 const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
                                     const std::string& field_name) {
-  const google::protobuf::Descriptor* d = msg.GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = d->FindFieldByName(field_name);
-  CHECK_NOTNULL(fd);
-  const google::protobuf::Reflection* r = msg.GetReflection();
+  PROTOBUF_REFLECTION(msg, field_name);
   return r->GetRepeatedField<T>(msg, fd);
 }
 
@@ -55,25 +64,19 @@ const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
   void Set##func_name##InPbMessage(                       \
       PbMessage* msg, const std::string& field_name, val_type val);
 
-DECLARE_SET_VAL_IN_PBMESSAGE(std::string, String);
-DECLARE_SET_VAL_IN_PBMESSAGE(int32_t, Int32);
-DECLARE_SET_VAL_IN_PBMESSAGE(uint32_t, UInt32);
-DECLARE_SET_VAL_IN_PBMESSAGE(int64_t, Int64);
-DECLARE_SET_VAL_IN_PBMESSAGE(uint64_t, UInt64);
-DECLARE_SET_VAL_IN_PBMESSAGE(bool, Bool);
+OF_PP_FOR_EACH_TUPLE(DECLARE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
 #undef DECLARE_SET_VAL_IN_PBMESSAGE
 
-// Alias PbType
+// Add In PbMessage RepeatedField
 
-#define ALIAS_PB_TYPE(type, name) using Pb##name = google::protobuf::type;
+#define DECLARE_ADD_VAL_IN_PBRF(val_type, func_name)                         \
+  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
+                              val_type val);
 
-ALIAS_PB_TYPE(int32, Int32);
-ALIAS_PB_TYPE(int64, Int64);
-ALIAS_PB_TYPE(uint32, UInt32);
-ALIAS_PB_TYPE(uint64, UInt64);
+OF_PP_FOR_EACH_TUPLE(DECLARE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
-#undef ALIAS_PB_TYPE
+#undef DECLARE_ADD_VAL_IN_PBRF
 
 // PbRf <-> std::vector
 

@@ -77,15 +77,19 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
 #endif
   int64_t piece_experiment = job_conf_.piece_num_of_experiment_phase();
   if (job_conf_.has_train_conf()) {
-    const TrainConf& train_conf = job_conf_.train_conf();
+    TrainConf* train_conf = job_conf_.mutable_train_conf();
     piece_experiment = std::max<int64_t>(
-        piece_experiment, train_conf.num_of_batches_in_snapshot()
-                              * train_conf.num_of_pieces_in_batch());
+        piece_experiment, train_conf->num_of_batches_in_snapshot()
+                              * train_conf->num_of_pieces_in_batch());
     piece_experiment = std::max<int64_t>(piece_experiment,
-                                         train_conf.piece_num_of_print_loss());
+                                         train_conf->piece_num_of_print_loss());
     if (piece_experiment != job_conf_.piece_num_of_experiment_phase()) {
       LOG(WARNING) << "Set piece_num_of_experiment_phase " << piece_experiment;
       job_conf_.set_piece_num_of_experiment_phase(piece_experiment);
+    }
+    if (train_conf->has_piece_num_of_print_loss() == false) {
+      train_conf->set_piece_num_of_print_loss(
+          train_conf->num_of_pieces_in_batch());
     }
   }
 #ifndef WITH_CUDA

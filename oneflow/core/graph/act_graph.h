@@ -65,8 +65,7 @@ class RegstActSubGraph;
 class ActGraph final : public Graph<ActNode, ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActGraph);
-  ActGraph(const Plan& plan,
-                    std::unique_ptr<std::list<ActEvent>>&& act_events);
+  ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_events);
   ~ActGraph() = default;
 
   void ForEachRegstDescMeanDuration(

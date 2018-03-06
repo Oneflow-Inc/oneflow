@@ -343,8 +343,12 @@ void ChainGraph::BuildLossPrintStruct() {
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
     loss_acc_op_conf.mutable_accumulate_conf();
     auto loss_acc_op = ConstructOp(loss_acc_op_conf);
+    OperatorConf reduction_acc_op_conf;
+    reduction_acc_op_conf.set_name("reduction_acc_" + NewUniqueId());
+    reduction_acc_op_conf.mutable_accumulate_conf();
+    auto reduction_acc_op = ConstructOp(reduction_acc_op_conf);
     auto loss_acc_chain = NewNode<LossAccChainNode>();
-    loss_acc_chain->mut_op_vec() = {loss_acc_op};
+    loss_acc_chain->mut_op_vec() = {loss_acc_op, reduction_acc_op};
     loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
     Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
     // Loss Print Chain
