@@ -92,7 +92,6 @@ void BasicLstmOp::VirtualInferBobDescs(
     *GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
   }
 }
-i
-REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);
+i REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);
 
 }  // namespace oneflow
