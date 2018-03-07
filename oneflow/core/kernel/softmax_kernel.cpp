@@ -78,11 +78,7 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
 }
 
 template<typename T>
-class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernelUtil);
-  SoftmaxKernelUtil() = delete;
-
+struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
   static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w,
                          const T* out, T* tmp) {
     for (int64_t i = 0; i < n; ++i) {
@@ -114,7 +110,7 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
-  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+  template struct SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,

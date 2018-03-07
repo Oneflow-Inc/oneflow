@@ -21,9 +21,8 @@ message ConvKernelConf {
 message LossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
-  required bool need_weight_blob = 3;
-  required float weight_scalar = 4;
-  required LossReductionType reduction = 5;
+  required float weight_scalar = 3;
+  required LossReductionType reduction = 4;
 }
 
 message SparseSoftmaxCrossEntropyLossKernelConf {
