@@ -91,7 +91,6 @@ class EmbeddingLookupKernelUtil<DeviceType::kCPU, T> final {
 };
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kEmbeddingLookupConf,
-                           EmbeddingLookupKernel,
-                           OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat));
+                           EmbeddingLookupKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

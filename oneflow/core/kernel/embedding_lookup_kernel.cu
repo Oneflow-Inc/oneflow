@@ -1,16 +1,9 @@
 #include "oneflow/core/kernel/embedding_lookup_kernel.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
 namespace {
-
-template<typename T>
-inline __device__ T gpu_atomic_add(const T val, T* address);
-
-template<>
-inline __device__ float gpu_atomic_add(const float val, float* address) {
-  return atomicAdd(address, val);
-}
 
 template<typename T>
 __global__ void EmbeddingLookupBackward(const int32_t n, const int32_t* in_dptr,
@@ -21,8 +14,8 @@ __global__ void EmbeddingLookupBackward(const int32_t n, const int32_t* in_dptr,
     const int32_t oidx = i / units;
     const int32_t uidx = i % units;
     const int32_t idx = in_dptr[oidx];
-    gpu_atomic_add<T>(out_diff_dptr[oidx * units + uidx],
-                      weight_diff_dptr + idx * units + uidx);
+    gpu_atomic_add<T>(weight_diff_dptr + idx * units + uidx,
+                      out_diff_dptr[oidx * units + uidx]);
   }
 }
 
@@ -62,6 +55,6 @@ class EmbeddingLookupKernelUtil<DeviceType::kGPU, T> final {
 #define INSTANTIATE_EMBEDDING_LOOKUP_KERNEL_UTIL(type_cpp, type_proto) \
   template class EmbeddingLookupKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_EMBEDDING_LOOKUP_KERNEL_UTIL,
-                     OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat))
+                     FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
