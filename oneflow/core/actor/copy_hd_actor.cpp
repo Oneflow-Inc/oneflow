@@ -43,6 +43,8 @@ void CopyHdActor::Act() {
                     });
   AsyncSendRegstMsgToConsumer([&](Regst* out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
+    out_regst->set_col_id(in_regst->col_id());
+    out_regst->set_max_col_id(in_regst->max_col_id());
     out_regst->set_model_version_id(in_regst->model_version_id());
     return true;
   });
