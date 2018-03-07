@@ -22,4 +22,3 @@ class BasicLstmOp final : public RecurrentOp {
 }  // namespace oneflow
 
 #endif  //  ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
-
