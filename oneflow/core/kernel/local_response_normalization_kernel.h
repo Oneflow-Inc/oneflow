@@ -54,8 +54,8 @@ class LocalResponseNormalizationKernel final : public KernelIf<device_type> {
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
 #ifdef WITH_CUDA
-  std::shared_ptr<CudnnTensorDesc> batch_desc_;
-  std::shared_ptr<CudnnLRNDesc> normalize_desc_;
+  std::unique_ptr<CudnnTensorDesc> batch_desc_;
+  std::unique_ptr<CudnnLRNDesc> normalize_desc_;
 #endif  // WITH_CUDA
 };
 
