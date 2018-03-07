@@ -4,10 +4,8 @@ namespace oneflow {
 
 void MaximumOp::InitFromOpConf() {
   CHECK(op_conf().has_maximum_conf());
-
-  for (int i = 0; i < op_conf().maximum_conf().in_size(); ++i) {
-    std::string ibn = "in_" + std::to_string(i);
-    EnrollInputBn(ibn);
+  for (size_t i = 1; i < input_bns().size(); ++i) {
+    EnrollOutputBn(input_bns().at(i));
   }
   EnrollOutputBn("out");
   EnrollOutputBn("mask");
