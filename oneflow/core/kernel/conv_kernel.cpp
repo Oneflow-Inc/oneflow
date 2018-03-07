@@ -4,14 +4,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::VirtualKernelInit(const ParallelContext*) {
-  Shape in_blob_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("in")));
-  this->kernel_dim_ = in_blob_shape.NumAxes() - 2;
-}
-
-template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
+void ConvKernelBase<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
@@ -24,7 +17,7 @@ void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
+void ConvKernelBase<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
@@ -43,7 +36,7 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
+void ConvKernelBase<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -60,9 +53,9 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
+const PbMessage& ConvKernelBase<device_type, T>::GetCustomizedOpConf() const {
   CHECK(this->kernel_conf().has_conv_conf());
-  switch (kernel_dim()) {
+  switch (KernelDim()) {
     case 1: return this->op_conf().conv_1d_conf();
     case 2: return this->op_conf().conv_2d_conf();
     case 3: return this->op_conf().conv_3d_conf();
@@ -71,8 +64,16 @@ const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedKernelConf() const {
+const PbMessage& ConvKernelBase<device_type, T>::GetCustomizedKernelConf()
+    const {
   return this->kernel_conf().conv_conf();
+}
+
+template<DeviceType device_type, typename T>
+const int32_t ConvKernelBase<device_type, T>::KernelDim() const {
+  Shape in_blob_shape(static_cast<const ShapeProto&>(
+      this->GetMessageFromCustomizedKernelConf("in")));
+  return in_blob_shape.NumAxes() - 2;
 }
 
 template<typename T>

@@ -6,8 +6,6 @@ namespace oneflow {
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
-  ConvKernelIf<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
-
   Shape in_shape(static_cast<const ShapeProto&>(
       this->GetMessageFromCustomizedKernelConf("in")));
   Shape out_shape(static_cast<const ShapeProto&>(
@@ -15,10 +13,10 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   Shape weight_shape(static_cast<const ShapeProto&>(
       this->GetMessageFromCustomizedKernelConf("weight")));
 
-  std::vector<int32_t> stride_of_in_tensor(this->kernel_dim(), 1);
-  std::vector<int32_t> stride_of_out_tensor(this->kernel_dim(), 1);
-  for (int32_t i = this->kernel_dim() + 2 - 1; i > 0; --i) {
-    for (int32_t j = this->kernel_dim() + 2 - 2; j >= 0; --j) {
+  std::vector<int32_t> stride_of_in_tensor(this->KernelDim(), 1);
+  std::vector<int32_t> stride_of_out_tensor(this->KernelDim(), 1);
+  for (int32_t i = this->KernelDim() + 2 - 1; i > 0; --i) {
+    for (int32_t j = this->KernelDim() + 2 - 2; j >= 0; --j) {
       stride_of_in_tensor[j] *= in_shape.At(i);
       stride_of_out_tensor[j] *= out_shape.At(i);
     }
@@ -28,17 +26,17 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   std::vector<int32_t> out_dim(out_shape.dim_vec().begin(),
                                out_shape.dim_vec().end());
 
-  this->in_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::val, this->kernel_dim() + 2,
-                          in_dim.data(), stride_of_in_tensor.data()));
+  this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::val,
+                                           this->KernelDim() + 2, in_dim.data(),
+                                           stride_of_in_tensor.data()));
   this->out_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::val, this->kernel_dim() + 2,
+      new CudnnTensorDesc(GetDataType<T>::val, this->KernelDim() + 2,
                           out_dim.data(), stride_of_out_tensor.data()));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<T>::val, weight_shape,
                           this->GetStringFromCustomizedOpConf("data_format")));
   this->conv_desc_.reset(new CudnnConvDesc(
-      GetDataType<T>::val, in_shape, this->kernel_dim(),
+      GetDataType<T>::val, in_shape, this->KernelDim(),
       this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
           .data(),
       this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),

@@ -8,14 +8,13 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ConvKernelIf : public KernelIf<device_type> {
+class ConvKernelBase : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvKernelIf);
-  ConvKernelIf() = default;
-  virtual ~ConvKernelIf() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernelBase);
+  ConvKernelBase() = default;
+  virtual ~ConvKernelBase() = default;
 
  protected:
-  void VirtualKernelInit(const ParallelContext*) override;
   void InitPureModelTmpBlobs(
       DeviceCtx*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -29,9 +28,7 @@ class ConvKernelIf : public KernelIf<device_type> {
 
   const PbMessage& GetCustomizedOpConf() const override;
   const PbMessage& GetCustomizedKernelConf() const override;
-  const int32_t kernel_dim() const { return kernel_dim_; }
-
-  int32_t kernel_dim_;
+  const int32_t KernelDim() const;
 };
 
 template<DeviceType device_type, typename T>
@@ -39,7 +36,7 @@ class ConvKernel;
 
 template<typename T>
 class ConvKernel<DeviceType::kCPU, T> final
-    : public ConvKernelIf<DeviceType::kCPU, T> {
+    : public ConvKernelBase<DeviceType::kCPU, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
   ConvKernel() = default;
@@ -56,7 +53,7 @@ class ConvKernel<DeviceType::kCPU, T> final
 
 template<typename T>
 class ConvKernel<DeviceType::kGPU, T> final
-    : public ConvKernelIf<DeviceType::kGPU, T> {
+    : public ConvKernelBase<DeviceType::kGPU, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
   ConvKernel() = default;
