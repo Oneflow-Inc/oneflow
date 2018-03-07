@@ -46,7 +46,7 @@ op {
 
 op {
   name: "softmax_loss"
-  softmax_loss_conf {
+  sparse_softmax_cross_entropy_loss_conf {
     prediction: "ip10/out"
     label: "label/out"
     loss: "loss"

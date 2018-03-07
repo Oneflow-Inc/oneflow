@@ -12,7 +12,7 @@ void Kernel::InitModelAndModelTmp(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitModelTmpBlobs(ctx.device_ctx, BnInOp2Blob);
+  InitPureModelTmpBlobs(ctx.device_ctx, BnInOp2Blob);
   std::string model_load_dir = kernel_conf().op_conf().model_load_dir();
   if (model_load_dir == "" && snapshot) {
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());

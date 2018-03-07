@@ -173,7 +173,18 @@ void Operator::VirtualGenKernelConf(
 }
 
 std::string Operator::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromCustomizedConf(input_bn);
+  const google::protobuf::Descriptor* desc =
+      GetCustomizedConf().GetDescriptor();
+  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
+  if (fd) {
+    return GetStringFromCustomizedConf(input_bn);
+  } else {
+    size_t underline_pos = input_bn.rfind('_');
+    CHECK_NE(underline_pos, std::string::npos);
+    std::string ibn_prefix = input_bn.substr(0, underline_pos);
+    int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
+    return GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+  }
 }
 std::string Operator::obn2lbn(const std::string& output_bn) const {
   return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
@@ -199,6 +210,31 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
     CHECK(bn_in_op2lbn_.emplace(idbn, lbn).second);
   }
 }
+
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num,
+                                     bool has_diff) {
+  FOR_RANGE(int32_t, i, 0, num) {
+    std::string ibn = ibn_prefix + "_" + std::to_string(i);
+    EnrollInputBn(ibn, has_diff);
+  }
+}
+
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix,
+                                     bool has_diff) {
+  EnrollRepeatedInputBn(
+      ibn_prefix, GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).size(),
+      has_diff);
+}
+
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix,
+                                     int32_t num) {
+  EnrollRepeatedInputBn(ibn_prefix, num, true);
+}
+
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
+  EnrollRepeatedInputBn(ibn_prefix, true);
+}
+
 void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   std::string lbn = obn2lbn(obn);
   output_bns_.push_back(obn);
@@ -224,6 +260,13 @@ void Operator::EnrollModelBn(const std::string& mbn) {
 void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   model_tmp_bns_.push_back(mtbn);
   CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);
+}
+
+void Operator::StrFieldTolower(const std::string& field_name) {
+  std::string field_val = GetStringFromCustomizedConf(field_name);
+  std::transform(field_val.begin(), field_val.end(), field_val.begin(),
+                 ::tolower);
+  SetStringInCustomizedConf(field_name, field_val);
 }
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
