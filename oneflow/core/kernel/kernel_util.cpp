@@ -273,7 +273,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
 
-#define DEFINE_VOID_KERNEL_UTIL(device_type)                        \
+#define DEFINE_UNIMPLEMENTED_KERNEL_UTIL(device_type)               \
   template<>                                                        \
   void KernelUtil<device_type, char>::Axpy(                         \
       DeviceCtx* ctx, const int n, const char alpha, const char* x, \
@@ -281,6 +281,6 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
     UNIMPLEMENTED();                                                \
   }
 
-OF_PP_FOR_EACH_TUPLE(DEFINE_VOID_KERNEL_UTIL, DEVICE_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(DEFINE_UNIMPLEMENTED_KERNEL_UTIL, DEVICE_TYPE_SEQ);
 
 }  //  namespace oneflow

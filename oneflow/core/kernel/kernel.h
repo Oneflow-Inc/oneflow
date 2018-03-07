@@ -70,7 +70,7 @@ class Kernel {
   virtual void BackwardColNum(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual void OtherTaskInBackward(
+  virtual void L2Regularization(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual bool NeedModelUpdate() const = 0;
@@ -102,12 +102,9 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void OtherTaskInBackward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void L2Regularization(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void CopyDataId(DeviceCtx* ctx,
                   std::function<Blob*(const std::string&)> BnInOp2Blob,

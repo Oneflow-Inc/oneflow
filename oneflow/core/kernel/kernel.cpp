@@ -59,13 +59,13 @@ void Kernel::Backward(
   BackwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-  if (HasModelBns() && JobDesc::Singleton()->L2()) {
-    OtherTaskInBackward(ctx, BnInOp2Blob);
+  if (HasModelBns() && JobDesc::Singleton()->L2() > 0) {
+    L2Regularization(ctx, BnInOp2Blob);
   }
 }
 
 bool Kernel::HasModelBns() const {
-  return kernel_conf().model_bns().size() == 0;
+  return kernel_conf().model_bns().size() != 0;
 }
 
 template<DeviceType device_type, typename T>
@@ -97,13 +97,6 @@ void KernelIf<device_type, T>::BackwardColNum(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
             kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
-}
-
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::OtherTaskInBackward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  L2Regularization(ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -187,14 +180,10 @@ std::unique_ptr<const Kernel> ConstructKernel(
   return std::unique_ptr<const Kernel>(rptr);
 }
 
-#define INSTANTIATE_KERNEL_IF_CHAR(x) template class KernelIf<x>;
-
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_CHAR, DEVICE_TYPE_SEQ);
-
-#define INSTANTIATE_KERNEL_IF_ARITHMETIC(device_type, data_type_pair) \
+#define INSTANTIATE_KERNEL_IF(device_type, data_type_pair) \
   template class KernelIf<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_ARITHMETIC,
-                                 DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ,
+                                 ALL_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
