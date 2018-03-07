@@ -58,8 +58,8 @@ void BasicLstmOp::VirtualInferBobDescs(
       BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_c_weight") =
       BlobDesc(Shape({hidden_size, hidden_size}));
- }
 }
+
 REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);
 
 }  // namespace oneflow
