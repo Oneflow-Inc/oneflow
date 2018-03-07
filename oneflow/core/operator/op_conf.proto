@@ -352,11 +352,7 @@ message BasicLstmOpConf {
 	optional InitializerConf i2h_c_weight_initializer = 18;
 	optional InitializerConf h2h_c_weight_initializer = 19;
 	
-	optional bool is_init_hidden_trainable = 20 [default = true];
-	optional bool use_f_bias = 21 [default = true];
-	optional bool use_i_bias = 22 [default = true];	
-	optional bool use_o_bias = 23 [default = true];
-	optional bool use_c_bias = 24 [default = true];	
+	optional bool is_init_hidden_trainable = 20 [default = true];	
 }
 
 
