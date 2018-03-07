@@ -6,7 +6,7 @@ namespace oneflow {
 void EmbeddingLookupOp::InitFromOpConf() {
   CHECK(op_conf().has_embedding_lookup_conf());
 
-  EnrollInputBn("ids");
+  EnrollInputBn("ids", false);
   EnrollOutputBn("out");
   EnrollModelBn("weight");
 }
