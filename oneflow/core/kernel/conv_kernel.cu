@@ -53,7 +53,7 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualWeightForward(
+void ConvKernel<DeviceType::kGPU, T>::WeightForward(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob,
     Blob* out_blob, Blob* cudnn_workspace) const {
   CudaCheck(cudnnConvolutionForward(
@@ -67,9 +67,9 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualWeightForward(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualBiasForward(DeviceCtx* device_ctx,
-                                                         const Blob* bias_blob,
-                                                         Blob* out_blob) const {
+void ConvKernel<DeviceType::kGPU, T>::BiasForward(DeviceCtx* device_ctx,
+                                                  const Blob* bias_blob,
+                                                  Blob* out_blob) const {
   CudaCheck(cudnnAddTensor(device_ctx->cudnn_handle(), CudnnDataType<T>::one,
                            this->bias_desc_->Get(), bias_blob->dptr<T>(),
                            CudnnDataType<T>::one, this->out_desc_->Get(),
@@ -77,7 +77,7 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualBiasForward(DeviceCtx* device_ctx,
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualDataBackward(
+void ConvKernel<DeviceType::kGPU, T>::DataBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* weight_blob,
     Blob* in_diff_blob, Blob* cudnn_workspace) const {
   CudaCheck(cudnnConvolutionBackwardData(
@@ -92,7 +92,7 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualDataBackward(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualWeightBackward(
+void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob,
     Blob* weight_diff_blob, Blob* cudnn_workspace) const {
   CudaCheck(cudnnConvolutionBackwardFilter(
@@ -107,9 +107,9 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualWeightBackward(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualBiasBackward(
-    DeviceCtx* device_ctx, const Blob* out_diff_blob,
-    Blob* bias_diff_blob) const {
+void ConvKernel<DeviceType::kGPU, T>::BiasBackward(DeviceCtx* device_ctx,
+                                                   const Blob* out_diff_blob,
+                                                   Blob* bias_diff_blob) const {
   CudaCheck(cudnnConvolutionBackwardBias(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->out_desc_->Get(),
       out_diff_blob->dptr<T>(), CudnnDataType<T>::one, this->bias_desc_->Get(),
