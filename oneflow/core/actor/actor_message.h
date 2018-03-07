@@ -41,7 +41,10 @@ class ActorMsg final {
   ActorMsgType msg_type() const { return msg_type_; }
   ActorCmd actor_cmd() const;
   Regst* regst() const;
+  int64_t model_version_id() const;
   int64_t piece_id() const;
+  int32_t col_id() const;
+  int32_t max_col_id() const;
   int64_t act_id() const;
   const void* comm_net_token() const;
   int64_t eord_regst_desc_id() const;

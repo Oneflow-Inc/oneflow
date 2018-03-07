@@ -36,7 +36,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   actor_read_id_ = CommNet::Singleton()->NewActorReadId();
   comm_net_device_ctx_ =
       new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
-  next_piece_id_ = 0;
+  next_act_id_ = 0;
   in_regst_desc_id_ = RegstDescId4Name("copy_in");
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
 }
@@ -53,12 +53,20 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
     if (msg.SrcMachineId() == MachineCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
     } else {
+      if (actor_id() == 159429186027521) {
+        LOG(ERROR) << "CopyCommNetActor recv copy_in";
+        LOG(ERROR) << msg.act_id() << "," << msg.piece_id() << ","
+                   << msg.col_id() << "," << msg.max_col_id();
+      }
       RegstCtx regst_ctx;
       regst_ctx.comm_net_token = msg.comm_net_token();
       regst_ctx.regst_raw_ptr = msg.regst();
       regst_ctx.producer = msg.src_actor_id();
       regst_ctx.act_id = msg.act_id();
-      CHECK(piece_id2regst_ctx.emplace(msg.piece_id(), regst_ctx).second);
+      regst_ctx.piece_id = msg.piece_id();
+      regst_ctx.col_id = msg.col_id();
+      regst_ctx.max_col_id = msg.max_col_id();
+      CHECK(act_id2regst_ctx.emplace(regst_ctx.act_id, regst_ctx).second);
     }
     ActUntilFail();
   } else {
@@ -69,7 +77,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
 
 void CopyCommNetActor::Act() {
   // readable
-  auto readable_it = piece_id2regst_ctx.find(next_piece_id_);
+  auto readable_it = act_id2regst_ctx.find(next_act_id_);
   const void* readable_token = readable_it->second.comm_net_token;
   Regst* readable_regst = readable_it->second.regst_raw_ptr;
   int64_t src_actor_id = readable_it->second.producer;
@@ -82,36 +90,39 @@ void CopyCommNetActor::Act() {
                                              readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(next_piece_id_);
+    regst->set_piece_id(readable_it->second.piece_id);
+    regst->set_col_id(readable_it->second.col_id);
+    regst->set_max_col_id(readable_it->second.max_col_id);
+    regst->set_model_version_id(readable_it->second.model_version_id);
     return true;
   });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
   CommNet::Singleton()->AddReadCallBackDone(read_id);
-  piece_id2regst_ctx.erase(readable_it);
-  next_piece_id_ += 1;
+  act_id2regst_ctx.erase(readable_it);
+  next_act_id_ += 1;
 }
 
 bool CopyCommNetActor::IsReadReady() {
-  return piece_id2regst_ctx.find(next_piece_id_) != piece_id2regst_ctx.end();
+  return act_id2regst_ctx.find(next_act_id_) != act_id2regst_ctx.end();
 }
 
 bool CopyCommNetActor::IsReadAlwaysUnReadyFromNow() {
-  return is_in_eord_ && piece_id2regst_ctx.empty();
+  return is_in_eord_ && act_id2regst_ctx.empty();
 }
 
 void CopyCommNetActor::AsyncReturnAllReadableRegst() {
-  CHECK(piece_id2regst_ctx.empty());
+  CHECK(act_id2regst_ctx.empty());
 }
 
 void CopyCommNetActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  handler(piece_id2regst_ctx.at(next_piece_id_).regst_raw_ptr);
+  handler(act_id2regst_ctx.at(next_act_id_).regst_raw_ptr);
 }
 
 void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst,
                                             ReadableRegstInfo* info) {
-  const RegstCtx& regst_ctx = piece_id2regst_ctx.at(next_piece_id_);
+  const RegstCtx& regst_ctx = act_id2regst_ctx.at(next_act_id_);
   CHECK(regst == regst_ctx.regst_raw_ptr);
   info->set_regst_desc_id(in_regst_desc_id_);
   info->set_act_id(regst_ctx.act_id);

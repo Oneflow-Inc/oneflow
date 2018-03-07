@@ -68,9 +68,24 @@ Regst* ActorMsg::regst() const {
   return regst_wrapper_.regst;
 }
 
+int64_t ActorMsg::model_version_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.regst_status.model_version_id;
+}
+
 int64_t ActorMsg::piece_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.regst_status.piece_id;
+}
+
+int32_t ActorMsg::col_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.regst_status.col_id;
+}
+
+int32_t ActorMsg::max_col_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.regst_status.max_col_id;
 }
 
 int64_t ActorMsg::act_id() const {
