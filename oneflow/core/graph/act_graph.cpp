@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/graph/graph_node_visitor_util.h"
 
 namespace oneflow {
 
@@ -17,6 +18,31 @@ int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
   ss >> regst_desc_id;
   return regst_desc_id;
 }
+
+using ConstActNodeVisitor = GraphNodeVisitorUtil<const ActNode*>;
+using ConstActNodeHandler = GraphNodeVisitorUtil<const ActNode*>::HandlerType;
+
+using ActNodeVisitor = GraphNodeVisitorUtil<ActNode*>;
+using ActNodeHandler = GraphNodeVisitorUtil<ActNode*>::HandlerType;
+
+std::map<TaskType, std::string> task_type2color = {
+    {kInvalid, "0"},
+    {kNormalForward, "2"},
+    {kRecurrentForward, "2"},
+    {kNormalBackward, "3"},
+    {kRecurrentBackward, "3"},
+    {kSource, "1"},
+    {kLoss, "4"},
+    {kLossAcc, "5"},
+    {kLossPrint, "1"},
+    {kMdUpdt, "6"},
+    {kMdSave, "1"},
+    {kMdDiffAcc, "7"},
+    {kCopyHd, "8"},
+    {kCopyCommNet, "9"},
+    {kBoxing, "10"},
+    {kPrint, "1"},
+};
 
 }  // namespace
 
@@ -86,7 +112,12 @@ bool RegstActSubGraph::IsSource(const ActNode* node) const {
 
 void RegstActSubGraph::TopoForEachActNode(
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachIn = std::bind(&RegstActSubGraph::ForEachInNode, this,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&RegstActSubGraph::ForEachOutNode, this,
+                              std::placeholders::_1, std::placeholders::_2);
+  ConstActNodeVisitor::TopoForEach(CalcSources(), ForEachIn, ForEachOut,
+                                   Handler);
 }
 
 void RegstActSubGraph::ForEachInNode(
@@ -161,7 +192,21 @@ class DepthRangeActSubGraph final {
 
 void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
                                                 int64_t component_id) const {
-  TODO();
+  std::string filepath = JoinPath(dir, std::to_string(component_id) + ".dot");
+  const auto& sources = compo_id2sources_.at(component_id);
+  PersistentOutStream out_stream(LocalFS(), filepath);
+  out_stream << "digraph {\n";
+  ForEachActNode(sources, [&](const ActNode* node) {
+    out_stream << node->node_id_str() << "[label=\"" << node->VisualStr()
+               << "\", shape=ellipse, style=\"rounded,filled\", "
+               << "colorscheme=set312, color="
+               << task_type2color.at(node->task_type()) << "];\n";
+    for (const ActEdge* act_edge : node->out_edges()) {
+      out_stream << "\"" << act_edge->src_node()->node_id_str() << "\" -> \""
+                 << act_edge->dst_node()->node_id_str() << "\";\n";
+    }
+  });
+  out_stream << "}\n";
 }
 
 void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
@@ -176,7 +221,11 @@ void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
 void DepthRangeActSubGraph::TopoForEachActNode(
     const std::list<const ActNode*>& starts,
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachIn = std::bind(&DepthRangeActSubGraph::ForEachInNode, this,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&DepthRangeActSubGraph::ForEachOutNode, this,
+                              std::placeholders::_1, std::placeholders::_2);
+  ConstActNodeVisitor::TopoForEach(starts, ForEachIn, ForEachOut, Handler);
 }
 
 void DepthRangeActSubGraph::ForEachInNode(
@@ -204,7 +253,12 @@ void DepthRangeActSubGraph::ForEachOutNode(
 void DepthRangeActSubGraph::ForEachActNode(
     const std::list<const ActNode*>& sources,
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachConnectedNode = [&](const ActNode* node,
+                                  const ConstActNodeHandler& Handler) {
+    ForEachInNode(node, Handler);
+    ForEachOutNode(node, Handler);
+  };
+  ConstActNodeVisitor::BfsForEach(sources, ForEachConnectedNode, Handler);
 }
 
 void DepthRangeActSubGraph::InitComponentId2Sources() {
@@ -319,10 +373,17 @@ void ActGraph::ForEachRegstDescMeanDuration(
 
 void ActGraph::ForEachRegstActSubGraph(
     const std::function<void(const RegstActSubGraph&)>& Handler) const {
+  ForEachDepthRangeSubActGraph([&](const DepthRangeActSubGraph& sub_graph) {
+    sub_graph.ForEachRegstActSubGraph(Handler);
+  });
+}
+
+void ActGraph::ForEachDepthRangeSubActGraph(
+    const std::function<void(const DepthRangeActSubGraph&)>& Handler) const {
   ForEachDepthRangeRegstUids(
       [&](const Range& range, const std::list<std::string>& regst_uids) {
         DepthRangeActSubGraph depth_range_subgrpah(this, range, regst_uids);
-        depth_range_subgrpah.ForEachRegstActSubGraph(Handler);
+        Handler(depth_range_subgrpah);
       });
 }
 
@@ -377,7 +438,11 @@ void ActGraph::InitEdges() {
 void ActGraph::TopoForEachActNode(
     const std::list<ActNode*>& starts,
     const std::function<void(ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachIn = std::bind(&ActNode::ForEachNodeOnInEdge,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&ActNode::ForEachNodeOnOutEdge,
+                              std::placeholders::_1, std::placeholders::_2);
+  ActNodeVisitor::TopoForEach(starts, ForEachIn, ForEachOut, Handler);
 }
 
 void ActGraph::InitDepth() {
@@ -426,5 +491,10 @@ void ActGraph::ForEachDepthRangeRegstUids(
   }
 }
 
-void ActGraph::ToDotFiles(const std::string& dir) const { TODO(); }
+void ActGraph::ToDotFiles(const std::string& dir) const {
+  ForEachDepthRangeSubActGraph([&](const DepthRangeActSubGraph& sub_graph) {
+    sub_graph.ToDotFiles(dir);
+  });
+}
+
 }  // namespace oneflow
