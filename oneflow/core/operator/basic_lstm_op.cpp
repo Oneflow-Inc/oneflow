@@ -23,19 +23,19 @@ void BasicLstmOp::VirtualInitFromOpConf() {
 
   if (GetBoolFromCustomizedConf("use_f_bias")) {
     EnrollModelBn("fbias");
-    EnrollModelTmpBn("bias_f_multipiler";)
+    EnrollModelTmpBn("bias_f_multipiler");
   }
   if (GetBoolFromCustomizedConf("use_i_bias")) {
     EnrollModelBn("ibias");
-    EnrollModelTmpBn("bias_i_multipiler";)
+    EnrollModelTmpBn("bias_i_multipiler");
   }
   if (GetBoolFromCustomizedConf("use_o_bias")) {
     EnrollModelBn("obias");
-    EnrollModelTmpBn("bias_o_multipiler";)
+    EnrollModelTmpBn("bias_o_multipiler");
   }
   if (GetBoolFromCustomizedConf("use_c_bias")) {
     EnrollModelBn("cbias");
-    EnrollModelTmpBn("bias_c_multipiler";)
+    EnrollModelTmpBn("bias_c_multipiler");
   }
 }
 
@@ -92,6 +92,7 @@ void BasicLstmOp::VirtualInferBobDescs(
     *GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
   }
 }
-
+i
 REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);
+
 }  // namespace oneflow
