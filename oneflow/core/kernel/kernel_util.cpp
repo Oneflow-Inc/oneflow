@@ -139,7 +139,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int incx, T* y, const int incy) {
     cblas_axpy(n, alpha, x, incx, y, incy);
   }
-  static void scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
     cblas_scal(n, *alpha, x, incx);
   }
