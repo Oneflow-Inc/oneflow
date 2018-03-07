@@ -4,7 +4,7 @@
 namespace oneflow {
 
 template<typename T>
-inline __device__ T gpu_atomic_add(T* address, const T val);
+__device__ T gpu_atomic_add(T* address, const T val);
 
 }  // namespace oneflow
 
