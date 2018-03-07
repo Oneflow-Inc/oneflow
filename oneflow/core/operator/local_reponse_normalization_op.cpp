@@ -26,7 +26,7 @@ void LocalResponseNormalizationOp::InferBlobDescs(
 
   if (device_type == DeviceType::kCPU) {
     GetBlobDesc4BnInOp("padded_square")->mut_shape() =
-        Shape({in_blob_desc->shape().At(3)});
+        Shape({in_blob_desc->shape().At(3) + 2 * conf.depth_radius()});
     GetBlobDesc4BnInOp("normalize_coef")->mut_shape() = in_blob_desc->shape();
   } else if (device_type == DeviceType::kGPU) {
     // cudnn requirements
