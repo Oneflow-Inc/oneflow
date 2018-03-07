@@ -1,7 +1,7 @@
 #ifdef ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
 #define ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
 
-#inlcude "oneflow/core/operator/recurrent_op.h"
+#include "oneflow/core/operator/recurrent_op.h"
 
 namespace oneflow {
 
