@@ -379,7 +379,7 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     for (std::shared_ptr<const Operator> op : fw_chain->op_vec()) {
       for (const std::string& mbn : op->model_bns()) {
         const std::string& lbn = op->Lbn4BnInOp(mbn);
-        model_save_op_conf.mutable_model_save_conf()->add_lbns(lbn);
+        model_save_op_conf.mutable_model_save_conf()->add_lbn(lbn);
       }
     }
     auto model_save_op = ConstructOp(model_save_op_conf);
