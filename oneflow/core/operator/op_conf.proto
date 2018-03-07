@@ -366,13 +366,10 @@ message OperatorConf {
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
-<<<<<<< HEAD
-		BasicLstmOpConf = 126;
-=======
     Conv1DOpConf conv_1d_conf = 125;
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
->>>>>>> e722a55b78f79c600ab67571ae4e7515f37ed797
+		BasicLstmOpConf basic_lstm_conf = 128;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;
