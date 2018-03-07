@@ -35,5 +35,4 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
 
 }  // namespace oneflow
 
-#endif //ONEFLOW_CORE_KERNEK_BASIC_GRU_KERNEL_H_
-
+#endif  // ONEFLOW_CORE_KERNEK_BASIC_GRU_KERNEL_H_

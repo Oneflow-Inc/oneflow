@@ -15,11 +15,11 @@ class BasicGruOp final : public RecurrentOp {
 
  private:
   void VirtualInitFromOpConf();
-  void VirtualIniferBlobDesc*(
+  void VirtualIniferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_BASIC_GRU_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_BASIC_GRU_OP_H_
