@@ -49,15 +49,17 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     DecreaseRemainingEordCnt();
     is_in_eord_ = true;
+  } else if (msg.msg_type() == ActorMsgType::kEmptyActNotifyToCommNet) {
+    int64_t act_id = msg.act_id_to_comm_net();
+    if (act_id == next_act_id_) {
+      next_act_id_ += 1;
+    } else {
+      act_id4empty_act_notify_.insert(act_id);
+    }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (msg.SrcMachineId() == MachineCtx::Singleton()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
     } else {
-      if (actor_id() == 159429186027521) {
-        LOG(ERROR) << "CopyCommNetActor recv copy_in";
-        LOG(ERROR) << msg.act_id() << "," << msg.piece_id() << ","
-                   << msg.col_id() << "," << msg.max_col_id();
-      }
       RegstCtx regst_ctx;
       regst_ctx.comm_net_token = msg.comm_net_token();
       regst_ctx.regst_raw_ptr = msg.regst();
@@ -72,7 +74,29 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNEXPECTED_RUN();
   }
+  TryUpdtNextActIdAndAct();
   return TrySwitchToZombieOrFinish();
+}
+
+void CopyCommNetActor::TryUpdtNextActIdAndAct() {
+  while (true) {
+    bool is_next_act_id_changed = false;
+    while (!act_id4empty_act_notify_.empty()) {
+      auto it = act_id4empty_act_notify_.find(next_act_id_);
+      if (it != act_id4empty_act_notify_.end()) {
+        next_act_id_ += 1;
+        act_id4empty_act_notify_.erase(it);
+        is_next_act_id_changed = true;
+      } else {
+        break;
+      }
+    }
+    if (is_next_act_id_changed) {
+      ActUntilFail();
+    } else {
+      break;
+    }
+  }
 }
 
 void CopyCommNetActor::Act() {
@@ -113,6 +137,7 @@ bool CopyCommNetActor::IsReadAlwaysUnReadyFromNow() {
 
 void CopyCommNetActor::AsyncReturnAllReadableRegst() {
   CHECK(act_id2regst_ctx.empty());
+  CHECK(act_id4empty_act_notify_.empty());
 }
 
 void CopyCommNetActor::ForEachCurReadableRegst(

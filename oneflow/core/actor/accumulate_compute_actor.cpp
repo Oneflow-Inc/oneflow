@@ -83,6 +83,8 @@ void AccumulateCompActor::Act() {
     });
     acc_cnt_ = 0;
     next_piece_id_ += 1;
+  } else {
+    AsyncSendEmptyActNotifyToCommNetMsg([](Regst* regst) { return true; });
   }
   AsyncSendRegstMsgToProducer(in_regst);
   pending_in_regst_.pop();

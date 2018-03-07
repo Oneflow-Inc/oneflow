@@ -97,6 +97,8 @@ class Actor {
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
+  void AsyncSendEmptyActNotifyToCommNetMsg(
+      std::function<bool(Regst*)> RegstPreProcess);
   void AsyncDo(std::function<void()>);
 
   // Status of Produced Registers
