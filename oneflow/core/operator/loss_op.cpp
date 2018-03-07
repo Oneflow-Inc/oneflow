@@ -8,8 +8,8 @@ void LossOp::InitFromOpConf() {
   EnrollOutputBn("loss", false);
   if (!GetStringFromCustomizedConf("weight").empty()) {
     EnrollInputBn("weight", false);
+    EnrollOutputBn("reduction_coefficient", false);
   }
-  EnrollOutputBn("reduction_coefficient", false);
 
   VirtualInitFromOpConf();
 }
@@ -20,6 +20,10 @@ void LossOp::VirtualGenKernelConf(
   LossKernelConf* conf = GetMutLossKernelConf(kernel_conf);
   conf->set_prediction_type(GetBlobDesc4BnInOp("prediction")->data_type());
   conf->set_label_type(GetBlobDesc4BnInOp("label")->data_type());
+  conf->set_need_weight_blob(!GetStringFromCustomizedConf("weight").empty());
+  conf->set_weight_scalar(GetFloatFromCustomizedConf("weight_scalar"));
+  conf->set_reduction(static_cast<LossReductionType>(
+      GetEnumValueFromCustomizedConf("reduction")));
 }
 
 void LossOp::InferBlobDescs(
@@ -37,13 +41,15 @@ void LossOp::InferBlobDescs(
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().At(0)});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
-  // reduction_coefficient
-  BlobDesc* reduction_blob_desc = GetBlobDesc4BnInOp("reduction_coefficient");
-  reduction_blob_desc->mut_shape() = Shape({1});
-  reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
-  reduction_blob_desc->set_has_data_id_field(
-      pred_blob_desc->has_data_id_field());
 
+  if (!GetStringFromCustomizedConf("weight").empty()) {
+    // reduction_coefficient
+    BlobDesc* reduction_blob_desc = GetBlobDesc4BnInOp("reduction_coefficient");
+    reduction_blob_desc->mut_shape() = Shape({1});
+    reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
+    reduction_blob_desc->set_has_data_id_field(
+        pred_blob_desc->has_data_id_field());
+  }
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
