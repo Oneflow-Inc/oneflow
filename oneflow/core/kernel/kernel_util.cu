@@ -2,6 +2,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -197,6 +198,24 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 };
+
+template<>
+__device__ float gpu_atomic_add(float* address, const float val) {
+  return atomicAdd(address, val);
+}
+
+template<>
+__device__ double gpu_atomic_add(double* address, const double val) {
+  auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val + __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
