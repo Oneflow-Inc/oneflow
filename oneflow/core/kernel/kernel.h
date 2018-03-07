@@ -73,10 +73,9 @@ class Kernel {
   virtual void L2Regularization(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual bool NeedModelUpdate() const = 0;
 
  private:
-  bool HasModelBlob() const;
+  bool HasModelBns() const;
   KernelConf kernel_conf_;
 };
 
