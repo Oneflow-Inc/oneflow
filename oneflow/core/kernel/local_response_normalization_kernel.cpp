@@ -4,6 +4,16 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+CudnnLRNDesc::CudnnLRNDesc(unsigned depth_radius, double alpha, double beta,
+                           double bias) {
+  CudaCheck(cudnnCreateLRNDescriptor(&val_));
+  CudaCheck(cudnnSetLRNDescriptor(val_, depth_radius, alpha, beta, bias));
+}
+
+CudnnLRNDesc::~CudnnLRNDesc() { CudaCheck(cudnnDestroyLRNDescriptor(val_)); }
+#endif  // WITH_CUDA
+
 template<DeviceType device_type, typename T>
 void LocalResponseNormalizationKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,

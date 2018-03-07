@@ -24,14 +24,20 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
 CudnnTensorDesc::~CudnnTensorDesc() {
   CudaCheck(cudnnDestroyTensorDescriptor(val_));
 }
-CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int n, int c, int h,
-                                 int w) {
-  CudaCheck(cudnnCreateTensorDescriptor(&val_));
-  CudaCheck(cudnnSetTensor4dDescriptor(
-      val_, CUDNN_TENSOR_NCHW, GetCudnnDataType(data_type), n, c, h, w));
-}
+CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int n, int c, int h, int w)
+    : CudnnTensorDesc(CUDNN_TENSOR_NCHW, data_type, n, c, h, w) {}
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape)
     : CudnnTensorDesc(data_type, shape.At(0), shape.At(1), shape.At(2),
+                      shape.At(3)) {}
+CudnnTensorDesc::CudnnTensorDesc(cudnnTensorFormat_t format, DataType data_type,
+                                 int n, int c, int h, int w) {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  CudaCheck(cudnnSetTensor4dDescriptor(
+      val_, format, GetCudnnDataType(data_type), n, c, h, w));
+}
+CudnnTensorDesc::CudnnTensorDesc(cudnnTensorFormat_t format, DataType data_type,
+                                 const Shape& shape)
+    : CudnnTensorDesc(format, data_type, shape.At(0), shape.At(1), shape.At(2),
                       shape.At(3)) {
   CHECK_EQ(shape.NumAxes(), 4);
 }

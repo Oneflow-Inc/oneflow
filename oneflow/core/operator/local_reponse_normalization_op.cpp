@@ -33,10 +33,18 @@ void LocalResponseNormalizationOp::InferBlobDescs(
     CHECK_GE(conf.bias(), 1e-5);
     CHECK_GE(conf.beta(), 0.01);
     CHECK_GE(conf.depth_radius(), 1);
-    CHECK_LE(conf.depth_radius(), 7);
+    CHECK_LE(conf.depth_radius(), 16);
   } else {
     UNIMPLEMENTED();
   }
+}
+
+void LocalResponseNormalizationOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
+  in_shape.ToProto(kernel_conf->mutable_local_response_normalization_conf()
+                       ->mutable_batch());
 }
 
 }  // namespace oneflow

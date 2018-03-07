@@ -7,6 +7,22 @@
 
 namespace oneflow {
 
+#ifdef WITH_CUDA
+class CudnnLRNDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CudnnLRNDesc);
+  CudnnLRNDesc() = delete;
+  ~CudnnLRNDesc();
+
+  CudnnLRNDesc(unsigned depth_radius, double alpha, double beta, double bias);
+
+  const cudnnLRNDescriptor_t& Get() const { return val_; }
+
+ private:
+  cudnnLRNDescriptor_t val_;
+};
+#endif  // WITH_CUDA
+
 template<DeviceType device_type, typename T>
 class LocalResponseNormalizationKernel final : public KernelIf<device_type> {
  public:
@@ -15,12 +31,32 @@ class LocalResponseNormalizationKernel final : public KernelIf<device_type> {
   ~LocalResponseNormalizationKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override {
+#ifdef WITH_CUDA
+    const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
+        GetMessageFromPbMessage(
+            this->kernel_conf().local_response_normalization_conf(), "batch"),
+        "dim");
+    batch_desc_.reset(new CudnnTensorDesc(
+        CUDNN_TENSOR_NHWC, GetDataType<T>::val, shape.Get(0), shape.Get(1),
+        shape.Get(2), shape.Get(3)));
+    const LocalResponseNormalizationOpConf& op_conf =
+        this->op_conf().local_response_normalization_conf();
+    normalize_desc_.reset(new CudnnLRNDesc(op_conf.depth_radius(),
+                                           op_conf.alpha(), op_conf.beta(),
+                                           op_conf.bias()));
+#endif  // WITH_CUDA
+  }
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
+#ifdef WITH_CUDA
+  std::shared_ptr<CudnnTensorDesc> batch_desc_;
+  std::shared_ptr<CudnnLRNDesc> normalize_desc_;
+#endif  // WITH_CUDA
 };
 
 }  // namespace oneflow
