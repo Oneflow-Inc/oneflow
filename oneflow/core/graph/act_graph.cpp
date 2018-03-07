@@ -126,6 +126,148 @@ double RegstActSubGraph::CalcLongestPathDuration() const {
   return duration;
 }
 
+class DepthRangeActSubGraph final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DepthRangeActSubGraph);
+  DepthRangeActSubGraph(const ActGraph* act_graph, const Range& depth_range,
+                        const std::list<std::string>& regst_uids);
+  ~DepthRangeActSubGraph() = default;
+
+  void ForEachRegstActSubGraph(
+      const std::function<void(const RegstActSubGraph&)>& Handler) const;
+  void ToDotFiles(const std::string& dir) const;
+
+ private:
+  void InitNode2ComponentId();
+  void InitComponentId2Sources();
+  void ForEachActNode(const std::list<const ActNode*>& sources,
+                      const std::function<void(const ActNode*)>& Handler) const;
+  void TopoForEachActNode(
+      const std::list<const ActNode*>& starts,
+      const std::function<void(const ActNode*)>& Handler) const;
+  void ForEachInNode(const ActNode* node,
+                     const std::function<void(const ActNode*)>& Handler) const;
+  void ForEachOutNode(const ActNode* node,
+                      const std::function<void(const ActNode*)>& Handler) const;
+  void ComponentToDotFiles(const std::string& dir, int64_t component_id) const;
+
+  const ActGraph* act_graph_;
+  Range depth_range_;
+  std::list<std::string> regst_uids_;
+  HashMap<const ActNode*, int64_t> node2component_id_;
+  HashMap<int64_t, std::list<const ActNode*>> compo_id2sources_;
+  HashMap<int64_t, std::list<RegstActSubGraph>> compo_id2regst_act_graph_;
+};
+
+void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
+                                                int64_t component_id) const {
+  TODO();
+}
+
+void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
+  std::string sub_dir = JoinPath(dir, std::to_string(depth_range_.begin()) + "-"
+                                          + std::to_string(depth_range_.end()));
+  LocalFS()->RecursivelyCreateDir(sub_dir);
+  for (const auto& pair : compo_id2sources_) {
+    ComponentToDotFiles(sub_dir, pair.first);
+  }
+}
+
+void DepthRangeActSubGraph::TopoForEachActNode(
+    const std::list<const ActNode*>& starts,
+    const std::function<void(const ActNode*)>& Handler) const {
+  TODO();
+}
+
+void DepthRangeActSubGraph::ForEachInNode(
+    const ActNode* node,
+    const std::function<void(const ActNode*)>& Handler) const {
+  node->ForEachNodeOnInEdge([&](ActNode* in_node) {
+    if (in_node->depth() >= depth_range_.begin()
+        && in_node->depth() <= depth_range_.end()) {
+      Handler(in_node);
+    }
+  });
+}
+
+void DepthRangeActSubGraph::ForEachOutNode(
+    const ActNode* node,
+    const std::function<void(const ActNode*)>& Handler) const {
+  node->ForEachNodeOnOutEdge([&](ActNode* out_node) {
+    if (out_node->depth() >= depth_range_.begin()
+        && out_node->depth() <= depth_range_.end()) {
+      Handler(out_node);
+    }
+  });
+}
+
+void DepthRangeActSubGraph::ForEachActNode(
+    const std::list<const ActNode*>& sources,
+    const std::function<void(const ActNode*)>& Handler) const {
+  TODO();
+}
+
+void DepthRangeActSubGraph::InitComponentId2Sources() {
+  for (const auto& pair : node2component_id_) {
+    int in_nodes_cnt = 0;
+    ForEachInNode(pair.first, [&](const ActNode*) { ++in_nodes_cnt; });
+    if (in_nodes_cnt == 0) {
+      compo_id2sources_[pair.second].push_back(pair.first);
+    }
+  }
+}
+
+void DepthRangeActSubGraph::InitNode2ComponentId() {
+  int64_t component_id = 0;
+  const auto& sources = act_graph_->Nodes4Depth(depth_range_.begin());
+  ForEachActNode(sources, [&](const ActNode* node) {
+    if (node2component_id_.find(node) != node2component_id_.end()) { return; }
+    ForEachActNode({node}, [&](const ActNode* component_node) {
+      node2component_id_.insert({component_node, component_id});
+    });
+    ++component_id;
+  });
+}
+
+DepthRangeActSubGraph::DepthRangeActSubGraph(
+    const ActGraph* act_graph, const Range& depth_range,
+    const std::list<std::string>& regst_uids)
+    : act_graph_(act_graph),
+      depth_range_(depth_range),
+      regst_uids_(regst_uids) {
+  InitNode2ComponentId();
+  InitComponentId2Sources();
+}
+
+void DepthRangeActSubGraph::ForEachRegstActSubGraph(
+    const std::function<void(const RegstActSubGraph&)>& Handler) const {
+  for (const auto& regst_uid : regst_uids_) {
+    const ActNode* producer = act_graph_->ProducerNode4RegstUid(regst_uid);
+    HashMap<int64_t, HashSet<const ActNode*>> compo_id2producer_outs;
+    HashMap<int64_t, HashSet<const ActNode*>> compo_id2consumers;
+    HashSet<int64_t> component_ids;
+    ForEachOutNode(producer, [&](const ActNode* node) {
+      int64_t component_id = node2component_id_.at(node);
+      compo_id2producer_outs[component_id].insert(node);
+      component_ids.insert(component_id);
+    });
+    for (const ActNode* node : act_graph_->ConsumerNodes4RegstUid(regst_uid)) {
+      int64_t component_id = node2component_id_.at(node);
+      compo_id2consumers[component_id].insert(node);
+      component_ids.insert(component_id);
+    }
+    for (int64_t compo_id : component_ids) {
+      if (compo_id2producer_outs.find(compo_id) != compo_id2producer_outs.end()
+          && compo_id2consumers.find(compo_id) != compo_id2consumers.end()) {
+        RegstActSubGraph regst_act_graph(
+            regst_uid, producer, compo_id2producer_outs.at(compo_id),
+            compo_id2consumers.at(compo_id), compo_id2sources_.at(compo_id));
+        Handler(regst_act_graph);
+      }
+    }
+  }
+}
+
 void ActNode::AddConsumerNode(const std::string& regst_uid,
                               const ActNode* consumer_node) {
   regst_uid2consumer_nodes_[regst_uid].push_back(consumer_node);
@@ -179,7 +321,8 @@ void ActGraph::ForEachRegstActSubGraph(
     const std::function<void(const RegstActSubGraph&)>& Handler) const {
   ForEachDepthRangeRegstUids(
       [&](const Range& range, const std::list<std::string>& regst_uids) {
-        TODO();
+        DepthRangeActSubGraph depth_range_subgrpah(this, range, regst_uids);
+        depth_range_subgrpah.ForEachRegstActSubGraph(Handler);
       });
 }
 
