@@ -34,4 +34,15 @@ Range FindIntersectant(const Range& lhs, const Range& rhs);
 
 }  // namespace oneflow
 
+namespace std {
+
+template<>
+struct hash<oneflow::Range> {
+  size_t operator()(const oneflow::Range& range) const {
+    return (range.begin() << 32) ^ range.end();
+  }
+};
+
+}  // namespace std
+
 #endif  // ONEFLOW_CORE_COMMON_RANGE_H_

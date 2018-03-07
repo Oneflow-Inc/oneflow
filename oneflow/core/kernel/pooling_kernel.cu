@@ -5,7 +5,7 @@ namespace oneflow {
 
 template<typename T>
 void PoolingKernel<DeviceType::kGPU, T>::PoolingForward(
-    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+    const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
     const Blob* in_blob, Blob* out_blob) const {
   CudaCheck(cudnnPoolingForward(
       kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(),
@@ -16,7 +16,7 @@ void PoolingKernel<DeviceType::kGPU, T>::PoolingForward(
 
 template<typename T>
 void PoolingKernel<DeviceType::kGPU, T>::PoolingBackward(
-    const KernelCtx& kernel_ctx, const Pooling3DCtx& pooling_ctx,
+    const KernelCtx& kernel_ctx, const PoolingCtx& pooling_ctx,
     const Blob* out_diff_blob, const Blob* out_blob, const Blob* in_blob,
     Blob* in_diff_blob) const {
   CudaCheck(cudnnPoolingBackward(

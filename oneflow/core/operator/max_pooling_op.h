@@ -12,7 +12,7 @@ class MaxPoolingOp : virtual public PoolingOp {
   virtual ~MaxPoolingOp() = default;
 
  private:
-  Pooling3DKernelConf* GetMutPooling3DKernelConf(KernelConf*) const override;
+  PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const override;
 };
 
 }  // namespace oneflow
