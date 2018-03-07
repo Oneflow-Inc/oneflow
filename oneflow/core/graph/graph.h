@@ -22,6 +22,20 @@ class Graph {
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
 
+  void BfsForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<
+          void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      const std::function<void(NodeType*)>& Handler) const;
+
+  void TopoForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(
+          NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(
+          NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*)>& Handler) const;
+
   // Getters
   const std::unordered_set<NodeType*>& source_nodes() const;
   const std::unordered_set<NodeType*>& sink_nodes() const;
@@ -85,29 +99,23 @@ void Graph<NodeType, EdgeType>::ForEachNode(
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNode(
     std::function<void(NodeType*)> NodeHandler) const {
-  HashMap<NodeType*, size_t> node2cnt;
-  auto IncreaseCnt = [&](NodeType* node) { node2cnt[node] += 1; };
-  auto MyNodeHandler = [&](NodeType* node) {
-    NodeHandler(node);
-    node->ForEachNodeOnOutEdge(IncreaseCnt);
-  };
-  ForEachNode(MyNodeHandler, [&](NodeType* node) {
-    return node->in_edges().size() == node2cnt[node];
+  std::list<NodeType*> starts;
+  ForEachNode([&](NodeType* node) {
+    if (node->in_edges().empty()) { starts.push_back(node); }
   });
+  TopoForEachNode(starts, &NodeType::ForEachNodeOnInEdge,
+                  &NodeType::ForEachNodeOnOutEdge, NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
     std::function<void(NodeType*)> NodeHandler) const {
-  HashMap<NodeType*, size_t> node2cnt;
-  auto IncreaseCnt = [&](NodeType* node) { node2cnt[node] += 1; };
-  auto MyNodeHandler = [&](NodeType* node) {
-    NodeHandler(node);
-    node->ForEachNodeOnInEdge(IncreaseCnt);
-  };
-  ForEachNode(MyNodeHandler, [&](NodeType* node) {
-    return node->out_edges().size() == node2cnt[node];
+  std::list<NodeType*> starts;
+  ForEachNode([&](NodeType* node) {
+    if (node->out_edges().empty()) { starts.push_back(node); }
   });
+  TopoForEachNode(starts, &NodeType::ForEachNodeOnOutEdge,
+                  &NodeType::ForEachNodeOnInEdge, NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -178,6 +186,63 @@ void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() {
   std::string file_path =
       LogDir() + "/dot/" + TypeName() + "/" + NewUniqueId() + ".dot";
   ToDotWithFilePath(file_path);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::BfsForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>&
+        ForEachNext,
+    const std::function<void(NodeType*)>& Handler) const {
+  HashMap<NodeType*, bool> has_queued;
+  std::queue<NodeType*> queue;
+  for (NodeType* start : starts) {
+    queue.push(start);
+    has_queued[start] = true;
+  }
+  while (!queue.empty()) {
+    NodeType* cur_node = queue.front();
+    queue.pop();
+    Handler(cur_node);
+    ForEachNext(cur_node, [&](NodeType* next) {
+      if (!has_queued[next]) {
+        queue.push(next);
+        has_queued[next] = true;
+      }
+    });
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>&
+        ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>&
+        ForEachOutNode,
+    const std::function<void(NodeType*)>& Handler) const {
+  HashMap<NodeType*, bool> has_queued;
+  std::queue<NodeType*> queue;
+  for (NodeType* start : starts) {
+    queue.push(start);
+    has_queued[start] = true;
+    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+  }
+  while (!queue.empty()) {
+    NodeType* cur_node = queue.front();
+    queue.pop();
+    Handler(cur_node);
+    ForEachOutNode(cur_node, [&](NodeType* out) {
+      bool will_be_ready = true;
+      ForEachInNode(out, [&](NodeType* in) {
+        if (will_be_ready && !has_queued[in]) { will_be_ready = false; }
+      });
+      if (will_be_ready && !has_queued[out]) {
+        queue.push(out);
+        has_queued[out] = true;
+      }
+    });
+  }
 }
 
 }  // namespace oneflow

@@ -65,9 +65,9 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    const int incx, T* y, const int incy) {
     cublas_axpy(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
   }
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cublas_scal(ctx->cublas_handle(), n, &alpha, x, incx);
+    cublas_scal(ctx->cublas_handle(), n, alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
@@ -200,9 +200,13 @@ struct KernelUtil<DeviceType::kGPU, T> final {
 };
 
 template<>
-inline __device__ double gpu_atomic_add(double* address, const double val) {
-  unsigned long long int* address_as_ull =
-      reinterpret_cast<unsigned long long int*>(address);
+__device__ float gpu_atomic_add(float* address, const float val) {
+  return atomicAdd(address, val);
+}
+
+template<>
+__device__ double gpu_atomic_add(double* address, const double val) {
+  auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;
   do {
