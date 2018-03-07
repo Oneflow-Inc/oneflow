@@ -305,6 +305,10 @@ message PrintOpConf {
 }
 
 message LossPrintOpConf {
+  required string loss_lbn = 1;
+  optional string reduction_lbn = 2;
+  optional float weight_scalar = 3 [default = 1.0];
+  optional LossReductionType reduction_type = 4 [default = kSumOverN]; 
 }
 
 message ReduceSumOpConf {

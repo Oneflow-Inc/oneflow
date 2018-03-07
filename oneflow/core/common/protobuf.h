@@ -26,6 +26,8 @@ using PbMapPair = google::protobuf::MapPair<T1, T2>;
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, UInt32)    \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
+  OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, EnumValue)  \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
 #define PROTOBUF_REFLECTION(msg, field_name)                               \
