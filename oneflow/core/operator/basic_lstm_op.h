@@ -1,4 +1,4 @@
-#ifdef ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
 #define ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
 
 #include "oneflow/core/operator/recurrent_op.h"
@@ -21,4 +21,5 @@ class BasicLstmOp final : public RecurrentOp {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
+#endif  //  ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
+
