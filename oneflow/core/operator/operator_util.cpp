@@ -2,6 +2,16 @@
 
 namespace oneflow {
 
+const size_t DhwOffset(const std::string& data_format) {
+  if (data_format == "channels_first") {
+    return 2;
+  } else if (data_format == "channels_last") {
+    return 1;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                            int32_t dilation_rate, int32_t stride,
                            const std::string& padding_type,
