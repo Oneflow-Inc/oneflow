@@ -102,22 +102,22 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
   // plus_op_out = hidden .* reset_gate
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(reset_gate_out_blob->shape().At(0)),
-      reset_mul_hidden_blob, reset_gate_out_blob, plus_op_out_blob);
+      reset_mul_hidden_blob->dptr<T>(), reset_gate_out_blob->dptr<T>(), plus_op_out_blob->mut_dptr<T>());
   // reset_mul_candidate_hidden = candidate_hidden .* reset_gate
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(reset_gate_out_blob->shape().At(0)),
-      reset_mul_candidate_hidden_blob, reset_gate_out_blob,
-      reset_mul_candidate_hidden_blob);
+      reset_mul_candidate_hidden_blob->dptr<T>(), reset_gate_out_blob->dptr<T>(),
+      reset_mul_candidate_hidden_blob->mut_dptr<T>());
 
   // plus_op_out -= reset_mul_candidate_hidden
   KernelUtil<device_type, T>::Axpy(
-      ctx.device_ctx, static_cast<T>(hidden->shape().At(0)), static_cast<T>(-1),
+      ctx.device_ctx, static_cast<T>(reset_mul_candidate_hidden_blob->shape().At(0)), static_cast<T>(-1),
       reset_mul_candidate_hidden_blob, static_cast<T>(1), plus_op_out_blob,
       static_cast<T>(1));
   // plus_op_out += candidate_hidden
   KernelUtil<device_type, T>::Axpy(
-      ctx.device_ctx, static_cast<T>(candidate_hidden_blob->shape().At(0)),
-      static_cast<T>(1), candidate_hidden_blob, static_cast<T>(1),
+      ctx.device_ctx, static_cast<T>(candidate_hidden_out_blob->shape().At(0)),
+      static_cast<T>(1), candidate_hidden_out_blob, static_cast<T>(1),
       plus_op_out_blob, static_cast<T>(1));
 
   // rec_out = out
