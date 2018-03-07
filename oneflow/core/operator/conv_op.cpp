@@ -142,9 +142,6 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_conv_conf->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(
       mut_conv_conf->mutable_weight());
-  if (GetBoolFromCustomizedConf("use_bias")) {
-    GetBlobDesc4BnInOp("bias")->shape().ToProto(mut_conv_conf->mutable_bias());
-  }
 
   std::vector<int64_t> out(NDims, 0);
   std::vector<int32_t> pad_small_side(NDims, 0);
