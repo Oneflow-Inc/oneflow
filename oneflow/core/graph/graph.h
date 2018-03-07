@@ -22,6 +22,17 @@ class Graph {
   void ReverseTopoForEachNode(std::function<void(NodeType*)> NodeHandler) const;
   void ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const;
 
+  using HandlerType = std::function<void(NodeType*)>;
+  using ForEachFnType = std::function<void(NodeType*, const HandlerType&)>;
+  void BfsForEachNode(const std::list<NodeType*>& starts,
+                      const ForEachFnType& ForEachNext,
+                      const HandlerType& Handler) const;
+
+  void TopoForEachNode(const std::list<NodeType*>& starts,
+                       const ForEachFnType& ForEachInNode,
+                       const ForEachFnType& ForEachOutNode,
+                       const HandlerType& Handler) const;
+
   // Getters
   const std::unordered_set<NodeType*>& source_nodes() const;
   const std::unordered_set<NodeType*>& sink_nodes() const;
@@ -178,6 +189,57 @@ void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() {
   std::string file_path =
       LogDir() + "/dot/" + TypeName() + "/" + NewUniqueId() + ".dot";
   ToDotWithFilePath(file_path);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::BfsForEachNode(
+    const std::list<NodeType*>& starts, const ForEachFnType& ForEachNext,
+    const HandlerType& Handler) const {
+  HashMap<NodeType*, bool> has_queued;
+  std::queue<NodeType*> queue;
+  for (NodeType* start : starts) {
+    queue.push(start);
+    has_queued[start] = true;
+  }
+  while (!queue.empty()) {
+    NodeType* cur_node = queue.front();
+    queue.pop();
+    Handler(cur_node);
+    ForEachNext(cur_node, [&](NodeType* next) {
+      if (!has_queued[next]) {
+        queue.push(next);
+        has_queued[next] = true;
+      }
+    });
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::TopoForEachNode(
+    const std::list<NodeType*>& starts, const ForEachFnType& ForEachInNode,
+    const ForEachFnType& ForEachOutNode, const HandlerType& Handler) const {
+  HashMap<NodeType*, bool> has_queued;
+  std::queue<NodeType*> queue;
+  for (NodeType* start : starts) {
+    queue.push(start);
+    has_queued[start] = true;
+    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+  }
+  while (!queue.empty()) {
+    NodeType* cur_node = queue.front();
+    queue.pop();
+    Handler(cur_node);
+    ForEachOutNode(cur_node, [&](NodeType* out) {
+      bool will_be_ready = true;
+      ForEachInNode(out, [&](NodeType* in) {
+        if (will_be_ready && !has_queued[in]) { will_be_ready = false; }
+      });
+      if (will_be_ready && !has_queued[out]) {
+        queue.push(out);
+        has_queued[out] = true;
+      }
+    });
+  }
 }
 
 }  // namespace oneflow

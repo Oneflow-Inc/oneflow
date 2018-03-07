@@ -243,7 +243,6 @@ Plan Improver::Improve(const Plan& naive_plan,
   ParseActEvents(act_event_filepath, act_events.get());
   double base_ii = CalcBaseII(*act_events);
   ActGraph act_graph(naive_plan, std::move(act_events));
-  // act_graph.ToDotFiles(JoinPath(LogDir(), "/dot/act_sub_graphs"));
   Plan plan(naive_plan);
   MemoryLimitedAllocate(act_graph, base_ii, MakeSetterSetPlanRegstNum(&plan));
   return plan;

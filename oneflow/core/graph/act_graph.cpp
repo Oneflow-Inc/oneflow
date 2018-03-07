@@ -1,7 +1,7 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
-#include "oneflow/core/graph/graph_node_visitor_util.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -19,34 +19,9 @@ int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
   return regst_desc_id;
 }
 
-using ConstActNodeVisitor = GraphNodeVisitorUtil<const ActNode*>;
-using ConstActNodeHandler = GraphNodeVisitorUtil<const ActNode*>::HandlerType;
-
-using ActNodeVisitor = GraphNodeVisitorUtil<ActNode*>;
-using ActNodeHandler = GraphNodeVisitorUtil<ActNode*>::HandlerType;
-
-std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},
-    {kNormalForward, "2"},
-    {kRecurrentForward, "2"},
-    {kNormalBackward, "3"},
-    {kRecurrentBackward, "3"},
-    {kSource, "1"},
-    {kLoss, "4"},
-    {kLossAcc, "5"},
-    {kLossPrint, "1"},
-    {kMdUpdt, "6"},
-    {kMdSave, "1"},
-    {kMdDiffAcc, "7"},
-    {kCopyHd, "8"},
-    {kCopyCommNet, "9"},
-    {kBoxing, "10"},
-    {kPrint, "1"},
-};
-
 }  // namespace
 
-class RegstActSubGraph final {
+class RegstActSubGraph final : public Graph<const ActNode, const ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstActSubGraph);
   RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
@@ -116,8 +91,7 @@ void RegstActSubGraph::TopoForEachActNode(
                              std::placeholders::_1, std::placeholders::_2);
   auto ForEachOut = std::bind(&RegstActSubGraph::ForEachOutNode, this,
                               std::placeholders::_1, std::placeholders::_2);
-  ConstActNodeVisitor::TopoForEach(CalcSources(), ForEachIn, ForEachOut,
-                                   Handler);
+  TopoForEachNode(CalcSources(), ForEachIn, ForEachOut, Handler);
 }
 
 void RegstActSubGraph::ForEachInNode(
@@ -157,7 +131,7 @@ double RegstActSubGraph::CalcLongestPathDuration() const {
   return duration;
 }
 
-class DepthRangeActSubGraph final {
+class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DepthRangeActSubGraph);
   DepthRangeActSubGraph(const ActGraph* act_graph, const Range& depth_range,
@@ -225,7 +199,7 @@ void DepthRangeActSubGraph::TopoForEachActNode(
                              std::placeholders::_1, std::placeholders::_2);
   auto ForEachOut = std::bind(&DepthRangeActSubGraph::ForEachOutNode, this,
                               std::placeholders::_1, std::placeholders::_2);
-  ConstActNodeVisitor::TopoForEach(starts, ForEachIn, ForEachOut, Handler);
+  TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
 }
 
 void DepthRangeActSubGraph::ForEachInNode(
@@ -253,12 +227,13 @@ void DepthRangeActSubGraph::ForEachOutNode(
 void DepthRangeActSubGraph::ForEachActNode(
     const std::list<const ActNode*>& sources,
     const std::function<void(const ActNode*)>& Handler) const {
-  auto ForEachConnectedNode = [&](const ActNode* node,
-                                  const ConstActNodeHandler& Handler) {
-    ForEachInNode(node, Handler);
-    ForEachOutNode(node, Handler);
-  };
-  ConstActNodeVisitor::BfsForEach(sources, ForEachConnectedNode, Handler);
+  auto ForEachConnectedNode =
+      [&](const ActNode* node,
+          const std::function<void(const ActNode*)>& Handler) {
+        ForEachInNode(node, Handler);
+        ForEachOutNode(node, Handler);
+      };
+  BfsForEachNode(sources, ForEachConnectedNode, Handler);
 }
 
 void DepthRangeActSubGraph::InitComponentId2Sources() {
@@ -442,7 +417,7 @@ void ActGraph::TopoForEachActNode(
                              std::placeholders::_1, std::placeholders::_2);
   auto ForEachOut = std::bind(&ActNode::ForEachNodeOnOutEdge,
                               std::placeholders::_1, std::placeholders::_2);
-  ActNodeVisitor::TopoForEach(starts, ForEachIn, ForEachOut, Handler);
+  TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
 }
 
 void ActGraph::InitDepth() {
