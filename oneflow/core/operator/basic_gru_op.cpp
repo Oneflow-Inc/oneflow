@@ -1,0 +1,106 @@
+#include "oneflow/core/operator/basic_gru_op.h"
+
+namespace oneflow {
+
+const PbMessage& BasicGruOp::GetCustomizedConf() const {
+  return op_conf().basic_gru_conf();
+}
+
+void BasicGruOp::VirtualInitFromOpConf() {
+  EnrollDataTmpBn("plus_op_out");
+  EnrollDataTmpBn("reset_gate_data");
+  EnrollDataTmpBn("update_gate_data");
+  EnrollDataTmpBn("candidate_hidden_data");
+  EnrollDataTmpBn("reset_gate_out");
+  EnrollDataTmpBn("update_gate_out");
+  EnrollDataTmpBn("candidate_hidden_out");
+  EnrollDataTmpBn("reset_mul_hidden");
+  EnrollDataTmpBn("reset_mul_candidate_hidden");
+
+  EnrollModelBn("i2h_weight_r");
+  EnrollModelBn("h2h_weight_r");
+
+  EnrollModelBn("i2h_weight_z");
+  EnrollModelBn("h2h_weight_z");
+
+  EnrollModelBn("i2h_weight");
+  EnrollModelBn("h2h_weight");
+
+  if (GetBoolFromCustomizedConf("use_bias")) {
+    EnrollModelBn("bias_r");
+    EnrollModelTmpBn("bias_multiplier_r");
+
+    EnrollModelBn("bias_z");
+    EnrollModelTmpBn("bias_multiplier_z");
+
+    EnrollModelBn("bias");
+    EnrollModelTmpBn("bias_multiplier");
+  }
+}
+
+void BasicGruOp::VirtualInferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  int64_t embedding_size = in_blob_desc->shape().Count(1);
+  int64_t data_num = in_blob_desc->shape().At(0);
+
+  *GetBlobDesc4BnInOp("plus_op_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("reset_gate_data") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("update_gate_data") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("candidate_hidden_data") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("reset_gate_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("update_gate_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("candidate_hidden_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("reset_mul_hidden") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("reset_mul_candidate_hidden") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+
+  *GetBlobDesc4BnInOp("i2h_weight_r") =
+      BlobDesc(Shape({hidden_size, embedding_size}));
+  *GetBlobDesc4BnInOp("h2h_weight_r") =
+      BlobDesc(Shape({hidden_size, hidden_size}));
+
+  *GetBlobDesc4BnInOp("i2h_weight_z") =
+      BlobDesc(Shape({hidden_size, embedding_size}));
+  *GetBlobDesc4BnInOp("h2h_weight_z") =
+      BlobDesc(Shape({hidden_size, hidden_size}));
+
+  *GetBlobDesc4BnInOp("i2h_weight") =
+      BlobDesc(Shape({hidden_size, embedding_size}));
+  *GetBlobDesc4BnInOp("h2h_weight") =
+      BlobDesc(Shape({hidden_size, hidden_size}));
+
+  if (GetBoolFromCustomizedConf("use_bias")) {
+    *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_multiplier_r") = BlobDesc(Shape({data_num, 1}));
+
+    *GetBlobDesc4BnInOp("bias_z") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_multiplier_z") = BlobDesc(Shape({data_num, 1}));
+
+    *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
+  }
+}
+
+REGISTER_OP(OperatorConf::kBasicGruConf, BasicGruOp);
+
+}  // namespace oneflow
