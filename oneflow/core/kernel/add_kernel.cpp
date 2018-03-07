@@ -9,9 +9,7 @@ void AddKernel<device_type, T>::ForwardDataContent(
   const AddOpConf& add_conf = this->op_conf().add_conf();
   Blob* out_blob = BnInOp2Blob("out");
   const Blob* in_blob0 = BnInOp2Blob("in_0");
-  Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(),
-                      in_blob0->dptr<T>(),
-                      out_blob->ByteSizeOfDataContentField());
+  out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
   const int count = out_blob->shape().elem_cnt();
   for (int i = 1; i < add_conf.in_size(); ++i) {
     std::string ibn = "in_" + std::to_string(i);
@@ -31,9 +29,7 @@ void AddKernel<device_type, T>::BackwardDataContent(
   for (int i = 0; i < add_conf.in_size(); ++i) {
     std::string idbn = GenDiffBn("in_" + std::to_string(i));
     Blob* in_diff_blob = BnInOp2Blob(idbn);
-    Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(),
-                        out_diff_blob->dptr<T>(),
-                        out_diff_blob->ByteSizeOfDataContentField());
+    in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
   }
 }
 

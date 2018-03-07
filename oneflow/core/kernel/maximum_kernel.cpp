@@ -9,9 +9,7 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
   const MaximumOpConf& maximum_conf = this->op_conf().maximum_conf();
   Blob* out_blob = BnInOp2Blob("out");
   const Blob* in_blob0 = BnInOp2Blob("in_0");
-  Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(),
-                      in_blob0->dptr<T>(),
-                      out_blob->ByteSizeOfDataContentField());
+  out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
   Blob* mask_blob = BnInOp2Blob("mask");
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
                       mask_blob->ByteSizeOfDataContentField());
