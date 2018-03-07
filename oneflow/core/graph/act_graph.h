@@ -57,6 +57,7 @@ class ActNode final : public Node<ActNode, ActEdge> {
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_nodes_;
 };
 
+class DepthRangeActSubGraph;
 class RegstActSubGraph;
 
 class ActGraph final : public Graph<ActNode, ActEdge> {
@@ -95,6 +96,8 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
       const std::function<void(const Range& range,
                                const std::list<std::string>& regst_uids)>&
           Handler) const;
+  void ForEachDepthRangeSubActGraph(
+      const std::function<void(const DepthRangeActSubGraph&)>& Handler) const;
   void ForEachRegstActSubGraph(
       const std::function<void(const RegstActSubGraph&)>& Handler) const;
   void TopoForEachActNode(const std::list<ActNode*>& starts,
