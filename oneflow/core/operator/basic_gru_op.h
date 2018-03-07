@@ -15,7 +15,7 @@ class BasicGruOp final : public RecurrentOp {
 
  private:
   void VirtualInitFromOpConf();
-  void VirtualIniferBlobDescs(
+  void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
 };
