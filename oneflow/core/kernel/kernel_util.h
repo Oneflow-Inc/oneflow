@@ -54,8 +54,6 @@ struct KernelUtil final {
                    const int incx, T* y, const int incy);
 
   // x = a*x
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
-                   const int incx);
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx);
   // max(x) only cpu
