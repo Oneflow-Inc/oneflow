@@ -116,11 +116,6 @@ void LocalResponseNormalizationKernel<device_type, T>::BackwardDataContent(
   }
 }
 
-#define INSTANTIATE_LOCAL_RESPONSE_NORMALIZATION_KERNEL(type_cpp, type_proto) \
-  template class LocalResponseNormalizationKernel<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_LOCAL_RESPONSE_NORMALIZATION_KERNEL,
-                     FLOATING_DATA_TYPE_SEQ)
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLocalResponseNormalizationConf,
                            LocalResponseNormalizationKernel,
                            FLOATING_DATA_TYPE_SEQ);
