@@ -200,12 +200,12 @@ struct KernelUtil<DeviceType::kGPU, T> final {
 };
 
 template<>
-inline __device__ float gpu_atomic_add(float* address, const float val) {
+__device__ float gpu_atomic_add(float* address, const float val) {
   return atomicAdd(address, val);
 }
 
 template<>
-inline __device__ double gpu_atomic_add(double* address, const double val) {
+__device__ double gpu_atomic_add(double* address, const double val) {
   auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
   unsigned long long int old = *address_as_ull;
   unsigned long long int assumed;
