@@ -296,7 +296,7 @@ message AccumulateOpConf {
 }
 
 message ModelSaveOpConf {
-  repeated string lbns = 1;
+  repeated string lbn = 1;
 }
 
 message PrintOpConf {

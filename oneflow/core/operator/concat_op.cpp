@@ -5,11 +5,7 @@ namespace oneflow {
 void ConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_concat_conf());
 
-  for (int i = 0; i < op_conf().concat_conf().in_size(); ++i) {
-    std::string ibn = "in_" + std::to_string(i);
-    CHECK(ibn2lbn_.emplace(ibn, op_conf().concat_conf().in(i)).second);
-    EnrollInputBn(ibn);
-  }
+  EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
 }
 

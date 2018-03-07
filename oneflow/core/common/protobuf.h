@@ -58,6 +58,13 @@ const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
   return r->GetRepeatedField<T>(msg, fd);
 }
 
+template<typename T>
+const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg,
+                                      const std::string& field_name) {
+  PROTOBUF_REFLECTION(msg, field_name);
+  return r->GetRepeatedPtrField<T>(msg, fd);
+}
+
 // Set In PbMessage
 
 #define DECLARE_SET_VAL_IN_PBMESSAGE(val_type, func_name) \
