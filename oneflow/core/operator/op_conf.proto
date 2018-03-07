@@ -320,7 +320,6 @@ message ReshapeOpConf {
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
-  // repeated float coeff = 4; // blob-wise coefficient for SUM operation
 }
 
 message MaximumOpConf {
