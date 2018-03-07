@@ -10,7 +10,7 @@ class BasicLstmOp final : public RecurrentOp {
   OF_DISALLOW_COPY_AND_MOVE(BasicLstmOp);
   BasicLstmOp() = default;
   ~BasicLstmOp() = default;
-  const PbMesssage& GetCustomizedConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
 
  private:
   void VirtualInitFromConf();
