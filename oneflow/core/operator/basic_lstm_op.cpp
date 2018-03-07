@@ -20,7 +20,6 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollModelBn("h2h_o_weight");
   EnrollModelBn("i2h_c_weight");
   EnrollModelBn("h2h_c_weight");
-
 }
 
 void BasicLstmOp::VirtualInferBobDescs(
