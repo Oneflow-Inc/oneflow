@@ -24,17 +24,17 @@ class CudnnPoolingDesc final {
 };
 #endif  // WITH_CUDA
 
-class Pooling3DCtx final {
+class PoolingCtx final {
  public:
-  Pooling3DCtx(const Pooling3DKernelConf&
+  PoolingCtx(const PoolingKernelConf&
 #ifdef WITH_CUDA
-               ,
-               cudnnPoolingMode_t, DataType
+             ,
+             cudnnPoolingMode_t, DataType
 #endif  // WITH_CUDA
   );
-  ~Pooling3DCtx() = default;
+  ~PoolingCtx() = default;
 
-  const Pooling3DKernelConf& kernel_conf() const { return kernel_conf_; }
+  const PoolingKernelConf& kernel_conf() const { return kernel_conf_; }
 
 #ifdef WITH_CUDA
   const cudnnTensorDescriptor_t& cudnn_in_tensor_desc() const;
@@ -45,7 +45,7 @@ class Pooling3DCtx final {
  private:
   std::vector<int> GetStdVecFromShapeInKernelConf(
       const std::string& field_name) const;
-  Pooling3DKernelConf kernel_conf_;
+  PoolingKernelConf kernel_conf_;
 
 #ifdef WITH_CUDA
   cudnnPoolingMode_t pooling_mode_;
@@ -66,23 +66,23 @@ class PoolingKernelIf : public KernelIf<device_type> {
 #ifdef WITH_CUDA
   virtual cudnnPoolingMode_t GetCudnnPoolingMode() = 0;
 #endif  // WITH_CUDA
-  const Pooling3DCtx& pooling_3d_ctx() const { return *pooling_3d_ctx_; }
+  const PoolingCtx& pooling_ctx() const { return *pooling_ctx_; }
   void VirtualKernelInit(const ParallelContext*) override {
-    pooling_3d_ctx_.reset(new Pooling3DCtx(GetPooling3DKernelConf()
+    pooling_ctx_.reset(new PoolingCtx(GetPoolingKernelConf()
 #ifdef WITH_CUDA
-                                               ,
-                                           this->GetCudnnPoolingMode(),
-                                           GetDataType<T>::val
+                                          ,
+                                      this->GetCudnnPoolingMode(),
+                                      GetDataType<T>::val
 #endif  // WITH_CUDA
-                                           ));
+                                      ));
   }
-  virtual const Pooling3DKernelConf& GetPooling3DKernelConf() const = 0;
+  virtual const PoolingKernelConf& GetPoolingKernelConf() const = 0;
   void ForwardDataContent(
       const KernelCtx& kernel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override {
     const Blob* in_blob = BnInOp2Blob("in");
     Blob* out_blob = BnInOp2Blob("out");
-    PoolingForward(kernel_ctx, this->pooling_3d_ctx(), in_blob, out_blob);
+    PoolingForward(kernel_ctx, this->pooling_ctx(), in_blob, out_blob);
   }
   void BackwardDataContent(
       const KernelCtx& kernel_ctx,
@@ -94,19 +94,19 @@ class PoolingKernelIf : public KernelIf<device_type> {
     const Blob* out_diff_blob = BnInOp2Blob("out_diff");
     const Blob* in_blob = BnInOp2Blob("in");
     const Blob* out_blob = BnInOp2Blob("out");
-    PoolingBackward(kernel_ctx, this->pooling_3d_ctx(), out_diff_blob, out_blob,
+    PoolingBackward(kernel_ctx, this->pooling_ctx(), out_diff_blob, out_blob,
                     in_blob, in_diff_blob);
   }
   virtual void PoolingForward(const KernelCtx& kernel_ctx,
-                              const Pooling3DCtx& pooling_ctx,
+                              const PoolingCtx& pooling_ctx,
                               const Blob* in_blob, Blob* out_blob) const = 0;
   virtual void PoolingBackward(const KernelCtx& kernel_ctx,
-                               const Pooling3DCtx& pooling_ctx,
+                               const PoolingCtx& pooling_ctx,
                                const Blob* out_diff_blob, const Blob* out_blob,
                                const Blob* in_blob,
                                Blob* in_diff_blob) const = 0;
 
-  std::unique_ptr<Pooling3DCtx> pooling_3d_ctx_;
+  std::unique_ptr<PoolingCtx> pooling_ctx_;
 };
 
 template<DeviceType device_type, typename T>
@@ -122,12 +122,12 @@ class PoolingKernel<DeviceType::kCPU, T>
 
  protected:
   void PoolingForward(const KernelCtx& kernel_ctx,
-                      const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+                      const PoolingCtx& pooling_ctx, const Blob* in_blob,
                       Blob* out_blob) const override;
   void PoolingBackward(const KernelCtx& kernel_ctx,
-                       const Pooling3DCtx& pooling_ctx,
-                       const Blob* out_diff_blob, const Blob* out_blob,
-                       const Blob* in_blob, Blob* in_diff_blob) const override;
+                       const PoolingCtx& pooling_ctx, const Blob* out_diff_blob,
+                       const Blob* out_blob, const Blob* in_blob,
+                       Blob* in_diff_blob) const override;
   virtual T ForwardInitialize() const = 0;
   virtual void NCDHWProcess(const T& lhs, T& rhs) const = 0;
   virtual void NDHWCProcess(const int64_t in_col, const int64_t out_col,
@@ -144,14 +144,14 @@ class PoolingKernel<DeviceType::kCPU, T>
                                 ConstEigenArrayMap<T>& in_arr,
                                 ConstEigenArrayMap<T>& out_diff_arr,
                                 EigenArrayMap<T>& in_diff_arr) const = 0;
-  void ForwardNCDHW(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+  void ForwardNCDHW(const PoolingCtx& pooling_ctx, const Blob* in_blob,
                     Blob* out_blob) const;
-  void BackwardNCDHW(const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
+  void BackwardNCDHW(const PoolingCtx& pooling_ctx, const Blob* out_diff_blob,
                      const Blob* out_blob, const Blob* in_blob,
                      Blob* in_diff_blob) const;
-  void ForwardNDHWC(const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+  void ForwardNDHWC(const PoolingCtx& pooling_ctx, const Blob* in_blob,
                     Blob* out_blob) const;
-  void BackwardNDHWC(const Pooling3DCtx& pooling_ctx, const Blob* out_diff_blob,
+  void BackwardNDHWC(const PoolingCtx& pooling_ctx, const Blob* out_diff_blob,
                      const Blob* out_blob, const Blob* in_blob,
                      Blob* in_diff_blob) const;
 };
@@ -166,12 +166,12 @@ class PoolingKernel<DeviceType::kGPU, T>
 
  protected:
   void PoolingForward(const KernelCtx& kernel_ctx,
-                      const Pooling3DCtx& pooling_ctx, const Blob* in_blob,
+                      const PoolingCtx& pooling_ctx, const Blob* in_blob,
                       Blob* out_blob) const override;
   void PoolingBackward(const KernelCtx& kernel_ctx,
-                       const Pooling3DCtx& pooling_ctx,
-                       const Blob* out_diff_blob, const Blob* out_blob,
-                       const Blob* in_blob, Blob* in_diff_blob) const override;
+                       const PoolingCtx& pooling_ctx, const Blob* out_diff_blob,
+                       const Blob* out_blob, const Blob* in_blob,
+                       Blob* in_diff_blob) const override;
 };
 
 }  // namespace oneflow

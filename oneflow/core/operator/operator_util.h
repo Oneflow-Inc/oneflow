@@ -1,9 +1,11 @@
-#ifndef ONEFLOW_CORE_COMMON_OPERATOR_UTIL_H_
-#define ONEFLOW_CORE_COMMON_OPERATOR_UTIL_H_
+#ifndef ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_
+#define ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_
 
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+const size_t DhwOffset(const std::string& data_format);
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                            int32_t stride, const std::string& padding_type,
@@ -35,4 +37,4 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_OPERATOR_UTIL_H_
+#endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_
