@@ -413,11 +413,8 @@ void ActGraph::InitEdges() {
 void ActGraph::TopoForEachActNode(
     const std::list<ActNode*>& starts,
     const std::function<void(ActNode*)>& Handler) const {
-  auto ForEachIn = std::bind(&ActNode::ForEachNodeOnInEdge,
-                             std::placeholders::_1, std::placeholders::_2);
-  auto ForEachOut = std::bind(&ActNode::ForEachNodeOnOutEdge,
-                              std::placeholders::_1, std::placeholders::_2);
-  TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
+  TopoForEachNode(starts, &ActNode::ForEachNodeOnInEdge,
+                  &ActNode::ForEachNodeOnOutEdge, Handler);
 }
 
 void ActGraph::InitDepth() {
