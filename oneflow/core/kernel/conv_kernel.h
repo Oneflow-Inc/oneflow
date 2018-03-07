@@ -62,7 +62,7 @@ class ConvKernel<DeviceType::kCPU, T> final
   ConvKernel() = default;
   ~ConvKernel() = default;
 
- protected:
+ private:
   void VirtualWeightForward(DeviceCtx*, const Blob* in_blob,
                             const Blob* weight_blob, Blob* out_blob,
                             Blob* tmp) const override;
@@ -86,7 +86,7 @@ class ConvKernel<DeviceType::kGPU, T> final
   ConvKernel() = default;
   ~ConvKernel() = default;
 
- protected:
+ private:
   void VirtualKernelInit(const ParallelContext*) override;
   void VirtualWeightForward(DeviceCtx*, const Blob* in_blob,
                             const Blob* weight_blob, Blob* out_blob,
@@ -102,7 +102,6 @@ class ConvKernel<DeviceType::kGPU, T> final
   void VirtualBiasBackward(DeviceCtx*, const Blob* out_diff_blob,
                            Blob* bias_diff_blob) const override;
 
- private:
   std::unique_ptr<CudnnTensorDesc> in_desc_;
   std::unique_ptr<CudnnTensorDesc> out_desc_;
   std::unique_ptr<CudnnFilterDesc> filter_desc_;

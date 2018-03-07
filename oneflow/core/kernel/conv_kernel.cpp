@@ -19,24 +19,16 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
-    Memset<device_type>(ctx.device_ctx, bias_diff_blob->mut_dptr(), 0,
-                        bias_diff_blob->ByteSizeOfDataContentField());
     VirtualBiasBackward(ctx.device_ctx, BnInOp2Blob("out_diff"),
-                        bias_diff_blob);
+                        BnInOp2Blob("bias_diff"));
   }
 
-  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
-  Memset<device_type>(ctx.device_ctx, weight_diff_blob->mut_dptr(), 0,
-                      weight_diff_blob->ByteSizeOfDataContentField());
   VirtualWeightBackward(ctx.device_ctx, BnInOp2Blob("out_diff"),
-                        BnInOp2Blob("in"), weight_diff_blob,
+                        BnInOp2Blob("in"), BnInOp2Blob("weight_diff"),
                         BnInOp2Blob("cudnn_workspace"));
 
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
-  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                      in_diff_blob->ByteSizeOfDataContentField());
   VirtualDataBackward(ctx.device_ctx, BnInOp2Blob("out_diff"),
                       BnInOp2Blob("weight"), in_diff_blob,
                       BnInOp2Blob("cudnn_workspace"));
@@ -109,9 +101,10 @@ const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedKernelConf() const {
 
 template<DeviceType device_type, typename T>
 const int32_t ConvKernelIf<device_type, T>::KernelDim() const {
-  Shape in_blob_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("in")));
-  return in_blob_shape.NumAxes() - 2;
+  return static_cast<const ShapeProto&>(
+             this->GetMessageFromCustomizedKernelConf("in"))
+             .dim_size()
+         - 2;
 }
 
 template<typename T>
