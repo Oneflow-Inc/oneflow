@@ -35,6 +35,9 @@ int AccumulateCompActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
+      if (order_ == ColIdOrder::kUnCertain) {
+        TryUpdtColIdOrder(regst, &order_);
+      }
       pending_in_regst_.push(regst);
     }
     ActUntilFail();

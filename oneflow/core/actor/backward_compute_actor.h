@@ -39,7 +39,6 @@ class BackwardCompActor : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
   void AsyncReturnAllReadableRegst() override;
   virtual void VirtualBackwardCompActorInit(const TaskProto&) = 0;
-  void TryUpdtColIdOrder(const Regst*);
   virtual void CheckBeforeAsyncReturnAllReadableRegst() = 0;
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();

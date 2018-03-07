@@ -19,25 +19,9 @@ void BackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   VirtualBackwardCompActorInit(task_proto);
 }
 
-void BackwardCompActor::TryUpdtColIdOrder(const Regst* cur_regst) {
-  if (order_ == ColIdOrder::kUnCertain) {
-    if (cur_regst->col_id() == 0) {
-      if (!(cur_regst->IsMaxCol())) {
-        order_ = ColIdOrder::kAscending;
-      } else {
-        CHECK_EQ(0, cur_regst->max_col_id());
-      }
-    } else if (cur_regst->IsMaxCol()) {
-      order_ = ColIdOrder::kDescending;
-    } else {
-      UNEXPECTED_RUN();
-    }
-  }
-}
-
 void BackwardCompActor::HandleOutDiffRegsts(
     Regst* cur_regst, std::deque<std::deque<Regst*>>* out_diff_regsts) {
-  TryUpdtColIdOrder(cur_regst);
+  TryUpdtColIdOrder(cur_regst, &order_);
   if ((order() == ColIdOrder::kUnCertain)
       || IsFirstRegstInPieceWithOrder(cur_regst, order())) {
     out_diff_regsts->push_back(std::deque<Regst*>());
