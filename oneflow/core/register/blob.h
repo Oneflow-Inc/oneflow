@@ -10,7 +10,16 @@ namespace oneflow {
 
 class Regst;
 
-class Blob {
+class BlobIf {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BlobIf);
+  virtual ~BlobIf() = default;
+
+ protected:
+  BlobIf() = default;
+};
+
+class Blob : public BlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   virtual ~Blob() = default;
@@ -97,6 +106,21 @@ class Blob {
 
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               const void* comm_net_token, DeviceType device_type);
+
+template<typename RecordType>
+class RecordBlob final : public BlobIf {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
+  RecordBlob() : records_(JobDesc::Singleton()->SinglePieceSize()) {}
+  ~RecordBlob() = default;
+
+  const std::vector<RecordType>& records() const { return records_; }
+
+  RecordType* mut_records(size_t i) { return &(records_.at(i)); }
+
+ private:
+  std::vector<RecordType> records_;
+};
 
 }  // namespace oneflow
 
