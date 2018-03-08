@@ -15,12 +15,9 @@ class LossKernel final : public KernelIf<device_type> {
  protected:
   virtual void VirtualLossForwardDataContent(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {};
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual LossKernelConf& GetLossKernelConf(
-      const KernelConf& kernel_conf) const {
-    LossKernelConf ret;
-    return ret;
-  }
+      const KernelConf& kernel_conf) const = 0;
 
  private:
   void ForwardDataContent(
