@@ -37,9 +37,11 @@ class LocalResponseNormalizationKernel final : public KernelIf<device_type> {
         GetMessageFromPbMessage(
             this->kernel_conf().local_response_normalization_conf(), "batch"),
         "dim");
-    batch_desc_.reset(new CudnnTensorDesc(
-        CUDNN_TENSOR_NHWC, GetDataType<T>::val, shape.Get(0), shape.Get(1),
-        shape.Get(2), shape.Get(3)));
+    std::vector<int> dims(shape.begin(), shape.end());
+    std::vector<int> strides{dims[1] * dims[2] * dims[3], 1, dims[2] * dims[3],
+                             dims[3]};
+    batch_desc_.reset(new CudnnTensorDesc(GetDataType<T>::val, 4, dims.data(),
+                                          strides.data()));
     const LocalResponseNormalizationOpConf& op_conf =
         this->op_conf().local_response_normalization_conf();
     normalize_desc_.reset(new CudnnLRNDesc(op_conf.depth_radius(),
