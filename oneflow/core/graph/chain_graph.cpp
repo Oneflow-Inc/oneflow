@@ -209,6 +209,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
 ChainGraph::ChainGraph(bool is_train) {
   HashMap<ChainNode*, const LogicalNode*> chain2first_shared;
   BuildFwStruct(is_train, &chain2first_shared);
+  BuildRecordLoadStruct();
   if (is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
@@ -286,6 +287,8 @@ void ChainGraph::BuildFwStruct(
     }
   }
 }
+
+void ChainGraph::BuildRecordLoadStruct() { TODO(); }
 
 void ChainGraph::BuildBwStruct() {
   HashSet<ForwardChainNode*> fw_nodes_that_need_bw;
