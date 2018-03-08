@@ -29,10 +29,15 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
     for (ChainNodeType* valid_node : valid_nodes) { Handler(valid_node); }
   }
 
-  void BuildFwStruct(bool is_train);
+  void BuildFwStruct(
+      bool is_train,
+      HashMap<ChainNode*, const LogicalNode*>* chain2first_shared);
   void BuildBwStruct();
   void BuildLossPrintStruct();
-  void BuildModelStruct(bool is_train);
+  MdUpdtChainNode* BuildMdUpdtAndMdSaveStruct(bool is_train, ForwardChainNode*);
+  void BuildModelStruct(
+      bool is_train,
+      const HashMap<ChainNode*, const LogicalNode*>& chain2first_shared);
   void BuildRecurrentStruct();
 };
 

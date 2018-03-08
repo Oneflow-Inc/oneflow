@@ -8,17 +8,20 @@ const std::vector<int64_t>& Regst::consumers_actor_id() const {
 }
 
 Regst::Regst() {
-  piece_id_ = -1;
-  model_version_id_ = -1;
+  status_.piece_id = -1;
+  status_.model_version_id = -1;
+  status_.act_id = -1;
+  status_.col_id = 0;
+  status_.max_col_id = 0;
   regst_desc_ = nullptr;
 }
 
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
   if (it != lbn2blob_.end()) {
-    return it->second.get();
+    return static_cast<Blob*>(it->second.get());
   } else if (lbn == kPackedBlobName) {
-    return packed_blob_.get();
+    return static_cast<Blob*>(packed_blob_.get());
   } else {
     return nullptr;
   }

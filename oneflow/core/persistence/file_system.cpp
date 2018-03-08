@@ -99,7 +99,7 @@ struct GlobalFSConstructor {
     } else if (gfs_conf.has_hdfs_conf()) {
       gfs = new HadoopFileSystem(gfs_conf.hdfs_conf());
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
   FileSystem* gfs;

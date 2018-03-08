@@ -1,12 +1,15 @@
 #ifndef ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
+#include "oneflow/core/common/util.h"
+
+#ifdef WITH_CUDA
+
 #include <cublas_v2.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <curand.h>
-#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -29,5 +32,7 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
 size_t GetAvailableGpuMemSize(int dev_id);
 
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_

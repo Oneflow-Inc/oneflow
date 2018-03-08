@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-template<typename T, bool has_data_id>
+template<typename T, bool has_data_id_field>
 void TestBoxingOp() {
   // input shape is
   // in1 {10, 5, 6, 6}
@@ -26,13 +26,13 @@ void TestBoxingOp() {
   auto boxing_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
       {boxing_op->input_bns()[0],
-       new BlobDesc(Shape(input_shape_vec2), data_type, has_data_id)},
+       new BlobDesc(Shape(input_shape_vec2), data_type, has_data_id_field)},
       {boxing_op->input_bns()[1],
-       new BlobDesc(Shape(input_shape_vec2), data_type, has_data_id)},
+       new BlobDesc(Shape(input_shape_vec2), data_type, has_data_id_field)},
       {boxing_op->input_bns()[2],
-       new BlobDesc(Shape(input_shape_vec2), data_type, has_data_id)},
+       new BlobDesc(Shape(input_shape_vec2), data_type, has_data_id_field)},
       {boxing_op->input_bns()[3],
-       new BlobDesc(Shape(input_shape_vec1), data_type, has_data_id)},
+       new BlobDesc(Shape(input_shape_vec1), data_type, has_data_id_field)},
       {"middle", new BlobDesc},
       {boxing_op->output_bns()[0], new BlobDesc},
       {boxing_op->output_bns()[1], new BlobDesc},
@@ -56,7 +56,7 @@ void TestBoxingOp() {
     if (i == 0) { output_shape_vec[0] = 4; }
     ASSERT_EQ(out_blobdesc->shape(), Shape(output_shape_vec));
     ASSERT_EQ(out_blobdesc->data_type(), data_type);
-    ASSERT_EQ(out_blobdesc->has_data_id(), has_data_id);
+    ASSERT_EQ(out_blobdesc->has_data_id_field(), has_data_id_field);
   }
 
   // Test add clone box shape function
@@ -75,7 +75,7 @@ void TestBoxingOp() {
     BlobDesc* out_blobdesc = bn2blobdesc_map.at(bn);
     ASSERT_EQ(out_blobdesc->shape(), Shape(input_shape_vec2));
     ASSERT_EQ(out_blobdesc->data_type(), data_type);
-    ASSERT_EQ(out_blobdesc->has_data_id(), has_data_id);
+    ASSERT_EQ(out_blobdesc->has_data_id_field(), has_data_id_field);
   }
 
   // Test concat clone shape function, this box has data_tmp_shape
@@ -93,7 +93,7 @@ void TestBoxingOp() {
   std::vector<int64_t> data_temp_shape_vec = {10, 17, 6, 6};
   ASSERT_EQ(data_tmp_blobdesc->shape(), Shape(data_temp_shape_vec));
   ASSERT_EQ(data_tmp_blobdesc->data_type(), data_type);
-  ASSERT_EQ(data_tmp_blobdesc->has_data_id(), has_data_id);
+  ASSERT_EQ(data_tmp_blobdesc->has_data_id_field(), has_data_id_field);
 
   // test results
   // output shape should be the same as data_tmp_shape
@@ -101,7 +101,7 @@ void TestBoxingOp() {
     BlobDesc* out_blobdesc = bn2blobdesc_map.at(bn);
     ASSERT_EQ(out_blobdesc->shape(), data_tmp_blobdesc->shape());
     ASSERT_EQ(out_blobdesc->data_type(), data_type);
-    ASSERT_EQ(out_blobdesc->has_data_id(), has_data_id);
+    ASSERT_EQ(out_blobdesc->has_data_id_field(), has_data_id_field);
   }
 }
 

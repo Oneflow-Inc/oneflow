@@ -14,14 +14,28 @@ class BackwardCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  CompTaskNode* GetRelatedFwTaskNode();
+
+ protected:
+  virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNIMPLEMENTED(); }
+  virtual void VirtualBuildActivationDiffRegst() {}
+  virtual void VirtualBuildInDiffRegst() { UNIMPLEMENTED(); }
+  virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
+    UNIMPLEMENTED();
+  };
+  virtual void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) {
+    UNIMPLEMENTED();
+  }
+  virtual void VirtualProduceActivationDiff() {}
+  virtual void VirtualConsumeActivation(TaskEdge* edge) {}
+  virtual void VirtualConsumeDiffRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualConsumeInRegst() { UNIMPLEMENTED(); };
+  virtual void VirtualInferBlobDescInActivationDiff() {}
+  virtual void VirtualInferBlobDescInHiddenDiff() {}
 
  private:
-  void BuildExecGphAndBindOutDiffRegst();
-  void BuildActivationDiffRegst();
-  void BuildInDiffRegst();
-  void BuildModelDiffRegst();
+  void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
-  std::shared_ptr<RegstDesc> GetRelatedInRegst();
 };
 
 }  // namespace oneflow

@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/dlnet_conf.pb.h"
-#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/persistence/file_system.h"
@@ -27,6 +27,7 @@ class JobDesc final {
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   size_t SizeOfOneDataId() const;
   bool use_rdma() const { return job_conf_.use_rdma(); }
+  bool UseCudnn() const { return job_conf_.use_cudnn_on_gpu(); }
   int64_t TotalMachineNum() const { return resource_.machine().size(); }
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
@@ -46,12 +47,14 @@ class JobDesc final {
   int32_t NumOfPiecesInBatch() const;
   int32_t Staleness() const;
   int64_t TotalBatchNum() const;
-  const FillConf* DefaultFillConf() const;
+  const InitializerConf* DefaultInitializerConf() const;
   int32_t PieceNumOfPrintLoss() const;
   int32_t BatchSize() const;
+  float L1() const;
+  float L2() const;
 
  private:
-  JobDesc(const JobConf&);
+  JobDesc(const JobDescProto&);
 
   JobConf job_conf_;
   DLNetConf dlnet_conf_;

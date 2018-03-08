@@ -4,12 +4,10 @@ namespace oneflow {
 
 void ModelSaveOp::InitFromOpConf() {
   CHECK(op_conf().has_model_save_conf());
-  for (const std::string& lbn : op_conf().model_save_conf().lbns()) {
-    EnrollInputBn("in_" + lbn);
-  }
+  EnrollRepeatedInputBn("lbn", false);
 }
 
-const PbMessage& ModelSaveOp::GetSpecialConf() const {
+const PbMessage& ModelSaveOp::GetCustomizedConf() const {
   return op_conf().model_save_conf();
 }
 

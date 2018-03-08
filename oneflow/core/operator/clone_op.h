@@ -11,15 +11,17 @@ class CloneOp final : public Operator {
   CloneOp() = default;
   ~CloneOp() = default;
 
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
+  const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
-    return GetStringFromSpecialConf("lbn");
+    return GetStringFromCustomizedConf("lbn");
   }
   std::string obn2lbn(const std::string& output_bn) const override {
     return op_name() + "/" + output_bn;

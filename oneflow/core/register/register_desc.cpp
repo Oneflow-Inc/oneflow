@@ -146,4 +146,14 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   *(ret->mutable_mem_case()) = mem_case_;
 }
 
+bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
+  if (rhs->lbn2blob_desc_.size() != lbn2blob_desc_.size()) { return false; }
+  for (const auto& pair : rhs->lbn2blob_desc_) {
+    auto iter = lbn2blob_desc_.find(pair.first);
+    if (iter == lbn2blob_desc_.end()) { return false; }
+    if (!(*(pair.second.get()) == *(iter->second.get()))) { return false; }
+  }
+  return true;
+}
+
 }  // namespace oneflow

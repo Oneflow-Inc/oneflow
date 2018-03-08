@@ -7,9 +7,9 @@ import "oneflow/core/job/placement.proto";
 
 enum TaskType {
   kInvalid = 0;
-  kNonRecurrentForward = 1;
+  kNormalForward = 1;
   kRecurrentForward = 2;
-  kNonRecurrentBackward = 3;
+  kNormalBackward = 3;
   kRecurrentBackward = 4;
   kSource = 5;
   kLoss = 6;
@@ -35,8 +35,7 @@ message TaskProto {
   map<string, int64> consumed_regst_desc_id = 7;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
-  optional uint32 random_seed = 1001; // MdUpdtCompTask
-  optional int64 related_save_task_id = 1002 [default = -1];
-  optional int64 related_fw_task_id = 1003 [default = -1];
-  optional int64 chain_id = 1004 [default = -1];
+  optional int64 random_seed = 1001; // ForwardCompTask
+  optional int64 related_save_model_task_id = 1002 [default = -1];
+  optional int64 related_init_model_task_id = 1003 [default = -1];
 };

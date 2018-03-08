@@ -37,7 +37,7 @@ int BackwardCompActor::HandlerNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }
@@ -124,6 +124,11 @@ void BackwardCompActor::Act() {
   }
 }
 
-REGISTER_ACTOR(TaskType::kNonRecurrentBackward, BackwardCompActor);
+void BackwardCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  for (const auto& pair : readable_regsts_) { handler(pair.second.front()); }
+}
+
+REGISTER_ACTOR(TaskType::kNormalBackward, BackwardCompActor);
 
 }  // namespace oneflow

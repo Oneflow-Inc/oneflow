@@ -1,0 +1,8 @@
+syntax = "proto2";
+package oneflow;
+
+import "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc_proto.proto";
+
+message IBVerbsTokensMsg {
+  map<uint64, IBVerbsMemDescProto> token2mem_desc_proto = 1;
+}

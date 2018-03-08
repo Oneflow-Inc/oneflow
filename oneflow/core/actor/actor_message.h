@@ -42,6 +42,7 @@ class ActorMsg final {
   ActorCmd actor_cmd() const;
   Regst* regst() const;
   int64_t piece_id() const;
+  int64_t act_id() const;
   const void* comm_net_token() const;
   int64_t eord_regst_desc_id() const;
 
@@ -59,7 +60,7 @@ class ActorMsg final {
   struct RegstWrapper {
     Regst* regst;
     const void* comm_net_token;
-    int64_t piece_id;
+    RegstStatus regst_status;
   };
 
   int64_t src_actor_id_;

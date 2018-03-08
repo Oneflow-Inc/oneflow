@@ -61,7 +61,8 @@ class KTCommon final {
     BlobCmp(BnInOp2Blob(result), BnInOp2Blob(expected_result));
   }
 
-  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf);
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf);
 };
 
 }  // namespace test

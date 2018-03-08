@@ -3,19 +3,46 @@
 
 namespace oneflow {
 
+namespace {
+
+template<DeviceType device_type, typename T>
+void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w,
+                        const T* out_diff, const T* out, T* tmp, T* in_diff) {
+  // copy out_diff to in_diff
+  KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
+  // dot product | get dot product tmp[i] from out[i] * out_diff[i]
+  SoftmaxKernelUtil<device_type, T>::BackwardDot(ctx, n, w, out, out_diff, tmp);
+  // sub | in_diff[i][j] -= tmp[i]
+  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, in_diff, tmp);
+  // elementwise multiplication | in_diff[i][j] *= out[i][j]
+  KernelUtil<device_type, T>::Mul(ctx, n * w, in_diff, out, in_diff);
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
   Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
-  Blob* tmp_blob = BnInOp2Blob(this->kernel_conf().data_tmp_bns(0));
-  const int64_t n = out_blob->shape().At(0);
-  const int64_t w = out_blob->shape().At(1);
-  const T* in = in_blob->dptr<T>();
+  Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  auto conf = this->kernel_conf().softmax_conf();
+  const int64_t n = conf.transpose_rows();
+  const int64_t w = conf.transpose_cols();
   T* tmp = tmp_blob->mut_dptr<T>();
-  T* out = out_blob->mut_dptr<T>();
-  SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in, tmp, out);
+  if (conf.need_transpose()) {
+    Blob* transpose_in_blob = BnInOp2Blob("transpose_in");
+    Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
+    in_blob->Transpose(ctx.device_ctx, transpose_in_blob, conf.perm());
+    SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w,
+                                       transpose_in_blob->dptr<T>(), tmp,
+                                       transpose_out_blob->mut_dptr<T>());
+    transpose_out_blob->Transpose(ctx.device_ctx, out_blob, conf.perm());
+  } else {
+    SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(),
+                                       tmp, out_blob->mut_dptr<T>());
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -26,31 +53,32 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob =
       BnInOp2Blob(this->kernel_conf().output_diff_bns(0));
   Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
-  Blob* tmp_blob = BnInOp2Blob(this->kernel_conf().data_tmp_bns(0));
-  const int64_t n = out_blob->shape().At(0);
-  const int64_t w = out_blob->shape().At(1);
-  T* in_diff = in_diff_blob->mut_dptr<T>();
+  Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  auto conf = this->kernel_conf().softmax_conf();
+  const int64_t n = conf.transpose_rows();
+  const int64_t w = conf.transpose_cols();
   T* tmp = tmp_blob->mut_dptr<T>();
-  const T* out = out_blob->dptr<T>();
-  const T* out_diff = out_diff_blob->dptr<T>();
-  // copy out_diff to in_diff
-  KernelUtil<device_type, T>::Copy(ctx.device_ctx, n * w, out_diff, 1, in_diff,
-                                   1);
-  // dot product | get dot product tmp[i] from out[i] * out_diff[i]
-  SoftmaxKernelUtil<device_type, T>::BackwardDot(ctx.device_ctx, n, w, out,
-                                                 out_diff, tmp);
-  // sub | in_diff[i][j] -= tmp[i]
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx.device_ctx, n, w, in_diff, tmp);
-  // elementwise multiplication | in_diff[i][j] *= out[i][j]
-  KernelUtil<device_type, T>::Mul(ctx.device_ctx, n * w, in_diff, out, in_diff);
+  if (conf.need_transpose()) {
+    Blob* transpose_in_diff_blob = BnInOp2Blob("transpose_in");
+    Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
+    Blob* transpose_out_diff_blob = BnInOp2Blob("transpose_out_diff");
+    out_diff_blob->Transpose(ctx.device_ctx, transpose_out_diff_blob,
+                             conf.perm());
+    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w,
+                                       transpose_out_diff_blob->dptr<T>(),
+                                       transpose_out_blob->dptr<T>(), tmp,
+                                       transpose_in_diff_blob->mut_dptr<T>());
+    transpose_in_diff_blob->Transpose(ctx.device_ctx, in_diff_blob,
+                                      conf.perm());
+  } else {
+    SoftmaxComputeDiff<device_type, T>(
+        ctx.device_ctx, n, w, out_diff_blob->dptr<T>(), out_blob->dptr<T>(),
+        tmp, in_diff_blob->mut_dptr<T>());
+  }
 }
 
 template<typename T>
-class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernelUtil);
-  SoftmaxKernelUtil() = delete;
-
+struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
   static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w,
                          const T* out, T* tmp) {
     for (int64_t i = 0; i < n; ++i) {
@@ -82,7 +110,7 @@ class SoftmaxKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
-  template class SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
+  template struct SoftmaxKernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kSoftmaxConf, SoftmaxKernel,

@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
@@ -22,8 +23,8 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max,
 }
 
 template<typename T>
-void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
-                 uint32_t random_seed, T* dptr) {
+void RngNormal(const int64_t elem_cnt, const T mean, const T std,
+               uint32_t random_seed, T* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_GT(std, 0.0);
@@ -36,37 +37,85 @@ void RngGaussian(const int64_t elem_cnt, const T mean, const T std,
 }
 
 template<typename T>
-void ConstantFill(const ConstantFillConf& fill_conf, Blob* blob) {
+void ConstantInitializer(const ConstantInitializerConf& initializer_conf,
+                         Blob* blob) {
   T* dptr = blob->mut_dptr<T>();
   const int64_t elem_cnt = blob->shape().elem_cnt();
-  const T value = fill_conf.value();
+  const T value = initializer_conf.value();
   CHECK(elem_cnt);
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
 }
 
 template<typename T>
-void UniformFill(const UniformFillConf& fill_conf, uint32_t random_seed,
-                 Blob* blob) {
+void RandomUniformInitializer(
+    const RandomUniformInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.min()),
-                static_cast<T>(fill_conf.max()), random_seed,
-                blob->mut_dptr<T>());
+  RngUniform<T>(
+      blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
+      static_cast<T>(initializer_conf.max()), random_seed, blob->mut_dptr<T>());
+}
+template<typename T>
+void RandomNormalInitializer(
+    const RandomNormalInitializerConf& initializer_conf, uint32_t random_seed,
+    Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  RngNormal<T>(
+      blob->shape().elem_cnt(), static_cast<T>(initializer_conf.mean()),
+      static_cast<T>(initializer_conf.std()), random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
-void GaussianFill(const GaussianFillConf& fill_conf, uint32_t random_seed,
-                  Blob* blob) {
+T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
+  T fan = static_cast<T>(0);
+  T fan_in = static_cast<T>(blob->shape().Count(1));
+  T fan_out = static_cast<T>(blob->shape().Count(0) / blob->shape().At(1));
+  if (variance_norm == VarianceNorm::kAverage) {
+    fan = (fan_in + fan_out) / static_cast<T>(2);
+  } else if (variance_norm == VarianceNorm::kFanIn) {
+    fan = fan_in;
+  } else if (variance_norm == VarianceNorm::kFanOut) {
+    fan = fan_out;
+  } else {
+    UNIMPLEMENTED();
+  }
+  return fan;
+}
+
+template<typename T>
+void XavierInitializer(const XavierInitializerConf& initializer_conf,
+                       uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
-  RngGaussian<T>(blob->shape().elem_cnt(), static_cast<T>(fill_conf.mean()),
-                 static_cast<T>(fill_conf.std()), random_seed,
-                 blob->mut_dptr<T>());
+  VarianceNorm variance_norm =
+      static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T scale =
+      std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob));
+  RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale),
+                static_cast<T>(scale), random_seed, blob->mut_dptr<T>());
+}
+
+template<typename T>
+void MsraInitializer(const MsraInitializerConf& initializer_conf,
+                     uint32_t random_seed, Blob* blob) {
+  CHECK(blob->shape().elem_cnt());
+  VarianceNorm variance_norm =
+      static_cast<VarianceNorm>(initializer_conf.variance_norm());
+  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
+  RngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(0), static_cast<T>(std),
+               random_seed, blob->mut_dptr<T>());
 }
 
 }  // namespace
 
 template<>
 void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src,
-                              size_t sz, cudaMemcpyKind kind) {
+                              size_t sz
+#ifdef WITH_CUDA
+                              ,
+                              cudaMemcpyKind kind
+#endif
+
+) {
   memcpy(dst, src, sz);
 }
 
@@ -90,9 +139,9 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int incx, T* y, const int incy) {
     cblas_axpy(n, alpha, x, incx, y, incy);
   }
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cblas_scal(n, alpha, x, incx);
+    cblas_scal(n, *alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
@@ -120,6 +169,31 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                   T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T half = static_cast<T>(0.5);
+    for (int64_t i = 0; i != n; ++i) {
+      y[i] = half * std::tanh(half * x[i]) + half;
+    }
+  }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * (1 - y[i]) * dy[i]; }
+  }
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::tanh(x[i]); }
+  }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
+  }
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+    T zero = static_cast<T>(0.0);
+    for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
+  }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
@@ -137,22 +211,30 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                ldc);
   }
 
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob) {
-    if (fill_conf.has_constant_conf()) {
-      ConstantFill<T>(fill_conf.constant_conf(), blob);
-    } else if (fill_conf.has_uniform_conf()) {
-      UniformFill<T>(fill_conf.uniform_conf(), random_seed, blob);
-    } else if (fill_conf.has_gaussian_conf()) {
-      GaussianFill<T>(fill_conf.gaussian_conf(), random_seed, blob);
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
+    if (initializer_conf.has_constant_conf()) {
+      ConstantInitializer<T>(initializer_conf.constant_conf(), blob);
+    } else if (initializer_conf.has_random_uniform_conf()) {
+      RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(),
+                                  random_seed, blob);
+    } else if (initializer_conf.has_random_normal_conf()) {
+      RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
+                                 random_seed, blob);
+    } else if (initializer_conf.has_xavier_conf()) {
+      XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob);
+    } else if (initializer_conf.has_msra_conf()) {
+      MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
-  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& bn_in_op,
-                               int32_t dim_num, int64_t num_in_each_dim) {
+  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                                     int32_t part_num,
+                                     const std::string& model_dir, Blob* blob,
+                                     const std::string& bn_in_op,
+                                     int32_t dim_num, int64_t num_in_each_dim) {
     int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);
@@ -170,6 +252,14 @@ struct KernelUtil<DeviceType::kCPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

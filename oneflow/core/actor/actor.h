@@ -15,6 +15,11 @@
 
 namespace oneflow {
 
+enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
+
+bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
+bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
+
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
@@ -31,6 +36,8 @@ class Actor {
   int64_t actor_id() const { return actor_id_; }
 
  protected:
+  friend class NaiveReadableRegstMgr;
+
   struct ExecKernel {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
@@ -50,6 +57,8 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
+  virtual void ForEachCurReadableRegst(std::function<void(const Regst*)>) {}
+  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -103,7 +112,9 @@ class Actor {
   HashMap<std::string, int64_t> name2regst_desc_id_;
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
+#ifdef WITH_CUDA
   CudaStreamHandle cuda_handle_;
+#endif
 
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;

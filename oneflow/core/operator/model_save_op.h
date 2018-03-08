@@ -12,12 +12,7 @@ class ModelSaveOp final : public Operator {
   ~ModelSaveOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetSpecialConf() const override;
-
- private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return input_bn.substr(3);
-  }
+  const PbMessage& GetCustomizedConf() const override;
 };
 
 }  // namespace oneflow

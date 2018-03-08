@@ -4,13 +4,16 @@
 
 namespace oneflow {
 
+#if defined(WITH_CUDA)
+
 namespace test {
 
 template<>
 Blob* CreateBlob<DeviceType::kGPU>(const BlobDesc* blob_desc) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMalloc(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(blob_desc, static_cast<char*>(mem_ptr));
+  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+                 DeviceType::kGPU);
 }
 
 template<>
@@ -20,7 +23,8 @@ void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   CudaCheck(cudaStreamCreate(cuda_stream));
   CudaCheck(cublasCreate(cublas_handle));
   CudaCheck(cublasSetStream(*cublas_handle, *cuda_stream));
-  ctx->device_ctx = new CudaDeviceCtx(-1, cuda_stream, cublas_handle, nullptr);
+  ctx->device_ctx =
+      new CudaDeviceCtx(-1, cuda_stream, cublas_handle, nullptr, nullptr);
 }
 
 template<>
@@ -51,12 +55,14 @@ class KTCommon<DeviceType::kGPU, T> final {
     KTCommon<DeviceType::kCPU, T>::BlobCmp(cpu_lhs, cpu_rhs);
   }
 
-  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf) {
     Blob* cpu_blob = CreateBlob<DeviceType::kCPU>(blob->blob_desc_ptr());
     CudaCheck(cudaMemcpy(cpu_blob->mut_dptr(), blob->dptr(),
                          blob->ByteSizeOfDataContentField(),
                          cudaMemcpyDeviceToHost));
-    KTCommon<DeviceType::kCPU, T>::CheckFillResult(cpu_blob, fill_conf);
+    KTCommon<DeviceType::kCPU, T>::CheckInitializeResult(cpu_blob,
+                                                         initializer_conf);
   }
 };
 
@@ -65,5 +71,7 @@ class KTCommon<DeviceType::kGPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
 
 }  // namespace test
+
+#endif
 
 }  // namespace oneflow

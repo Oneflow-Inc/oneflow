@@ -15,8 +15,7 @@ void CloneKernel<device_type, T>::Forward(
 }
 
 template<DeviceType device_type, typename T>
-class CloneKernelUtil final {
- public:
+struct CloneKernelUtil {
   // b += a
   static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b);
 };
@@ -41,8 +40,7 @@ void CloneKernel<device_type, T>::BackwardDataContent(
 
 #define DEFINE_FLOATING_CLONE_KERNEL_UTIL(type_cpp, type_proto)           \
   template<DeviceType device_type>                                        \
-  class CloneKernelUtil<device_type, type_cpp> final {                    \
-   public:                                                                \
+  struct CloneKernelUtil<device_type, type_cpp> {                         \
     static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a,      \
                                Blob* b) {                                 \
       KernelUtil<device_type, type_cpp>::Axpy(                            \
@@ -55,11 +53,10 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_NONFLOAT_CLONE_KERNEL_UTIL(type_cpp, type_proto)      \
   template<DeviceType device_type>                                   \
-  class CloneKernelUtil<device_type, type_cpp> final {               \
-   public:                                                           \
+  struct CloneKernelUtil<device_type, type_cpp> {                    \
     static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, \
                                Blob* b) {                            \
-      UNEXPECTED_RUN();                                              \
+      UNIMPLEMENTED();                                               \
     }                                                                \
   };
 

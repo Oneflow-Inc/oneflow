@@ -32,7 +32,7 @@ void SourceCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
-  node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx());
+  node->InferBlobDescs(parallel_ctx(), device_type());
 }
 
 void SourceCompTaskNode::FixThrdId() {

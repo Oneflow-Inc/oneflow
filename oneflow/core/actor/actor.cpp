@@ -2,23 +2,33 @@
 
 namespace oneflow {
 
+bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  return (order == ColIdOrder::kAscending && regst->col_id() == 0)
+         || (order == ColIdOrder::kDescending && regst->IsMaxCol());
+}
+
+bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  return (order == ColIdOrder::kAscending && regst->IsMaxCol())
+         || (order == ColIdOrder::kDescending && regst->col_id() == 0);
+}
+
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
-  act_id_ = 0;
+  act_id_ = -1;
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }
   for (const ExecNodeProto& node : task_proto.exec_sequence().exec_node()) {
     ExecKernel ek;
-    ek.kernel =
-        ConstructKernel(GetDeviceType(), parallel_ctx(), node.kernel_conf());
+    ek.kernel = ConstructKernel(parallel_ctx(), node.kernel_conf());
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    RegstMgr::Singleton()->NewRegsts(pair.second, [this](Regst* regst) {
-      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-    });
+    RegstMgr::Singleton()->NewRegsts(
+        pair.second, GetDeviceType(), [this](Regst* regst) {
+          produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+        });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.emplace(pair.first, regst_desc_id).second);
   }
@@ -59,13 +69,16 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
       device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
+#ifdef WITH_CUDA
     case DeviceType::kGPU: {
       device_ctx_.reset(new CudaDeviceCtx(
           NewWorkStreamId(), cuda_handle_.cuda_stream(),
-          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle()));
+          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle(),
+          cuda_handle_.eigen_gpu_device()));
       break;
     }
-    default: { UNEXPECTED_RUN(); }
+#endif
+    default: { UNIMPLEMENTED(); }
   }
 }
 
@@ -73,6 +86,11 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   KernelCtx ctx;
   ctx.device_ctx = device_ctx_.get();
   return ctx;
+}
+
+void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
+  info->set_regst_desc_id(regst->regst_desc_id());
+  info->set_act_id(regst->act_id());
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
@@ -83,7 +101,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
       AsyncSendRegstMsgToProducer(msg.regst());
     }
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
     msg_handler_ = nullptr;
@@ -94,12 +112,17 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
+    act_id_ += 1;
     ActEvent* act_event = nullptr;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
-      act_event->set_act_id(act_id_++);
+      act_event->set_act_id(act_id_);
       act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      ForEachCurReadableRegst([&](const Regst* readable_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        SetReadableRegstInfo(readable_regst, info);
+      });
       device_ctx_->AddCallBack(
           [act_event]() { act_event->set_start_time(GetCurTime()); });
     }
@@ -164,6 +187,7 @@ void Actor::AsyncSendRegstMsgToConsumer(
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
+      regst->set_act_id(act_id_);
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
         ActorMsg msg =
             ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);

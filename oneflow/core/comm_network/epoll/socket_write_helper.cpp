@@ -105,7 +105,7 @@ void SocketWriteHelper::SetStatusWhenMsgHeadDone() {
   case SocketMsgType::k##x: return SetStatusWhen##x##MsgHeadDone();
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, SOCKET_MSG_TYPE_SEQ);
 #undef MAKE_ENTRY
-    default: UNEXPECTED_RUN();
+    default: UNIMPLEMENTED();
   }
 }
 

@@ -25,7 +25,7 @@ std::string Shape::DebugStr() const {
 }
 
 void Shape::ToProto(ShapeProto* ret) const {
-  *(ret->mutable_dim()) = PbRf<PbInt64>(dim_vec_.begin(), dim_vec_.end());
+  *(ret->mutable_dim()) = PbRf<int64_t>(dim_vec_.begin(), dim_vec_.end());
 }
 
 void Shape::Set(int64_t index, int64_t val) {

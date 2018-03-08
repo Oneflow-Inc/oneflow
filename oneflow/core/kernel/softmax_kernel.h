@@ -22,11 +22,7 @@ class SoftmaxKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-class SoftmaxKernelUtil final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernelUtil);
-  SoftmaxKernelUtil() = delete;
-
+struct SoftmaxKernelUtil {
   // n = number of data sample
   // w = number of (input/output) neuron
   static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w,

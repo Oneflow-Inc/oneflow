@@ -7,7 +7,7 @@ namespace {
 
 template<typename T>
 void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
-                        bool has_data_id) {
+                        bool has_data_id_field) {
   int out_num = 40;
   JobConf job_conf;
   job_conf.set_DefaultDataType(GetDataType<T>::val);
@@ -23,7 +23,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
 
   HashMap<std::string, BlobDesc*> bn2blob_desc = {
       {"in", new BlobDesc(Shape({1000, 3, 256, 256}), GetDataType<T>::val,
-                          has_data_id)},
+                          has_data_id_field)},
       {"out", new BlobDesc},
       {"weight", new BlobDesc},
   };
@@ -42,9 +42,9 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
     out_num = splitter.At(3).size();
   }
 
-  ASSERT_TRUE(
-      *bn2blob_desc.at("out")
-      == BlobDesc(Shape({1000, out_num}), GetDataType<T>::val, has_data_id));
+  ASSERT_TRUE(*bn2blob_desc.at("out")
+              == BlobDesc(Shape({1000, out_num}), GetDataType<T>::val,
+                          has_data_id_field));
 
   ASSERT_TRUE(
       *bn2blob_desc.at("weight")
@@ -60,9 +60,9 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
 }  // namespace
 
 TEST(InnerProductOp, innerproduct) {
-#define MAKE_ENTRY(data_type, policy, has_bias, has_data_id)        \
+#define MAKE_ENTRY(data_type, policy, has_bias, has_data_id_field)  \
   TestInnerProductOp<OF_PP_PAIR_FIRST(data_type)>(policy, has_bias, \
-                                                  has_data_id);
+                                                  has_data_id_field);
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ,
                                    PARALLEL_POLICY_SEQ, BOOL_SEQ, BOOL_SEQ)
 }

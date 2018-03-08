@@ -12,8 +12,17 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   ~RecurrentBackwardCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kRecurrentBackward; }
+  bool IsReadyForBuild() override;
 
  private:
+  void VirtualBuildExecGphAndBindOutDiffRegst() override;
+  void VirtualBuildInDiffRegst() override;
+  void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override;
+  void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) override;
+  void VirtualConsumeDiffRegst(TaskEdge* edge) override;
+  void VirtualConsumeInRegst();
+  void VirtualInferBlobDescInHiddenDiff() override;
+  bool CanBindInDiff(TaskEdge* edge);
 };
 
 }  // namespace oneflow

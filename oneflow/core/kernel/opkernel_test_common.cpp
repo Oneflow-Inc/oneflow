@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+#if defined(WITH_CUDA)
+
 namespace test {
 
 std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
@@ -34,7 +36,8 @@ template<>
 Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(blob_desc, static_cast<char*>(mem_ptr));
+  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+                 DeviceType::kCPU);
 }
 
 template<>
@@ -70,17 +73,19 @@ class KTCommon<DeviceType::kCPU, T> final {
     }
   }
 
-  static void CheckFillResult(const Blob* blob, const FillConf& fill_conf) {
-    if (fill_conf.has_constant_conf()) {
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf) {
+    if (initializer_conf.has_constant_conf()) {
       for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
-        ASSERT_FLOAT_EQ(blob->dptr<T>()[i], fill_conf.constant_conf().value());
+        ASSERT_FLOAT_EQ(blob->dptr<T>()[i],
+                        initializer_conf.constant_conf().value());
       }
-    } else if (fill_conf.has_uniform_conf()) {
+    } else if (initializer_conf.has_random_uniform_conf()) {
       TODO();
-    } else if (fill_conf.has_gaussian_conf()) {
+    } else if (initializer_conf.has_random_normal_conf()) {
       TODO();
     } else {
-      UNEXPECTED_RUN();
+      UNIMPLEMENTED();
     }
   }
 };
@@ -90,5 +95,7 @@ class KTCommon<DeviceType::kCPU, T> final {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
 
 }  // namespace test
+
+#endif
 
 }  // namespace oneflow

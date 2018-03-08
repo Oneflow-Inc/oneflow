@@ -2,14 +2,8 @@
 
 namespace oneflow {
 
-void RMSPropModelUpdateOp::InitFromOpConf() {
-  EnrollInputBn("model_diff_acc", false);
+void RMSPropModelUpdateOp::MdUpdtVirtualInitFromOpConf() {
   EnrollDataTmpBn("mean_square");
-  EnrollOutputBn("model", false);
-}
-
-const PbMessage& RMSPropModelUpdateOp::GetSpecialConf() const {
-  return op_conf().rmsprop_mdupdt_conf();
 }
 
 void RMSPropModelUpdateOp::InferBlobDescs(
@@ -18,10 +12,8 @@ void RMSPropModelUpdateOp::InferBlobDescs(
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(),
            JobDesc::Singleton()->DefaultDataType());
-  CHECK_EQ(model_blob_desc->has_data_id(), false);
+  CHECK_EQ(model_blob_desc->has_data_id_field(), false);
   *GetBlobDesc4BnInOp("mean_square") = *model_blob_desc;
 }
-
-REGISTER_OP(OperatorConf::kRmspropMdupdtConf, RMSPropModelUpdateOp);
 
 }  // namespace oneflow

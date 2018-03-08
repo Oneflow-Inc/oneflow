@@ -37,17 +37,16 @@ op {
 
 op {
   name: "ip10"
-  innerproduct_conf {
+  fully_connected_conf {
     in: "conv/out"
     out: "out"
-    out_num: 10
-    has_bias_term: true
+    units: 10
   }
 }
 
 op {
   name: "softmax_loss"
-  softmax_loss_conf {
+  sparse_softmax_cross_entropy_loss_conf {
     prediction: "ip10/out"
     label: "label/out"
     loss: "loss"

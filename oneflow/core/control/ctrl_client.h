@@ -59,7 +59,7 @@ class CtrlClient final {
     } else if (lock_ret == TryLockResult::kDoing) {                  \
       CtrlClient::Singleton()->WaitUntilDone(name);                  \
     } else {                                                         \
-      UNEXPECTED_RUN();                                              \
+      UNIMPLEMENTED();                                               \
     }                                                                \
   } while (0)
 

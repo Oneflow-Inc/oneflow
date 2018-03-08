@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-template<typename T, bool has_data_id>
+template<typename T, bool has_data_id_field>
 void TestReluOp() {
   // create relu_op with input shape 3x5x4
   OperatorConf op_conf;
@@ -13,7 +13,7 @@ void TestReluOp() {
   auto relu_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
       {relu_op->SoleIbn(),
-       new BlobDesc(Shape({3, 5, 4}), data_type, has_data_id)},
+       new BlobDesc(Shape({3, 5, 4}), data_type, has_data_id_field)},
       {relu_op->SoleObn(), new BlobDesc}};
   auto fp = [&bn2blobdesc_map](const std::string& bn) {
     return bn2blobdesc_map.at(bn);

@@ -2,14 +2,31 @@
 
 namespace oneflow {
 
+std::map<TaskType, std::string> task_type2color = {
+    {kInvalid, "0"},
+    {kNormalForward, "2"},
+    {kRecurrentForward, "2"},
+    {kNormalBackward, "3"},
+    {kRecurrentBackward, "3"},
+    {kSource, "1"},
+    {kLoss, "4"},
+    {kLossAcc, "5"},
+    {kLossPrint, "1"},
+    {kMdUpdt, "6"},
+    {kMdSave, "1"},
+    {kMdDiffAcc, "7"},
+    {kCopyHd, "8"},
+    {kCopyCommNet, "9"},
+    {kBoxing, "10"},
+    {kPrint, "1"},
+};
+
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNonRecurrentForward
-         || tt == TaskType::kRecurrentForward;
+  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNonRecurrentBackward
-         || tt == TaskType::kRecurrentBackward;
+  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
 }
 
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
@@ -41,6 +58,12 @@ void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
+}
+
+void TaskNode::FixRegisterNumRange() {
+  for (auto& pair : produced_regsts_) {
+    pair.second->set_min_register_num(pair.second->MaxColNum());
+  }
 }
 
 void TaskNode::EraseEmptyProducedRegst() {
@@ -85,7 +108,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false,
-                           parallel_ctx(), task_proto->mutable_exec_sequence());
+                           device_type(), parallel_ctx(),
+                           task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -135,8 +159,14 @@ std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegst(const std::string& name) {
   return nullptr;
 }
 
+const HashMap<std::string, std::weak_ptr<RegstDesc>>&
+TaskNode::consumed_regsts() {
+  return consumed_regsts_;
+}
+
 bool TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto regst = GetConsumedRegst(name);
+  if (regst->IsLocked()) { return false; }
   if (regst) {
     regst->Lock();
     return true;

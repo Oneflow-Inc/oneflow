@@ -2,6 +2,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -64,9 +65,9 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    const int incx, T* y, const int incy) {
     cublas_axpy(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
   }
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cublas_scal(ctx->cublas_handle(), n, &alpha, x, incx);
+    cublas_scal(ctx->cublas_handle(), n, alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
@@ -91,6 +92,50 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                 ctx->cuda_stream()>>>(n, x, y, z);
   }
+#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)                 \
+  CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnTensorDesc y_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnActivationDesc act_desc(mode, CUDNN_PROPAGATE_NAN, 0.0);
+
+#define FORWARD_COMPUTE_ACTIVATION(mode)                                   \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                   \
+  CudaCheck(cudnnActivationForward(ctx->cudnn_handle(), act_desc.Get(),    \
+                                   CudnnDataType<T>::one, x_desc.Get(), x, \
+                                   CudnnDataType<T>::zero, y_desc.Get(), y));
+
+#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)                 \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                       \
+  CudnnTensorDesc dx_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnTensorDesc dy_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1);
+
+#define BACKWARD_COMPUTE_ACTIVATION(mode)                         \
+  CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \
+  CudaCheck(cudnnActivationBackward(                              \
+      ctx->cudnn_handle(), act_desc.Get(), CudnnDataType<T>::one, \
+      y_desc.Get(), y, dy_desc.Get(), dy, x_desc.Get(), x,        \
+      CudnnDataType<T>::zero, dx_desc.Get(), dx));
+
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID)
+  }
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx) {
+    BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID);
+  }
+  static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
+  }
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
+  }
+  static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
+  }
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx) {
+    BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
@@ -110,49 +155,81 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                 &alpha, b, ldb, a, lda, &beta, c, ldc);
   }
 
-  static void Fill(DeviceCtx* ctx, const FillConf& fill_conf,
-                   uint32_t random_seed, Blob* blob) {
-    // create temporary host blob store fill
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf& initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
+    // create temporary host blob store initializer result
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
-    size_t byte_size = blob->ByteSizeOfDataContentField();
-    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
-    Blob host_blob(&blob_desc, host_raw_dptr);
-    // synchronous fill the host blob
-    KernelUtil<DeviceType::kCPU, T>::Fill(nullptr, fill_conf, random_seed,
-                                          &host_blob);
+    CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
+    std::unique_ptr<Blob> host_blob;
+    host_blob.reset(
+        NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+    // synchronous initialize the host blob
+    KernelUtil<DeviceType::kCPU, T>::Initialize(nullptr, initializer_conf,
+                                                random_seed, host_blob.get());
     // asynchronous copy to device
-    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),
+                             blob->ByteSizeOfDataContentField(),
                              cudaMemcpyHostToDevice);
     cudaStreamSynchronize(ctx->cuda_stream());
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 
-  static void FillWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                               int32_t part_num, const std::string& model_dir,
-                               Blob* blob, const std::string& bn_in_op,
-                               int32_t dim_num, int64_t num_in_each_dim) {
+  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
+                                     int32_t part_num,
+                                     const std::string& model_dir, Blob* blob,
+                                     const std::string& bn_in_op,
+                                     int32_t dim_num, int64_t num_in_each_dim) {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
-    size_t byte_size = blob->ByteSizeOfDataContentField();
-    CudaCheck(cudaMallocHost(&host_raw_dptr, byte_size));
-    Blob host_blob(&blob_desc, host_raw_dptr);
-    KernelUtil<DeviceType::kCPU, T>::FillWithModelDir(
-        ctx, part_id, part_num, model_dir, &host_blob, bn_in_op, dim_num,
+    CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
+    std::unique_ptr<Blob> host_blob;
+    host_blob.reset(
+        NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+    KernelUtil<DeviceType::kCPU, T>::InitializeWithModelDir(
+        ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
         num_in_each_dim);
 
-    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob.dptr(), byte_size,
+    Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),
+                             blob->ByteSizeOfDataContentField(),
                              cudaMemcpyHostToDevice);
     cudaStreamSynchronize(ctx->cuda_stream());
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 };
 
+template<>
+__device__ float gpu_atomic_add(float* address, const float val) {
+  return atomicAdd(address, val);
+}
+
+template<>
+__device__ double gpu_atomic_add(double* address, const double val) {
+  auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val + __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
+  template void KernelUtil<DeviceType::kGPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kGPU, T>::Relu(                        \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
+  template void KernelUtil<DeviceType::kGPU, T>::ReluBackward(                \
+      DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
+      T* dx);                                                                 \
   template<>                                                                  \
   void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

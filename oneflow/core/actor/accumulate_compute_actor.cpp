@@ -2,16 +2,25 @@
 
 namespace oneflow {
 
-void AccumulateCompActor::Init(const TaskProto& task_proto,
-                               int32_t max_acc_cnt) {
+void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
+                               ColIdOrder order) {
   using namespace std::placeholders;
   is_in_eord_ = false;
+  order_ = order;
   if (GetDeviceType() == DeviceType::kCPU) {
-    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4,
-                          cudaMemcpyKind::cudaMemcpyHostToHost);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kCPU>, _1, _2, _3, _4
+#ifdef WITH_CUDA
+                          ,
+                          cudaMemcpyHostToHost
+#endif
+    );
   } else {
+#ifdef WITH_CUDA
     cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4,
-                          cudaMemcpyKind::cudaMemcpyDeviceToDevice);
+                          cudaMemcpyDeviceToDevice);
+#else
+    UNIMPLEMENTED();
+#endif
   }
   OF_SET_MSG_HANDLER(&AccumulateCompActor::HandlerNormal);
   acc_cnt_ = 0;
@@ -30,7 +39,7 @@ int AccumulateCompActor::HandlerNormal(const ActorMsg& msg) {
     }
     ActUntilFail();
   } else {
-    UNEXPECTED_RUN();
+    UNIMPLEMENTED();
   }
   return TrySwitchToZombieOrFinish();
 }
@@ -47,7 +56,7 @@ void AccumulateCompActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
   Regst* out_regst = GetCurSoleWriteableRegst();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  if (acc_cnt_ == 0) {
+  if (acc_cnt_ == 0 && IsFirstRegstInPieceWithOrder(in_regst, order_)) {
     Blob* in_blob = in_regst->packed_blob();
     Blob* out_blob = out_regst->packed_blob();
     cpy_func_(kernel_ctx.device_ctx, out_blob->mut_dptr(), in_blob->dptr(),
@@ -63,7 +72,7 @@ void AccumulateCompActor::Act() {
       }
     });
   }
-  acc_cnt_ += 1;
+  if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
   if (acc_cnt_ == max_acc_cnt_) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
       regst->set_piece_id(next_piece_id_);
@@ -74,6 +83,11 @@ void AccumulateCompActor::Act() {
   }
   AsyncSendRegstMsgToProducer(in_regst);
   pending_in_regst_.pop();
+}
+
+void AccumulateCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regst_.front());
 }
 
 }  // namespace oneflow
