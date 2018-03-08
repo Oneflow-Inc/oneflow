@@ -33,21 +33,8 @@ int64_t IDMgr::GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const {
   return thrd_id - cpu_device_num_;
 }
 
-int64_t IDMgr::AllocatePersistenceThrdId(int64_t machine_id) {
-  int64_t& offset = persistence_thrd_offset_[machine_id];
-  int64_t ret = xpu_device_num_ + offset;
-  offset = (offset + 1) % JobDesc::Singleton()->PersistenceWorkerNum();
-  return ret;
-}
-int64_t IDMgr::AllocateBoxingThrdId(int64_t machine_id) {
-  int64_t offset = boxing_thrd_offset_[machine_id];
-  int64_t ret =
-      xpu_device_num_ + JobDesc::Singleton()->PersistenceWorkerNum() + offset;
-  offset = (offset + 1) % JobDesc::Singleton()->BoxingWorkerNum();
-  return ret;
-}
 int64_t IDMgr::CommNetThrdId() const {
-  return xpu_device_num_ + JobDesc::Singleton()->PersistenceWorkerNum()
+  return xpu_device_num_ + JobDesc::Singleton()->DecodeWorkerNum()
          + JobDesc::Singleton()->BoxingWorkerNum();
 }
 
@@ -97,8 +84,6 @@ IDMgr::IDMgr() {
     CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
   }
   regst_desc_id_count_ = 0;
-  persistence_thrd_offset_.assign(machine_num, 0);
-  boxing_thrd_offset_.assign(machine_num, 0);
 }
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {
