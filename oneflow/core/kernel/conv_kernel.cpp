@@ -7,10 +7,9 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  WeightForward(ctx.device_ctx, BnInOp2Blob("in"), BnInOp2Blob("weight"),
-                BnInOp2Blob("out"), BnInOp2Blob("cudnn_workspace"));
+  WeightForward(ctx.device_ctx, BnInOp2Blob);
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    BiasForward(ctx.device_ctx, BnInOp2Blob("bias"), BnInOp2Blob("out"));
+    BiasForward(ctx.device_ctx, BnInOp2Blob);
   }
 }
 
@@ -19,16 +18,10 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    BiasBackward(ctx.device_ctx, BnInOp2Blob("out_diff"),
-                 BnInOp2Blob("bias_diff"));
+    BiasBackward(ctx.device_ctx, BnInOp2Blob);
   }
-  WeightBackward(ctx.device_ctx, BnInOp2Blob("out_diff"), BnInOp2Blob("in"),
-                 BnInOp2Blob("weight_diff"), BnInOp2Blob("cudnn_workspace"));
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  if (in_diff_blob) {
-    DataBackward(ctx.device_ctx, BnInOp2Blob("out_diff"), BnInOp2Blob("weight"),
-                 in_diff_blob, BnInOp2Blob("cudnn_workspace"));
-  }
+  WeightBackward(ctx.device_ctx, BnInOp2Blob);
+  DataBackward(ctx.device_ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -88,47 +81,50 @@ const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
 }
 
 template<DeviceType device_type, typename T>
-const ConvKernelConf& ConvKernelIf<device_type, T>::GetConvKernelConf() const {
+const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedKernelConf() const {
   return this->kernel_conf().conv_conf();
 }
 
 template<DeviceType device_type, typename T>
 const int32_t ConvKernelIf<device_type, T>::KernelDim() const {
-  return GetConvKernelConf().in().dim_size() - 2;
+  return static_cast<const ShapeProto&>(
+             this->GetMessageFromCustomizedKernelConf("in"))
+             .dim_size()
+         - 2;
 }
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::WeightForward(
-    DeviceCtx* device_ctx, const Blob* in, const Blob* weight, Blob* out,
-    Blob* cudnn_workspace) const {
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::BiasForward(DeviceCtx* device_ctx,
-                                                  const Blob* bias,
-                                                  Blob* out) const {
+void ConvKernel<DeviceType::kCPU, T>::BiasForward(
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::DataBackward(
-    DeviceCtx* device_ctx, const Blob* out_diff, const Blob* weight,
-    Blob* in_diff, Blob* cudnn_workspace) const {
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
-    DeviceCtx* device_ctx, const Blob* out_diff, const Blob* in,
-    Blob* weight_diff, Blob* cudnn_workspace) const {
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::BiasBackward(DeviceCtx* device_ctx,
-                                                   const Blob* out_diff,
-                                                   Blob* bias_diff) const {
+void ConvKernel<DeviceType::kCPU, T>::BiasBackward(
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   UNIMPLEMENTED();
 }
 
