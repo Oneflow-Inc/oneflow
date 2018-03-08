@@ -23,6 +23,25 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
+template<typename T>
+__global__ void ElementwiseMaxWithMaskGpu(const int64_t n, const T* x, T* y,
+                                          const int x_idx, int* mask) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (x[i] > y[i]) {
+      y[i] = x[i];
+      mask[i] = x_idx;
+    }
+  }
+}
+
+template<typename T>
+__global__ void ElementwiseSetWithMaskGpu(const int64_t n, T* x, const T* y,
+                                          const int x_idx, int* mask) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    if (x_idx == mask[i]) { x[i] = y[i]; }
+  }
+}
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -73,6 +92,19 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                   T* temp_storage, size_t temp_storage_bytes) {
     cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
                            ctx->cuda_stream());
+  }
+  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n,
+                                     const T* x, T* y, const int x_idx,
+                                     int* mask) {
+    ElementwiseMaxWithMaskGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(n, x, y, x_idx, mask);
+  }
+  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+                                     const T* y, const int x_idx, int* mask) {
+    ElementwiseSetWithMaskGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(n, x, y, x_idx, mask);
   }
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     ExpGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,

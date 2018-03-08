@@ -151,19 +151,20 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     *max_ptr = x[0];
     for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
   }
-  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t count,
-       const T* x, T* y, const int i, int* mask) {
-    for (int idx = 0; idx < count; ++idx) {
-      if (x[idx] > y[idx]) {
-        y[idx] = x[idx];
-        mask[idx] = i;
+  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n,
+                                     const T* x, T* y, const int x_idx,
+                                     int* mask) {
+    for (int i = 0; i < n; ++i) {
+      if (x[i] > y[i]) {
+        y[i] = x[i];
+        mask[i] = x_idx;
       }
     }
   }
-  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t count,
-       T* x, const T* y, const int i, int* mask) {
-    for (int idx = 0; idx < count; ++idx) {
-      if (i == mask[idx]) { x[idx] = y[idx]; }
+  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+                                     const T* y, const int x_idx, int* mask) {
+    for (int i = 0; i < n; ++i) {
+      if (x_idx == mask[i]) { x[i] = y[i]; }
     }
   }
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
