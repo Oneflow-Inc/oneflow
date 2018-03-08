@@ -11,7 +11,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
   chain_gph_->ForEachNode([&](const ChainNode* chain_node) {
     chain_node->GenSortedCompTaskNodes([&](CompTaskNode* comp_task_node) {
-      comp_task_node->FixThrdId();
       AddAllocatedNode(comp_task_node);
       chain2sorted_comp_tasks[chain_node].push_back(comp_task_node);
     });
@@ -23,6 +22,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
                     chain2sorted_comp_tasks.at(chain_edge->dst_node()),
                     &chain2sorted_in_box, &chain2sorted_out_box);
   });
+  FixThrdId();
   ToDotWithAutoFilePath();
 }
 
@@ -216,5 +216,7 @@ void TaskGraph::BuildInBoxing(
     sorted_in_box->push_back(boxing_task);
   }
 }
+
+void TaskGraph::FixThrdId() { TODO(); }
 
 }  // namespace oneflow

@@ -25,8 +25,6 @@ class IDMgr final {
 
   int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
 
-  int64_t AllocatePersistenceThrdId(int64_t machine_id);
-  int64_t AllocateBoxingThrdId(int64_t machine_id);
   int64_t CommNetThrdId() const;
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
@@ -58,9 +56,6 @@ class IDMgr final {
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;
-
-  std::vector<int64_t> persistence_thrd_offset_;
-  std::vector<int64_t> boxing_thrd_offset_;
 
   //  64 bit id design:
   //   sign | machine | thread | task

@@ -157,7 +157,7 @@ void LogicalGraph::CollectCloneInfos(
 void LogicalGraph::AddOneCloneNode(
     const CloneInfo& clone_info,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
-  if (clone_info.pred_node->op()->IsDataLoaderOp()) { return; }
+  if (clone_info.pred_node->op()->IsDecodeOp()) { return; }
   LogicalNode* clone_node = NewNode();
   clone_node->mut_op() = clone_info.clone_op;
   clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();

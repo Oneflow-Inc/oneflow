@@ -195,7 +195,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (cur_logi_node->op()->IsLossOp()) { continue; }
-    if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
+    if (cur_logi_node->op()->IsDecodeOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
@@ -241,8 +241,8 @@ void ChainGraph::BuildFwStruct(
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
-      } else if (op->IsDataLoaderOp()) {
-        chain_node = NewNode<SourceChainNode>();
+      } else if (op->IsDecodeOp()) {
+        chain_node = NewNode<DecodeChainNode>();
       } else if (op->IsPrintOp()) {
         chain_node = NewNode<PrintChainNode>();
       } else {
