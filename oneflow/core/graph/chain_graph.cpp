@@ -482,13 +482,18 @@ void ChainGraph::RemoveReductantCloneOp() {
       }
     }
     ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, chain_node);
-    if (olbn2ilbn_in_clone_op.empty()) { return; }
-    fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* child_chain_node) {
-      ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, child_chain_node);
-    });
+    if (!olbn2ilbn_in_clone_op.empty()) {
+      fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* child_chain_node) {
+        ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, child_chain_node);
+      });
+    }
+    auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
     for (auto clone_op : clone_ops) {
-      const_cast<std::vector<std::string>&>(clone_op->input_bns()).clear();
-      const_cast<std::vector<std::string>&>(clone_op->output_bns()).clear();
+      auto clone_op_it =
+          std::find(op_vec_in_fw.begin(), op_vec_in_fw.end(), clone_op);
+      if (clone_op_it != op_vec_in_fw.end()) {
+        op_vec_in_fw.erase(clone_op_it);
+      }
     }
   });
 }
