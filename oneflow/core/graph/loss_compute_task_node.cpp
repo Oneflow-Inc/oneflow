@@ -28,7 +28,7 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   // op
-  auto const& op_vec = chain_node()->op_vec();
+  const auto& op_vec = chain_node()->op_vec();
   CHECK_EQ(op_vec.size(), 2);
   std::shared_ptr<const Operator> loss_op = op_vec[0];
   std::shared_ptr<const Operator> sum_op = op_vec[1];
