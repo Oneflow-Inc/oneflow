@@ -11,6 +11,8 @@ class AddOp final : public ElementwiseOp {
   AddOp() = default;
   ~AddOp() = default;
 
+  void InitFromOpConf() override;
+
   const PbMessage& GetCustomizedConf() const override;
 };
 }  // namespace oneflow

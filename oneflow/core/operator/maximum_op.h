@@ -1,18 +1,16 @@
 #ifndef ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
 #define ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
 
-#include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/elementwise_op.h"
 
 namespace oneflow {
 
-class MaximumOp final : public Operator {
+class MaximumOp final : public ElementwiseOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MaximumOp);
   MaximumOp() = default;
   ~MaximumOp() = default;
 
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
-  bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;
