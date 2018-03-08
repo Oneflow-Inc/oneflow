@@ -7,11 +7,5 @@ enum DataType {
   kFloat = 2;
   kDouble = 3;
   kInt8 = 4;
-  kInt16 = 5;
-  kInt32 = 6;
-  kInt64 = 7;
-  kUInt8 = 8;
-  kUInt16 = 9;
-  kUInt32 = 10;
-  kUInt64 = 11;
+  kInt32 = 5;
 }
