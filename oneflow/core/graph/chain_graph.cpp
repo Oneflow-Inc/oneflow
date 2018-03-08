@@ -338,24 +338,31 @@ void ChainGraph::BuildBwStruct() {
 
 void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
+    std::shared_ptr<const Operator> loss_op = loss_chain->SoleOp();
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
     loss_acc_op_conf.mutable_accumulate_conf();
     auto loss_acc_op = ConstructOp(loss_acc_op_conf);
-    OperatorConf reduction_acc_op_conf;
-    reduction_acc_op_conf.set_name("reduction_acc_" + NewUniqueId());
-    reduction_acc_op_conf.mutable_accumulate_conf();
-    auto reduction_acc_op = ConstructOp(reduction_acc_op_conf);
     auto loss_acc_chain = NewNode<LossAccChainNode>();
-    loss_acc_chain->mut_op_vec() = {loss_acc_op, reduction_acc_op};
+    loss_acc_chain->mut_op_vec() = {loss_acc_op};
     loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
     Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
     // Loss Print Chain
     OperatorConf loss_print_op_conf;
-    loss_print_op_conf.set_name("loss_print_"
-                                + loss_chain->SoleOp()->op_name());
+    loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
     loss_print_op_conf.mutable_loss_print_conf();
+    loss_print_op_conf.mutable_loss_print_conf()->set_loss_lbn(
+        loss_op->Lbn4BnInOp("loss"));
+    if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
+      loss_print_op_conf.mutable_loss_print_conf()->set_reduction_lbn(
+          loss_op->Lbn4BnInOp("reduction_coefficient"));
+    }
+    loss_print_op_conf.mutable_loss_print_conf()->set_weight_scalar(
+        loss_op->GetFloatFromCustomizedConf("weight_scalar"));
+    loss_print_op_conf.mutable_loss_print_conf()->set_reduction_type(
+        static_cast<LossReductionType>(
+            loss_op->GetEnumValueFromCustomizedConf("reduction")));
     auto loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
@@ -379,7 +386,7 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     for (std::shared_ptr<const Operator> op : fw_chain->op_vec()) {
       for (const std::string& mbn : op->model_bns()) {
         const std::string& lbn = op->Lbn4BnInOp(mbn);
-        model_save_op_conf.mutable_model_save_conf()->add_lbns(lbn);
+        model_save_op_conf.mutable_model_save_conf()->add_lbn(lbn);
       }
     }
     auto model_save_op = ConstructOp(model_save_op_conf);

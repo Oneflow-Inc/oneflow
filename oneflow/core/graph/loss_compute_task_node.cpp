@@ -62,8 +62,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   sum_node->BindBnInOpAndRegst(sum_op->SoleIbn(), data_tmp_regst);
   loss_regst->AddLbn(sum_op->Lbn4BnInOp(sum_op->SoleObn()));
   sum_node->BindBnInOpAndRegst(sum_op->SoleObn(), loss_regst);
-  loss_regst->AddLbn(loss_op->Lbn4BnInOp("reduction_coefficient"));
-  loss_node->BindBnInOpAndRegst("reduction_coefficient", loss_regst);
+  if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
+    loss_regst->AddLbn(loss_op->Lbn4BnInOp("reduction_coefficient"));
+    loss_node->BindBnInOpAndRegst("reduction_coefficient", loss_regst);
+  }
   loss_node->InferBlobDescs(parallel_ctx(), device_type());
   sum_node->InferBlobDescs(parallel_ctx(), device_type());
   in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());

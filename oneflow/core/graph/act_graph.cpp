@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -20,7 +21,7 @@ int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
 
 }  // namespace
 
-class RegstActSubGraph final {
+class RegstActSubGraph final : public Graph<const ActNode, const ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstActSubGraph);
   RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
@@ -86,7 +87,11 @@ bool RegstActSubGraph::IsSource(const ActNode* node) const {
 
 void RegstActSubGraph::TopoForEachActNode(
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachIn = std::bind(&RegstActSubGraph::ForEachInNode, this,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&RegstActSubGraph::ForEachOutNode, this,
+                              std::placeholders::_1, std::placeholders::_2);
+  TopoForEachNode(CalcSources(), ForEachIn, ForEachOut, Handler);
 }
 
 void RegstActSubGraph::ForEachInNode(
@@ -126,7 +131,7 @@ double RegstActSubGraph::CalcLongestPathDuration() const {
   return duration;
 }
 
-class DepthRangeActSubGraph final {
+class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DepthRangeActSubGraph);
   DepthRangeActSubGraph(const ActGraph* act_graph, const Range& depth_range,
@@ -161,7 +166,21 @@ class DepthRangeActSubGraph final {
 
 void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
                                                 int64_t component_id) const {
-  TODO();
+  std::string filepath = JoinPath(dir, std::to_string(component_id) + ".dot");
+  const auto& sources = compo_id2sources_.at(component_id);
+  PersistentOutStream out_stream(LocalFS(), filepath);
+  out_stream << "digraph {\n";
+  ForEachActNode(sources, [&](const ActNode* node) {
+    out_stream << node->node_id_str() << "[label=\"" << node->VisualStr()
+               << "\", shape=ellipse, style=\"rounded,filled\", "
+               << "colorscheme=set312, color="
+               << task_type2color.at(node->task_type()) << "];\n";
+    for (const ActEdge* act_edge : node->out_edges()) {
+      out_stream << "\"" << act_edge->src_node()->node_id_str() << "\" -> \""
+                 << act_edge->dst_node()->node_id_str() << "\";\n";
+    }
+  });
+  out_stream << "}\n";
 }
 
 void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
@@ -176,7 +195,11 @@ void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
 void DepthRangeActSubGraph::TopoForEachActNode(
     const std::list<const ActNode*>& starts,
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachIn = std::bind(&DepthRangeActSubGraph::ForEachInNode, this,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&DepthRangeActSubGraph::ForEachOutNode, this,
+                              std::placeholders::_1, std::placeholders::_2);
+  TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
 }
 
 void DepthRangeActSubGraph::ForEachInNode(
@@ -204,7 +227,13 @@ void DepthRangeActSubGraph::ForEachOutNode(
 void DepthRangeActSubGraph::ForEachActNode(
     const std::list<const ActNode*>& sources,
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachConnectedNode =
+      [&](const ActNode* node,
+          const std::function<void(const ActNode*)>& Handler) {
+        ForEachInNode(node, Handler);
+        ForEachOutNode(node, Handler);
+      };
+  BfsForEachNode(sources, ForEachConnectedNode, Handler);
 }
 
 void DepthRangeActSubGraph::InitComponentId2Sources() {
@@ -319,10 +348,17 @@ void ActGraph::ForEachRegstDescMeanDuration(
 
 void ActGraph::ForEachRegstActSubGraph(
     const std::function<void(const RegstActSubGraph&)>& Handler) const {
+  ForEachDepthRangeSubActGraph([&](const DepthRangeActSubGraph& sub_graph) {
+    sub_graph.ForEachRegstActSubGraph(Handler);
+  });
+}
+
+void ActGraph::ForEachDepthRangeSubActGraph(
+    const std::function<void(const DepthRangeActSubGraph&)>& Handler) const {
   ForEachDepthRangeRegstUids(
       [&](const Range& range, const std::list<std::string>& regst_uids) {
         DepthRangeActSubGraph depth_range_subgrpah(this, range, regst_uids);
-        depth_range_subgrpah.ForEachRegstActSubGraph(Handler);
+        Handler(depth_range_subgrpah);
       });
 }
 
@@ -377,7 +413,8 @@ void ActGraph::InitEdges() {
 void ActGraph::TopoForEachActNode(
     const std::list<ActNode*>& starts,
     const std::function<void(ActNode*)>& Handler) const {
-  TODO();
+  TopoForEachNode(starts, &ActNode::ForEachNodeOnInEdge,
+                  &ActNode::ForEachNodeOnOutEdge, Handler);
 }
 
 void ActGraph::InitDepth() {
@@ -426,5 +463,10 @@ void ActGraph::ForEachDepthRangeRegstUids(
   }
 }
 
-void ActGraph::ToDotFiles(const std::string& dir) const { TODO(); }
+void ActGraph::ToDotFiles(const std::string& dir) const {
+  ForEachDepthRangeSubActGraph([&](const DepthRangeActSubGraph& sub_graph) {
+    sub_graph.ToDotFiles(dir);
+  });
+}
+
 }  // namespace oneflow
