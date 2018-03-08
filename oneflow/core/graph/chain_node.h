@@ -166,6 +166,11 @@ class BackwardChainNode final : public ChainNode {
   ForwardChainNode* fw_node_;
 };
 
+class RecordLoadChainNode final : public ChainNode {
+ public:
+  CHAIN_NODE_BOILERPLATE(RecordLoadChainNode);
+};
+
 class DecodeChainNode final : public ChainNode {
  public:
   CHAIN_NODE_BOILERPLATE(DecodeChainNode);
