@@ -11,7 +11,7 @@ enum TaskType {
   kRecurrentForward = 2;
   kNormalBackward = 3;
   kRecurrentBackward = 4;
-  kSource = 5;
+  kDecode = 5;
   kLoss = 6;
   kLossAcc = 7;
   kLossPrint = 8;

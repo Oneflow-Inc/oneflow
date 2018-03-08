@@ -80,7 +80,7 @@ void Operator::InferBlobDescs(
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
-  if (IsDataLoaderOp()) {
+  if (IsDecodeOp()) {
     CHECK_EQ(pr_desc->parallel_num(),
              JobDesc::Singleton()->job_conf().data_part_num())
         << "parallel_num of data loader is not equal to the data_part_num in "
@@ -90,7 +90,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
     CHECK(model_tmp_bns_.empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
-  if (IsDataLoaderOp() == false && IsPrintOp() == false) {
+  if (IsDecodeOp() == false && IsPrintOp() == false) {
     pr_desc->RemoveInvalidDevice(op_name());
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {

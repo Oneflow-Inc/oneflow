@@ -8,7 +8,7 @@ std::map<TaskType, std::string> task_type2color = {
     {kRecurrentForward, "2"},
     {kNormalBackward, "3"},
     {kRecurrentBackward, "3"},
-    {kSource, "1"},
+    {kDecode, "1"},
     {kLoss, "4"},
     {kLossAcc, "5"},
     {kLossPrint, "1"},
