@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-class LossKernel final : public KernelIf<device_type> {
+class LossKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LossKernel);
   LossKernel() = default;
@@ -16,7 +16,7 @@ class LossKernel final : public KernelIf<device_type> {
   virtual void VirtualLossForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual LossKernelConf& GetLossKernelConf(
+  virtual const LossKernelConf& GetLossKernelConf(
       const KernelConf& kernel_conf) const = 0;
 
  private:
