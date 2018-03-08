@@ -14,6 +14,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override {}
   void ConsumeAllRegsts() override {}
   void BuildExecGphAndRegst() override {}
+  void ToProto(TaskProto*) override;
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
 

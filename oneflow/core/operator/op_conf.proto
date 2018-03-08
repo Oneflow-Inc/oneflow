@@ -2,7 +2,6 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/data_type.proto";
 
 enum ActivationType {
   kTanH = 0;
@@ -96,6 +95,10 @@ message FullyConnectedOpConf {
   optional bool use_bias = 4 [default = true];
   optional InitializerConf weight_initializer = 5;
   optional InitializerConf bias_initializer = 6;
+}
+
+message DataLoaderOpConf {
+  required string data_dir = 1;
 }
 
 message AveragePooling1DOpConf {
@@ -351,6 +354,7 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
+    DataLoaderOpConf data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;

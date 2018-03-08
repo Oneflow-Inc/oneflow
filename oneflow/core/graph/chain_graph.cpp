@@ -288,7 +288,14 @@ void ChainGraph::BuildFwStruct(
   }
 }
 
-void ChainGraph::BuildRecordLoadStruct() { TODO(); }
+void ChainGraph::BuildRecordLoadStruct() {
+  TopoForEachNode([&](ChainNode* chain_node) {
+    if (dynamic_cast<DecodeChainNode*>(chain_node) == nullptr) { return; }
+    ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
+    Connect<ChainNode>(record_load_node, NewEdge(), chain_node);
+    record_load_node->mut_parallel_desc() = chain_node->parallel_desc();
+  });
+}
 
 void ChainGraph::BuildBwStruct() {
   HashSet<ForwardChainNode*> fw_nodes_that_need_bw;

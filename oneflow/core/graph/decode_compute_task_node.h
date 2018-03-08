@@ -14,6 +14,7 @@ class DecodeCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  const std::string GetDataDir();
 
   TaskType GetTaskType() const override { return TaskType::kDecode; }
 
