@@ -1,12 +1,12 @@
-#ifndef ONEFLOW_CORE_KERNEL_Add_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_Add_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_ADD_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_ADD_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/elementwise_kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class AddKernel final : public KernelIf<device_type> {
+class AddKernel final : public ElementwiseKernel<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AddKernel);
   AddKernel() = default;
