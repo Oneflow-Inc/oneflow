@@ -342,6 +342,14 @@ void ChainGraph::BuildBwStruct() {
 void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
     std::shared_ptr<const Operator> loss_op = loss_chain->SoleOp();
+    // Reduce Sum op
+    OperatorConf sum_op_conf;
+    sum_op_conf.set_name("sum_op_" + NewUniqueId());
+    sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_op->Lbn4BnInOp("loss"));
+    sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
+    sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
+    std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
+    loss_chain->mut_op_vec().push_back(sum_op);
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
@@ -356,7 +364,7 @@ void ChainGraph::BuildLossPrintStruct() {
     loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
     loss_print_op_conf.mutable_loss_print_conf();
     loss_print_op_conf.mutable_loss_print_conf()->set_loss_lbn(
-        loss_op->Lbn4BnInOp("loss"));
+        sum_op->Lbn4BnInOp("out"));
     if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
       loss_print_op_conf.mutable_loss_print_conf()->set_reduction_lbn(
           loss_op->Lbn4BnInOp("reduction_coefficient"));
