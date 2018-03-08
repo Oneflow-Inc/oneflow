@@ -28,7 +28,7 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
 #define CHAIN_TYPE_SEQ            \
   OF_PP_MAKE_TUPLE_SEQ(Forward)   \
   OF_PP_MAKE_TUPLE_SEQ(Backward)  \
-  OF_PP_MAKE_TUPLE_SEQ(Source)    \
+  OF_PP_MAKE_TUPLE_SEQ(Decode)    \
   OF_PP_MAKE_TUPLE_SEQ(Loss)      \
   OF_PP_MAKE_TUPLE_SEQ(LossAcc)   \
   OF_PP_MAKE_TUPLE_SEQ(LossPrint) \
@@ -125,13 +125,13 @@ class ForwardChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Forward)(Source)(MdUpdt));
+                                   (Forward)(Decode)(MdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
-      (Forward)(Source));
+      (Forward)(Decode));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
-                                   (Forward)(Source));
+                                   (Forward)(Decode));
 
   void set_data_output_lbns() override;
 
@@ -166,9 +166,14 @@ class BackwardChainNode final : public ChainNode {
   ForwardChainNode* fw_node_;
 };
 
-class SourceChainNode final : public ChainNode {
+class RecordLoadChainNode final : public ChainNode {
  public:
-  CHAIN_NODE_BOILERPLATE(SourceChainNode);
+  CHAIN_NODE_BOILERPLATE(RecordLoadChainNode);
+};
+
+class DecodeChainNode final : public ChainNode {
+ public:
+  CHAIN_NODE_BOILERPLATE(DecodeChainNode);
 
   void set_data_output_lbns() override;
 };
@@ -179,13 +184,13 @@ class LossChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Forward)(Source));
+                                   (Forward)(Decode));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
-      (Forward)(Source));
+      (Forward)(Decode));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
-                                   (Forward)(Source));
+                                   (Forward)(Decode));
 
   void set_data_output_lbns() override;
 };
@@ -200,13 +205,13 @@ class PrintChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Source)(Forward)(Loss));
+                                   (Decode)(Forward)(Loss));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
-      (Source)(Forward)(Loss));
+      (Decode)(Forward)(Loss));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
-                                   (Source)(Forward)(Loss));
+                                   (Decode)(Forward)(Loss));
 };
 
 class LossAccChainNode final : public ChainNode {

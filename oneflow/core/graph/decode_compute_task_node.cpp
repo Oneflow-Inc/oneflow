@@ -1,17 +1,17 @@
-#include "oneflow/core/graph/source_compute_task_node.h"
+#include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
 
 namespace oneflow {
 
-void SourceCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", 1, 1);
   auto out_regst = ProduceRegst("out");
   SoleOutEdge()->AddRegst("out", out_regst);
 }
 
-void SourceCompTaskNode::ConsumeAllRegsts() {}
+void DecodeCompTaskNode::ConsumeAllRegsts() {}
 
-void SourceCompTaskNode::BuildExecGphAndRegst() {
+void DecodeCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   ExecNode* node = mut_exec_gph().NewNode();
@@ -33,10 +33,6 @@ void SourceCompTaskNode::BuildExecGphAndRegst() {
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
   node->InferBlobDescs(parallel_ctx(), device_type());
-}
-
-void SourceCompTaskNode::FixThrdId() {
-  set_thrd_id(IDMgr::Singleton()->AllocatePersistenceThrdId(machine_id()));
 }
 
 }  // namespace oneflow

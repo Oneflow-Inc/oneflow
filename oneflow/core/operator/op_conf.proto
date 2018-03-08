@@ -98,14 +98,6 @@ message FullyConnectedOpConf {
   optional InitializerConf bias_initializer = 6;
 }
 
-message BasicDataLoaderOpConf {
-  required string out = 1;
-  required DataType data_type = 2;
-  required string data_dir = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required ShapeProto shape = 5;
-}
-
 message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
@@ -359,7 +351,6 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
-    BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;

@@ -40,7 +40,7 @@ class Operator {
   virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
-  virtual bool IsDataLoaderOp() const { return false; }
+  virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsCloneOp() const { return false; }
 
