@@ -43,15 +43,20 @@ class RegstActSubGraph final : public Graph<const ActNode, const ActEdge> {
   void ForEachOutNode(const ActNode* node,
                       const std::function<void(const ActNode*)>& Handler) const;
   std::list<const ActNode*> CalcSources() const;
-  bool IsSource(const ActNode* node) const;
+  bool IsWithinDepthRange(const ActNode* node) const;
 
   std::string regst_uid_;
   const ActNode* producer_node_;
   HashSet<const ActNode*> partial_producer_outs_;
   HashSet<const ActNode*> partial_consumer_nodes_;
   HashSet<const ActNode*> fake_sources_;
-  int64_t max_depth_;
+  Range depth_range_;
 };
+
+bool RegstActSubGraph::IsWithinDepthRange(const ActNode* node) const {
+  return node->depth() >= depth_range_.begin()
+         && node->depth() <= depth_range_.end();
+}
 
 RegstActSubGraph::RegstActSubGraph(
     const std::string& regst_uid, const ActNode* producer_node,
@@ -67,10 +72,16 @@ RegstActSubGraph::RegstActSubGraph(
       fake_sources_.insert(node);
     }
   }
-  max_depth_ = 0;
-  for (const ActNode* node : partial_consumer_nodes_) {
-    max_depth_ = std::max(max_depth_, node->depth());
+  int64_t min_depth = std::numeric_limits<int64_t>::max();
+  for (const ActNode* node : partial_producer_outs_) {
+    min_depth = std::min(min_depth, node->depth());
   }
+  int64_t max_depth = std::numeric_limits<int64_t>::min();
+  for (const ActNode* node : partial_consumer_nodes_) {
+    max_depth = std::max(max_depth, node->depth());
+  }
+  depth_range_.mut_begin() = min_depth;
+  depth_range_.mut_end() = max_depth;
 }
 
 std::list<const ActNode*> RegstActSubGraph::CalcSources() const {
@@ -78,11 +89,6 @@ std::list<const ActNode*> RegstActSubGraph::CalcSources() const {
   for (const ActNode* node : fake_sources_) { sources.push_back(node); }
   sources.push_back(producer_node_);
   return sources;
-}
-
-bool RegstActSubGraph::IsSource(const ActNode* node) const {
-  return node == producer_node_
-         || fake_sources_.find(node) != fake_sources_.end();
 }
 
 void RegstActSubGraph::TopoForEachActNode(
@@ -97,15 +103,26 @@ void RegstActSubGraph::TopoForEachActNode(
 void RegstActSubGraph::ForEachInNode(
     const ActNode* node,
     const std::function<void(const ActNode*)>& Handler) const {
-  if (IsSource(node)) { return; }
-  node->ForEachNodeOnInEdge(Handler);
+  if (partial_producer_outs_.find(node) != partial_producer_outs_.end()) {
+    Handler(producer_node_);
+  }
+  node->ForEachNodeOnInEdge([&](const ActNode* node) {
+    if (IsWithinDepthRange(node)) { Handler(node); }
+  });
 }
 
 void RegstActSubGraph::ForEachOutNode(
     const ActNode* node,
     const std::function<void(const ActNode*)>& Handler) const {
-  if (node->depth() >= max_depth_) { return; }
-  node->ForEachNodeOnOutEdge(Handler);
+  if (node == producer_node_) {
+    for (const ActNode* producer_out : partial_producer_outs_) {
+      Handler(producer_out);
+    }
+  } else {
+    node->ForEachNodeOnOutEdge([&](const ActNode* node) {
+      if (IsWithinDepthRange(node)) { Handler(node); }
+    });
+  }
 }
 
 double RegstActSubGraph::CalcLongestPathDuration() const {
