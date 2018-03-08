@@ -81,7 +81,7 @@ struct LossKernelUtil<DeviceType::kCPU, T> {
         }
         break;
       }
-      case kSumOverN: *reduction = data_num; break;
+      case kSumOverN: *reduction = 1.0 * data_num; break;
       case kSumOverNonZeroWeight: {
         if (weight_length == data_num) {
           *reduction = 0;
@@ -89,8 +89,7 @@ struct LossKernelUtil<DeviceType::kCPU, T> {
             if (weight[i] > 0.0) { (*reduction) += 1.0; }
           }
         } else if (weight_length == 1) {
-          CHECK(*weight > 0.0);
-          *reduction = (*weight) * data_num;
+          *reduction = 1.0 * data_num;
         } else {
           UNIMPLEMENTED();
         }

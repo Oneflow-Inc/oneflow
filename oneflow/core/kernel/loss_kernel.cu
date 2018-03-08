@@ -59,8 +59,8 @@ struct LossKernelUtil<DeviceType::kGPU, T> {
           LossReductionCountNonZero<T>
               <<<1, 1, 0, ctx->cuda_stream()>>>(reduction, weight, data_num);
         } else if (weight_length == 1) {
-          LossReductionAssignN<T>
-              <<<1, 1, 0, ctx->cuda_stream()>>>(reduction, weight, data_num);
+          LossReductionAssign<T>
+              <<<1, 1, 0, ctx->cuda_stream()>>>(reduction, data_num * 1.0);
         } else {
           UNIMPLEMENTED();
         }
