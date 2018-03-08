@@ -227,9 +227,9 @@ ChainGraph::ChainGraph(bool is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
   }
-  RemoveReductantCloneOp();
   BuildModelStruct(is_train, chain2first_shared);
   BuildRecurrentStruct();
+  RemoveReductantCloneOp();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
