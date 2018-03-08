@@ -114,12 +114,19 @@ class RecordBlob final : public BlobIf {
   RecordBlob() : records_(JobDesc::Singleton()->SinglePieceSize()) {}
   ~RecordBlob() = default;
 
-  const std::vector<RecordType>& records() const { return records_; }
+  void ForEachRecord(std::function<void(const RecordType&)> Handler) {
+    FOR_RANGE(int32_t, i, 0, record_num_) { Handler(records_.at(i)); }
+  }
 
-  RecordType* mut_records(size_t i) { return &(records_.at(i)); }
+  RecordType* mut_records(size_t i) {
+    CHECK_LT(i, record_num_);
+    return &(records_.at(i));
+  }
+  void set_record_num(int32_t val) { record_num_ = val; }
 
  private:
   std::vector<RecordType> records_;
+  int32_t record_num_;
 };
 
 }  // namespace oneflow

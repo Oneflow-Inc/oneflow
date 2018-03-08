@@ -7,10 +7,10 @@ message BytesList {
   repeated bytes value = 1;
 }
 message FloatList {
-  repeated float value = 1; [packed = true];
+  repeated float value = 1 [packed = true];
 }
 message DoubleList {
-  repeated double value = 1; [packed = true];
+  repeated double value = 1 [packed = true];
 }
 message Int32List {
   repeated int32 value = 1 [packed = true];
@@ -22,7 +22,6 @@ message Feature {
     FloatList float_list = 2;
     DoubleList double_list = 3;
     Int32List int32_list = 4;
-    // char and int8 are not supported by protobuf
   }
 }
 
