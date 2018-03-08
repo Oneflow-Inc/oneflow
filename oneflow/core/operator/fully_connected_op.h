@@ -22,8 +22,6 @@ class FullyConnectedOp final : public Operator {
   int32_t MaxModelSplitNum() const override {
     return op_conf().fully_connected_conf().units();
   }
-
- private:
 };
 
 }  // namespace oneflow
