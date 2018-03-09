@@ -61,7 +61,7 @@ void SoftmaxOp::VirtualGenKernelConf(
   }
 }
 
-SoftmaxOpCtx SoftmaxOp::GetSoftmaxOpCtx(Shape in_shape) const {
+SoftmaxOpCtx SoftmaxOp::GetSoftmaxOpCtx(const Shape& in_shape) const {
   SoftmaxOpCtx op_ctx;
   op_ctx.axis = op_conf().softmax_conf().axis();
   op_ctx.dims = in_shape.NumAxes();
