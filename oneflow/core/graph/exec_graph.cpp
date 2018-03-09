@@ -4,9 +4,7 @@ namespace oneflow {
 
 void ExecNode::BindBnInOpAndRegst(const std::string& bn_in_op,
                                   std::weak_ptr<RegstDesc> regst) {
-  if (bn_in_op2regst_.find(bn_in_op) == bn_in_op2regst_.end()) {
-    CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
-  }
+  CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
 }
 
 void ExecNode::ToProto(bool is_forward, DeviceType device_type,
