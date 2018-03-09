@@ -36,7 +36,7 @@ __global__ void ElementwiseMaxWithMaskGpu(const int64_t n, const T* x, T* y,
 
 template<typename T>
 __global__ void ElementwiseSetWithMaskGpu(const int64_t n, T* x, const T* y,
-                                          const int x_idx, int* mask) {
+                                          const int x_idx, const int* mask) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (x_idx == mask[i]) { x[i] = y[i]; }
   }
@@ -101,7 +101,8 @@ struct KernelUtil<DeviceType::kGPU, T> final {
            ctx->cuda_stream()>>>(n, x, y, x_idx, mask);
   }
   static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int x_idx, int* mask) {
+                                     const T* y, const int x_idx,
+                                     const int* mask) {
     ElementwiseSetWithMaskGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(n, x, y, x_idx, mask);
@@ -260,6 +261,9 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   template void KernelUtil<DeviceType::kGPU, T>::Max(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kGPU, T>::ElementwiseSetWithMask(      \
+      DeviceCtx* ctx, const int64_t n, T* x, const T* y, const int x_idx,     \
+      const int* mask);                                                       \
   template void KernelUtil<DeviceType::kGPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
   template void KernelUtil<DeviceType::kGPU, T>::ReluBackward(                \

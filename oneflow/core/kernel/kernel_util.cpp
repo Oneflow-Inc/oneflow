@@ -162,7 +162,8 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     }
   }
   static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int x_idx, int* mask) {
+                                     const T* y, const int x_idx,
+                                     const int* mask) {
     for (int i = 0; i < n; ++i) {
       if (x_idx == mask[i]) { x[i] = y[i]; }
     }
@@ -276,6 +277,9 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   template void KernelUtil<DeviceType::kCPU, T>::Max(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kCPU, T>::ElementwiseSetWithMask(      \
+      DeviceCtx* ctx, const int64_t n, T* x, const T* y, const int x_idx,     \
+      const int* mask);                                                       \
   template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
   template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \

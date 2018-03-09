@@ -62,7 +62,12 @@ struct KernelUtil final {
   // max(x) temp_storage is for gpu
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
-
+  // static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n,
+  //                                    const T* x, T* y, const int x_idx,
+  //                                    int* mask);
+  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+                                     const T* y, const int x_idx,
+                                     const int* mask);
   // y = exp(x)
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 
