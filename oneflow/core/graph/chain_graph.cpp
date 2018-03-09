@@ -23,13 +23,12 @@ void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
 void ModifyOpLbn4BnInChainNode(HashMap<std::string, std::string>& olbn2ilbn,
                                ChainNode* chain_node) {
-  for (std::shared_ptr<const Operator> op : chain_node->op_vec()) {
+  for (std::shared_ptr<Operator> op : chain_node->op_vec()) {
     for (const std::string& ibn : op->input_bns()) {
       const std::string& lbn = op->Lbn4BnInOp(ibn);
       auto olbn2ilbn_it = olbn2ilbn.find(lbn);
       if (olbn2ilbn_it == olbn2ilbn.end()) { continue; }
-      Operator* mut_op = const_cast<Operator*>(op.get());
-      mut_op->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
+      op.get()->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
       olbn2ilbn.erase(olbn2ilbn_it);
     }
   }
@@ -271,7 +270,7 @@ void ChainGraph::BuildFwStruct(
     CHECK(!chain_it->nodes.empty());
     chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
     for (const LogicalNode* logical_node : chain_it->nodes) {
-      chain_node->mut_op_vec().push_back(logical_node->op());
+      chain_node->mut_op_vec().push_back(logical_node->mut_op());
       if (logical_node->shared_model_nodes()) {
         CHECK_EQ(chain_it->nodes.size(), 1);
         CHECK(
@@ -356,14 +355,14 @@ void ChainGraph::BuildBwStruct() {
 
 void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
-    std::shared_ptr<const Operator> loss_op = loss_chain->SoleOp();
+    std::shared_ptr<Operator> loss_op = loss_chain->SoleOp();
     // Reduce Sum op
     OperatorConf sum_op_conf;
     sum_op_conf.set_name("sum_op_" + NewUniqueId());
     sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_op->Lbn4BnInOp("loss"));
     sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
     sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
-    std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
+    std::shared_ptr<Operator> sum_op = ConstructOp(sum_op_conf);
     loss_chain->mut_op_vec().push_back(sum_op);
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;

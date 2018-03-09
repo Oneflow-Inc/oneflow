@@ -88,12 +88,12 @@ std::vector<std::string> FindLbnsBetweenBw(const ChainNode* in_chain,
 
 }  // namespace
 
-std::shared_ptr<const Operator> ChainNode::SoleOp() const {
+std::shared_ptr<Operator> ChainNode::SoleOp() const {
   CHECK_EQ(op_vec_.size(), 1);
   return op_vec_.front();
 }
 
-const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
+const std::vector<std::shared_ptr<Operator>>& ChainNode::op_vec() const {
   return op_vec_;
 }
 

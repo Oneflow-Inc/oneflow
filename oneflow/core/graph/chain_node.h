@@ -43,9 +43,9 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual ~ChainNode() = default;
 
   // op_vec_
-  std::shared_ptr<const Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
-  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
+  std::shared_ptr<Operator> SoleOp() const;
+  const std::vector<std::shared_ptr<Operator>>& op_vec() const;
+  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
 
   // parallel_desc_
@@ -92,7 +92,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   void AddDataOutputLbnsTo(const ChainNode*);
 
  private:
-  std::vector<std::shared_ptr<const Operator>> op_vec_;
+  std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
   HashSet<std::string> data_output_lbns_;
