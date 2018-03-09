@@ -28,15 +28,11 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   // op
-  std::shared_ptr<const Operator> loss_op = chain_node()->SoleOp();
+  const auto& op_vec = chain_node()->op_vec();
+  CHECK_EQ(op_vec.size(), 2);
+  std::shared_ptr<const Operator> loss_op = op_vec[0];
+  std::shared_ptr<const Operator> sum_op = op_vec[1];
   CHECK(loss_op->IsLossOp());
-  const std::string& loss_lbn = loss_op->Lbn4BnInOp("loss");
-  OperatorConf sum_op_conf;
-  sum_op_conf.set_name("sum_op_" + NewUniqueId());
-  sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_lbn);
-  sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
-  sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
-  std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
   // exec gph
   ExecNode* loss_node = mut_exec_gph().NewNode();
   loss_node->mut_op() = loss_op;
@@ -62,8 +58,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   sum_node->BindBnInOpAndRegst(sum_op->SoleIbn(), data_tmp_regst);
   loss_regst->AddLbn(sum_op->Lbn4BnInOp(sum_op->SoleObn()));
   sum_node->BindBnInOpAndRegst(sum_op->SoleObn(), loss_regst);
-  loss_regst->AddLbn(loss_op->Lbn4BnInOp("reduction_coefficient"));
-  loss_node->BindBnInOpAndRegst("reduction_coefficient", loss_regst);
+  if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
+    loss_regst->AddLbn(loss_op->Lbn4BnInOp("reduction_coefficient"));
+    loss_node->BindBnInOpAndRegst("reduction_coefficient", loss_regst);
+  }
   loss_node->InferBlobDescs(parallel_ctx(), device_type());
   sum_node->InferBlobDescs(parallel_ctx(), device_type());
   in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());

@@ -27,8 +27,7 @@ __global__ void ComputeSigmoidDiffGpu(const int64_t n, const T* out,
 }  // namespace
 
 template<typename T>
-class BasicRnnKernelUtil<DeviceType::kGPU, T> final {
- public:
+struct BasicRnnKernelUtil<DeviceType::kGPU, T> {
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
                               const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff) {
@@ -46,7 +45,7 @@ class BasicRnnKernelUtil<DeviceType::kGPU, T> final {
 };
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
-  template class BasicRnnKernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct BasicRnnKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

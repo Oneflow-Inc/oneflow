@@ -11,7 +11,7 @@ enum TaskType {
   kRecurrentForward = 2;
   kNormalBackward = 3;
   kRecurrentBackward = 4;
-  kSource = 5;
+  kDecode = 5;
   kLoss = 6;
   kLossAcc = 7;
   kLossPrint = 8;
@@ -22,6 +22,7 @@ enum TaskType {
   kCopyCommNet = 13;
   kBoxing = 14;
   kPrint = 15;
+  kRecordLoad = 16;
 };
 
 message TaskProto {
