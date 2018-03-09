@@ -17,10 +17,9 @@ const PbMessage& DecodeOfrecordOp::GetCustomizedConf() const {
 void DecodeOfrecordOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const DecodeOfrecordOpConf& conf = op_conf().decode_ofrecord_conf();
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
-    const BlobConf& blob_conf = conf.blobs(i);
+    const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blobs(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
     dim_vec[0] = JobDesc::Singleton()->SinglePieceSize();
     FOR_RANGE(size_t, j, 1, dim_vec.size()) {
