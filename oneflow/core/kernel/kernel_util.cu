@@ -124,9 +124,9 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                 ctx->cuda_stream()>>>(n, x, y, z);
   }
-#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
-  CudnnTensorDesc x_desc(GetDataType<T>::val, n, 1, 1, 1);    \
-  CudnnTensorDesc y_desc(GetDataType<T>::val, n, 1, 1, 1);    \
+#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)                 \
+  CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnTensorDesc y_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
   CudnnActivationDesc act_desc(mode, CUDNN_PROPAGATE_NAN, 0.0);
 
 #define FORWARD_COMPUTE_ACTIVATION(mode)                                   \
@@ -135,10 +135,10 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                                    CudnnDataType<T>::one, x_desc.Get(), x, \
                                    CudnnDataType<T>::zero, y_desc.Get(), y));
 
-#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
-  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);       \
-  CudnnTensorDesc dx_desc(GetDataType<T>::val, n, 1, 1, 1);    \
-  CudnnTensorDesc dy_desc(GetDataType<T>::val, n, 1, 1, 1);
+#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)                 \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                       \
+  CudnnTensorDesc dx_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnTensorDesc dy_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1);
 
 #define BACKWARD_COMPUTE_ACTIVATION(mode)                         \
   CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \

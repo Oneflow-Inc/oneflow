@@ -177,8 +177,7 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
 }
 
 template<typename T>
-class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
- public:
+struct BasicRnnKernelUtil<DeviceType::kCPU, T> {
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
                               const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff) {

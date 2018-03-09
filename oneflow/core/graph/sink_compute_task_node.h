@@ -15,8 +15,6 @@ class SinkCompTaskNode : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-
-  void FixThrdId() override;
 };
 
 }  // namespace oneflow

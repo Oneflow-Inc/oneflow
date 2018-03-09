@@ -98,14 +98,6 @@ message FullyConnectedOpConf {
   optional InitializerConf bias_initializer = 6;
 }
 
-message BasicDataLoaderOpConf {
-  required string out = 1;
-  required DataType data_type = 2;
-  required string data_dir = 3;
-  optional int32 max_sequence_size = 4 [default = 1];
-  required ShapeProto shape = 5;
-}
-
 message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
@@ -308,7 +300,7 @@ message LossPrintOpConf {
   required string loss_lbn = 1;
   optional string reduction_lbn = 2;
   optional float weight_scalar = 3 [default = 1.0];
-  optional LossReductionType reduction_type = 4 [default = kSumOverN]; 
+  optional LossReductionType reduction_type = 4 [default = kSumOverN];
 }
 
 message ReduceSumOpConf {
@@ -353,6 +345,15 @@ message MaximumOpConf {
   required string out = 2;
 }
 
+message LocalResponseNormalizationOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 depth_radius = 3 [default = 5];
+  optional double bias = 4 [default = 1];
+  optional double alpha = 5 [default = 1];
+  optional double beta = 6 [default = 0.5];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -360,7 +361,6 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
-    BasicDataLoaderOpConf basic_data_loader_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
@@ -391,6 +391,7 @@ message OperatorConf {
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
     AddOpConf add_conf = 301;
     MaximumOpConf maximum_conf = 302;
+    LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
   }
 }
 

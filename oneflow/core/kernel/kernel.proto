@@ -20,9 +20,8 @@ message ConvKernelConf {
 message LossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
-  required bool need_weight_blob = 3;
-  required float weight_scalar = 4;
-  required LossReductionType reduction = 5;
+  required float weight_scalar = 3;
+  required LossReductionType reduction = 4;
 }
 
 message SparseSoftmaxCrossEntropyLossKernelConf {
@@ -34,8 +33,8 @@ message SparseCrossEntropyLossKernelConf {
 }
 
 message PoolingKernelConf {
-  required ShapeProto in= 1;
-  required ShapeProto out= 2;
+  required ShapeProto in = 1;
+  required ShapeProto out = 2;
   repeated int32 padding_before = 3;
   repeated int32 padding_after = 4;
   repeated int32 pool_size = 5;
@@ -61,6 +60,10 @@ message SoftmaxKernelConf {
   required int64 transpose_cols = 3;
   required bool need_transpose = 4;
   repeated int32 perm = 5;
+}
+
+message LocalResponseNormalizationKernelConf {
+  required ShapeProto batch = 1;
 }
 
 message KernelConf {
@@ -91,5 +94,6 @@ message KernelConf {
     ConvKernelConf conv_conf = 127;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
+    LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
   }
 }
