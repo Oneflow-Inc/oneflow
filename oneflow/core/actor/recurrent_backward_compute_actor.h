@@ -23,18 +23,15 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
 
+  bool RetFalseOrTerminate(Regst*) const;
+
   int64_t h0_regst_desc_id_;
   int64_t rec_in_regst_desc_id_;
   int64_t rec_out_diff_regst_desc_id_;
 
   std::queue<Regst*> h0_regsts_;
-  std::deque<std::stack<Regst*>> rec_in_regsts_;
-  std::deque<std::stack<Regst*>> in_regsts_;
-  std::deque<std::deque<Regst*>> out_regsts_;
-  std::deque<std::stack<Regst*>> data_tmp_regsts_;
-  // regst in deque is ascending by col_id
-  std::deque<std::deque<Regst*>> out_diff_regsts_;
   Regst* rec_out_diff_regst_;
+  HashMap<int64_t, std::deque<std::deque<Regst*>>> readable_deq_regsts_;
 };
 
 }  // namespace oneflow
