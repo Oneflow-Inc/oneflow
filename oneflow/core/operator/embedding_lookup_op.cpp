@@ -9,6 +9,7 @@ void EmbeddingLookupOp::InitFromOpConf() {
   EnrollInputBn("ids", false);
   EnrollOutputBn("out");
   EnrollModelBn("weight");
+  EnrollModelDiffBn(GenDiffBn("ids"));
 }
 
 const PbMessage& EmbeddingLookupOp::GetCustomizedConf() const {
@@ -18,7 +19,6 @@ const PbMessage& EmbeddingLookupOp::GetCustomizedConf() const {
 void EmbeddingLookupOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  // useful vars
   const EmbeddingLookupOpConf& conf = op_conf().embedding_lookup_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("ids");
   CHECK_EQ(in_blob_desc->data_type(), DataType::kInt32);
@@ -36,6 +36,12 @@ void EmbeddingLookupOp::InferBlobDescs(
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({table_size, units});
+
+  // weight_diff
+  GetBlobDesc4BnInOp(GenDiffBn("weight"))->mut_shape() = out_blob_desc->shape();
+
+  // ids_diff
+  *GetBlobDesc4BnInOp(GenDiffBn("ids")) = *in_blob_desc;
 }
 
 REGISTER_OP(OperatorConf::kEmbeddingLookupConf, EmbeddingLookupOp);

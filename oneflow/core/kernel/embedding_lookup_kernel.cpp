@@ -23,10 +23,6 @@ void EmbeddingLookupKernel<device_type, T>::BackwardDataContent(
   Blob* weight_diff_blob = BnInOp2Blob(this->kernel_conf().model_diff_bns(0));
   const Blob* out_diff_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
 
-  Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
-  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<int32_t>(), 0,
-                      in_diff_blob->ByteSizeOfDataContentField());
-
   EmbeddingLookupKernelUtil<device_type, T>::Backward(
       ctx.device_ctx, in_blob, out_diff_blob, weight_diff_blob);
 }

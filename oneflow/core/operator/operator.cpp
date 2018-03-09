@@ -257,6 +257,12 @@ void Operator::EnrollModelBn(const std::string& mbn) {
   model_diff_bns_.push_back(mdbn);
   CHECK(bn_in_op2lbn_.emplace(mdbn, lbn).second);
 }
+
+void Operator::EnrollModelDiffBn(const std::string& mdbn) {
+  model_diff_bns_.push_back(mdbn);
+  CHECK(bn_in_op2lbn_.emplace(mdbn, mbn2lbn(mdbn)).second);
+}
+
 void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   model_tmp_bns_.push_back(mtbn);
   CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);

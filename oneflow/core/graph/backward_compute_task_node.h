@@ -33,9 +33,10 @@ class BackwardCompTaskNode : public CompTaskNode {
   virtual void VirtualInferBlobDescInActivationDiff() {}
   virtual void VirtualInferBlobDescInHiddenDiff() {}
 
+  virtual void VirtualInferBlobDescsInProducedRegsts();
+
  private:
   void BindModelDiffRegst();
-  void InferBlobDescsInProducedRegsts();
 };
 
 }  // namespace oneflow

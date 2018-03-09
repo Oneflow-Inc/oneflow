@@ -42,7 +42,7 @@ void BackwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildActivationDiffRegst();
   VirtualBuildInDiffRegst();
   BindModelDiffRegst();
-  InferBlobDescsInProducedRegsts();
+  VirtualInferBlobDescsInProducedRegsts();
 }
 
 void BackwardCompTaskNode::BindModelDiffRegst() {
@@ -66,7 +66,7 @@ void BackwardCompTaskNode::BindModelDiffRegst() {
   });
 }
 
-void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
+void BackwardCompTaskNode::VirtualInferBlobDescsInProducedRegsts() {
   if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
     std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
     in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());
