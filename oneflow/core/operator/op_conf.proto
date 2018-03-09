@@ -348,7 +348,7 @@ message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
-  optional int32 max_sequece_size = 4 [default = 1];
+  optional int32 max_sequence_size = 4 [default = 1];
 }
 
 message DecodeOfrecordOpConf {
