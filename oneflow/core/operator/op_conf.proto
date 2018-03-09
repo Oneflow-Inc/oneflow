@@ -351,9 +351,9 @@ message BlobConf {
   optional int32 max_sequence_size = 4 [default = 1];
 }
 
-message DecodeOfrecordOpConf {
+message DecodeOFRecordOpConf {
   required string data_dir = 1;
-  repeated BlobConf blobs = 2;
+  repeated BlobConf blob = 2;
 }
 
 message OperatorConf {
@@ -363,7 +363,7 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
-    DecodeOfrecordOpConf decode_ofrecord_conf = 102;
+    DecodeOFRecordOpConf decode_ofrecord_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;

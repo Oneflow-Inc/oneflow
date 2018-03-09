@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class DecodeOfrecordOp final : public Operator {
+class DecodeOFRecordOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DecodeOfrecordOp);
-  DecodeOfrecordOp() = default;
-  ~DecodeOfrecordOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DecodeOFRecordOp);
+  DecodeOFRecordOp() = default;
+  ~DecodeOFRecordOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
