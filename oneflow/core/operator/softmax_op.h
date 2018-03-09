@@ -5,6 +5,14 @@
 
 namespace oneflow {
 
+struct SoftmaxOpCtx {
+  int32_t axis;
+  int32_t dims;
+  int64_t transpose_rows;
+  int64_t transpose_cols;
+  bool need_transpose;
+};
+
 class SoftmaxOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxOp);
@@ -23,6 +31,7 @@ class SoftmaxOp final : public Operator {
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const override;
+  SoftmaxOpCtx GetSoftmaxOpCtx(Shape in_shape) const;
 };
 
 }  // namespace oneflow
