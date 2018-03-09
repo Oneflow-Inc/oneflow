@@ -198,6 +198,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->op()->IsDecodeOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
+    if (cur_logi_node->op()->IsEmbeddingLookupOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
@@ -439,6 +440,9 @@ void ChainGraph::BuildModelStruct(
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     if (is_train == false) { return; }
     // Model Diff Accumulate Chain
+    if (fw_chain->HasSoleEmbeddingLookupOp()) {
+      md_updt_chain->SetEmbeddingLookupMdUpdt();
+    }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;

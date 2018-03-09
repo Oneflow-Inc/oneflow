@@ -47,6 +47,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
   std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
+  bool HasSoleEmbeddingLookupOp() const;
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
@@ -256,10 +257,14 @@ class MdUpdtChainNode final : public ChainNode {
                                    (std::vector<std::string> FindLbns),
                                    (MdDiffAcc));
 
+  bool IsEmbeddingLookupMdUpdt() const { return is_embedding_lookup_mdupdt; }
+  void SetEmbeddingLookupMdUpdt() { is_embedding_lookup_mdupdt = true; }
+
  private:
   void FixCompTaskNode(CompTaskNode*) const override;
 
   uint32_t random_seed_;
+  bool is_embedding_lookup_mdupdt = false;
 };
 
 class MdSaveChainNode final : public ChainNode {

@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/recurrent_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
+#include "oneflow/core/graph/embedding_lookup_backward_compute_task_node.h"
 #include "oneflow/core/graph/recurrent_forward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
@@ -99,6 +100,10 @@ const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
 
 bool ChainNode::HasSoleRecurrentOp() const {
   return op_vec_.size() == 1 && op_vec_.front()->IsRecurrentOp();
+}
+
+bool ChainNode::HasSoleEmbeddingLookupOp() const {
+  return op_vec_.size() == 1 && op_vec_.front()->IsEmbeddingLookupOp();
 }
 
 std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
@@ -278,6 +283,8 @@ void BackwardChainNode::set_data_output_lbns() {
 CompTaskNode* BackwardChainNode::NewCompTaskNode() const {
   if (HasSoleRecurrentOp()) {
     return new RecurrentBackwardCompTaskNode;
+  } else if (HasSoleEmbeddingLookupOp()) {
+    return new EmbeddingLookupBackwardCompTaskNode;
   } else {
     return new NormalBackwardCompTaskNode;
   }
@@ -400,7 +407,11 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
 }
 BldBoxingOpConfMthd MdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
     const ChainNode*) const {
-  return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
+  if (IsEmbeddingLookupMdUpdt()) {
+    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone;
+  } else {
+    return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
+  }
 }
 std::vector<std::string> MdUpdtChainNode::FindLbnsFromMdDiffAcc(
     const ChainNode*) const {

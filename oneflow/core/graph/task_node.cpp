@@ -8,6 +8,7 @@ std::map<TaskType, std::string> task_type2color = {
     {kRecurrentForward, "2"},
     {kNormalBackward, "3"},
     {kRecurrentBackward, "3"},
+    {kEmbeddingLookupBackward, "3"},
     {kDecode, "1"},
     {kLoss, "4"},
     {kLossAcc, "5"},
@@ -26,7 +27,8 @@ bool IsForwardTaskType(TaskType tt) {
 }
 
 bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
+  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward
+         || tt == TaskType::kEmbeddingLookupBackward;
 }
 
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
