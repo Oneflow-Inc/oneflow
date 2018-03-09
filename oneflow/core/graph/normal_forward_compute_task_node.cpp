@@ -41,9 +41,7 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<std::string> found_lbns;
     for (ExecEdge* out_edge : cur_node->out_edges()) {
-      if (found_lbns.find(out_edge->lbn()) == found_lbns.end()) {
-        CHECK(found_lbns.insert(out_edge->lbn()).second);
-      }
+      found_lbns.insert(out_edge->lbn());
     }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);

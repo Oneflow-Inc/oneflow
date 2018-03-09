@@ -23,7 +23,7 @@ void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
 void ModifyOpLbn4BnInChainNode(HashMap<std::string, std::string>& olbn2ilbn,
                                ChainNode* chain_node) {
-  for (auto op : chain_node->op_vec()) {
+  for (std::shared_ptr<const Operator> op : chain_node->op_vec()) {
     for (const std::string& ibn : op->input_bns()) {
       const std::string& lbn = op->Lbn4BnInOp(ibn);
       auto olbn2ilbn_it = olbn2ilbn.find(lbn);
@@ -230,7 +230,7 @@ ChainGraph::ChainGraph(bool is_train) {
   }
   BuildModelStruct(is_train, chain2first_shared);
   BuildRecurrentStruct();
-  RemoveReductantCloneOp();
+  RemoveNeedlessCloneOp();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
@@ -478,17 +478,17 @@ void ChainGraph::BuildRecurrentStruct() {
   });
 }
 
-void ChainGraph::RemoveReductantCloneOp() {
+void ChainGraph::RemoveNeedlessCloneOp() {
   TopoForEachNode([&](ChainNode* chain_node) {
     HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
     std::vector<std::shared_ptr<const Operator>> clone_ops;
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
-    for (auto op : fw_chain_node->op_vec()) {
+    for (std::shared_ptr<const Operator> op : fw_chain_node->op_vec()) {
       if (!op->IsCloneOp()) { continue; }
       clone_ops.push_back(op);
-      auto ilbn = op->Lbn4BnInOp(op->SoleIbn());
-      for (auto obn : op->output_bns()) {
+      const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
+      for (const std::string& obn : op->output_bns()) {
         olbn2ilbn_in_clone_op.insert({op->Lbn4BnInOp(obn), ilbn});
       }
     }
