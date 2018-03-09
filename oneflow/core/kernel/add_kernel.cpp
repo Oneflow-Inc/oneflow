@@ -11,7 +11,7 @@ void AddKernel<device_type, T>::ForwardDataContent(
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
   const int count = out_blob->shape().elem_cnt();
   for (size_t i = 1; i < this->kernel_conf().input_bns().size(); ++i) {
-    std::string ibn = this->kernel_conf().input_bns()[i];
+    const std::string ibn = this->kernel_conf().input_bns()[i];
     const Blob* in_blob = BnInOp2Blob(ibn);
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, count, static_cast(1),
                                      in_blob->dptr<T>(), 1,
