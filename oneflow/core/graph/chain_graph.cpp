@@ -289,11 +289,10 @@ void ChainGraph::BuildFwStruct(
 }
 
 void ChainGraph::BuildRecordLoadStruct() {
-  TopoForEachNode([&](ChainNode* chain_node) {
-    if (strcmp(chain_node->TypeName(), "DecodeChainNode") != 0) { return; }
+  ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
     ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
-    Connect<ChainNode>(record_load_node, NewEdge(), chain_node);
-    record_load_node->mut_parallel_desc() = chain_node->parallel_desc();
+    Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
+    record_load_node->mut_parallel_desc() = decode_node->parallel_desc();
   });
 }
 
