@@ -355,7 +355,7 @@ void ChainGraph::BuildBwStruct() {
 
 void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
-    std::shared_ptr<Operator> loss_op = loss_chain->SoleOp();
+    std::shared_ptr<const Operator> loss_op = loss_chain->SoleOp();
     // Reduce Sum op
     OperatorConf sum_op_conf;
     sum_op_conf.set_name("sum_op_" + NewUniqueId());

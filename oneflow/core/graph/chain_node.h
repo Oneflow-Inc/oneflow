@@ -43,7 +43,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual ~ChainNode() = default;
 
   // op_vec_
-  std::shared_ptr<Operator> SoleOp() const;
+  std::shared_ptr<const Operator> SoleOp() const;
   const std::vector<std::shared_ptr<Operator>>& op_vec() const;
   std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
