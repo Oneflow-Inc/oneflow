@@ -57,15 +57,15 @@ void Kernel::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardDataContent(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
   if (HasModelBns() && JobDesc::Singleton()->L2() > 0) {
     L2Regularization(ctx, BnInOp2Blob);
   }
+  if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
 
 bool Kernel::HasModelBns() const {
-  return kernel_conf().model_bns().size() != 0;
+  return kernel_conf().model_bns().size() > 0;
 }
 
 template<DeviceType device_type, typename T>
@@ -107,8 +107,9 @@ void KernelIf<device_type, T>::L2Regularization(
     const Blob* model_blob = BnInOp2Blob(mbn);
     KernelUtil<device_type, T>::Axpy(
         ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()),
-        JobDesc::Singleton()->L2(), model_blob->dptr<T>(), 1,
-        BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<T>(), 1);
+        JobDesc::Singleton()->L2() * JobDesc::Singleton()->ParallelPieceSize(),
+        model_blob->dptr<T>(), 1, BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<T>(),
+        1);
   }
 }
 
