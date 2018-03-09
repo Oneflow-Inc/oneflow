@@ -1,16 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_SOURCE_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_SOURCE_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/kernel/basic_data_loader_kernel.h"
 
 namespace oneflow {
 
-class SourceCompActor final : public CompActor {
+class DecodeCompActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SourceCompActor);
-  SourceCompActor() = default;
-  ~SourceCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DecodeCompActor);
+  DecodeCompActor() = default;
+  ~DecodeCompActor() = default;
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
@@ -22,10 +21,8 @@ class SourceCompActor final : public CompActor {
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
   void AsyncReturnAllReadableRegst() override {}
-
-  DataLoadStatus data_load_status_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_SOURCE_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_

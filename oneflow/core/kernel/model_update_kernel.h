@@ -29,8 +29,7 @@ class MdUpdateKernel : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-class MdUpdateKernelUtil final {
- public:
+struct MdUpdateKernelUtil {
   static void DiffAveragingAndRegularization(DeviceCtx* ctx, const int64_t n,
                                              float l1, float l2, const T* model,
                                              T* model_diff_acc);

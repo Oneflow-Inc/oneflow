@@ -11,7 +11,7 @@
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
-#include "oneflow/core/graph/source_compute_task_node.h"
+#include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
@@ -193,7 +193,7 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromForward(
     return &TaskGraph::BldSubTskGphByBoxing;
   }
 }
-BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromSource(
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromDecode(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
@@ -206,7 +206,7 @@ BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromForward(
   if (this == node) { CHECK_EQ(parallel_desc()->policy(), kModelParallel); }
   return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
-BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromSource(
+BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromDecode(
     const ChainNode* node) const {
   return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
@@ -214,7 +214,7 @@ std::vector<std::string> ForwardChainNode::FindLbnsFromForward(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
 }
-std::vector<std::string> ForwardChainNode::FindLbnsFromSource(
+std::vector<std::string> ForwardChainNode::FindLbnsFromDecode(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
 }
@@ -290,8 +290,8 @@ CompTaskNode* BackwardChainNode::NewCompTaskNode() const {
   }
 }
 
-// SourceChainNode
-void SourceChainNode::set_data_output_lbns() {
+// DecodeChainNode
+void DecodeChainNode::set_data_output_lbns() {
   ForEachNodeOnOutEdge([this](const ChainNode* to_node) {
     if (dynamic_cast<const ForwardChainNode*>(to_node)
         || dynamic_cast<const LossChainNode*>(to_node)
@@ -306,7 +306,7 @@ BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromForward(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromSource(
+BldSubTskGphMthd LossChainNode::GetMthdForBldSubTskGphFromDecode(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
@@ -314,7 +314,7 @@ BldBoxingOpConfMthd LossChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
   return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
-BldBoxingOpConfMthd LossChainNode::GetMthdForBldBoxingOpConfFromSource(
+BldBoxingOpConfMthd LossChainNode::GetMthdForBldBoxingOpConfFromDecode(
     const ChainNode* node) const {
   return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
@@ -322,7 +322,7 @@ std::vector<std::string> LossChainNode::FindLbnsFromForward(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
 }
-std::vector<std::string> LossChainNode::FindLbnsFromSource(
+std::vector<std::string> LossChainNode::FindLbnsFromDecode(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
 }
@@ -337,7 +337,7 @@ void LossChainNode::set_data_output_lbns() {
 }
 
 // PrintChainNode
-BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromSource(
+BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromDecode(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
@@ -349,7 +349,7 @@ BldSubTskGphMthd PrintChainNode::GetMthdForBldSubTskGphFromLoss(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromSource(
+BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromDecode(
     const ChainNode* node) const {
   return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
@@ -361,7 +361,7 @@ BldBoxingOpConfMthd PrintChainNode::GetMthdForBldBoxingOpConfFromLoss(
     const ChainNode* node) const {
   return GetBldBoxingOpConfMethodByFwParallelPolicy(node, this);
 }
-std::vector<std::string> PrintChainNode::FindLbnsFromSource(
+std::vector<std::string> PrintChainNode::FindLbnsFromDecode(
     const ChainNode* node) const {
   return FindLbnsBetweenFw(node, this);
 }

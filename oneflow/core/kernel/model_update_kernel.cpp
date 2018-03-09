@@ -36,8 +36,7 @@ Blob* MdUpdateKernel<device_type, T>::DiffAveragingAndRegularization(
 }
 
 template<typename T>
-class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
- public:
+struct MdUpdateKernelUtil<DeviceType::kCPU, T> {
   static void DiffAveragingAndRegularization(DeviceCtx* ctx, int64_t n,
                                              float l1, float l2, const T* model,
                                              T* model_diff_acc) {
@@ -51,7 +50,7 @@ class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
 };
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
-  template class MdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+  template struct MdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
 

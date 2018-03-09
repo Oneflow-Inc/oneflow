@@ -19,8 +19,7 @@ __global__ void DiffAveragingRegularizationGpu(const int64_t n, T l1, T l2,
 }  // namespace
 
 template<typename T>
-class MdUpdateKernelUtil<DeviceType::kGPU, T> final {
- public:
+struct MdUpdateKernelUtil<DeviceType::kGPU, T> {
   static void DiffAveragingAndRegularization(DeviceCtx* ctx, int64_t n,
                                              float l1, float l2, const T* model,
                                              T* model_diff_acc) {
@@ -33,7 +32,7 @@ class MdUpdateKernelUtil<DeviceType::kGPU, T> final {
 };
 
 #define INSTANTIATE_GPU_KERNEL_UTIL(type_cpp, type_proto) \
-  template class MdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct MdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -19,6 +19,7 @@ void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
 }  // namespace
 
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
+  static const HashSet<std::string> special_device({"decode", "persistence"});
   policy_ = user_conf.policy();
   HashSet<std::string> machine_name_set;
   std::string device_tag_check;
@@ -29,14 +30,14 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
     if (device_tag_check == "") {
       device_tag_check = device_tag;
-    } else if (device_tag_check == "persistence") {
-      CHECK_STREQ(device_tag.c_str(), "persistence");
+    } else if (special_device.find(device_tag_check) != special_device.end()) {
+      CHECK_STREQ(device_tag.c_str(), device_tag_check.c_str());
       CHECK(machine_name_set.find(mchn_name) == machine_name_set.end());
     } else {
       // do nothing
     }
     machine_name_set.insert(mchn_name);
-    if (device_tag == "persistence") {
+    if (special_device.find(device_tag) != special_device.end()) {
       int64_t part_num = oneflow_cast<int64_t>(device_id_str);
       device_id_str = "0-" + std::to_string(part_num - 1);
     }
