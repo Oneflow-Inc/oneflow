@@ -18,13 +18,11 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
-  Blob* out_blob = BnInOp2Blob("out");
   Blob* reset_gate_data_blob = BnInOp2Blob("reset_gate_data");
   Blob* update_gate_data_blob = BnInOp2Blob("update_gate_data");
   Blob* candidate_hidden_data_blob = BnInOp2Blob("candidate_hidden_data");
   Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
   Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
-  Blob* candidate_hidden_out_blob = BnInOp2Blob("candidate_hidden_out");
   Blob* reset_mul_hidden_blob = BnInOp2Blob("reset_mul_hidden");
   Blob* reset_mul_candidate_hidden_blob =
       BnInOp2Blob("reset_mul_candidate_hidden");
@@ -122,9 +120,19 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
       ctx.device_ctx, static_cast<T>(candidate_hidden_out_blob->shape().At(0)),
       static_cast<T>(1), candidate_hidden_out_blob->dptr<T>(),
       static_cast<T>(1), plus_op_out_blob->mut_dptr<T>(), static_cast<T>(1));
+  // out = plus_op_out
+  BnInOp2Blob("out")->CopyDataContentFrom(ctx.device_ctx, plus_op_out_blob);
+  // rec_out = plus_op_out
+  BnInOp2Blob("rec_out")->CopyDataContentFrom(ctx.device_ctx, plus_op_out_blob);
+}
 
-  // rec_out = out
-  BnInOp2Blob("rec_out")->CopyDataContentFrom(ctx.device_ctx, out_blob);
+template<DeviceType device_type, typename T>
+void BasicGruKernel<DeviceType, T>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnIn2Blob("in");
+  const Blob* out_blob = BnIn2Blob("out");
+  const Blob* in_blob = BnIn2Blob("out_diff");
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicGruConf, BasicGruKernel,

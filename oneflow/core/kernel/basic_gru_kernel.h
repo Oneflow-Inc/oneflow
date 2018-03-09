@@ -18,10 +18,10 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  /*void BackwardDataContent(
+  void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  void InitPureModelTmpBlobs(
+  /*void InitPureModelTmpBlobs(
       DeviceCtx*,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void VirtualInitModelBlobsWithRandomSeed(
