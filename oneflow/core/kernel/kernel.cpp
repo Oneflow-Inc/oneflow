@@ -105,9 +105,10 @@ void KernelIf<device_type, T>::L2Regularization(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   for (const std::string& mbn : kernel_conf().model_bns()) {
     const Blob* model_blob = BnInOp2Blob(mbn);
+    T l2 = static_cast<T>(JobDesc::Singleton()->L2()
+                          * JobDesc::Singleton()->ParallelPieceSize());
     KernelUtil<device_type, T>::Axpy(
-        ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()),
-        JobDesc::Singleton()->L2() * JobDesc::Singleton()->ParallelPieceSize(),
+        ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()), l2,
         model_blob->dptr<T>(), 1, BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<T>(),
         1);
   }
