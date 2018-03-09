@@ -19,8 +19,4 @@ void SinkCompTaskNode::BuildExecGphAndRegst() {
   CHECK(node->op()->output_bns().empty());
 }
 
-void SinkCompTaskNode::FixThrdId() {
-  set_thrd_id(IDMgr::Singleton()->AllocatePersistenceThrdId(machine_id()));
-}
-
 }  // namespace oneflow

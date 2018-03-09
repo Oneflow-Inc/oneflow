@@ -54,7 +54,7 @@ struct KernelUtil final {
                    const int incx, T* y, const int incy);
 
   // x = a*x
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx);
   // max(x) only cpu
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr);
@@ -130,6 +130,13 @@ struct KernelUtil final {
       initializer_conf = JobDesc::Singleton()->DefaultInitializerConf();
     }
     Initialize(ctx, *initializer_conf, random_seed, blob);
+  }
+  static void InitializeWithProperConf(DeviceCtx* ctx,
+                                       const PbMessage& initializer_conf,
+                                       uint32_t random_seed, Blob* blob) {
+    InitializeWithProperConf(
+        ctx, static_cast<const InitializerConf*>(&initializer_conf),
+        random_seed, blob);
   }
 
   // initialize blob with model dir

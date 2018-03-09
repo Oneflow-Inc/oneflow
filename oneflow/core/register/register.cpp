@@ -19,9 +19,9 @@ Regst::Regst() {
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
   if (it != lbn2blob_.end()) {
-    return it->second.get();
+    return static_cast<Blob*>(it->second.get());
   } else if (lbn == kPackedBlobName) {
-    return packed_blob_.get();
+    return static_cast<Blob*>(packed_blob_.get());
   } else {
     return nullptr;
   }

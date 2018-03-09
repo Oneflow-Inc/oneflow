@@ -31,7 +31,7 @@ class MdUpdateKernelUtil<DeviceType::kGPU, T> final {
 };
 
 #define INSTANTIATE_GPU_KERNEL_UTIL(type_cpp, type_proto) \
-  template class MdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct MdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

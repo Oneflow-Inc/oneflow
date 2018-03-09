@@ -49,7 +49,7 @@ class MdUpdateKernelUtil<DeviceType::kCPU, T> final {
 };
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
-  template class MdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+  template struct MdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ)
 

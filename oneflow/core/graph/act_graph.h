@@ -6,6 +6,7 @@
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event.pb.h"
+#include "oneflow/core/common/range.h"
 
 namespace oneflow {
 
@@ -24,7 +25,7 @@ inline double Duration4ActEvent(const ActEvent& act_event) {
 class ActNode final : public Node<ActNode, ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActNode);
-  explicit ActNode(const ActEvent* act_event, const TaskProto* task_proto)
+  ActNode(const ActEvent* act_event, const TaskProto* task_proto)
       : act_event_(act_event), task_proto_(task_proto) {}
   ~ActNode() = default;
 
@@ -38,35 +39,75 @@ class ActNode final : public Node<ActNode, ActEdge> {
   const ActEvent& act_event() const { return *act_event_; }
   TaskType task_type() const { return task_proto_->task_type(); }
   std::string VisualStr() const override;
+  int64_t depth() const { return depth_; }
+  const std::list<const ActNode*>& ConsumerNodes4RegstInfo(
+      const std::string& regst_uid) const {
+    return regst_uid2consumer_nodes_.at(regst_uid);
+  }
+
+  // Setters
+  void AddConsumerNode(const std::string& regst_uid,
+                       const ActNode* consumer_node);
+  void set_depth(int64_t depth) { depth_ = depth; }
 
  private:
   const ActEvent* act_event_;
   const TaskProto* task_proto_;
+  int64_t depth_;
+  HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_nodes_;
 };
+
+class DepthRangeActSubGraph;
+class RegstActSubGraph;
 
 class ActGraph final : public Graph<ActNode, ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActGraph);
-  explicit ActGraph(const Plan& plan,
-                    std::unique_ptr<std::list<ActEvent>>&& act_events);
+  ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_events);
   ~ActGraph() = default;
 
   void ForEachRegstDescMeanDuration(
       const std::function<void(int64_t, double)>& Handler) const;
   void ForEachRegstDescIIScale(
       const std::function<void(int64_t, double)>& Handler) const;
-
   void ToDotFiles(const std::string& dir) const;
 
+  // Getters
   const Plan& plan() const { return *plan_; }
+  const std::list<const ActNode*>& Nodes4Depth(int64_t depth) const {
+    return depth2nodes_.at(depth);
+  }
+  const ActNode* ProducerNode4RegstUid(const std::string& regst_uid) const {
+    return regst_uid2producer_node_.at(regst_uid);
+  }
+
+  const std::list<const ActNode*>& ConsumerNodes4RegstUid(
+      const std::string& regst_uid) const {
+    return regst_uid2consumer_nodes_.at(regst_uid);
+  }
 
  private:
   void ForEachRegstUidDuration(
-      const std::function<void(int64_t regst_desc_id, int64_t act_id,
-                               double time)>& Handler) const;
+      const std::function<void(const std::string&, double)>& Handler) const;
+  void InitNodes();
+  void InitEdges();
+  void InitDepth();
+  void ForEachDepthRangeRegstUids(
+      const std::function<void(const Range& range,
+                               const std::list<std::string>& regst_uids)>&
+          Handler) const;
+  void ForEachDepthRangeSubActGraph(
+      const std::function<void(const DepthRangeActSubGraph&)>& Handler) const;
+  void ForEachRegstActSubGraph(
+      const std::function<void(const RegstActSubGraph&)>& Handler) const;
+  void TopoForEachActNode(const std::list<ActNode*>& starts,
+                          const std::function<void(ActNode*)>& Handler) const;
+
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
-  HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_acts_;
+  HashMap<std::string, ActNode*> regst_uid2producer_node_;
+  HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_nodes_;
+  HashMap<int64_t, std::list<const ActNode*>> depth2nodes_;
 };
 
 }  // namespace oneflow
