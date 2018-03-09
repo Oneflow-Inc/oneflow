@@ -499,7 +499,7 @@ void ChainGraph::RemoveNeedlessCloneOp() {
       });
     }
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
-    for (auto clone_op : clone_ops) {
+    for (std::shared_ptr<const Operator> clone_op : clone_ops) {
       auto clone_op_it =
           std::find(op_vec_in_fw.begin(), op_vec_in_fw.end(), clone_op);
       if (clone_op_it != op_vec_in_fw.end()) {

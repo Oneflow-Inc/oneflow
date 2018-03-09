@@ -27,7 +27,9 @@ void NormalBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
         Connect(producer_it->second.first, edge, cur_node);
       } else {
         cur_node->BindBnInOpAndRegst(odbn, out_diff_regst);
-        cur_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
+        if (!cur_node->op()->IsCloneOp()) {
+          cur_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
+        }
       }
     }
   });
@@ -49,10 +51,14 @@ void NormalBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
       edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
     }
 
-    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
-                                         activation_regst);
-    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
-                                         activation_regst);
+    if (!edge->src_node()->op()->IsCloneOp()) {
+      edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
+                                           activation_regst);
+    }
+    if (!edge->dst_node()->op()->IsCloneOp()) {
+      edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
+                                           activation_regst);
+    }
   });
 }
 
@@ -71,7 +77,9 @@ void NormalBackwardCompTaskNode::VirtualBuildInDiffRegst() {
         in_diff_regst->AddLbn(lbn);
         cur_node->BindBnInOpAndRegst(idbn, in_diff_regst);
       }
-      cur_node->BindBnInOpAndRegst(GenUnDiffBn(idbn), in_regst);
+      if (!cur_node->op()->IsCloneOp()) {
+        cur_node->BindBnInOpAndRegst(GenUnDiffBn(idbn), in_regst);
+      }
     }
   });
 }

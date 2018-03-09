@@ -60,11 +60,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
 
 BlobDesc* RegstDesc::AddLbn(const std::string& lbn) {
   CHECK_EQ(is_locked_, false);
-  auto lbn2blob_desc_it = lbn2blob_desc_.find(lbn);
-  if (lbn2blob_desc_it != lbn2blob_desc_.end()) {
-    LOG(INFO) << "clone removed with the lbn:" << lbn;
-    return &*(lbn2blob_desc_it->second);
-  }
+  CHECK(lbn2blob_desc_.find(lbn) == lbn2blob_desc_.end()) << lbn;
   BlobDesc* blob_desc = new BlobDesc;
   lbn2blob_desc_[lbn].reset(blob_desc);
   return blob_desc;
