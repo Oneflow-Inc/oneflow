@@ -24,7 +24,7 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
   Blob* candidate_hidden_out_blob = BnInOp2Blob("candidate_hidden_out");
   Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
   Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
-  Blob* reset_mul_hidden__blob = BnInOp2Blob("reset_mul_hidden");
+  Blob* reset_mul_hidden_blob = BnInOp2Blob("reset_mul_hidden");
   Blob* reset_mul_candidate_hidden_blob =
       BnInOp2Blob("reset_mul_candidate_hidden");
 
