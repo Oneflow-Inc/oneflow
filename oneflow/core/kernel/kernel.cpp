@@ -57,7 +57,7 @@ void Kernel::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardDataContent(ctx, BnInOp2Blob);
-  if (HasModelBns() && JobDesc::Singleton()->L2() > 0) {
+  if (HasModelBns() && JobDesc::Singleton()->L2() > 0.0f) {
     L2Regularization(ctx, BnInOp2Blob);
   }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
@@ -105,8 +105,9 @@ void KernelIf<device_type, T>::L2Regularization(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   for (const std::string& mbn : kernel_conf().model_bns()) {
     const Blob* model_blob = BnInOp2Blob(mbn);
-    T l2 = static_cast<T>(JobDesc::Singleton()->L2()
-                          * JobDesc::Singleton()->ParallelPieceSize());
+    T l2 = static_cast<T>(
+        JobDesc::Singleton()->L2()
+        * BnInOp2Blob(kernel_conf().output_diff_bns()[0])->shape().At(0));
     KernelUtil<device_type, T>::Axpy(
         ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()), l2,
         model_blob->dptr<T>(), 1, BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<T>(),
