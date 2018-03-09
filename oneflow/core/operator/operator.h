@@ -42,6 +42,7 @@ class Operator {
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
+  virtual bool IsEmbeddingLookupOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
     return !model_bns_.empty() || !model_tmp_bns_.empty();
@@ -206,6 +207,7 @@ class Operator {
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
+  void EnrollModelDiffBn(const std::string& mdbn);
 
   void StrFieldTolower(const std::string& field_name);
 
