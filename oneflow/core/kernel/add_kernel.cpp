@@ -24,7 +24,7 @@ void AddKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  for (int i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
+  for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
     const std::string idbn = this->kernel_conf().input_diff_bns()[i];
     Blob* in_diff_blob = BnInOp2Blob(idbn);
     in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
