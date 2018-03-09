@@ -17,16 +17,14 @@ class ElementwiseKernel : public KernelIf<device_type> {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
-    Blob* out_blob = BnInOp2Blob("out");
-    out_blob->CopyDataIdFrom(ctx.device_ctx, in_blob);
+    BnInOp2Blob("out")->CopyDataIdFrom(ctx.device_ctx, in_blob);
   }
 
   void ForwardColNum(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
-    Blob* out_blob = BnInOp2Blob("out");
-    out_blob->CopyColNumFrom(ctx.device_ctx, in_blob);
+    BnInOp2Blob("out")->CopyColNumFrom(ctx.device_ctx, in_blob);
   }
 };
 
