@@ -270,7 +270,7 @@ void ChainGraph::BuildFwStruct(
     CHECK(!chain_it->nodes.empty());
     chain_node->mut_parallel_desc() = chain_it->nodes.front()->parallel_desc();
     for (const LogicalNode* logical_node : chain_it->nodes) {
-      chain_node->mut_op_vec().push_back(logical_node->mut_op());
+      chain_node->mut_op_vec().push_back(logical_node->op());
       if (logical_node->shared_model_nodes()) {
         CHECK_EQ(chain_it->nodes.size(), 1);
         CHECK(
