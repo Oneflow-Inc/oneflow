@@ -16,12 +16,9 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
   for (size_t i = 1; i < this->kernel_conf().input_bns().size(); ++i) {
     std::string ibn = this->kernel_conf().input_bns()[i];
     const Blob* in_blob = BnInOp2Blob(ibn);
-    for (int idx = 0; idx < count; ++idx) {
-      if (in_blob->dptr<T>()[idx] > out_blob->mut_dptr<T>()[idx]) {
-        out_blob->mut_dptr<T>()[idx] = in_blob->dptr<T>()[idx];
-        mask_blob->mut_dptr<T>()[idx] = i;
-      }
-    }
+    KernelUtil<device_type, T>::ElementwiseMaxWithMask(
+        ctx.device_ctx, count, out_blob->mut_dptr<T>(), in_blob->dptr<T>(), i,
+        mask_blob->mut_dptr<int>());
   }
 }
 
