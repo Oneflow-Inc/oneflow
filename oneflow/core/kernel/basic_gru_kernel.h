@@ -18,19 +18,19 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
- /* void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void InitPureModelTmpBlobs(
-      DeviceCtx*,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void VirtualInitModelBlobsWithRandomSeed(
-      DeviceCtx*, std::mt19937*,
-      std::function<Blob*(const std::string&)>) const override;
-  void VirtualInitModelBlobsWithDir(
-      DeviceCtx*, int32_t part_id, int32_t part_num,
-      const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;*/
+  void BackwardDataContent(
+       const KernelCtx&,
+       std::function<Blob*(const std::string&)>) const override;
+   /*void InitPureModelTmpBlobs(
+       DeviceCtx*,
+       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+   void VirtualInitModelBlobsWithRandomSeed(
+       DeviceCtx*, std::mt19937*,
+       std::function<Blob*(const std::string&)>) const override;
+   void VirtualInitModelBlobsWithDir(
+       DeviceCtx*, int32_t part_id, int32_t part_num,
+       const std::string& model_load_dir,
+       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;*/
 };
 
 }  // namespace oneflow

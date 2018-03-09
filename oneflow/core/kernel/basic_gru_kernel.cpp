@@ -127,14 +127,14 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
   BnInOp2Blob("rec_out")->CopyDataContentFrom(ctx.device_ctx, plus_op_out_blob);
 }
 
-/*template<DeviceType device_type, typename T>
-void BasicGruKernel<DeviceType, T>::BackwardDataContent(
+template<DeviceType device_type, typename T>
+void BasicGruKernel<devicetype, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnIn2Blob("in");
   const Blob* out_blob = BnIn2Blob("out");
   const Blob* in_blob = BnIn2Blob("out_diff");
-}*/
+}
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicGruConf, BasicGruKernel,
                            FLOATING_DATA_TYPE_SEQ);
