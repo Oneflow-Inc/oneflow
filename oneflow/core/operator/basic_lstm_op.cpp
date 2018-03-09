@@ -20,16 +20,16 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollModelBn("h2h_o_weight");
   EnrollModelBn("i2h_c_weight");
   EnrollModelBn("h2h_c_weight");
-	if  (GetBoolFromCustomizedConf("use_bias")) {
-			EnrollModelBn("bias_f");
-			EnrollModelTmpBn("bias_f_multiplier");
-			EnrollModelBn("bias_o");
-			EnrollModelTmpBn("bias_o_multiplier");
-			EnrollModelBn("bias_i");
-			EnrollModelTmpBn("bias_i_multiplier");
-			EnrollModelBn("bias_c");
-			EnrollModelTmpBn("bias_c_multiplier");
-	}
+  if (GetBoolFromCustomizedConf("use_bias")) {
+    EnrollModelBn("bias_f");
+    EnrollModelTmpBn("bias_f_multiplier");
+    EnrollModelBn("bias_o");
+    EnrollModelTmpBn("bias_o_multiplier");
+    EnrollModelBn("bias_i");
+    EnrollModelTmpBn("bias_i_multiplier");
+    EnrollModelBn("bias_c");
+    EnrollModelTmpBn("bias_c_multiplier");
+  }
 }
 
 void BasicLstmOp::VirtualInferBlobDescs(
@@ -69,17 +69,17 @@ void BasicLstmOp::VirtualInferBlobDescs(
       BlobDesc(Shape({hidden_size, embedding_zie}));
   *GetBlobDesc4BnInOp("h2h_c_weight") =
       BlobDesc(Shape({hidden_size, embedding_zie}));
-	
-	if (GetBoolFromCustomizedConf("use_bias")) {
-		*GetBlobDesc4BnInOp("bias_f") = BlobDesc(Shape({1, hidden_size}));
-		*GetBlobDesc4BnInOp("bias_f_multiplier") = BlobDesc(Shape({data_num, 1}));
-		*GetBlobDesc4BnInOp("bias_o") = BlobDesc(Shape({1, hidden_size}));
-		*GetBlobDesc4BnInOp("bias_o_multiplier") = BlobDesc(Shape({data_num, 1}));
-		*GetBlobDesc4BnInOp("bias_i") = BlobDesc(Shape({1, hidden_size}));
-		*GetBlobDesc4BnInOp("bias_i_multiplier") = BlobDesc(Shape({data_num, 1}));
-		*GetBlobDesc4BnInOp("bias_c") = BlobDesc(Shape({1, hidden_size}));
-		*GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
-	}
+
+  if (GetBoolFromCustomizedConf("use_bias")) {
+    *GetBlobDesc4BnInOp("bias_f") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_f_multiplier") = BlobDesc(Shape({data_num, 1}));
+    *GetBlobDesc4BnInOp("bias_o") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_o_multiplier") = BlobDesc(Shape({data_num, 1}));
+    *GetBlobDesc4BnInOp("bias_i") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_i_multiplier") = BlobDesc(Shape({data_num, 1}));
+    *GetBlobDesc4BnInOp("bias_c") = BlobDesc(Shape({1, hidden_size}));
+    *GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
+  }
 }
 
 REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);
