@@ -46,7 +46,7 @@ void SoftmaxOp::InferBlobDescs(
 void SoftmaxOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  auto conf = kernel_conf->mutable_softmax_conf();
+  SoftmaxKernelConf* conf = kernel_conf->mutable_softmax_conf();
   SoftmaxOpCtx op_ctx = GetSoftmaxOpCtx(GetBlobDesc4BnInOp("in")->shape());
   conf->set_axis(op_ctx.axis);
   conf->set_transpose_rows(op_ctx.transpose_rows);
