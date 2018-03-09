@@ -97,7 +97,7 @@ message FullyConnectedOpConf {
   optional InitializerConf bias_initializer = 6;
 }
 
-message DataLoaderOpConf {
+message DecodeOpConf {
   required string data_dir = 1;
 }
 
@@ -354,7 +354,7 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
-    DataLoaderOpConf data_loader_conf = 102;
+    DecodeOpConf decode_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;

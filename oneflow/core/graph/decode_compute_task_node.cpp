@@ -35,9 +35,4 @@ void DecodeCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(parallel_ctx(), device_type());
 }
 
-const std::string DecodeCompTaskNode::GetDataDir() {
-  return GetStringFromPbMessage(
-      chain_node()->SoleOp()->op_conf().data_loader_conf(), "data_dir");
-}
-
 }  // namespace oneflow
