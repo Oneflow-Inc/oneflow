@@ -29,8 +29,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
   Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   const int count = mask_blob->shape().elem_cnt();
   for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
-    const std::string& idbn = this->kernel_conf().input_diff_bns()[i];
-    Blob* in_diff_blob = BnInOp2Blob(idbn);
+    Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns()[i]);
     Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                         in_diff_blob->ByteSizeOfDataContentField());
     KernelUtil<device_type, T>::ElementwiseSetWithMask(

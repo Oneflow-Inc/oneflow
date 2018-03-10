@@ -12,7 +12,7 @@ void AddKernel<device_type, T>::ForwardDataContent(
   const int count = out_blob->shape().elem_cnt();
   for (size_t i = 1; i < this->kernel_conf().input_bns().size(); ++i) {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[i]);
-    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, count, static_cast(1),
+    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, count, static_cast<float>(1),
                                      in_blob->dptr<T>(), 1,
                                      out_blob->mut_dptr<T>(), 1);
   }
