@@ -8,8 +8,9 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   DecodeCompTaskNode* decode_node =
       static_cast<DecodeCompTaskNode*>(SoleOutEdge()->dst_node());
-  task_proto->set_data_path(GetStringFromPbMessage(
-      decode_node->chain_node()->SoleOp()->GetCustomizedConf(), "data_dir"));
+  task_proto->set_data_path(
+      decode_node->chain_node()->SoleOp()->GetStringFromCustomizedConf(
+          "data_dir"));
 }
 
 }  // namespace oneflow

@@ -204,6 +204,11 @@ void DataMergeChains(std::list<Chain>* chain_list,
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
 }
 
+void MergeDecodeNodes(std::list<Chain>* chain_list,
+                      Logical2ChainItMap* logical2chain_it) {
+  // TODO
+}
+
 }  // namespace
 
 ChainGraph::ChainGraph(bool is_train) {
@@ -227,6 +232,7 @@ void ChainGraph::BuildFwStruct(
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
   InitChains(&chain_list, &logical2chain_it);
+  MergeDecodeNodes(&chain_list, &logical2chain_it);
   ModelMergeChains(&chain_list, &logical2chain_it);
   DataMergeChains(&chain_list, &logical2chain_it);
   // Init chain_nodes
@@ -243,6 +249,7 @@ void ChainGraph::BuildFwStruct(
       if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
       } else if (op->IsDecodeOp()) {
+        // TODO: may contain mutiple decode ops
         chain_node = NewNode<DecodeChainNode>();
       } else if (op->IsPrintOp()) {
         chain_node = NewNode<PrintChainNode>();
@@ -289,11 +296,27 @@ void ChainGraph::BuildFwStruct(
 }
 
 void ChainGraph::BuildRecordLoadStruct() {
+  HashMap<std::string, std::vector<DecodeChainNode*>> data_dir2decode_node;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
-    ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
-    Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
-    record_load_node->mut_parallel_desc() = decode_node->parallel_desc();
+    std::string data_dir =
+        decode_node->SoleOp()->GetStringFromCustomizedConf("data_dir");
+    auto iter = data_dir2decode_node.find(data_dir);
+    if (iter == data_dir2decode_node.end()) {
+      CHECK(data_dir2decode_node
+                .emplace(data_dir, std::vector<DecodeChainNode*>{decode_node})
+                .second);
+    } else {
+      iter->second.emplace_back(decode_node);
+    }
   });
+  for (auto& pair : data_dir2decode_node) {
+    ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
+    record_load_node->mut_parallel_desc() =
+        pair.second.front()->parallel_desc();
+    for (DecodeChainNode* decode_node : pair.second) {
+      Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
+    }
+  }
 }
 
 void ChainGraph::BuildBwStruct() {

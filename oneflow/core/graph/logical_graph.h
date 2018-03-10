@@ -70,6 +70,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                              HashMap<std::string, LogicalNode*>* op_name2node);
   void FillNodeWithParallelDesc(
       const HashMap<std::string, LogicalNode*>& op_name2node);
+  void SplitDecodeNodes();
 
   struct CloneInfo {
     std::shared_ptr<Operator> clone_op;

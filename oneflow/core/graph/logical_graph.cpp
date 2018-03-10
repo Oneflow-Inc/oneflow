@@ -116,6 +116,10 @@ void LogicalGraph::FillNodeWithParallelDesc(
   });
 }
 
+void LogicalGraph::SplitDecodeNodes() {
+  // TODO: split decode logical nodes
+}
+
 void LogicalGraph::AddCloneNodes(
     const HashMap<LogicalEdge*, std::string>& edge2lbn,
     const HashMap<LogicalEdge*, std::string>& edge2ibn) {
