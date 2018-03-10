@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/logical_graph.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -117,7 +118,43 @@ void LogicalGraph::FillNodeWithParallelDesc(
 }
 
 void LogicalGraph::SplitDecodeNodes() {
-  // TODO: split decode logical nodes
+  std::list<LogicalNode*> decode_nodes;
+  ForEachNode([&](LogicalNode* cur_node) {
+    if (cur_node->in_edges().empty()) { decode_nodes.push_back(cur_node); }
+  });
+  for (LogicalNode* decode_node : decode_nodes) {
+    CHECK(decode_node->op()->op_conf().has_decode_ofrecord_conf());
+    const DecodeOFRecordOpConf& op_conf =
+        decode_node->op()->op_conf().decode_ofrecord_conf();
+    if (op_conf.blob_size() == 1) { continue; }
+    HashMap<std::string, LogicalNode*> lbn2producer;
+    FOR_RANGE(int32_t, i, 0, op_conf.blob_size()) {
+      DecodeOFRecordOpConf decode_conf;
+      decode_conf.CopyFrom(op_conf);
+      decode_conf.clear_blob();
+      *decode_conf.add_blob() = op_conf.blob(i);
+      OperatorConf cur_op_conf(decode_node->op()->op_conf());
+      *cur_op_conf.mutable_decode_ofrecord_conf() = decode_conf;
+      LogicalNode* cur_node = NewNode();
+      cur_node->mut_op() = ConstructOp(cur_op_conf);
+      for (const std::string& obn : cur_node->op()->output_bns()) {
+        const std::string& lbn = cur_node->op()->Lbn4BnInOp(obn);
+        CHECK(lbn2producer.emplace(lbn, cur_node).second);
+      }
+    }
+    for (LogicalEdge* edge : decode_node->out_edges()) {
+      LogicalNode* cur_node = edge->src_node();
+      for (const std::string& ibn : cur_node->op()->input_bns()) {
+        const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
+        LogicalNode* pred_node = lbn2producer.at(lbn);
+        CHECK(pred_node != cur_node);
+        if (pred_node == cur_node) { continue; }
+        LogicalEdge* edge = NewEdge();
+        Connect(pred_node, edge, cur_node);
+      }
+      DisConnect(edge);
+    }
+  }
 }
 
 void LogicalGraph::AddCloneNodes(

@@ -206,7 +206,47 @@ void DataMergeChains(std::list<Chain>* chain_list,
 
 void MergeDecodeNodes(std::list<Chain>* chain_list,
                       Logical2ChainItMap* logical2chain_it) {
-  // TODO
+  HashMap<std::string, std::vector<const LogicalNode*>> name2decode_nodes;
+  for (auto& pair : *logical2chain_it) {
+    const LogicalNode* cur_node = pair.first;
+    if (cur_node->op()->IsDecodeOp()) {
+      const DecodeOFRecordOpConf& op_conf =
+          cur_node->op()->op_conf().decode_ofrecord_conf();
+      std::string name = op_conf.data_dir() + "/"
+                         + std ::to_string(op_conf.blob(0).max_sequence_size());
+      auto iter = name2decode_nodes.find(name);
+      if (iter == name2decode_nodes.end()) {
+        CHECK(name2decode_nodes
+                  .emplace(name, std::vector<const LogicalNode*>{cur_node})
+                  .second);
+      } else {
+        iter->second.emplace_back(cur_node);
+      }
+    }
+  }
+  for (auto& pair : name2decode_nodes) {
+    if (pair.second.size() == 1) { continue; }
+    ChainIt decode_chain = logical2chain_it->at(pair.second.front());
+    FOR_RANGE(size_t, i, 1, pair.second.size()) {
+      ChainIt cur_chain = logical2chain_it->at(pair.second.at(i));
+      decode_chain->nodes.insert(decode_chain->nodes.end(),
+                                 cur_chain->nodes.begin(),
+                                 cur_chain->nodes.end());
+      CHECK_EQ(cur_chain->ancestors.size(), 0);
+      decode_chain->descendants.insert(cur_chain->descendants.begin(),
+                                       cur_chain->descendants.end());
+      decode_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
+                                              cur_chain->nodes.end());
+      decode_chain->descendants_and_this.insert(
+          cur_chain->descendants_and_this.begin(),
+          cur_chain->descendants_and_this.end());
+      for (const LogicalNode* node : cur_chain->nodes) {
+        decode_chain->descendants.erase(node);
+        logical2chain_it->at(node) = decode_chain;
+      }
+      chain_list->erase(cur_chain);
+    }
+  }
 }
 
 }  // namespace
@@ -248,14 +288,13 @@ void ChainGraph::BuildFwStruct(
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
-      } else if (op->IsDecodeOp()) {
-        // TODO: may contain mutiple decode ops
-        chain_node = NewNode<DecodeChainNode>();
       } else if (op->IsPrintOp()) {
         chain_node = NewNode<PrintChainNode>();
       } else {
         // do nothing
       }
+    } else if (chain_it->nodes[0]->op()->IsDecodeOp()) {
+      chain_node = NewNode<DecodeChainNode>();
     }
     if (chain_node == nullptr) { chain_node = NewNode<ForwardChainNode>(); }
     chain_it2chain_node[chain_it] = chain_node;
