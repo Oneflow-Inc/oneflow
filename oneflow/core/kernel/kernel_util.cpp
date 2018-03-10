@@ -149,7 +149,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
     *max_ptr = x[0];
-    for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max_element(*max_ptr, x[i]); }
+    for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
   }
   static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
                                      const T* y, const int y_idx, int* mask) {
