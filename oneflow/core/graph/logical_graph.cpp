@@ -143,17 +143,16 @@ void LogicalGraph::SplitDecodeNodes() {
       }
     }
     for (LogicalEdge* edge : decode_node->out_edges()) {
-      LogicalNode* cur_node = edge->src_node();
+      LogicalNode* cur_node = edge->dst_node();
       for (const std::string& ibn : cur_node->op()->input_bns()) {
         const std::string& lbn = cur_node->op()->Lbn4BnInOp(ibn);
         LogicalNode* pred_node = lbn2producer.at(lbn);
         CHECK(pred_node != cur_node);
-        if (pred_node == cur_node) { continue; }
-        LogicalEdge* edge = NewEdge();
-        Connect(pred_node, edge, cur_node);
+        LogicalEdge* load2decode_edge = NewEdge();
+        Connect(pred_node, load2decode_edge, cur_node);
       }
-      DisConnect(edge);
     }
+    for (LogicalEdge* edge : decode_node->out_edges()) { DisConnect(edge); }
   }
 }
 
