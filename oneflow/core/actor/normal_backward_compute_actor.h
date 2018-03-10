@@ -20,8 +20,6 @@ class NormalBackwardCompActor final : public BackwardCompActor {
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
-
-  HashMap<int64_t, std::deque<std::deque<Regst*>>> readable_deq_regsts_;
 };
 
 }  // namespace oneflow

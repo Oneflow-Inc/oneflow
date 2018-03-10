@@ -29,6 +29,10 @@ class BackwardCompActor : public CompActor {
   void set_is_out_diff_eord(bool val) { is_out_diff_eord_ = val; }
   void set_model_tmp_regst(Regst* regst) { model_tmp_regst_ = regst; }
 
+  HashMap<int64_t, std::deque<std::deque<Regst*>>>* readable_deq_regsts() {
+    return &readable_deq_regsts_;
+  }
+
   void HandleOutDiffRegsts(Regst*, std::deque<std::deque<Regst*>>*);
   void AsyncReturnModelRegstUntilMatchCurOutRegst(int64_t cur_model_id);
   void AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id);
@@ -57,6 +61,8 @@ class BackwardCompActor : public CompActor {
   std::queue<Regst*> model_regsts_;
   Regst* model_tmp_regst_;
   bool has_cur_piece_started_;
+
+  HashMap<int64_t, std::deque<std::deque<Regst*>>> readable_deq_regsts_;
 };
 
 }  // namespace oneflow

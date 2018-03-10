@@ -9,7 +9,7 @@ void NormalBackwardCompActor::VirtualBackwardCompActorInit(
         || pair.second == model_tmp_regst_desc_id()) {
       continue;
     }
-    readable_deq_regsts_[pair.second] = {};
+    (*readable_deq_regsts())[pair.second] = {};
   }
   OF_SET_MSG_HANDLER(&NormalBackwardCompActor::HandlerNormal);
 }
@@ -30,7 +30,7 @@ int NormalBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
       } else if (cur_regst_desc_id == model_regst_desc_id()) {
         model_regsts()->push(cur_regst);
       } else {
-        auto& rdq = readable_deq_regsts_.at(cur_regst_desc_id);
+        auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
         if (cur_regst_desc_id == out_diff_regst_desc_id()) {
           HandleOutDiffRegsts(cur_regst, &rdq);
         } else {
@@ -55,11 +55,11 @@ bool NormalBackwardCompActor::IsReadReady() {
   if (model_regst_desc_id() != -1 && model_regsts()->empty()) { return false; }
   if (model_tmp_regst_desc_id() != -1 && !model_tmp_regst()) { return false; }
 
-  auto& out_rdq = readable_deq_regsts_.at(out_regst_desc_id());
+  auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
   if (out_rdq.empty()) { return false; }
   if (out_rdq.front().empty()) { return false; }
 
-  for (auto& pair : readable_deq_regsts_) {
+  for (auto& pair : *readable_deq_regsts()) {
     if (pair.first == out_regst_desc_id()) { continue; }
     auto& rdq = pair.second;
     if (rdq.empty()) { return false; }
@@ -79,15 +79,15 @@ bool NormalBackwardCompActor::IsReadReady() {
 
 bool NormalBackwardCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_out_diff_eord()
-         && readable_deq_regsts_.at(out_diff_regst_desc_id()).empty();
+         && readable_deq_regsts()->at(out_diff_regst_desc_id()).empty();
 }
 
 void NormalBackwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
-  for (auto& pair : readable_deq_regsts_) { CHECK(pair.second.empty()); }
+  for (auto& pair : *readable_deq_regsts()) { CHECK(pair.second.empty()); }
 }
 
 void NormalBackwardCompActor::Act() {
-  auto& out_rdq = readable_deq_regsts_.at(out_regst_desc_id());
+  auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
   Regst* out_regst = nullptr;
   if (order() == ColIdOrder::kDescending) {
     out_regst = out_rdq.front().back();
@@ -110,7 +110,7 @@ void NormalBackwardCompActor::Act() {
                         } else if (regst_desc_id == model_regst_desc_id()) {
                           return model_regsts()->front();
                         } else {
-                          auto& rdq = readable_deq_regsts_.at(regst_desc_id);
+                          auto& rdq = readable_deq_regsts()->at(regst_desc_id);
                           if (order() == ColIdOrder::kDescending) {
                             return rdq.front().back();
                           } else {
@@ -143,7 +143,7 @@ void NormalBackwardCompActor::Act() {
     }
   }
 
-  for (auto& pair : readable_deq_regsts_) {
+  for (auto& pair : *readable_deq_regsts()) {
     if (pair.first == out_regst_desc_id()) { continue; }
     auto& rdq = pair.second;
     if (order() == ColIdOrder::kDescending) {
@@ -167,7 +167,7 @@ void NormalBackwardCompActor::Act() {
 
 void NormalBackwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  for (const auto& pair : readable_deq_regsts_) {
+  for (const auto& pair : *readable_deq_regsts()) {
     if (order() == ColIdOrder::kDescending) {
       handler(pair.second.front().back());
     } else {

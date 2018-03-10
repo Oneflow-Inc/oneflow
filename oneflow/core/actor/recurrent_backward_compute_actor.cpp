@@ -15,7 +15,7 @@ void RecurrentBackwardCompActor::VirtualBackwardCompActorInit(
         || pair.second == rec_out_diff_regst_desc_id_) {
       continue;
     }
-    readable_deq_regsts_[pair.second] = {};
+    (*readable_deq_regsts())[pair.second] = {};
   }
   if (parallel_ctx()->policy() == kDataParallel) {
     CHECK_EQ(-1, rec_out_diff_regst_desc_id_);
@@ -55,7 +55,7 @@ int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
           rec_out_diff_regst_ = cur_regst;
         }
       } else {
-        auto& rdq = readable_deq_regsts_.at(cur_regst_desc_id);
+        auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
         if (cur_regst_desc_id == out_diff_regst_desc_id()) {
           HandleOutDiffRegsts(cur_regst, &rdq);
         } else {
@@ -87,6 +87,7 @@ bool RecurrentBackwardCompActor::RetFalseOrTerminate(Regst* out_regst) const {
     return false;
   } else {
     UNEXPECTED_RUN();
+    return false;
   }
 }
 
@@ -94,7 +95,7 @@ bool RecurrentBackwardCompActor::IsReadReady() {
   if (model_regsts()->empty()) { return false; }
   if (model_tmp_regst_desc_id() != -1 && !model_tmp_regst()) { return false; }
 
-  auto& out_rdq = readable_deq_regsts_.at(out_regst_desc_id());
+  auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
   if (out_rdq.empty()) { return false; }
   CHECK(!out_rdq.front().empty());
   Regst* out_regst = out_rdq.front().back();
@@ -111,7 +112,7 @@ bool RecurrentBackwardCompActor::IsReadReady() {
     CHECK(rec_out_diff_regst_->HaveNextPieceColStatusOf(out_regst));
   }
 
-  for (auto& pair : readable_deq_regsts_) {
+  for (auto& pair : *readable_deq_regsts()) {
     if (pair.first == out_regst_desc_id()) { continue; }
     auto& rdq = pair.second;
     if (rdq.empty()) { return false; }
@@ -133,7 +134,7 @@ bool RecurrentBackwardCompActor::IsReadReady() {
 Blob* RecurrentBackwardCompActor::HandleSpecialBnInOp(
     const std::string& bn_in_op) {
   if (bn_in_op == "rec_in" && parallel_ctx()->policy() == kDataParallel) {
-    auto& out_rdq = readable_deq_regsts_.at(out_regst_desc_id());
+    auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
     CHECK_GT(out_rdq.front().back()->col_id(), 0);
     Regst* regst = *(out_rdq.front().end() - 2);
     return regst->GetBlobByLbn("rnn_cell/out");
@@ -155,14 +156,14 @@ void RecurrentBackwardCompActor::Act() {
           } else if (regst_desc_id == rec_out_diff_regst_desc_id_) {
             return rec_out_diff_regst_;
           } else {
-            return readable_deq_regsts_.at(regst_desc_id).front().back();
+            return readable_deq_regsts()->at(regst_desc_id).front().back();
           }
         } else {
           return regst;
         }
       });
 
-  auto& out_rdq = readable_deq_regsts_.at(out_regst_desc_id());
+  auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
   Regst* out_regst = out_rdq.front().back();
   out_rdq.front().pop_back();
   if (out_regst->col_id() == 0) {
@@ -195,7 +196,7 @@ void RecurrentBackwardCompActor::Act() {
     rec_out_diff_regst_ = nullptr;
   }
   // other
-  for (auto& pair : readable_deq_regsts_) {
+  for (auto& pair : *readable_deq_regsts()) {
     if (pair.first == out_regst_desc_id()) { continue; }
     auto& rdq = pair.second;
     if ((pair.first != rec_in_regst_desc_id_)
@@ -216,19 +217,19 @@ void RecurrentBackwardCompActor::Act() {
 
 bool RecurrentBackwardCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_out_diff_eord()
-         && readable_deq_regsts_.at(out_diff_regst_desc_id()).empty();
+         && readable_deq_regsts()->at(out_diff_regst_desc_id()).empty();
 }
 
 void RecurrentBackwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
   CHECK(h0_regsts_.empty());
   CHECK(!rec_out_diff_regst_);
-  for (auto& pair : readable_deq_regsts_) { CHECK(pair.second.empty()); }
+  for (auto& pair : *readable_deq_regsts()) { CHECK(pair.second.empty()); }
 }
 
 void RecurrentBackwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
   Regst* out_regst =
-      readable_deq_regsts_.at(out_regst_desc_id()).front().back();
+      readable_deq_regsts()->at(out_regst_desc_id()).front().back();
   handler(out_regst);
   if (!out_regst->IsMaxCol() && rec_out_diff_regst_desc_id_ != -1) {
     handler(rec_out_diff_regst_);
@@ -236,7 +237,7 @@ void RecurrentBackwardCompActor::ForEachCurReadableRegst(
   if (out_regst->col_id() == 0 && h0_regst_desc_id_ != -1) {
     handler(h0_regsts_.front());
   }
-  for (const auto& pair : readable_deq_regsts_) {
+  for (const auto& pair : *readable_deq_regsts()) {
     if (pair.first == out_regst_desc_id()) { continue; }
     if ((pair.first != rec_in_regst_desc_id_)
         || (pair.first == rec_in_regst_desc_id_ && out_regst->col_id() != 0)) {
