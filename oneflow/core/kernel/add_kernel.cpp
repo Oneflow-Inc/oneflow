@@ -11,7 +11,7 @@ void AddKernel<device_type, T>::ForwardDataContent(
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
   const int count = out_blob->shape().elem_cnt();
   for (size_t i = 1; i < this->kernel_conf().input_bns().size(); ++i) {
-    const std::string ibn = this->kernel_conf().input_bns()[i];
+    const std::string& ibn = this->kernel_conf().input_bns()[i];
     const Blob* in_blob = BnInOp2Blob(ibn);
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, count, static_cast(1),
                                      in_blob->dptr<T>(), 1,
@@ -25,7 +25,7 @@ void AddKernel<device_type, T>::BackwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
-    const std::string idbn = this->kernel_conf().input_diff_bns()[i];
+    const std::string& idbn = this->kernel_conf().input_diff_bns()[i];
     Blob* in_diff_blob = BnInOp2Blob(idbn);
     in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
   }
