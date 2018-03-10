@@ -5,8 +5,14 @@ namespace oneflow {
 void DecodeOFRecordOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_ofrecord_conf());
   EnrollInputBn("in", false);
-  for (int32_t i = 0; i < op_conf().decode_ofrecord_conf().blob_size(); ++i) {
+  const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
+  for (int32_t i = 0; i < conf.blob_size(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
+  }
+  if (conf.suffix_length() != -1) {
+    CHECK_GE(conf.suffix_length(),
+             std::to_string(JobDesc::Singleton()->job_conf().data_part_num())
+                 .length());
   }
 }
 
