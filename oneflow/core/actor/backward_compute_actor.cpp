@@ -19,6 +19,32 @@ void BackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   VirtualBackwardCompActorInit(task_proto);
 }
 
+int BackwardCompActor::HandlerNormal(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    if (msg.eord_regst_desc_id() == out_diff_regst_desc_id_) {
+      is_out_diff_eord_ = true;
+    }
+    DecreaseRemainingEordCnt();
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    Regst* cur_regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
+      int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
+      if (cur_regst_desc_id == model_tmp_regst_desc_id_) {
+        CHECK(!model_tmp_regst_);
+        model_tmp_regst_ = cur_regst;
+      } else if (cur_regst_desc_id == model_regst_desc_id_) {
+        model_regsts_.push(cur_regst);
+      } else {
+        HandleTheRestOfRegstMsg(cur_regst);
+      }
+    }
+    ActUntilFail();
+  } else {
+    UNEXPECTED_RUN();
+  }
+  return TrySwitchToZombieOrFinish();
+}
+
 void BackwardCompActor::HandleOutDiffRegsts(
     Regst* cur_regst, std::deque<std::deque<Regst*>>* out_diff_regsts) {
   TryUpdtColIdOrder(cur_regst, &order_);
@@ -83,6 +109,11 @@ void BackwardCompActor::ForCurReadableModelAndModelTmp(
     std::function<void(const Regst*)> handler) {
   if (model_regst_desc_id_ != -1) { handler(model_regsts_.front()); }
   if (model_tmp_regst_desc_id_ != -1) { handler(model_tmp_regst_); }
+}
+
+bool BackwardCompActor::IsReadAlwaysUnReadyFromNow() {
+  return is_out_diff_eord_
+         && readable_deq_regsts_.at(out_diff_regst_desc_id_).empty();
 }
 
 }  // namespace oneflow

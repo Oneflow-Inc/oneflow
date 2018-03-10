@@ -14,13 +14,12 @@ class RecurrentBackwardCompActor final : public BackwardCompActor {
 
  private:
   void VirtualBackwardCompActorInit(const TaskProto&) override;
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-  Blob* HandleSpecialBnInOp(const std::string& bn_in_op) override;
   void CheckBeforeAsyncReturnAllReadableRegst() override;
+  void HandleTheRestOfRegstMsg(Regst*) override;
 
-  int HandlerNormal(const ActorMsg&) override;
+  Blob* HandleSpecialBnInOp(const std::string& bn_in_op) override;
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
   bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
 
   bool RetFalseOrTerminate(Regst*) const;

@@ -14,11 +14,10 @@ class NormalBackwardCompActor final : public BackwardCompActor {
  private:
   void VirtualBackwardCompActorInit(const TaskProto&) override;
   void CheckBeforeAsyncReturnAllReadableRegst() override;
+  void HandleTheRestOfRegstMsg(Regst*) override;
 
-  int HandlerNormal(const ActorMsg&) override;
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
   bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override;
   void Act() override;
 };
 

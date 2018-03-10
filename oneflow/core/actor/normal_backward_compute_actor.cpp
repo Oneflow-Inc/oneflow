@@ -14,41 +14,19 @@ void NormalBackwardCompActor::VirtualBackwardCompActorInit(
   OF_SET_MSG_HANDLER(&NormalBackwardCompActor::HandlerNormal);
 }
 
-int NormalBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    if (msg.eord_regst_desc_id() == out_diff_regst_desc_id()) {
-      set_is_out_diff_eord(true);
-    }
-    DecreaseRemainingEordCnt();
-  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    Regst* cur_regst = msg.regst();
-    if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
-      int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
-      if (cur_regst_desc_id == model_tmp_regst_desc_id()) {
-        CHECK(!model_tmp_regst());
-        set_model_tmp_regst(cur_regst);
-      } else if (cur_regst_desc_id == model_regst_desc_id()) {
-        model_regsts()->push(cur_regst);
-      } else {
-        auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
-        if (cur_regst_desc_id == out_diff_regst_desc_id()) {
-          HandleOutDiffRegsts(cur_regst, &rdq);
-        } else {
-          if (cur_regst->col_id() == 0) { rdq.push_back(std::deque<Regst*>()); }
-          if (cur_regst_desc_id == out_regst_desc_id() && rdq.size() == 1
-              && rdq.front().empty()) {
-            AsyncReturnModelRegstUntilMatchCurOutRegst(
-                cur_regst->model_version_id());
-          }
-          rdq.back().push_back(cur_regst);
-        }
-      }
-    }
-    ActUntilFail();
+void NormalBackwardCompActor::HandleTheRestOfRegstMsg(Regst* cur_regst) {
+  int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
+  auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
+  if (cur_regst_desc_id == out_diff_regst_desc_id()) {
+    HandleOutDiffRegsts(cur_regst, &rdq);
   } else {
-    UNEXPECTED_RUN();
+    if (cur_regst->col_id() == 0) { rdq.push_back(std::deque<Regst*>()); }
+    if (cur_regst_desc_id == out_regst_desc_id() && rdq.size() == 1
+        && rdq.front().empty()) {
+      AsyncReturnModelRegstUntilMatchCurOutRegst(cur_regst->model_version_id());
+    }
+    rdq.back().push_back(cur_regst);
   }
-  return TrySwitchToZombieOrFinish();
 }
 
 bool NormalBackwardCompActor::IsReadReady() {
@@ -75,11 +53,6 @@ bool NormalBackwardCompActor::IsReadReady() {
     }
   }
   return true;
-}
-
-bool NormalBackwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_out_diff_eord()
-         && readable_deq_regsts()->at(out_diff_regst_desc_id()).empty();
 }
 
 void NormalBackwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {

@@ -28,58 +28,38 @@ void RecurrentBackwardCompActor::VirtualBackwardCompActorInit(
   OF_SET_MSG_HANDLER(&RecurrentBackwardCompActor::HandlerNormal);
 }
 
-int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    if (msg.eord_regst_desc_id() == out_diff_regst_desc_id()) {
-      set_is_out_diff_eord(true);
-    }
-    DecreaseRemainingEordCnt();
-  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    Regst* cur_regst = msg.regst();
-    if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
-      int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
-      int64_t cur_col_id = cur_regst->col_id();
+void RecurrentBackwardCompActor::HandleTheRestOfRegstMsg(Regst* cur_regst) {
+  int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
+  int64_t cur_col_id = cur_regst->col_id();
 
-      if (cur_regst_desc_id == model_regst_desc_id()) {
-        model_regsts()->push(cur_regst);
-      } else if (cur_regst_desc_id == model_tmp_regst_desc_id()) {
-        CHECK(!model_tmp_regst());
-        set_model_tmp_regst(cur_regst);
-      } else if (cur_regst_desc_id == h0_regst_desc_id_) {
-        h0_regsts_.push(cur_regst);
-      } else if (cur_regst_desc_id == rec_out_diff_regst_desc_id_) {
-        CHECK(!rec_out_diff_regst_);
-        if (cur_col_id == 0) {
-          AsyncSendRegstMsgToProducer(cur_regst);
-        } else {
-          rec_out_diff_regst_ = cur_regst;
-        }
+  if (cur_regst_desc_id == h0_regst_desc_id_) {
+    h0_regsts_.push(cur_regst);
+  } else if (cur_regst_desc_id == rec_out_diff_regst_desc_id_) {
+    CHECK(!rec_out_diff_regst_);
+    if (cur_col_id == 0) {
+      AsyncSendRegstMsgToProducer(cur_regst);
+    } else {
+      rec_out_diff_regst_ = cur_regst;
+    }
+  } else {
+    auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
+    if (cur_regst_desc_id == out_diff_regst_desc_id()) {
+      HandleOutDiffRegsts(cur_regst, &rdq);
+    } else {
+      if (cur_regst_desc_id == rec_in_regst_desc_id_ && cur_regst->IsMaxCol()) {
+        AsyncSendRegstMsgToProducer(cur_regst);
       } else {
-        auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
-        if (cur_regst_desc_id == out_diff_regst_desc_id()) {
-          HandleOutDiffRegsts(cur_regst, &rdq);
-        } else {
-          if (cur_regst_desc_id == rec_in_regst_desc_id_
-              && cur_regst->IsMaxCol()) {
-            AsyncSendRegstMsgToProducer(cur_regst);
-          } else {
-            if (cur_col_id == 0) {
-              rdq.push_back(std::deque<Regst*>());
-              if (cur_regst_desc_id == out_regst_desc_id() && rdq.size() == 1) {
-                AsyncReturnModelRegstUntilMatchCurOutRegst(
-                    cur_regst->model_version_id());
-              }
-            }
-            rdq.back().push_back(cur_regst);
+        if (cur_col_id == 0) {
+          rdq.push_back(std::deque<Regst*>());
+          if (cur_regst_desc_id == out_regst_desc_id() && rdq.size() == 1) {
+            AsyncReturnModelRegstUntilMatchCurOutRegst(
+                cur_regst->model_version_id());
           }
         }
+        rdq.back().push_back(cur_regst);
       }
     }
-    ActUntilFail();
-  } else {
-    UNEXPECTED_RUN();
   }
-  return TrySwitchToZombieOrFinish();
 }
 
 bool RecurrentBackwardCompActor::RetFalseOrTerminate(Regst* out_regst) const {
@@ -213,11 +193,6 @@ void RecurrentBackwardCompActor::Act() {
   if (out_regst->IsMaxCol()) { set_has_cur_piece_started(true); }
   if (out_regst->col_id() == 0) { set_has_cur_piece_started(false); }
   AsyncSendRegstMsgToProducer(out_regst);
-}
-
-bool RecurrentBackwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_out_diff_eord()
-         && readable_deq_regsts()->at(out_diff_regst_desc_id()).empty();
 }
 
 void RecurrentBackwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
