@@ -353,9 +353,9 @@ message BlobConf {
 
 message DecodeOFRecordOpConf {
   required string data_dir = 1;
-  repeated BlobConf blob = 2;
-  optional string prefix = 3 [default = "part-"];
-  optional int32 suffix_length = 4 [default = -1];
+  optional string part_name_prefix = 2 [default = "part-"];
+  optional int32 part_name_suffix_length = 3 [default = -1];
+  repeated BlobConf blob = 4;
 }
 
 message OperatorConf {

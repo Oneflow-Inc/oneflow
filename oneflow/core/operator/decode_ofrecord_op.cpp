@@ -9,10 +9,11 @@ void DecodeOFRecordOp::InitFromOpConf() {
   for (int32_t i = 0; i < conf.blob_size(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
-  if (conf.suffix_length() != -1) {
-    CHECK_GE(conf.suffix_length(),
-             std::to_string(JobDesc::Singleton()->job_conf().data_part_num())
-                 .length());
+  if (conf.part_name_suffix_length() != -1) {
+    CHECK_GE(
+        conf.part_name_suffix_length(),
+        std::to_string(JobDesc::Singleton()->job_conf().data_part_num() - 1)
+            .length());
   }
 }
 
