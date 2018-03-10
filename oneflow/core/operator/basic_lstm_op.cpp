@@ -70,13 +70,19 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("h2h_c_weight") =
       BlobDesc(Shape({hidden_size, embedding_zie}));
 
-  if (GetBoolFromCustomizedConf("use_bias")) {
+  if (GetBoolFromCustomizedConf("use_f_bias")) {
     *GetBlobDesc4BnInOp("bias_f") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_f_multiplier") = BlobDesc(Shape({data_num, 1}));
+	}
+	if (GetBoolFromCustomizedConf("use_o_bias")) {
     *GetBlobDesc4BnInOp("bias_o") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_o_multiplier") = BlobDesc(Shape({data_num, 1}));
+	}
+	if (GetBoolFromCustomizedConf("use_i_bias")) {
     *GetBlobDesc4BnInOp("bias_i") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_i_multiplier") = BlobDesc(Shape({data_num, 1}));
+	}
+	if (GetBoolFromCustomizedConf("use_c_bias")) {
     *GetBlobDesc4BnInOp("bias_c") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
   }
