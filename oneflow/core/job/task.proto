@@ -15,7 +15,7 @@ enum TaskType {
   kLoss = 6;
   kLossAcc = 7;
   kLossPrint = 8;
-  kMdUpdt = 9;
+  kNormalMdUpdt = 9;
   kMdSave = 10;
   kMdDiffAcc = 11;
   kCopyHd = 12;
@@ -24,6 +24,7 @@ enum TaskType {
   kPrint = 15;
   kRecordLoad = 16;
   kEmbeddingLookupBackward = 20;
+  kEmbeddingLookupMdUpdt = 21;
 };
 
 message TaskProto {

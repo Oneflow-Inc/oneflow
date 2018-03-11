@@ -390,7 +390,12 @@ void ChainGraph::BuildLossPrintStruct() {
 
 MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     bool is_train, ForwardChainNode* fw_chain) {
-  MdUpdtChainNode* md_updt_chain = NewNode<MdUpdtChainNode>();
+  MdUpdtChainNode* md_updt_chain;
+  if (fw_chain->HasSoleEmbeddingLookupOp()) {
+    md_updt_chain = NewNode<EmbeddingLookupMdUpdtChainNode>();
+  } else {
+    md_updt_chain = NewNode<NormalMdUpdtChainNode>();
+  }
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
   if (is_train) {
     OperatorConf model_save_op_conf;
@@ -440,9 +445,6 @@ void ChainGraph::BuildModelStruct(
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     if (is_train == false) { return; }
     // Model Diff Accumulate Chain
-    if (fw_chain->HasSoleEmbeddingLookupOp()) {
-      md_updt_chain->SetEmbeddingLookupMdUpdt();
-    }
     BackwardChainNode* bw_chain = fw_chain->bw_node();
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;

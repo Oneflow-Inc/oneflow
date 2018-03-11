@@ -80,7 +80,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual std::vector<std::string> FindLbnsFrom##x(const ChainNode*) const;
 
   OF_PP_FOR_EACH_TUPLE(DECLARE_VIRTUAL_FROM_METHOD, CHAIN_TYPE_SEQ);
-#undef DECLARE_VIRTUAL_METHOD
+#undef DECLARE_VIRTUAL_FROM_METHOD
 
  protected:
   ChainNode() = default;
@@ -239,7 +239,7 @@ class LossPrintChainNode final : public ChainNode {
                                    (LossAcc));
 };
 
-class MdUpdtChainNode final : public ChainNode {
+class MdUpdtChainNode : public ChainNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdtChainNode);
   MdUpdtChainNode() : random_seed_(NewRandomSeed()) {}
@@ -250,21 +250,44 @@ class MdUpdtChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (MdDiffAcc));
+
+ private:
+  void FixCompTaskNode(CompTaskNode*) const override;
+
+  uint32_t random_seed_;
+};
+
+class NormalMdUpdtChainNode final : public MdUpdtChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtChainNode);
+  NormalMdUpdtChainNode() = default;
+  ~NormalMdUpdtChainNode() = default;
+
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
       (MdDiffAcc));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
                                    (MdDiffAcc));
-
-  bool IsEmbeddingLookupMdUpdt() const { return is_embedding_lookup_mdupdt; }
-  void SetEmbeddingLookupMdUpdt() { is_embedding_lookup_mdupdt = true; }
-
  private:
-  void FixCompTaskNode(CompTaskNode*) const override;
+  CompTaskNode* NewCompTaskNode() const override;
+};
 
-  uint32_t random_seed_;
-  bool is_embedding_lookup_mdupdt = false;
+class EmbeddingLookupMdUpdtChainNode final : public MdUpdtChainNode {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EmbeddingLookupMdUpdtChainNode);
+  EmbeddingLookupMdUpdtChainNode() = default;
+  ~EmbeddingLookupMdUpdtChainNode() = default;
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+      OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
+      (MdDiffAcc));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (std::vector<std::string> FindLbns),
+                                   (MdDiffAcc));
+  
+ private:
+  CompTaskNode* NewCompTaskNode() const override;
 };
 
 class MdSaveChainNode final : public ChainNode {
