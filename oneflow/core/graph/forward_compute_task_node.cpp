@@ -59,8 +59,7 @@ void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
 void ForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
-    if (edge->src_bn() != "out"
-        || activation_regst->GetBlobDesc(edge->lbn()) == nullptr) {
+    if (activation_regst->GetBlobDesc(edge->lbn()) == nullptr) {
       activation_regst->AddLbn(edge->lbn());
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
     }

@@ -29,7 +29,6 @@ void ModifyOpLbn4BnInChainNode(HashMap<std::string, std::string>& olbn2ilbn,
       auto olbn2ilbn_it = olbn2ilbn.find(lbn);
       if (olbn2ilbn_it == olbn2ilbn.end()) { continue; }
       op.get()->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
-      olbn2ilbn.erase(olbn2ilbn_it);
     }
   }
 }
@@ -493,8 +492,8 @@ void ChainGraph::RemoveNeedlessCloneOp() {
     }
     ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, chain_node);
     if (!olbn2ilbn_in_clone_op.empty()) {
-      fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* child_chain_node) {
-        ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, child_chain_node);
+      fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* succ_chain_node) {
+        ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
       });
     }
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
