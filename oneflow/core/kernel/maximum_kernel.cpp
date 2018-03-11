@@ -6,10 +6,10 @@ template<DeviceType device_type, typename T>
 void MaximumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = BnInOp2Blob("out");
+  const Blob* out_blob = BnInOp2Blob("out");
   const Blob* in_blob0 = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
-  Blob* mask_blob = BnInOp2Blob("mask");
+  const Blob* mask_blob = BnInOp2Blob("mask");
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
                       mask_blob->ByteSizeOfDataContentField());
   const int count = out_blob->shape().elem_cnt();
@@ -26,7 +26,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* mask_blob = BnInOp2Blob("mask");
-  Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+  const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   const int count = mask_blob->shape().elem_cnt();
   for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
     Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns()[i]);
