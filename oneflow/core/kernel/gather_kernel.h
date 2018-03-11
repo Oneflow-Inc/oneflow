@@ -1,0 +1,46 @@
+#ifndef ONEFLOW_CORE_KERNEL_GATHER_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_GATHER_KERNEL_H_
+
+#include "oneflow/core/kernel/kernel.h"
+
+namespace oneflow {
+
+template<DeviceType device_type, typename T>
+class GatherKernel final : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(GatherKernel);
+  GatherKernel() = default;
+  ~GatherKernel() = default;
+
+ private:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
+  void ForwardDataId(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void ForwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void BackwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+
+  void BackwardColNum(const KernelCtx&,
+                      std::function<Blob*(const std::string&)>) const override;
+};
+
+template<DeviceType device_type, typename T>
+class GatherKernelUtil {
+ public:
+  static void Gather(DeviceCtx*, const int64_t n, const int32_t hidden_dim,
+                     const int32_t col_id, const T* src_dptr,
+                     const int32_t* col_num_ptr, T* dst_dptr);
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_KERNEL_GATHER_KERNEL_H_
