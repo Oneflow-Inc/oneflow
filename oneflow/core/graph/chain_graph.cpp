@@ -288,6 +288,8 @@ void ChainGraph::BuildFwStruct(
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
+      } else if (op->IsDecodeOp()) {
+        chain_node = NewNode<DecodeChainNode>();
       } else if (op->IsPrintOp()) {
         chain_node = NewNode<PrintChainNode>();
       } else {
@@ -338,7 +340,7 @@ void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, std::vector<DecodeChainNode*>> data_dir2decode_node;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
     std::string data_dir =
-        decode_node->SoleOp()->GetStringFromCustomizedConf("data_dir");
+        decode_node->op_vec().front()->GetStringFromCustomizedConf("data_dir");
     auto iter = data_dir2decode_node.find(data_dir);
     if (iter == data_dir2decode_node.end()) {
       CHECK(data_dir2decode_node

@@ -79,6 +79,7 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
   dlnet_conf_ = job_desc.dlnet_conf();
   resource_ = job_desc.resource();
   placement_ = job_desc.placement();
+  SplitDecodeOps();
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
@@ -102,6 +103,29 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
 #ifndef WITH_CUDA
   CHECK_EQ(resource_.gpu_device_num(), 0);
 #endif
+}
+
+void JobDesc::SplitDecodeOps() {
+  FOR_RANGE(int32_t, i, 0, dlnet_conf_.op_size()) {
+    const OperatorConf& op_conf = dlnet_conf_.op(i);
+    if (op_conf.has_decode_ofrecord_conf() == false) { continue; }
+    if (op_conf.decode_ofrecord_conf().blob_size() == 1) { continue; }
+    LOG(INFO) << "split " << op_conf.name();
+    const DecodeOFRecordOpConf& decode_conf = op_conf.decode_ofrecord_conf();
+    for (int32_t j = decode_conf.blob_size() - 1; j >= 0; --j) {
+      DecodeOFRecordOpConf gen_decode_conf;
+      gen_decode_conf.CopyFrom(decode_conf);
+      gen_decode_conf.clear_blob();
+      *gen_decode_conf.add_blob() = decode_conf.blob(j);
+      OperatorConf gen_op_conf(op_conf);
+      *gen_op_conf.mutable_decode_ofrecord_conf() = gen_decode_conf;
+      if (j == 0) {
+        *dlnet_conf_.mutable_op(i) = gen_op_conf;
+      } else {
+        *dlnet_conf_.add_op() = gen_op_conf;
+      }
+    }
+  }
 }
 
 }  // namespace oneflow
