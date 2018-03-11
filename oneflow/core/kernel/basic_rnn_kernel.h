@@ -54,6 +54,9 @@ struct BasicRnnKernelUtil {
   static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
                                  const T* out_diff, const T* rec_out_diff,
                                  T* plus_out_diff);
+  static void ComputeReluDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff);
 };
 
 }  // namespace oneflow
