@@ -9,7 +9,7 @@ class ElementwiseOp : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseOp);
   ElementwiseOp() = default;
-  ~ElementwiseOp() = default;
+  virtual ~ElementwiseOp() = default;
 
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
