@@ -40,7 +40,7 @@ class Operator {
   virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
-  virtual bool IsDataLoaderOp() const { return false; }
+  virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
@@ -58,19 +58,21 @@ class Operator {
   bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
-
-#define DEFINE_GET_VAL_FROM_SPECIAL_CONF(ret_type, func_name)                \
-  ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
-      const {                                                                \
-    const PbMessage& special_conf = GetCustomizedConf();                     \
-    return Get##func_name##FromPbMessage(special_conf, field_name);          \
+  virtual PbMessage* MutableCustomizedKernelConf(
+      KernelConf* kernel_conf) const {
+    UNIMPLEMENTED();
   }
 
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(std::string, String);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(bool, Bool);
-  DEFINE_GET_VAL_FROM_SPECIAL_CONF(const PbMessage&, Message);
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name)             \
+  ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
+      const {                                                                \
+    const PbMessage& customized_conf = GetCustomizedConf();                  \
+    return Get##func_name##FromPbMessage(customized_conf, field_name);       \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
+                           const PbMessage&, Message));
 
   template<typename T>
   const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
@@ -82,23 +84,54 @@ class Operator {
       const std::string& field_name) const {
     return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
-
-#undef DEFINE_GET_VAL_FROM_SPECIAL_CONF
-
-#define DEFINE_SET_VAL_In_SPECIAL_CONF(val_type, func_name)              \
-  void Set##func_name##InCustomizedConf(const std::string& field_name,   \
-                                        val_type val) const {            \
-    const PbMessage& special_conf = GetCustomizedConf();                 \
-    PbMessage* special_conf_ptr = &const_cast<PbMessage&>(special_conf); \
-    Set##func_name##InPbMessage(special_conf_ptr, field_name, val);      \
+  template<typename T>
+  const PbRpf<T>& GetPbRpfFromCustomizedConf(
+      const std::string& field_name) const {
+    return GetPbRpfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
-  DEFINE_SET_VAL_In_SPECIAL_CONF(std::string, String);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(int32_t, Int32);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(int64_t, Int64);
-  DEFINE_SET_VAL_In_SPECIAL_CONF(bool, Bool);
+#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
-#undef DEFINE_SET_VAL_IN_SPECIAL_CONF
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_CONF(val_type, func_name)                 \
+  void Set##func_name##InCustomizedConf(const std::string& field_name,         \
+                                        val_type val) const {                  \
+    const PbMessage& customized_conf = GetCustomizedConf();                    \
+    PbMessage* customized_conf_ptr = &const_cast<PbMessage&>(customized_conf); \
+    Set##func_name##InPbMessage(customized_conf_ptr, field_name, val);         \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_CONF
+
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name)         \
+  void Set##func_name##InCustomizedKernelConf(                                \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
+      const {                                                                 \
+    PbMessage* customized_kernel_conf_ptr =                                   \
+        MutableCustomizedKernelConf(kernel_conf);                             \
+    Set##func_name##InPbMessage(customized_kernel_conf_ptr, field_name, val); \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
+
+#define DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name) \
+  void Add##func_name##ToPbRfInCustomizedKernelConf(                          \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
+      const {                                                                 \
+    PbMessage* customized_kernel_conf_ptr =                                   \
+        MutableCustomizedKernelConf(kernel_conf);                             \
+    Add##func_name##InPbRf(customized_kernel_conf_ptr, field_name, val);      \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
 
   const std::string& SoleIbn() const;
   const std::string& SoleIdbn() const;
@@ -161,14 +194,20 @@ class Operator {
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
-  void EnrollOutputBn(const std::string& obn, bool has_diff);
-
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num,
+                             bool has_diff);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix);
+  void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
+
+  void StrFieldTolower(const std::string& field_name);
 
  private:
   std::string dtbn2lbn(const std::string& data_tmp_bn) const;

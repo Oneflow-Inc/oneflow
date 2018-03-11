@@ -195,7 +195,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (cur_logi_node->op()->IsLossOp()) { continue; }
-    if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
+    if (cur_logi_node->op()->IsDecodeOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
@@ -209,6 +209,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
 ChainGraph::ChainGraph(bool is_train) {
   HashMap<ChainNode*, const LogicalNode*> chain2first_shared;
   BuildFwStruct(is_train, &chain2first_shared);
+  BuildRecordLoadStruct();
   if (is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
@@ -241,8 +242,8 @@ void ChainGraph::BuildFwStruct(
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
-      } else if (op->IsDataLoaderOp()) {
-        chain_node = NewNode<SourceChainNode>();
+      } else if (op->IsDecodeOp()) {
+        chain_node = NewNode<DecodeChainNode>();
       } else if (op->IsPrintOp()) {
         chain_node = NewNode<PrintChainNode>();
       } else {
@@ -286,6 +287,8 @@ void ChainGraph::BuildFwStruct(
     }
   }
 }
+
+void ChainGraph::BuildRecordLoadStruct() { TODO(); }
 
 void ChainGraph::BuildBwStruct() {
   HashSet<ForwardChainNode*> fw_nodes_that_need_bw;
@@ -338,24 +341,39 @@ void ChainGraph::BuildBwStruct() {
 
 void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
+    std::shared_ptr<const Operator> loss_op = loss_chain->SoleOp();
+    // Reduce Sum op
+    OperatorConf sum_op_conf;
+    sum_op_conf.set_name("sum_op_" + NewUniqueId());
+    sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_op->Lbn4BnInOp("loss"));
+    sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
+    sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
+    std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
+    loss_chain->mut_op_vec().push_back(sum_op);
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
     loss_acc_op_conf.mutable_accumulate_conf();
     auto loss_acc_op = ConstructOp(loss_acc_op_conf);
-    OperatorConf reduction_acc_op_conf;
-    reduction_acc_op_conf.set_name("reduction_acc_" + NewUniqueId());
-    reduction_acc_op_conf.mutable_accumulate_conf();
-    auto reduction_acc_op = ConstructOp(reduction_acc_op_conf);
     auto loss_acc_chain = NewNode<LossAccChainNode>();
-    loss_acc_chain->mut_op_vec() = {loss_acc_op, reduction_acc_op};
+    loss_acc_chain->mut_op_vec() = {loss_acc_op};
     loss_acc_chain->mut_parallel_desc() = loss_chain->parallel_desc();
     Connect<ChainNode>(loss_chain, NewEdge(), loss_acc_chain);
     // Loss Print Chain
     OperatorConf loss_print_op_conf;
-    loss_print_op_conf.set_name("loss_print_"
-                                + loss_chain->SoleOp()->op_name());
+    loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
     loss_print_op_conf.mutable_loss_print_conf();
+    loss_print_op_conf.mutable_loss_print_conf()->set_loss_lbn(
+        sum_op->Lbn4BnInOp("out"));
+    if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
+      loss_print_op_conf.mutable_loss_print_conf()->set_reduction_lbn(
+          loss_op->Lbn4BnInOp("reduction_coefficient"));
+    }
+    loss_print_op_conf.mutable_loss_print_conf()->set_weight_scalar(
+        loss_op->GetFloatFromCustomizedConf("weight_scalar"));
+    loss_print_op_conf.mutable_loss_print_conf()->set_reduction_type(
+        static_cast<LossReductionType>(
+            loss_op->GetEnumValueFromCustomizedConf("reduction")));
     auto loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
@@ -379,7 +397,7 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
     for (std::shared_ptr<const Operator> op : fw_chain->op_vec()) {
       for (const std::string& mbn : op->model_bns()) {
         const std::string& lbn = op->Lbn4BnInOp(mbn);
-        model_save_op_conf.mutable_model_save_conf()->add_lbns(lbn);
+        model_save_op_conf.mutable_model_save_conf()->add_lbn(lbn);
       }
     }
     auto model_save_op = ConstructOp(model_save_op_conf);

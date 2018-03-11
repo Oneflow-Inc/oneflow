@@ -6,9 +6,22 @@ import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/job/resource.proto";
 
+message ConvKernelConf {
+  required ShapeProto in = 1;
+  required ShapeProto out = 2;
+  required ShapeProto weight = 3;
+  repeated int32 pad_small_side = 4;
+  repeated int32 pad_large_side = 5;
+  optional int32 cudnn_fwd_algo = 6 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+}
+
 message LossKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
+  required float weight_scalar = 3;
+  required LossReductionType reduction = 4;
 }
 
 message SparseSoftmaxCrossEntropyLossKernelConf {
@@ -19,9 +32,9 @@ message SparseCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
-message Pooling3DKernelConf {
-  required ShapeProto in= 1;
-  required ShapeProto out= 2;
+message PoolingKernelConf {
+  required ShapeProto in = 1;
+  required ShapeProto out = 2;
   repeated int32 padding_before = 3;
   repeated int32 padding_after = 4;
   repeated int32 pool_size = 5;
@@ -29,12 +42,12 @@ message Pooling3DKernelConf {
   required string data_format = 7;
 }
 
-message AveragePooling3DKernelConf {
-  required Pooling3DKernelConf pooling_3d_conf = 1;
+message AveragePoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
 }
 
-message MaxPooling3DKernelConf {
-  required Pooling3DKernelConf pooling_3d_conf = 1;
+message MaxPoolingKernelConf {
+  required PoolingKernelConf pooling_conf = 1;
 }
 
 message ReduceSumKernelConf {
@@ -47,6 +60,10 @@ message SoftmaxKernelConf {
   required int64 transpose_cols = 3;
   required bool need_transpose = 4;
   repeated int32 perm = 5;
+}
+
+message LocalResponseNormalizationKernelConf {
+  required ShapeProto batch = 1;
 }
 
 message KernelConf {
@@ -74,7 +91,9 @@ message KernelConf {
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     SoftmaxKernelConf softmax_conf = 116;
     ReduceSumKernelConf reduce_sum_conf = 120;
-    AveragePooling3DKernelConf average_pooling_3d_conf = 204;
-    MaxPooling3DKernelConf max_pooling_3d_conf = 205;
+    ConvKernelConf conv_conf = 127;
+    AveragePoolingKernelConf average_pooling_conf = 204;
+    MaxPoolingKernelConf max_pooling_conf = 205;
+    LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
   }
 }

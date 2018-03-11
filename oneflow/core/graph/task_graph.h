@@ -47,6 +47,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void BuildInBoxing(const ChainNode* chain,
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_box);
+  void FixThrdId();
 
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

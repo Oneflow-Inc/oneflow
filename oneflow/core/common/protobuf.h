@@ -26,6 +26,8 @@ using PbMapPair = google::protobuf::MapPair<T1, T2>;
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, UInt32)    \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
+  OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, EnumValue)  \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
 #define PROTOBUF_REFLECTION(msg, field_name)                               \
@@ -58,6 +60,13 @@ const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
   return r->GetRepeatedField<T>(msg, fd);
 }
 
+template<typename T>
+const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg,
+                                      const std::string& field_name) {
+  PROTOBUF_REFLECTION(msg, field_name);
+  return r->GetRepeatedPtrField<T>(msg, fd);
+}
+
 // Set In PbMessage
 
 #define DECLARE_SET_VAL_IN_PBMESSAGE(val_type, func_name) \
@@ -67,6 +76,16 @@ const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
 OF_PP_FOR_EACH_TUPLE(DECLARE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
 #undef DECLARE_SET_VAL_IN_PBMESSAGE
+
+// Add In PbMessage RepeatedField
+
+#define DECLARE_ADD_VAL_IN_PBRF(val_type, func_name)                         \
+  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
+                              val_type val);
+
+OF_PP_FOR_EACH_TUPLE(DECLARE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
+
+#undef DECLARE_ADD_VAL_IN_PBRF
 
 // PbRf <-> std::vector
 
