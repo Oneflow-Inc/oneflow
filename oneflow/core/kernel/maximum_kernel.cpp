@@ -6,10 +6,10 @@ template<DeviceType device_type, typename T>
 void MaximumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_blob = BnInOp2Blob("out");
+  Blob* out_blob = BnInOp2Blob("out");
   const Blob* in_blob0 = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
-  const Blob* mask_blob = BnInOp2Blob("mask");
+  Blob* mask_blob = BnInOp2Blob("mask");
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
                       mask_blob->ByteSizeOfDataContentField());
   const int count = out_blob->shape().elem_cnt();
