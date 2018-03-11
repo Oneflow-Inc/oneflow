@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -217,6 +218,56 @@ void TaskGraph::BuildInBoxing(
   }
 }
 
-void TaskGraph::FixThrdId() { TODO(); }
+void TaskGraph::FixThrdId() {
+  std::vector<int32_t> thread_nums{
+      JobDesc::Singleton()->CpuDeviceNum(),
+      JobDesc::Singleton()->GpuDeviceNum(),
+      JobDesc::Singleton()->DecodeWorkerNum(),
+      JobDesc::Singleton()->BoxingWorkerNum(),
+      JobDesc::Singleton()->CommNetWorkerNum(),
+      JobDesc::Singleton()->PersistenceWorkerNum()};
+  std::vector<int32_t> offsets(thread_nums.size(), 0);
+  FOR_RANGE(size_t, i, 1, offsets.size()) {
+    offsets[i] = offsets[i - 1] + thread_nums[i - 1];
+  }
+  std::vector<TaskNode*> cpu_nodes;
+  std::vector<TaskNode*> gpu_nodes;
+  std::vector<TaskNode*> decode_nodes;
+  std::vector<TaskNode*> boxing_nodes;
+  std::vector<TaskNode*> commnet_nodes;
+  std::vector<TaskNode*> persistence_nodes;
+  ForEachNode([&](TaskNode* node) {
+    if (node->GetTaskType() == TaskType::kDecode) {
+      decode_nodes.emplace_back(node);
+    } else if (node->GetTaskType() == TaskType::kBoxing) {
+      boxing_nodes.emplace_back(node);
+    } else if (node->GetTaskType() == TaskType::kCopyCommNet) {
+      commnet_nodes.emplace_back(node);
+    } else if (node->device_type() == DeviceType::kGPU) {
+      gpu_nodes.emplace_back(node);
+    }
+    // which kind of nodes belonging to persistentce_nodes?
+  });
+  CalcThrdID(cpu_nodes, thread_nums[0], offsets[0]);
+  CalcThrdID(gpu_nodes, thread_nums[1], offsets[1]);
+  CalcThrdID(decode_nodes, thread_nums[2], offsets[2]);
+  CalcThrdID(boxing_nodes, thread_nums[3], offsets[3]);
+  CalcThrdID(commnet_nodes, thread_nums[4], offsets[4]);
+  CalcThrdID(persistence_nodes, thread_nums[5], offsets[5]);
+}
+
+void TaskGraph::CalcThrdID(std::vector<TaskNode*>& nodes, int32_t thread_num,
+                           int32_t offset) {
+  BalancedSplitter splitter(nodes.size(), thread_num);
+  int32_t idx = 0;
+  Range range = splitter.At(0);
+  FOR_RANGE(size_t, i, 0, nodes.size()) {
+    if (i == range.end()) {
+      idx++;
+      range = splitter.At(idx);
+    }
+    nodes[i]->set_thrd_id(offset + idx);
+  }
+}
 
 }  // namespace oneflow
