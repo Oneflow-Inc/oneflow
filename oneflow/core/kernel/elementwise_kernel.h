@@ -10,7 +10,7 @@ class ElementwiseKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseKernel);
   ElementwiseKernel() = default;
-  ~ElementwiseKernel() = default;
+  virtual ~ElementwiseKernel() = default;
 
  private:
   void ForwardDataId(
