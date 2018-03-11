@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/model_update_compute_task_node.h"
-#include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 namespace oneflow {
 
@@ -50,28 +49,8 @@ bool MdUpdtCompTaskNode::IsReadyForBuild() {
          && GetProducedRegst("model_tmp")->IsLocked();
 }
 
-static std::shared_ptr<const Operator> ConstructModelUpdateOp(int32_t in_num) {
-  OperatorConf op_conf;
-  op_conf.set_name("md_update_" + NewUniqueId());
-  ModelUpdateOpConf* mdupdt_conf = op_conf.mutable_mdupdt_conf();
-  const JobDesc* job_desc = JobDesc::Singleton();
-  if (job_desc->IsTrain()) {
-    *(mdupdt_conf->mutable_user_conf()) =
-        job_desc->job_conf().train_conf().model_update_conf();
-  }
-  mdupdt_conf->set_in_num(in_num);
-  return ConstructOp(op_conf);
-}
-
-void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
-  if (JobDesc::Singleton()->IsPredict()) { return; }
-  ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructModelUpdateOp(consumed_regsts().size());
-  size_t ibn_idx = 0;
-  for (const auto& pair : consumed_regsts()) {
-    node->BindBnInOpAndRegst(node->op()->input_bns().at(ibn_idx++),
-                             pair.second.lock());
-  }
+void MdUpdtCompTaskNode::BindOtherRegst() {
+  ExecNode* node = mut_exec_gph().SoleNode();
   node->BindBnInOpAndRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   auto data_tmp_regst = GetProducedRegst("data_tmp");
   for (const std::string& dtbn : node->op()->data_tmp_bns()) {
@@ -79,6 +58,14 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbn(lbn);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
+}
+
+void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
+  if (JobDesc::Singleton()->IsPredict()) { return; }
+  ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = ConstructModelUpdateOp(consumed_regsts().size());
+  BindInRegst();
+  BindOtherRegst();
   node->InferBlobDescs(nullptr, device_type());
 }
 

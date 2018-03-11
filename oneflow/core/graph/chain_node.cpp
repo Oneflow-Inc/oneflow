@@ -9,7 +9,8 @@
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
-#include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
+#include "oneflow/core/graph/embedding_lookup_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
@@ -405,17 +406,31 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
     UNIMPLEMENTED();
   }
 }
-BldBoxingOpConfMthd MdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
+// normal model update
+BldBoxingOpConfMthd
+NormalMdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
     const ChainNode*) const {
-  if (IsEmbeddingLookupMdUpdt()) {
-    return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone;
-  } else {
-    return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
-  }
+  return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
 }
-std::vector<std::string> MdUpdtChainNode::FindLbnsFromMdDiffAcc(
+CompTaskNode* NormalMdUpdtChainNode::NewCompTaskNode() const {
+  return new NormalMdUpdtCompTaskNode;
+}
+std::vector<std::string> NormalMdUpdtChainNode::FindLbnsFromMdDiffAcc(
     const ChainNode*) const {
   return {kPackedBlobName};
+}
+// embedding lookup model update
+BldBoxingOpConfMthd
+EmbeddingLookupMdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
+    const ChainNode*) const {
+  return &BoxingTaskNode::BldBoxingOpConfWithDataConcatAndClone;
+}
+CompTaskNode* EmbeddingLookupMdUpdtChainNode::NewCompTaskNode() const {
+  return new EmbeddingLookupMdUpdtCompTaskNode;
+}
+std::vector<std::string> EmbeddingLookupMdUpdtChainNode::FindLbnsFromMdDiffAcc(
+    const ChainNode* node) const {
+  return FindLbnsBetweenFw(node, this);
 }
 
 void MdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {

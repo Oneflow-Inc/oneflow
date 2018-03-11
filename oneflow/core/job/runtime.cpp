@@ -36,7 +36,8 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     if (task.machine_id() != MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    if (task.task_type() == TaskType::kMdUpdt) {
+    if (task.task_type() == TaskType::kNormalMdUpdt
+        || task.task_type() == TaskType::kEmbeddingLookupMdUpdt) {
       mdupdt_tasks.push_back(&task);
     } else if (task.task_type() == TaskType::kDecode) {
       source_tasks.push_back(&task);

@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class MdUpdtCompTaskNode final : public CompTaskNode {
+class MdUpdtCompTaskNode : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MdUpdtCompTaskNode);
   MdUpdtCompTaskNode() = default;
@@ -18,10 +18,16 @@ class MdUpdtCompTaskNode final : public CompTaskNode {
   void LockRegsts() override;
 
   void set_random_seed(uint32_t val) { random_seed_ = val; }
-  TaskType GetTaskType() const override { return TaskType::kMdUpdt; }
   void ToProto(TaskProto*) override;
 
  private:
+  virtual std::shared_ptr<const Operator> ConstructModelUpdateOp(
+      int32_t in_num) {
+    UNIMPLEMENTED();
+  }
+  virtual void BindInRegst() { UNIMPLEMENTED(); }
+  virtual void BindOtherRegst();
+
   uint32_t random_seed_;
 };
 

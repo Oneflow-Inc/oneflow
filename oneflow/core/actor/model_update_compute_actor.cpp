@@ -132,6 +132,6 @@ void MdUpdtCompActor::ForEachCurReadableRegst(
   readable_regst_mgr_.ForEachCurReadableRegst(func);
 }
 
-REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);
+REGISTER_ACTOR(TaskType::kNormalMdUpdt, MdUpdtCompActor);
 
 }  // namespace oneflow

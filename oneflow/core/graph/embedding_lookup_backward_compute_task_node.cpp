@@ -107,7 +107,7 @@ void EmbeddingLookupBackwardCompTaskNode::VirtualConsumeInRegst() {
   TaskNode* fw_node = GetRelatedFwTaskNode();
   for (TaskEdge* edge : fw_node->in_edges()) {
     TaskNode* pred_fw_node = edge->src_node();
-    if (pred_fw_node->GetTaskType() != TaskType::kMdUpdt) {
+    if (pred_fw_node->GetTaskType() != TaskType::kEmbeddingLookupMdUpdt) {
       ConsumeRegst("in", edge->GetSoleRegst());
       return;
     }
