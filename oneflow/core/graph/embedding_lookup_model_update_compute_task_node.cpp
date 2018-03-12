@@ -5,7 +5,8 @@ std::shared_ptr<const Operator>
 EmbeddingLookupMdUpdtCompTaskNode::ConstructModelUpdateOp(int32_t in_num) {
   OperatorConf op_conf;
   op_conf.set_name("md_update_" + NewUniqueId());
-  ModelUpdateOpConf* mdupdt_conf = op_conf.mutable_mdupdt_conf();
+  EmbeddingLookupModelUpdateOpConf* mdupdt_conf =
+      op_conf.mutable_embedding_lookup_mdupdt_conf();
   const JobDesc* job_desc = JobDesc::Singleton();
   if (job_desc->IsTrain()) {
     *(mdupdt_conf->mutable_user_conf()) =

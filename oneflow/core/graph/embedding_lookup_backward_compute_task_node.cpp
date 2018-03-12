@@ -77,6 +77,17 @@ void EmbeddingLookupBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   });
 }
 
+void EmbeddingLookupBackwardCompTaskNode::BuildModelDiffRegst() {
+  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
+  std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
+  md_diff_regst->AddLbn(op->Lbn4BnInOp("ids_diff"));
+  md_diff_regst->AddLbn(op->Lbn4BnInOp("weight_diff"));
+  md_diff_regst->MutBlobDesc(op->Lbn4BnInOp("weight_diff"))->mut_shape() =
+      GetConsumedRegst("out")->MutBlobDesc(op->Lbn4BnInOp("out"))->shape();
+  *(md_diff_regst->MutBlobDesc(op->Lbn4BnInOp("ids_diff"))) =
+      *(md_diff_regst->MutBlobDesc(op->Lbn4BnInOp("ids")));
+}
+
 void EmbeddingLookupBackwardCompTaskNode::VirtualConsumeDiffRegst(
     TaskEdge* edge) {
   ConsumeRegst("out_diff", edge->GetSoleRegst());

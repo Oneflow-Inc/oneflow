@@ -25,7 +25,10 @@ class EmbeddingLookupBackwardCompTaskNode final : public BackwardCompTaskNode {
   void VirtualProduceActivationDiff() override;
   void VirtualConsumeActivation(TaskEdge* edge) override;
   void VirtualInferBlobDescInActivationDiff() override;
-  void VirtualInferBlobDescsInProducedRegsts() override {}
+  void VirtualInferBlobDescsInProducedRegsts() override {
+    BuildModelDiffRegst();
+  }
+  void BuildModelDiffRegst();
 };
 
 }  // namespace oneflow

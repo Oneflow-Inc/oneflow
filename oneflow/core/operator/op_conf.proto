@@ -284,7 +284,15 @@ message ModelUpdateOpConf {
   required int32 in_num = 2;
 }
 
+message EmbeddingLookupModelUpdateOpConf {
+  required ModelUpdateOpUserConf user_conf = 1;
+  required int32 in_num = 2;
+}
+
 message AccumulateOpConf {
+}
+
+message EmbeddingLookupModelAccumulateOpConf{
 }
 
 message ModelSaveOpConf {
@@ -388,6 +396,8 @@ message OperatorConf {
     AveragePooling3DOpConf average_pooling_3d_conf = 204;
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
     EmbeddingLookupOpConf embedding_lookup_conf = 250;
+    EmbeddingLookupModelUpdateOpConf embedding_lookup_mdupdt_conf = 251;
+    EmbeddingLookupModelAccumulateOpConf embedding_lookup_accumulate_conf = 252;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
   }
 }

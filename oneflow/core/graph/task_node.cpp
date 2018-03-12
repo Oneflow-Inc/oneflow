@@ -17,6 +17,7 @@ std::map<TaskType, std::string> task_type2color = {
     {kEmbeddingLookupMdUpdt, "6"},
     {kMdSave, "1"},
     {kMdDiffAcc, "7"},
+    {kEmbeddingLookupMdDiffAcc, "7"},
     {kCopyHd, "8"},
     {kCopyCommNet, "9"},
     {kBoxing, "10"},

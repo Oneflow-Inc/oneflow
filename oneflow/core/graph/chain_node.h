@@ -307,6 +307,9 @@ class MdDiffAccChainNode final : public ChainNode {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
                                    (Backward));
+
+ private:
+  CompTaskNode* NewCompTaskNode() const override;
 };
 
 std::vector<std::string> FindLbnsBetween(const ChainNode* in_chain,

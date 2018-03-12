@@ -8,6 +8,7 @@
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
+#include "oneflow/core/graph/embedding_lookup_model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/embedding_lookup_model_update_compute_task_node.h"
@@ -458,6 +459,13 @@ BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt(
 BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphFromBackward(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
+}
+CompTaskNode* MdDiffAccChainNode::NewCompTaskNode() const {
+  if (HasSoleEmbeddingLookupOp()) {
+    return new EmbeddingLookupMdDiffAccCompTaskNode;
+  } else {
+    return new MdDiffAccCompTaskNode;
+  }
 }
 
 std::vector<std::string> FindLbnsBetween(const ChainNode* in_chain,

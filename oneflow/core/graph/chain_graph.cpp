@@ -449,7 +449,11 @@ void ChainGraph::BuildModelStruct(
     Connect<ChainNode>(md_updt_chain, NewEdge(), bw_chain);
     OperatorConf md_diff_acc_op_conf;
     md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
-    md_diff_acc_op_conf.mutable_accumulate_conf();
+    if (fw_chain->HasSoleEmbeddingLookupOp()) {
+      md_diff_acc_op_conf.mutable_embedding_lookup_accumulate_conf();
+    } else {
+      md_diff_acc_op_conf.mutable_accumulate_conf();
+    }
     auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
     auto md_diff_acc_chain = NewNode<MdDiffAccChainNode>();
     md_diff_acc_chain->mut_op_vec() = {md_diff_acc_op};
