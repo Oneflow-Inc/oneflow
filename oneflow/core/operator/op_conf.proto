@@ -7,6 +7,7 @@ import "oneflow/core/common/data_type.proto";
 enum ActivationType {
   kTanH = 0;
   kSigmoid = 1;
+  kRelu = 2;
 }
 
 message ConstantInitializerConf {
@@ -344,6 +345,20 @@ message LocalResponseNormalizationOpConf {
   optional double beta = 6 [default = 0.5];
 }
 
+message BlobConf {
+  required string name = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+}
+
+message DecodeOFRecordOpConf {
+  required string data_dir = 1;
+  optional string part_name_prefix = 2 [default = "part-"];
+  optional int32 part_name_suffix_length = 3 [default = -1];
+  repeated BlobConf blob = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -351,6 +366,7 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
+    DecodeOFRecordOpConf decode_ofrecord_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
