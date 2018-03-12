@@ -7,6 +7,12 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
+struct CudnnConvAlgoCtx final {
+  cudnnConvolutionFwdAlgoPerf_t fwd_algo_perf;
+  cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo_perf;
+  cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo_perf;
+};
+
 class CudnnConvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
@@ -38,12 +44,11 @@ class ConvOp : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type,
-      std::function<void(OpContext*)> EnrollOpContext) const override;
+      const ParallelContext* parallel_ctx) const override;
 
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const OpContext* op_ctx,
+      const ParallelContext* parallel_ctx,
       KernelConf* kernel_conf) const override;
 
  protected:
@@ -52,9 +57,9 @@ class ConvOp : public Operator {
   int32_t MaxModelSplitNum() const override;
 
 #ifdef WITH_CUDA
-  size_t InferCudnnWorkspaceSize(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      std::function<void(OpContext*)> EnrollOpContext) const;
+  void InferCudnnAlgo(
+      std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      CudnnConvAlgoCtx* conv_ctx) const;
 #endif  // WITH_CUDA
 };
 
