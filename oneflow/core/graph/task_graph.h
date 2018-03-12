@@ -48,8 +48,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_box);
   void FixThrdId();
-  void CalcThrdID(std::vector<TaskNode*>& nodes, int32_t thread_num,
-                  int32_t offset);
+  void FixWorkerNums();
 
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

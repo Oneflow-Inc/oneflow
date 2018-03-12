@@ -33,9 +33,13 @@ class JobDesc final {
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t XpuDeviceNum() const { return CpuDeviceNum() + GpuDeviceNum(); }
   int32_t DecodeWorkerNum() const;
+  void set_decode_worker_num(int32_t decode_worker_num);
   int32_t BoxingWorkerNum() const;
+  void set_boxing_worker_num(int32_t boxing_worker_num);
   int32_t CommNetWorkerNum() const;
+  void set_comm_net_worker_num(int32_t comm_net_worker_num);
   int32_t PersistenceWorkerNum() const;
+  void set_persistence_worker_num(int32_t persistence_worker_num);
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
   int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }

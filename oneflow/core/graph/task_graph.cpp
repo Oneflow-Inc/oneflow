@@ -219,54 +219,98 @@ void TaskGraph::BuildInBoxing(
 }
 
 void TaskGraph::FixThrdId() {
-  std::vector<int32_t> thread_nums{
+  FixWorkerNums();
+  std::vector<int32_t> thrd_offsets{
+      0,
       JobDesc::Singleton()->CpuDeviceNum(),
       JobDesc::Singleton()->GpuDeviceNum(),
       JobDesc::Singleton()->DecodeWorkerNum(),
       JobDesc::Singleton()->BoxingWorkerNum(),
-      JobDesc::Singleton()->CommNetWorkerNum(),
-      JobDesc::Singleton()->PersistenceWorkerNum()};
-  std::vector<int32_t> offsets(thread_nums.size(), 0);
-  FOR_RANGE(size_t, i, 1, offsets.size()) {
-    offsets[i] = offsets[i - 1] + thread_nums[i - 1];
+      1,
+  };
+  FOR_RANGE(size_t, i, 1, thrd_offsets.size()) {
+    thrd_offsets[i] = thrd_offsets[i - 1] + thrd_offsets[i];
   }
-  std::vector<TaskNode*> cpu_nodes;
-  std::vector<TaskNode*> gpu_nodes;
-  std::vector<TaskNode*> decode_nodes;
-  std::vector<TaskNode*> boxing_nodes;
-  std::vector<TaskNode*> commnet_nodes;
-  std::vector<TaskNode*> persistence_nodes;
-  ForEachNode([&](TaskNode* node) {
-    if (node->GetTaskType() == TaskType::kDecode) {
-      decode_nodes.emplace_back(node);
-    } else if (node->GetTaskType() == TaskType::kBoxing) {
-      boxing_nodes.emplace_back(node);
-    } else if (node->GetTaskType() == TaskType::kCopyCommNet) {
-      commnet_nodes.emplace_back(node);
-    } else if (node->device_type() == DeviceType::kGPU) {
-      gpu_nodes.emplace_back(node);
-    }
-    // which kind of nodes belonging to persistentce_nodes?
-  });
-  CalcThrdID(cpu_nodes, thread_nums[0], offsets[0]);
-  CalcThrdID(gpu_nodes, thread_nums[1], offsets[1]);
-  CalcThrdID(decode_nodes, thread_nums[2], offsets[2]);
-  CalcThrdID(boxing_nodes, thread_nums[3], offsets[3]);
-  CalcThrdID(commnet_nodes, thread_nums[4], offsets[4]);
-  CalcThrdID(persistence_nodes, thread_nums[5], offsets[5]);
+  FOR_RANGE(int64_t, machine_id, 0, JobDesc::Singleton()->TotalBatchNum()) {
+    std::vector<int32_t> node_offset(thrd_offsets.size(), 0);
+    ForEachNode([&](TaskNode* node) {
+      if (node->machine_id() != machine_id) { return; }
+      if (node->device_type() == DeviceType::kGPU) {
+        node->set_thrd_id(thrd_offsets[1]
+                          + node_offset[1]
+                                % JobDesc::Singleton()->GpuDeviceNum());
+        node_offset[1]++;
+      } else if (node->GetTaskType() == TaskType::kDecode) {
+        node->set_thrd_id(thrd_offsets[2]
+                          + node_offset[2]
+                                % JobDesc::Singleton()->DecodeWorkerNum());
+        node_offset[2]++;
+      } else if (node->GetTaskType() == TaskType::kBoxing) {
+        node->set_thrd_id(thrd_offsets[3]
+                          + node_offset[3]
+                                % JobDesc::Singleton()->BoxingWorkerNum());
+        node_offset[3]++;
+      } else if (node->GetTaskType() == TaskType::kCopyCommNet) {
+        node->set_thrd_id(thrd_offsets[4]);
+      } else if (node->GetTaskType() == TaskType::kRecordLoad
+                 || node->GetTaskType() == TaskType::kMdSave
+                 || node->GetTaskType() == TaskType::kPrint) {
+        node->set_thrd_id(thrd_offsets[5]
+                          + node_offset[5]
+                                % JobDesc::Singleton()->PersistenceWorkerNum());
+        node_offset[5]++;
+      } else {
+        node->set_thrd_id(thrd_offsets[0]
+                          + node_offset[0]
+                                % JobDesc::Singleton()->CpuDeviceNum());
+        node_offset[0]++;
+      }
+    });
+  }
 }
 
-void TaskGraph::CalcThrdID(std::vector<TaskNode*>& nodes, int32_t thread_num,
-                           int32_t offset) {
-  BalancedSplitter splitter(nodes.size(), thread_num);
-  int32_t idx = 0;
-  Range range = splitter.At(0);
-  FOR_RANGE(size_t, i, 0, nodes.size()) {
-    if (i == range.end()) {
-      idx++;
-      range = splitter.At(idx);
+void TaskGraph::FixWorkerNums() {
+  int32_t core_nums = static_cast<int32_t>(std::thread::hardware_concurrency());
+  const Resource& resource = JobDesc::Singleton()->resource();
+  core_nums -= JobDesc::Singleton()->XpuDeviceNum();
+  bool need_set_worker_num = false;
+  if (resource.has_decode_worker_num()) {
+    core_nums -= resource.decode_worker_num();
+  } else {
+    need_set_worker_num = true;
+  }
+  if (resource.has_boxing_worker_num()) {
+    core_nums -= resource.boxing_worker_num();
+  } else {
+    need_set_worker_num = true;
+  }
+  if (resource.has_comm_net_worker_num()) {
+    core_nums -= resource.comm_net_worker_num();
+  } else {
+    need_set_worker_num = true;
+  }
+  if (resource.has_persistence_worker_num()) {
+    core_nums -= resource.persistence_worker_num();
+  } else {
+    need_set_worker_num = true;
+  }
+  if (need_set_worker_num) {
+    if (core_nums <= 0) {
+      LOG(WARNING) << "Remaining core nums less than 1.";
+      core_nums = 1;
     }
-    nodes[i]->set_thrd_id(offset + idx);
+    if (!resource.has_decode_worker_num()) {
+      JobDesc::Singleton()->set_decode_worker_num(core_nums);
+    }
+    if (!resource.has_boxing_worker_num()) {
+      JobDesc::Singleton()->set_boxing_worker_num(core_nums);
+    }
+    if (!resource.has_comm_net_worker_num()) {
+      JobDesc::Singleton()->set_comm_net_worker_num(core_nums);
+    }
+    if (!resource.has_persistence_worker_num()) {
+      JobDesc::Singleton()->set_persistence_worker_num(core_nums);
+    }
   }
 }
 

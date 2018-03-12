@@ -7,7 +7,7 @@ namespace oneflow {
 void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   DecodeCompTaskNode* decode_node =
-      static_cast<DecodeCompTaskNode*>(SoleOutEdge()->dst_node());
+      static_cast<DecodeCompTaskNode*>((*out_edges().begin())->dst_node());
   std::string data_dir =
       decode_node->chain_node()->SoleOp()->GetStringFromCustomizedConf(
           "data_dir");
@@ -19,11 +19,17 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
           "part_name_suffix_length");
   std::string num = std::to_string(parallel_id());
   std::string data_path = data_dir + "/" + part_name_prefix;
-  FOR_RANGE(size_t, i, 0, part_name_suffix_length - num.length()) {
-    data_path += "0";
+  if (part_name_suffix_length != -1) {
+    CHECK_GE(part_name_suffix_length, num.length());
+    FOR_RANGE(size_t, i, 0, part_name_suffix_length - num.length()) {
+      data_path += "0";
+    }
   }
   data_path += num;
   task_proto->set_data_path(data_path);
+  for (TaskEdge* edge : out_edges()) {
+    task_proto->add_related_decode_task_ids(edge->dst_node()->task_id());
+  }
 }
 
 }  // namespace oneflow
