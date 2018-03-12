@@ -21,14 +21,14 @@ using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
 void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
-void ModifyOpLbn4BnInChainNode(HashMap<std::string, std::string>& olbn2ilbn,
-                               ChainNode* chain_node) {
+void ModifyOpLbn4BnInChainNode(
+    const HashMap<std::string, std::string>& olbn2ilbn, ChainNode* chain_node) {
   for (std::shared_ptr<Operator> op : chain_node->op_vec()) {
     for (const std::string& ibn : op->input_bns()) {
       const std::string& lbn = op->Lbn4BnInOp(ibn);
       auto olbn2ilbn_it = olbn2ilbn.find(lbn);
       if (olbn2ilbn_it == olbn2ilbn.end()) { continue; }
-      op.get()->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
+      op->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
     }
   }
 }
@@ -487,15 +487,13 @@ void ChainGraph::RemoveNeedlessCloneOp() {
       clone_ops.push_back(op);
       const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
       for (const std::string& obn : op->output_bns()) {
-        olbn2ilbn_in_clone_op.insert({op->Lbn4BnInOp(obn), ilbn});
+        CHECK(olbn2ilbn_in_clone_op.emplace(op->Lbn4BnInOp(obn), ilbn).second);
       }
     }
     ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, chain_node);
-    if (!olbn2ilbn_in_clone_op.empty()) {
-      fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* succ_chain_node) {
-        ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
-      });
-    }
+    fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* succ_chain_node) {
+      ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
+    });
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
     for (std::shared_ptr<const Operator> clone_op : clone_ops) {
       auto clone_op_it =
