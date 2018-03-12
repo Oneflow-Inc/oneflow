@@ -17,7 +17,7 @@ class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
   LogicalNode() = default;
   ~LogicalNode() = default;
 
-  std::shared_ptr<const Operator> op() const { return op_; }
+  std::shared_ptr<Operator> op() const { return op_; }
   std::shared_ptr<Operator>& mut_op() { return op_; }
 
   std::shared_ptr<const ParallelDesc> parallel_desc() const {
