@@ -93,7 +93,7 @@ std::shared_ptr<const Operator> ChainNode::SoleOp() const {
   return op_vec_.front();
 }
 
-const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
+const std::vector<std::shared_ptr<Operator>>& ChainNode::op_vec() const {
   return op_vec_;
 }
 
