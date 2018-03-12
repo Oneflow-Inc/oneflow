@@ -15,7 +15,8 @@ void BasicGruOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("update_gate_out");
   EnrollDataTmpBn("candidate_hidden_out");
   EnrollDataTmpBn("reset_mul_hidden");
-  EnrollDataTmpBn("reset_mul_candidate_hidden");
+  EnrollDataTmpBn("update_mul_hidden");
+  EnrollDataTmpBn("update_mul_candidate_hidden");
 
   EnrollModelBn("i2h_weight_r");
   EnrollModelBn("h2h_weight_r");
@@ -70,7 +71,10 @@ void BasicGruOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("reset_mul_hidden") = BlobDesc(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("reset_mul_candidate_hidden") = BlobDesc(
+  *GetBlobDesc4BnInOp("update_mul_hidden") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("update_mul_candidate_hidden") = BlobDesc(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
 
