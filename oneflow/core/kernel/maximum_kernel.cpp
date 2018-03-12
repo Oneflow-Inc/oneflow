@@ -12,7 +12,7 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
   Blob* mask_blob = BnInOp2Blob("mask");
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
                       mask_blob->ByteSizeOfDataContentField());
-  const int count = out_blob->shape().elem_cnt();
+  const int64_t count = out_blob->shape().elem_cnt();
   for (size_t i = 1; i < this->kernel_conf().input_bns().size(); ++i) {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[i]);
     KernelUtil<device_type, T>::ElementwiseMaxWithMask(

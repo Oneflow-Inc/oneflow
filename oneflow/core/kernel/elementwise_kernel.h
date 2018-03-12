@@ -26,6 +26,16 @@ class ElementwiseKernel : public KernelIf<device_type> {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
     BnInOp2Blob("out")->CopyColNumFrom(ctx.device_ctx, in_blob);
   }
+
+  void BackwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
+    for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
+      Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns()[i]);
+      in_diff_blob->CopyColNumFrom(ctx.device_ctx, out_diff_blob);
+    }
+  }
 };
 
 }  // namespace oneflow
