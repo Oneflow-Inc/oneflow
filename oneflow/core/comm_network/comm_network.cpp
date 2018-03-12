@@ -82,10 +82,8 @@ void CommNet::GenConnectionInfo(const Plan& plan) {
 
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      CHECK(rid2mid
-                .emplace(regst_desc_it.second.regst_desc_id(),
-                         task_proto.machine_id())
-                .second);
+      rid2mid.emplace(regst_desc_it.second.regst_desc_id(),
+                      task_proto.machine_id());
     }
     CHECK(
         tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
