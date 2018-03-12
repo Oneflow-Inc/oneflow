@@ -14,7 +14,8 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("o_gate_out");
 	EnrollDataTmpBn("o_out")
   EnrollDataTmpBn("c_gate_out");
-	EnrollDataTmpBn("c_out")
+	EnrollDataTmpBn("c_out");
+	EnrollDataTmpBn("update_out");
 
   EnrollModelBn("i2h_f_weight");
   EnrollModelBn("h2h_f_weight");
