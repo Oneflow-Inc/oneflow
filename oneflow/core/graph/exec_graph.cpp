@@ -11,7 +11,7 @@ void ExecNode::ToProto(bool is_forward, DeviceType device_type,
                        const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, device_type,
-                     parallel_ctx, op_ctx_.get(), ret->mutable_kernel_conf());
+                     parallel_ctx, ret->mutable_kernel_conf());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second.lock();
@@ -23,8 +23,7 @@ void ExecNode::ToProto(bool is_forward, DeviceType device_type,
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx,
                               DeviceType device_type) {
-  op_->InferBlobDescs(GetBlobDesc4BnInOpFunc(), parallel_ctx, device_type,
-                      [this](OpContext* val) { op_ctx_.reset(val); });
+  op_->InferBlobDescs(GetBlobDesc4BnInOpFunc(), parallel_ctx, device_type);
 }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
