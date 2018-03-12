@@ -33,6 +33,7 @@ class Operator {
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
+  virtual bool IsCloneOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
     return !model_bns_.empty() || !model_tmp_bns_.empty();
