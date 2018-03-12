@@ -1,7 +1,6 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 

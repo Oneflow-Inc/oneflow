@@ -206,17 +206,20 @@ void DataMergeChains(std::list<Chain>* chain_list,
 
 void MergeDecodeNodes(std::list<Chain>* chain_list,
                       Logical2ChainItMap* logical2chain_it) {
-  HashMap<std::string, std::vector<const LogicalNode*>> name2decode_nodes;
+  HashMap<std::string, std::vector<const LogicalNode*>> data_dir2decode_nodes;
   for (auto& pair : *logical2chain_it) {
     const LogicalNode* cur_node = pair.first;
     if (cur_node->op()->IsDecodeOp()) {
       const DecodeOFRecordOpConf& op_conf =
           cur_node->op()->op_conf().decode_ofrecord_conf();
-      std::string name = op_conf.data_dir() + "/"
-                         + std ::to_string(op_conf.blob(0).max_sequence_size());
-      auto iter = name2decode_nodes.find(name);
-      if (iter == name2decode_nodes.end()) {
-        CHECK(name2decode_nodes
+      if (op_conf.blob(0).max_sequence_size() > 1) {
+        CHECK_EQ(op_conf.blob_size(), 1);
+        continue;
+      }
+      std::string name = op_conf.data_dir();
+      auto iter = data_dir2decode_nodes.find(name);
+      if (iter == data_dir2decode_nodes.end()) {
+        CHECK(data_dir2decode_nodes
                   .emplace(name, std::vector<const LogicalNode*>{cur_node})
                   .second);
       } else {
@@ -224,7 +227,7 @@ void MergeDecodeNodes(std::list<Chain>* chain_list,
       }
     }
   }
-  for (auto& pair : name2decode_nodes) {
+  for (auto& pair : data_dir2decode_nodes) {
     if (pair.second.size() == 1) { continue; }
     ChainIt decode_chain = logical2chain_it->at(pair.second.front());
     FOR_RANGE(size_t, i, 1, pair.second.size()) {

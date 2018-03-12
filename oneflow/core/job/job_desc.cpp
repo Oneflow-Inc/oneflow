@@ -123,35 +123,27 @@ void JobDesc::SplitDecodeOps() {
     if (op_conf.has_decode_ofrecord_conf() == false) { continue; }
     if (op_conf.decode_ofrecord_conf().blob_size() == 1) { continue; }
     const DecodeOFRecordOpConf& decode_conf = op_conf.decode_ofrecord_conf();
-    HashMap<int32_t, std::vector<int32_t>> max_seq_size2blob_idx;
-    FOR_RANGE(int32_t, j, 0, decode_conf.blob_size()) {
-      int32_t max_seq_size = decode_conf.blob(j).max_sequence_size();
-      if (max_seq_size2blob_idx.find(max_seq_size)
-          == max_seq_size2blob_idx.end()) {
-        CHECK(
-            max_seq_size2blob_idx.emplace(max_seq_size, std::vector<int32_t>{j})
-                .second);
-      } else {
-        max_seq_size2blob_idx.at(max_seq_size).push_back(j);
+    PbRpf<BlobConf>* blobs = dlnet_conf_.mutable_op(i)
+                                 ->mutable_decode_ofrecord_conf()
+                                 ->mutable_blob();
+    auto back = blobs->end() - 1;
+    for (auto iter = blobs->begin(); iter != blobs->end(); ++iter) {
+      if (iter->max_sequence_size() > 1) {
+        while (back != iter && back->max_sequence_size() > 1) { back--; }
+        if (iter == back) { break; }
+        std::swap(*iter, *back);
       }
     }
-    if (max_seq_size2blob_idx.size() == 1) { continue; }
-    int32_t split_cnt = 0;
-    for (auto& pair : max_seq_size2blob_idx) {
+    if (back == blobs->begin()) { back++; }
+    for (auto iter = back; iter != blobs->end(); ++iter) {
       DecodeOFRecordOpConf gen_decode_conf(decode_conf);
       gen_decode_conf.clear_blob();
-      FOR_RANGE(size_t, j, 0, pair.second.size()) {
-        *gen_decode_conf.add_blob() = decode_conf.blob(pair.second.at(j));
-      }
+      *gen_decode_conf.add_blob() = blobs->Get(iter - blobs->begin());
       OperatorConf gen_op_conf(op_conf);
       *gen_op_conf.mutable_decode_ofrecord_conf() = gen_decode_conf;
-      split_cnt++;
-      if (split_cnt == max_seq_size2blob_idx.size()) {
-        *dlnet_conf_.mutable_op(i) = gen_op_conf;
-      } else {
-        *dlnet_conf_.add_op() = gen_op_conf;
-      }
+      *dlnet_conf_.add_op() = gen_op_conf;
     }
+    blobs->erase(back, blobs->end());
   }
 }
 
