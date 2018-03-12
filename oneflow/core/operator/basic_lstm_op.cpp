@@ -8,9 +8,13 @@ const PbMessage& BasicLstmOp::GetCustomizedConf() const {
 
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("f_gate_out");
+	EnrollDataTmpBn("f_out");
   EnrollDataTmpBn("i_gate_out");
+	EnrollDataTmpBn("i_out");
   EnrollDataTmpBn("o_gate_out");
+	EnrollDataTmpBn("o_out")
   EnrollDataTmpBn("c_gate_out");
+	EnrollDataTmpBn("c_out")
 
   EnrollModelBn("i2h_f_weight");
   EnrollModelBn("h2h_f_weight");
@@ -52,6 +56,21 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("c_gate_out") = BlobDesc(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
+
+  *GetBlobDesc4BnInOp("f_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("i_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("o_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+  *GetBlobDesc4BnInOp("c_out") = BlobDesc(
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      false, true, in_blob_desc->max_col_num());
+
+
 
   *GetBlobDesc4BnInOp("i2h_f_weight") =
       BlobDesc(Shape({hidden_size, embedding_zie}));
