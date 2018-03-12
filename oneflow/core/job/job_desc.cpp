@@ -110,16 +110,31 @@ void JobDesc::SplitDecodeOps() {
     const OperatorConf& op_conf = dlnet_conf_.op(i);
     if (op_conf.has_decode_ofrecord_conf() == false) { continue; }
     if (op_conf.decode_ofrecord_conf().blob_size() == 1) { continue; }
-    LOG(INFO) << "split " << op_conf.name();
     const DecodeOFRecordOpConf& decode_conf = op_conf.decode_ofrecord_conf();
-    for (int32_t j = decode_conf.blob_size() - 1; j >= 0; --j) {
-      DecodeOFRecordOpConf gen_decode_conf;
-      gen_decode_conf.CopyFrom(decode_conf);
+    HashMap<int32_t, std::vector<int32_t>> max_seq_size2blob_idx;
+    FOR_RANGE(int32_t, j, 0, decode_conf.blob_size()) {
+      int32_t max_seq_size = decode_conf.blob(j).max_sequence_size();
+      if (max_seq_size2blob_idx.find(max_seq_size)
+          == max_seq_size2blob_idx.end()) {
+        CHECK(
+            max_seq_size2blob_idx.emplace(max_seq_size, std::vector<int32_t>{j})
+                .second);
+      } else {
+        max_seq_size2blob_idx.at(max_seq_size).push_back(j);
+      }
+    }
+    if (max_seq_size2blob_idx.size() == 1) { continue; }
+    int32_t split_cnt = 0;
+    for (auto& pair : max_seq_size2blob_idx) {
+      DecodeOFRecordOpConf gen_decode_conf(decode_conf);
       gen_decode_conf.clear_blob();
-      *gen_decode_conf.add_blob() = decode_conf.blob(j);
+      FOR_RANGE(size_t, j, 0, pair.second.size()) {
+        *gen_decode_conf.add_blob() = decode_conf.blob(pair.second.at(j));
+      }
       OperatorConf gen_op_conf(op_conf);
       *gen_op_conf.mutable_decode_ofrecord_conf() = gen_decode_conf;
-      if (j == 0) {
+      split_cnt++;
+      if (split_cnt == max_seq_size2blob_idx.size()) {
         *dlnet_conf_.mutable_op(i) = gen_op_conf;
       } else {
         *dlnet_conf_.add_op() = gen_op_conf;
