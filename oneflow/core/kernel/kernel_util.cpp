@@ -139,9 +139,9 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int incx, T* y, const int incy) {
     cblas_axpy(n, alpha, x, incx, y, incy);
   }
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cblas_scal(n, alpha, x, incx);
+    cblas_scal(n, *alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
@@ -272,5 +272,15 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   }
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_INT_KERNEL_UTIL, INT_DATA_TYPE_SEQ);
+
+#define DEFINE_UNIMPLEMENTED_KERNEL_UTIL(device_type)               \
+  template<>                                                        \
+  void KernelUtil<device_type, char>::Axpy(                         \
+      DeviceCtx* ctx, const int n, const char alpha, const char* x, \
+      const int incx, char* y, const int incy) {                    \
+    UNIMPLEMENTED();                                                \
+  }
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_UNIMPLEMENTED_KERNEL_UTIL, DEVICE_TYPE_SEQ);
 
 }  //  namespace oneflow

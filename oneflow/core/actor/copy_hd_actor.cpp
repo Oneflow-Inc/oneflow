@@ -34,7 +34,7 @@ void CopyHdActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
   pending_in_regst_.pop();
   AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [&](uint64_t regst_desc_id) -> Regst* {
+                    [&](int64_t regst_desc_id) -> Regst* {
                       if (regst_desc_id == in_regst->regst_desc_id()) {
                         return in_regst;
                       } else {

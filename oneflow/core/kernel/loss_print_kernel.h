@@ -16,6 +16,8 @@ class LossPrintKernel final : public KernelIf<DeviceType::kCPU> {
                std::function<Blob*(const std::string&)>) const override;
 
  private:
+  T GetReductionCoefficient(T weight_scalar, LossReductionType reduction,
+                            int32_t n) const;
 };
 
 }  // namespace oneflow

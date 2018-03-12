@@ -38,8 +38,7 @@ class CudnnTensorDesc final {
   CudnnTensorDesc() = delete;
   ~CudnnTensorDesc();
 
-  CudnnTensorDesc(DataType, int n, int c, int h, int w);
-  CudnnTensorDesc(DataType, const Shape&);
+  CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
   CudnnTensorDesc(DataType data_type, int dims, const int* dim,
                   const int* stride);
 

@@ -31,6 +31,13 @@ class LossOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  private:
+  std::string obn2lbn(const std::string& output_bn) const override {
+    if (output_bn == "reduction_coefficient") {
+      return op_name() + "/reduction_coefficient";
+    } else {
+      return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
+    }
+  }
 };
 
 }  // namespace oneflow

@@ -17,6 +17,10 @@ void BasicRnnKernel<device_type, T>::VirtualKernelInit(
         &BasicRnnKernelUtil<device_type, T>::ComputeSigmoidDiff;
     last_colnum_activation_bw_func_ =
         &KernelUtil<device_type, T>::SigmoidBackward;
+  } else if (activation_type == kRelu) {
+    activation_fw_func_ = &KernelUtil<device_type, T>::Relu;
+    activation_bw_func_ = &BasicRnnKernelUtil<device_type, T>::ComputeReluDiff;
+    last_colnum_activation_bw_func_ = &KernelUtil<device_type, T>::ReluBackward;
   } else {
     UNIMPLEMENTED();
   }
@@ -177,8 +181,7 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
 }
 
 template<typename T>
-class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
- public:
+struct BasicRnnKernelUtil<DeviceType::kCPU, T> {
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
                               const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff) {
@@ -193,6 +196,13 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
     FOR_RANGE(int64_t, i, 0, n) {
       plus_out_diff[i] =
           out[i] * (1 - out[i]) * (out_diff[i] + rec_out_diff[i]);
+    }
+  }
+  static void ComputeReluDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff) {
+    FOR_RANGE(int64_t, i, 0, n) {
+      plus_out_diff[i] = out[i] * (out_diff[i] + rec_out_diff[i]);
     }
   }
 };

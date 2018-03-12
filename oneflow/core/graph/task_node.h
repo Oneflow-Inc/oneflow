@@ -89,6 +89,8 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   HashMap<std::string, std::weak_ptr<RegstDesc>> name_in_producer2regst_;
 };
 
+extern std::map<TaskType, std::string> task_type2color;
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_TASK_NODE_H_

@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -20,7 +21,7 @@ int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
 
 }  // namespace
 
-class RegstActSubGraph final {
+class RegstActSubGraph final : public Graph<const ActNode, const ActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstActSubGraph);
   RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
@@ -42,15 +43,20 @@ class RegstActSubGraph final {
   void ForEachOutNode(const ActNode* node,
                       const std::function<void(const ActNode*)>& Handler) const;
   std::list<const ActNode*> CalcSources() const;
-  bool IsSource(const ActNode* node) const;
+  bool IsWithinDepthRange(const ActNode* node) const;
 
   std::string regst_uid_;
   const ActNode* producer_node_;
   HashSet<const ActNode*> partial_producer_outs_;
   HashSet<const ActNode*> partial_consumer_nodes_;
   HashSet<const ActNode*> fake_sources_;
-  int64_t max_depth_;
+  Range depth_range_;
 };
+
+bool RegstActSubGraph::IsWithinDepthRange(const ActNode* node) const {
+  return node->depth() >= depth_range_.begin()
+         && node->depth() <= depth_range_.end();
+}
 
 RegstActSubGraph::RegstActSubGraph(
     const std::string& regst_uid, const ActNode* producer_node,
@@ -66,10 +72,16 @@ RegstActSubGraph::RegstActSubGraph(
       fake_sources_.insert(node);
     }
   }
-  max_depth_ = 0;
-  for (const ActNode* node : partial_consumer_nodes_) {
-    max_depth_ = std::max(max_depth_, node->depth());
+  int64_t min_depth = std::numeric_limits<int64_t>::max();
+  for (const ActNode* node : partial_producer_outs_) {
+    min_depth = std::min(min_depth, node->depth());
   }
+  int64_t max_depth = std::numeric_limits<int64_t>::min();
+  for (const ActNode* node : partial_consumer_nodes_) {
+    max_depth = std::max(max_depth, node->depth());
+  }
+  depth_range_.mut_begin() = min_depth;
+  depth_range_.mut_end() = max_depth;
 }
 
 std::list<const ActNode*> RegstActSubGraph::CalcSources() const {
@@ -79,28 +91,38 @@ std::list<const ActNode*> RegstActSubGraph::CalcSources() const {
   return sources;
 }
 
-bool RegstActSubGraph::IsSource(const ActNode* node) const {
-  return node == producer_node_
-         || fake_sources_.find(node) != fake_sources_.end();
-}
-
 void RegstActSubGraph::TopoForEachActNode(
     const std::function<void(const ActNode*)>& Handler) const {
-  TODO();
+  auto ForEachIn = std::bind(&RegstActSubGraph::ForEachInNode, this,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&RegstActSubGraph::ForEachOutNode, this,
+                              std::placeholders::_1, std::placeholders::_2);
+  TopoForEachNode(CalcSources(), ForEachIn, ForEachOut, Handler);
 }
 
 void RegstActSubGraph::ForEachInNode(
     const ActNode* node,
     const std::function<void(const ActNode*)>& Handler) const {
-  if (IsSource(node)) { return; }
-  node->ForEachNodeOnInEdge(Handler);
+  if (partial_producer_outs_.find(node) != partial_producer_outs_.end()) {
+    Handler(producer_node_);
+  }
+  node->ForEachNodeOnInEdge([&](const ActNode* node) {
+    if (IsWithinDepthRange(node)) { Handler(node); }
+  });
 }
 
 void RegstActSubGraph::ForEachOutNode(
     const ActNode* node,
     const std::function<void(const ActNode*)>& Handler) const {
-  if (node->depth() >= max_depth_) { return; }
-  node->ForEachNodeOnOutEdge(Handler);
+  if (node == producer_node_) {
+    for (const ActNode* producer_out : partial_producer_outs_) {
+      Handler(producer_out);
+    }
+  } else {
+    node->ForEachNodeOnOutEdge([&](const ActNode* node) {
+      if (IsWithinDepthRange(node)) { Handler(node); }
+    });
+  }
 }
 
 double RegstActSubGraph::CalcLongestPathDuration() const {
@@ -124,6 +146,172 @@ double RegstActSubGraph::CalcLongestPathDuration() const {
     duration = std::max(duration, node2longest_path_duration.at(node));
   }
   return duration;
+}
+
+class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DepthRangeActSubGraph);
+  DepthRangeActSubGraph(const ActGraph* act_graph, const Range& depth_range,
+                        const std::list<std::string>& regst_uids);
+  ~DepthRangeActSubGraph() = default;
+
+  void ForEachRegstActSubGraph(
+      const std::function<void(const RegstActSubGraph&)>& Handler) const;
+  void ToDotFiles(const std::string& dir) const;
+
+ private:
+  void InitNode2ComponentId();
+  void InitComponentId2Sources();
+  void ForEachActNode(const std::list<const ActNode*>& sources,
+                      const std::function<void(const ActNode*)>& Handler) const;
+  void TopoForEachActNode(
+      const std::list<const ActNode*>& starts,
+      const std::function<void(const ActNode*)>& Handler) const;
+  void ForEachInNode(const ActNode* node,
+                     const std::function<void(const ActNode*)>& Handler) const;
+  void ForEachOutNode(const ActNode* node,
+                      const std::function<void(const ActNode*)>& Handler) const;
+  void ComponentToDotFiles(const std::string& dir, int64_t component_id) const;
+
+  const ActGraph* act_graph_;
+  Range depth_range_;
+  std::list<std::string> regst_uids_;
+  HashMap<const ActNode*, int64_t> node2component_id_;
+  HashMap<int64_t, std::list<const ActNode*>> compo_id2sources_;
+  HashMap<int64_t, std::list<RegstActSubGraph>> compo_id2regst_act_graph_;
+};
+
+void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
+                                                int64_t component_id) const {
+  std::string filepath = JoinPath(dir, std::to_string(component_id) + ".dot");
+  const auto& sources = compo_id2sources_.at(component_id);
+  PersistentOutStream out_stream(LocalFS(), filepath);
+  out_stream << "digraph {\n";
+  ForEachActNode(sources, [&](const ActNode* node) {
+    out_stream << node->node_id_str() << "[label=\"" << node->VisualStr()
+               << "\", shape=ellipse, style=\"rounded,filled\", "
+               << "colorscheme=set312, color="
+               << task_type2color.at(node->task_type()) << "];\n";
+    for (const ActEdge* act_edge : node->out_edges()) {
+      out_stream << "\"" << act_edge->src_node()->node_id_str() << "\" -> \""
+                 << act_edge->dst_node()->node_id_str() << "\";\n";
+    }
+  });
+  out_stream << "}\n";
+}
+
+void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
+  std::string sub_dir = JoinPath(dir, std::to_string(depth_range_.begin()) + "-"
+                                          + std::to_string(depth_range_.end()));
+  LocalFS()->RecursivelyCreateDir(sub_dir);
+  for (const auto& pair : compo_id2sources_) {
+    ComponentToDotFiles(sub_dir, pair.first);
+  }
+}
+
+void DepthRangeActSubGraph::TopoForEachActNode(
+    const std::list<const ActNode*>& starts,
+    const std::function<void(const ActNode*)>& Handler) const {
+  auto ForEachIn = std::bind(&DepthRangeActSubGraph::ForEachInNode, this,
+                             std::placeholders::_1, std::placeholders::_2);
+  auto ForEachOut = std::bind(&DepthRangeActSubGraph::ForEachOutNode, this,
+                              std::placeholders::_1, std::placeholders::_2);
+  TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
+}
+
+void DepthRangeActSubGraph::ForEachInNode(
+    const ActNode* node,
+    const std::function<void(const ActNode*)>& Handler) const {
+  node->ForEachNodeOnInEdge([&](ActNode* in_node) {
+    if (in_node->depth() >= depth_range_.begin()
+        && in_node->depth() <= depth_range_.end()) {
+      Handler(in_node);
+    }
+  });
+}
+
+void DepthRangeActSubGraph::ForEachOutNode(
+    const ActNode* node,
+    const std::function<void(const ActNode*)>& Handler) const {
+  node->ForEachNodeOnOutEdge([&](ActNode* out_node) {
+    if (out_node->depth() >= depth_range_.begin()
+        && out_node->depth() <= depth_range_.end()) {
+      Handler(out_node);
+    }
+  });
+}
+
+void DepthRangeActSubGraph::ForEachActNode(
+    const std::list<const ActNode*>& sources,
+    const std::function<void(const ActNode*)>& Handler) const {
+  auto ForEachConnectedNode =
+      [&](const ActNode* node,
+          const std::function<void(const ActNode*)>& Handler) {
+        ForEachInNode(node, Handler);
+        ForEachOutNode(node, Handler);
+      };
+  BfsForEachNode(sources, ForEachConnectedNode, Handler);
+}
+
+void DepthRangeActSubGraph::InitComponentId2Sources() {
+  for (const auto& pair : node2component_id_) {
+    int in_nodes_cnt = 0;
+    ForEachInNode(pair.first, [&](const ActNode*) { ++in_nodes_cnt; });
+    if (in_nodes_cnt == 0) {
+      compo_id2sources_[pair.second].push_back(pair.first);
+    }
+  }
+}
+
+void DepthRangeActSubGraph::InitNode2ComponentId() {
+  int64_t component_id = 0;
+  const auto& sources = act_graph_->Nodes4Depth(depth_range_.begin());
+  ForEachActNode(sources, [&](const ActNode* node) {
+    if (node2component_id_.find(node) != node2component_id_.end()) { return; }
+    ForEachActNode({node}, [&](const ActNode* component_node) {
+      node2component_id_.insert({component_node, component_id});
+    });
+    ++component_id;
+  });
+}
+
+DepthRangeActSubGraph::DepthRangeActSubGraph(
+    const ActGraph* act_graph, const Range& depth_range,
+    const std::list<std::string>& regst_uids)
+    : act_graph_(act_graph),
+      depth_range_(depth_range),
+      regst_uids_(regst_uids) {
+  InitNode2ComponentId();
+  InitComponentId2Sources();
+}
+
+void DepthRangeActSubGraph::ForEachRegstActSubGraph(
+    const std::function<void(const RegstActSubGraph&)>& Handler) const {
+  for (const auto& regst_uid : regst_uids_) {
+    const ActNode* producer = act_graph_->ProducerNode4RegstUid(regst_uid);
+    HashMap<int64_t, HashSet<const ActNode*>> compo_id2producer_outs;
+    HashMap<int64_t, HashSet<const ActNode*>> compo_id2consumers;
+    HashSet<int64_t> component_ids;
+    ForEachOutNode(producer, [&](const ActNode* node) {
+      int64_t component_id = node2component_id_.at(node);
+      compo_id2producer_outs[component_id].insert(node);
+      component_ids.insert(component_id);
+    });
+    for (const ActNode* node : act_graph_->ConsumerNodes4RegstUid(regst_uid)) {
+      int64_t component_id = node2component_id_.at(node);
+      compo_id2consumers[component_id].insert(node);
+      component_ids.insert(component_id);
+    }
+    for (int64_t compo_id : component_ids) {
+      if (compo_id2producer_outs.find(compo_id) != compo_id2producer_outs.end()
+          && compo_id2consumers.find(compo_id) != compo_id2consumers.end()) {
+        RegstActSubGraph regst_act_graph(
+            regst_uid, producer, compo_id2producer_outs.at(compo_id),
+            compo_id2consumers.at(compo_id), compo_id2sources_.at(compo_id));
+        Handler(regst_act_graph);
+      }
+    }
+  }
 }
 
 void ActNode::AddConsumerNode(const std::string& regst_uid,
@@ -177,9 +365,17 @@ void ActGraph::ForEachRegstDescMeanDuration(
 
 void ActGraph::ForEachRegstActSubGraph(
     const std::function<void(const RegstActSubGraph&)>& Handler) const {
+  ForEachDepthRangeSubActGraph([&](const DepthRangeActSubGraph& sub_graph) {
+    sub_graph.ForEachRegstActSubGraph(Handler);
+  });
+}
+
+void ActGraph::ForEachDepthRangeSubActGraph(
+    const std::function<void(const DepthRangeActSubGraph&)>& Handler) const {
   ForEachDepthRangeRegstUids(
       [&](const Range& range, const std::list<std::string>& regst_uids) {
-        TODO();
+        DepthRangeActSubGraph depth_range_subgrpah(this, range, regst_uids);
+        Handler(depth_range_subgrpah);
       });
 }
 
@@ -234,7 +430,8 @@ void ActGraph::InitEdges() {
 void ActGraph::TopoForEachActNode(
     const std::list<ActNode*>& starts,
     const std::function<void(ActNode*)>& Handler) const {
-  TODO();
+  TopoForEachNode(starts, &ActNode::ForEachNodeOnInEdge,
+                  &ActNode::ForEachNodeOnOutEdge, Handler);
 }
 
 void ActGraph::InitDepth() {
@@ -283,5 +480,10 @@ void ActGraph::ForEachDepthRangeRegstUids(
   }
 }
 
-void ActGraph::ToDotFiles(const std::string& dir) const { TODO(); }
+void ActGraph::ToDotFiles(const std::string& dir) const {
+  ForEachDepthRangeSubActGraph([&](const DepthRangeActSubGraph& sub_graph) {
+    sub_graph.ToDotFiles(dir);
+  });
+}
+
 }  // namespace oneflow

@@ -16,7 +16,14 @@ class LossPrintOp final : public Operator {
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
+    if (input_bn == "loss_acc") {
+      return op_conf().loss_print_conf().loss_lbn();
+    } else if (input_bn == "reduction_acc") {
+      return op_conf().loss_print_conf().reduction_lbn();
+    } else {
+      UNIMPLEMENTED();
+      return "";
+    }
   }
 };
 

@@ -47,14 +47,16 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
 };
 
 template<DeviceType device_type, typename T>
-class BasicRnnKernelUtil final {
- public:
+struct BasicRnnKernelUtil {
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
                               const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff);
   static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
                                  const T* out_diff, const T* rec_out_diff,
                                  T* plus_out_diff);
+  static void ComputeReluDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff);
 };
 
 }  // namespace oneflow

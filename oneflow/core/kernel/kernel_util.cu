@@ -2,6 +2,7 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -64,9 +65,9 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    const int incx, T* y, const int incy) {
     cublas_axpy(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
   }
-  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cublas_scal(ctx->cublas_handle(), n, &alpha, x, incx);
+    cublas_scal(ctx->cublas_handle(), n, alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
@@ -91,9 +92,9 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                 ctx->cuda_stream()>>>(n, x, y, z);
   }
-#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
-  CudnnTensorDesc x_desc(GetDataType<T>::val, n, 1, 1, 1);    \
-  CudnnTensorDesc y_desc(GetDataType<T>::val, n, 1, 1, 1);    \
+#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)                 \
+  CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnTensorDesc y_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
   CudnnActivationDesc act_desc(mode, CUDNN_PROPAGATE_NAN, 0.0);
 
 #define FORWARD_COMPUTE_ACTIVATION(mode)                                   \
@@ -102,10 +103,10 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                                    CudnnDataType<T>::one, x_desc.Get(), x, \
                                    CudnnDataType<T>::zero, y_desc.Get(), y));
 
-#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode) \
-  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);       \
-  CudnnTensorDesc dx_desc(GetDataType<T>::val, n, 1, 1, 1);    \
-  CudnnTensorDesc dy_desc(GetDataType<T>::val, n, 1, 1, 1);
+#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)                 \
+  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                       \
+  CudnnTensorDesc dx_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1); \
+  CudnnTensorDesc dy_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::val, n, 1, 1, 1);
 
 #define BACKWARD_COMPUTE_ACTIVATION(mode)                         \
   CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);         \
@@ -197,6 +198,24 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 };
+
+template<>
+__device__ float gpu_atomic_add(float* address, const float val) {
+  return atomicAdd(address, val);
+}
+
+template<>
+__device__ double gpu_atomic_add(double* address, const double val) {
+  auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
+  unsigned long long int old = *address_as_ull;
+  unsigned long long int assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val + __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;

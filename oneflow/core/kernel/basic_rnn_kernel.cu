@@ -24,11 +24,18 @@ __global__ void ComputeSigmoidDiffGpu(const int64_t n, const T* out,
   }
 }
 
+template<typename T>
+__global__ void ComputeReluDiffGpu(const int64_t n, const T* out,
+                                   const T* out_diff, const T* rec_out_diff,
+                                   T* plus_out_diff) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    plus_out_diff[i] = out[i] * (out_diff[i] + rec_out_diff[i]);
+  }
+}
 }  // namespace
 
 template<typename T>
-class BasicRnnKernelUtil<DeviceType::kGPU, T> final {
- public:
+struct BasicRnnKernelUtil<DeviceType::kGPU, T> {
   static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
                               const T* out_diff, const T* rec_out_diff,
                               T* plus_out_diff) {
@@ -43,10 +50,17 @@ class BasicRnnKernelUtil<DeviceType::kGPU, T> final {
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(n, out, out_diff, rec_out_diff, plus_out_diff);
   }
+  static void ComputeReluDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff) {
+    ComputeReluDiffGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(n, out, out_diff, rec_out_diff, plus_out_diff);
+  }
 };
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \
-  template class BasicRnnKernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct BasicRnnKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -40,7 +40,7 @@ class Operator {
   virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
-  virtual bool IsDataLoaderOp() const { return false; }
+  virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
@@ -83,6 +83,11 @@ class Operator {
   const PbRf<T>& GetPbRfFromCustomizedConf(
       const std::string& field_name) const {
     return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
+  }
+  template<typename T>
+  const PbRpf<T>& GetPbRpfFromCustomizedConf(
+      const std::string& field_name) const {
+    return GetPbRpfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
@@ -189,9 +194,13 @@ class Operator {
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
-  void EnrollOutputBn(const std::string& obn, bool has_diff);
-
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num,
+                             bool has_diff);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix);
+  void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
 
   // enroll model blobs

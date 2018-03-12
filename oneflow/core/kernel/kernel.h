@@ -8,6 +8,8 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -70,12 +72,49 @@ class Kernel {
   virtual void BackwardColNum(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void L2Regularization(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+
+  virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
+  virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
+
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, conf_type) \
+  ret_type Get##func_name##FromCustomized##conf_type(                       \
+      const std::string& field_name) const {                                \
+    const PbMessage& customized_conf = GetCustomized##conf_type();          \
+    return Get##func_name##FromPbMessage(customized_conf, field_name);      \
+  }
+
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE(ret_type, func_name) \
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, OpConf);   \
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, KernelConf);
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
+                           const PbMessage&, Message));
+
+#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE
+#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
+
+  template<typename T>
+  const PbRf<T>& GetPbRfFromCustomizedOpConf(
+      const std::string& field_name) const {
+    return GetPbRfFromPbMessage<T>(GetCustomizedOpConf(), field_name);
+  }
+
+  template<typename T>
+  const PbRf<T>& GetPbRfFromCustomizedKernelConf(
+      const std::string& field_name) const {
+    return GetPbRfFromPbMessage<T>(GetCustomizedKernelConf(), field_name);
+  }
 
  private:
+  bool HasModelBns() const;
   KernelConf kernel_conf_;
 };
 
-template<DeviceType device_type>
+template<DeviceType device_type, typename T = char>
 class KernelIf : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIf);
@@ -94,6 +133,10 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardColNum(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  void L2Regularization(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
