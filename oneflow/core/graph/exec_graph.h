@@ -56,7 +56,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
-  std::unique_ptr<OpContext> op_ctx_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
 };
 
