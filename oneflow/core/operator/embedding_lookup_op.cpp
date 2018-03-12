@@ -36,12 +36,6 @@ void EmbeddingLookupOp::InferBlobDescs(
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape({table_size, units});
-
-  // weight_diff
-  GetBlobDesc4BnInOp(GenDiffBn("weight"))->mut_shape() = out_blob_desc->shape();
-
-  // ids_diff
-  *GetBlobDesc4BnInOp(GenDiffBn("ids")) = *in_blob_desc;
 }
 
 REGISTER_OP(OperatorConf::kEmbeddingLookupConf, EmbeddingLookupOp);
