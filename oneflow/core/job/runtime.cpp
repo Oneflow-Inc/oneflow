@@ -83,6 +83,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
     }
   }
   RuntimeCtx::NewSingleton(piece_num, is_experiment_phase);
+  CommNet::GenConnectionInfo(plan);
 #ifdef PLATFORM_POSIX
   if (JobDesc::Singleton()->use_rdma()) {
 #ifdef WITH_RDMA

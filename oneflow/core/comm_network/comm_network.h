@@ -4,6 +4,7 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -13,6 +14,11 @@ class CommNet {
   virtual ~CommNet() = default;
 
   static CommNet* Singleton() { return comm_network_ptr_; }
+
+  static void GenConnectionInfo(const Plan& plan);
+  static const HashSet<int64_t>& get_peer_machine_id() {
+    return peer_machine_id_;
+  }
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
@@ -56,6 +62,7 @@ class CommNet {
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneRead(ReadContext*);
 
+  static HashSet<int64_t> peer_machine_id_;
   static CommNet* comm_network_ptr_;
 };
 

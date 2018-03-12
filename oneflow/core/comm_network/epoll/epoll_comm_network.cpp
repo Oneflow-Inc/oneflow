@@ -129,8 +129,13 @@ void EpollCommNet::InitSockets() {
     }
   }
   CHECK_LT(this_listen_port, listen_port_max);
+  int32_t src_machine_count = 0;
   // connect
-  FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
+  for (int64_t peer_machine_id : CommNet::get_peer_machine_id()) {
+    if (peer_machine_id < this_machine_id) {
+      ++src_machine_count;
+      continue;
+    }
     uint16_t peer_port = PullPort(peer_machine_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -141,7 +146,7 @@ void EpollCommNet::InitSockets() {
     machine_id2sockfd_[peer_machine_id] = sockfd;
   }
   // accept
-  FOR_RANGE(int64_t, idx, 0, this_machine_id) {
+  FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
     int sockfd = accept(listen_sockfd,
