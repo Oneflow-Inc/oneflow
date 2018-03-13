@@ -1,11 +1,21 @@
 #ifndef ONEFLOW_CORE_PERSISTENCE_PERSISTENCE_THREAD_POOL_H_
 #define ONEFLOW_CORE_PERSISTENCE_PERSISTENCE_THREAD_POOL_H_
 
-#include "unsupported/Eigen/CXX11/ThreadPool"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class CpuStream final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(CpuStream);
+  CpuStream() = default;
+  ~CpuStream() = default;
+
+  void Schedule(std::function<void()> fn) { TODO(); }
+
+ private:
+};
 
 class PersistenceThreadPool final {
  public:
@@ -15,13 +25,11 @@ class PersistenceThreadPool final {
 
   OF_SINGLETON(PersistenceThreadPool);
 
-  void Schedule(std::function<void()> fn);
+  CpuStream* NewCpuStream() { TODO(); }
 
  private:
   PersistenceThreadPool(const Plan& plan);
-  int32_t CalcPersistenceTaskNumOnThisMachine(const Plan& plan);
-
-  std::unique_ptr<Eigen::ThreadPoolInterface> eigen_thread_pool_;
+  int32_t CalcThreadNum(const Plan& plan);
 };
 
 }  // namespace oneflow
