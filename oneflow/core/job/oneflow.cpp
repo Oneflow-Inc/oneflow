@@ -42,6 +42,21 @@ AvailableMemDesc PullAvailableMemDesc() {
   return ret;
 }
 
+void FixCpuDeviceNum() {
+  int32_t cpu_device_num = JobDesc::Singleton()->CpuDeviceNum();
+  if (cpu_device_num > 0) { return; }
+  if (MachineCtx::Singleton()->IsThisMachineMaster()) {
+    cpu_device_num = std::thread::hardware_concurrency();
+    CtrlClient::Singleton()->PushKVT("cpu_device_num", cpu_device_num);
+  } else {
+    CtrlClient::Singleton()->PullKVT("cpu_device_num", &cpu_device_num);
+  }
+  OF_BARRIER();
+  CtrlClient::Singleton()->ClearKV("cpu_device_num");
+  CHECK_GT(cpu_device_num, 0);
+  JobDesc::Singleton()->SetCpuDeviceNum(cpu_device_num);
+}
+
 }  // namespace
 
 class Oneflow final {
@@ -66,6 +81,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
   const MachineCtx* machine_ctx = MachineCtx::Singleton();
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   CtrlClient::NewSingleton();
+  FixCpuDeviceNum();
   // Compile
   Plan plan;
   if (machine_ctx->IsThisMachineMaster()) {

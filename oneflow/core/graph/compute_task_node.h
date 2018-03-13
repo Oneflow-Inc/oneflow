@@ -14,6 +14,13 @@ class CompTaskNode : public TaskNode {
   virtual ~CompTaskNode() = default;
 
   virtual void ToProto(TaskProto*) override;
+  void SetThrdId(std::function<int64_t()> AllocateOneCpuDeviceThrdId) {
+    if (IsPersistence()) {
+      set_thrd_id(IDMgr::Singleton()->PersistenceThrdId());
+    } else {
+      set_thrd_id(AllocateOneCpuDeviceThrdId());
+    }
+  }
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
@@ -27,6 +34,9 @@ class CompTaskNode : public TaskNode {
   void set_chain_node(const ChainNode* val) { chain_node_ = val; }
   const ChainNode* SuccChainNodeOnEdge(TaskEdge* edge);
   const ChainNode* PredChainNodeOnEdge(TaskEdge* edge);
+
+ protected:
+  virtual bool IsPersistence() const { return false; }
 
  private:
   ParallelContext parallel_ctx_;

@@ -10,33 +10,11 @@ const std::string& JobDesc::MdLoadSnapshotPath() {
 size_t JobDesc::SizeOfOneDataId() const {
   return job_conf_.max_data_id_length() * sizeof(char);
 }
-int32_t JobDesc::DecodeWorkerNum() const {
-  CHECK(resource_.has_decode_worker_num());
-  return resource_.decode_worker_num();
-}
-void JobDesc::set_decode_worker_num(int32_t decode_worker_num) {
-  resource_.set_decode_worker_num(decode_worker_num);
-}
-int32_t JobDesc::BoxingWorkerNum() const {
-  CHECK(resource_.has_boxing_worker_num());
-  return resource_.boxing_worker_num();
-}
-void JobDesc::set_boxing_worker_num(int32_t boxing_worker_num) {
-  resource_.set_boxing_worker_num(boxing_worker_num);
-}
 int32_t JobDesc::CommNetWorkerNum() const {
-  CHECK(resource_.has_comm_net_worker_num());
   return resource_.comm_net_worker_num();
 }
-void JobDesc::set_comm_net_worker_num(int32_t comm_net_worker_num) {
-  resource_.set_comm_net_worker_num(comm_net_worker_num);
-}
 int32_t JobDesc::PersistenceWorkerNum() const {
-  CHECK(resource_.has_persistence_worker_num());
   return resource_.persistence_worker_num();
-}
-void JobDesc::set_persistence_worker_num(int32_t persistence_worker_num) {
-  resource_.set_persistence_worker_num(persistence_worker_num);
 }
 int32_t JobDesc::ParallelPieceSize() const {
   return job_conf_.data_part_num() * SinglePieceSize();
