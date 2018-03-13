@@ -149,7 +149,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   // c_gate_out = in * i2h_c_weight + hidden * h2h_c_weight +
   //							bias_c * bias_c_mulipler
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasTran, static_cast<T>(1),
+      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
       static_cast<T>(0), BnInOp2Blob("in"), BnInOp2Blob("i2h_c_weight"),
       c_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
@@ -159,7 +159,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), BnInOp2Blob("bias_c_multiplier"),
-      BnInOp2Blob("bias_c"), c_gate_out);
+      BnInOp2Blob("bias_c"), c_gate_out_blob);
 
   // c_out = tanh(c_gate_out)
   KernelUtil<device_type, T>::TanH(ctx.device_ctx, out_blob->shape().elem_cnt(),
@@ -168,7 +168,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 
   // o_gate_out = in * i2h_o_weight + hidden * h2h_o_weight +
   //							bias_o * bias_o_mulipler
-  KenerUtil<device_type, T>::BlobGemm(
+  KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasTran, static_cast<T>(1),
       static_cast<T>(0), BnInOp2Blob("in"), BnInOp2Blob("i2h_o_weight"),
       o_gate_out_blob);
