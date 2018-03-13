@@ -1,5 +1,9 @@
-#ifndef oqwd
-#define oqwd
+#ifndef ONEFLOW_CORE_PERSISTENCE_PERSISTENCE_THREAD_POOL_H_
+#define ONEFLOW_CORE_PERSISTENCE_PERSISTENCE_THREAD_POOL_H_
+
+#include "unsupported/Eigen/CXX11/ThreadPool"
+#include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -11,12 +15,15 @@ class PersistenceThreadPool final {
 
   OF_SINGLETON(PersistenceThreadPool);
 
-  void Schedule(std::function<void()> fn) { TODO(); }
+  void Schedule(std::function<void()> fn);
 
  private:
-  PersistenceThreadPool(const Plan& plan) { TODO(); }
+  PersistenceThreadPool(const Plan& plan);
+  int32_t CalcPersistenceTaskNumOnThisMachine(const Plan& plan);
+
+  std::unique_ptr<Eigen::ThreadPoolInterface> eigen_thread_pool_;
 };
 
 }  // namespace oneflow
 
-#endif  // oqwd
+#endif  // ONEFLOW_CORE_PERSISTENCE_PERSISTENCE_THREAD_POOL_H_

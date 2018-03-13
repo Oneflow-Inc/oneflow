@@ -22,5 +22,5 @@ message Resource {
 
 // Usage:
 //   machine_name:gpu:gpu_dev_phy_id
-//   machine_name:gpu:gpu_dev_phy_id_min-gpu_dev_phy_id_max
+//   machine_name:gpu:gpu_dev_phy_id_first-gpu_dev_phy_id_last
 //   machine_name:cpu:parallel_num
