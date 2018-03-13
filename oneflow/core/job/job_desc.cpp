@@ -11,11 +11,9 @@ size_t JobDesc::SizeOfOneDataId() const {
   return job_conf_.max_data_id_length() * sizeof(char);
 }
 int32_t JobDesc::CommNetWorkerNum() const {
-  CHECK(resource_.has_comm_net_worker_num());
   return resource_.comm_net_worker_num();
 }
 int32_t JobDesc::PersistenceWorkerNum() const {
-  CHECK(resource_.has_persistence_worker_num());
   return resource_.persistence_worker_num();
 }
 int32_t JobDesc::ParallelPieceSize() const {
