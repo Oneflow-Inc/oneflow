@@ -10,7 +10,8 @@ void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       continue;
     }
     TaskNode* dst_node = edge->dst_node();
-    if (dst_node->GetTaskType() != TaskType::kMdDiffAcc) {
+    if (dst_node->GetTaskType() != TaskType::kMdDiffAcc
+        && dst_node->GetTaskType() != TaskType::kEmbeddingLookupMdDiffAcc) {
       VirtualProduceInDiffAndBindEdge(edge);
     } else {
       edge->AddRegst("model_diff", ProduceRegst("model_diff"));
