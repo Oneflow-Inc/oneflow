@@ -13,9 +13,9 @@ class BasicLstmKernel : public KernelIf<device_type> {
 	~BasicLstmKernel() = default;
 
  private:
-  const PbMessage& GetBasicLstmOpConf() const = 0;
-	bool HasInitHiddenInitializer() const = 0;
-  bool HasInitCellInitializer() const = 0;
+  const PbMessage& GetBasicLstmOpConf() const  override;
+	bool HasInitHiddenInitializer() const  override;
+  bool HasInitCellInitializer() const  override;
 	bool NeedExternalH0() const;
 	bool NeedExternalC0() const;
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
@@ -36,11 +36,11 @@ class BasicLstmKernel : public KernelIf<device_type> {
 	void InitPureModelTmpBlobs(
 										DeviceCtx*,
 										std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-	void InitModelBlobsWithDir(
+	void VirtualInitModelBlobsWithDir(
 			DeviceCtx*, int32_t part_id, int32_t part_num,
 			const std::string& model_load_dir,
 			std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitModelBlobsWithRandomSeed(
+  void VitualInitModelBlobsWithRandomSeed(
 			DeviceCtx*, std::mt19937* random_seed_gen,
 			std::function<Blob*(const std::string&)>) const{}
 	void VirtualKernelInit(const ParallelContext*) override;
