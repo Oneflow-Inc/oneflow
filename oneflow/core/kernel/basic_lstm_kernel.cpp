@@ -111,7 +111,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 	Blob* c_out_blob = BnInOp2Blob("c_out");
 	// f_gate_out = in * i2h_f_weight + hidden * h2h_f_weight +
 	//							bias * bias_f_mulipler
-	KenerUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
 																			static_cast<T>(1), static_cast<T>(0),
 																			BnInOp2Blob("in"), BnInOp2Blob("i2h_f_weight"),
 																			f_gate_out);
@@ -164,7 +164,6 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 	KernelUtil<device_type, T>::TanH(ctx.device_ctx, out_blob->shape().elem_cnt(),
 																	 c_gate_out_blob->dptr<T>(), c_out_blob->mut_dptr<T>());
 
-
 	// o_gate_out = in * i2h_o_weight + hidden * h2h_o_weight +
 	//							bias_o * bias_o_mulipler
 	KenerUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
@@ -183,7 +182,6 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 	// o_out = sigmoid(o_gate_out)  
 	KernelUtil<device_type, T>::Sigmoid(ctx.device_ctx, out_blob->shape().elem_cnt(),
 																			o_gate_out_blob->dptr<T>(), o_out_blob->mut_dptr<T>());
-
 
 	// rec_out = o_out *  tanh(c_out)  
   KernelUtil<device_type, T>::TanH(ctx.device_ctx, out_blob->shape().elem_cnt(),
@@ -238,39 +236,67 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
 	
 	//cell_out_diff = rec_out_diff * o_out * [1 - tanh(cell_out)*tanh(cell_out)] 
 	//								+ cell_out_diff
-	
-	
+	KernelUtil<device_type, T>::TanH(ctx.device_type, out_blob->shape().elem_cnt(),
+																	 );
+	KernelUtil<device_type, T>::Mul(ctx.device_type, out_blob->shape().elem_cnt(), 
+																	);
+	KernelUtil<device_type, T>::Mul(ctx.device_type, out_blob->shape().elem_cnt(),
+																	);
+	KernelUtil<device_type, T>::Axpy(ctx.device_type, out_blob_shape().elem_cnt(),
+																	);
 
 	//i_out_diff = cell_out_diff * c_out	
 	KernelUtil<device_type, T>::Mul(ctx.device_type, out_blob->shape().elem_cnt(),
 																	cell_out_diff_blob->dptr<T>(), c_out_blob->dptr<T>(),
 																	i_out_diff_blob->mut_dptr<T>());
-	//	i_gate_out_diff = i_out_diff * (1 - i_out_diff)
-	if (in_blob->col_id() == in_blob->max_col_id()) {
-		(*last_colnum_activation_bw_func_)(
-				ctx.device_ctx, out_blob->shape().elem_cnt(),
-				)
-	
-	}
+
+	//	i_gate_out_diff = ComputeSigmoidDiff(i_out_diff)
+	KernelUtil<device_type, T>::SigmoidBackward();
+
 	//	h2h_i_weight_diff = i_gate_out_diff * hidden
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 i_gate_out_diff_blob, hidden_blob,
+																			 BnInOp2Blob("h2h_i_weight_diff"));
 	// 	i2h_i_weight_diff = i_gate_out_diff * in
-	
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 i_gate_out_diff_blob, BnInOp2Blob("in"),
+																			 BnInOp2Blob("i2h_i_weight_diff"));
 
 	//f_out_diff = cell_out_diff * cell_in
 	KernelUtil<device_type, T>::Mul(ctx.device_type, out_blob->shape().elem_cnt(),
 																	cell_out_diff_blob->dptr<T>(), cell_in_blob->dptr<T>(),
 																	f_out_diff_blob->mut_dptr<T>());
 	//	f_gate_out_diff = f_out_diff * (1 - f_out_diff)
+	KernelUtil<device_type, T>::SigmoideBackward();
 	//	h2h_f_weight_diff = f_gate_out_diff * hidden
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 f_gate_out_diff_blob, hidden_blob,
+																			 BnInOp2Blob("h2h_f_weight_diff"));
 	// 	i2h_f_weight_diff = f_gate_out_diff * in
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 f_gate_out_diff_blob, BnInOp2Blob("in"),
+																			 BnInOp2Blob("i2h_f_weight_diff"));
 	
 	//c_out_diff = cell_out_diff * i_out
 	KernelUtil<device_type, T>::Mul(ctx.device_type, out_blob->shape().elem_cnt(),
 																	cell_out_diff_blob->dptr<T>(), i_out_blob->dptr<T>(),
 																	c_out_diff_blob->mut_dptr<T>());
-	//	c_gate_out_diff = c_out_diff * (1 - c_out_diff)
+	
+	KernelUtil<device_type, T>::TanHBackward();
 	//	h2h_c_weight_diff = c_gate_out_diff * hidden
+	KernekUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 c_gate_out_diff_blob, hidden_blob,
+																			 BnInOp2Blob("h2h_c_weight_diff"));
 	// 	i2h_c_weight_diff = c_gate_out_diff * in
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 c_gate_out_diff_blob, BnInOp2Blob("in"),
+																			 BnInOp2Blob("i2h_c_weight_diff"));
 	
 	//o_out_diff = rec_out_diff * tanh(cell_out)
 	KernelUtil<device_type, T>::TanH(ctx.device_type, out_blob->shape().elem_cnt(),
@@ -280,25 +306,175 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
 																	o_out_diff_blob->mut_dptr<T>());
 
 	//	o_gate_out_diff = o_out_diff * (1 - o_out_diff)
+	KernelUtil<device_type, T>::SigmoidBackward();
 	//	h2h_o_weight_diff = o_gate_out_diff * hidden
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNotrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 o_gate_out_diff_blob, hidden_blob,
+																			 BnInOp2Blob("h2h_o_weight_diff"));
 	// 	i2h_o_weight_diff = o_gate_out_diff * in
-	
+	KernelUtil<device_type, T>::BlobGemm(ctx.device_type, CblasTrans, CblasNoTrans,
+																			 static_cast<T>(1), static_cast<T>(0),
+																			 o_gate_out_diff_blob, BnInOp2Blob("in"),
+																			 BnInOp2Blob("i2h_o_weight_diff"));
 }
 	
-
-
-
-
 template<DeviceType device_type, typename T>
-void BasicLstmKernel<device_type, T>::InitPureModelTmpBlobs()
+void BasicLstmKernel<device_type, T>::VirtualInitModelTmpBlobsWithRandomSeed(
+		DeviceCtx* ctx, std::mt19937* random_seed_gen
+		std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												i2h_f_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("i2h_f_weight"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												i2h_i_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("i2h_i_weight"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												i2h_o_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("i2h_o_weight"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												i2h_c_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("i2h_c_weight"));
 
-template<DeviceType device_type, typename T>
-void BasicLstmKernel<device_type, T>::VitualInitModelBlobsWithDir()
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												h2h_f_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("h2h_f_weight"));
 
-template<DeviceType device_type, typename T>
-void BasicLstmKernel<device_type, T>::VitualInitModelBlobsWithRandomSeed()
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												h2h_i_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("h2h_i_weight"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												h2h_c_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("h2h_c_weight"));
 
-
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												h2h_o_weight_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("h2h_o_weight"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												bias_f_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("bais_f"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												bias_i_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("bais_i"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												bias_o_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("bais_o"));
+	KernelUtil<device_type, T>::InitializeWithProperConf(
+			ctx,
+			OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),
+												bias_c_initializer),
+			(*random_seed_gen)(), BnInOp2Blob("bais_c"));
 }
 
+template<DeviceType device_type, typename T>
+void BasicLstmKernel<device_type, T>::VitualInitModelBlobsWithDir(
+		DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+		const std::string& model_load_dir,
+		std:function<Blob*(const std:;string&)> BnInOp2Blob) const {
+	Blob* i2h_f_weight_blob = BnInOp2Blob("i2h_f_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, i2h_f_weight_blob, "i2h_f_weight",
+			i2h_f_weight_blob->shape().At(0), i2h_f_weight_blob->shape().Count(1));
+	Blob* i2h_i_weight_blob = BnInOp2Blob("i2h_i_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, i2h_i_weight_blob, "i2h_i_weight",
+			i2h_i_weight_blob->shape().At(0), i2h_i_weight_blob->shape().Count(1));
+	Blob* i2h_c_weight_blob = BnInOp2Blob("i2h_c_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, i2h_c_weight_blob, "i2h_c_weight",
+			i2h_c_weight_blob->shape().At(0), i2h_c_weight_blob->shape().Count(1));
+	Blob* i2h_o_weight_blob = BnInOp2Blob("i2h_o_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, i2h_o_weight_blob, "i2h_o_weight",
+			i2h_o_weight_blob->shape().At(0), i2h_o_weight_blob->shape().Count(1));
 
+	Blob* h2h_f_weight_blob = BnInOp2Blob("h2h_f_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, h2h_f_weight_blob, "h2h_f_weight",
+			h2h_f_weight_blob->shape().At(0), h2h_f_weight_blob->shape().Count(1));
+	Blob* h2h_i_weight_blob = BnInOp2Blob("h2h_i_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, h2h_i_weight_blob, "h2h_i_weight",
+			h2h_i_weight_blob->shape().At(0), h2h_i_weight_blob->shape().Count(1));
+	Blob* h2h_c_weight_blob = BnInOp2Blob("h2h_c_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, h2h_c_weight_blob, "h2h_c_weight",
+			h2h_c_weight_blob->shape().At(0), h2h_c_weight_blob->shape().Count(1));
+	Blob* h2h_o_weight_blob = BnInOp2Blob("h2h_o_weight");
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, h2h_c_weight_blob, "h2h_c_weight",
+			h2h_o_weight_blob->shape().At(0), h2h_o_weight_blob->shape().Count(1));
+
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_f"), "bias_f",
+			BnInOp2Blob("bias_f")->shape().At(0), 1);
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_i"), "bias_i",
+			BnInOp2Blob("bias_i")->shape().At(0), 1);
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_o"), "bias_o",
+			BnInOp2Blob("bias_o")->shape().At(0), 1);
+	KernelUtil<device_type, T>::InitializeWithModelDir(
+			ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_c"), "bias_c",
+			BnInOp2Blob("bias_c")->shape().At(0), 1);
+
+	if (NeedExternalH0()) {
+		KernelUtil<device_type, T>::InitialzeWithModelDir(
+				ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"), "h0",
+				BnInOp2Blob("h0")->shape().At(0), 1);
+	}
+	if (NeedExternalC0()) {
+		KernelUtil<device_type, T>::InitializeWithModelDir(
+				ctx, part_id, part_num, model_load_dir, BnInOp2Blob("c0"), "c0",
+				BnInOp2Blob("c0")->shape().At(0), 1);
+	}
+}
+
+template<DeviceType device_type, typename T>
+void BasicLstmKernel<device_type, T>::InitPureModelBlobsTmpBlobs(
+		DeviceCtx* ctx,
+		std::function<Blob*(const std:;string&)> BnInOp2Blob) const {
+	InitializerConf bias_f_multiplier_fill_conf;
+	bias_f_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+	KernelUtil<devcice_type, T>::Initialize(ctx, bias_f_multiplier_fill_conf, 0,
+															 BnInOp2Blob("bias_f_multiplier"));
+
+	InitializerConf bias_i_multiplier_fill_conf;
+	bias_i_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+	KernelUtil<devcice_type, T>::Initialize(ctx, bias_i_multiplier_fill_conf, 0,
+															 BnInOp2Blob("bias_i_multiplier"));
+
+	InitializerConf bias_o_multiplier_fill_conf;
+	bias_o_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+	KernelUtil<devcice_type, T>::Initialize(ctx, bias_o_multiplier_fill_conf, 0,
+															 BnInOp2Blob("bias_o_multiplier"));
+
+	InitializerConf bias_c_multiplier_fill_conf;
+	bias_c_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+	KernelUtil<devcice_type, T>::Initialize(ctx, bias_c_multiplier_fill_conf, 0,
+															 BnInOp2Blob("bias_c_multiplier"));
+}
+
+}
