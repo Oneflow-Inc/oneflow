@@ -33,14 +33,6 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;*/
 };
 
-template<DeviceType device_type, typename T>
-class BasicGruKernelUtil final {
- public:
-  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                                 const T* out_diff, const T* rec_out_diff,
-                                 T* plus_out_diff);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEK_BASIC_GRU_KERNEL_H_
