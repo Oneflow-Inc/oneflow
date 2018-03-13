@@ -25,13 +25,19 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollModelBn("h2h_o_weight");
   EnrollModelBn("i2h_c_weight");
   EnrollModelBn("h2h_c_weight");
-  if (GetBoolFromCustomizedConf("use_bias")) {
+  if (GetBoolFromCustomizedConf("use_f_bias")) {
     EnrollModelBn("bias_f");
     EnrollModelTmpBn("bias_f_multiplier");
+	}
+	if (GetBoolFromCustomizedConf("use_o_bias")) {
     EnrollModelBn("bias_o");
     EnrollModelTmpBn("bias_o_multiplier");
+	}
+	if (GetBoolFromCustomizedConf("use_i_bias")) {
     EnrollModelBn("bias_i");
     EnrollModelTmpBn("bias_i_multiplier");
+	}
+	if (GetBoolFromCustomizedConf("use_c_bias")) {
     EnrollModelBn("bias_c");
     EnrollModelTmpBn("bias_c_multiplier");
   }
