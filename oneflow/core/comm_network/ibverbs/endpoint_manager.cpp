@@ -55,7 +55,7 @@ EndpointManager::~EndpointManager() {
 void EndpointManager::InitRdma() {
   int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
   int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
-  for (int64_t peer_machine_id : CommNet::get_peer_machine_id()) {
+  for (int64_t peer_machine_id : CommNet::Singleton()->get_peer_machine_id()) {
     IBVerbsConnection* conn = NewIBVerbsConnection();
     connection_pool_.emplace(peer_machine_id, conn);
     CtrlClient::Singleton()->PushKV(
@@ -63,7 +63,7 @@ void EndpointManager::InitRdma() {
         conn->mut_this_machine_conn_info());
   }
   OF_BARRIER();
-  for (int64_t peer_machine_id : CommNet::get_peer_machine_id()) {
+  for (int64_t peer_machine_id : CommNet::Singleton()->get_peer_machine_id()) {
     IBVerbsConnection* conn = connection_pool_[peer_machine_id];
     CtrlClient::Singleton()->PullKV(
         GenConnInfoKey(peer_machine_id, this_machine_id),

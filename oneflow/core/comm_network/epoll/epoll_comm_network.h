@@ -19,7 +19,7 @@ class EpollCommNet final : public CommNet {
     return static_cast<EpollCommNet*>(CommNet::Singleton());
   }
 
-  static void Init();
+  static void Init(const Plan& plan);
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;

@@ -59,8 +59,10 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::Init() {
-  CommNet::Singleton()->set_comm_network_ptr(new EpollCommNet());
+void EpollCommNet::Init(const Plan& plan) {
+  EpollCommNet* comm_net = new EpollCommNet();
+  comm_net->GenConnectionInfo(plan);
+  CommNet::Singleton()->set_comm_network_ptr(comm_net);
 }
 
 const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -131,7 +133,7 @@ void EpollCommNet::InitSockets() {
   CHECK_LT(this_listen_port, listen_port_max);
   int32_t src_machine_count = 0;
   // connect
-  for (int64_t peer_machine_id : CommNet::get_peer_machine_id()) {
+  for (int64_t peer_machine_id : CommNet::Singleton()->get_peer_machine_id()) {
     if (peer_machine_id < this_machine_id) {
       ++src_machine_count;
       continue;

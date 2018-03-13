@@ -15,11 +15,6 @@ class CommNet {
 
   static CommNet* Singleton() { return comm_network_ptr_; }
 
-  static void GenConnectionInfo(const Plan& plan);
-  static const HashSet<int64_t>& get_peer_machine_id() {
-    return peer_machine_id_;
-  }
-
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
   virtual const void* RegisterMemory(void* dptr, size_t byte_size) = 0;
@@ -38,6 +33,7 @@ class CommNet {
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
+  const HashSet<int64_t>& get_peer_machine_id() { return peer_machine_id_; }
 
  protected:
   CommNet() = default;
@@ -57,12 +53,13 @@ class CommNet {
 
   virtual void DoRead(void* read_id, int64_t src_machine_id,
                       const void* src_token, const void* dst_token) = 0;
+  void GenConnectionInfo(const Plan& plan);
 
  private:
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneRead(ReadContext*);
 
-  static HashSet<int64_t> peer_machine_id_;
+  HashSet<int64_t> peer_machine_id_;
   static CommNet* comm_network_ptr_;
 };
 

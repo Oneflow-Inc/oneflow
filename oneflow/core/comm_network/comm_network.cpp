@@ -3,7 +3,6 @@
 namespace oneflow {
 
 CommNet* CommNet::comm_network_ptr_;
-HashSet<int64_t> CommNet::peer_machine_id_;
 
 void* CommNet::NewActorReadId() { return new ActorReadContext; }
 

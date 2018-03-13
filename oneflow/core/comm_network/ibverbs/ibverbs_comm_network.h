@@ -19,7 +19,7 @@ class IBVerbsCommNet final : public CommNet {
     return static_cast<IBVerbsCommNet*>(CommNet::Singleton());
   }
 
-  static void Init();
+  static void Init(const Plan& plan);
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
@@ -33,7 +33,7 @@ class IBVerbsCommNet final : public CommNet {
               const void* dst_token) override;
 
   MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
-  EndpointManager endpoint_manager_;
+  std::unique_ptr<EndpointManager> endpoint_manager_;
   HashMap<uint64_t, IBVerbsMemDescProto> token2mem_desc_proto_;
 };
 
