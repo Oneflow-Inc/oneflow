@@ -14,13 +14,15 @@ class DecodeCompActor final : public CompActor {
  private:
   void VirtualCompActorInit(const TaskProto&) override;
 
-  int HandlerWaitToStart(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
 
   void Act() override;
   bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
+  bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override {}
+
+  bool is_in_eord_;
+  std::queue<Regst*> pending_in_regsts_;
 };
 
 }  // namespace oneflow
