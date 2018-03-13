@@ -13,7 +13,7 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("i_out");
   EnrollDataTmpBn("o_gate_out");
   EnrollDataTmpBn("o_out");
-	EnrollDataTmpBn("c_gate_out");
+  EnrollDataTmpBn("c_gate_out");
   EnrollDataTmpBn("c_out");
   EnrollDataTmpBn("update_out");
 
@@ -63,6 +63,9 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("c_gate_out") = BlobDesc(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
+	*GetBlobDesc4BnInOp("update_gate") = BlobDesc(
+			Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+			false, true, in_blob_desc->max_col_num();)
 
   *GetBlobDesc4BnInOp("f_out") = BlobDesc(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
