@@ -63,7 +63,7 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp("c_gate_out") = BlobDesc(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
-	*GetBlobDesc4BnInOp("update_gate") = BlobDesc(
+	*GetBlobDesc4BnInOp("update_out") = BlobDesc(
 			Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
 			false, true, in_blob_desc->max_col_num();)
 
