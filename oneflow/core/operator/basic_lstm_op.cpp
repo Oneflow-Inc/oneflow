@@ -8,14 +8,14 @@ const PbMessage& BasicLstmOp::GetCustomizedConf() const {
 
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("f_gate_out");
-	EnrollDataTmpBn("f_out");
+  EnrollDataTmpBn("f_out");
   EnrollDataTmpBn("i_gate_out");
-	EnrollDataTmpBn("i_out");
+  EnrollDataTmpBn("i_out");
   EnrollDataTmpBn("o_gate_out");
-	EnrollDataTmpBn("o_out")
-  EnrollDataTmpBn("c_gate_out");
-	EnrollDataTmpBn("c_out");
-	EnrollDataTmpBn("update_out");
+  EnrollDataTmpBn("o_out");
+	EnrollDataTmpBn("c_gate_out");
+  EnrollDataTmpBn("c_out");
+  EnrollDataTmpBn("update_out");
 
   EnrollModelBn("i2h_f_weight");
   EnrollModelBn("h2h_f_weight");
@@ -28,16 +28,16 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   if (GetBoolFromCustomizedConf("use_f_bias")) {
     EnrollModelBn("bias_f");
     EnrollModelTmpBn("bias_f_multiplier");
-	}
-	if (GetBoolFromCustomizedConf("use_o_bias")) {
+  }
+  if (GetBoolFromCustomizedConf("use_o_bias")) {
     EnrollModelBn("bias_o");
     EnrollModelTmpBn("bias_o_multiplier");
-	}
-	if (GetBoolFromCustomizedConf("use_i_bias")) {
+  }
+  if (GetBoolFromCustomizedConf("use_i_bias")) {
     EnrollModelBn("bias_i");
     EnrollModelTmpBn("bias_i_multiplier");
-	}
-	if (GetBoolFromCustomizedConf("use_c_bias")) {
+  }
+  if (GetBoolFromCustomizedConf("use_c_bias")) {
     EnrollModelBn("bias_c");
     EnrollModelTmpBn("bias_c_multiplier");
   }
@@ -77,8 +77,6 @@ void BasicLstmOp::VirtualInferBlobDescs(
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
 
-
-
   *GetBlobDesc4BnInOp("i2h_f_weight") =
       BlobDesc(Shape({hidden_size, embedding_zie}));
   *GetBlobDesc4BnInOp("h2h_f_weight") =
@@ -99,16 +97,16 @@ void BasicLstmOp::VirtualInferBlobDescs(
   if (GetBoolFromCustomizedConf("use_f_bias")) {
     *GetBlobDesc4BnInOp("bias_f") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_f_multiplier") = BlobDesc(Shape({data_num, 1}));
-	}
-	if (GetBoolFromCustomizedConf("use_o_bias")) {
+  }
+  if (GetBoolFromCustomizedConf("use_o_bias")) {
     *GetBlobDesc4BnInOp("bias_o") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_o_multiplier") = BlobDesc(Shape({data_num, 1}));
-	}
-	if (GetBoolFromCustomizedConf("use_i_bias")) {
+  }
+  if (GetBoolFromCustomizedConf("use_i_bias")) {
     *GetBlobDesc4BnInOp("bias_i") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_i_multiplier") = BlobDesc(Shape({data_num, 1}));
-	}
-	if (GetBoolFromCustomizedConf("use_c_bias")) {
+  }
+  if (GetBoolFromCustomizedConf("use_c_bias")) {
     *GetBlobDesc4BnInOp("bias_c") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
   }
