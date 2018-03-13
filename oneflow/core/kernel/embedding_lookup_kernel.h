@@ -36,8 +36,6 @@ class EmbeddingLookupKernelUtil final {
 
   static void Forward(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                       Blob* out_blob);
-  static void Backward(DeviceCtx*, const Blob* in_blob,
-                       const Blob* out_diff_blob, Blob* weight_diff_blob);
 };
 
 }  // namespace oneflow
