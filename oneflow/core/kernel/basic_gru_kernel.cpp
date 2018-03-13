@@ -215,38 +215,38 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
       reset_gate_data_diff_blob->mut_dptr<T>());
 
   // h2h_weght_r_diff = reset_gate_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        reset_gate_data_diff_blob, hidden_blob,
                                        BnInOp2Blob("h2h_weight_r"));
 
   // i2h_weght_r_diff = reset_gate_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), reset_gate_data_diff_blob, BnInOp2Blob("in"),
       BnInOp2Blob("i2h_weight_r"));
 
   // h2h_weght_z_diff = update_gate_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        update_gate_data_diff_blob, hidden_blob,
                                        BnInOp2Blob("h2h_weight_z"));
 
   // i2h_weght_z_diff = reset_gate_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), update_gate_data_diff_blob, BnInOp2Blob("in"),
       BnInOp2Blob("i2h_weight_z"));
 
   // h2h_weght_diff = candidate_hidden_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        reset_gate_data_diff_blob, hidden_blob,
                                        BnInOp2Blob("h2h_weight_r"));
 
   // i2h_weght_diff = candidate_hidden_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), candidate_hidden_data_diff_blob, BnInOp2Blob("in"),
       BnInOp2Blob("i2h_weight_r"));
   if (BnInOp2Blob("bias_diff_r") != nullptr) {
@@ -274,17 +274,17 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   if (BnInOp2Blob("in_diff") != nullptr) {
     // in_diff = reset_gate_data_diff * i2h_weght_r
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(0), reset_gate_data_diff_blob,
         BnInOp2Blob("i2h_weight_r"), BnInOp2Blob("in_diff"));
     // in_diff += update_gate_data_diff * i2h_weght_z
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(1), update_gate_data_diff_blob,
         BnInOp2Blob("i2h_weight_z"), BnInOp2Blob("in_diff"));
     // in_diff += candidate_hidden_data_diff * i2h_weght
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(1), candidate_hidden_data_diff_blob,
         BnInOp2Blob("i2h_weight"), BnInOp2Blob("in_diff"));
   }
@@ -293,7 +293,7 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
       || this->op_conf().basic_gru_conf().is_init_hidden_trainable()) {
     // compute hidden_diff
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(0), candidate_hidden_data_diff_blob,
         BnInOp2Blob("h2h_weight"), hidden_diff_blob);
     KernelUtil<device_type, T>::Mul(
@@ -301,11 +301,11 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
         hidden_diff_blob->dptr<T>(), reset_gate_out_blob->dptr<T>(),
         hidden_diff_blob->mut_dptr<T>());
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(1), reset_gate_data_diff_blob,
         BnInOp2Blob("h2h_weight_r"), hidden_diff_blob);
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(1), update_gate_data_diff_blob,
         BnInOp2Blob("h2h_weight_z"), hidden_diff_blob);
     // reuse hidden_blob
