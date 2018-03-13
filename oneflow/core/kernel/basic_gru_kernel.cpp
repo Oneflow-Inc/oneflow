@@ -324,6 +324,114 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+void BasicGruKernel<device_type, T>::InitPureModelTmpBlobs(
+    DeviceCtx* ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitializerConf bias_multiplier_r_fill_conf;
+  bias_multiplier_r_fill_conf.mutable_constant_conf()->set_value(1.f);
+  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_r_fill_conf, 0,
+                                         BnInOp2Blob("bias_miltiplier_r"));
+  InitializerConf bias_multiplier_z_fill_conf;
+  bias_multiplier_z_fill_conf.mutable_constant_conf()->set_value(1.f);
+  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_z_fill_conf, 0,
+                                         BnInOp2Blob("bias_miltiplier_z"));
+  InitializerConf bias_multiplier_fill_conf;
+  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_fill_conf, 0,
+                                         BnInOp2Blob("bias_miltiplier"));
+}
+
+template<DeviceType device_type, typename T>
+void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
+    DeviceCtx* ctx, std::mt19937* random_seed_gen,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
+                        i2h_weight_r_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("i2h_weiht_r"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
+                        h2h_weight_r_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("h2h_weiht_r"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_r_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("bias_r"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
+                        i2h_weight_z_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("i2h_weiht_z"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
+                        h2h_weight_z_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("h2h_weiht_z"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_z_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("bias_z"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
+                        i2h_weight_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("i2h_weiht"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
+                        h2h_weight_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("h2h_weiht"));
+  KernelUtil<device_type, T>::InitializeWithProperConf(
+      ctx,
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_initializer),
+      (*random_seed_gen)(), BnInOp2Blob("bias"));
+}
+
+template<DeviceType device_type, typename T>
+void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithDir(
+    DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+    const std::string& model_load_dir,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* i2h_weight_r_blob = BnInOp2Blob("i2h_weigth_r");
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, i2h_weight_r_blob, "i2h_weight_r",
+      i2h_weight_r_blob->shape().At(0), i2h_weight_r_blob->shape().Count(1));
+  Blob* h2h_weight_r_blob = BnInOp2Blob("h2h_weigth_r");
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, h2h_weight_r_blob, "h2h_weight_r",
+      h2h_weight_r_blob->shape().At(0), h2h_weight_r_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_r"), "bias_r",
+      BnInOp2Blob("bias_r")->shape().At(0), 1);
+
+  Blob* i2h_weight_z_blob = BnInOp2Blob("i2h_weigth_z");
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, i2h_weight_z_blob, "i2h_weight_z",
+      i2h_weight_z_blob->shape().At(0), i2h_weight_z_blob->shape().Count(1));
+  Blob* h2h_weight_z_blob = BnInOp2Blob("h2h_weigth_z");
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, h2h_weight_z_blob, "h2h_weight_z",
+      h2h_weight_z_blob->shape().At(0), h2h_weight_z_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_z"), "bias_z",
+      BnInOp2Blob("bias_z")->shape().At(0), 1);
+
+  Blob* i2h_weight_blob = BnInOp2Blob("i2h_weigth");
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, i2h_weight_blob, "i2h_weight",
+      i2h_weight_blob->shape().At(0), i2h_weight_blob->shape().Count(1));
+  Blob* h2h_weight_blob = BnInOp2Blob("h2h_weigth");
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, h2h_weight_blob, "h2h_weight",
+      h2h_weight_blob->shape().At(0), h2h_weight_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithModelDir(
+      ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
+      BnInOp2Blob("bias")->shape().At(0), 1);
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicGruConf, BasicGruKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
