@@ -6,7 +6,10 @@
 
 namespace oneflow {
 
-void BoxingTaskNode::Init(int64_t machine_id) { set_machine_id(machine_id); }
+void BoxingTaskNode::Init(int64_t machine_id, int64_t thrd_id) {
+  set_machine_id(machine_id);
+  set_thrd_id(thrd_id);
+}
 
 void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* out_edge : out_edges()) {

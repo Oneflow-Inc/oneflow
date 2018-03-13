@@ -12,6 +12,7 @@ class LossPrintCompTaskNode final : public SinkCompTaskNode {
   ~LossPrintCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kLossPrint; }
+  bool IsPersistence() const override { return true; }
 
  private:
 };

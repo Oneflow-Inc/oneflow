@@ -10,7 +10,7 @@ const std::string& IDMgr::MachineName4MachineId(int64_t machine_id) const {
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  if (cpu_device_num_ <= thrd_id && thrd_id < xpu_device_num_) {
+  if (thrd_id < gpu_device_num_) {
     return DeviceType::kGPU;
   } else {
     return DeviceType::kCPU;
@@ -24,18 +24,21 @@ int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
   return machine_thrd_id | (thread_id2num_of_tasks_[machine_thrd_id]++);
 }
 
-int64_t IDMgr::GetGpuDeviceThrdId(int64_t dev_phy_id) const {
-  return cpu_device_num_ + dev_phy_id;
+int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
+  return gpu_device_num_ + dev_phy_id;
 }
 
-int64_t IDMgr::GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const {
-  CHECK_GE(thrd_id, cpu_device_num_);
-  return thrd_id - cpu_device_num_;
+int64_t IDMgr::PersistenceThrdId() const {
+  return gpu_device_num_ + cpu_device_num_;
 }
 
 int64_t IDMgr::CommNetThrdId() const {
-  return xpu_device_num_ + JobDesc::Singleton()->DecodeWorkerNum()
-         + JobDesc::Singleton()->BoxingWorkerNum();
+  return gpu_device_num_ + cpu_device_num_ + 1;
+}
+
+int64_t IDMgr::GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const {
+  CHECK_LT(thrd_id, gpu_device_num_);
+  return thrd_id;
 }
 
 DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {
@@ -73,10 +76,9 @@ IDMgr::IDMgr() {
   const Resource& resource = JobDesc::Singleton()->resource();
   int64_t machine_num = resource.machine_size();
   CHECK_LT(machine_num, static_cast<int64_t>(1) << machine_id_bit_num_);
-  cpu_device_num_ = resource.cpu_device_num();
   gpu_device_num_ = resource.gpu_device_num();
-  xpu_device_num_ = cpu_device_num_ + gpu_device_num_;
-  CHECK_LT(xpu_device_num_,
+  cpu_device_num_ = resource.cpu_device_num();
+  CHECK_LT(gpu_device_num_ + cpu_device_num_,
            (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   for (int64_t i = 0; i < machine_num; ++i) {
     const std::string& machine_name = resource.machine(i).name();

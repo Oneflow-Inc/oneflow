@@ -32,8 +32,6 @@ class JobDesc final {
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t XpuDeviceNum() const { return CpuDeviceNum() + GpuDeviceNum(); }
-  int32_t DecodeWorkerNum() const;
-  int32_t BoxingWorkerNum() const;
   int32_t CommNetWorkerNum() const;
   int32_t PersistenceWorkerNum() const;
   bool IsTrain() const { return job_conf_.has_train_conf(); }
