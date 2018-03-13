@@ -66,8 +66,7 @@ Blob* BasicLstmKernel<device_type, T>::GetCellDiffBlob(
 }
 
 template<DeviceType device_type, typename T>
-void BasicLstmKernel<device_type, T>
-    : ForwardDataId(
+void BasicLstmKernel<device_type, T>::ForwardDataId(
           const KernelCtx& ctx,
           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("out")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("in"));
@@ -86,8 +85,7 @@ template<DeviceType device_type, typename T>
 void BasicLstmKernel<device_type, T>::BackWardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in_diff")->CopyColNumFrom(ctx.device_ctx,
-                                         BnInOp2Blob("out_diff"));
+  BnInOp2Blob("in_diff")->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
   BnInOp2Blob("rec_in_diff")
       ->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
   BnInOp2Blob("cell_in_diff")
@@ -111,17 +109,17 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   Blob* c_out_blob = BnInOp2Blob("c_out");
   // f_gate_out = in * i2h_f_weight + hidden * h2h_f_weight +
   //							bias * bias_f_mulipler
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        BnInOp2Blob("in"),
-                                       BnInOp2Blob("i2h_f_weight"), f_gate_out);
+                                       BnInOp2Blob("i2h_f_weight"), f_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
-      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_f_weight"), f_gate_out);
+      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_f_weight"), f_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), BnInOp2Blob("bias_f_multiplier"),
-      BnInOp2Blob("bias_f"), f_gate_out);
+      BnInOp2Blob("bias_f"), f_gate_out_blob);
   // f_out = sigmoid(f_gate_out)
   KernelUtil<device_type, T>::Sigmoid(
       ctx.device_ctx, out_blob->shape().elem_cnt(), f_gate_out_blob->dptr<T>(),
@@ -129,13 +127,13 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 
   // i_gate_out = in * i2h_i_weight + hidden * h2h_i_weight +
   //							bias_i * bias_i_mulipler
-  KenerUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
                                       static_cast<T>(1), static_cast<T>(0),
                                       BnInOp2Blob("in"),
-                                      BnInOp2Blob("i2h_i_weight"), i_gate_out);
+                                      BnInOp2Blob("i2h_i_weight"), i_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
-      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_i_weight"), i_gate_out);
+      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_i_weight"), i_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), BnInOp2Blob("bias_i_multiplier"),
@@ -150,10 +148,10 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   KenerUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
                                       static_cast<T>(1), static_cast<T>(0),
                                       BnInOp2Blob("in"),
-                                      BnInOp2Blob("i2h_c_weight"), c_gate_out);
+                                      BnInOp2Blob("i2h_c_weight"), c_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
-      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_c_weight"), c_gate_out);
+      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_c_weight"), c_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), BnInOp2Blob("bias_c_multiplier"),
@@ -169,14 +167,14 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   KenerUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTran,
                                       static_cast<T>(1), static_cast<T>(0),
                                       BnInOp2Blob("in"),
-                                      BnInOp2Blob("i2h_o_weight"), o_gate_out);
+                                      BnInOp2Blob("i2h_o_weight"), o_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
-      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_o_weight"), o_gate_out);
+      static_cast<T>(1), hidden_blob, BnInOp2Blob("h2h_o_weight"), o_gate_out_blob);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), BnInOp2Blob("bias_o_multiplier"),
-      BnInOp2Blob("bias_o"), o_gate_out);
+      BnInOp2Blob("bias_o"), o_gate_out_blob);
 
   // o_out = sigmoid(o_gate_out)
   KernelUtil<device_type, T>::Sigmoid(
@@ -186,7 +184,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   // rec_out = o_out *  tanh(c_out)
   KernelUtil<device_type, T>::TanH(ctx.device_ctx, out_blob->shape().elem_cnt(),
                                    c_gate_out_blob->dptr<T>(),
-                                   rec_out->mut_dptr<T>());
+                                   rec_out_blob->mut_dptr<T>());
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, out_blob->shape().elem_cnt(), o_out_blob->dptr<T>(),
       rec_out_blob->dptr<T>(), rec_out_blob->mut_dptr<T>());
@@ -205,10 +203,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 
   template<DeviceType device_type, typename T>
   void BasicLstmKernel<device_type, T>::BackwardDataContent(
-      const KernelCtx& ctx, std::function<Blob*(const std
-                                                :;
-                                                string&)>
-                                BnInOp2Blob) const {
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)>BnInOp2Blob) const {
     const Blob* in_blob = BnInOp2Blob("in") const Blob* out_blob =
         BnInOp2Blob("out") const Blob* hidden_blob =
             this->GetHiddenBlob(BnInOp2Blob);
@@ -412,10 +407,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   void BasicLstmKernel<device_type, T>::VitualInitModelBlobsWithDir(
       DeviceCtx * ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir, std
-      : function<Blob*(const std
-                       :;
-                       string&)>
-          BnInOp2Blob) const {
+      : function<Blob*(const std::string&)> BnInOp2Blob) const {
     Blob* i2h_f_weight_blob = BnInOp2Blob("i2h_f_weight");
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_load_dir, i2h_f_weight_blob,
@@ -485,7 +477,8 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
 
   template<DeviceType device_type, typename T>
   void BasicLstmKernel<device_type, T>::InitPureModelBlobsTmpBlobs(
-      DeviceCtx * ctx, std::function<Blob*(const std ::string&)> BnInOp2Blob) const {
+      DeviceCtx * ctx, std::function<Blob*(const std ::string&)> BnInOp2Blob)
+      const {
     InitializerConf bias_f_multiplier_fill_conf;
     bias_f_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
     KernelUtil<devcice_type, T>::Initialize(ctx, bias_f_multiplier_fill_conf, 0,
