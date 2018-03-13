@@ -167,6 +167,35 @@ inline double GetCurTime() {
 
 size_t GetAvailableCpuMemSize();
 
+template<typename ElementType,
+         template<typename, typename...> class ContainerType, typename... Args>
+void Erase(ContainerType<ElementType, Args...>& container,
+           std::function<bool(ElementType&)> need_erase) {
+  Erase(container, need_erase, [](ElementType) {});
+}
+
+template<typename ElementType,
+         template<typename, typename...> class ContainerType, typename... Args>
+void Erase(ContainerType<ElementType, Args...>& container,
+           std::function<bool(ElementType&)> need_erase,
+           std::function<void(ElementType&)> erase_element_handler) {
+  auto iter = container.begin();
+  auto erase_from = container.end();
+  while (iter != erase_from) {
+    if (need_erase(*iter)) {
+      --erase_from;
+      if (iter == erase_from) { break; }
+      std::swap(*iter, *erase_from);
+    } else {
+      ++iter;
+    }
+  }
+  for (; iter != container.end(); ++iter) { erase_element_handler(*iter); }
+  if (erase_from != container.end()) {
+    container.erase(erase_from, container.end());
+  }
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

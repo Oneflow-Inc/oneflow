@@ -104,24 +104,18 @@ void JobDesc::SplitDecodeOps() {
     PbRpf<BlobConf>* blobs = dlnet_conf_.mutable_op(i)
                                  ->mutable_decode_ofrecord_conf()
                                  ->mutable_blob();
-    auto back = blobs->end() - 1;
-    for (auto iter = blobs->begin(); iter != blobs->end(); ++iter) {
-      if (iter->max_sequence_size() > 1) {
-        while (back != iter && back->max_sequence_size() > 1) { back--; }
-        if (iter == back) { break; }
-        std::swap(*iter, *back);
-      }
-    }
-    if (back == blobs->begin()) { back++; }
-    for (auto iter = back; iter != blobs->end(); ++iter) {
-      DecodeOFRecordOpConf gen_decode_conf(decode_conf);
-      gen_decode_conf.clear_blob();
-      *gen_decode_conf.add_blob() = blobs->Get(iter - blobs->begin());
-      OperatorConf gen_op_conf(op_conf);
-      *gen_op_conf.mutable_decode_ofrecord_conf() = gen_decode_conf;
-      *dlnet_conf_.add_op() = gen_op_conf;
-    }
-    blobs->erase(back, blobs->end());
+    Erase(*blobs,
+          std::function<bool(BlobConf&)>([&](BlobConf blob_conf) -> bool {
+            return blob_conf.max_sequence_size() > 1;
+          }),
+          std::function<void(BlobConf&)>([&](BlobConf blob_conf) {
+            DecodeOFRecordOpConf gen_decode_conf(decode_conf);
+            gen_decode_conf.clear_blob();
+            *gen_decode_conf.add_blob() = blob_conf;
+            OperatorConf gen_op_conf(op_conf);
+            *gen_op_conf.mutable_decode_ofrecord_conf() = gen_decode_conf;
+            *dlnet_conf_.add_op() = gen_op_conf;
+          }));
   }
 }
 

@@ -69,7 +69,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
   for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
     auto shared_model_nodes = std::make_shared<std::vector<LogicalNode*>>();
     for (const std::string& op_name : op_name_set.op_name()) {
-      CHECK(op_name2nodes->at(op_name).size() == 1);
+      CHECK_EQ(op_name2nodes->at(op_name).size(), 1);
       shared_model_nodes->push_back(op_name2nodes->at(op_name).front());
     }
     SortAndRemoveDuplication(shared_model_nodes.get());
