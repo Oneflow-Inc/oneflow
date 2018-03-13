@@ -54,6 +54,16 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   return msg;
 }
 
+ActorMsg ActorMsg::BuildEmptyActNotifyToCommNetMsg(int64_t dst_actor_id,
+                                                   int64_t act_id) {
+  ActorMsg msg;
+  msg.src_actor_id_ = -1;
+  msg.dst_actor_id_ = dst_actor_id;
+  msg.msg_type_ = ActorMsgType::kEmptyActNotifyToCommNet;
+  msg.act_id_to_comm_net_ = act_id;
+  return msg;
+}
+
 int64_t ActorMsg::SrcMachineId() const {
   return IDMgr::Singleton()->MachineId4ActorId(src_actor_id_);
 }
@@ -68,9 +78,24 @@ Regst* ActorMsg::regst() const {
   return regst_wrapper_.regst;
 }
 
+int64_t ActorMsg::model_version_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.regst_status.model_version_id;
+}
+
 int64_t ActorMsg::piece_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.regst_status.piece_id;
+}
+
+int32_t ActorMsg::col_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.regst_status.col_id;
+}
+
+int32_t ActorMsg::max_col_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  return regst_wrapper_.regst_status.max_col_id;
 }
 
 int64_t ActorMsg::act_id() const {
@@ -86,6 +111,11 @@ const void* ActorMsg::comm_net_token() const {
 int64_t ActorMsg::eord_regst_desc_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kEordMsg);
   return eord_regst_desc_id_;
+}
+
+int64_t ActorMsg::act_id_to_comm_net() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kEmptyActNotifyToCommNet);
+  return act_id_to_comm_net_;
 }
 
 }  // namespace oneflow

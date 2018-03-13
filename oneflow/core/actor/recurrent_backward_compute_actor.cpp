@@ -7,6 +7,16 @@ void RecurrentBackwardCompActor::VirtualBackwardCompActorInit(
   h0_regst_desc_id_ = RegstDescId4Name("h0");
   rec_in_regst_desc_id_ = RegstDescId4Name("rec_in");
   rec_out_diff_regst_desc_id_ = RegstDescId4Name("rec_out_diff");
+
+  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+    if (pair.second == model_regst_desc_id()
+        || pair.second == model_tmp_regst_desc_id()
+        || pair.second == h0_regst_desc_id_
+        || pair.second == rec_out_diff_regst_desc_id_) {
+      continue;
+    }
+    (*readable_deq_regsts())[pair.second] = {};
+  }
   if (parallel_ctx()->policy() == kDataParallel) {
     CHECK_EQ(-1, rec_out_diff_regst_desc_id_);
     CHECK_EQ(-1, rec_in_regst_desc_id_);
@@ -14,113 +24,87 @@ void RecurrentBackwardCompActor::VirtualBackwardCompActorInit(
     CHECK_NE(-1, rec_out_diff_regst_desc_id_);
     CHECK_NE(-1, rec_in_regst_desc_id_);
   }
-
   rec_out_diff_regst_ = nullptr;
   OF_SET_MSG_HANDLER(&RecurrentBackwardCompActor::HandlerNormal);
 }
 
-int RecurrentBackwardCompActor::HandlerNormal(const ActorMsg& msg) {
-  if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    if (msg.eord_regst_desc_id() == out_diff_regst_desc_id()) {
-      set_is_out_diff_eord(true);
-    }
-    DecreaseRemainingEordCnt();
-  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    Regst* cur_regst = msg.regst();
-    if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
-      int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
-      int64_t cur_col_id = cur_regst->col_id();
+void RecurrentBackwardCompActor::HandleTheRestOfRegstMsg(Regst* cur_regst) {
+  int64_t cur_regst_desc_id = cur_regst->regst_desc_id();
+  int64_t cur_col_id = cur_regst->col_id();
 
-      if (cur_regst_desc_id == in_regst_desc_id()) {
-        if (cur_col_id == 0) { in_regsts_.push_back(std::stack<Regst*>()); }
-        in_regsts_.back().push(cur_regst);
-      } else if (cur_regst_desc_id == out_regst_desc_id()) {
+  if (cur_regst_desc_id == h0_regst_desc_id_) {
+    h0_regsts_.push(cur_regst);
+  } else if (cur_regst_desc_id == rec_out_diff_regst_desc_id_) {
+    CHECK(!rec_out_diff_regst_);
+    if (cur_col_id == 0) {
+      AsyncSendRegstMsgToProducer(cur_regst);
+    } else {
+      rec_out_diff_regst_ = cur_regst;
+    }
+  } else {
+    auto& rdq = readable_deq_regsts()->at(cur_regst_desc_id);
+    if (cur_regst_desc_id == out_diff_regst_desc_id()) {
+      HandleOutDiffRegsts(cur_regst, &rdq);
+    } else {
+      if (cur_regst_desc_id == rec_in_regst_desc_id_ && cur_regst->IsMaxCol()) {
+        AsyncSendRegstMsgToProducer(cur_regst);
+      } else {
         if (cur_col_id == 0) {
-          out_regsts_.push_back(std::deque<Regst*>{cur_regst});
-          if (out_regsts_.size() == 1) {
+          rdq.push_back(std::deque<Regst*>());
+          if (cur_regst_desc_id == out_regst_desc_id() && rdq.size() == 1) {
             AsyncReturnModelRegstUntilMatchCurOutRegst(
                 cur_regst->model_version_id());
           }
-        } else {
-          out_regsts_.back().push_back(cur_regst);
         }
-      } else if (cur_regst_desc_id == h0_regst_desc_id_) {
-        h0_regsts_.push(cur_regst);
-      } else if (cur_regst_desc_id == out_diff_regst_desc_id()) {
-        HandleOutDiffRegsts(cur_regst, &out_diff_regsts_);
-      } else if (cur_regst_desc_id == rec_in_regst_desc_id_) {
-        if (cur_regst->IsMaxCol()) {
-          AsyncSendRegstMsgToProducer(cur_regst);
-        } else {
-          if (cur_col_id == 0) {
-            rec_in_regsts_.push_back(std::stack<Regst*>());
-          }
-          rec_in_regsts_.back().push(cur_regst);
-        }
-      } else if (cur_regst_desc_id == rec_out_diff_regst_desc_id_) {
-        CHECK(!rec_out_diff_regst_);
-        if (cur_col_id == 0) {
-          AsyncSendRegstMsgToProducer(cur_regst);
-        } else {
-          rec_out_diff_regst_ = cur_regst;
-        }
-      } else if (cur_regst_desc_id == model_regst_desc_id()) {
-        model_regsts()->push(cur_regst);
-      } else if (cur_regst_desc_id == model_tmp_regst_desc_id()) {
-        CHECK(!model_tmp_regst());
-        set_model_tmp_regst(cur_regst);
-      } else if (cur_regst_desc_id == data_tmp_regst_desc_id()) {
-        if (cur_col_id == 0) {
-          data_tmp_regsts_.push_back(std::stack<Regst*>());
-        }
-        data_tmp_regsts_.back().push(cur_regst);
-      } else {
-        UNEXPECTED_RUN();
+        rdq.back().push_back(cur_regst);
       }
     }
-    ActUntilFail();
+  }
+}
+
+bool RecurrentBackwardCompActor::RetFalseOrTerminate(Regst* out_regst) const {
+  if (out_regst->IsMaxCol()) {
+    return false;
   } else {
     UNEXPECTED_RUN();
+    return false;
   }
-  return TrySwitchToZombieOrFinish();
 }
 
 bool RecurrentBackwardCompActor::IsReadReady() {
-  if (in_regsts_.empty() || out_regsts_.empty() || out_diff_regsts_.empty()
-      || model_regsts()->empty() || data_tmp_regsts_.empty()) {
-    return false;
-  }
+  if (model_regsts()->empty()) { return false; }
   if (model_tmp_regst_desc_id() != -1 && !model_tmp_regst()) { return false; }
 
-  Regst* out_regst = out_regsts_.front().back();
-  if (out_regst->col_id() == 0) {
-    if (h0_regst_desc_id_ != -1 && h0_regsts_.empty()) { return false; }
+  auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
+  if (out_rdq.empty()) { return false; }
+  CHECK(!out_rdq.front().empty());
+  Regst* out_regst = out_rdq.front().back();
+  if (!out_regst->IsMaxCol() && !has_cur_piece_started()) { return false; }
+
+  if (out_regst->col_id() == 0 && h0_regst_desc_id_ != -1
+      && h0_regsts_.empty()) {
+    return false;
   }
 
-  if (out_regst->IsMaxCol()) {
-    if (!(in_regsts_.front().top()->IsMaxCol())) { return false; }
-    if (!(out_diff_regsts_.front().back()->IsMaxCol())) { return false; }
-    if (!(data_tmp_regsts_.front().top()->IsMaxCol())) { return false; }
-    if (parallel_ctx()->policy() == kModelParallel) {
-      if (out_regst->col_id() != 0) {
-        CHECK(!rec_in_regsts_.empty());
-        Regst* rec_in_regst = rec_in_regsts_.front().top();
-        if (rec_in_regst->col_id() != rec_in_regst->max_col_id() - 1) {
-          return false;
-        }
+  bool is_model_parallel = parallel_ctx()->policy() == kModelParallel;
+  if (is_model_parallel && !out_regst->IsMaxCol()) {
+    if (!rec_out_diff_regst_) { return false; }
+    CHECK(rec_out_diff_regst_->HaveNextPieceColStatusOf(out_regst));
+  }
+
+  for (auto& pair : *readable_deq_regsts()) {
+    if (pair.first == out_regst_desc_id()) { continue; }
+    auto& rdq = pair.second;
+    if (rdq.empty()) { return false; }
+    if (pair.first == rec_in_regst_desc_id_) {
+      if (out_regst->col_id() != 0
+          && !out_regst->HaveNextPieceColStatusOf(rdq.front().back())) {
+        return RetFalseOrTerminate(out_regst);
       }
-    }
-  } else {
-    if (!has_cur_piece_started()) { return false; }
-    CHECK(in_regsts_.front().top()->HaveSamePieceColStatusAs(out_regst));
-    CHECK(out_diff_regsts_.front().back()->HaveSamePieceColStatusAs(out_regst));
-    CHECK(data_tmp_regsts_.front().top()->HaveSamePieceColStatusAs(out_regst));
-    if (parallel_ctx()->policy() == kModelParallel) {
-      if (!rec_out_diff_regst_) { return false; }
-      CHECK(rec_out_diff_regst_->HaveNextPieceColStatusOf(out_regst));
-      if (out_regst->col_id() != 0) {
-        CHECK(
-            out_regst->HaveNextPieceColStatusOf(rec_in_regsts_.front().top()));
+    } else {
+      if (rdq.front().empty()) { return false; }  // for out_diff
+      if (!out_regst->HaveSamePieceColStatusAs(out_regst)) {
+        return RetFalseOrTerminate(out_regst);
       }
     }
   }
@@ -130,41 +114,42 @@ bool RecurrentBackwardCompActor::IsReadReady() {
 Blob* RecurrentBackwardCompActor::HandleSpecialBnInOp(
     const std::string& bn_in_op) {
   if (bn_in_op == "rec_in" && parallel_ctx()->policy() == kDataParallel) {
-    CHECK_GT(out_regsts_.front().back()->col_id(), 0);
-    Regst* regst = *(out_regsts_.front().end() - 2);
+    auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
+    CHECK_GT(out_rdq.front().back()->col_id(), 0);
+    Regst* regst = *(out_rdq.front().end() - 2);
     return regst->GetBlobByLbn("rnn_cell/out");
   }
   return nullptr;
 }
 
 void RecurrentBackwardCompActor::Act() {
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [this](int64_t regst_desc_id) -> Regst* {
-                      if (regst_desc_id == in_regst_desc_id()) {
-                        return in_regsts_.front().top();
-                      } else if (regst_desc_id == out_regst_desc_id()) {
-                        return out_regsts_.front().back();
-                      } else if (regst_desc_id == data_tmp_regst_desc_id()) {
-                        return data_tmp_regsts_.front().top();
-                      } else if (regst_desc_id == h0_regst_desc_id_) {
-                        return h0_regsts_.front();
-                      } else if (regst_desc_id == out_diff_regst_desc_id()) {
-                        return out_diff_regsts_.front().back();
-                      } else if (regst_desc_id == rec_in_regst_desc_id_) {
-                        return rec_in_regsts_.front().top();
-                      } else if (regst_desc_id == rec_out_diff_regst_desc_id_) {
-                        return rec_out_diff_regst_;
-                      } else if (regst_desc_id == model_regst_desc_id()) {
-                        return model_regsts()->front();
-                      } else if (regst_desc_id == model_tmp_regst_desc_id()) {
-                        return model_tmp_regst();
-                      } else {
-                        return GetCurWriteableRegst(regst_desc_id);
-                      }
-                    });
+  AsyncLaunchKernel(
+      GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
+        Regst* regst = GetCurWriteableRegst(regst_desc_id);
+        if (regst == nullptr) {
+          if (regst_desc_id == model_regst_desc_id()) {
+            return model_regsts()->front();
+          } else if (regst_desc_id == model_tmp_regst_desc_id()) {
+            return model_tmp_regst();
+          } else if (regst_desc_id == h0_regst_desc_id_) {
+            return h0_regsts_.front();
+          } else if (regst_desc_id == rec_out_diff_regst_desc_id_) {
+            return rec_out_diff_regst_;
+          } else {
+            return readable_deq_regsts()->at(regst_desc_id).front().back();
+          }
+        } else {
+          return regst;
+        }
+      });
 
-  Regst* out_regst = out_regsts_.front().back();
-  out_regsts_.front().pop_back();
+  auto& out_rdq = readable_deq_regsts()->at(out_regst_desc_id());
+  Regst* out_regst = out_rdq.front().back();
+  out_rdq.front().pop_back();
+  if (out_regst->col_id() == 0) {
+    CHECK(out_rdq.front().empty());
+    out_rdq.pop_front();
+  }
 
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(out_regst->piece_id());
@@ -172,86 +157,69 @@ void RecurrentBackwardCompActor::Act() {
     regst->set_max_col_id(out_regst->max_col_id());
     return true;
   });
-
-  AsyncSendRegstMsgToProducer(in_regsts_.front().top());
-  in_regsts_.front().pop();
-  AsyncSendRegstMsgToProducer(out_diff_regsts_.front().back());
-  out_diff_regsts_.front().pop_back();
-  AsyncSendRegstMsgToProducer(data_tmp_regsts_.front().top());
-  data_tmp_regsts_.front().pop();
-  if (parallel_ctx()->policy() == kModelParallel) {
-    if (out_regst->col_id() > 0) {
-      AsyncSendRegstMsgToProducer(rec_in_regsts_.front().top());
-      rec_in_regsts_.front().pop();
-    }
+  // model
+  if (out_rdq.empty()) {
+    AsyncReturnModelRegstUntilLastPieceIdGreaterThan(out_regst->piece_id());
+  } else {
+    CHECK(!out_rdq.front().empty());
+    AsyncReturnModelRegstUntilMatchCurOutRegst(
+        out_rdq.front().back()->model_version_id());
   }
-
-  if (!(out_regst->IsMaxCol()) && parallel_ctx()->policy() == kModelParallel) {
+  // h0
+  if (out_regst->col_id() == 0 && h0_regst_desc_id_ != -1) {
+    AsyncSendRegstMsgToProducer(h0_regsts_.front());
+    h0_regsts_.pop();
+  }
+  // rec_out_diff
+  if (!out_regst->IsMaxCol() && rec_out_diff_regst_desc_id_ != -1) {
     AsyncSendRegstMsgToProducer(rec_out_diff_regst_);
     rec_out_diff_regst_ = nullptr;
   }
-  if (out_regst->col_id() == 0) {
-    if (h0_regst_desc_id_ != -1) {
-      AsyncSendRegstMsgToProducer(h0_regsts_.front());
-      h0_regsts_.pop();
-    } else {
-      CHECK(h0_regsts_.empty());
+  // other
+  for (auto& pair : *readable_deq_regsts()) {
+    if (pair.first == out_regst_desc_id()) { continue; }
+    auto& rdq = pair.second;
+    if ((pair.first != rec_in_regst_desc_id_)
+        || (pair.first == rec_in_regst_desc_id_ && out_regst->col_id() > 0)) {
+      AsyncSendRegstMsgToProducer(rdq.front().back());
+      rdq.front().pop_back();
     }
-
-    CHECK(in_regsts_.front().empty());
-    in_regsts_.pop_front();
-    CHECK(out_diff_regsts_.front().empty());
-    out_diff_regsts_.pop_front();
-    CHECK(data_tmp_regsts_.front().empty());
-    data_tmp_regsts_.pop_front();
-    CHECK(out_regsts_.front().empty());
-    out_regsts_.pop_front();
-    if (parallel_ctx()->policy() == kModelParallel) {
-      CHECK(rec_in_regsts_.front().empty());
-      rec_in_regsts_.pop_front();
-    }
-
-    if (out_regsts_.empty()) {
-      AsyncReturnModelRegstUntilLastPieceIdGreaterThan(out_regst->piece_id());
-    } else {
-      AsyncReturnModelRegstUntilMatchCurOutRegst(out_regst->model_version_id());
+    if (out_regst->col_id() == 0) {
+      CHECK(rdq.front().empty());
+      rdq.pop_front();
     }
   }
+
   if (out_regst->IsMaxCol()) { set_has_cur_piece_started(true); }
   if (out_regst->col_id() == 0) { set_has_cur_piece_started(false); }
   AsyncSendRegstMsgToProducer(out_regst);
 }
 
-bool RecurrentBackwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_out_diff_eord() && out_diff_regsts_.empty();
-}
-
 void RecurrentBackwardCompActor::CheckBeforeAsyncReturnAllReadableRegst() {
-  CHECK(in_regsts_.empty());
-  CHECK(out_regsts_.empty());
-  CHECK(data_tmp_regsts_.empty());
-  CHECK(out_diff_regsts_.empty());
   CHECK(h0_regsts_.empty());
   CHECK(!rec_out_diff_regst_);
+  for (auto& pair : *readable_deq_regsts()) { CHECK(pair.second.empty()); }
 }
 
 void RecurrentBackwardCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> handler) {
-  ForCurReadableModelAndModelTmp(handler);
-  Regst* out_regst = out_regsts_.front().back();
-  handler(in_regsts_.front().top());
+  Regst* out_regst =
+      readable_deq_regsts()->at(out_regst_desc_id()).front().back();
   handler(out_regst);
-  handler(data_tmp_regsts_.front().top());
-  handler(out_diff_regsts_.front().back());
-  if (rec_out_diff_regst_desc_id_ != -1 && !(out_regst->IsMaxCol())) {
+  if (!out_regst->IsMaxCol() && rec_out_diff_regst_desc_id_ != -1) {
     handler(rec_out_diff_regst_);
   }
-  if (h0_regst_desc_id_ != -1 && out_regst->col_id() == 0) {
+  if (out_regst->col_id() == 0 && h0_regst_desc_id_ != -1) {
     handler(h0_regsts_.front());
   }
-  if (rec_in_regst_desc_id_ != -1 && out_regst->col_id() != 0) {
-    handler(rec_in_regsts_.front().top());
+  for (const auto& pair : *readable_deq_regsts()) {
+    if (pair.first == out_regst_desc_id()) { continue; }
+    if ((pair.first != rec_in_regst_desc_id_)
+        || (pair.first == rec_in_regst_desc_id_ && out_regst->col_id() != 0)) {
+      handler(pair.second.front().back());
+    }
   }
+  ForCurReadableModelAndModelTmp(handler);
 }
 
 REGISTER_ACTOR(TaskType::kRecurrentBackward, RecurrentBackwardCompActor);

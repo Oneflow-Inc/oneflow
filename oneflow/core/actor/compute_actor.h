@@ -28,6 +28,22 @@ inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {
   return (model_version_id + staleness + 1) * num_of_pieces_in_batch - 1;
 }
 
+inline void TryUpdtColIdOrder(const Regst* cur_regst, ColIdOrder* order) {
+  if (*order == ColIdOrder::kUnCertain) {
+    if (cur_regst->col_id() == 0) {
+      if (!(cur_regst->IsMaxCol())) {
+        *order = ColIdOrder::kAscending;
+      } else {
+        CHECK_EQ(0, cur_regst->max_col_id());
+      }
+    } else if (cur_regst->IsMaxCol()) {
+      *order = ColIdOrder::kDescending;
+    } else {
+      UNEXPECTED_RUN();
+    }
+  }
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_ACTOR_COMPUTE_ACTOR_H_

@@ -26,8 +26,9 @@ class BackwardCompActor : public CompActor {
   bool has_cur_piece_started() const { return has_cur_piece_started_; }
 
   void set_has_cur_piece_started(bool val) { has_cur_piece_started_ = val; }
-  void set_is_out_diff_eord(bool val) { is_out_diff_eord_ = val; }
-  void set_model_tmp_regst(Regst* regst) { model_tmp_regst_ = regst; }
+  HashMap<int64_t, std::deque<std::deque<Regst*>>>* readable_deq_regsts() {
+    return &readable_deq_regsts_;
+  }
 
   void HandleOutDiffRegsts(Regst*, std::deque<std::deque<Regst*>>*);
   void AsyncReturnModelRegstUntilMatchCurOutRegst(int64_t cur_model_id);
@@ -35,12 +36,15 @@ class BackwardCompActor : public CompActor {
   void ForCurReadableModelAndModelTmp(
       std::function<void(const Regst*)> handler);
 
+  int HandlerNormal(const ActorMsg& msg) override;
+
  private:
   void VirtualCompActorInit(const TaskProto&) override;
   void AsyncReturnAllReadableRegst() override;
+  bool IsReadAlwaysUnReadyFromNow() override;
   virtual void VirtualBackwardCompActorInit(const TaskProto&) = 0;
-  void TryUpdtColIdOrder(const Regst*);
   virtual void CheckBeforeAsyncReturnAllReadableRegst() = 0;
+  virtual void HandleTheRestOfRegstMsg(Regst*) = 0;
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();
 
@@ -58,6 +62,8 @@ class BackwardCompActor : public CompActor {
   std::queue<Regst*> model_regsts_;
   Regst* model_tmp_regst_;
   bool has_cur_piece_started_;
+
+  HashMap<int64_t, std::deque<std::deque<Regst*>>> readable_deq_regsts_;
 };
 
 }  // namespace oneflow

@@ -35,6 +35,9 @@ int AccumulateCompActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) != 0) {
+      if (order_ == ColIdOrder::kUnCertain) {
+        TryUpdtColIdOrder(regst, &order_);
+      }
       pending_in_regst_.push(regst);
     }
     ActUntilFail();
@@ -80,6 +83,8 @@ void AccumulateCompActor::Act() {
     });
     acc_cnt_ = 0;
     next_piece_id_ += 1;
+  } else {
+    AsyncSendEmptyActNotifyToCommNetMsg([](Regst* regst) { return true; });
   }
   AsyncSendRegstMsgToProducer(in_regst);
   pending_in_regst_.pop();

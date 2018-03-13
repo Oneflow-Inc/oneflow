@@ -248,6 +248,27 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   device_ctx_->AddCallBack([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 
+void Actor::AsyncSendEmptyActNotifyToCommNetMsg(
+    std::function<bool(Regst*)> RegstPreProcess) {
+  for (auto& pair : writeable_produced_regst_) {
+    CHECK(!pair.second.empty());
+    Regst* regst = pair.second.front();
+    if (RegstPreProcess(regst) == false) { continue; }
+    for (int64_t consumer : regst->consumers_actor_id()) {
+      if (IDMgr::Singleton()->ThrdId4ActorId(consumer)
+          != IDMgr::Singleton()->CommNetThrdId()) {
+        continue;
+      }
+      int64_t act_id = act_id_;
+      device_ctx_->AddCallBack([consumer, act_id]() {
+        ActorMsg msg =
+            ActorMsg::BuildEmptyActNotifyToCommNetMsg(consumer, act_id);
+        ActorMsgBus::Singleton()->SendMsg(std::move(msg));
+      });
+    }
+  }
+}
+
 void Actor::AsyncDo(std::function<void()> func) {
   device_ctx_->AddCallBack(func);
 }
