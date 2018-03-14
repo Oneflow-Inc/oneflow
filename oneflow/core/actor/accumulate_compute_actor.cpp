@@ -56,6 +56,22 @@ void AccumulateCompActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
   Regst* out_regst = GetCurSoleWriteableRegst();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  VirtualLaunchKernel(in_regst, out_regst, kernel_ctx);
+  if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
+  if (acc_cnt_ == max_acc_cnt_) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_piece_id(next_piece_id_);
+      return true;
+    });
+    acc_cnt_ = 0;
+    next_piece_id_ += 1;
+  }
+  AsyncSendRegstMsgToProducer(in_regst);
+  pending_in_regst_.pop();
+}
+
+void AccumulateCompActor::VirtualLaunchKernel(Regst* in_regst, Regst* out_regst,
+                                              KernelCtx kernel_ctx) {
   if (acc_cnt_ == 0 && IsFirstRegstInPieceWithOrder(in_regst, order_)) {
     Blob* in_blob = in_regst->packed_blob();
     Blob* out_blob = out_regst->packed_blob();
@@ -72,17 +88,6 @@ void AccumulateCompActor::Act() {
       }
     });
   }
-  if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
-  if (acc_cnt_ == max_acc_cnt_) {
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-      regst->set_piece_id(next_piece_id_);
-      return true;
-    });
-    acc_cnt_ = 0;
-    next_piece_id_ += 1;
-  }
-  AsyncSendRegstMsgToProducer(in_regst);
-  pending_in_regst_.pop();
 }
 
 void AccumulateCompActor::ForEachCurReadableRegst(
