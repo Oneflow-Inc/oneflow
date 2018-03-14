@@ -3,12 +3,14 @@
 namespace oneflow {
 
 void DropoutOp::InitFromOpConf() {
+  if (op_conf().dropout_conf().has_noise_shape()) { TODO(); }
+  if (op_conf().dropout_conf().has_seed()) { TODO(); }
   double keep_prob = op_conf().dropout_conf().keep_prob();
-  CHECK_GE(keep_prob, 0);
+  CHECK_GT(keep_prob, 0);
   CHECK_LE(keep_prob, 1);
   EnrollInputBn("in");
   EnrollInputBn("out");
-  EnrollDataTmpBn("mask");
+  if (JobDesc::Singleton()->IsTrain()) { EnrollDataTmpBn("mask"); }
 }
 
 const PbMessage& DropoutOp::GetCustomizedConf() const {
@@ -20,8 +22,11 @@ void DropoutOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
            GetBlobDesc4BnInOp("in")->shape().NumAxes());
-  *GetBlobDesc4BnInOp("mask") = *GetBlobDesc4BnInOp("in");
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
+  if (JobDesc::Singleton()->IsTrain()) {
+    *GetBlobDesc4BnInOp("mask") = *GetBlobDesc4BnInOp("in");
+    GetBlobDesc4BnInOp("mask")->set_data_type(DataType::kFloat);
+  }
 }
 
 void DropoutOp::VirtualGenKernelConf(
@@ -29,7 +34,7 @@ void DropoutOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   auto mut_dropout_conf = kernel_conf->mutable_dropout_conf();
   GetBlobDesc4BnInOp("in")->shape().ToProto(mut_dropout_conf->mutable_in());
-  GetBlobDesc4BnInOp("mask")->shape().ToProto(mut_dropout_conf->mutable_mask());
+  GetBlobDesc4BnInOp("in")->shape().ToProto(mut_dropout_conf->mutable_mask());
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
 }
 

@@ -23,8 +23,8 @@ void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   CudaCheck(cudaStreamCreate(cuda_stream));
   CudaCheck(cublasCreate(cublas_handle));
   CudaCheck(cublasSetStream(*cublas_handle, *cuda_stream));
-  ctx->device_ctx =
-      new CudaDeviceCtx(-1, cuda_stream, cublas_handle, nullptr, nullptr);
+  ctx->device_ctx = new CudaDeviceCtx(-1, cuda_stream, nullptr, cublas_handle,
+                                      nullptr, nullptr);
 }
 
 template<>

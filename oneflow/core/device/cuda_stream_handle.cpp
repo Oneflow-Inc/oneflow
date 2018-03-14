@@ -39,10 +39,26 @@ const Eigen::GpuDevice* CudaStreamHandle::eigen_gpu_device() {
   return eigen_gpu_device_.get();
 }
 
+const curandGenerator_t* CudaStreamHandle::curand_generator() {
+  if (!curand_generator_) {
+    curand_generator_.reset(new curandGenerator_t);
+    if (curandCreateGenerator(curand_generator_.get(),
+                              CURAND_RNG_PSEUDO_DEFAULT)
+        != CURAND_STATUS_SUCCESS) {
+      CudaCheck(
+          curandSetPseudoRandomGeneratorSeed(*curand_generator_, GetCurTime()));
+    }
+  }
+  return curand_generator_.get();
+}
+
 CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_handle_) { CudaCheck(cublasDestroy(*cublas_handle_)); }
   if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
+  if (curand_generator_) {
+    CudaCheck(curandDestroyGenerator(*curand_generator_));
+  }
   eigen_gpu_device_.reset();
   eigen_cuda_stream_.reset();
 }

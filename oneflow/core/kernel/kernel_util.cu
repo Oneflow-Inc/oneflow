@@ -9,6 +9,26 @@ namespace oneflow {
 namespace {
 
 template<typename T>
+void RngUniformGpu(const curandGenerator_t& gen, int64_t n, T* ret);
+
+template<>
+void RngUniformGpu<float>(const curandGenerator_t& gen, int64_t n, float* ret) {
+  CudaCheck(curandGenerateUniform(gen, ret, n));
+}
+
+template<>
+void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n,
+                           double* ret) {
+  CudaCheck(curandGenerateUniformDouble(gen, ret, n));
+}
+
+template<typename T>
+__global__ void MaskAndScaleGpu(const int64_t n, double threshold, double scale,
+                                const T* x, const float* mask, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] * (mask[i] > threshold) * scale; }
+}
+
+template<typename T>
 __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
 }
@@ -136,6 +156,19 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                            const T* y, const T* dy, T* dx) {
     BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
   }
+  static void Dropout(DeviceCtx* ctx, const int64_t n, double keep_prob,
+                      const T* x, float* mask, T* y) {
+    RngUniformGpu<float>(ctx->curand_generator(), n, mask);
+    MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                         ctx->cuda_stream()>>>(n, 1.0 - keep_prob,
+                                               1.0 / keep_prob, x, mask, y);
+  }
+  static void DropoutBackward(DeviceCtx* ctx, const int64_t n, double keep_prob,
+                              const T* dy, const float* mask, T* dx) {
+    MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                         ctx->cuda_stream()>>>(n, 1.0 - keep_prob,
+                                               1.0 / keep_prob, dy, mask, dx);
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
@@ -230,6 +263,12 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   template void KernelUtil<DeviceType::kGPU, T>::ReluBackward(                \
       DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
       T* dx);                                                                 \
+  template void KernelUtil<DeviceType::kGPU, T>::Dropout(                     \
+      DeviceCtx* ctx, const int64_t n, double keep_prob, const T* x,          \
+      float* mask, T* y);                                                     \
+  template void KernelUtil<DeviceType::kGPU, T>::DropoutBackward(             \
+      DeviceCtx* ctx, const int64_t n, double keep_prob, const T* dy,         \
+      const float* mask, T* dx);                                              \
   template<>                                                                  \
   void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

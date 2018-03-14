@@ -104,6 +104,14 @@ struct KernelUtil final {
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx);
 
+  // mask = random_uniform(0, 1)
+  // y = dropout(x, mask, keep_prob)
+  static void Dropout(DeviceCtx* ctx, const int64_t n, double keep_prob,
+                      const T* x, float* mask, T* y);
+  // y = dropout(x, mask)
+  static void DropoutBackward(DeviceCtx* ctx, const int64_t n, double keep_prob,
+                              const T* dy, const float* mask, T* dx);
+
   // matrix vector multiply
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
