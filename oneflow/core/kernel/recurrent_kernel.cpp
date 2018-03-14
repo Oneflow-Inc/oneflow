@@ -8,7 +8,7 @@ void RecurrentKernel<device_type, T>::VirtualKernelInit(
     const ParallelContext*) {
   auto& input_bns = this->kernel_conf().input_bns();
   need_external_h0_ =
-      std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+      std::find(input_bns.begin(), input_bns.end(), "h0") != input_bns.end();
 }
 
 template<DeviceType device_type, typename T>
@@ -58,7 +58,7 @@ void RecurrentKernel<device_type, T>::BackwardColNum(
                                               BnInOp2Blob("out_diff"));
   }
 
-  if (BnInOp2Blob("in") != 0) {
+  if (BnInOp2Blob("in") != nullptr) {
     BnInOp2Blob("rec_in_diff")
         ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
   }
