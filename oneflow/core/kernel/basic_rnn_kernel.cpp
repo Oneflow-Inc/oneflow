@@ -22,7 +22,7 @@ void BasicRnnKernel<device_type, T>::VirtualKernelInit(
     activation_bw_func_ = &BasicRnnKernelUtil<device_type, T>::ComputeReluDiff;
     last_colnum_activation_bw_func_ = &KernelUtil<device_type, T>::ReluBackward;
   } else {
-    UNIMPLEMENTED();
+    UNEXPECTED_RUN();
   }
 }
 
@@ -211,12 +211,6 @@ class BasicRnnKernelUtil<DeviceType::kCPU, T> final {
       plus_out_diff[i] = out[i] * (out_diff[i] + rec_out_diff[i]);
     }
   }
-};
-
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicRnnConf, BasicRnnKernel,
-                           FLOATING_DATA_TYPE_SEQ);
-
-}  // namespace oneflow
 };
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicRnnConf, BasicRnnKernel,
