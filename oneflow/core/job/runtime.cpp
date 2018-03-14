@@ -5,7 +5,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/persistence/persistence_thread_pool.h"
+#include "oneflow/core/persistence/persistence_worker_pool.h"
 
 namespace oneflow {
 
@@ -95,7 +95,7 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
     EpollCommNet::Init();
   }
 #endif
-  PersistenceThreadPool::NewSingleton(plan);
+  PersistenceWorkerPool::NewSingleton(plan);
   SnapshotMgr::NewSingleton(plan);
   MemoryAllocator::NewSingleton();
   RegstMgr::NewSingleton();
@@ -109,7 +109,7 @@ void Runtime::DeleteAllSingleton() {
   RegstMgr::DeleteSingleton();
   MemoryAllocator::DeleteSingleton();
   SnapshotMgr::DeleteSingleton();
-  PersistenceThreadPool::DeleteSingleton();
+  PersistenceWorkerPool::DeleteSingleton();
   delete CommNet::Singleton();
   RuntimeCtx::DeleteSingleton();
   ActEventLogger::DeleteSingleton();

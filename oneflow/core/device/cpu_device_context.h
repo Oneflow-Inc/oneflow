@@ -11,14 +11,23 @@ class CpuDeviceCtx final : public DeviceCtx {
   CpuDeviceCtx() = delete;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(int64_t work_stream_id) { set_work_stream_id(work_stream_id); }
+  CpuDeviceCtx(int64_t work_stream_id)
+      : CpuDeviceCtx(work_stream_id, nullptr) {}
+  CpuDeviceCtx(int64_t work_stream_id, CpuWorker* worker) {
+    set_work_stream_id(work_stream_id);
+    set_cpu_worker(worker);
+  }
 
   void AddCallBack(std::function<void()> callback) const override {
-    callback();
+    if (cpu_worker()) {
+      cpu_worker()->PushWork(callback);
+    } else {
+      callback();
+    }
   }
 
  private:
-};
+};  // namespace oneflow
 
 }  // namespace oneflow
 

@@ -36,7 +36,8 @@ class IDMgr final {
 
   // reserved_id: 0-999
   // for cpu:
-  //   0: the only one work stream
+  //   0: the actor thread
+  //   1-999:  the persistence worker
   // for gpu:
   //   0: the copy cuda stream
   int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id,
