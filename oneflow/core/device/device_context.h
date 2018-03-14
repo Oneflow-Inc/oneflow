@@ -15,9 +15,6 @@ class DeviceCtx {
 
 #ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const { return *cuda_stream_; }
-  const curandGenerator_t& curand_generator() const {
-    return *curand_generator_;
-  }
   const cublasHandle_t& cublas_handle() const { return *cublas_handle_; }
   const cudnnHandle_t& cudnn_handle() const { return *cudnn_handle_; }
   const Eigen::GpuDevice& eigen_gpu_device() const {
@@ -33,7 +30,6 @@ class DeviceCtx {
 #ifdef WITH_CUDA
         ,
         cuda_stream_(nullptr),
-        curand_generator_(nullptr),
         cublas_handle_(nullptr),
         cudnn_handle_(nullptr),
         eigen_gpu_device_(nullptr)
@@ -45,9 +41,6 @@ class DeviceCtx {
 
 #ifdef WITH_CUDA
   void set_cuda_stream(const cudaStream_t* val) { cuda_stream_ = val; }
-  void set_curand_generator(const curandGenerator_t* val) {
-    curand_generator_ = val;
-  }
   void set_cublas_handle(const cublasHandle_t* val) { cublas_handle_ = val; }
   void set_cudnn_handle(const cudnnHandle_t* val) { cudnn_handle_ = val; }
   void set_eigen_gpu_device(const Eigen::GpuDevice* val) {
@@ -59,7 +52,6 @@ class DeviceCtx {
   int64_t work_stream_id_;
 #ifdef WITH_CUDA
   const cudaStream_t* cuda_stream_;
-  const curandGenerator_t* curand_generator_;
   const cublasHandle_t* cublas_handle_;
   const cudnnHandle_t* cudnn_handle_;
   const Eigen::GpuDevice* eigen_gpu_device_;

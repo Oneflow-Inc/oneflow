@@ -9,14 +9,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void RngUniformGpu(const curandGenerator_t& gen, int64_t n, T* ret);
-
-template<>
-void RngUniformGpu<float>(const curandGenerator_t& gen, int64_t n, float* ret) {
-  CudaCheck(curandGenerateUniform(gen, ret, n));
-}
-
-template<typename T>
 __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
 }

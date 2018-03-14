@@ -4,7 +4,6 @@ namespace oneflow {
 
 void DropoutOp::InitFromOpConf() {
   if (op_conf().dropout_conf().has_noise_shape()) { TODO(); }
-  if (op_conf().dropout_conf().has_seed()) { TODO(); }
   double dropout_rate = op_conf().dropout_conf().rate();
   CHECK_GE(dropout_rate, 0);
   CHECK_LT(dropout_rate, 1);

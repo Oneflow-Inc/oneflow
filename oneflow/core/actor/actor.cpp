@@ -73,8 +73,8 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
     case DeviceType::kGPU: {
       device_ctx_.reset(new CudaDeviceCtx(
           NewWorkStreamId(), cuda_handle_.cuda_stream(),
-          cuda_handle_.curand_generator(), cuda_handle_.cublas_handle(),
-          cuda_handle_.cudnn_handle(), cuda_handle_.eigen_gpu_device()));
+          cuda_handle_.cublas_handle(), cuda_handle_.cudnn_handle(),
+          cuda_handle_.eigen_gpu_device()));
       break;
     }
 #endif

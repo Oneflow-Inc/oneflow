@@ -6,6 +6,14 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+  const auto& dropout_conf = this->op_conf().dropout_conf();
+  int64_t seed = GetCurTime();
+  if (dropout_conf.has_seed()) { seed = dropout_conf.seed(); }
+  random_generator_.reset(new RandomGenerator(seed));
+}
+
+template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -36,7 +44,7 @@ template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n,
                                             double dropout_rate, const T* x,
                                             float* random_mask, T* y) const {
-  random_generator_->Uniform(n, random_mask);
+  random_generator_->Uniform<device_type, float>(n, random_mask);
   DropoutKernelUtil<device_type, T>::MaskAndScale(
       ctx, n, dropout_rate, 1 / (1 - dropout_rate), x, random_mask, y);
 }
@@ -61,7 +69,7 @@ struct DropoutKernelUtil<DeviceType::kCPU, T> final {
 };
 
 #define INITIATE_DROPOUT_KERNEL_UTIL(T, type_proto) \
-  template struct DropoutKernel<DeviceType::kCPU, T>;
+  template struct DropoutKernelUtil<DeviceType::kCPU, T>;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
