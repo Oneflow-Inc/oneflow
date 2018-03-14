@@ -21,6 +21,18 @@ using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
 void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
+void ModifyOpLbn4BnInChainNode(
+    const HashMap<std::string, std::string>& olbn2ilbn, ChainNode* chain_node) {
+  for (std::shared_ptr<Operator> op : chain_node->op_vec()) {
+    for (const std::string& ibn : op->input_bns()) {
+      const std::string& lbn = op->Lbn4BnInOp(ibn);
+      auto olbn2ilbn_it = olbn2ilbn.find(lbn);
+      if (olbn2ilbn_it == olbn2ilbn.end()) { continue; }
+      op->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
+    }
+  }
+}
+
 void InitChains(std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
@@ -216,6 +228,7 @@ ChainGraph::ChainGraph(bool is_train) {
   }
   BuildModelStruct(is_train, chain2first_shared);
   BuildRecurrentStruct();
+  RemoveNeedlessCloneOp();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
@@ -348,7 +361,7 @@ void ChainGraph::BuildLossPrintStruct() {
     sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_op->Lbn4BnInOp("loss"));
     sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
     sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
-    std::shared_ptr<const Operator> sum_op = ConstructOp(sum_op_conf);
+    std::shared_ptr<Operator> sum_op = ConstructOp(sum_op_conf);
     loss_chain->mut_op_vec().push_back(sum_op);
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;
@@ -459,6 +472,35 @@ void ChainGraph::BuildRecurrentStruct() {
   ForEachNode([&](ChainNode* chain_node) {
     if (chain_node->HasSoleRecurrentOp()) {
       Connect(chain_node, NewEdge(), chain_node);
+    }
+  });
+}
+
+void ChainGraph::RemoveNeedlessCloneOp() {
+  TopoForEachNode([&](ChainNode* chain_node) {
+    HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
+    std::vector<std::shared_ptr<const Operator>> clone_ops;
+    auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
+    if (fw_chain_node == nullptr) { return; }
+    for (std::shared_ptr<const Operator> op : fw_chain_node->op_vec()) {
+      if (!op->IsCloneOp()) { continue; }
+      clone_ops.push_back(op);
+      const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
+      for (const std::string& obn : op->output_bns()) {
+        CHECK(olbn2ilbn_in_clone_op.emplace(op->Lbn4BnInOp(obn), ilbn).second);
+      }
+    }
+    ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, chain_node);
+    fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* succ_chain_node) {
+      ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
+    });
+    auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
+    for (std::shared_ptr<const Operator> clone_op : clone_ops) {
+      auto clone_op_it =
+          std::find(op_vec_in_fw.begin(), op_vec_in_fw.end(), clone_op);
+      if (clone_op_it != op_vec_in_fw.end()) {
+        op_vec_in_fw.erase(clone_op_it);
+      }
     }
   });
 }

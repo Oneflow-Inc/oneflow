@@ -45,11 +45,13 @@ DeviceType TaskNode::device_type() const {
 }
 
 void TaskNode::set_machine_id(int64_t val) {
+  CHECK_EQ(machine_id_, -1);
   machine_id_ = val;
   if (thrd_id_ != -1) { UpdateTaskId(); }
 }
 
 void TaskNode::set_thrd_id(int64_t val) {
+  CHECK_EQ(thrd_id_, -1);
   thrd_id_ = val;
   if (machine_id_ != -1) { UpdateTaskId(); }
 }

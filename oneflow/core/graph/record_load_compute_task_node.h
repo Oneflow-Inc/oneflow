@@ -16,6 +16,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override {}
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
+  bool IsPersistence() const override { return true; }
 
  private:
 };

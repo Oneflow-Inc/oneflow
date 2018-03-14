@@ -16,7 +16,8 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
-    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
 
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::string& lbn,
@@ -44,8 +45,8 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
 
   // op_vec_
   std::shared_ptr<const Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
-  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
+  const std::vector<std::shared_ptr<Operator>>& op_vec() const;
+  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
 
   // parallel_desc_
@@ -62,7 +63,9 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual const char* TypeName() const = 0;
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
-  void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
+  void GenSortedCompTaskNodes(
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
+      CompTaskNodeHandler) const;
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
@@ -92,7 +95,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   void AddDataOutputLbnsTo(const ChainNode*);
 
  private:
-  std::vector<std::shared_ptr<const Operator>> op_vec_;
+  std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
   HashSet<std::string> data_output_lbns_;

@@ -40,6 +40,7 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
       bool is_train,
       const HashMap<ChainNode*, const LogicalNode*>& chain2first_shared);
   void BuildRecurrentStruct();
+  void RemoveNeedlessCloneOp();
 };
 
 }  // namespace oneflow
