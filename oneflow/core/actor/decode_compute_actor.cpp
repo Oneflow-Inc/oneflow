@@ -6,6 +6,7 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
   decode_status_.in_regst_ = nullptr;
   decode_status_.cur_col_id_ = 0;
+  decode_status_.max_col_id_ = 0;
   OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
 }
 
@@ -33,18 +34,20 @@ void DecodeCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
+  CHECK_GT(decode_status_.max_col_id_, 0);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(decode_status_.in_regst_->piece_id());
     regst->set_col_id(decode_status_.cur_col_id_);
-    regst->set_max_col_id(decode_status_.in_regst_->max_col_id());
+    regst->set_max_col_id(decode_status_.max_col_id_);
     return true;
   });
   decode_status_.cur_col_id_++;
-  if (decode_status_.cur_col_id_ == decode_status_.in_regst_->max_col_id()) {
+  if (decode_status_.cur_col_id_ == decode_status_.max_col_id_) {
     AsyncSendRegstMsgToProducer(decode_status_.in_regst_);
     pending_in_regsts_.pop();
     decode_status_.in_regst_ = nullptr;
     decode_status_.cur_col_id_ = 0;
+    decode_status_.max_col_id_ = 0;
   }
 }
 
