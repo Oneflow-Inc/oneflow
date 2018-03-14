@@ -14,20 +14,20 @@ class CudaStreamHandle final {
   CudaStreamHandle() = default;
 
   const cudaStream_t* cuda_stream();
+  const curandGenerator_t* curand_generator();
   const cublasHandle_t* cublas_handle();
   const cudnnHandle_t* cudnn_handle();
   const Eigen::GpuDevice* eigen_gpu_device();
-  const curandGenerator_t* curand_generator();
 
   ~CudaStreamHandle();
 
  private:
   std::unique_ptr<cudaStream_t> cuda_stream_;
+  std::unique_ptr<curandGenerator_t> curand_generator_;
   std::unique_ptr<cublasHandle_t> cublas_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
   std::unique_ptr<Eigen::GpuDevice> eigen_gpu_device_;
   std::unique_ptr<Eigen::CudaStreamDevice> eigen_cuda_stream_;
-  std::unique_ptr<curandGenerator_t> curand_generator_;
 };
 
 #endif  // WITH_CUDA

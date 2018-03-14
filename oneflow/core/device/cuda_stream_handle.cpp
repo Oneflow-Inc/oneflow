@@ -55,10 +55,10 @@ const curandGenerator_t* CudaStreamHandle::curand_generator() {
 CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_handle_) { CudaCheck(cublasDestroy(*cublas_handle_)); }
-  if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
   if (curand_generator_) {
     CudaCheck(curandDestroyGenerator(*curand_generator_));
   }
+  if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
   eigen_gpu_device_.reset();
   eigen_cuda_stream_.reset();
 }

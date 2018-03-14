@@ -17,14 +17,6 @@ void RngUniformGpu<float>(const curandGenerator_t& gen, int64_t n, float* ret) {
 }
 
 template<typename T>
-__global__ void MaskAndScaleGpu(const int64_t n, double threshold, double scale,
-                                const T* x, const float* random_mask, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    y[i] = x[i] * (random_mask[i] > threshold) * scale;
-  }
-}
-
-template<typename T>
 __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
 }
@@ -152,20 +144,6 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                            const T* y, const T* dy, T* dx) {
     BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
   }
-  static void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate,
-                      const T* x, float* random_mask, T* y) {
-    RngUniformGpu<float>(ctx->curand_generator(), n, random_mask);
-    MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                         ctx->cuda_stream()>>>(
-        n, dropout_rate, 1 / (1 - dropout_rate), x, random_mask, y);
-  }
-  static void DropoutBackward(DeviceCtx* ctx, const int64_t n,
-                              double dropout_rate, const T* dy,
-                              const float* random_mask, T* dx) {
-    MaskAndScaleGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                         ctx->cuda_stream()>>>(
-        n, dropout_rate, 1 / (1 - dropout_rate), dy, random_mask, dx);
-  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
@@ -260,12 +238,6 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ);
   template void KernelUtil<DeviceType::kGPU, T>::ReluBackward(                \
       DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
       T* dx);                                                                 \
-  template void KernelUtil<DeviceType::kGPU, T>::Dropout(                     \
-      DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* x,       \
-      float* random_mask, T* y);                                              \
-  template void KernelUtil<DeviceType::kGPU, T>::DropoutBackward(             \
-      DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* dy,      \
-      const float* random_mask, T* dx);                                       \
   template<>                                                                  \
   void KernelUtil<DeviceType::kGPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

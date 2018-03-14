@@ -8,14 +8,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void MaskAndScale(const int64_t n, double threshold, double scale, const T* x,
-                  const float* random_mask, T* y) {
-  for (int64_t i = 0; i < n; ++i) {
-    y[i] = x[i] * (random_mask[i] > threshold) * scale;
-  }
-}
-
-template<typename T>
 void RngUniform(const int64_t elem_cnt, const T min, const T max,
                 uint32_t random_seed, T* dptr) {
   CHECK_GE(elem_cnt, 0);
@@ -202,17 +194,6 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                            const T* y, const T* dy, T* dx) {
     for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
   }
-  static void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate,
-                      const T* x, float* random_mask, T* y) {
-    RngUniform<float>(n, 0.0, 1.0, GetCurTime(), random_mask);
-    MaskAndScale<T>(n, dropout_rate, 1 / (1 - dropout_rate), x, random_mask, y);
-  }
-  static void DropoutBackward(DeviceCtx* ctx, const int64_t n,
-                              double dropout_rate, const T* dy,
-                              const float* random_mask, T* dx) {
-    MaskAndScale<T>(n, dropout_rate, 1 / (1 - dropout_rate), dy, random_mask,
-                    dx);
-  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
@@ -279,12 +260,6 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \
       DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
       T* dx);                                                                 \
-  template void KernelUtil<DeviceType::kCPU, T>::Dropout(                     \
-      DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* x,       \
-      float* random_mask, T* y);                                              \
-  template void KernelUtil<DeviceType::kCPU, T>::DropoutBackward(             \
-      DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* dy,      \
-      const float* random_mask, T* dx);                                       \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \
       DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, \

@@ -9,7 +9,7 @@ void DropoutOp::InitFromOpConf() {
   CHECK_GE(dropout_rate, 0);
   CHECK_LT(dropout_rate, 1);
   EnrollInputBn("in");
-  EnrollInputBn("out");
+  EnrollOutputBn("out");
   if (JobDesc::Singleton()->IsTrain()) { EnrollDataTmpBn("random_mask"); }
 }
 
