@@ -23,6 +23,8 @@ class DecodeCompActor final : public CompActor {
 
   bool is_in_eord_;
   std::queue<Regst*> pending_in_regsts_;
+  Regst* cur_in_regst_;
+  int32_t cur_col_id_;
 };
 
 }  // namespace oneflow
