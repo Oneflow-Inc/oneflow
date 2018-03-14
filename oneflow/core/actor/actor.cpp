@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/persistence/persistence_worker_pool.h"
 
 namespace oneflow {
 
@@ -67,15 +66,7 @@ int64_t Actor::RegstDescId4Name(const std::string& name) const {
 void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      if (thrd_id() == IDMgr::Singleton()->PersistenceThrdId()) {
-        std::tuple<CpuWorker*, int32_t> worker_and_id;
-        worker_and_id = PersistenceWorkerPool::Singleton()->AllocateOneWorker();
-        device_ctx_.reset(new CpuDeviceCtx(
-            GetReservedWorkStreamId(1 + std::get<1>(worker_and_id)),
-            std::get<0>(worker_and_id)));
-      } else {
-        device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
-      }
+      device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
       break;
     }
 #ifdef WITH_CUDA

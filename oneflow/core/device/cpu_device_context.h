@@ -11,19 +11,10 @@ class CpuDeviceCtx final : public DeviceCtx {
   CpuDeviceCtx() = delete;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(int64_t work_stream_id)
-      : CpuDeviceCtx(work_stream_id, nullptr) {}
-  CpuDeviceCtx(int64_t work_stream_id, CpuWorker* worker) {
-    set_work_stream_id(work_stream_id);
-    set_cpu_worker(worker);
-  }
+  CpuDeviceCtx(int64_t work_stream_id) { set_work_stream_id(work_stream_id); }
 
   void AddCallBack(std::function<void()> callback) const override {
-    if (cpu_worker()) {
-      cpu_worker()->PushWork(callback);
-    } else {
-      callback();
-    }
+    callback();
   }
 
  private:

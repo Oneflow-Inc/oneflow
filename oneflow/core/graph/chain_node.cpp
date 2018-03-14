@@ -123,7 +123,7 @@ bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
 }
 
 void ChainNode::GenSortedCompTaskNodes(
-    std::function<int64_t()> AllocateOneCpuDeviceThrdId,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
     CompTaskNodeHandler Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
@@ -135,7 +135,7 @@ void ChainNode::GenSortedCompTaskNodes(
         comp_task_node->set_thrd_id(
             IDMgr::Singleton()->GetGpuDeviceThrdId(dev_phy_id));
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        comp_task_node->SetThrdId(AllocateOneCpuDeviceThrdId);
+        comp_task_node->set_thrd_id(AllocateCpuThrdId(comp_task_node));
       } else {
         UNIMPLEMENTED();
       }
