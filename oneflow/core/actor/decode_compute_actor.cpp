@@ -41,7 +41,6 @@ void DecodeCompActor::Act() {
     regst->set_max_col_id(decode_status_.max_col_id_);
     return true;
   });
-  decode_status_.cur_col_id_++;
   if (decode_status_.cur_col_id_ == decode_status_.max_col_id_) {
     AsyncSendRegstMsgToProducer(decode_status_.in_regst_);
     pending_in_regsts_.pop();
@@ -49,6 +48,7 @@ void DecodeCompActor::Act() {
     decode_status_.cur_col_id_ = 0;
     decode_status_.max_col_id_ = 0;
   }
+  ++decode_status_.cur_col_id_;
 }
 
 bool DecodeCompActor::IsReadReady() { return !pending_in_regsts_.empty(); }
