@@ -3,6 +3,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/operator/record.pb.h"
 
 namespace oneflow {
 
@@ -39,6 +40,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     regst->deleter_ = std::get<2>(allocation_result);
     OneRegstDone(regst);
   }
+}
+
+Regst* RegstMgr::NewRegst() {
+  Regst* regst = new Regst;
+  regst->packed_blob_.reset(new RecordBlob<OfRecord>);
+  return regst;
 }
 
 }  // namespace oneflow
