@@ -134,16 +134,6 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::InitPureModelTmpBlobs(
-    DeviceCtx* ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf bias_multiplier_fill_conf;
-  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
-  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_fill_conf, 0,
-                                         BnInOp2Blob("bias_multiplier"));
-}
-
-template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
