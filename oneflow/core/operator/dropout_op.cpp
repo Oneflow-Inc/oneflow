@@ -32,7 +32,7 @@ void DropoutOp::InferBlobDescs(
 void DropoutOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  auto mut_dropout_conf = kernel_conf->mutable_dropout_conf();
+  DropoutKernelConf* mut_dropout_conf = kernel_conf->mutable_dropout_conf();
   GetBlobDesc4BnInOp("in")->shape().ToProto(mut_dropout_conf->mutable_in());
   GetBlobDesc4BnInOp("in")->shape().ToProto(mut_dropout_conf->mutable_mask());
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
