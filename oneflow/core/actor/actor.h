@@ -20,13 +20,12 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
 
-class Actor {
+class ActorIf {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ActorIf);
+  virtual ~ActorIf() = default;
 
-  void Init(const TaskProto&, const ThreadCtx&);
-
+  virtual void Init(const TaskProto&, const ThreadCtx&) = 0;
   // 1: success, and actor finish
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
@@ -36,16 +35,41 @@ class Actor {
   int64_t actor_id() const { return actor_id_; }
 
  protected:
+  using MsgHandler = int (ActorIf::*)(const ActorMsg&);
+
+  // Msg Handler
+  void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
+#define OF_SET_MSG_HANDLER(val)                                   \
+  do {                                                            \
+    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
+    set_msg_handler(static_cast<MsgHandler>(val));                \
+  } while (0)
+
+  void set_actor_id(int64_t val) { actor_id_ = val; };
+
+  ActorIf() = default;
+
+ private:
+  MsgHandler msg_handler_;
+  int64_t actor_id_;
+};
+
+class Actor : public ActorIf {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(Actor);
+  virtual ~Actor() = default;
+
+ protected:
   friend class NaiveReadableRegstMgr;
 
   struct ExecKernel {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
   };
-  using MsgHandler = int (Actor::*)(const ActorMsg&);
 
   // Util
   Actor() = default;
+  void Init(const TaskProto&, const ThreadCtx&) override;
   int64_t GetReservedWorkStreamId(int64_t reserved_id);
   int64_t NewWorkStreamId();
   int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
@@ -59,14 +83,6 @@ class Actor {
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   virtual void ForEachCurReadableRegst(std::function<void(const Regst*)>) {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
-
-  // Msg Handler
-  void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                   \
-  do {                                                            \
-    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
-    set_msg_handler(static_cast<MsgHandler>(val));                \
-  } while (0)
 
   // Common Handlers
   virtual int HandlerNormal(const ActorMsg& msg) = 0;
@@ -104,13 +120,11 @@ class Actor {
   int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
  private:
-  int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<std::string, int64_t> name2regst_desc_id_;
-  MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
 #ifdef WITH_CUDA
   CudaStreamHandle cuda_handle_;
@@ -124,8 +138,8 @@ class Actor {
   int64_t remaining_eord_cnt_;
 };
 
-void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);
-std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
+void AddActorCreator(TaskType task_type, std::function<ActorIf*()> creator);
+std::unique_ptr<ActorIf> NewActor(const TaskProto&, const ThreadCtx&);
 
 template<TaskType task_type, typename T>
 struct ActorRegistry {
