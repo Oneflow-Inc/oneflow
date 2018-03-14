@@ -4,8 +4,8 @@ namespace oneflow {
 
 void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
-  cur_in_regst_ = nullptr;
-  cur_col_id_ = 0;
+  decode_status_.in_regst_ = nullptr;
+  decode_status_.cur_col_id_ = 0;
   OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
 }
 
@@ -17,6 +17,7 @@ int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(regst) == -1) {
       pending_in_regsts_.push(regst);
     }
+    ActUntilFail();
   } else {
     UNIMPLEMENTED();
   }
@@ -24,25 +25,26 @@ int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void DecodeCompActor::Act() {
-  if (cur_in_regst_ == nullptr) {
-    CHECK_EQ(cur_col_id_, 0);
-    cur_in_regst_ = pending_in_regsts_.front();
+  if (decode_status_.in_regst_ == nullptr) {
+    decode_status_.in_regst_ = pending_in_regsts_.front();
   }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = cur_in_regst_;
+  kernel_ctx.other = &decode_status_;
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(cur_in_regst_->piece_id());
+    regst->set_piece_id(decode_status_.in_regst_->piece_id());
+    regst->set_col_id(decode_status_.cur_col_id_);
+    regst->set_max_col_id(decode_status_.in_regst_->max_col_id());
     return true;
   });
-  cur_col_id_++;
-  if (cur_col_id_ == cur_in_regst_->max_col_id()) {
-    AsyncSendRegstMsgToProducer(cur_in_regst_);
+  decode_status_.cur_col_id_++;
+  if (decode_status_.cur_col_id_ == decode_status_.in_regst_->max_col_id()) {
+    AsyncSendRegstMsgToProducer(decode_status_.in_regst_);
     pending_in_regsts_.pop();
-    cur_in_regst_ = nullptr;
-    cur_col_id_ = 0;
+    decode_status_.in_regst_ = nullptr;
+    decode_status_.cur_col_id_ = 0;
   }
 }
 
