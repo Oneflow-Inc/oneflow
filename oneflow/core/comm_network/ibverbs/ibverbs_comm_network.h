@@ -28,7 +28,7 @@ class IBVerbsCommNet final : public CommNet {
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
-  IBVerbsCommNet() = default;
+  IBVerbsCommNet(const Plan& plan);
   void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
               const void* dst_token) override;
 

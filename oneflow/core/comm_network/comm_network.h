@@ -33,7 +33,7 @@ class CommNet {
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
-  const HashSet<int64_t>& get_peer_machine_id() { return peer_machine_id_; }
+  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
  protected:
   CommNet() = default;

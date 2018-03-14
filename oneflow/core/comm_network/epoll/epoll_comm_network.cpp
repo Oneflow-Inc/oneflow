@@ -60,9 +60,7 @@ EpollCommNet::~EpollCommNet() {
 }
 
 void EpollCommNet::Init(const Plan& plan) {
-  EpollCommNet* comm_net = new EpollCommNet();
-  comm_net->GenConnectionInfo(plan);
-  CommNet::Singleton()->set_comm_network_ptr(comm_net);
+  CommNet::Singleton()->set_comm_network_ptr(new EpollCommNet(plan));
 }
 
 const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -93,7 +91,8 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollCommNet::EpollCommNet() {
+EpollCommNet::EpollCommNet(const Plan& plan) {
+  GenConnectionInfo(plan);
   pollers_.resize(JobDesc::Singleton()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
@@ -133,7 +132,7 @@ void EpollCommNet::InitSockets() {
   CHECK_LT(this_listen_port, listen_port_max);
   int32_t src_machine_count = 0;
   // connect
-  for (int64_t peer_machine_id : CommNet::Singleton()->get_peer_machine_id()) {
+  for (int64_t peer_machine_id : CommNet::Singleton()->peer_machine_id()) {
     if (peer_machine_id < this_machine_id) {
       ++src_machine_count;
       continue;
