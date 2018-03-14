@@ -10,7 +10,7 @@ void DropoutOp::InitFromOpConf() {
   CHECK_LE(keep_prob, 1);
   EnrollInputBn("in");
   EnrollInputBn("out");
-  if (JobDesc::Singleton()->IsTrain()) { EnrollDataTmpBn("mask"); }
+  if (JobDesc::Singleton()->IsTrain()) { EnrollDataTmpBn("random_mask"); }
 }
 
 const PbMessage& DropoutOp::GetCustomizedConf() const {
@@ -24,8 +24,8 @@ void DropoutOp::InferBlobDescs(
            GetBlobDesc4BnInOp("in")->shape().NumAxes());
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   if (JobDesc::Singleton()->IsTrain()) {
-    *GetBlobDesc4BnInOp("mask") = *GetBlobDesc4BnInOp("in");
-    GetBlobDesc4BnInOp("mask")->set_data_type(DataType::kFloat);
+    *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
+    GetBlobDesc4BnInOp("random_mask")->set_data_type(DataType::kFloat);
   }
 }
 
@@ -34,7 +34,8 @@ void DropoutOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   DropoutKernelConf* mut_dropout_conf = kernel_conf->mutable_dropout_conf();
   GetBlobDesc4BnInOp("in")->shape().ToProto(mut_dropout_conf->mutable_in());
-  GetBlobDesc4BnInOp("in")->shape().ToProto(mut_dropout_conf->mutable_mask());
+  GetBlobDesc4BnInOp("in")->shape().ToProto(
+      mut_dropout_conf->mutable_random_mask());
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_dropout_conf->mutable_out());
 }
 

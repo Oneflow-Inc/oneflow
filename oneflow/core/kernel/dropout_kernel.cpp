@@ -12,7 +12,8 @@ void DropoutKernel<device_type, T>::ForwardDataContent(
   if (JobDesc::Singleton()->IsTrain()) {
     KernelUtil<device_type, T>::Dropout(
         ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().keep_prob(),
-        BnInOp2Blob("in")->dptr<T>(), BnInOp2Blob("mask")->mut_dptr<float>(),
+        BnInOp2Blob("in")->dptr<T>(),
+        BnInOp2Blob("random_mask")->mut_dptr<float>(),
         BnInOp2Blob("out")->mut_dptr<T>());
   } else {
     Memcpy<device_type>(ctx.device_ctx, BnInOp2Blob("out")->mut_dptr<void>(),
@@ -27,7 +28,8 @@ void DropoutKernel<device_type, T>::BackwardDataContent(
   KernelUtil<device_type, T>::DropoutBackward(
       ctx.device_ctx, BnInOp2Blob("in")->shape().elem_cnt(),
       this->op_conf().dropout_conf().keep_prob(),
-      BnInOp2Blob("out_diff")->dptr<T>(), BnInOp2Blob("mask")->dptr<float>(),
+      BnInOp2Blob("out_diff")->dptr<T>(),
+      BnInOp2Blob("random_mask")->dptr<float>(),
       BnInOp2Blob("in_diff")->mut_dptr<T>());
 }
 

@@ -19,7 +19,7 @@ message ConvKernelConf {
 
 message DropoutKernelConf {
   required ShapeProto in = 1;
-  required ShapeProto mask = 2;
+  required ShapeProto random_mask = 2;
   required ShapeProto out = 3;
 };
 
