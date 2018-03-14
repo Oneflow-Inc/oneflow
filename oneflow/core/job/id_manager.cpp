@@ -28,12 +28,13 @@ int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ + dev_phy_id;
 }
 
-int64_t IDMgr::PersistenceThrdId() const {
-  return gpu_device_num_ + cpu_device_num_;
+int64_t IDMgr::GetPersistenceThrdId(int64_t offset) const {
+  return gpu_device_num_ + cpu_device_num_ + offset;
 }
 
 int64_t IDMgr::CommNetThrdId() const {
-  return gpu_device_num_ + cpu_device_num_ + 1;
+  return gpu_device_num_ + cpu_device_num_
+         + JobDesc::Singleton()->PersistenceWorkerNum();
 }
 
 int64_t IDMgr::GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const {

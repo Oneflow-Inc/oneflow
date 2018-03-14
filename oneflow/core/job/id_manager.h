@@ -22,7 +22,7 @@ class IDMgr final {
 
   int64_t GetGpuDeviceThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
-  int64_t PersistenceThrdId() const;
+  int64_t GetPersistenceThrdId(int64_t offset) const;
   int64_t CommNetThrdId() const;
 
   int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
@@ -37,7 +37,6 @@ class IDMgr final {
   // reserved_id: 0-999
   // for cpu:
   //   0: the actor thread
-  //   1-999:  the persistence worker
   // for gpu:
   //   0: the copy cuda stream
   int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id,

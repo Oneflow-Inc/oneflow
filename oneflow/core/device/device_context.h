@@ -3,7 +3,6 @@
 
 #include "unsupported/Eigen/CXX11/Tensor"
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/device/cpu_worker.h"
 
 namespace oneflow {
 
@@ -14,7 +13,6 @@ class DeviceCtx {
 
   int64_t work_stream_id() const { return work_stream_id_; }
 
-  CpuWorker* cpu_worker() const { return cpu_worker_; }
 #ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const { return *cuda_stream_; }
   const cublasHandle_t& cublas_handle() const { return *cublas_handle_; }
@@ -28,8 +26,7 @@ class DeviceCtx {
 
  protected:
   DeviceCtx()
-      : work_stream_id_(-1),
-        cpu_worker_(nullptr)
+      : work_stream_id_(-1)
 #ifdef WITH_CUDA
         ,
         cuda_stream_(nullptr),
@@ -42,7 +39,6 @@ class DeviceCtx {
 
   void set_work_stream_id(int64_t val) { work_stream_id_ = val; }
 
-  void set_cpu_worker(CpuWorker* val) { cpu_worker_ = val; }
 #ifdef WITH_CUDA
   void set_cuda_stream(const cudaStream_t* val) { cuda_stream_ = val; }
   void set_cublas_handle(const cublasHandle_t* val) { cublas_handle_ = val; }
@@ -54,7 +50,6 @@ class DeviceCtx {
 
  private:
   int64_t work_stream_id_;
-  CpuWorker* cpu_worker_;
 #ifdef WITH_CUDA
   const cudaStream_t* cuda_stream_;
   const cublasHandle_t* cublas_handle_;
