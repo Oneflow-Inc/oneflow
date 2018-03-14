@@ -11,7 +11,7 @@ void DropoutKernel<device_type, T>::ForwardDataContent(
   int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
   if (JobDesc::Singleton()->IsTrain()) {
     KernelUtil<device_type, T>::Dropout(
-        ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().keep_prob(),
+        ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().rate(),
         BnInOp2Blob("in")->dptr<T>(),
         BnInOp2Blob("random_mask")->mut_dptr<float>(),
         BnInOp2Blob("out")->mut_dptr<T>());
@@ -27,8 +27,7 @@ void DropoutKernel<device_type, T>::BackwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::DropoutBackward(
       ctx.device_ctx, BnInOp2Blob("in")->shape().elem_cnt(),
-      this->op_conf().dropout_conf().keep_prob(),
-      BnInOp2Blob("out_diff")->dptr<T>(),
+      this->op_conf().dropout_conf().rate(), BnInOp2Blob("out_diff")->dptr<T>(),
       BnInOp2Blob("random_mask")->dptr<float>(),
       BnInOp2Blob("in_diff")->mut_dptr<T>());
 }

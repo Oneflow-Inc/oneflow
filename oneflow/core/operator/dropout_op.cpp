@@ -5,9 +5,9 @@ namespace oneflow {
 void DropoutOp::InitFromOpConf() {
   if (op_conf().dropout_conf().has_noise_shape()) { TODO(); }
   if (op_conf().dropout_conf().has_seed()) { TODO(); }
-  double keep_prob = op_conf().dropout_conf().keep_prob();
-  CHECK_GT(keep_prob, 0);
-  CHECK_LE(keep_prob, 1);
+  double dropout_rate = op_conf().dropout_conf().rate();
+  CHECK_GE(dropout_rate, 0);
+  CHECK_LT(dropout_rate, 1);
   EnrollInputBn("in");
   EnrollInputBn("out");
   if (JobDesc::Singleton()->IsTrain()) { EnrollDataTmpBn("random_mask"); }

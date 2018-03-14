@@ -360,7 +360,7 @@ message DecodeOFRecordOpConf {
 }
 
 message DropoutOpConf {
-  required double keep_prob = 1;
+  required double rate = 1;
   optional ShapeProto noise_shape = 2;
   optional int64 seed = 3;
 }

@@ -202,14 +202,16 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                            const T* y, const T* dy, T* dx) {
     for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
   }
-  static void Dropout(DeviceCtx* ctx, const int64_t n, double keep_prob,
+  static void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate,
                       const T* x, float* random_mask, T* y) {
     RngUniform<float>(n, 0.0, 1.0, GetCurTime(), random_mask);
-    MaskAndScale<T>(n, 1.0 - keep_prob, 1.0 / keep_prob, x, random_mask, y);
+    MaskAndScale<T>(n, dropout_rate, 1 / (1 - dropout_rate), x, random_mask, y);
   }
-  static void DropoutBackward(DeviceCtx* ctx, const int64_t n, double keep_prob,
-                              const T* dy, const float* random_mask, T* dx) {
-    MaskAndScale<T>(n, 1.0 - keep_prob, 1.0 / keep_prob, dy, random_mask, dx);
+  static void DropoutBackward(DeviceCtx* ctx, const int64_t n,
+                              double dropout_rate, const T* dy,
+                              const float* random_mask, T* dx) {
+    MaskAndScale<T>(n, dropout_rate, 1 / (1 - dropout_rate), dy, random_mask,
+                    dx);
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
@@ -278,10 +280,10 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
       DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,   \
       T* dx);                                                                 \
   template void KernelUtil<DeviceType::kCPU, T>::Dropout(                     \
-      DeviceCtx* ctx, const int64_t n, double keep_prob, const T* x,          \
+      DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* x,       \
       float* random_mask, T* y);                                              \
   template void KernelUtil<DeviceType::kCPU, T>::DropoutBackward(             \
-      DeviceCtx* ctx, const int64_t n, double keep_prob, const T* dy,         \
+      DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* dy,      \
       const float* random_mask, T* dx);                                       \
   template<>                                                                  \
   void KernelUtil<DeviceType::kCPU, T>::Axpy(                                 \

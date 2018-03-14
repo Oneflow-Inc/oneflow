@@ -105,12 +105,13 @@ struct KernelUtil final {
                            const T* y, const T* dy, T* dx);
 
   // random_mask = random_uniform(0, 1)
-  // y = dropout(x, random_mask, keep_prob)
-  static void Dropout(DeviceCtx* ctx, const int64_t n, double keep_prob,
+  // y = dropout(x, random_mask, dropout_rate)
+  static void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate,
                       const T* x, float* random_mask, T* y);
   // y = dropout(x, random_mask)
-  static void DropoutBackward(DeviceCtx* ctx, const int64_t n, double keep_prob,
-                              const T* dy, const float* random_mask, T* dx);
+  static void DropoutBackward(DeviceCtx* ctx, const int64_t n,
+                              double dropout_rate, const T* dy,
+                              const float* random_mask, T* dx);
 
   // matrix vector multiply
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
