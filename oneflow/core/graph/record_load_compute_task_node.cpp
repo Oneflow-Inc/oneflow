@@ -30,9 +30,6 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   }
   data_path += num;
   task_proto->set_data_path(data_path);
-  for (TaskEdge* edge : out_edges()) {
-    task_proto->add_related_decode_task_ids(edge->dst_node()->task_id());
-  }
 }
 
 }  // namespace oneflow
