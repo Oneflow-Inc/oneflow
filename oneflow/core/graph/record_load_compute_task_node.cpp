@@ -16,7 +16,7 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   std::shared_ptr<const Operator> decode_op =
       decode_node->chain_node()->SoleOp();
   if (decode_op->op_conf().has_decode_ofrecord_conf()) {
-    task_proto->set_record_type(RecordType::kOFRecord);
+    task_proto->set_record_type(RecordTypeProto::kOFRecord);
   } else {
     UNIMPLEMENTED();
   }
