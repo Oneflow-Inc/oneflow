@@ -4,6 +4,11 @@
 
 namespace oneflow {
 
+void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record");
+  for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
+}
+
 void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   DecodeCompTaskNode* decode_node =

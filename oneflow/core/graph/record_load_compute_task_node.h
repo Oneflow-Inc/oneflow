@@ -11,11 +11,12 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   RecordLoadCompTaskNode() = default;
   ~RecordLoadCompTaskNode() = default;
 
-  void ProduceAllRegstsAndBindEdges() override {}
+  void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
   void BuildExecGphAndRegst() override {}
   void ToProto(TaskProto*) override;
-  virtual bool IsMeaningLess() override { return false; }
+  bool IsMeaningLess() override { return false; }
+  void EraseEmptyProducedRegst() override {}
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
   bool IsPersistence() const override { return true; }

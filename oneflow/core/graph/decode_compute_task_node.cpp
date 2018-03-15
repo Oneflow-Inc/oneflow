@@ -9,20 +9,32 @@ void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
 }
 
-void DecodeCompTaskNode::ConsumeAllRegsts() {}
+void DecodeCompTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("record", SoleInEdge()->GetSoleRegst());
+}
 
 void DecodeCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
-  FOR_RANGE(size_t, i, 0, chain_node()->op_vec().size()) {
-    ExecNode* node = mut_exec_gph().NewNode();
-    node->mut_op() = chain_node()->op_vec().at(i);
-    for (const std::string& obn : node->op()->output_bns()) {
-      const std::string& lbn = node->op()->Lbn4BnInOp(obn);
+  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = chain_node()->SoleOp();
+  const auto& data_output_lbns = chain_node()->data_output_lbns();
+  for (const std::string& obn : node->op()->output_bns()) {
+    const std::string& lbn = node->op()->Lbn4BnInOp(obn);
+    if (data_output_lbns.find(lbn) == data_output_lbns.end()) {
+      data_tmp_regst->AddLbn(lbn);
+      node->BindBnInOpAndRegst(obn, data_tmp_regst);
+    } else {
       out_regst->AddLbn(lbn);
       node->BindBnInOpAndRegst(obn, out_regst);
     }
-    node->InferBlobDescs(parallel_ctx(), device_type());
   }
+  for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+    const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
+    data_tmp_regst->AddLbn(lbn);
+    node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+  }
+  node->InferBlobDescs(parallel_ctx(), device_type());
 }
 
 }  // namespace oneflow
