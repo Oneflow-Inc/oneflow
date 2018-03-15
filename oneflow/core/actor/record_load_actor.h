@@ -19,8 +19,6 @@ class RecordLoadActor final : public CompActor {
   int HandlerNormal(const ActorMsg&) override;
 
   void Act() override;
-  bool ReadOneRecord();
-  bool ReadOneOFRecord();
   bool IsReadReady() override { return !IsReadAlwaysUnReadyFromNow(); };
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override {}

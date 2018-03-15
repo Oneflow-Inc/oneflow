@@ -27,12 +27,6 @@ message Feature {
   }
 }
 
-enum RecordType {
-  kNullRecord = 0;
-  kOFRecord = 1;
-  kLineRecord = 2;
-}
-
 message OFRecord {
   map<string, Feature> feature = 1;
 }
