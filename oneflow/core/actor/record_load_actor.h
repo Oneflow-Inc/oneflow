@@ -25,7 +25,7 @@ class RecordLoadActor final : public CompActor {
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override {}
 
-  RecordType record_type;
+  RecordTypeProto record_type;
   int32_t piece_id_;
   bool is_eof_;
   std::unique_ptr<PersistentInStream> in_stream_;

@@ -18,7 +18,7 @@ class RegstMgr final {
   OF_SINGLETON(RegstMgr);
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
-                 RecordType record_type,
+                 RecordTypeProto record_type,
                  std::function<void(Regst*)> OneRegstDone);
 
  private:

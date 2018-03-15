@@ -35,9 +35,6 @@ message TaskProto {
   required ExecSequence exec_sequence = 5;
   map<string, RegstDescProto> produced_regst_desc = 6;
   map<string, int64> consumed_regst_desc_id = 7;
-  // record load task
-  optional string data_path = 101;
-  optional RecordType record_type = 102 [default = kNullRecord];
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask

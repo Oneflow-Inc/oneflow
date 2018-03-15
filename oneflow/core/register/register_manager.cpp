@@ -7,7 +7,7 @@
 namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
-                         DeviceType device_type, RecordType record_type,
+                         DeviceType device_type, RecordTypeProto record_type,
                          std::function<void(Regst*)> OneRegstDone) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
   rt_regst_descs_.emplace_back(runtime_regst_desc);
@@ -40,9 +40,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       regst->deleter_ = std::get<2>(allocation_result);
     } else {
       switch (record_type) {
-        case kNullRecord: UNIMPLEMENTED(); break;
-        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>);
-        case kLineRecord: TODO(); break;
+        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
       }
     }
     OneRegstDone(regst);
