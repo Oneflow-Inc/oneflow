@@ -216,54 +216,6 @@ void DataMergeChains(std::list<Chain>* chain_list,
   while (DoOneDataMerge(data_parallel_node, chain_list, logical2chain_it)) {}
 }
 
-void MergeDecodeNodes(std::list<Chain>* chain_list,
-                      Logical2ChainItMap* logical2chain_it) {
-  HashMap<std::string, std::vector<const LogicalNode*>> data_dir2decode_nodes;
-  for (auto& pair : *logical2chain_it) {
-    const LogicalNode* cur_node = pair.first;
-    if (cur_node->op()->IsDecodeOp()) {
-      const DecodeOFRecordOpConf& op_conf =
-          cur_node->op()->op_conf().decode_ofrecord_conf();
-      if (op_conf.blob(0).max_sequence_size() > 1) {
-        CHECK_EQ(op_conf.blob_size(), 1);
-        continue;
-      }
-      std::string name = op_conf.data_dir();
-      auto iter = data_dir2decode_nodes.find(name);
-      if (iter == data_dir2decode_nodes.end()) {
-        CHECK(data_dir2decode_nodes
-                  .emplace(name, std::vector<const LogicalNode*>{cur_node})
-                  .second);
-      } else {
-        iter->second.emplace_back(cur_node);
-      }
-    }
-  }
-  for (auto& pair : data_dir2decode_nodes) {
-    if (pair.second.size() == 1) { continue; }
-    ChainIt decode_chain = logical2chain_it->at(pair.second.front());
-    FOR_RANGE(size_t, i, 1, pair.second.size()) {
-      ChainIt cur_chain = logical2chain_it->at(pair.second.at(i));
-      decode_chain->nodes.insert(decode_chain->nodes.end(),
-                                 cur_chain->nodes.begin(),
-                                 cur_chain->nodes.end());
-      CHECK_EQ(cur_chain->ancestors.size(), 0);
-      decode_chain->descendants.insert(cur_chain->descendants.begin(),
-                                       cur_chain->descendants.end());
-      decode_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
-                                              cur_chain->nodes.end());
-      decode_chain->descendants_and_this.insert(
-          cur_chain->descendants_and_this.begin(),
-          cur_chain->descendants_and_this.end());
-      for (const LogicalNode* node : cur_chain->nodes) {
-        decode_chain->descendants.erase(node);
-        logical2chain_it->at(node) = decode_chain;
-      }
-      chain_list->erase(cur_chain);
-    }
-  }
-}
-
 }  // namespace
 
 ChainGraph::ChainGraph(bool is_train) {
@@ -288,7 +240,6 @@ void ChainGraph::BuildFwStruct(
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
   InitChains(&chain_list, &logical2chain_it);
-  MergeDecodeNodes(&chain_list, &logical2chain_it);
   ModelMergeChains(&chain_list, &logical2chain_it);
   DataMergeChains(&chain_list, &logical2chain_it);
   // Init chain_nodes

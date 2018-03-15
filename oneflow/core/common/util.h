@@ -167,22 +167,20 @@ inline double GetCurTime() {
 
 size_t GetAvailableCpuMemSize();
 
-template<typename ElementType,
-         template<typename, typename...> class ContainerType, typename... Args>
-void Erase(ContainerType<ElementType, Args...>& container,
-           std::function<bool(ElementType&)> need_erase) {
-  Erase(container, need_erase, [](ElementType) {});
+template<typename T>
+void Erase(T& container,
+           std::function<bool(const typename T::value_type&)> NeedErase) {
+  Erase(container, NeedErase, [](const typename T::value_type&) {});
 }
 
-template<typename ElementType,
-         template<typename, typename...> class ContainerType, typename... Args>
-void Erase(ContainerType<ElementType, Args...>& container,
-           std::function<bool(ElementType&)> need_erase,
-           std::function<void(ElementType&)> erase_element_handler) {
+template<typename T>
+void Erase(
+    T& container, std::function<bool(const typename T::value_type&)> NeedErase,
+    std::function<void(const typename T::value_type&)> EraseElementHandler) {
   auto iter = container.begin();
   auto erase_from = container.end();
   while (iter != erase_from) {
-    if (need_erase(*iter)) {
+    if (NeedErase(*iter)) {
       --erase_from;
       if (iter == erase_from) { break; }
       std::swap(*iter, *erase_from);
@@ -190,7 +188,7 @@ void Erase(ContainerType<ElementType, Args...>& container,
       ++iter;
     }
   }
-  for (; iter != container.end(); ++iter) { erase_element_handler(*iter); }
+  for (; iter != container.end(); ++iter) { EraseElementHandler(*iter); }
   if (erase_from != container.end()) {
     container.erase(erase_from, container.end());
   }
