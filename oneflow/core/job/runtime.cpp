@@ -86,12 +86,12 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
 #ifdef PLATFORM_POSIX
   if (JobDesc::Singleton()->use_rdma()) {
 #ifdef WITH_RDMA
-    IBVerbsCommNet::Init();
+    IBVerbsCommNet::Init(plan);
 #else
     LOG(FATAL) << "RDMA components not found";
 #endif
   } else {
-    EpollCommNet::Init();
+    EpollCommNet::Init(plan);
   }
 #endif
   SnapshotMgr::NewSingleton(plan);
