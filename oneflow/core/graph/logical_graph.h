@@ -65,11 +65,12 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
  private:
   LogicalGraph();
-  void NaiveBuildGraphStruct(HashMap<LogicalEdge*, std::string>* edge2lbn,
-                             HashMap<LogicalEdge*, std::string>* edge2ibn,
-                             HashMap<std::string, LogicalNode*>* op_name2node);
+  void NaiveBuildGraphStruct(
+      HashMap<LogicalEdge*, std::string>* edge2lbn,
+      HashMap<LogicalEdge*, std::string>* edge2ibn,
+      HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FillNodeWithParallelDesc(
-      const HashMap<std::string, LogicalNode*>& op_name2node);
+      const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
 
   struct CloneInfo {
     std::shared_ptr<Operator> clone_op;
