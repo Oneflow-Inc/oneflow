@@ -15,13 +15,8 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
       static_cast<DecodeCompTaskNode*>((*out_edges().begin())->dst_node());
   std::shared_ptr<const Operator> decode_op =
       decode_node->chain_node()->SoleOp();
-  const OperatorConf& op_conf = decode_op->op_conf();
-  if (op_conf.has_decode_ofrecord_conf()) {
+  if (decode_op->op_conf().has_decode_ofrecord_conf()) {
     task_proto->set_record_type(RecordType::kOFRecord);
-  } else if (op_conf.has_decode_line_conf()) {
-    task_proto->set_record_type(RecordType::kLine);
-  } else if (op_conf.has_decode_fixedlen_conf()) {
-    task_proto->set_record_type(RecordType::kFixedLen);
   } else {
     UNIMPLEMENTED();
   }

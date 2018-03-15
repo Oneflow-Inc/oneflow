@@ -3,8 +3,6 @@ package oneflow;
 
 enum RecordType {
   kOFRecord = 0;
-  kLine = 1;
-  kFixedLen = 2;
 }
 
 message BytesList {
