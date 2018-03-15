@@ -26,7 +26,7 @@ class RecordLoadActor final : public ActorIf {
 
   std::queue<std::unique_ptr<Regst>> produced_regsts_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
-  std::vector<int64_t> consumers_actor_id_;
+  PbRf<int64_t> consumers_actor_id_;
   int32_t piece_id_;
   bool is_eof_;
   std::unique_ptr<PersistentInStream> in_stream_;
