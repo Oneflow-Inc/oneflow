@@ -249,14 +249,24 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
   // cell_out_diff = rec_out_diff * o_out * [1 -
   // tanh(cell_out)*tanh(cell_out)]
   //								+ cell_out_diff
-  KernelUtil<device_type, T>::TanH(ctx.device_ctx,
-                                   out_blob->shape().elem_cnt(), );
-  KernelUtil<device_type, T>::Mul(ctx.device_ctx,
-                                  out_blob->shape().elem_cnt(), );
-  KernelUtil<device_type, T>::Mul(ctx.device_ctx,
-                                  out_blob->shape().elem_cnt(), );
-  KernelUtil<device_type, T>::Axpy(ctx.device_ctx,
-                                   out_blob_shape().elem_cnt(), );
+  KernelUtil<device_type, T>::TanH(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                   cell_out_blob->dptr<T>(),
+                                   cell_out_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
+      cell_out_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
+      o_out_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                  rec_out_diff_blob->dptr<T>(),
+                                  cell_out_blob->dptr<T>(),
+                                  cell_out_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Axpy(
+      ctx.device_ctx, out_blob->shape().elem_cnt(), static_cast<T>(1),
+      cell_out_blob->dptr<T>(), static_cast<T>(1),
+      cell_out_diff_blob->dptr<T>(), static_cast<T>(1),
+      cell_out_diff_blob->mut_dptr<T>());
 
   // i_out_diff = cell_out_diff * c_out
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_blob->shape().elem_cnt(),
@@ -483,22 +493,22 @@ void BasicLstmKernel<device_type, T>::InitPureModelTmpBlobs(
   InitializerConf bias_f_multiplier_fill_conf;
   bias_f_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
   KernelUtil<device_type, T>::Initialize(ctx, bias_f_multiplier_fill_conf, 0,
-                                          BnInOp2Blob("bias_f_multiplier"));
+                                         BnInOp2Blob("bias_f_multiplier"));
 
   InitializerConf bias_i_multiplier_fill_conf;
   bias_i_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
   KernelUtil<device_type, T>::Initialize(ctx, bias_i_multiplier_fill_conf, 0,
-                                          BnInOp2Blob("bias_i_multiplier"));
+                                         BnInOp2Blob("bias_i_multiplier"));
 
   InitializerConf bias_o_multiplier_fill_conf;
   bias_o_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
   KernelUtil<device_type, T>::Initialize(ctx, bias_o_multiplier_fill_conf, 0,
-                                          BnInOp2Blob("bias_o_multiplier"));
+                                         BnInOp2Blob("bias_o_multiplier"));
 
   InitializerConf bias_c_multiplier_fill_conf;
   bias_c_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
   KernelUtil<device_type, T>::Initialize(ctx, bias_c_multiplier_fill_conf, 0,
-                                          BnInOp2Blob("bias_c_multiplier"));
+                                         BnInOp2Blob("bias_c_multiplier"));
 }
 
 }  // namespace oneflow
