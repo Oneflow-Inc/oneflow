@@ -365,6 +365,18 @@ message DecodeOFRecordOpConf {
   repeated BlobConf blob = 4;
 }
 
+message DecodeLineOpConf {
+  required string data_dir = 1;
+  optional string part_name_prefix = 2 [default = "part-"];
+  optional int32 part_name_suffix_length = 3 [default = -1];
+}
+
+message DecodeFixedLenOpConf {
+  required string data_dir = 1;
+  optional string part_name_prefix = 2 [default = "part-"];
+  optional int32 part_name_suffix_length = 3 [default = -1];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -372,7 +384,6 @@ message OperatorConf {
   optional bool trainable = 4 [default = true];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
-    DecodeOFRecordOpConf decode_ofrecord_conf = 102;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
@@ -402,6 +413,9 @@ message OperatorConf {
     AveragePooling3DOpConf average_pooling_3d_conf = 204;
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
+    DecodeOFRecordOpConf decode_ofrecord_conf = 400;
+    DecodeLineOpConf decode_line_conf = 401;
+    DecodeFixedLenOpConf decode_fixedlen_conf = 402;
   }
 }
 
