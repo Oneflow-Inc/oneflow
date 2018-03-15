@@ -1,6 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
+import "oneflow/core/operator/record.proto";
 import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
 import "oneflow/core/job/placement.proto";
@@ -41,4 +42,5 @@ message TaskProto {
   optional int64 related_save_model_task_id = 1002 [default = -1];
   optional int64 related_init_model_task_id = 1003 [default = -1];
   optional string data_path = 1004;
+  optional RecordTypeProto record_type = 1005;
 };

@@ -1,6 +1,10 @@
 syntax = "proto2";
 package oneflow;
 
+enum RecordTypeProto {
+  kOFRecord = 0;
+}
+
 message BytesList {
   repeated bytes value = 1;
 }
