@@ -11,7 +11,6 @@ static const int32_t record_load_regst_num = 2;
 void RecordLoadActor::Init(const TaskProto& task_proto, const ThreadCtx&) {
   set_actor_id(task_proto.task_id());
   consumers_actor_id_ = PbRf2StdVec(task_proto.related_decode_task_ids());
-  record_type_ = task_proto.record_type();
   piece_id_ = 0;
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);

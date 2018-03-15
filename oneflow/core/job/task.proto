@@ -25,10 +25,6 @@ enum TaskType {
   kRecordLoad = 16;
 };
 
-enum RecordType {
-  kOFRecord = 0;
-}
-
 message TaskProto {
   // common
   required TaskType task_type = 1;
@@ -46,5 +42,4 @@ message TaskProto {
   // record load task
   optional string data_path = 1004;
   repeated int64 related_decode_task_ids = 1005;
-  optional RecordType record_type = 1006 [default = kOFRecord];
 };
