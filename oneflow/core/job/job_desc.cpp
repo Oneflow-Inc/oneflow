@@ -69,6 +69,7 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
   dlnet_conf_ = job_desc.dlnet_conf();
   resource_ = job_desc.resource();
   placement_ = job_desc.placement();
+  SplitDecodeOps();
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
@@ -92,6 +93,33 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
 #ifndef WITH_CUDA
   CHECK_EQ(resource_.gpu_device_num(), 0);
 #endif
+}
+
+void JobDesc::SplitDecodeOps() {
+  std::vector<OperatorConf> gen_op_confs;
+  for (OperatorConf& op_conf : *(dlnet_conf_.mutable_op())) {
+    if (op_conf.has_decode_ofrecord_conf() == false) { continue; }
+    if (op_conf.decode_ofrecord_conf().blob_size() == 1) { continue; }
+    const DecodeOFRecordOpConf& decode_conf = op_conf.decode_ofrecord_conf();
+    PbRpf<BlobConf>* blobs =
+        op_conf.mutable_decode_ofrecord_conf()->mutable_blob();
+    Erase<PbRpf<BlobConf>>(
+        *blobs,
+        [&](const BlobConf& blob_conf) -> bool {
+          return blob_conf.max_sequence_size() > 1;
+        },
+        [&](const BlobConf& blob_conf) {
+          gen_op_confs.emplace_back(op_conf);
+          DecodeOFRecordOpConf* gen_decode_conf =
+              gen_op_confs.back().mutable_decode_ofrecord_conf();
+          *gen_decode_conf = decode_conf;
+          gen_decode_conf->clear_blob();
+          *gen_decode_conf->add_blob() = blob_conf;
+        });
+  }
+  for (OperatorConf& gen_op_conf : gen_op_confs) {
+    *dlnet_conf_.add_op() = gen_op_conf;
+  }
 }
 
 }  // namespace oneflow

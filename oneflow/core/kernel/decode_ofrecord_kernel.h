@@ -12,6 +12,6 @@ struct DecodeStatus {
   int32_t max_col_id_;
 };
 
-}  // oneflow
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_DECODE_OFRECORD_KERNEL_H_

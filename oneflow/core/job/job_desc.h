@@ -55,6 +55,7 @@ class JobDesc final {
 
  private:
   JobDesc(const JobDescProto&);
+  void SplitDecodeOps();
 
   JobConf job_conf_;
   DLNetConf dlnet_conf_;
