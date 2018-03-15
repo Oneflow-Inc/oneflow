@@ -13,7 +13,7 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
 }
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  actor_id_ = task_proto.task_id();
+  set_actor_id(task_proto.task_id());
   act_id_ = -1;
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
@@ -35,7 +35,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
   }
-  msg_handler_ = nullptr;
+  set_msg_handler(static_cast<MsgHandler>(nullptr));
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
       writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
@@ -49,12 +49,12 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   InitDeviceCtx(thread_ctx);
 }
 
-int64_t Actor::machine_id() const {
-  return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+int64_t ActorIf::machine_id() const {
+  return IDMgr::Singleton()->MachineId4ActorId(actor_id());
 }
 
-int64_t Actor::thrd_id() const {
-  return IDMgr::Singleton()->ThrdId4ActorId(actor_id_);
+int64_t ActorIf::thrd_id() const {
+  return IDMgr::Singleton()->ThrdId4ActorId(actor_id());
 }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
@@ -104,7 +104,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     UNIMPLEMENTED();
   }
   if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
-    msg_handler_ = nullptr;
+    set_msg_handler(static_cast<MsgHandler>(nullptr));
     return 1;
   }
   return 0;
@@ -116,7 +116,7 @@ void Actor::ActUntilFail() {
     ActEvent* act_event = nullptr;
     if (RuntimeCtx::Singleton()->is_experiment_phase()) {
       act_event = new ActEvent;
-      act_event->set_actor_id(actor_id_);
+      act_event->set_actor_id(actor_id());
       act_event->set_act_id(act_id_);
       act_event->set_work_stream_id(device_ctx_->work_stream_id());
       ForEachCurReadableRegst([&](const Regst* readable_regst) {
@@ -177,7 +177,7 @@ void Actor::AsyncLaunchKernel(
 void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(Regst*)> RegstPreProcess,
     std::function<bool(int64_t)> IsAllowedActor) {
-  int64_t this_actor_id = actor_id_;
+  int64_t this_actor_id = actor_id();
   for (auto& pair : writeable_produced_regst_) {
     Regst* regst = pair.second.front();
     if (RegstPreProcess(regst) == false) { continue; }
@@ -236,7 +236,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 }
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
-  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id(), producer, regst);
   device_ctx_->AddCallBack([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
 }
 
@@ -284,25 +284,25 @@ int64_t Actor::NewWorkStreamId() {
 }
 
 DeviceType Actor::GetDeviceType() const {
-  return IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_);
+  return IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id());
 }
 
-static HashMap<int, std::function<Actor*()>>& ActorCreatorMap() {
-  static HashMap<int, std::function<Actor*()>> obj;
+static HashMap<int, std::function<ActorIf*()>>& ActorCreatorMap() {
+  static HashMap<int, std::function<ActorIf*()>> obj;
   return obj;
 }
 
-void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
+void AddActorCreator(TaskType task_type, std::function<ActorIf*()> creator) {
   CHECK(ActorCreatorMap().emplace(task_type, creator).second);
 }
 
-std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
-                                const ThreadCtx& thread_ctx) {
+std::unique_ptr<ActorIf> NewActor(const TaskProto& task_proto,
+                                  const ThreadCtx& thread_ctx) {
   auto it = ActorCreatorMap().find(task_proto.task_type());
   CHECK(it != ActorCreatorMap().end()) << TaskType_Name(task_proto.task_type());
-  Actor* rptr = it->second();
+  ActorIf* rptr = it->second();
   rptr->Init(task_proto, thread_ctx);
-  return std::unique_ptr<Actor>(rptr);
+  return std::unique_ptr<ActorIf>(rptr);
 }
 
 }  // namespace oneflow

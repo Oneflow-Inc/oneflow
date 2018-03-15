@@ -19,6 +19,8 @@ class RegstMgr final {
   void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
                  std::function<void(Regst*)> OneRegstDone);
 
+  Regst* NewRegst();
+
  private:
   RegstMgr() = default;
   std::list<std::unique_ptr<const RtRegstDesc>> rt_regst_descs_;
