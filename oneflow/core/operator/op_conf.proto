@@ -365,6 +365,12 @@ message DecodeOFRecordOpConf {
   repeated BlobConf blob = 4;
 }
 
+message DropoutOpConf {
+  required double rate = 1;
+  optional ShapeProto noise_shape = 2;
+  optional int64 seed = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -395,6 +401,7 @@ message OperatorConf {
     Conv1DOpConf conv_1d_conf = 125;
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
+    DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;
