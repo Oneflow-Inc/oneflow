@@ -68,11 +68,6 @@ struct DropoutKernelUtil<DeviceType::kCPU, T> final {
   }
 };
 
-#define INITIATE_DROPOUT_KERNEL_UTIL(T, type_proto) \
-  template struct DropoutKernelUtil<DeviceType::kCPU, T>;
-
-OF_PP_FOR_EACH_TUPLE(INITIATE_DROPOUT_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
-
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kDropoutConf, DropoutKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
