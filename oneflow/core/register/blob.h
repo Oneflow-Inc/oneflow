@@ -5,6 +5,9 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/eigen_util.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/record/record.h"
 
 namespace oneflow {
 
@@ -107,8 +110,26 @@ class Blob : public BlobIf {
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               const void* comm_net_token, DeviceType device_type);
 
+class RecordBlobIf : public BlobIf {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RecordBlobIf);
+  RecordBlobIf() : in_stream_(nullptr){};
+  ~RecordBlobIf() = default;
+
+  virtual bool Read(size_t index) = 0;
+  virtual void set_record_num(int32_t val) = 0;
+
+  void set_in_stream(PersistentInStream* val) { in_stream_ = val; }
+
+ protected:
+  PersistentInStream* in_stream() { return in_stream_; };
+
+ private:
+  PersistentInStream* in_stream_;
+};
+
 template<typename RecordType>
-class RecordBlob final : public BlobIf {
+class RecordBlob final : public RecordBlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
   RecordBlob() : records_(JobDesc::Singleton()->SinglePieceSize()) {}
@@ -123,6 +144,10 @@ class RecordBlob final : public BlobIf {
     return &(records_.at(i));
   }
   void set_record_num(int32_t val) { record_num_ = val; }
+
+  bool Read(size_t index) override {
+    return ReadRecord<RecordType>(in_stream(), &(records_.at(index)));
+  }
 
  private:
   std::vector<RecordType> records_;

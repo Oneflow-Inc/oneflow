@@ -2,7 +2,7 @@
 #include "oneflow/core/persistence/cyclic_persistent_in_stream.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/operator/record.pb.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
@@ -18,6 +18,9 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
     in_stream_.reset(
         new NormalPersistentInStream(GlobalFS(), task_proto.data_path()));
   }
+  ForEachProducedRegst([&](Regst* regst) {
+    regst->GetRecordBlobIf()->set_in_stream(in_stream_.get());
+  });
 }
 
 int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
@@ -37,23 +40,15 @@ int RecordLoadActor::HandlerNormal(const ActorMsg& msg) {
 void RecordLoadActor::Act() {
   Regst* regst = GetCurSoleWriteableRegst();
   regst->set_piece_id(piece_id_++);
-  size_t record_size = 0;
   size_t i = 0;
   for (; i < JobDesc::Singleton()->SinglePieceSize(); ++i) {
-    if (!in_stream_->Read(reinterpret_cast<char*>(&record_size),
-                          sizeof(size_t))) {
-      std::unique_ptr<std::vector<char>> buffer =
-          of_make_unique<std::vector<char>>(record_size);
-      CHECK_EQ(in_stream_->Read(buffer->data(), record_size), 0);
-      regst->GetRecordBlob<OFRecord>()->mut_records(i)->ParseFromArray(
-          buffer->data(), record_size);
-    } else {
+    if (!regst->GetRecordBlobIf()->Read(i)) {
       is_eof_ = true;
       break;
     }
   }
   if (i != 0) {
-    regst->GetRecordBlob<OFRecord>()->set_record_num(i);
+    regst->GetRecordBlobIf()->set_record_num(i);
     AsyncSendRegstMsgToConsumer();
   }
 }
