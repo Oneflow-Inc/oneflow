@@ -346,11 +346,17 @@ message LocalResponseNormalizationOpConf {
   optional double beta = 6 [default = 0.5];
 }
 
+enum EncodeType {
+  kRaw = 0;
+  kJpeg = 1;
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
+  optional EncodeType encode_type = 5 [default = kRaw];
 }
 
 message DecodeOFRecordOpConf {
@@ -358,6 +364,12 @@ message DecodeOFRecordOpConf {
   optional string part_name_prefix = 2 [default = "part-"];
   optional int32 part_name_suffix_length = 3 [default = -1];
   repeated BlobConf blob = 4;
+}
+
+message DropoutOpConf {
+  required double rate = 1;
+  optional ShapeProto noise_shape = 2;
+  optional int64 seed = 3;
 }
 
 message OperatorConf {
@@ -390,6 +402,7 @@ message OperatorConf {
     Conv1DOpConf conv_1d_conf = 125;
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
+    DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;

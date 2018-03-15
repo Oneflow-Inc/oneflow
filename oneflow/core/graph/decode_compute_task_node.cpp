@@ -5,11 +5,13 @@ namespace oneflow {
 
 void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", 1, 1);
-  auto out_regst = ProduceRegst("out");
-  SoleOutEdge()->AddRegst("out", out_regst);
+  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
+  for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
 }
 
-void DecodeCompTaskNode::ConsumeAllRegsts() {}
+void DecodeCompTaskNode::ConsumeAllRegsts() {
+  ConsumeRegst("record", SoleInEdge()->GetSoleRegst());
+}
 
 void DecodeCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
