@@ -262,6 +262,8 @@ void ChainGraph::BuildFwStruct(
       } else {
         // do nothing
       }
+    } else if (chain_it->nodes[0]->op()->IsDecodeOp()) {
+      chain_node = NewNode<DecodeChainNode>();
     }
     if (chain_node == nullptr) { chain_node = NewNode<ForwardChainNode>(); }
     chain_it2chain_node[chain_it] = chain_node;
@@ -301,7 +303,29 @@ void ChainGraph::BuildFwStruct(
   }
 }
 
-void ChainGraph::BuildRecordLoadStruct() { TODO(); }
+void ChainGraph::BuildRecordLoadStruct() {
+  HashMap<std::string, std::vector<DecodeChainNode*>> data_dir2decode_node;
+  ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
+    std::string data_dir =
+        decode_node->op_vec().front()->GetStringFromCustomizedConf("data_dir");
+    auto iter = data_dir2decode_node.find(data_dir);
+    if (iter == data_dir2decode_node.end()) {
+      CHECK(data_dir2decode_node
+                .emplace(data_dir, std::vector<DecodeChainNode*>{decode_node})
+                .second);
+    } else {
+      iter->second.emplace_back(decode_node);
+    }
+  });
+  for (auto& pair : data_dir2decode_node) {
+    ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
+    record_load_node->mut_parallel_desc() =
+        pair.second.front()->parallel_desc();
+    for (DecodeChainNode* decode_node : pair.second) {
+      Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
+    }
+  }
+}
 
 void ChainGraph::BuildBwStruct() {
   HashSet<ForwardChainNode*> fw_nodes_that_need_bw;
