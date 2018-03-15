@@ -345,11 +345,17 @@ message LocalResponseNormalizationOpConf {
   optional double beta = 6 [default = 0.5];
 }
 
+enum EncodeType {
+  kRaw = 0;
+  kJpeg = 1;
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
+  optional EncodeType encode_type = 5 [default = kRaw];
 }
 
 message DecodeOFRecordOpConf {
