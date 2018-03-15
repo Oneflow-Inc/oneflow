@@ -74,4 +74,35 @@ void CommNet::FinishOneRead(ReadContext* read_ctx) {
   delete read_ctx;
 }
 
+void CommNet::GenConnectionInfo(const Plan& plan) {
+  HashMap<int64_t, int64_t> rid2mid;
+  HashMap<int64_t, int64_t> tid2mid;
+  int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
+
+  for (const TaskProto& task_proto : plan.task()) {
+    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
+      rid2mid.emplace(regst_desc_it.second.regst_desc_id(),
+                      task_proto.machine_id());
+    }
+    CHECK(
+        tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
+  }
+  for (const TaskProto& task_proto : plan.task()) {
+    if (task_proto.machine_id() != this_machine_id) { continue; }
+    for (const auto& regst_desc_it : task_proto.consumed_regst_desc_id()) {
+      auto rid2mid_it = rid2mid.find(regst_desc_it.second);
+      CHECK(rid2mid_it != rid2mid.end());
+      peer_machine_id_.insert(rid2mid_it->second);
+    }
+    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
+      for (int64_t consumer_task_id : regst_desc_it.second.consumer_task_id()) {
+        auto tid2mid_it = tid2mid.find(consumer_task_id);
+        CHECK(tid2mid_it != tid2mid.end());
+        peer_machine_id_.insert(tid2mid_it->second);
+      }
+    }
+  }
+  peer_machine_id_.erase(this_machine_id);
+}
+
 }  // namespace oneflow

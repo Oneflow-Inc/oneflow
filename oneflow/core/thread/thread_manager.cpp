@@ -28,7 +28,9 @@ ThreadMgr::ThreadMgr() {
   FOR_RANGE(int64_t, i, 0, job_desc->CpuDeviceNum()) {
     threads_.push_back(new CpuThread(thrd_id++));
   }
-  threads_.push_back(new CpuThread(thrd_id++));  // persistence
+  FOR_RANGE(int64_t, i, 0, job_desc->PersistenceWorkerNum()) {
+    threads_.push_back(new CpuThread(thrd_id++));
+  }
   threads_.push_back(new CpuThread(thrd_id++));  // comm_net
 }
 

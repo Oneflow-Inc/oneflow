@@ -17,7 +17,7 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box,
-    std::function<int64_t()> AllocateOneCpuDeviceThrdId);
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
 
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::string& lbn,
@@ -65,7 +65,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   void GenSortedCompTaskNodes(
-      std::function<int64_t()> AllocateOneCpuDeviceThrdId,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
       CompTaskNodeHandler) const;
 
   // To

@@ -9,15 +9,27 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   HashMap<const ChainNode*, std::vector<CompTaskNode*>> chain2sorted_comp_tasks;
   HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_in_box;
   HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
-  int64_t cpu_dev_id = 0;
-  auto AllocateOneCpuDeviceThrdId = [&]() {
-    int64_t ret = IDMgr::Singleton()->GetCpuDeviceThrdId(cpu_dev_id);
-    cpu_dev_id = (cpu_dev_id + 1) % JobDesc::Singleton()->CpuDeviceNum();
+
+  const JobDesc* job_desc = JobDesc::Singleton();
+
+  std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
+  std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
+  auto AllocateCpuThrdId = [&](const TaskNode* task_node) {
+    int64_t ret = -1;
+    if (task_node->IsPersistence() == false) {
+      int64_t& offset = cpu_device_offset.at(task_node->machine_id());
+      ret = IDMgr::Singleton()->GetCpuDeviceThrdId(offset);
+      offset = (offset + 1) % job_desc->CpuDeviceNum();
+    } else {
+      int64_t& offset = persistence_offset.at(task_node->machine_id());
+      ret = IDMgr::Singleton()->GetPersistenceThrdId(offset);
+      offset = (offset + 1) % job_desc->PersistenceWorkerNum();
+    }
     return ret;
   };
   chain_gph_->ForEachNode([&](const ChainNode* chain_node) {
     chain_node->GenSortedCompTaskNodes(
-        AllocateOneCpuDeviceThrdId, [&](CompTaskNode* comp_task_node) {
+        AllocateCpuThrdId, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           chain2sorted_comp_tasks[chain_node].push_back(comp_task_node);
         });
@@ -28,7 +40,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
                     chain2sorted_comp_tasks.at(chain_edge->src_node()),
                     chain2sorted_comp_tasks.at(chain_edge->dst_node()),
                     &chain2sorted_in_box, &chain2sorted_out_box,
-                    AllocateOneCpuDeviceThrdId);
+                    AllocateCpuThrdId);
   });
   ToDotWithAutoFilePath();
 }
@@ -52,26 +64,25 @@ static bool IsDataParallelOneToOneBoxing(const ChainNode* src_chain,
       const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                 \
       HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,  \
       HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box, \
-      std::function<int64_t()> AllocateOneCpuDeviceThrdId)
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId)
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   if (IsDataParallelOneToOneBoxing(src_chain, dst_chain)) {
     BldSubTskGphByOneToOne(src_chain, dst_chain, sorted_src_comp_tasks,
                            sorted_dst_comp_tasks, nullptr, nullptr,
-                           AllocateOneCpuDeviceThrdId);
+                           AllocateCpuThrdId);
     return;
   }
   std::vector<TaskNode*> sorted_out_box_tmp;
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (src_chain->HasSoleRecurrentOp()) {
     BuildOutBoxing(src_chain, sorted_src_comp_tasks, &sorted_out_box_tmp,
-                   AllocateOneCpuDeviceThrdId);
+                   AllocateCpuThrdId);
     sorted_out_box = &sorted_out_box_tmp;
   } else {
     if (chain2sorted_out_box->find(src_chain) == chain2sorted_out_box->end()) {
       BuildOutBoxing(src_chain, sorted_src_comp_tasks,
-                     &((*chain2sorted_out_box)[src_chain]),
-                     AllocateOneCpuDeviceThrdId);
+                     &((*chain2sorted_out_box)[src_chain]), AllocateCpuThrdId);
     }
     sorted_out_box = &(chain2sorted_out_box->at(src_chain));
   }
@@ -80,13 +91,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   std::vector<TaskNode*>* sorted_in_box = nullptr;
   if (dst_chain->HasSoleRecurrentOp()) {
     BuildInBoxing(dst_chain, sorted_dst_comp_tasks, &sorted_in_box_tmp,
-                  AllocateOneCpuDeviceThrdId);
+                  AllocateCpuThrdId);
     sorted_in_box = &sorted_in_box_tmp;
   } else {
     if (chain2sorted_in_box->find(dst_chain) == chain2sorted_in_box->end()) {
       BuildInBoxing(dst_chain, sorted_dst_comp_tasks,
-                    &((*chain2sorted_in_box)[dst_chain]),
-                    AllocateOneCpuDeviceThrdId);
+                    &((*chain2sorted_in_box)[dst_chain]), AllocateCpuThrdId);
     }
     sorted_in_box = &(chain2sorted_in_box->at(dst_chain));
   }
@@ -159,7 +169,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
   CHECK_NOTNULL(selected_src_comp_task);
   BldSubTskGphByOneToOne(nullptr, nullptr, {selected_src_comp_task},
                          sorted_dst_comp_tasks, nullptr, nullptr,
-                         AllocateOneCpuDeviceThrdId);
+                         AllocateCpuThrdId);
 }
 
 TaskNode* TaskGraph::AddCopyH2DTaskIfNotCpu(CompTaskNode* comp_task) {
@@ -191,7 +201,7 @@ void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
 void TaskGraph::BuildOutBoxing(
     const ChainNode* chain, const std::vector<CompTaskNode*>& sorted_comp_tasks,
     std::vector<TaskNode*>* sorted_out_box,
-    std::function<int64_t()> AllocateOneCpuDeviceThrdId) {
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = AddCopyD2HTaskIfNotCpu(comp_task);
@@ -199,8 +209,8 @@ void TaskGraph::BuildOutBoxing(
   }
   for (const auto& pair : machine_id2bound_task) {
     OutBoxingTaskNode* boxing_task = NewNode<OutBoxingTaskNode>();
-    boxing_task->Init(pair.second.front()->machine_id(),
-                      AllocateOneCpuDeviceThrdId());
+    boxing_task->set_machine_id(pair.second.front()->machine_id());
+    boxing_task->set_thrd_id(AllocateCpuThrdId(boxing_task));
     for (TaskNode* task : pair.second) {
       Connect<TaskNode>(task, NewEdge(), boxing_task);
     }
@@ -211,7 +221,7 @@ void TaskGraph::BuildOutBoxing(
 void TaskGraph::BuildInBoxing(
     const ChainNode* chain, const std::vector<CompTaskNode*>& sorted_comp_tasks,
     std::vector<TaskNode*>* sorted_in_box,
-    std::function<int64_t()> AllocateOneCpuDeviceThrdId) {
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = AddCopyH2DTaskIfNotCpu(comp_task);
@@ -219,8 +229,8 @@ void TaskGraph::BuildInBoxing(
   }
   for (const auto& pair : machine_id2bound_task) {
     InBoxingTaskNode* boxing_task = NewNode<InBoxingTaskNode>();
-    boxing_task->Init(pair.second.front()->machine_id(),
-                      AllocateOneCpuDeviceThrdId());
+    boxing_task->set_machine_id(pair.second.front()->machine_id());
+    boxing_task->set_thrd_id(AllocateCpuThrdId(boxing_task));
     for (TaskNode* task : pair.second) {
       Connect<TaskNode>(boxing_task, NewEdge(), task);
     }

@@ -19,7 +19,7 @@ class EpollCommNet final : public CommNet {
     return static_cast<EpollCommNet*>(CommNet::Singleton());
   }
 
-  static void Init();
+  static void Init(const Plan& plan);
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
   void UnRegisterMemory(const void* token) override;
@@ -29,7 +29,7 @@ class EpollCommNet final : public CommNet {
   void SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg);
 
  private:
-  EpollCommNet();
+  EpollCommNet(const Plan& plan);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
   void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,

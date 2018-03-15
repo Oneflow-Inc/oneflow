@@ -17,10 +17,10 @@ message Resource {
   required int32 gpu_device_num = 2;
   optional int32 cpu_device_num = 3 [default = 0];
   optional int32 comm_net_worker_num = 4 [default = 4];
-  optional int32 persistence_worker_num = 5 [default = 0];
+  optional int32 persistence_worker_num = 5 [default = 64];
 }
 
 // Usage:
 //   machine_name:gpu:gpu_dev_phy_id
-//   machine_name:gpu:gpu_dev_phy_id_min-gpu_dev_phy_id_max
+//   machine_name:gpu:gpu_dev_phy_id_first-gpu_dev_phy_id_last
 //   machine_name:cpu:parallel_num

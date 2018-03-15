@@ -25,7 +25,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                 \
       HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,  \
       HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box, \
-      std::function<int64_t()> AllocateOneCpuDeviceThrdId);
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
@@ -35,14 +35,15 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* AddCopyH2DTaskIfNotCpu(CompTaskNode*);
   TaskNode* AddCopyD2HTaskIfNotCpu(CompTaskNode*);
   void AddCopyCommNetTask(TaskNode* src, TaskNode* dst);
-  void BuildOutBoxing(const ChainNode* chain,
-                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                      std::vector<TaskNode*>* sorted_box,
-                      std::function<int64_t()> AllocateOneCpuDeviceThrdId);
+  void BuildOutBoxing(
+      const ChainNode* chain,
+      const std::vector<CompTaskNode*>& sorted_comp_tasks,
+      std::vector<TaskNode*>* sorted_box,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void BuildInBoxing(const ChainNode* chain,
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_box,
-                     std::function<int64_t()> AllocateOneCpuDeviceThrdId);
+                     std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
 
   std::unique_ptr<const ChainGraph> chain_gph_;
 };

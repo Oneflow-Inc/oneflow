@@ -13,13 +13,13 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 
 }  // namespace
 
-void IBVerbsCommNet::Init() {
-  CommNet::Singleton()->set_comm_network_ptr(new IBVerbsCommNet());
+void IBVerbsCommNet::Init(const Plan& plan) {
+  CommNet::Singleton()->set_comm_network_ptr(new IBVerbsCommNet(plan));
 }
 
 const void* IBVerbsCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   IBVerbsMemDesc* ibverbs_mem_desc =
-      endpoint_manager_.NewIBVerbsMemDesc(mem_ptr, byte_size);
+      endpoint_manager_->NewIBVerbsMemDesc(mem_ptr, byte_size);
   mem_desc_mgr_.RegisterMemDesc(ibverbs_mem_desc);
   return ibverbs_mem_desc;
 }
@@ -56,7 +56,12 @@ void IBVerbsCommNet::RegisterMemoryDone() {
 }
 
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
-  endpoint_manager_.SendActorMsg(dst_machine_id, msg);
+  endpoint_manager_->SendActorMsg(dst_machine_id, msg);
+}
+
+IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) {
+  GenConnectionInfo(plan);
+  endpoint_manager_.reset(new EndpointManager());
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id,
@@ -65,8 +70,8 @@ void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id,
       token2mem_desc_proto_[reinterpret_cast<uint64_t>(src_token)];
   auto local_mem_desc = const_cast<IBVerbsMemDesc*>(
       static_cast<const IBVerbsMemDesc*>(dst_token));
-  endpoint_manager_.Read(read_id, src_machine_id, local_mem_desc,
-                         remote_mem_desc_proto);
+  endpoint_manager_->Read(read_id, src_machine_id, local_mem_desc,
+                          remote_mem_desc_proto);
 }
 
 }  // namespace oneflow

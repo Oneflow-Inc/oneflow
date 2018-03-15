@@ -45,6 +45,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
+  virtual bool IsPersistence() const { return false; }
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);

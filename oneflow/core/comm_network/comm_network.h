@@ -4,6 +4,7 @@
 #include "oneflow/core/actor/actor_message.h"
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/job/plan.pb.h"
+#include "oneflow/core/job/machine_context.h"
 
 namespace oneflow {
 
@@ -32,6 +33,7 @@ class CommNet {
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
+  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
  protected:
   CommNet() = default;
@@ -51,11 +53,13 @@ class CommNet {
 
   virtual void DoRead(void* read_id, int64_t src_machine_id,
                       const void* src_token, const void* dst_token) = 0;
+  void GenConnectionInfo(const Plan& plan);
 
  private:
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneRead(ReadContext*);
 
+  HashSet<int64_t> peer_machine_id_;
   static CommNet* comm_network_ptr_;
 };
 

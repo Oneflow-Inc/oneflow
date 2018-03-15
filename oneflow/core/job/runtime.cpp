@@ -5,7 +5,6 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/persistence/persistence_thread_pool.h"
 
 namespace oneflow {
 
@@ -87,15 +86,14 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
 #ifdef PLATFORM_POSIX
   if (JobDesc::Singleton()->use_rdma()) {
 #ifdef WITH_RDMA
-    IBVerbsCommNet::Init();
+    IBVerbsCommNet::Init(plan);
 #else
     LOG(FATAL) << "RDMA components not found";
 #endif
   } else {
-    EpollCommNet::Init();
+    EpollCommNet::Init(plan);
   }
 #endif
-  PersistenceThreadPool::NewSingleton(plan);
   SnapshotMgr::NewSingleton(plan);
   MemoryAllocator::NewSingleton();
   RegstMgr::NewSingleton();
@@ -109,7 +107,6 @@ void Runtime::DeleteAllSingleton() {
   RegstMgr::DeleteSingleton();
   MemoryAllocator::DeleteSingleton();
   SnapshotMgr::DeleteSingleton();
-  PersistenceThreadPool::DeleteSingleton();
   delete CommNet::Singleton();
   RuntimeCtx::DeleteSingleton();
   ActEventLogger::DeleteSingleton();

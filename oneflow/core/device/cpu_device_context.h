@@ -18,7 +18,7 @@ class CpuDeviceCtx final : public DeviceCtx {
   }
 
  private:
-};
+};  // namespace oneflow
 
 }  // namespace oneflow
 
