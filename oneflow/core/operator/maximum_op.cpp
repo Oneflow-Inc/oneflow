@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-void MaximumOp::InitFromOpConf() {
+void MaximumOp::VirtualInitFromOpConf() {
   CHECK(op_conf().has_maximum_conf());
-  ElementwiseOp::InitFromOpConf();
   EnrollDataTmpBn("mask");
 }
 

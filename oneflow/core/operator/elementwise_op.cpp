@@ -5,6 +5,7 @@ namespace oneflow {
 void ElementwiseOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
+  VirtualInitFromOpConf();
 }
 
 void ElementwiseOp::InferBlobDescs(

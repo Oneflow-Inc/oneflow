@@ -2,10 +2,7 @@
 
 namespace oneflow {
 
-void AddOp::InitFromOpConf() {
-  CHECK(op_conf().has_add_conf());
-  ElementwiseOp::InitFromOpConf();
-}
+void AddOp::VirtualInitFromOpConf() { CHECK(op_conf().has_add_conf()); }
 const PbMessage& AddOp::GetCustomizedConf() const {
   return op_conf().add_conf();
 }
