@@ -23,8 +23,8 @@ class GatherBackwardActor final : public Actor {
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
-  bool is_in_eord_;
-  int32_t cur_generating_cid_;
+  bool is_out_diff_eord_;
+  int32_t cur_generated_cid_;
   std::queue<Regst*> out_diff_regst_;
 };
 

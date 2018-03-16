@@ -4,15 +4,15 @@
 namespace oneflow {
 
 void GatherBackwardActor::VirtualActorInit(const TaskProto& task_proto) {
-  is_in_eord_ = false;
-  cur_generating_cid_ = -1;
+  is_out_diff_eord_ = false;
+  cur_generated_cid_ = -1;
   OF_SET_MSG_HANDLER(&GatherBackwardActor::HandlerNormal);
 }
 
 int GatherBackwardActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     DecreaseRemainingEordCnt();
-    is_in_eord_ = true;
+    is_out_diff_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
       out_diff_regst_.push(msg.regst());
@@ -26,9 +26,11 @@ int GatherBackwardActor::HandlerNormal(const ActorMsg& msg) {
 
 void GatherBackwardActor::Act() {
   Regst* cur_regst = out_diff_regst_.front();
-  if (cur_generating_cid_ == -1) cur_generating_cid_ = cur_regst->max_col_id();
+  if (cur_generated_cid_ == -1) {
+    cur_generated_cid_ = cur_regst->max_col_id();
+  }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &cur_generating_cid_;
+  kernel_ctx.other = &cur_generated_cid_;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == cur_regst->regst_desc_id()) {
       return cur_regst;
@@ -38,16 +40,16 @@ void GatherBackwardActor::Act() {
   });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(cur_regst->piece_id());
-    regst->set_col_id(cur_generating_cid_);
+    regst->set_col_id(cur_generated_cid_);
     regst->set_max_col_id(cur_regst->max_col_id());
     return true;
   });
-  cur_generating_cid_ -= 1;
-  if (cur_generating_cid_ == -1) out_diff_regst_.pop();
+  cur_generated_cid_ -= 1;
+  if (cur_generated_cid_ == -1) { out_diff_regst_.pop(); }
 }
 
 bool GatherBackwardActor::IsReadAlwaysUnReadyFromNow() {
-  return is_in_eord_ && out_diff_regst_.empty();
+  return is_out_diff_eord_ && out_diff_regst_.empty();
 }
 
 void GatherBackwardActor::AsyncReturnAllReadableRegst() {
