@@ -22,7 +22,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void ForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kMdUpdt) {
+    if (src_node->GetTaskType() == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
