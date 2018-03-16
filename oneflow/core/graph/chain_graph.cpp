@@ -304,20 +304,27 @@ void ChainGraph::BuildFwStruct(
 }
 
 void ChainGraph::BuildRecordLoadStruct() {
-  HashMap<std::string, std::vector<DecodeChainNode*>> data_dir2decode_node;
+  HashMap<std::string, std::vector<DecodeChainNode*>> data_info2decode_nodes;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
     std::string data_dir =
-        decode_node->op_vec().front()->GetStringFromCustomizedConf("data_dir");
-    auto iter = data_dir2decode_node.find(data_dir);
-    if (iter == data_dir2decode_node.end()) {
-      CHECK(data_dir2decode_node
-                .emplace(data_dir, std::vector<DecodeChainNode*>{decode_node})
+        decode_node->SoleOp()->GetStringFromCustomizedConf("data_dir");
+    std::string part_name_prefix =
+        decode_node->SoleOp()->GetStringFromCustomizedConf("part_name_prefix");
+    int32_t part_name_suffix_length =
+        decode_node->SoleOp()->GetInt32FromCustomizedConf(
+            "part_name_suffix_length");
+    std::string data_info = data_dir + "_" + part_name_prefix + "_"
+                            + std::to_string(part_name_suffix_length);
+    auto iter = data_info2decode_nodes.find(data_info);
+    if (iter == data_info2decode_nodes.end()) {
+      CHECK(data_info2decode_nodes
+                .emplace(data_info, std::vector<DecodeChainNode*>{decode_node})
                 .second);
     } else {
       iter->second.emplace_back(decode_node);
     }
   });
-  for (auto& pair : data_dir2decode_node) {
+  for (auto& pair : data_info2decode_nodes) {
     std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
     for (DecodeChainNode* decode_node : pair.second) {
       if (parallel_descs.empty()) {
@@ -336,8 +343,9 @@ void ChainGraph::BuildRecordLoadStruct() {
       }
     }
     if (parallel_descs.size() > 1) {
-      LOG(WARNING) << "Operators sharing same data_dir belongs to different "
-                      "placement group";
+      LOG(WARNING)
+          << "Operators sharing same data information belongs to different "
+             "placement groups";
     }
     for (auto parallel_desc : parallel_descs) {
       ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
