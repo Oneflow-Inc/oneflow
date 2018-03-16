@@ -11,6 +11,9 @@ class MaximumOp final : public ElementwiseOp {
   MaximumOp() = default;
   ~MaximumOp() = default;
 
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override { return false; }
+  
   void InitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;

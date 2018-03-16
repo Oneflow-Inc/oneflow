@@ -13,11 +13,11 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
                       mask_blob->ByteSizeOfDataContentField());
   const int64_t count = out_blob->shape().elem_cnt();
-  for (size_t i = 1; i < this->kernel_conf().input_bns().size(); ++i) {
+  FOR_RANGE(size_t, i, 1, this->kernel_conf().input_bns().size()) {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[i]);
     KernelUtil<device_type, T>::ElementwiseMaxWithMask(
         ctx.device_ctx, count, out_blob->mut_dptr<T>(), in_blob->dptr<T>(), i,
-        mask_blob->mut_dptr<int>());
+        mask_blob->mut_dptr<int32_t>());
   }
 }
 
@@ -28,13 +28,13 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
   const Blob* mask_blob = BnInOp2Blob("mask");
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   const int64_t count = mask_blob->shape().elem_cnt();
-  for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
+  FOR_RANGE(size_t, i, 0, this->kernel_conf().input_diff_bns().size()) {
     Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns()[i]);
     Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                         in_diff_blob->ByteSizeOfDataContentField());
     KernelUtil<device_type, T>::ElementwiseSetWithMask(
         ctx.device_ctx, count, in_diff_blob->mut_dptr<T>(),
-        out_diff_blob->dptr<T>(), i, mask_blob->dptr<int>());
+        out_diff_blob->dptr<T>(), i, mask_blob->dptr<int32_t>());
   }
 }
 

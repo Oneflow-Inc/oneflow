@@ -1,6 +1,7 @@
 #include "oneflow/core/operator/add_op.h"
 
 namespace oneflow {
+
 void AddOp::InitFromOpConf() {
   CHECK(op_conf().has_add_conf());
   ElementwiseOp::InitFromOpConf();

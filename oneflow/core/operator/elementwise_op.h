@@ -11,8 +11,6 @@ class ElementwiseOp : public Operator {
   ElementwiseOp() = default;
   virtual ~ElementwiseOp() = default;
 
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
-  bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
 
   void InferBlobDescs(

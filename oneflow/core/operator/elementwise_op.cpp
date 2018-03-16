@@ -14,9 +14,7 @@ void ElementwiseOp::InferBlobDescs(
   for (size_t i = 1; i < input_bns().size(); ++i) {
     CHECK(*in_0_blob_desc == *GetBlobDesc4BnInOp(input_bns().at(i)));
   }
-  BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  *out_blob_desc = *in_0_blob_desc;
-  out_blob_desc->mut_shape() = Shape(in_0_blob_desc->shape().dim_vec());
+  *GetBlobDesc4BnInOp("out") = *in_0_blob_desc;
 }
 
 }  // namespace oneflow
