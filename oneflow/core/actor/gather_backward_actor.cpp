@@ -25,24 +25,25 @@ int GatherBackwardActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void GatherBackwardActor::Act() {
-  Regst* in_regst = out_diff_regst_.front();
-  if (cur_generating_cid_ == -1) cur_generating_cid_ = in_regst->max_col_id();
+  Regst* cur_regst = out_diff_regst_.front();
+  if (cur_generating_cid_ == -1) cur_generating_cid_ = cur_regst->max_col_id();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &cur_generating_cid_;
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
-    if (regst_desc_id == in_regst->regst_desc_id()) {
-      return in_regst;
+    if (regst_desc_id == cur_regst->regst_desc_id()) {
+      return cur_regst;
     } else {
       return GetCurWriteableRegst(regst_desc_id);
     }
   });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(in_regst->piece_id());
+    regst->set_piece_id(cur_regst->piece_id());
     regst->set_col_id(cur_generating_cid_);
-    regst->set_max_col_id(in_regst->max_col_id());
+    regst->set_max_col_id(cur_regst->max_col_id());
     return true;
   });
   cur_generating_cid_ -= 1;
+  if (cur_generating_cid_ == -1) out_diff_regst_.pop();
 }
 
 bool GatherBackwardActor::IsReadAlwaysUnReadyFromNow() {
