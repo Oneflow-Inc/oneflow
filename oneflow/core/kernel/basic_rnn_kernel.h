@@ -6,6 +6,13 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, T*);
+
+template<DeviceType device_type, typename T>
+using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, const T*,
+                                  const T*, T*);
+
+template<DeviceType device_type, typename T>
 class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BasicRnnKernel);
@@ -13,6 +20,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   ~BasicRnnKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override;
   const PbMessage& GetRecurrentOpConf() const override;
   bool HasInitHiddenInitializer() const override;
   void ForwardDataContent(
@@ -31,6 +39,11 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   void InitModelTmpBlobs(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
+  FwActivationFunc<device_type, T> activation_fw_func_;
+  BwActivationFunc<device_type, T> activation_bw_func_;
+  BwActivationFunc<device_type, T> last_colnum_activation_bw_func_;
 };
 
 template<DeviceType device_type, typename T>
@@ -42,6 +55,9 @@ class BasicRnnKernelUtil final {
   static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
                                  const T* out_diff, const T* rec_out_diff,
                                  T* plus_out_diff);
+  static void ComputeReluDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff);
 };
 
 }  // namespace oneflow
