@@ -13,7 +13,7 @@ class AddOp final : public ElementwiseOp {
 
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
-  
+
   void InitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;

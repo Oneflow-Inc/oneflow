@@ -151,7 +151,8 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     *max_ptr = *std::max_element(x, x + n);
   }
   static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int y_idx, int32_t* mask) {
+                                     const T* y, const int y_idx,
+                                     int32_t* mask) {
     for (int64_t i = 0; i < n; ++i) {
       if (y[i] > x[i]) {
         x[i] = y[i];
