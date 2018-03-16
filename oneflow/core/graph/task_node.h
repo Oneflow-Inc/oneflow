@@ -10,6 +10,7 @@ namespace oneflow {
 
 bool IsForwardTaskType(TaskType);
 bool IsBackwardTaskType(TaskType);
+bool IsMdUpdtTaskType(TaskType);
 
 class TaskEdge;
 

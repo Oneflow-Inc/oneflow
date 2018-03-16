@@ -3,9 +3,9 @@
 namespace oneflow {
 
 void NormalizationMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto other_model_regst = ProduceRegst("other_model", 1, 1);
+  std::shared_ptr<RegstDesc> other_model_regst =
+      ProduceRegst("other_model", 1, 1);
   for (TaskEdge* out_edge : out_edges()) {
-    TaskNode* dst_node = out_edge->dst_node();
     out_edge->AddRegst("other_model", other_model_regst);
   }
 }
@@ -34,9 +34,11 @@ void NormalizationMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
       }
     } else if (IsBackwardTaskType(node->GetTaskType())) {
       // do nothing
-    } else {
+    } else if (node->GetTaskType() == TaskType::kMdSave) {
       CHECK_EQ(task_proto->related_save_model_task_id(), -1);
       task_proto->set_related_save_model_task_id(node->task_id());
+    } else {
+      UNIMPLEMENTED();
     }
   });
 }

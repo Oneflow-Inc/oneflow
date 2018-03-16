@@ -27,7 +27,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
       VirtualConsumeActivation(edge);
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("out", edge->GetRegst("out"));
-    } else if (src_task_type == TaskType::kMdUpdt) {
+    } else if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else if (src_task_type == TaskType::kNormalizationMdUpdt) {

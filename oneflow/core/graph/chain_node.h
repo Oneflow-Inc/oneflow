@@ -29,12 +29,12 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
 #define CHAIN_TYPE_SEQ                      \
   OF_PP_MAKE_TUPLE_SEQ(Forward)             \
   OF_PP_MAKE_TUPLE_SEQ(Backward)            \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad) \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad)          \
   OF_PP_MAKE_TUPLE_SEQ(Decode)              \
   OF_PP_MAKE_TUPLE_SEQ(Loss)                \
   OF_PP_MAKE_TUPLE_SEQ(LossAcc)             \
   OF_PP_MAKE_TUPLE_SEQ(LossPrint)           \
-  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)              \
+  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt)        \
   OF_PP_MAKE_TUPLE_SEQ(NormalizationMdUpdt) \
   OF_PP_MAKE_TUPLE_SEQ(MdSave)              \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)           \
@@ -131,7 +131,7 @@ class ForwardChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldSubTskGphMthd GetMthdForBldSubTskGph),
-      (Forward)(Decode)(MdUpdt)(NormalizationMdUpdt));
+      (Forward)(Decode)(NormalMdUpdt)(NormalizationMdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
       (Forward)(Decode));
@@ -156,7 +156,7 @@ class BackwardChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldSubTskGphMthd GetMthdForBldSubTskGph),
-      (Forward)(Backward)(Loss)(MdUpdt)(NormalizationMdUpdt));
+      (Forward)(Backward)(Loss)(NormalMdUpdt)(NormalizationMdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
       (Backward)(Loss));
@@ -250,11 +250,11 @@ class LossPrintChainNode final : public ChainNode {
                                    (LossAcc));
 };
 
-class MdUpdtChainNode final : public ChainNode {
+class NormalMdUpdtChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdUpdtChainNode);
-  MdUpdtChainNode() : random_seed_(NewRandomSeed()) {}
-  ~MdUpdtChainNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtChainNode);
+  NormalMdUpdtChainNode() : random_seed_(NewRandomSeed()) {}
+  ~NormalMdUpdtChainNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
 
@@ -285,7 +285,7 @@ class MdSaveChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (MdUpdt)(NormalizationMdUpdt));
+                                   (NormalMdUpdt)(NormalizationMdUpdt));
 };
 
 class MdDiffAccChainNode final : public ChainNode {

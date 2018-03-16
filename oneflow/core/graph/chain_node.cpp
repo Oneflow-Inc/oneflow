@@ -8,7 +8,7 @@
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
-#include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/normalization_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
@@ -207,7 +207,7 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromDecode(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
@@ -267,7 +267,7 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
     const ChainNode* node) const {
   return &TaskGraph::BldSubTskGphByBoxing;
 }
-BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
@@ -416,8 +416,8 @@ std::vector<std::string> LossPrintChainNode::FindLbnsFromLossAcc(
   return {kPackedBlobName};
 }
 
-// MdUpdtChainNode
-BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
+// NormalMdUpdtChainNode
+BldSubTskGphMthd NormalMdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
     const ChainNode*) const {
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
     return &TaskGraph::BldSubTskGphByBoxing;
@@ -427,28 +427,30 @@ BldSubTskGphMthd MdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
     UNIMPLEMENTED();
   }
 }
-BldBoxingOpConfMthd MdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
+BldBoxingOpConfMthd
+NormalMdUpdtChainNode::GetMthdForBldBoxingOpConfFromMdDiffAcc(
     const ChainNode*) const {
   return &BoxingTaskNode::BldBoxingOpConfWithAddAndClone;
 }
-std::vector<std::string> MdUpdtChainNode::FindLbnsFromMdDiffAcc(
+std::vector<std::string> NormalMdUpdtChainNode::FindLbnsFromMdDiffAcc(
     const ChainNode*) const {
   return {kPackedBlobName};
 }
 
-void MdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
-  MdUpdtCompTaskNode* mdupdt_node = static_cast<MdUpdtCompTaskNode*>(node);
+void NormalMdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
+  NormalMdUpdtCompTaskNode* normal_mdupdt_node =
+      static_cast<NormalMdUpdtCompTaskNode*>(node);
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    mdupdt_node->set_random_seed(random_seed_);
+    normal_mdupdt_node->set_random_seed(random_seed_);
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
-    mdupdt_node->set_random_seed(NewRandomSeed());
+    normal_mdupdt_node->set_random_seed(NewRandomSeed());
   } else {
     UNIMPLEMENTED();
   }
 }
 
 // MdSaveChainNode
-BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     const ChainNode*) const {
   if (parallel_desc()->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
