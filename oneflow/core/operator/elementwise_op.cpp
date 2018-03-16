@@ -15,6 +15,7 @@ void ElementwiseOp::InferBlobDescs(
     CHECK(*in_0_blob_desc == *GetBlobDesc4BnInOp(input_bns().at(i)));
   }
   *GetBlobDesc4BnInOp("out") = *in_0_blob_desc;
+  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 }  // namespace oneflow

@@ -18,7 +18,7 @@ class MaximumOp final : public ElementwiseOp {
 
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(
+  void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
 };
