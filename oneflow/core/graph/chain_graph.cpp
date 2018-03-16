@@ -305,35 +305,37 @@ void ChainGraph::BuildFwStruct(
 
 void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, std::vector<DecodeChainNode*>> data_info2decode_nodes;
+  HashMap<std::string, int32_t> data_info2suffix_length;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
     std::shared_ptr<const Operator> op_conf = decode_node->SoleOp();
     std::string data_dir = op_conf->GetStringFromCustomizedConf("data_dir");
     std::string part_name_prefix =
         op_conf->GetStringFromCustomizedConf("part_name_prefix");
+    std::string data_info = data_dir + "_" + part_name_prefix;
+    data_info2decode_nodes[data_info].emplace_back(decode_node);
     int32_t part_name_suffix_length =
         op_conf->GetInt32FromCustomizedConf("part_name_suffix_length");
-    std::string data_info = data_dir + "_" + part_name_prefix + "_"
-                            + std::to_string(part_name_suffix_length);
-    data_info2decode_nodes[data_info].emplace_back(decode_node);
+    if (data_info2suffix_length.find(data_info)
+        != data_info2suffix_length.end()) {
+      CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
+    } else {
+      data_info2suffix_length[data_info] = part_name_suffix_length;
+    }
   });
   for (auto& pair : data_info2decode_nodes) {
     std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
     for (DecodeChainNode* decode_node : pair.second) {
-      if (parallel_descs.empty()) {
+      auto iter = std::find_if(
+          parallel_descs.begin(), parallel_descs.end(),
+          [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
+            return parallel_desc->Equal(decode_node->parallel_desc().get());
+          });
+      if (iter == parallel_descs.end()) {
         parallel_descs.emplace_back(decode_node->parallel_desc());
-      } else {
-        auto iter = std::find_if(
-            parallel_descs.begin(), parallel_descs.end(),
-            [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
-              return parallel_desc->Equal(decode_node->parallel_desc().get());
-            });
-        if (iter == parallel_descs.end()) {
-          parallel_descs.emplace_back(decode_node->parallel_desc());
-        }
       }
     }
     LOG_IF(WARNING, parallel_descs.size() > 1)
-        << "Operators sharing same data information belongs to different "
+        << "Operators sharing same data information belong to different "
            "placement groups";
     for (auto parallel_desc : parallel_descs) {
       ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
