@@ -7,7 +7,7 @@
 #include "oneflow/core/common/eigen_util.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/record/record.h"
+#include "oneflow/core/record/record_io.h"
 
 namespace oneflow {
 
@@ -113,26 +113,21 @@ Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
 class RecordBlobIf : public BlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlobIf);
-  RecordBlobIf() : in_stream_(nullptr){};
-  ~RecordBlobIf() = default;
+  RecordBlobIf() = default;
+  virtual ~RecordBlobIf() = default;
 
-  virtual bool Read(size_t index) = 0;
-  virtual void set_record_num(int32_t val) = 0;
-
-  void set_in_stream(PersistentInStream* val) { in_stream_ = val; }
-
- protected:
-  PersistentInStream* in_stream() { return in_stream_; };
+  virtual void ReadFrom(PersistentInStream* in_stream) = 0;
+  virtual int32_t record_num() = 0;
 
  private:
-  PersistentInStream* in_stream_;
 };
 
 template<typename RecordType>
 class RecordBlob final : public RecordBlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
-  RecordBlob() : records_(JobDesc::Singleton()->SinglePieceSize()) {}
+  RecordBlob()
+      : records_(JobDesc::Singleton()->SinglePieceSize()), record_num_(0) {}
   ~RecordBlob() = default;
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {
@@ -143,10 +138,11 @@ class RecordBlob final : public RecordBlobIf {
     CHECK_LT(i, record_num_);
     return &(records_.at(i));
   }
-  void set_record_num(int32_t val) { record_num_ = val; }
 
-  bool Read(size_t index) override {
-    return ReadRecord<RecordType>(in_stream(), &(records_.at(index)));
+  int32_t record_num() override { return record_num_; }
+
+  void ReadFrom(PersistentInStream* in_stream) override {
+    record_num_ = ReadRecord<RecordType>(in_stream, &records_);
   }
 
  private:

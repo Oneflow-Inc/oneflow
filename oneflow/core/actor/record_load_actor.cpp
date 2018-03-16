@@ -18,9 +18,6 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
     in_stream_.reset(
         new NormalPersistentInStream(GlobalFS(), task_proto.data_path()));
   }
-  ForEachProducedRegst([&](Regst* regst) {
-    regst->GetRecordBlobIf()->set_in_stream(in_stream_.get());
-  });
 }
 
 int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
@@ -40,17 +37,12 @@ int RecordLoadActor::HandlerNormal(const ActorMsg& msg) {
 void RecordLoadActor::Act() {
   Regst* regst = GetCurSoleWriteableRegst();
   regst->set_piece_id(piece_id_++);
-  size_t i = 0;
-  for (; i < JobDesc::Singleton()->SinglePieceSize(); ++i) {
-    if (!regst->GetRecordBlobIf()->Read(i)) {
-      is_eof_ = true;
-      break;
-    }
+  RecordBlobIf* blob = regst->GetRecordBlobIf();
+  blob->ReadFrom(in_stream_.get());
+  if (blob->record_num() < JobDesc::Singleton()->SinglePieceSize()) {
+    is_eof_ = true;
   }
-  if (i != 0) {
-    regst->GetRecordBlobIf()->set_record_num(i);
-    AsyncSendRegstMsgToConsumer();
-  }
+  if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 
 bool RecordLoadActor::IsReadAlwaysUnReadyFromNow() {
