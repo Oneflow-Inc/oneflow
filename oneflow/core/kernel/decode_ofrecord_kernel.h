@@ -3,7 +3,7 @@
 
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/register.h"
-#include "oneflow/core/operator/record.pb.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
@@ -24,12 +24,12 @@ class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
   void Forward(const KernelCtx&,
                std::function<Blob*(const std::string&)>) const override;
 
-  void ReadColNumToOutBlob(Blob* out_blob, const std::string& name,
-                           RecordBlob<OfRecord>*, int32_t& max_clo_id);
-  void ReadDataIdToOutBlob(Blob* out_blob, RecordBlob<OfRecord>*, DeviceCtx*);
+  void ReadColNumToOutBlob(Blob* out_blob, const std::string& name, EncodeType,
+                           RecordBlob<OFRecord>*, int32_t* max_clo_id);
+  void ReadDataIdToOutBlob(Blob* out_blob, RecordBlob<OFRecord>*, DeviceCtx*);
   void ReadDataContentToOutBlob(Blob* out_blob, const std::string& name,
-                                RecordBlob<OfRecord>*, int32_t col_id,
-                                DeviceCtx*);
+                                EncodeType, RecordBlob<OFRecord>*,
+                                int32_t col_id, DeviceCtx*);
 };
 
 }  // namespace oneflow
