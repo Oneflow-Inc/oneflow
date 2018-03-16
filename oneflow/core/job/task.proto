@@ -24,6 +24,7 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRecordLoad = 16;
+  kNormalizationMdUpdt = 17;
 };
 
 message TaskProto {

@@ -14,6 +14,7 @@ std::map<TaskType, std::string> task_type2color = {
     {kLossAcc, "5"},
     {kLossPrint, "1"},
     {kMdUpdt, "6"},
+    {kNormalizationMdUpdt, "6"},
     {kMdSave, "1"},
     {kMdDiffAcc, "7"},
     {kCopyHd, "8"},

@@ -9,6 +9,7 @@
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/normalization_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
@@ -100,6 +101,10 @@ const std::vector<std::shared_ptr<Operator>>& ChainNode::op_vec() const {
 
 bool ChainNode::HasSoleRecurrentOp() const {
   return op_vec_.size() == 1 && op_vec_.front()->IsRecurrentOp();
+}
+
+bool ChainNode::HasSoleNormalizationOp() const {
+  return op_vec_.size() == 1 && op_vec_.front()->IsNormalizationOp();
 }
 
 std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
@@ -206,6 +211,11 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
+BldSubTskGphMthd
+ForwardChainNode::GetMthdForBldSubTskGphFromNormalizationMdUpdt(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
+}
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
   if (this == node) { CHECK_EQ(parallel_desc()->policy(), kModelParallel); }
@@ -258,6 +268,11 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
+}
+BldSubTskGphMthd
+BackwardChainNode::GetMthdForBldSubTskGphFromNormalizationMdUpdt(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
@@ -434,6 +449,14 @@ void MdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
 
 // MdSaveChainNode
 BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromMdUpdt(
+    const ChainNode*) const {
+  if (parallel_desc()->parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
+  } else {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
+}
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromNormalizationMdUpdt(
     const ChainNode*) const {
   if (parallel_desc()->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
