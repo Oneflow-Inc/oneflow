@@ -92,7 +92,9 @@ void RecurrentBackwardCompTaskNode::VirtualConsumeInRegst() {
   CompTaskNode* fw_node = GetRelatedFwTaskNode();
   std::shared_ptr<const Operator> op = fw_node->chain_node()->SoleOp();
   for (TaskEdge* edge : fw_node->in_edges()) {
-    if (edge->src_node()->GetTaskType() == TaskType::kMdUpdt) { continue; }
+    if (edge->src_node()->GetTaskType() == TaskType::kNormalMdUpdt) {
+      continue;
+    }
     std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
     const auto& lbns = PredChainNodeOnEdge(edge)->data_output_lbns();
     if (lbns.find(op->Lbn4BnInOp("in")) != lbns.end()) {

@@ -10,7 +10,7 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
   const MomentumModelUpdateConf& conf =
-      this->op_conf().mdupdt_conf().user_conf().momentum_conf();
+      this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf();
   float learning_rate = conf.learning_rate();
   float beta = conf.beta();
   if (next_model_vid == 1) { beta = 0.0f; }

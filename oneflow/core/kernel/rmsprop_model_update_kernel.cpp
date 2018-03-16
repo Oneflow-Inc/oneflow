@@ -10,7 +10,7 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
   const RMSPropModelUpdateConf& conf =
-      this->op_conf().mdupdt_conf().user_conf().rmsprop_conf();
+      this->op_conf().normal_mdupdt_conf().user_conf().rmsprop_conf();
   float decay_rate = conf.decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
 

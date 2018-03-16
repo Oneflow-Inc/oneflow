@@ -424,9 +424,9 @@ void ChainGraph::BuildLossPrintStruct() {
   });
 }
 
-MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
+NormalMdUpdtChainNode* ChainGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardChainNode* fw_chain) {
-  MdUpdtChainNode* md_updt_chain = NewNode<MdUpdtChainNode>();
+  NormalMdUpdtChainNode* md_updt_chain = NewNode<NormalMdUpdtChainNode>();
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
   if (is_train) {
     OperatorConf model_save_op_conf;
@@ -453,19 +453,19 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
 void ChainGraph::BuildModelStruct(
     bool is_train,
     const HashMap<ChainNode*, const LogicalNode*>& chain2first_shared) {
-  HashMap<const LogicalNode*, MdUpdtChainNode*> first_shared2mdupdt;
+  HashMap<const LogicalNode*, NormalMdUpdtChainNode*> first_shared2mdupdt;
   ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
     if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
     // MdUpdt MdSave
-    MdUpdtChainNode* md_updt_chain = nullptr;
+    NormalMdUpdtChainNode* md_updt_chain = nullptr;
     auto chain2first_shared_it = chain2first_shared.find(fw_chain);
     if (chain2first_shared_it == chain2first_shared.end()) {
-      md_updt_chain = BuildMdUpdtAndMdSaveStruct(is_train, fw_chain);
+      md_updt_chain = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_chain);
     } else {
       auto first_shared2mdupdt_it =
           first_shared2mdupdt.find(chain2first_shared_it->second);
       if (first_shared2mdupdt_it == first_shared2mdupdt.end()) {
-        md_updt_chain = BuildMdUpdtAndMdSaveStruct(is_train, fw_chain);
+        md_updt_chain = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_chain);
         CHECK(first_shared2mdupdt
                   .emplace(chain2first_shared_it->second, md_updt_chain)
                   .second);
