@@ -257,7 +257,7 @@ message BoxingOpConf {
   }
 }
 
-message NormalModelUpdateConf {
+message NaiveModelUpdateConf {
   optional float learning_rate = 1 [default = 0.01];
 }
 
@@ -272,16 +272,16 @@ message RMSPropModelUpdateConf {
   optional float epsilon = 3 [default = 1e-8];
 }
 
-message ModelUpdateOpUserConf {
+message NormalModelUpdateOpUserConf {
   oneof mdupdt {
-    NormalModelUpdateConf normal_conf = 1000;
+    NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
   }
 }
 
-message ModelUpdateOpConf {
-  required ModelUpdateOpUserConf user_conf = 1;
+message NormalModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required int32 in_num = 2;
 }
 
@@ -366,8 +366,8 @@ message DecodeOFRecordOpConf {
 }
 
 message NormalizationOpConf {
-  required string in = 1;
-  required string out = 2;
+  required string inputs = 1;
+  required string outputs = 2;
   optional float momentum = 3 [default = 0.99];
   optional float epsilon = 4 [default = 0.001];
   optional bool center = 5 [default = true];
@@ -401,7 +401,7 @@ message OperatorConf {
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
-    ModelUpdateOpConf mdupdt_conf = 110;
+    NormalModelUpdateOpConf normal_mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
     AccumulateOpConf accumulate_conf = 112;
     ConcatOpConf concat_conf = 113;

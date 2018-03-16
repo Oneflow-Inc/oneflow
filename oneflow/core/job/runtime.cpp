@@ -5,6 +5,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -36,7 +37,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     if (task.machine_id() != MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    if (task.task_type() == TaskType::kMdUpdt || task.task_type() == TaskType::kNormalizationMdUpdt) {
+    if (IsMdUpdtTaskType(task.task_type())) {
       mdupdt_tasks.push_back(&task);
     } else if (task.task_type() == TaskType::kRecordLoad) {
       source_tasks.push_back(&task);
