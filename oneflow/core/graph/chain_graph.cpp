@@ -318,11 +318,36 @@ void ChainGraph::BuildRecordLoadStruct() {
     }
   });
   for (auto& pair : data_dir2decode_node) {
-    ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
-    record_load_node->mut_parallel_desc() =
-        pair.second.front()->parallel_desc();
+    std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
     for (DecodeChainNode* decode_node : pair.second) {
-      Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
+      if (parallel_descs.empty()) {
+        parallel_descs.emplace_back(decode_node->parallel_desc());
+      } else {
+        bool found_equal = false;
+        for (auto parallel_desc : parallel_descs) {
+          if (parallel_desc->Equal(decode_node->parallel_desc().get())) {
+            found_equal = true;
+            break;
+          }
+        }
+        if (!found_equal) {
+          parallel_descs.emplace_back(decode_node->parallel_desc());
+        }
+      }
+    }
+    if (parallel_descs.size() > 1) {
+      LOG(WARNING) << "Operators sharing same data_dir belongs to different "
+                      "placement group";
+    }
+    for (auto parallel_desc : parallel_descs) {
+      ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
+      record_load_node->mut_parallel_desc() = parallel_desc;
+      for (DecodeChainNode* decode_node : pair.second) {
+        if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) {
+          continue;
+        }
+        Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
+      }
     }
   }
 }
