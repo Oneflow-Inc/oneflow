@@ -22,6 +22,15 @@ class MaximumKernel final : public ElementwiseKernel<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
+template<DeviceType device_type, typename T>
+struct MaximumKernelUtil {
+  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+                                     const T* y, const int y_idx,
+                                     int32_t* mask);
+  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+                                     const T* y, const int x_idx,
+                                     const int32_t* mask);
+};
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_MAXIMUM_KERNEL_H_

@@ -150,23 +150,6 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                   T* temp_storage, size_t temp_storage_bytes) {
     *max_ptr = *std::max_element(x, x + n);
   }
-  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int y_idx,
-                                     int32_t* mask) {
-    for (int64_t i = 0; i < n; ++i) {
-      if (y[i] > x[i]) {
-        x[i] = y[i];
-        mask[i] = y_idx;
-      }
-    }
-  }
-  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int x_idx,
-                                     const int32_t* mask) {
-    for (int i = 0; i < n; ++i) {
-      if (x_idx == mask[i]) { x[i] = y[i]; }
-    }
-  }
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
   }
@@ -276,12 +259,6 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
   template void KernelUtil<DeviceType::kCPU, T>::Max(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
-  template void KernelUtil<DeviceType::kCPU, T>::ElementwiseMaxWithMask(      \
-      DeviceCtx* ctx, const int64_t n, T* x, const T* y, const int y_idx,     \
-      int* mask);                                                             \
-  template void KernelUtil<DeviceType::kCPU, T>::ElementwiseSetWithMask(      \
-      DeviceCtx* ctx, const int64_t n, T* x, const T* y, const int x_idx,     \
-      const int* mask);                                                       \
   template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
   template void KernelUtil<DeviceType::kCPU, T>::ReluBackward(                \
