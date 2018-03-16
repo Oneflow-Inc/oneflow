@@ -1,9 +1,9 @@
-#include "oneflow/core/graph/model_update_compute_task_node.h"
+#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 namespace oneflow {
 
-void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t min_model_regst = -1;
   int32_t max_model_regst = -1;
   if (JobDesc::Singleton()->IsPredict()) {
@@ -38,14 +38,14 @@ void MdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
 }
 
-void MdUpdtCompTaskNode::ConsumeAllRegsts() {
+void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
   if (JobDesc::Singleton()->IsPredict()) { return; }
   for (TaskEdge* edge : in_edges()) {
     ConsumeRegst("model_diff_acc_" + NewUniqueId(), edge->GetSoleRegst());
   }
 }
 
-bool MdUpdtCompTaskNode::IsReadyForBuild() {
+bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
   return GetProducedRegst("model")->IsLocked()
          && GetProducedRegst("model_tmp")->IsLocked();
 }
@@ -53,7 +53,7 @@ bool MdUpdtCompTaskNode::IsReadyForBuild() {
 static std::shared_ptr<const Operator> ConstructModelUpdateOp(int32_t in_num) {
   OperatorConf op_conf;
   op_conf.set_name("md_update_" + NewUniqueId());
-  ModelUpdateOpConf* mdupdt_conf = op_conf.mutable_mdupdt_conf();
+  NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
   const JobDesc* job_desc = JobDesc::Singleton();
   if (job_desc->IsTrain()) {
     *(mdupdt_conf->mutable_user_conf()) =
@@ -63,7 +63,7 @@ static std::shared_ptr<const Operator> ConstructModelUpdateOp(int32_t in_num) {
   return ConstructOp(op_conf);
 }
 
-void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
+void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (JobDesc::Singleton()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = ConstructModelUpdateOp(consumed_regsts().size());
@@ -82,9 +82,11 @@ void MdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->InferBlobDescs(nullptr, device_type());
 }
 
-void MdUpdtCompTaskNode::LockRegsts() { GetProducedRegst("data_tmp")->Lock(); }
+void NormalMdUpdtCompTaskNode::LockRegsts() {
+  GetProducedRegst("data_tmp")->Lock();
+}
 
-void MdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
+void NormalMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   ForEachNodeOnOutEdge([&](const TaskNode* node) {
     if (IsForwardTaskType(node->GetTaskType())) {

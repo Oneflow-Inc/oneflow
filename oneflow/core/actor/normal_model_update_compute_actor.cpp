@@ -1,9 +1,9 @@
-#include "oneflow/core/actor/model_update_compute_actor.h"
+#include "oneflow/core/actor/normal_model_update_compute_actor.h"
 #include "oneflow/core/job/runtime_context.h"
 
 namespace oneflow {
 
-void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
   init_remaining_cnt_ = 0;
@@ -15,10 +15,10 @@ void MdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
   readable_regst_mgr_.Init(task_proto);
-  OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerInitModelAndModelTmp);
+  OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndModelTmp);
 }
 
-void MdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
+void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   if (regst_desc_id == -1) { return; }
   Regst* regst = GetCurWriteableRegst(regst_desc_id);
   ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(
@@ -26,7 +26,7 @@ void MdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   ActorMsgBus::Singleton()->SendMsg(msg);
 }
 
-int MdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
+int NormalMdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
     InitRegstBySendToFw(model_regst_desc_id_);
@@ -37,13 +37,13 @@ int MdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
     UNIMPLEMENTED();
   }
   if (init_remaining_cnt_ == 0) {
-    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerSendInitialModel);
+    OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerSendInitialModel);
     RuntimeCtx::Singleton()->DecreaseCounter("model_init_cnt");
   }
   return 0;
 }
 
-int MdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
+int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
   CHECK_EQ(actor_msg.actor_cmd(), ActorCmd::kSendInitialModel);
   pre_model_regst_ = GetCurWriteableRegst(model_regst_desc_id_);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
@@ -52,15 +52,15 @@ int MdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
   });
   next_model_version_id_ += 1;
   if (JobDesc::Singleton()->IsTrain()) {
-    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerNormal);
+    OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    OF_SET_MSG_HANDLER(&MdUpdtCompActor::HandlerZombie);
+    OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerZombie);
   }
   return 0;
 }
 
-int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
+int NormalMdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   if (actor_msg.msg_type() == ActorMsgType::kEordMsg) {
     is_model_diff_acc_eord_ = true;
     DecreaseRemainingEordCnt();
@@ -76,7 +76,7 @@ int MdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-void MdUpdtCompActor::Act() {
+void NormalMdUpdtCompActor::Act() {
   Regst* cur_model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   cur_model_regst->set_model_version_id(next_model_version_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -111,27 +111,27 @@ void MdUpdtCompActor::Act() {
   next_model_version_id_ += 1;
 }
 
-bool MdUpdtCompActor::IsReadReady() {
+bool NormalMdUpdtCompActor::IsReadReady() {
   return readable_regst_mgr_.IsReadReady();
 }
 
-bool MdUpdtCompActor::IsReadAlwaysUnReadyFromNow() {
+bool NormalMdUpdtCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_model_diff_acc_eord_ && readable_regst_mgr_.IsEmpty();
 }
 
-bool MdUpdtCompActor::IsWriteReady() {
+bool NormalMdUpdtCompActor::IsWriteReady() {
   return GetCurWriteableRegst(model_regst_desc_id_);
 }
 
-void MdUpdtCompActor::AsyncReturnAllReadableRegst() {
+void NormalMdUpdtCompActor::AsyncReturnAllReadableRegst() {
   CHECK(readable_regst_mgr_.IsEmpty());
 }
 
-void MdUpdtCompActor::ForEachCurReadableRegst(
+void NormalMdUpdtCompActor::ForEachCurReadableRegst(
     std::function<void(const Regst*)> func) {
   readable_regst_mgr_.ForEachCurReadableRegst(func);
 }
 
-REGISTER_ACTOR(TaskType::kMdUpdt, MdUpdtCompActor);
+REGISTER_ACTOR(TaskType::kNormalMdUpdt, NormalMdUpdtCompActor);
 
 }  // namespace oneflow
