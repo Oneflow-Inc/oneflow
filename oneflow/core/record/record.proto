@@ -27,6 +27,6 @@ message Feature {
   }
 }
 
-message OfRecord {
+message OFRecord {
   map<string, Feature> feature = 1;
 }

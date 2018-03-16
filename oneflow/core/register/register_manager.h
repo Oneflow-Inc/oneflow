@@ -6,6 +6,7 @@
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/register/register.h"
+#include "oneflow/core/record/record.pb.h"
 
 namespace oneflow {
 
@@ -17,6 +18,7 @@ class RegstMgr final {
   OF_SINGLETON(RegstMgr);
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
+                 RecordTypeProto record_type,
                  std::function<void(Regst*)> OneRegstDone);
 
  private:
