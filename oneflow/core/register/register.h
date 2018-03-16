@@ -37,6 +37,9 @@ class Regst final {
   RecordBlob<RecordType>* GetRecordBlob() {
     return static_cast<RecordBlob<RecordType>*>(packed_blob_.get());
   }
+  RecordBlobIf* GetRecordBlobIf() {
+    return static_cast<RecordBlobIf*>(packed_blob_.get());
+  }
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
 
