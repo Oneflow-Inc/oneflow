@@ -21,6 +21,7 @@ class DecodeCompActor final : public CompActor {
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override {}
+  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
   bool is_in_eord_;
   std::queue<Regst*> pending_in_regsts_;

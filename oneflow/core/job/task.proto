@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/operator/record.proto";
+import "oneflow/core/record/record.proto";
 import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
 import "oneflow/core/job/placement.proto";
