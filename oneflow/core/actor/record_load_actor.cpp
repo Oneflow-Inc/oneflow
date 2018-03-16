@@ -7,7 +7,6 @@
 namespace oneflow {
 
 void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
-  record_type = task_proto.record_type();
   piece_id_ = 0;
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
@@ -29,7 +28,7 @@ int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
 
 int RecordLoadActor::HandlerNormal(const ActorMsg& msg) {
   CHECK_EQ(msg.msg_type(), ActorMsgType::kRegstMsg);
-  TryUpdtStateAsProducedRegst(msg.regst());
+  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
   ActUntilFail();
   return TrySwitchToZombieOrFinish();
 }
@@ -45,8 +44,8 @@ void RecordLoadActor::Act() {
   if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 
-bool RecordLoadActor::IsReadAlwaysUnReadyFromNow() {
-  return is_eof_ || piece_id_ >= RuntimeCtx::Singleton()->total_piece_num();
+bool RecordLoadActor::IsReadReady() {
+  return !is_eof_ && piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
 }
 
 REGISTER_ACTOR(kRecordLoad, RecordLoadActor);

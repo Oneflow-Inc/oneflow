@@ -19,11 +19,10 @@ class RecordLoadActor final : public CompActor {
   int HandlerNormal(const ActorMsg&) override;
 
   void Act() override;
-  bool IsReadReady() override { return !IsReadAlwaysUnReadyFromNow(); };
-  bool IsReadAlwaysUnReadyFromNow() override;
+  bool IsReadReady() override;
+  bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
   void AsyncReturnAllReadableRegst() override {}
 
-  RecordTypeProto record_type;
   int32_t piece_id_;
   bool is_eof_;
   std::unique_ptr<PersistentInStream> in_stream_;
