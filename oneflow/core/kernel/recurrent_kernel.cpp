@@ -8,7 +8,7 @@ void RecurrentKernel<device_type, T>::VirtualKernelInit(
     const ParallelContext*) {
   auto& input_bns = this->kernel_conf().input_bns();
   need_external_h0_ =
-      std::find(input_bns.begin(), input_bns.end(), "h0") == input_bns.end();
+      std::find(input_bns.begin(), input_bns.end(), "h0") != input_bns.end();
 }
 
 template<DeviceType device_type, typename T>
@@ -58,7 +58,7 @@ void RecurrentKernel<device_type, T>::BackwardColNum(
                                               BnInOp2Blob("out_diff"));
   }
 
-  if (BnInOp2Blob("in") != 0) {
+  if (BnInOp2Blob("in") != nullptr) {
     BnInOp2Blob("rec_in_diff")
         ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
   }
@@ -68,7 +68,7 @@ template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (NeedExternalH0()) {
+  if (!NeedExternalH0()) {
     const InitializerConf* init_hidden_initializer = nullptr;
     if (HasInitHiddenInitializer()) {
       init_hidden_initializer =
@@ -87,7 +87,7 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
     const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (NeedExternalH0()) {
+  if (!NeedExternalH0()) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"),
         "h0", BnInOp2Blob("h0")->shape().At(0), 1);
