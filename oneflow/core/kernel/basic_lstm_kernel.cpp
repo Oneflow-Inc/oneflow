@@ -219,6 +219,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_blob = BnInOp2Blob("out");
+  Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
 
   const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
@@ -246,28 +247,32 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
   const Blob* cell_out_blob = BnInOp2Blob("cell_out");
   Blob* cell_out_diff_blob = BnInOp2Blob("cell_out_diff");
   Blob* cell_in_diff_blob = BnInOp2Blob("cell_in_diff");
-  // cell_out_diff = rec_out_diff * o_out * [1 -
-  // tanh(cell_out)*tanh(cell_out)]
-  //								+ cell_out_diff
-  KernelUtil<device_type, T>::TanH(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                                   cell_out_blob->dptr<T>(),
-                                   cell_out_blob->mut_dptr<T>());
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
-      cell_out_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
-      o_out_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
-  KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                                  rec_out_diff_blob->dptr<T>(),
-                                  cell_out_blob->dptr<T>(),
-                                  cell_out_blob->mut_dptr<T>());
-  KernelUtil<device_type, T>::Axpy(
-      ctx.device_ctx, out_blob->shape().elem_cnt(), static_cast<T>(1),
-      cell_out_blob->dptr<T>(), static_cast<T>(1),
-      cell_out_diff_blob->dptr<T>(), static_cast<T>(1),
-      cell_out_diff_blob->mut_dptr<T>());
 
+  if (in_blob->col_id() != in_blob->max_col_id()) {
+    // cell_out_diff = rec_out_diff * o_out * [1 -
+    // tanh(cell_out)*tanh(cell_out)]
+    //								+ cell_out_diff
+    KernelUtil<device_type, T>::TanH(
+        ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
+        cell_out_blob->mut_dptr<T>());
+    KernelUtil<device_type, T>::Mul(
+        ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
+        cell_out_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
+    KernelUtil<device_type, T>::Mul(
+        ctx.device_ctx, out_blob->shape().elem_cnt(), cell_out_blob->dptr<T>(),
+        o_out_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
+    KernelUtil<device_type, T>::Mul(
+        ctx.device_ctx, out_blob->shape().elem_cnt(),
+        rec_out_diff_blob->dptr<T>(), cell_out_blob->dptr<T>(),
+        cell_out_blob->mut_dptr<T>());
+    KernelUtil<device_type, T>::Axpy(
+        ctx.device_ctx, out_blob->shape().elem_cnt(), static_cast<T>(1),
+        cell_out_blob->dptr<T>(), static_cast<T>(1),
+        cell_out_diff_blob->dptr<T>(), static_cast<T>(1),
+        cell_out_diff_blob->mut_dptr<T>());
+  } else {
+    cell_out_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
+  }
   // i_out_diff = cell_out_diff * c_out
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_blob->shape().elem_cnt(),
                                   BnInOp2Blob("rec_out_diff")->dptr<T>(),
