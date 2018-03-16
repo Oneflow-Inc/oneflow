@@ -17,14 +17,15 @@ class GatherBackwardActor final : public Actor {
   int HandlerNormal(const ActorMsg&) override;
 
   void Act() override;
-  bool IsReadReady() override { return !pending_in_regst_.empty(); };
+  bool IsReadReady() override { return !out_diff_regst_.empty(); };
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
   bool is_in_eord_;
-  std::queue<Regst*> pending_in_regst_;
+  int32_t cur_generating_cid_;
+  std::queue<Regst*> out_diff_regst_;
 };
 
 }  // namespace oneflow
