@@ -5,6 +5,7 @@
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_decoder.h"
+#include "oneflow/core/record/raw_record_decoder.h"
 
 namespace oneflow {
 

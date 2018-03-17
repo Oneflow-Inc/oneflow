@@ -7,9 +7,10 @@ namespace oneflow {
 
 template<typename T>
 class RawRecordDecoder final : public RecordDecoder<T> {
- protected:
+ private:
   int32_t GetColNumOfFeature(const Feature&, int64_t item_size) override;
-  void ReadDataContentForOneItem(T* out_dptr, const Feature&, int64_t item_size,
+  void ReadDataContentForOneItem(const Feature&, int32_t cur_col_id,
+                                 T* out_dptr, int64_t item_size,
                                  DeviceCtx*) override;
 };
 

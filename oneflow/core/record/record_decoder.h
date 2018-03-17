@@ -3,7 +3,6 @@
 
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/record/record.pb.h"
-#include "oneflow/core/record/feature_list_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
@@ -18,9 +17,8 @@ class RecordDecoder {
                               int32_t cur_col_id, Blob* out_blob, DeviceCtx*);
 
  protected:
-  virtual int32_t GetColNumOfFeature(Feature&, int64_t item_size) = 0;
-  virtual void ReadDataContentForOneItem(T* dptr, Feature&, int64_t item_size,
-                                         DeviceCtx*) = 0;
+  DataType DataTypeOf(const Feature&);
+  int64_t SizeOf(const Feature&);
 
   int32_t ReadColNumToOutBlob(RecordBlob<OFRecord>*, const std::string& name,
                               Blob* out_blob);
@@ -28,7 +26,16 @@ class RecordDecoder {
                            DeviceCtx* ctx);
   void ReadDataContentToOutBlob(RecordBlob<OFRecord>*, const std::string& name,
                                 int32_t cur_col_id, Blob* out_blob, DeviceCtx*);
+
+ private:
+  virtual int32_t GetColNumOfFeature(const Feature&, int64_t item_size) = 0;
+  virtual void ReadDataContentForOneItem(const Feature&, int32_t cur_col_id,
+                                         T* out_dptr, int64_t item_size,
+                                         DeviceCtx*) = 0;
 };
+
+DataType DataTypeOf(const Feature& feature);
+int64_t SizeOf(const Feature& feature);
 
 }  // namespace oneflow
 

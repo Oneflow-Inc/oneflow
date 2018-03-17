@@ -16,12 +16,40 @@ void DecodeOFRecordKernel<T>::Forward(
 
   FOR_RANGE(int32_t, i, 0, decode_conf.blob_size()) {
     Blob* out_blob = BnInOp2Blob(kernel_conf().output_bns(i));
-    const std::string& name = decode_conf.blob(i).name();
-    EncodeType encode_type = decode_conf.blob(i).encode_type();
-    // TODO
-    // generate record_decoder based on the type of encode_type
-    // get the datatype of out_blob and pass it to record_decoder
+    const BlobConf& blob_conf = decode_conf.blob(i);
+    const std::string& name = blob_conf.name();
+    EncodeType encode_type = blob_conf.encode_type();
+    DataType data_type = blob_conf.data_type();
+    if (encode_type == kRaw) {
+      if (data_type == DataType::kInt8) {
+        RawRecordDecoder<int8_t> record_decoder;
+        record_decoder.ReadRecordToOutBlob(record_blob, name,
+                                           status->cur_col_id_, out_blob,
+                                           kernel_ctx.device_ctx);
+      } else if (data_type == DataType::kInt32) {
+        RawRecordDecoder<int32_t> record_decoder;
+        record_decoder.ReadRecordToOutBlob(record_blob, name,
+                                           status->cur_col_id_, out_blob,
+                                           kernel_ctx.device_ctx);
+      } else if (data_type == DataType::kFloat) {
+        RawRecordDecoder<float> record_decoder;
+        record_decoder.ReadRecordToOutBlob(record_blob, name,
+                                           status->cur_col_id_, out_blob,
+                                           kernel_ctx.device_ctx);
+      } else if (data_type == DataType::kDouble) {
+        RawRecordDecoder<double> record_decoder;
+        record_decoder.ReadRecordToOutBlob(record_blob, name,
+                                           status->cur_col_id_, out_blob,
+                                           kernel_ctx.device_ctx);
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else if (encode_type == kJpeg) {
+    }
   }
 }
+
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kDecodeOfrecordConf,
+                               DecodeOFRecordKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
