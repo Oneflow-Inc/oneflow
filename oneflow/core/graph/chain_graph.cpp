@@ -438,7 +438,7 @@ void ChainGraph::BuildLossPrintStruct() {
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(
-        IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence:1");
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":cpu:1");
     auto loss_print_chain = NewNode<LossPrintChainNode>();
     loss_print_chain->mut_op_vec() = {loss_print_op};
     loss_print_chain->mut_parallel_desc().reset(
