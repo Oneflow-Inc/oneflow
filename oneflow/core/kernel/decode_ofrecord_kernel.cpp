@@ -20,32 +20,10 @@ void DecodeOFRecordKernel<T>::Forward(
     const std::string& name = blob_conf.name();
     EncodeType encode_type = blob_conf.encode_type();
     DataType data_type = blob_conf.data_type();
-    if (encode_type == kRaw) {
-      if (data_type == DataType::kInt8) {
-        RawRecordDecoder<int8_t> record_decoder;
-        record_decoder.ReadRecordToOutBlob(record_blob, name,
-                                           status->cur_col_id_, out_blob,
-                                           kernel_ctx.device_ctx);
-      } else if (data_type == DataType::kInt32) {
-        RawRecordDecoder<int32_t> record_decoder;
-        record_decoder.ReadRecordToOutBlob(record_blob, name,
-                                           status->cur_col_id_, out_blob,
-                                           kernel_ctx.device_ctx);
-      } else if (data_type == DataType::kFloat) {
-        RawRecordDecoder<float> record_decoder;
-        record_decoder.ReadRecordToOutBlob(record_blob, name,
-                                           status->cur_col_id_, out_blob,
-                                           kernel_ctx.device_ctx);
-      } else if (data_type == DataType::kDouble) {
-        RawRecordDecoder<double> record_decoder;
-        record_decoder.ReadRecordToOutBlob(record_blob, name,
-                                           status->cur_col_id_, out_blob,
-                                           kernel_ctx.device_ctx);
-      } else {
-        UNIMPLEMENTED();
-      }
-    } else if (encode_type == kJpeg) {
-    }
+    OFRecordDecoderIf* decoder = GetOFRecordDecoder(encode_type, data_type);
+    status->max_col_id_ =
+        decoder->Decode(record_blob, name, status->cur_col_id_, out_blob,
+                        kernel_ctx.device_ctx);
   }
 }
 

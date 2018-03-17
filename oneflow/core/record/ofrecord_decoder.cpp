@@ -1,46 +1,45 @@
-#include "oneflow/core/record/record_decoder.h"
+#include "oneflow/core/record/ofrecord_decoder.h"
 
 namespace oneflow {
 
-template<typename T>
-int32_t RecordDecoder<T>::ReadRecordToOutBlob(RecordBlob<OFRecord>* record_blob,
-                                              const std::string& name,
-                                              int32_t cur_col_id,
-                                              Blob* out_blob, DeviceCtx* ctx) {
+template<EncodeType E, DataType D>
+int32_t OFRecordDecoder<E, D>::Decode(RecordBlob<OFRecord>* record_blob,
+                                      const std::string& name, int32_t col_id,
+                                      Blob* out_blob, DeviceCtx* ctx) {
   int32_t max_col_id = 0;
   if (out_blob->has_col_num_field()) {
-    max_col_id = ReadColNumToOutBlob(record_blob, name, out_blob);
+    max_col_id = ReadColNumToOutBlob(record_blob, name, out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) {
     ReadDataIdToOutBlob(record_blob, out_blob, ctx);
   }
-  ReadDataContentToOutBlob(record_blob, name, cur_col_id, out_blob, ctx);
+  ReadDataContentToOutBlob(record_blob, name, col_id, out_blob, ctx);
   return max_col_id;
 }
 
-template<typename T>
-int32_t RecordDecoder<T>::ReadColNumToOutBlob(RecordBlob<OFRecord>* record_blob,
-                                              const std::string& name,
-                                              Blob* out_blob) {
+template<EncodeType E, DataType D>
+int32_t OFRecordDecoder<E, D>::ReadColNumToOutBlob(
+    RecordBlob<OFRecord>* record_blob, const std::string& name,
+    Blob* out_blob) {
   CHECK(out_blob->has_col_num_field());
   int32_t i = 0;
-  int32_t max_col_id = 0;
+  int32_t max_col_num = 1;
   record_blob->ForEachRecord([&](const OFRecord& record) {
     const Feature& feature = record.feature().at(name);
     int32_t col_num = GetColNumOfFeature(feature, out_blob->shape().Count(1));
     CHECK(col_num <= out_blob->max_col_num());
-    max_col_id = std::max(max_col_id, col_num - 1);
+    max_col_num = std::max(max_col_num, col_num);
     out_blob->set_col_num(i++, col_num);
   });
   while (i < JobDesc::Singleton()->SinglePieceSize()) {
     out_blob->set_col_num(i++, 0);
   }
-  return max_col_id;
+  return max_col_num;
 }
 
-template<typename T>
-void RecordDecoder<T>::ReadDataIdToOutBlob(RecordBlob<OFRecord>* record_blob,
-                                           Blob* out_blob, DeviceCtx* ctx) {
+template<EncodeType E, DataType D>
+void OFRecordDecoder<E, D>::ReadDataIdToOutBlob(
+    RecordBlob<OFRecord>* record_blob, Blob* out_blob, DeviceCtx* ctx) {
   CHECK(out_blob->has_data_id_field());
   int32_t i = 0;
   size_t size_of_data_id = JobDesc::Singleton()->SizeOfOneDataId();
@@ -48,7 +47,7 @@ void RecordDecoder<T>::ReadDataIdToOutBlob(RecordBlob<OFRecord>* record_blob,
     const Feature& feature = record.feature().at("data_id");
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     const std::string& data_id_str = feature.bytes_list().value(0);
-    CHECK(data_id_str.size() <= size_of_data_id);
+    CHECK_LE(data_id_str.size(), size_of_data_id);
     Memcpy<DeviceType::kCPU>(ctx, out_blob->mut_data_id(i++), &data_id_str,
                              data_id_str.size());
   });
@@ -56,25 +55,24 @@ void RecordDecoder<T>::ReadDataIdToOutBlob(RecordBlob<OFRecord>* record_blob,
          size_of_data_id * (JobDesc::Singleton()->SinglePieceSize() - i));
 }
 
-template<typename T>
-void RecordDecoder<T>::ReadDataContentToOutBlob(
-    RecordBlob<OFRecord>* record_blob, const std::string& name,
-    int32_t cur_col_id, Blob* out_blob, DeviceCtx* ctx) {
+template<EncodeType E, DataType D>
+void OFRecordDecoder<E, D>::ReadDataContentToOutBlob(
+    RecordBlob<OFRecord>* record_blob, const std::string& name, int32_t col_id,
+    Blob* out_blob, DeviceCtx* ctx) {
   int32_t i = 0;
-  int64_t item_size = out_blob->shape().Count(1);
-  T* out_dptr = out_blob->mut_dptr<T>();
+  int64_t item_size =
+      out_blob->shape().Count(1) * GetSizeOfDataType(out_blob->data_type());
   record_blob->ForEachRecord([&](const OFRecord& record) {
     const Feature& feature = record.feature().at(name);
     int32_t col_num = out_blob->has_col_num_field() ? out_blob->col_num(i) : 1;
-    if (cur_col_id < col_num) {
-      ReadDataContentForOneItem(feature, cur_col_id, out_dptr, item_size, ctx);
+    if (col_id < col_num) {
+      ReadDataContentForOneItem(feature, col_id, out_blob, ctx);
     } else {
-      memset(out_dptr, 0, item_size);
+      memset(out_blob->mut_dptr<char>() + i * item_size, 0, item_size);
     }
     ++i;
-    out_dptr += item_size;
   });
-  memset(out_dptr, 0,
+  memset(out_blob->mut_dptr<char>() + i * item_size, 0,
          item_size * (JobDesc::Singleton()->SinglePieceSize() - i));
 }
 
@@ -106,9 +104,13 @@ int64_t SizeOf(const Feature& feature) {
   }
 }
 
-template class RecordDecoder<int8_t>;
-template class RecordDecoder<int32_t>;
-template class RecordDecoder<float>;
-template class RecordDecoder<double>;
+template class OFRecordDecoder<EncodeType::kRaw, DataType::kInt8>;
+template class OFRecordDecoder<EncodeType::kRaw, DataType::kInt32>;
+template class OFRecordDecoder<EncodeType::kRaw, DataType::kFloat>;
+template class OFRecordDecoder<EncodeType::kRaw, DataType::kDouble>;
+template class OFRecordDecoder<EncodeType::kJpeg, DataType::kInt8>;
+template class OFRecordDecoder<EncodeType::kJpeg, DataType::kInt32>;
+template class OFRecordDecoder<EncodeType::kJpeg, DataType::kFloat>;
+template class OFRecordDecoder<EncodeType::kJpeg, DataType::kDouble>;
 
 }  // namespace oneflow
