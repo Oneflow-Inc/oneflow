@@ -99,16 +99,28 @@ const int32_t ConvKernelIf<device_type, T>::KernelDim() const {
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::WeightForward(
-    DeviceCtx* device_ctx, const Blob* in, const Blob* weight, Blob* out,
-    Blob* cudnn_workspace) const {
-  UNIMPLEMENTED();
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* out_blob = BnInOp2Blob("out");
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* col_buf_blob = BnInOp2Blob("col_buf");
+  FOR_RANGE(int64_t, i, 0, in_blob->shape().At(0)) {
+    ConvKernelUtil<T>::Im2Col(device_ctx, in_blob, weight_blob, col_buf_blob);
+    // TODO
+    KernelUtil<DeviceType::kCPU, T>::Gemm();
+  }
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::BiasForward(DeviceCtx* device_ctx,
-                                                  const Blob* bias,
-                                                  Blob* out) const {
-  UNIMPLEMENTED();
+void ConvKernel<DeviceType::kCPU, T>::BiasForward(
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* bias_blob = BnInOp2Blob("bias");
+  Blob* out_blob = BnInOp2Blob("out");
+  KernelUtil<DeviceType::kCPU, T>::Axpy(device_ctx, out_blob->shape().elem_cnt(),
+                                        static_cast<T>(1), bias_blob->dptr<T>(), 1,
+                                        out_blob->mut_dptr<T>(), 1);
 }
 
 template<typename T>
@@ -138,5 +150,54 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+class ConvKernelUtil final {
+ public:
+  static void Im2Col(DeviceCtx* device_ctx, int64_t img_dix, const Blob* in_blob,
+                     Blob* col_buf_blob) {
+    T* col_buf = col_buf_blob->mut_dptr<T>();
+    const T* in = in_blob->dptr<T>();
+    int64_t d_size = in_blob->shape().At(2);
+    int64_t h_size = in_blob->shape().At(3);
+    int64_t w_size = in_blob->shape().At(4);
+    int64_t d_dim = in_blob->shape().Count(3);
+    int64_t h_dim = in_blob->shape().Count(4);
+    for (int64_t c = 0; c != in_blob->shape().At(1); in += channel_size) {
+      FOR_RANGE(int64_t, kd, 0, weight_blob->shape().At(1)) {
+        FOR_RANGE(int64_t, kh, 0, weight_blob->shape().At(2)) {
+          FOR_RANGE(int64_t, kw, 0, weight_blob->shape().At(3)) {
+            int64_t id = kd * dilation_rate.Get(0) - padding_before.Get(0);
+            for (int64_t od = d_size; od > 0; od--) {
+              if (id < 0 || id >= d_size) {
+                FOR_RANGE(int64_t, out, 0, d_dim) { *(col_buf++) = 0; }
+              } else {
+                int64_t ih = kh * dilation_rate.Get(1) - padding_before.Get(1);
+                for (int64_t oh = h_size; oh > 0; oh--) {
+                  if (ih < 0 || ih >= h_size) {
+                    FOR_RANGE(int64_t, out, 0, h_dim) { *(col_buf++) = 0; }
+                  } else {
+                    int64_t iw = kw * dilation_rate.Get(2) - padding_before.Get(2);
+                    for (int64_t ow = w_size; ow > 0; ow--) {
+                      if (iw < 0 || iw >= w_size) {
+                        *(col_buf++) = 0;
+                      } else {
+                        *(col_buf++) = in[id * dim_d + ih * dim_h + iw];
+                      }
+                      iw += strides.At(2);
+                    }
+                  }
+                  ih += strides.At(1);
+                }
+              }
+              id += strides.At(0);
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
 
 }  // namespace oneflow
