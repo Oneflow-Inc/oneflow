@@ -90,15 +90,39 @@ class ConvKernelUtil final {
  public:
   static void Im2Col(DeviceCtx* device_ctx, const T* in_dptr,
                      const Shape& in_shape, const Shape& weight_shape,
-                     const Shape& out_shape, const int32_t* strides,
-                     const int32_t* dilation_rate,
+                     const Shape& out_shape, const std::string& data_format,
+                     const int32_t* strides, const int32_t* dilation_rate,
                      const int32_t* padding_before, T* col_buf);
 
   static void Col2Im(DeviceCtx* device_ctx, const T* col_buf,
                      const Shape& in_shape, const Shape& weight_shape,
-                     const Shape& out_shape, const int32_t* strides,
-                     const int32_t* dilation_rate,
+                     const Shape& out_shape, const std::string& data_format,
+                     const int32_t* strides, const int32_t* dilation_rate,
                      const int32_t* padding_before, T* in_diff_ptr);
+
+  static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape,
+                          const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
+
+  static void NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape,
+                          const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
+
+  static void NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape,
+                          const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
+
+  static void NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape,
+                          const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 };
 
 }  // namespace oneflow

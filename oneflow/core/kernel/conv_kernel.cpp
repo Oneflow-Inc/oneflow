@@ -105,6 +105,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
     ConvKernelUtil<T>::Im2Col(
         ctx.device_ctx, img_offset<T>(in_blob, i), in_blob->shape(),
         weight_blob->shape(), out_blob->shape(),
+        this->template GetStringFromCustomizedOpConf("data_format"),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
             .data(),
@@ -151,6 +152,7 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
     ConvKernelUtil<T>::Im2Col(
         ctx, in_blob->dptr<T>() + i * in_blob->shape().Count(1),
         in_blob->shape(), weight_diff_blob->shape(), out_diff_blob->shape(),
+        this->template GetStringFromCustomizedOpConf("data_format"),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
             .data(),
@@ -183,6 +185,7 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
     ConvKernelUtil<T>::Col2Im(
         ctx, col_buf_blob->dptr<T>(), in_blob->shape(), weight_blob->shape(),
         out_diff_blob->shape(),
+        this->template GetStringFromCustomizedOpConf("data_format"),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
             .data(),
@@ -223,9 +226,44 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
 template<typename T>
 void ConvKernelUtil<T>::Im2Col(DeviceCtx* device_ctx, const T* in_dptr,
                                const Shape& in_shape, const Shape& weight_shape,
-                               const Shape& out_shape, const int32_t* strides,
+                               const Shape& out_shape,
+                               const std::string& data_format,
+                               const int32_t* strides,
                                const int32_t* dilation_rate,
                                const int32_t* padding_before, T* col_buf) {
+  if (data_format == "channel_first") {
+    NCDHWCol2Im(device_ctx, in_dptr, in_shape, weight_shape, out_shape, strides,
+                dilation_rate, padding_before, col_buf);
+  } else {
+    NDHWCCol2Im(device_ctx, in_dptr, in_shape, weight_shape, out_shape, strides,
+                dilation_rate, padding_before, col_buf);
+  }
+}
+
+template<typename T>
+void ConvKernelUtil<T>::Col2Im(DeviceCtx* device_ctx, const T* col_buf,
+                               const Shape& in_shape, const Shape& weight_shape,
+                               const Shape& out_shape,
+                               const std::string& data_format,
+                               const int32_t* strides,
+                               const int32_t* dilation_rate,
+                               const int32_t* padding_before, T* in_diff_ptr) {
+  if (data_format == "channel_first") {
+    ConvKernelUtil<T>::NCDHWIm2Col(device_ctx, col_buf, in_shape, weight_shape,
+                                   out_shape, strides, dilation_rate,
+                                   padding_before, in_diff_ptr);
+  } else {
+    ConvKernelUtil<T>::NDHWCIm2Col(device_ctx, col_buf, in_shape, weight_shape,
+                                   out_shape, strides, dilation_rate,
+                                   padding_before, in_diff_ptr);
+  }
+}
+
+template<typename T>
+void ConvKernelUtil<T>::NCDHWIm2Col(
+    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf) {
   int64_t id_size = in_shape.Count(3);
   int64_t ih_size = in_shape.Count(4);
   for (int64_t c = 0; c != in_shape.At(1); in_dptr += in_shape.Count(2)) {
@@ -264,11 +302,11 @@ void ConvKernelUtil<T>::Im2Col(DeviceCtx* device_ctx, const T* in_dptr,
 }
 
 template<typename T>
-void ConvKernelUtil<T>::Col2Im(DeviceCtx* device_ctx, const T* col_buf,
-                               const Shape& in_shape, const Shape& weight_shape,
-                               const Shape& out_shape, const int32_t* strides,
-                               const int32_t* dilation_rate,
-                               const int32_t* padding_before, T* in_diff_ptr) {
+void ConvKernelUtil<T>::NCDHWCol2Im(
+    DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before,
+    T* in_diff_ptr) {
   int64_t id_size = in_shape.Count(3);
   int64_t ih_size = in_shape.Count(4);
   for (int64_t c = 0; c != weight_shape.At(1);
@@ -304,6 +342,23 @@ void ConvKernelUtil<T>::Col2Im(DeviceCtx* device_ctx, const T* col_buf,
       }
     }
   }
+}
+
+template<typename T>
+void ConvKernelUtil<T>::NDHWCIm2Col(
+    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf) {
+  UNIMPLEMENTED();
+}
+
+template<typename T>
+void ConvKernelUtil<T>::NDHWCCol2Im(
+    DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before,
+    T* in_diff_ptr) {
+  UNIMPLEMENTED();
 }
 
 }  // namespace oneflow
