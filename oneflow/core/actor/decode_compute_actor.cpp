@@ -57,6 +57,11 @@ bool DecodeCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_in_eord_ && pending_in_regsts_.empty();
 }
 
+void DecodeCompActor::ForEachCurReadableRegst(
+    std::function<void(const Regst*)> handler) {
+  handler(pending_in_regsts_.front());
+}
+
 REGISTER_ACTOR(kDecode, DecodeCompActor);
 
 }  // namespace oneflow
