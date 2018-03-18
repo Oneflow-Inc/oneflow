@@ -15,9 +15,6 @@ class ConvKernelIf : public KernelIf<device_type> {
   virtual ~ConvKernelIf() = default;
 
  protected:
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -32,12 +29,6 @@ class ConvKernelIf : public KernelIf<device_type> {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  virtual void WeightForward(
-      DeviceCtx*, std::function<Blob*(const std::string&)>) const = 0;
-  virtual void BiasForward(DeviceCtx*,
-                           std::function<Blob*(const std::string&)>) const = 0;
-  virtual void DataBackward(DeviceCtx*,
-                            std::function<Blob*(const std::string&)>) const = 0;
   virtual void WeightBackward(
       DeviceCtx*, std::function<Blob*(const std::string&)>) const = 0;
   virtual void BiasBackward(DeviceCtx*,
@@ -60,12 +51,9 @@ class ConvKernel<DeviceType::kCPU, T> final
   ~ConvKernel() = default;
 
  private:
-  void WeightForward(DeviceCtx*,
-                     std::function<Blob*(const std::string&)>) const override;
-  void BiasForward(DeviceCtx*,
-                   std::function<Blob*(const std::string&)>) const override;
-  void DataBackward(DeviceCtx*,
-                    std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackward(DeviceCtx*,
                       std::function<Blob*(const std::string&)>) const override;
   void BiasBackward(DeviceCtx*,
@@ -82,12 +70,9 @@ class ConvKernel<DeviceType::kGPU, T> final
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void WeightForward(DeviceCtx*,
-                     std::function<Blob*(const std::string&)>) const override;
-  void BiasForward(DeviceCtx*,
-                   std::function<Blob*(const std::string&)>) const override;
-  void DataBackward(DeviceCtx*,
-                    std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackward(DeviceCtx*,
                       std::function<Blob*(const std::string&)>) const override;
   void BiasBackward(DeviceCtx*,
@@ -98,6 +83,22 @@ class ConvKernel<DeviceType::kGPU, T> final
   std::unique_ptr<CudnnFilterDesc> filter_desc_;
   std::unique_ptr<CudnnConvDesc> conv_desc_;
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
+};
+
+template<typename T>
+class ConvKernelUtil final {
+ public:
+  static void Im2Col(DeviceCtx* device_ctx, const T* in_dptr,
+                     const Shape& in_shape, const Shape& weight_shape,
+                     const Shape& out_shape, const int32_t* strides,
+                     const int32_t* dilation_rate,
+                     const int32_t* padding_before, T* col_buf);
+
+  static void Col2Im(DeviceCtx* device_ctx, const T* col_buf,
+                     const Shape& in_shape, const Shape& weight_shape,
+                     const Shape& out_shape, const int32_t* strides,
+                     const int32_t* dilation_rate,
+                     const int32_t* padding_before, T* in_diff_ptr);
 };
 
 }  // namespace oneflow
