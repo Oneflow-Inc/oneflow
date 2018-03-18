@@ -63,7 +63,14 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollOutputBn("out");
   EnrollModelBn("weight");
   if (GetBoolFromCustomizedConf("use_bias")) { EnrollModelBn("bias"); }
-  if (UseCudnn()) { EnrollDataTmpBn("cudnn_workspace"); }
+  if (UseCudnn()) {
+    EnrollDataTmpBn("cudnn_workspace");
+  } else {
+    EnrollDataTmpBn("col_buf");
+    if (GetBoolFromCustomizedConf("use_bias")) {
+      EnrollModelTmpBn("bias_multiplier");
+    }
+  }
 }
 
 template<int32_t NDims>
@@ -113,7 +120,7 @@ void ConvOp<NDims>::InferBlobDescs(
 
   // bias
   if (GetBoolFromCustomizedConf("use_bias")) {
-    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
+    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
   }
 
 #ifdef WITH_CUDA
@@ -130,6 +137,18 @@ void ConvOp<NDims>::InferBlobDescs(
         Shape({cudnn_workspace_size});
   }
 #endif  // WITH_CUDA
+
+  // col_buf
+  if (!UseCudnn()) {
+    int64_t output_size = GetBlobDesc4BnInOp("out")->shape().Count(
+        DhwOffset(data_format), DhwOffset(data_format) + NDims);
+    GetBlobDesc4BnInOp("col_buf")->mut_shape() =
+        Shape({output_size, GetBlobDesc4BnInOp("weight")->shape().Count(1)});
+    if (GetBoolFromCustomizedConf("use_bias")) {
+      GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+          Shape({1, output_size});
+    }
+  }
 }
 
 template<int32_t NDims>
