@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
@@ -26,15 +27,13 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   int32_t part_name_suffix_length =
       decode_op->GetInt32FromCustomizedConf("part_name_suffix_length");
   std::string num = std::to_string(parallel_id());
-  std::string data_path = data_dir + "/" + part_name_prefix;
+  int32_t zero_count = 0;
   if (part_name_suffix_length != -1) {
-    CHECK_GE(part_name_suffix_length, num.length());
-    FOR_RANGE(size_t, i, 0, part_name_suffix_length - num.length()) {
-      data_path += "0";
-    }
+    zero_count = part_name_suffix_length - num.length();
   }
-  data_path += num;
-  task_proto->set_data_path(data_path);
+  task_proto->set_data_path(JoinPath(
+      data_dir,
+      std::string(part_name_prefix + std::string(zero_count, '0') + num)));
 }
 
 }  // namespace oneflow
