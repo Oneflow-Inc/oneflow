@@ -481,12 +481,7 @@ ChainGraph::BuildNormalizationMdUpdtAndMdSaveStruct(
       model_save_op_conf.mutable_model_save_conf()->add_lbn(
           op->Lbn4BnInOp(otbn));
     }
-    ParallelDesc md_save_pr_desc =
-        *(BuildMdSaveStruct(fw_chain, model_save_op_conf, md_updt_chain)
-              ->parallel_desc());
-    md_save_pr_desc.RemoveNeedlessDevice(1);
-    std::shared_ptr<const ParallelDesc> parallel_desc(
-        new ParallelDesc(md_save_pr_desc));
+    BuildMdSaveStruct(fw_chain, model_save_op_conf, md_updt_chain);
   }
   return md_updt_chain;
 }
