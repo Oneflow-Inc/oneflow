@@ -519,13 +519,15 @@ void ChainGraph::RemoveNeedlessCloneOp() {
       ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
     });
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
-    for (std::shared_ptr<const Operator> clone_op : clone_ops) {
-      auto clone_op_it =
-          std::find(op_vec_in_fw.begin(), op_vec_in_fw.end(), clone_op);
-      if (clone_op_it != op_vec_in_fw.end()) {
-        op_vec_in_fw.erase(clone_op_it);
-      }
-    }
+    Erase<std::vector<std::shared_ptr<Operator>>>(
+        op_vec_in_fw, [&](const std::shared_ptr<Operator>& op) {
+          if (std::find(clone_ops.begin(), clone_ops.end(), op)
+              != clone_ops.end()) {
+            return true;
+          } else {
+            return false;
+          }
+        });
   });
 }
 
