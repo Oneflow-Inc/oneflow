@@ -27,7 +27,7 @@ class JobDesc final {
   DataType DefaultDataType() const { return job_conf_.default_data_type(); }
   size_t SizeOfOneDataId() const;
   bool use_rdma() const { return job_conf_.use_rdma(); }
-  bool UseCudnn() const { return job_conf_.use_cudnn_on_gpu(); }
+  bool UseCudnnOnGpu() const { return job_conf_.use_cudnn_on_gpu(); }
   int64_t TotalMachineNum() const { return resource_.machine().size(); }
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }

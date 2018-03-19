@@ -19,7 +19,7 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
-    op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnn());
+    op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnnOnGpu());
   }
   InitFromOpConf();
 }
