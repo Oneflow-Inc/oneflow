@@ -503,12 +503,10 @@ void ChainGraph::BuildRecurrentStruct() {
 void ChainGraph::RemoveNeedlessCloneOp() {
   TopoForEachNode([&](ChainNode* chain_node) {
     HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
-    std::vector<std::shared_ptr<const Operator>> clone_ops;
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
     for (std::shared_ptr<const Operator> op : fw_chain_node->op_vec()) {
       if (!op->IsCloneOp()) { continue; }
-      clone_ops.push_back(op);
       const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
       for (const std::string& obn : op->output_bns()) {
         CHECK(olbn2ilbn_in_clone_op.emplace(op->Lbn4BnInOp(obn), ilbn).second);
@@ -521,8 +519,7 @@ void ChainGraph::RemoveNeedlessCloneOp() {
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
     Erase<std::vector<std::shared_ptr<Operator>>>(
         op_vec_in_fw, [&](const std::shared_ptr<Operator>& op) {
-          if (std::find(clone_ops.begin(), clone_ops.end(), op)
-              != clone_ops.end()) {
+          if (op->IsCloneOp()) {
             return true;
           } else {
             return false;
