@@ -305,7 +305,7 @@ void ConvKernelUtil<T>::NCDHWCol2Im(
                     if (iw >= 0 && iw < in_shape.At(4)) {
                       in_diff_ptr[id * id_size + ih * ih_size + iw] += *col_buf;
                     }
-                    col_buf++;
+                    ++col_buf;
                     iw += strides[2];
                   }
                 }
@@ -314,10 +314,10 @@ void ConvKernelUtil<T>::NCDHWCol2Im(
             }
             id += strides[0];
           }
-        }
-      }
-    }
-  }
+        }  // kw
+      }    // kh
+    }      // kd
+  }        // c
 }
 
 template<typename T>
@@ -325,7 +325,45 @@ void ConvKernelUtil<T>::NDHWCIm2Col(
     DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
     const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf) {
-  UNIMPLEMENTED();
+  int64_t id_size = in_shape.Count(2);
+  int64_t ih_size = in_shape.Count(3);
+  int64_t iw_size = in_shape.Count(4);
+  for (int64_t kd = 0; kd != weight_shape.At(1); ++kd) {
+    for (int64_t kh = 0; kh != weight_shape.At(2); ++kh) {
+      for (int64_t kw = 0; kw != weight_shape.At(3); ++kw) {
+        for (int64_t c = 0; c != weight_shape.At(4); ++c) {
+          int64_t id = kd * dilation_rate[0] - padding_before[0];
+          for (int64_t od = 0; od != out_shape.At(1); ++od) {
+            if (id < 0 || id >= in_shape.At(1)) {
+              for (int64_t out = 0; out != id_size; ++out) { *(col_buf++) = 0; }
+            } else {
+              int64_t ih = kh * dilation_rate[1] - padding_before[1];
+              for (int64_t oh = 0; oh != out_shape.At(2); ++oh) {
+                if (ih < 0 || ih >= in_shape.At(2)) {
+                  for (int64_t out = 0; out != ih_size; ++out) {
+                    *(col_buf++) = 0;
+                  }
+                } else {
+                  int64_t iw = kw * dilation_rate[2] - padding_before[2];
+                  for (int64_t ow = 0; ow != out_shape.At(3); ++ow) {
+                    if (iw < 0 || iw >= in_shape.At(3)) {
+                      *(col_buf++) = 0;
+                    } else {
+                      *(col_buf++) = in_dptr[id * id_size + ih * ih_size
+                                             + iw * iw_size + c];
+                    }
+                    iw += strides[2];
+                  }
+                }
+                ih += strides[1];
+              }
+            }
+            id += strides[0];
+          }
+        }  // c
+      }    // kw
+    }      // kh
+  }        // kd
 }
 
 template<typename T>
@@ -334,7 +372,42 @@ void ConvKernelUtil<T>::NDHWCCol2Im(
     const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
     const int32_t* dilation_rate, const int32_t* padding_before,
     T* in_diff_ptr) {
-  UNIMPLEMENTED();
+  int64_t id_size = in_shape.Count(2);
+  int64_t ih_size = in_shape.Count(3);
+  int64_t iw_size = in_shape.Count(4);
+  for (int64_t kd = 0; kd != weight_shape.At(1); ++kd) {
+    for (int64_t kh = 0; kh != weight_shape.At(2); ++kh) {
+      for (int64_t kw = 0; kw != weight_shape.At(3); ++kw) {
+        for (int64_t c = 0; c != weight_shape.At(4); ++c) {
+          int64_t id = kd * dilation_rate[0] - padding_before[0];
+          for (int64_t od = 0; od != out_shape.At(1); ++od) {
+            if (id < 0 || id >= in_shape.At(1)) {
+              in_diff_ptr += id_size;
+            } else {
+              int64_t ih = kh * dilation_rate[1] - padding_before[1];
+              for (int64_t oh = 0; oh != out_shape.At(2); ++oh) {
+                if (ih < 0 || ih >= in_shape.At(2)) {
+                  in_diff_ptr += ih_size;
+                } else {
+                  int64_t iw = kw * dilation_rate[2] - padding_before[2];
+                  for (int64_t ow = 0; ow != out_shape.At(3); ++ow) {
+                    if (iw >= 0 && iw < in_shape.At(3)) {
+                      in_diff_ptr[id * id_size + ih * ih_size + iw * iw_size
+                                  + c] += *col_buf;
+                    }
+                    ++col_buf;
+                    iw += strides[2];
+                  }
+                }
+                ih += strides[1];
+              }
+            }
+            id += strides[0];
+          }
+        }  // c
+      }    // kw
+    }      // kh
+  }        // kd
 }
 
 }  // namespace oneflow

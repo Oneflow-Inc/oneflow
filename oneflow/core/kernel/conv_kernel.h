@@ -30,9 +30,11 @@ class ConvKernelIf : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   virtual void WeightBackward(
-      DeviceCtx*, std::function<Blob*(const std::string&)>) const = 0;
-  virtual void BiasBackward(DeviceCtx*,
-                            std::function<Blob*(const std::string&)>) const = 0;
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void BiasBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
   const PbMessage& GetCustomizedOpConf() const override;
   const ConvKernelConf& GetConvKernelConf() const;
@@ -40,14 +42,18 @@ class ConvKernelIf : public KernelIf<device_type> {
 };
 
 template<typename T>
-using Im2ColFunc = void (*)(DeviceCtx*, const T*, const Shape&, const Shape&,
-                            const Shape&, const int32_t*, const int32_t*,
-                            const int32_t*, T*);
+using Im2ColFunc = void (*)(DeviceCtx* device_ctx, const T* in_dptr,
+                            const Shape& in_shape, const Shape& weight_shape,
+                            const Shape& out_shape, const int32_t* strides,
+                            const int32_t* dilation_rate,
+                            const int32_t* padding_before, T* col_buf);
 
 template<typename T>
-using Col2ImFunc = void (*)(DeviceCtx*, const T*, const Shape&, const Shape&,
-                            const Shape&, const int32_t*, const int32_t*,
-                            const int32_t*, T*);
+using Col2ImFunc = void (*)(DeviceCtx* device_ctx, const T* col_buf,
+                            const Shape& in_shape, const Shape& weight_shape,
+                            const Shape& out_shape, const int32_t* strides,
+                            const int32_t* dilation_rate,
+                            const int32_t* padding_before, T* in_diff_ptr);
 
 template<DeviceType device_type, typename T>
 class ConvKernel;
@@ -65,10 +71,12 @@ class ConvKernel<DeviceType::kCPU, T> final
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void WeightBackward(DeviceCtx*,
-                      std::function<Blob*(const std::string&)>) const override;
-  void BiasBackward(DeviceCtx*,
-                    std::function<Blob*(const std::string&)>) const override;
+  void WeightBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
 };
@@ -86,10 +94,12 @@ class ConvKernel<DeviceType::kGPU, T> final
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void WeightBackward(DeviceCtx*,
-                      std::function<Blob*(const std::string&)>) const override;
-  void BiasBackward(DeviceCtx*,
-                    std::function<Blob*(const std::string&)>) const override;
+  void WeightBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
   std::unique_ptr<CudnnTensorDesc> out_desc_;
@@ -99,7 +109,7 @@ class ConvKernel<DeviceType::kGPU, T> final
 };
 
 template<typename T>
-class ConvKernelUtil final {
+struct ConvKernelUtil final {
  public:
   static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr,
                           const Shape& in_shape, const Shape& weight_shape,
