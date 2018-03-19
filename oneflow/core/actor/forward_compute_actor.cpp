@@ -42,12 +42,14 @@ int ForwardCompActor::HandlerInitModel(const ActorMsg& msg) {
 }
 
 int ForwardCompActor::HandlerInitModelTmp(const ActorMsg& msg) {
+  CHECK_NE(random_seed_, -1);
   Regst* model_tmp_regst = msg.regst();
   CHECK_EQ(model_tmp_regst->regst_desc_id(), model_tmp_regst_desc_id_);
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
+    KernelCtx kernel_ctx = GenDefaultKernelCtx();
+    kernel_ctx.other = &random_seed_;
     exec_kernel.kernel->InitModelTmpBlobs(
-        GenDefaultKernelCtx(), parallel_ctx(),
-        [&](const std::string& bn_in_op) {
+        kernel_ctx, parallel_ctx(), [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
           return model_tmp_regst->GetBlobByLbn(lbn);
         });
