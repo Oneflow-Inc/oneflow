@@ -33,6 +33,24 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
+template<DeviceType device_type, typename T>
+struct BasicGruKernelUtil {
+  static void ComputeGateForward(const KernelCtx& ctx, const Blob* in_data,
+                                 const Blob* hidden,
+                                 const Blob* bias_multiplier,
+                                 const Blob* i2h_weight, const Blob* h2h_weight,
+                                 const Blob* bias, Blob* gate_data,
+                                 Blob* gate_out);
+  static void ComputeCandidateHiddenForward(
+      const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
+      const Blob* bias_multiplier, const Blob* i2h_weight,
+      const Blob* h2h_weight, const Blob* bias, Blob* candidate_data,
+      Blob* candidate_out, Blob* reset_out);
+  static void ComputePlusOutForward(const KernelCtx& ctx, const Blob* hidden,
+                                    Blob* candidate_out, Blob* temp_data,
+                                    Blob* update_out, Blob* plus_out);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEK_BASIC_GRU_KERNEL_H_
