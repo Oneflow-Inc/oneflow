@@ -168,12 +168,6 @@ inline double GetCurTime() {
 size_t GetAvailableCpuMemSize();
 
 template<typename T>
-void Erase(T& container,
-           std::function<bool(const typename T::value_type&)> NeedErase) {
-  Erase(container, NeedErase, [](const typename T::value_type&) {});
-}
-
-template<typename T>
 void Erase(
     T& container, std::function<bool(const typename T::value_type&)> NeedErase,
     std::function<void(const typename T::value_type&)> EraseElementHandler) {
@@ -192,6 +186,12 @@ void Erase(
   if (erase_from != container.end()) {
     container.erase(erase_from, container.end());
   }
+}
+
+template<typename T>
+void Erase(T& container,
+           std::function<bool(const typename T::value_type&)> NeedErase) {
+  Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
 }  // namespace oneflow
