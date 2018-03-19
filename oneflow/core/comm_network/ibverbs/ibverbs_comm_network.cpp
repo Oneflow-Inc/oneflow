@@ -15,7 +15,7 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 
 void IBVerbsCommNet::Init(const Plan& plan) {
   IBVerbsCommNet* comm_net = new IBVerbsCommNet(plan);
-  CommNet::Singleton()->set_comm_network_ptr(new IBVerbsCommNet(plan));
+  CommNet::Singleton()->set_comm_network_ptr(comm_net);
   comm_net->endpoint_manager_.reset(new EndpointManager());
 }
 
@@ -60,8 +60,6 @@ void IBVerbsCommNet::RegisterMemoryDone() {
 void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   endpoint_manager_->SendActorMsg(dst_machine_id, msg);
 }
-
-IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) { GenConnectionInfo(plan); }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id,
                             const void* src_token, const void* dst_token) {
