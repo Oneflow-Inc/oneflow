@@ -112,7 +112,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
           this->GetInt32FromCustomizedKernelConf("cudnn_bwd_filter_algo")),
       BnInOp2Blob("cudnn_workspace")->mut_dptr<T>(),
-      BnInOp2Blob("cudnn_workspace")->shape().At(0), CudnnDataType<T>::one,
+      BnInOp2Blob("cudnn_workspace")->shape().At(0), CudnnDataType<T>::zero,
       this->filter_desc_->Get(), BnInOp2Blob("weight_diff")->mut_dptr<T>()));
 }
 

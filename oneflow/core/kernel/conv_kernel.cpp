@@ -28,7 +28,8 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
+  if (this->GetBoolFromCustomizedOpConf("use_bias")
+      && !this->op_conf().use_cudnn_on_gpu()) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::Initialize(ctx,
@@ -42,16 +43,12 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      static_cast<const InitializerConf*>(
-          &this->GetMessageFromCustomizedOpConf("weight_initializer")),
+      ctx, this->GetMessageFromCustomizedOpConf("weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx,
-        static_cast<const InitializerConf*>(
-            &this->GetMessageFromCustomizedOpConf("bias_initializer")),
+        ctx, this->GetMessageFromCustomizedOpConf("bias_initializer"),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }
