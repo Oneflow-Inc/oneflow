@@ -27,10 +27,8 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   int32_t part_name_suffix_length =
       decode_op->GetInt32FromCustomizedConf("part_name_suffix_length");
   std::string num = std::to_string(parallel_id());
-  int32_t zero_count = 0;
-  if (part_name_suffix_length != -1) {
-    zero_count = part_name_suffix_length - num.length();
-  }
+  int32_t zero_count =
+      std::max<int32_t>(part_name_suffix_length - num.length(), 0);
   task_proto->set_data_path(JoinPath(
       data_dir,
       std::string(part_name_prefix + std::string(zero_count, '0') + num)));
