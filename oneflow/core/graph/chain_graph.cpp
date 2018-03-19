@@ -518,13 +518,8 @@ void ChainGraph::RemoveNeedlessCloneOp() {
     });
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
     Erase<std::vector<std::shared_ptr<Operator>>>(
-        op_vec_in_fw, [&](const std::shared_ptr<Operator>& op) {
-          if (op->IsCloneOp()) {
-            return true;
-          } else {
-            return false;
-          }
-        });
+        op_vec_in_fw,
+        [&](const std::shared_ptr<Operator>& op) { return op->IsCloneOp(); });
   });
 }
 
