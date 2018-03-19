@@ -8,15 +8,18 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
-  random_seed_ = task_proto.random_seed();
-  model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
+<<<<<<< HEAD
   if (random_seed_ == -1
       || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   } else {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelAndModelTmp);
   }
+=======
+  random_seed_ = task_proto.random_seed();
+  VirtualForwardCompActorInit(task_proto);
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
 }
 
 int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
@@ -61,6 +64,7 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   return 0;
 }
 
+<<<<<<< HEAD
 int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     if (msg.eord_regst_desc_id() == in_regst_desc_id_) { is_in_eord_ = true; }
@@ -125,25 +129,12 @@ void ForwardCompActor::Act() {
   AsyncSendRegstMsgToProducer(in_regst);
 }
 
+=======
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
 void ForwardCompActor::AsyncReturnAllReadableRegst() {
-  CHECK(pending_in_regsts_.empty());
+  CheckBeforeAsyncReturnAllReadableRegst();
   TryAsyncReturnModelRegst();
   TryAsyncReturnModelTmpRegst();
-}
-
-void ForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
-  TryAsyncReturnModelRegst();
-  model_regst_ = regst;
-}
-
-void ForwardCompActor::AsyncReturnModelRegst() {
-  CHECK_NOTNULL(model_regst_);
-  AsyncSendRegstMsgToProducer(model_regst_);
-  model_regst_ = nullptr;
-}
-
-void ForwardCompActor::TryAsyncReturnModelRegst() {
-  if (model_regst_) { AsyncReturnModelRegst(); }
 }
 
 void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
@@ -152,15 +143,5 @@ void ForwardCompActor::TryAsyncReturnModelTmpRegst() {
     model_tmp_regst_ = nullptr;
   }
 }
-
-void ForwardCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
-  handler(pending_in_regsts_.front());
-  if (model_regst_desc_id_ != -1) { handler(model_regst_); }
-  if (model_tmp_regst_desc_id_ != -1) { handler(model_tmp_regst_); }
-}
-
-REGISTER_ACTOR(TaskType::kNormalForward, ForwardCompActor);
-REGISTER_ACTOR(TaskType::kLoss, ForwardCompActor);
 
 }  // namespace oneflow

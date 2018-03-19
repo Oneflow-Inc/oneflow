@@ -3,11 +3,19 @@
 namespace oneflow {
 
 bool IsFirstRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  if (order == ColIdOrder::kUnCertain) {
+    CHECK_EQ(0, regst->max_col_id());
+    return true;
+  }
   return (order == ColIdOrder::kAscending && regst->col_id() == 0)
          || (order == ColIdOrder::kDescending && regst->IsMaxCol());
 }
 
 bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
+  if (order == ColIdOrder::kUnCertain) {
+    CHECK_EQ(0, regst->max_col_id());
+    return true;
+  }
   return (order == ColIdOrder::kAscending && regst->IsMaxCol())
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
@@ -163,6 +171,8 @@ void Actor::AsyncLaunchKernel(
     std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
+      Blob* blob = HandleSpecialBnInOp(bn_in_op);
+      if (blob) { return blob; }
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
         return nullptr;
@@ -238,6 +248,27 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
   device_ctx_->AddCallBack([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+}
+
+void Actor::AsyncSendEmptyActNotifyToCommNetMsg(
+    std::function<bool(Regst*)> RegstPreProcess) {
+  for (auto& pair : writeable_produced_regst_) {
+    CHECK(!pair.second.empty());
+    Regst* regst = pair.second.front();
+    if (RegstPreProcess(regst) == false) { continue; }
+    for (int64_t consumer : regst->consumers_actor_id()) {
+      if (IDMgr::Singleton()->ThrdId4ActorId(consumer)
+          != IDMgr::Singleton()->CommNetThrdId()) {
+        continue;
+      }
+      int64_t act_id = act_id_;
+      device_ctx_->AddCallBack([consumer, act_id]() {
+        ActorMsg msg =
+            ActorMsg::BuildEmptyActNotifyToCommNetMsg(consumer, act_id);
+        ActorMsgBus::Singleton()->SendMsg(std::move(msg));
+      });
+    }
+  }
 }
 
 void Actor::AsyncDo(std::function<void()> func) {

@@ -16,7 +16,12 @@ enum class ActorCmd {
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
+enum class ActorMsgType {
+  kRegstMsg = 0,
+  kEordMsg,
+  kCmdMsg,
+  kEmptyActNotifyToCommNet
+};
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -33,6 +38,8 @@ class ActorMsg final {
                                           Regst*);
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
+  static ActorMsg BuildEmptyActNotifyToCommNetMsg(int64_t dst_actor_id,
+                                                  int64_t act_id);
 
   // Getters
   int64_t SrcMachineId() const;
@@ -41,10 +48,14 @@ class ActorMsg final {
   ActorMsgType msg_type() const { return msg_type_; }
   ActorCmd actor_cmd() const;
   Regst* regst() const;
+  int64_t model_version_id() const;
   int64_t piece_id() const;
+  int32_t col_id() const;
+  int32_t max_col_id() const;
   int64_t act_id() const;
   const void* comm_net_token() const;
   int64_t eord_regst_desc_id() const;
+  int64_t act_id_to_comm_net() const;
 
   // Serialize
   template<typename StreamT>
@@ -70,6 +81,7 @@ class ActorMsg final {
     ActorCmd actor_cmd_;
     RegstWrapper regst_wrapper_;
     int64_t eord_regst_desc_id_;
+    int64_t act_id_to_comm_net_;
   };
 };
 

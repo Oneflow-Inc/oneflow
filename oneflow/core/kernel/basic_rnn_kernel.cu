@@ -57,6 +57,13 @@ struct BasicRnnKernelUtil<DeviceType::kGPU, T> {
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(n, out, out_diff, rec_out_diff, plus_out_diff);
   }
+  static void ComputeReluDiff(DeviceCtx* ctx, int64_t n, const T* out,
+                              const T* out_diff, const T* rec_out_diff,
+                              T* plus_out_diff) {
+    ComputeReluDiffGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->cuda_stream()>>>(n, out, out_diff, rec_out_diff, plus_out_diff);
+  }
 };
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto) \

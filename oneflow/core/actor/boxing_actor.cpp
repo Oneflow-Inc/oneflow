@@ -65,6 +65,8 @@ void BoxingActor::Act() {
           return regst;
         }
       });
+  AsyncSendEmptyActNotifyToCommNetMsg(
+      [](Regst* regst) { return regst->col_id() > regst->max_col_id(); });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();

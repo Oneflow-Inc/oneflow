@@ -49,10 +49,23 @@ template<DeviceType device_type, typename T>
 void RecurrentKernel<device_type, T>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+<<<<<<< HEAD
   BnInOp2Blob("in_diff")->CopyColNumFrom(ctx.device_ctx,
                                          BnInOp2Blob("out_diff"));
   BnInOp2Blob("rec_in_diff")
       ->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
+=======
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  if (in_diff_blob != nullptr) {
+    in_diff_blob->CopyColNumFrom<device_type>(ctx.device_ctx,
+                                              BnInOp2Blob("out_diff"));
+  }
+
+  if (BnInOp2Blob("in") != nullptr) {
+    BnInOp2Blob("rec_in_diff")
+        ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
+  }
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
 }
 
 template<DeviceType device_type, typename T>
@@ -77,7 +90,7 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (NeedExternalH0()) {
+  if (!NeedExternalH0()) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"), "h0",
         BnInOp2Blob("h0")->shape().At(0), 1);

@@ -39,6 +39,12 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
       DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+<<<<<<< HEAD
+=======
+  void InitModelTmpBlobs(
+      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
 
  private:
   FwActivationFunc<device_type, T> activation_fw_func_;

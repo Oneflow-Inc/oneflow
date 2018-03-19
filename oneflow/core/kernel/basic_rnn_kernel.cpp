@@ -22,7 +22,11 @@ void BasicRnnKernel<device_type, T>::VirtualKernelInit(
     activation_bw_func_ = &BasicRnnKernelUtil<device_type, T>::ComputeReluDiff;
     last_colnum_activation_bw_func_ = &KernelUtil<device_type, T>::ReluBackward;
   } else {
+<<<<<<< HEAD
     UNIMPLEMENTED();
+=======
+    UNEXPECTED_RUN();
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
   }
 }
 
@@ -81,6 +85,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   // reuse memory
   const Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
 
   if (in_blob->col_id() == in_blob->max_col_id()) {
     (*last_colnum_activation_bw_func_)(
@@ -106,6 +111,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
                                        plus_op_out_diff_blob, BnInOp2Blob("in"),
                                        BnInOp2Blob("i2h_weight_diff"));
 
+<<<<<<< HEAD
   if (BnInOp2Blob("in_diff") != nullptr) {
     // in_diff = plus_op_out_diff * i2h_weight
     KernelUtil<device_type, T>::BlobGemm(
@@ -116,6 +122,18 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
 
   if (BnInOp2Blob("bias_diff") != nullptr) {
     // bias_diff = bias_multiplier * plus_op_out_diff
+=======
+  // in_diff = plus_op_out_diff * i2h_weight
+  if (in_diff_blob != nullptr) {
+    KernelUtil<device_type, T>::BlobGemm(
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+        static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
+        in_diff_blob);
+  }
+
+  // bias_diff = bias_multiplier * plus_op_out_diff
+  if (this->op_conf().fully_connected_conf().use_bias()) {
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(0), BnInOp2Blob("bias_multiplier"),

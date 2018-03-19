@@ -22,7 +22,12 @@ enum TaskType {
   kCopyCommNet = 13;
   kBoxing = 14;
   kPrint = 15;
+<<<<<<< HEAD
   kRecordLoad = 16;
+=======
+  kGatherForward = 16;
+  kGatherBackward = 17;
+>>>>>>> f1e0f08ae2904701b38785c4db81dc697bbea232
 };
 
 message TaskProto {
