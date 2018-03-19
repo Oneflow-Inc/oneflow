@@ -21,8 +21,9 @@ void NormalizationMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   op_conf.set_name("norm_md_update_" + NewUniqueId());
   op_conf.mutable_normalization_mdupdt_conf();
   node->mut_op() = ConstructOp(op_conf);
-  node->BindBnInOpAndRegst(node->op()->SoleObn(),
-                           GetProducedRegst("other_model"));
+  for (const std::string& obn : node->op()->output_bns()) {
+    node->BindBnInOpAndRegst(obn, GetProducedRegst("other_model"));
+  }
 }
 
 void NormalizationMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
