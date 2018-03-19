@@ -35,7 +35,25 @@ int32_t OFRecordDecoder<encode_type, T>::ReadColNum(
 template<EncodeType encode_type, typename T>
 void OFRecordDecoder<encode_type, T>::ReadDataId(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, Blob* out_blob) {
-  TODO();
+  int64_t max_data_id_size = JobDesc::Singleton()->SizeOfOneDataId();
+  int32_t i = 0;
+  record_blob->ForEachRecord([&](const OFRecord& record) {
+    const Feature& feature = record.feature().at("data_id");
+    CHECK_EQ(feature.bytes_list().value_size(), 1);
+    const std::string& data_id_str = feature.bytes_list().value(0);
+    CHECK_LE(data_id_str.size(), max_data_id_size);
+    Memcpy<DeviceType::kCPU>(ctx, out_blob->mut_data_id(i), data_id_str.c_str(),
+                             data_id_str.size());
+    if (data_id_str.size() != max_data_id_size) {
+      *(out_blob->mut_data_id(i) + data_id_str.size()) = '\0';
+    }
+    i += 1;
+  });
+  int64_t left_row_num = out_blob->shape().At(0) - i;
+  if (left_row_num > 0) {
+    Memset<DeviceType::kCPU>(ctx, out_blob->mut_data_id(i), '\0',
+                             left_row_num * max_data_id_size);
+  }
 }
 
 template<EncodeType encode_type, typename T>
