@@ -30,8 +30,7 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   int32_t zero_count =
       std::max<int32_t>(part_name_suffix_length - num.length(), 0);
   task_proto->set_data_path(JoinPath(
-      data_dir,
-      std::string(part_name_prefix + std::string(zero_count, '0') + num)));
+      data_dir, part_name_prefix + std::string(zero_count, '0') + num));
 }
 
 }  // namespace oneflow
