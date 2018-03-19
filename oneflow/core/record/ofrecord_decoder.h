@@ -33,21 +33,24 @@ class OFRecordDecoder : public OFRecordDecoderIf {
  protected:
   OFRecordDecoder() = default;
   virtual int32_t GetColNumOfFeature(const Feature&,
-                                     int64_t elem_num_of_one_col) = 0;
-  virtual void ReadOneRow(DeviceCtx*, const Feature&, int32_t col_id,
-                          Blob* out_blob) = 0;
+                                     int64_t one_col_elem_num) const = 0;
+  virtual void ReadOneCol(DeviceCtx*, const Feature&, int32_t col_id,
+                          T* out_dptr, int64_t one_col_elem_num) const = 0;
 
  private:
   // return: max_col_num
   int32_t ReadColNum(DeviceCtx*, RecordBlob<OFRecord>*, const std::string& name,
-                     Blob* out_blob);
-  void ReadDataId(DeviceCtx*, RecordBlob<OFRecord>*, Blob* out_blob);
+                     Blob* out_blob) const;
+  void ReadDataId(DeviceCtx*, RecordBlob<OFRecord>*, Blob* out_blob) const;
   void ReadDataContent(DeviceCtx*, RecordBlob<OFRecord>*,
-                       const std::string& name, int32_t col_id, Blob* out_blob);
+                       const std::string& name, int32_t col_id,
+                       Blob* out_blob) const;
 };
 
 template<EncodeType encode_type, typename T>
 class OFRecordDecoderImpl;
+
+#define ENCODE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(EncodeType::kRaw)
 
 OFRecordDecoderIf* GetOFRecordDecoder(EncodeType, DataType);
 
