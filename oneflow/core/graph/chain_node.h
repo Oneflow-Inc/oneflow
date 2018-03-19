@@ -16,7 +16,8 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
     const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
     const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
     HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_in_box,
-    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box);
+    HashMap<const ChainNode*, std::vector<TaskNode*>>* chain2sorted_out_box,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
 
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::string& lbn,
@@ -25,16 +26,17 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
     int64_t out_parallel_num, BoxingOpConf*);
 
-#define CHAIN_TYPE_SEQ            \
-  OF_PP_MAKE_TUPLE_SEQ(Forward)   \
-  OF_PP_MAKE_TUPLE_SEQ(Backward)  \
-  OF_PP_MAKE_TUPLE_SEQ(Source)    \
-  OF_PP_MAKE_TUPLE_SEQ(Loss)      \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc)   \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint) \
-  OF_PP_MAKE_TUPLE_SEQ(MdUpdt)    \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave)    \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc) \
+#define CHAIN_TYPE_SEQ               \
+  OF_PP_MAKE_TUPLE_SEQ(Forward)      \
+  OF_PP_MAKE_TUPLE_SEQ(Backward)     \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad)   \
+  OF_PP_MAKE_TUPLE_SEQ(Decode)       \
+  OF_PP_MAKE_TUPLE_SEQ(Loss)         \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc)      \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint)    \
+  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt) \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave)       \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)    \
   OF_PP_MAKE_TUPLE_SEQ(Print)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
@@ -44,8 +46,8 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
 
   // op_vec_
   std::shared_ptr<const Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
-  std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
+  const std::vector<std::shared_ptr<Operator>>& op_vec() const;
+  std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
 
   // parallel_desc_
@@ -62,7 +64,9 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual const char* TypeName() const = 0;
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
-  void GenSortedCompTaskNodes(CompTaskNodeHandler) const;
+  void GenSortedCompTaskNodes(
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
+      CompTaskNodeHandler) const;
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
@@ -92,7 +96,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   void AddDataOutputLbnsTo(const ChainNode*);
 
  private:
-  std::vector<std::shared_ptr<const Operator>> op_vec_;
+  std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 
   HashSet<std::string> data_output_lbns_;
@@ -125,13 +129,13 @@ class ForwardChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Forward)(Source)(MdUpdt));
+                                   (Forward)(Decode)(NormalMdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
-      (Forward)(Source));
+      (Forward)(Decode));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
-                                   (Forward)(Source));
+                                   (Forward)(Decode));
 
   void set_data_output_lbns() override;
 
@@ -150,7 +154,7 @@ class BackwardChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Forward)(Backward)(Loss)(MdUpdt));
+                                   (Forward)(Backward)(Loss)(NormalMdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
       (Backward)(Loss));
@@ -166,9 +170,20 @@ class BackwardChainNode final : public ChainNode {
   ForwardChainNode* fw_node_;
 };
 
-class SourceChainNode final : public ChainNode {
+class RecordLoadChainNode final : public ChainNode {
  public:
-  CHAIN_NODE_BOILERPLATE(SourceChainNode);
+  CHAIN_NODE_BOILERPLATE(RecordLoadChainNode);
+
+  void set_data_output_lbns() override {}
+};
+
+class DecodeChainNode final : public ChainNode {
+ public:
+  CHAIN_NODE_BOILERPLATE(DecodeChainNode);
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (RecordLoad));
 
   void set_data_output_lbns() override;
 };
@@ -179,13 +194,13 @@ class LossChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Forward)(Source));
+                                   (Forward)(Decode));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
-      (Forward)(Source));
+      (Forward)(Decode));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
-                                   (Forward)(Source));
+                                   (Forward)(Decode));
 
   void set_data_output_lbns() override;
 };
@@ -200,13 +215,13 @@ class PrintChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Source)(Forward)(Loss));
+                                   (Decode)(Forward)(Loss));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
-      (Source)(Forward)(Loss));
+      (Decode)(Forward)(Loss));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (std::vector<std::string> FindLbns),
-                                   (Source)(Forward)(Loss));
+                                   (Decode)(Forward)(Loss));
 };
 
 class LossAccChainNode final : public ChainNode {
@@ -233,11 +248,11 @@ class LossPrintChainNode final : public ChainNode {
                                    (LossAcc));
 };
 
-class MdUpdtChainNode final : public ChainNode {
+class NormalMdUpdtChainNode final : public ChainNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdUpdtChainNode);
-  MdUpdtChainNode() : random_seed_(NewRandomSeed()) {}
-  ~MdUpdtChainNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtChainNode);
+  NormalMdUpdtChainNode() : random_seed_(NewRandomSeed()) {}
+  ~NormalMdUpdtChainNode() = default;
 
   OVERRIDE_PURE_VIRTUAL_METHOD();
 
@@ -263,7 +278,7 @@ class MdSaveChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (MdUpdt));
+                                   (NormalMdUpdt));
 };
 
 class MdDiffAccChainNode final : public ChainNode {

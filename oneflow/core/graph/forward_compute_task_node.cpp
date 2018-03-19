@@ -22,7 +22,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void ForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kMdUpdt) {
+    if (src_node->GetTaskType() == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
@@ -59,8 +59,10 @@ void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
 void ForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
-    activation_regst->AddLbn(edge->lbn());
-    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+    if (activation_regst->GetBlobDesc(edge->lbn()) == nullptr) {
+      activation_regst->AddLbn(edge->lbn());
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+    }
     edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
   });
 }

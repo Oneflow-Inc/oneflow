@@ -13,7 +13,6 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
-  virtual void FixThrdId() {}
   virtual void ToProto(TaskProto*) override;
 
   // parallel_ctx_

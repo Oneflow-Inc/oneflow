@@ -21,6 +21,18 @@ using Logical2ChainItMap = HashMap<const LogicalNode*, ChainIt>;
 
 void SetChainNodeWithChainIt(ChainNode* chain_node, ChainIt chain_it) {}
 
+void ModifyOpLbn4BnInChainNode(
+    const HashMap<std::string, std::string>& olbn2ilbn, ChainNode* chain_node) {
+  for (std::shared_ptr<Operator> op : chain_node->op_vec()) {
+    for (const std::string& ibn : op->input_bns()) {
+      const std::string& lbn = op->Lbn4BnInOp(ibn);
+      auto olbn2ilbn_it = olbn2ilbn.find(lbn);
+      if (olbn2ilbn_it == olbn2ilbn.end()) { continue; }
+      op->ModifyLbn4BnInOp(ibn, olbn2ilbn_it->second);
+    }
+  }
+}
+
 void InitChains(std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
@@ -195,7 +207,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     const LogicalNode* cur_logi_node = pair.first;
     if (cur_logi_node->parallel_desc()->policy() != kDataParallel) { continue; }
     if (cur_logi_node->op()->IsLossOp()) { continue; }
-    if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
+    if (cur_logi_node->op()->IsDecodeOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
@@ -209,12 +221,14 @@ void DataMergeChains(std::list<Chain>* chain_list,
 ChainGraph::ChainGraph(bool is_train) {
   HashMap<ChainNode*, const LogicalNode*> chain2first_shared;
   BuildFwStruct(is_train, &chain2first_shared);
+  BuildRecordLoadStruct();
   if (is_train) {
     BuildBwStruct();
     BuildLossPrintStruct();
   }
   BuildModelStruct(is_train, chain2first_shared);
   BuildRecurrentStruct();
+  RemoveNeedlessCloneOp();
   ForEachNode([](ChainNode* node) { node->set_data_output_lbns(); });
   ToDotWithAutoFilePath();
 }
@@ -241,13 +255,15 @@ void ChainGraph::BuildFwStruct(
       std::shared_ptr<const Operator> op = chain_it->nodes[0]->op();
       if (op->IsLossOp() && is_train) {
         chain_node = NewNode<LossChainNode>();
-      } else if (op->IsDataLoaderOp()) {
-        chain_node = NewNode<SourceChainNode>();
+      } else if (op->IsDecodeOp()) {
+        chain_node = NewNode<DecodeChainNode>();
       } else if (op->IsPrintOp()) {
         chain_node = NewNode<PrintChainNode>();
       } else {
         // do nothing
       }
+    } else if (chain_it->nodes[0]->op()->IsDecodeOp()) {
+      chain_node = NewNode<DecodeChainNode>();
     }
     if (chain_node == nullptr) { chain_node = NewNode<ForwardChainNode>(); }
     chain_it2chain_node[chain_it] = chain_node;
@@ -283,6 +299,53 @@ void ChainGraph::BuildFwStruct(
     ChainNode* cur_node = pair.first;
     for (ChainNode* pred_node : pair.second) {
       Connect(pred_node, NewEdge(), cur_node);
+    }
+  }
+}
+
+void ChainGraph::BuildRecordLoadStruct() {
+  HashMap<std::string, std::vector<DecodeChainNode*>> data_info2decode_nodes;
+  HashMap<std::string, int32_t> data_info2suffix_length;
+  ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
+    std::shared_ptr<const Operator> op_conf = decode_node->SoleOp();
+    std::string data_dir = op_conf->GetStringFromCustomizedConf("data_dir");
+    std::string part_name_prefix =
+        op_conf->GetStringFromCustomizedConf("part_name_prefix");
+    std::string data_info = data_dir + "_" + part_name_prefix;
+    data_info2decode_nodes[data_info].emplace_back(decode_node);
+    int32_t part_name_suffix_length =
+        op_conf->GetInt32FromCustomizedConf("part_name_suffix_length");
+    if (data_info2suffix_length.find(data_info)
+        != data_info2suffix_length.end()) {
+      CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
+    } else {
+      data_info2suffix_length[data_info] = part_name_suffix_length;
+    }
+  });
+  for (auto& pair : data_info2decode_nodes) {
+    std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
+    for (DecodeChainNode* decode_node : pair.second) {
+      auto iter = std::find_if(
+          parallel_descs.begin(), parallel_descs.end(),
+          [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
+            return parallel_desc->Equal(decode_node->parallel_desc().get());
+          });
+      if (iter == parallel_descs.end()) {
+        parallel_descs.emplace_back(decode_node->parallel_desc());
+      }
+    }
+    LOG_IF(WARNING, parallel_descs.size() > 1)
+        << "Operators sharing same data information belong to different "
+           "placement groups";
+    for (auto parallel_desc : parallel_descs) {
+      ChainNode* record_load_node = NewNode<RecordLoadChainNode>();
+      record_load_node->mut_parallel_desc() = parallel_desc;
+      for (DecodeChainNode* decode_node : pair.second) {
+        if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) {
+          continue;
+        }
+        Connect<ChainNode>(record_load_node, NewEdge(), decode_node);
+      }
     }
   }
 }
@@ -339,6 +402,14 @@ void ChainGraph::BuildBwStruct() {
 void ChainGraph::BuildLossPrintStruct() {
   ForEachChainNode<LossChainNode>([&](LossChainNode* loss_chain) {
     std::shared_ptr<const Operator> loss_op = loss_chain->SoleOp();
+    // Reduce Sum op
+    OperatorConf sum_op_conf;
+    sum_op_conf.set_name("sum_op_" + NewUniqueId());
+    sum_op_conf.mutable_reduce_sum_conf()->set_in(loss_op->Lbn4BnInOp("loss"));
+    sum_op_conf.mutable_reduce_sum_conf()->set_out("out");
+    sum_op_conf.mutable_reduce_sum_conf()->set_axis(0);
+    std::shared_ptr<Operator> sum_op = ConstructOp(sum_op_conf);
+    loss_chain->mut_op_vec().push_back(sum_op);
     // Loss Accumulate Chain
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + NewUniqueId());
@@ -353,7 +424,7 @@ void ChainGraph::BuildLossPrintStruct() {
     loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
     loss_print_op_conf.mutable_loss_print_conf();
     loss_print_op_conf.mutable_loss_print_conf()->set_loss_lbn(
-        loss_op->Lbn4BnInOp("loss"));
+        sum_op->Lbn4BnInOp("out"));
     if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
       loss_print_op_conf.mutable_loss_print_conf()->set_reduction_lbn(
           loss_op->Lbn4BnInOp("reduction_coefficient"));
@@ -367,7 +438,7 @@ void ChainGraph::BuildLossPrintStruct() {
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(
-        IDMgr::Singleton()->MachineName4MachineId(0) + ":persistence:1");
+        IDMgr::Singleton()->MachineName4MachineId(0) + ":cpu:1");
     auto loss_print_chain = NewNode<LossPrintChainNode>();
     loss_print_chain->mut_op_vec() = {loss_print_op};
     loss_print_chain->mut_parallel_desc().reset(
@@ -376,9 +447,9 @@ void ChainGraph::BuildLossPrintStruct() {
   });
 }
 
-MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
+NormalMdUpdtChainNode* ChainGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardChainNode* fw_chain) {
-  MdUpdtChainNode* md_updt_chain = NewNode<MdUpdtChainNode>();
+  NormalMdUpdtChainNode* md_updt_chain = NewNode<NormalMdUpdtChainNode>();
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
   if (is_train) {
     OperatorConf model_save_op_conf;
@@ -405,19 +476,19 @@ MdUpdtChainNode* ChainGraph::BuildMdUpdtAndMdSaveStruct(
 void ChainGraph::BuildModelStruct(
     bool is_train,
     const HashMap<ChainNode*, const LogicalNode*>& chain2first_shared) {
-  HashMap<const LogicalNode*, MdUpdtChainNode*> first_shared2mdupdt;
+  HashMap<const LogicalNode*, NormalMdUpdtChainNode*> first_shared2mdupdt;
   ForEachChainNode<ForwardChainNode>([&](ForwardChainNode* fw_chain) {
     if (fw_chain->HasOpWithModelOrModelTmpBlob() == false) { return; }
     // MdUpdt MdSave
-    MdUpdtChainNode* md_updt_chain = nullptr;
+    NormalMdUpdtChainNode* md_updt_chain = nullptr;
     auto chain2first_shared_it = chain2first_shared.find(fw_chain);
     if (chain2first_shared_it == chain2first_shared.end()) {
-      md_updt_chain = BuildMdUpdtAndMdSaveStruct(is_train, fw_chain);
+      md_updt_chain = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_chain);
     } else {
       auto first_shared2mdupdt_it =
           first_shared2mdupdt.find(chain2first_shared_it->second);
       if (first_shared2mdupdt_it == first_shared2mdupdt.end()) {
-        md_updt_chain = BuildMdUpdtAndMdSaveStruct(is_train, fw_chain);
+        md_updt_chain = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_chain);
         CHECK(first_shared2mdupdt
                   .emplace(chain2first_shared_it->second, md_updt_chain)
                   .second);
@@ -449,6 +520,29 @@ void ChainGraph::BuildRecurrentStruct() {
     if (chain_node->HasSoleRecurrentOp()) {
       Connect(chain_node, NewEdge(), chain_node);
     }
+  });
+}
+
+void ChainGraph::RemoveNeedlessCloneOp() {
+  TopoForEachNode([&](ChainNode* chain_node) {
+    HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
+    auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
+    if (fw_chain_node == nullptr) { return; }
+    for (std::shared_ptr<const Operator> op : fw_chain_node->op_vec()) {
+      if (!op->IsCloneOp()) { continue; }
+      const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
+      for (const std::string& obn : op->output_bns()) {
+        CHECK(olbn2ilbn_in_clone_op.emplace(op->Lbn4BnInOp(obn), ilbn).second);
+      }
+    }
+    ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, chain_node);
+    fw_chain_node->ForEachNodeOnOutEdge([&](ChainNode* succ_chain_node) {
+      ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
+    });
+    auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
+    Erase<std::vector<std::shared_ptr<Operator>>>(
+        op_vec_in_fw,
+        [&](const std::shared_ptr<Operator>& op) { return op->IsCloneOp(); });
   });
 }
 

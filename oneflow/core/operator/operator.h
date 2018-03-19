@@ -16,15 +16,6 @@ namespace oneflow {
 // bn  : blob name
 // lbn : logical blob name
 
-class OpContext {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(OpContext);
-  virtual ~OpContext() = default;
-
- protected:
-  OpContext() = default;
-};
-
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
@@ -40,8 +31,9 @@ class Operator {
   virtual bool NeedOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
-  virtual bool IsDataLoaderOp() const { return false; }
+  virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
+  virtual bool IsCloneOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
     return !model_bns_.empty() || !model_tmp_bns_.empty();
@@ -55,7 +47,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }
-  bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
+  bool UseCudnnOnGpu() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
   virtual PbMessage* MutableCustomizedKernelConf(
@@ -157,10 +149,6 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type,
-      std::function<void(OpContext*)> EnrollOpContext) const;
-  virtual void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx, DeviceType device_type) const;
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
@@ -172,14 +160,10 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, DeviceType, const ParallelContext*, const OpContext*,
-      KernelConf*) const;
+      bool is_forward, DeviceType, const ParallelContext*, KernelConf*) const;
 
  protected:
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
-  virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, const OpContext*, KernelConf*) const;
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const {}

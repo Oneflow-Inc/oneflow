@@ -47,20 +47,14 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type,
                kernel_size, out, pad_small_side, pad_large_side);
 
   CudaCheck(cudnnSetConvolutionNdDescriptor(
-      val_, in_blob_shape.NumAxes(), pad_large_side.data(), strides,
-      dilation_rate, CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+      val_, kernel_dim, pad_large_side.data(), strides, dilation_rate,
+      CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
 }
 #endif  // WITH_CUDA
 
-struct ConvOpCtx : public OpContext {
-  int32_t cudnn_fwd_algo;
-  int32_t cudnn_bwd_filter_algo;
-  int32_t cudnn_bwd_data_algo;
-};
-
 template<int32_t NDims>
 void ConvOp<NDims>::InitFromOpConf() {
-  CHECK(UseCudnn());
+  CHECK(UseCudnnOnGpu());
 
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
@@ -69,14 +63,13 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollOutputBn("out");
   EnrollModelBn("weight");
   if (GetBoolFromCustomizedConf("use_bias")) { EnrollModelBn("bias"); }
-  if (UseCudnn()) { EnrollDataTmpBn("cudnn_workspace"); }
+  if (UseCudnnOnGpu()) { EnrollDataTmpBn("cudnn_workspace"); }
 }
 
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
-    std::function<void(OpContext*)> EnrollOpContext) const {
+    const ParallelContext* parallel_ctx) const {
   const std::string& data_format = GetStringFromCustomizedConf("data_format");
 
   // in
@@ -122,12 +115,19 @@ void ConvOp<NDims>::InferBlobDescs(
   if (GetBoolFromCustomizedConf("use_bias")) {
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
   }
+
 #ifdef WITH_CUDA
   // cudnn_workspace
-  if (UseCudnn()) {
+  if (UseCudnnOnGpu()) {
+    CudnnConvAlgoCtx conv_ctx;
+    InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
+
+    int64_t cudnn_workspace_size = static_cast<int64_t>(std::max(
+        {conv_ctx.fwd_algo_perf.memory, conv_ctx.bwd_filter_algo_perf.memory,
+         conv_ctx.bwd_data_algo_perf.memory}));
+
     GetBlobDesc4BnInOp("cudnn_workspace")->mut_shape() =
-        Shape({static_cast<int64_t>(
-            InferCudnnWorkspaceSize(GetBlobDesc4BnInOp, EnrollOpContext))});
+        Shape({cudnn_workspace_size});
   }
 #endif  // WITH_CUDA
 }
@@ -135,8 +135,7 @@ void ConvOp<NDims>::InferBlobDescs(
 template<int32_t NDims>
 void ConvOp<NDims>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const OpContext* op_ctx,
-    KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   auto mut_conv_conf = kernel_conf->mutable_conv_conf();
   GetBlobDesc4BnInOp("in")->shape().ToProto(mut_conv_conf->mutable_in());
   GetBlobDesc4BnInOp("out")->shape().ToProto(mut_conv_conf->mutable_out());
@@ -162,14 +161,19 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   }
 
 #ifdef WITH_CUDA
-  if (UseCudnn()) {
-    auto conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-    SetInt32InCustomizedKernelConf(kernel_conf, "cudnn_fwd_algo",
-                                   conv_op_ctx->cudnn_fwd_algo);
-    SetInt32InCustomizedKernelConf(kernel_conf, "cudnn_bwd_filter_algo",
-                                   conv_op_ctx->cudnn_bwd_filter_algo);
-    SetInt32InCustomizedKernelConf(kernel_conf, "cudnn_bwd_data_algo",
-                                   conv_op_ctx->cudnn_bwd_data_algo);
+  if (UseCudnnOnGpu()) {
+    CudnnConvAlgoCtx conv_ctx;
+    InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
+
+    SetInt32InCustomizedKernelConf(
+        kernel_conf, "cudnn_fwd_algo",
+        static_cast<int32_t>(conv_ctx.fwd_algo_perf.algo));
+    SetInt32InCustomizedKernelConf(
+        kernel_conf, "cudnn_bwd_filter_algo",
+        static_cast<int32_t>(conv_ctx.bwd_filter_algo_perf.algo));
+    SetInt32InCustomizedKernelConf(
+        kernel_conf, "cudnn_bwd_data_algo",
+        static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
 #endif  // WITH_CUDA
 }
@@ -198,13 +202,9 @@ int32_t ConvOp<NDims>::MaxModelSplitNum() const {
 
 #ifdef WITH_CUDA
 template<int32_t NDims>
-size_t ConvOp<NDims>::InferCudnnWorkspaceSize(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    std::function<void(OpContext*)> EnrollOpContext) const {
-  size_t fwd_workspace_size = 0;
-  size_t bwd_filter_workspace_size = 0;
-  size_t bwd_data_workspace_size = 0;
-
+void ConvOp<NDims>::InferCudnnAlgo(
+    std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    CudnnConvAlgoCtx* conv_ctx) const {
   CudaStreamHandle cuda_handle;
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -239,43 +239,19 @@ size_t ConvOp<NDims>::InferCudnnWorkspaceSize(
       GetStringFromCustomizedConf("data_format"),
       GetStringFromCustomizedConf("padding"));
 
-  cudnnConvolutionFwdAlgo_t cudnn_fwd_algo;
-  cudnnConvolutionBwdFilterAlgo_t cudnn_bwd_filter_algo;
-  cudnnConvolutionBwdDataAlgo_t cudnn_bwd_data_algo;
-  CudaCheck(cudnnGetConvolutionForwardAlgorithm(
+  int returned_algo_count;
+  CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
-      conv_desc.Get(), out_desc.Get(), CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0,
-      &cudnn_fwd_algo));
-  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
+      conv_desc.Get(), out_desc.Get(), 1, &returned_algo_count,
+      &conv_ctx->fwd_algo_perf));
+  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
       *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(),
-      conv_desc.Get(), filter_desc.Get(),
-      CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0, &cudnn_bwd_filter_algo));
-  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
+      conv_desc.Get(), filter_desc.Get(), 1, &returned_algo_count,
+      &conv_ctx->bwd_filter_algo_perf));
+  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(),
-      conv_desc.Get(), in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST,
-      0, &cudnn_bwd_data_algo));
-
-  ConvOpCtx* conv_op_ctx = new ConvOpCtx;
-  EnrollOpContext(conv_op_ctx);
-  conv_op_ctx->cudnn_fwd_algo = static_cast<int32_t>(cudnn_fwd_algo);
-  conv_op_ctx->cudnn_bwd_filter_algo =
-      static_cast<int32_t>(cudnn_bwd_filter_algo);
-  conv_op_ctx->cudnn_bwd_data_algo = static_cast<int32_t>(cudnn_bwd_data_algo);
-
-  CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
-      *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
-      conv_desc.Get(), out_desc.Get(), cudnn_fwd_algo, &fwd_workspace_size));
-  CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-      *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(),
-      conv_desc.Get(), filter_desc.Get(), cudnn_bwd_filter_algo,
-      &bwd_filter_workspace_size));
-  CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
-      *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(),
-      conv_desc.Get(), in_desc.Get(), cudnn_bwd_data_algo,
-      &bwd_data_workspace_size));
-
-  return std::max(
-      {fwd_workspace_size, bwd_filter_workspace_size, bwd_data_workspace_size});
+      conv_desc.Get(), in_desc.Get(), 1, &returned_algo_count,
+      &conv_ctx->bwd_data_algo_perf));
 }
 #endif  // WITH_CUDA
 

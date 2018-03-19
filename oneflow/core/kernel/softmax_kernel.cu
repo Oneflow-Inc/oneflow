@@ -47,11 +47,7 @@ __global__ void SoftmaxBackwardDotGpu(const int64_t n, const int64_t w,
 }  // namespace
 
 template<typename T>
-class SoftmaxKernelUtil<DeviceType::kGPU, T> final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernelUtil);
-  SoftmaxKernelUtil() = delete;
-
+struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
   static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w,
                          const T* out, T* tmp) {
     SoftmaxForwardMaxGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock,
@@ -79,7 +75,7 @@ class SoftmaxKernelUtil<DeviceType::kGPU, T> final {
 };
 
 #define INSTANTIATE_SOFTMAX_KERNEL_UTIL(type_cpp, type_proto) \
-  template class SoftmaxKernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct SoftmaxKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_SOFTMAX_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

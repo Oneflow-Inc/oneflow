@@ -20,14 +20,13 @@ class IDMgr final {
   DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
 
-  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
-  int64_t GetGpuDeviceThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuDeviceThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
+  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
+  int64_t GetPersistenceThrdId(int64_t offset) const;
+  int64_t CommNetThrdId() const;
 
   int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
 
-  int64_t AllocatePersistenceThrdId(int64_t machine_id);
-  int64_t AllocateBoxingThrdId(int64_t machine_id);
-  int64_t CommNetThrdId() const;
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
   // Runtime
@@ -37,7 +36,7 @@ class IDMgr final {
 
   // reserved_id: 0-999
   // for cpu:
-  //   0: the only one work stream
+  //   0: the actor thread
   // for gpu:
   //   0: the copy cuda stream
   int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id,
@@ -49,18 +48,14 @@ class IDMgr final {
   IDMgr();
   int64_t GetMachineThrdId(int64_t machine_id, int64_t thrd_id);
 
-  int64_t cpu_device_num_;
   int64_t gpu_device_num_;
-  int64_t xpu_device_num_;
+  int64_t cpu_device_num_;
   int64_t regst_desc_id_count_;
   HashMap<int64_t, int64_t> thread_id2num_of_tasks_;
   HashMap<int64_t, int64_t> thread_id2num_of_streams_;
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;
-
-  std::vector<int64_t> persistence_thrd_offset_;
-  std::vector<int64_t> boxing_thrd_offset_;
 
   //  64 bit id design:
   //   sign | machine | thread | task

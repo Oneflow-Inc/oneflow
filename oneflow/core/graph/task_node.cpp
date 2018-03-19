@@ -8,11 +8,12 @@ std::map<TaskType, std::string> task_type2color = {
     {kRecurrentForward, "2"},
     {kNormalBackward, "3"},
     {kRecurrentBackward, "3"},
-    {kSource, "1"},
+    {kRecordLoad, "1"},
+    {kDecode, "1"},
     {kLoss, "4"},
     {kLossAcc, "5"},
     {kLossPrint, "1"},
-    {kMdUpdt, "6"},
+    {kNormalMdUpdt, "6"},
     {kMdSave, "1"},
     {kMdDiffAcc, "7"},
     {kCopyHd, "8"},
@@ -28,6 +29,8 @@ bool IsForwardTaskType(TaskType tt) {
 bool IsBackwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
 }
+
+bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
 
@@ -45,11 +48,13 @@ DeviceType TaskNode::device_type() const {
 }
 
 void TaskNode::set_machine_id(int64_t val) {
+  CHECK_EQ(machine_id_, -1);
   machine_id_ = val;
   if (thrd_id_ != -1) { UpdateTaskId(); }
 }
 
 void TaskNode::set_thrd_id(int64_t val) {
+  CHECK_EQ(thrd_id_, -1);
   thrd_id_ = val;
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
@@ -166,8 +171,8 @@ TaskNode::consumed_regsts() {
 
 bool TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto regst = GetConsumedRegst(name);
-  if (regst->IsLocked()) { return false; }
   if (regst) {
+    if (regst->IsLocked()) { return false; }
     regst->Lock();
     return true;
   } else {

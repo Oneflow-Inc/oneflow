@@ -32,7 +32,14 @@ class Regst final {
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbn(const std::string& lbn);
-  Blob* packed_blob() { return packed_blob_.get(); }
+  Blob* packed_blob() { return static_cast<Blob*>(packed_blob_.get()); }
+  template<typename RecordType>
+  RecordBlob<RecordType>* GetRecordBlob() {
+    return static_cast<RecordBlob<RecordType>*>(packed_blob_.get());
+  }
+  RecordBlobIf* GetRecordBlobIf() {
+    return static_cast<RecordBlobIf*>(packed_blob_.get());
+  }
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
 
@@ -50,8 +57,8 @@ class Regst final {
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
   std::function<void()> deleter_;
-  HashMap<std::string, std::unique_ptr<Blob>> lbn2blob_;
-  std::unique_ptr<Blob> packed_blob_;
+  HashMap<std::string, std::unique_ptr<BlobIf>> lbn2blob_;
+  std::unique_ptr<BlobIf> packed_blob_;
 };
 
 }  // namespace oneflow

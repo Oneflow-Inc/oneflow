@@ -32,13 +32,16 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   void BuildFwStruct(
       bool is_train,
       HashMap<ChainNode*, const LogicalNode*>* chain2first_shared);
+  void BuildRecordLoadStruct();
   void BuildBwStruct();
   void BuildLossPrintStruct();
-  MdUpdtChainNode* BuildMdUpdtAndMdSaveStruct(bool is_train, ForwardChainNode*);
+  NormalMdUpdtChainNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
+                                                          ForwardChainNode*);
   void BuildModelStruct(
       bool is_train,
       const HashMap<ChainNode*, const LogicalNode*>& chain2first_shared);
   void BuildRecurrentStruct();
+  void RemoveNeedlessCloneOp();
 };
 
 }  // namespace oneflow
