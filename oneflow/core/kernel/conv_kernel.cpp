@@ -94,6 +94,20 @@ const int32_t ConvKernelIf<device_type, T>::KernelDim() const {
 }
 
 template<typename T>
+void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(
+    const ParallelContext* parallel_ctx) {
+  const std::string& data_format =
+      this->template GetStringFromCustomizedOpConf("data_format");
+  if (data_format == "channel_first") {
+    im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
+    col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
+  } else {
+    im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
+    col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
+  }
+}
+
+template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -102,10 +116,9 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   FOR_RANGE(int64_t, i, 0, in_blob->shape().At(0)) {
-    ConvKernelUtil<T>::Im2Col(
+    im2col_func_(
         ctx.device_ctx, img_offset<T>(in_blob, i), in_blob->shape(),
         weight_blob->shape(), out_blob->shape(),
-        this->template GetStringFromCustomizedOpConf("data_format"),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
             .data(),
@@ -149,10 +162,9 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
   Memset<DeviceType::kCPU>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
                            weight_diff_blob->ByteSizeOfDataContentField());
   FOR_RANGE(int64_t, i, 0, out_diff_blob->shape().At(0)) {
-    ConvKernelUtil<T>::Im2Col(
+    im2col_func_(
         ctx, in_blob->dptr<T>() + i * in_blob->shape().Count(1),
         in_blob->shape(), weight_diff_blob->shape(), out_diff_blob->shape(),
-        this->template GetStringFromCustomizedOpConf("data_format"),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
             .data(),
@@ -181,11 +193,11 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
 
     Blob* in_diff_blob = BnInOp2Blob("in_diff");
     if (in_diff_blob == nullptr) { return; }
+
     // col2im(col_buf')
-    ConvKernelUtil<T>::Col2Im(
+    col2im_func_(
         ctx, col_buf_blob->dptr<T>(), in_blob->shape(), weight_blob->shape(),
         out_diff_blob->shape(),
-        this->template GetStringFromCustomizedOpConf("data_format"),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
             .data(),
@@ -222,42 +234,6 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
-
-template<typename T>
-void ConvKernelUtil<T>::Im2Col(DeviceCtx* device_ctx, const T* in_dptr,
-                               const Shape& in_shape, const Shape& weight_shape,
-                               const Shape& out_shape,
-                               const std::string& data_format,
-                               const int32_t* strides,
-                               const int32_t* dilation_rate,
-                               const int32_t* padding_before, T* col_buf) {
-  if (data_format == "channel_first") {
-    NCDHWCol2Im(device_ctx, in_dptr, in_shape, weight_shape, out_shape, strides,
-                dilation_rate, padding_before, col_buf);
-  } else {
-    NDHWCCol2Im(device_ctx, in_dptr, in_shape, weight_shape, out_shape, strides,
-                dilation_rate, padding_before, col_buf);
-  }
-}
-
-template<typename T>
-void ConvKernelUtil<T>::Col2Im(DeviceCtx* device_ctx, const T* col_buf,
-                               const Shape& in_shape, const Shape& weight_shape,
-                               const Shape& out_shape,
-                               const std::string& data_format,
-                               const int32_t* strides,
-                               const int32_t* dilation_rate,
-                               const int32_t* padding_before, T* in_diff_ptr) {
-  if (data_format == "channel_first") {
-    ConvKernelUtil<T>::NCDHWIm2Col(device_ctx, col_buf, in_shape, weight_shape,
-                                   out_shape, strides, dilation_rate,
-                                   padding_before, in_diff_ptr);
-  } else {
-    ConvKernelUtil<T>::NDHWCIm2Col(device_ctx, col_buf, in_shape, weight_shape,
-                                   out_shape, strides, dilation_rate,
-                                   padding_before, in_diff_ptr);
-  }
-}
 
 template<typename T>
 void ConvKernelUtil<T>::NCDHWIm2Col(

@@ -39,6 +39,16 @@ class ConvKernelIf : public KernelIf<device_type> {
   const int32_t KernelDim() const;
 };
 
+template<typename T>
+using Im2ColFunc = void (*)(DeviceCtx*, const T*, const Shape&, const Shape&,
+                            const Shape&, const int32_t*, const int32_t*,
+                            const int32_t*, T*);
+
+template<typename T>
+using Col2ImFunc = void (*)(DeviceCtx*, const T*, const Shape&, const Shape&,
+                            const Shape&, const int32_t*, const int32_t*,
+                            const int32_t*, T*);
+
 template<DeviceType device_type, typename T>
 class ConvKernel;
 
@@ -51,6 +61,7 @@ class ConvKernel<DeviceType::kCPU, T> final
   ~ConvKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -58,6 +69,8 @@ class ConvKernel<DeviceType::kCPU, T> final
                       std::function<Blob*(const std::string&)>) const override;
   void BiasBackward(DeviceCtx*,
                     std::function<Blob*(const std::string&)>) const override;
+  Im2ColFunc<T> im2col_func_;
+  Col2ImFunc<T> col2im_func_;
 };
 
 template<typename T>
@@ -88,18 +101,6 @@ class ConvKernel<DeviceType::kGPU, T> final
 template<typename T>
 class ConvKernelUtil final {
  public:
-  static void Im2Col(DeviceCtx* device_ctx, const T* in_dptr,
-                     const Shape& in_shape, const Shape& weight_shape,
-                     const Shape& out_shape, const std::string& data_format,
-                     const int32_t* strides, const int32_t* dilation_rate,
-                     const int32_t* padding_before, T* col_buf);
-
-  static void Col2Im(DeviceCtx* device_ctx, const T* col_buf,
-                     const Shape& in_shape, const Shape& weight_shape,
-                     const Shape& out_shape, const std::string& data_format,
-                     const int32_t* strides, const int32_t* dilation_rate,
-                     const int32_t* padding_before, T* in_diff_ptr);
-
   static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr,
                           const Shape& in_shape, const Shape& weight_shape,
                           const Shape& out_shape, const int32_t* strides,
