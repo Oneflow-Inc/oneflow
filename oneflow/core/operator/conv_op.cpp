@@ -54,7 +54,7 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type,
 
 template<int32_t NDims>
 void ConvOp<NDims>::InitFromOpConf() {
-  CHECK(UseCudnn());
+  CHECK(UseCudnnOnGpu());
 
   StrFieldTolower("data_format");
   StrFieldTolower("padding");
@@ -63,7 +63,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollOutputBn("out");
   EnrollModelBn("weight");
   if (GetBoolFromCustomizedConf("use_bias")) { EnrollModelBn("bias"); }
-  if (UseCudnn()) { EnrollDataTmpBn("cudnn_workspace"); }
+  if (UseCudnnOnGpu()) { EnrollDataTmpBn("cudnn_workspace"); }
 }
 
 template<int32_t NDims>
@@ -118,7 +118,7 @@ void ConvOp<NDims>::InferBlobDescs(
 
 #ifdef WITH_CUDA
   // cudnn_workspace
-  if (UseCudnn()) {
+  if (UseCudnnOnGpu()) {
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
 
@@ -161,7 +161,7 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   }
 
 #ifdef WITH_CUDA
-  if (UseCudnn()) {
+  if (UseCudnnOnGpu()) {
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
 
