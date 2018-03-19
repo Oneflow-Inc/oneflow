@@ -131,13 +131,6 @@ struct KernelUtil final {
     }
     Initialize(ctx, *initializer_conf, random_seed, blob);
   }
-  static void InitializeWithProperConf(DeviceCtx* ctx,
-                                       const PbMessage& initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
-    InitializeWithProperConf(
-        ctx, static_cast<const InitializerConf*>(&initializer_conf),
-        random_seed, blob);
-  }
 
   // initialize blob with model dir
   static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
