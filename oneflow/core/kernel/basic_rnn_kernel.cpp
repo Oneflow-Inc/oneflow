@@ -117,7 +117,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
   }
 
   // bias_diff = bias_multiplier * plus_op_out_diff
-  if (this->op_conf().fully_connected_conf().use_bias()) {
+  if (this->op_conf().basic_rnn_conf().use_bias()) {
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
@@ -178,11 +178,27 @@ template<DeviceType device_type, typename T>
 void BasicRnnKernel<device_type, T>::InitModelTmpBlobs(
     const KernelCtx& ctx, const ParallelContext* parallel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf bias_multiplier_fill_conf;
-  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
-  KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                         bias_multiplier_fill_conf, 0,
-                                         BnInOp2Blob("bias_multiplier"));
+  Blob* h0_blob = BnInOp2Blob("h0");
+  if (!(this->NeedExternalH0()) && h0_blob != nullptr) {
+    const InitializerConf* init_hidden_initializer = nullptr;
+    if (HasInitHiddenInitializer()) {
+      init_hidden_initializer =
+          static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
+              GetRecurrentOpConf(), "init_hidden_initializer"));
+    }
+
+    int64_t random_seed = *static_cast<int64_t*>(ctx.other);
+    std::mt19937 random_seed_gen(random_seed);
+    KernelUtil<device_type, T>::InitializeWithProperConf(
+        ctx.device_ctx, init_hidden_initializer, random_seed_gen(), h0_blob);
+  }
+  if (this->op_conf().basic_rnn_conf().use_bias()) {
+    InitializerConf bias_multiplier_fill_conf;
+    bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+    KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
+                                           bias_multiplier_fill_conf, 0,
+                                           BnInOp2Blob("bias_multiplier"));
+  }
 }
 
 template<typename T>
