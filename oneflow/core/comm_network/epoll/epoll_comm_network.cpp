@@ -132,19 +132,19 @@ void EpollCommNet::InitSockets() {
   CHECK_LT(this_listen_port, listen_port_max);
   int32_t src_machine_count = 0;
   // connect
-  for (int64_t peer_machine_id : CommNet::Singleton()->peer_machine_id()) {
-    if (peer_machine_id < this_machine_id) {
+  for (int64_t peer_id : peer_machine_id()) {
+    if (peer_id < this_machine_id) {
       ++src_machine_count;
       continue;
     }
-    uint16_t peer_port = PullPort(peer_machine_id);
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
+    uint16_t peer_port = PullPort(peer_id);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
                    sizeof(peer_sockaddr))
            == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
-    machine_id2sockfd_[peer_machine_id] = sockfd;
+    machine_id2sockfd_[peer_id] = sockfd;
   }
   // accept
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
