@@ -65,8 +65,7 @@ void BasicGruOp::VirtualInferBlobDescs(
 #define OF_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight) \
   *GetBlobDesc4BnInOp(#i2h_weight) =                  \
       BlobDesc(Shape({hidden_size, embedding_size})); \
-  *GetBlobDesc4BnInOp(#h2h_weight) =                  \
-  BlobDesc(Shape({hidden_size, hidden_size}))
+  *GetBlobDesc4BnInOp(#h2h_weight) = BlobDesc(Shape({hidden_size, hidden_size}))
   OF_INFER_WEIGHT_DESCS(i2h_weight_r, h2h_weight_r);
   OF_INFER_WEIGHT_DESCS(i2h_weight_z, h2h_weight_z);
   OF_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight);

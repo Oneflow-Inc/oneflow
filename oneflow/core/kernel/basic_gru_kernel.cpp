@@ -56,20 +56,18 @@ template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // const Blob* in_blob = BnInOp2Blob("in");
-  Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
-  Blob* hidden_diff_blob = this->GetHiddenBlob(BnInOp2Blob);
-  // const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
   const Blob* update_gate_data_blob = BnInOp2Blob("update_gate_data");
   const Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
-  Blob* update_gate_out_diff_blob = BnInOp2Blob("update_gate_out_diff");
-  Blob* update_gate_data_diff_blob = BnInOp2Blob("update_gate_data_diff");
   const Blob* reset_gate_data_blob = BnInOp2Blob("reset_gate_data");
   const Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
-  Blob* reset_gate_out_diff_blob = BnInOp2Blob("reset_gate_out_diff");
-  Blob* reset_gate_data_diff_blob = BnInOp2Blob("reset_gate_data_diff");
   const Blob* candidate_hidden_data_blob = BnInOp2Blob("candidate_hidden_data");
   const Blob* candidate_hidden_out_blob = BnInOp2Blob("candidate_hidden_out");
+  Blob* update_gate_out_diff_blob = BnInOp2Blob("update_gate_out_diff");
+  Blob* update_gate_data_diff_blob = BnInOp2Blob("update_gate_data_diff");
+  Blob* reset_gate_out_diff_blob = BnInOp2Blob("reset_gate_out_diff");
+  Blob* reset_gate_data_diff_blob = BnInOp2Blob("reset_gate_data_diff");
+  Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
+  Blob* hidden_diff_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* candidate_hidden_data_diff_blob =
       BnInOp2Blob("candidate_hidden_data_diff");
 
@@ -344,6 +342,9 @@ void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
       static_cast<T>(1), bias_multiplier, bias, candidate_data);
 
   // candidate_hidden_out = tanh(candidate_hidden_data)
+  KernelUtil<device_type, T>::TanH(
+      ctx.device_ctx, candidate_data->shape().elem_cnt(),
+      candidate_data->dptr<T>(), candidate_out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
