@@ -34,7 +34,6 @@ void DecodeCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
-  CHECK_GT(decode_status_.max_col_id_, 0);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(decode_status_.in_regst_->piece_id());
     regst->set_col_id(decode_status_.cur_col_id_);

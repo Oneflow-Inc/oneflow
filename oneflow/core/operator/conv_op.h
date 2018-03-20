@@ -44,12 +44,11 @@ class ConvOp : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+      const ParallelContext*, DeviceType) const override;
 
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
+      const ParallelContext*, KernelConf*) const override;
 
  protected:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;

@@ -12,7 +12,7 @@ class AveragePoolingOp : virtual public PoolingOp {
   virtual ~AveragePoolingOp() = default;
 
  private:
-  PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const override;
+  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
 };
 
 }  // namespace oneflow
