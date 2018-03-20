@@ -307,14 +307,14 @@ void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, std::vector<DecodeChainNode*>> data_info2decode_nodes;
   HashMap<std::string, int32_t> data_info2suffix_length;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
-    std::shared_ptr<const Operator> op_conf = decode_node->SoleOp();
-    std::string data_dir = op_conf->GetStringFromCustomizedConf("data_dir");
+    std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
+    std::string data_dir = decode_op->GetStringFromCustomizedConf("data_dir");
     std::string part_name_prefix =
-        op_conf->GetStringFromCustomizedConf("part_name_prefix");
+        decode_op->GetStringFromCustomizedConf("part_name_prefix");
     std::string data_info = data_dir + "_" + part_name_prefix;
     data_info2decode_nodes[data_info].emplace_back(decode_node);
     int32_t part_name_suffix_length =
-        op_conf->GetInt32FromCustomizedConf("part_name_suffix_length");
+        decode_op->GetInt32FromCustomizedConf("part_name_suffix_length");
     if (data_info2suffix_length.find(data_info)
         != data_info2suffix_length.end()) {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
