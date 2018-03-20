@@ -42,14 +42,22 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const InitializerConf* weight_initializer =
+      (HasFieldInPbMessage(this->GetCustomizedOpConf(), "weight_initializer"))
+          ? (static_cast<const InitializerConf*>(
+                &(this->GetMessageFromCustomizedOpConf("weight_initializer"))))
+          : (nullptr);
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, this->GetMessageFromCustomizedOpConf("weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"));
+      ctx, weight_initializer, (*random_seed_gen)(), BnInOp2Blob("weight"));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
+    const InitializerConf* bias_initializer =
+        (HasFieldInPbMessage(this->GetCustomizedOpConf(), "bias_initializer"))
+            ? (static_cast<const InitializerConf*>(
+                  &(this->GetMessageFromCustomizedOpConf("bias_initializer"))))
+            : (nullptr);
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, this->GetMessageFromCustomizedOpConf("bias_initializer"),
-        (*random_seed_gen)(), BnInOp2Blob("bias"));
+        ctx, bias_initializer, (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }
 

@@ -139,6 +139,8 @@ inline bool operator!=(const google::protobuf::MessageLite& lhs,
 #define OF_PB_POINTER_GET(obj, field) \
   obj.has_##field() ? &(obj.field()) : nullptr
 
+bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_PROTOBUF_H_
