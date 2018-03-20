@@ -13,6 +13,7 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     is_in_eord_ = true;
+    DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) == -1) {

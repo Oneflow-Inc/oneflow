@@ -7,7 +7,7 @@ template<EncodeType encode_type, typename T>
 int32_t OFRecordDecoder<encode_type, T>::DecodeOneCol(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const std::string& name,
     int32_t col_id, Blob* out_blob) const {
-  int32_t max_col_id = 0;
+  int32_t max_col_id = 1;
   if (out_blob->has_col_num_field()) {
     max_col_id = ReadColNum(ctx, record_blob, name, out_blob) - 1;
   }

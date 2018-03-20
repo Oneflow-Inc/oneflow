@@ -44,6 +44,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
           regst->packed_blob_.reset(new RecordBlob<OFRecord>);
           break;
       }
+      regst->deleter_ = []() {};
     }
     OneRegstDone(regst);
   }
