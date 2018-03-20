@@ -16,7 +16,7 @@ void DecodeOFRecordKernel::Forward(
     Blob* out_blob = BnInOp2Blob(kernel_conf().output_bns(i));
     const BlobConf& blob_conf = decode_conf.blob(i);
     OFRecordDecoderIf* decoder =
-        GetOFRecordDecoder(blob_conf.encode_type(), blob_conf.data_type());
+        GetOFRecordDecoder(blob_conf.encode_case(), blob_conf.data_type());
     int32_t max_col_id =
         decoder->DecodeOneCol(ctx.device_ctx, record_blob, blob_conf.name(),
                               status->cur_col_id_, out_blob);

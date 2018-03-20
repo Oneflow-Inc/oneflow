@@ -21,7 +21,7 @@ void ReadFromDptrToDptr(DeviceCtx* ctx, const T* in_dptr, int32_t col_id,
 }  // namespace
 
 template<typename T>
-int32_t OFRecordDecoderImpl<EncodeType::kRaw, T>::GetColNumOfFeature(
+int32_t OFRecordDecoderImpl<EncodeCase::kRaw, T>::GetColNumOfFeature(
     const Feature& feature, int64_t one_col_elem_num) const {
   int64_t elem_num = 0;
   if (feature.has_bytes_list()) {
@@ -44,7 +44,7 @@ int32_t OFRecordDecoderImpl<EncodeType::kRaw, T>::GetColNumOfFeature(
 }
 
 template<typename T>
-void OFRecordDecoderImpl<EncodeType::kRaw, T>::ReadOneCol(
+void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
     DeviceCtx* ctx, const Feature& feature, int32_t col_id, T* out_dptr,
     int64_t one_col_elem_num) const {
   if (feature.has_bytes_list()) {
@@ -70,7 +70,7 @@ void OFRecordDecoderImpl<EncodeType::kRaw, T>::ReadOneCol(
 }
 
 #define INSTANTIATE_OFRECORD_RAW_DECODER(type_cpp, type_proto) \
-  template class OFRecordDecoderImpl<EncodeType::kRaw, type_cpp>;
+  template class OFRecordDecoderImpl<EncodeCase::kRaw, type_cpp>;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_DECODER, ARITHMETIC_DATA_TYPE_SEQ)
 

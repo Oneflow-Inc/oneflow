@@ -6,8 +6,8 @@
 namespace oneflow {
 
 template<typename T>
-class OFRecordDecoderImpl<EncodeType::kRaw, T> final
-    : public OFRecordDecoder<EncodeType::kRaw, T> {
+class OFRecordDecoderImpl<EncodeCase::kRaw, T> final
+    : public OFRecordDecoder<EncodeCase::kRaw, T> {
  public:
  private:
   int32_t GetColNumOfFeature(const Feature&,
