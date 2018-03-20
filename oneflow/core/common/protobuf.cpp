@@ -54,4 +54,9 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg,
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
+bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
+  PROTOBUF_REFLECTION(msg, field_name);
+  return r->HasField(msg, fd);
+}
+
 }  // namespace oneflow
