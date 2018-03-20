@@ -20,9 +20,7 @@ class CudnnConvDesc final {
   ~CudnnConvDesc();
 
   CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                const int kernel_dim, const int* dilation_rate,
-                const int* strides, const int* kernel_size,
-                const std::string& data_format, const std::string& padding);
+                const PbMessage& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 

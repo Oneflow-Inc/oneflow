@@ -35,14 +35,8 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<T>::val, weight_shape,
                           this->GetStringFromCustomizedOpConf("data_format")));
-  this->conv_desc_.reset(new CudnnConvDesc(
-      GetDataType<T>::val, in_shape, this->KernelDim(),
-      this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
-          .data(),
-      this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
-      this->template GetPbRfFromCustomizedOpConf<int32_t>("kernel_size").data(),
-      this->GetStringFromCustomizedOpConf("data_format"),
-      this->GetStringFromCustomizedOpConf("padding")));
+  this->conv_desc_.reset(new CudnnConvDesc(GetDataType<T>::val, in_shape,
+                                           this->GetCustomizedOpConf()));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     int32_t filters = this->GetInt32FromCustomizedOpConf("filters");
