@@ -46,52 +46,31 @@ void BasicGruOp::VirtualInferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
+#define OF_INFER_BLOB_DESCS(modelname)                                         \
+  *GetBlobDesc4BnInOp(#modelname) = BlobDesc(                                  \
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
+      false, true, in_blob_desc->max_col_num())
+  OF_INFER_BLOB_DESCS(plus_op_out);
+  OF_INFER_BLOB_DESCS(reset_gate_data);
+  OF_INFER_BLOB_DESCS(update_gate_data);
+  OF_INFER_BLOB_DESCS(candidate_hidden_data);
+  OF_INFER_BLOB_DESCS(reset_gate_out);
+  OF_INFER_BLOB_DESCS(update_gate_out);
+  OF_INFER_BLOB_DESCS(candidate_hidden_out);
+  OF_INFER_BLOB_DESCS(reset_mul_hidden);
+  OF_INFER_BLOB_DESCS(update_mul_hidden);
+  OF_INFER_BLOB_DESCS(update_mul_candidate_hidden);
+#undef OF_INFER_BLOB_DESCS
 
-  *GetBlobDesc4BnInOp("plus_op_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("reset_gate_data") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("update_gate_data") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("candidate_hidden_data") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("reset_gate_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("update_gate_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("candidate_hidden_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("reset_mul_hidden") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("update_mul_hidden") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("update_mul_candidate_hidden") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-
-  *GetBlobDesc4BnInOp("i2h_weight_r") =
-      BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("h2h_weight_r") =
-      BlobDesc(Shape({hidden_size, hidden_size}));
-
-  *GetBlobDesc4BnInOp("i2h_weight_z") =
-      BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("h2h_weight_z") =
-      BlobDesc(Shape({hidden_size, hidden_size}));
-
-  *GetBlobDesc4BnInOp("i2h_weight") =
-      BlobDesc(Shape({hidden_size, embedding_size}));
-  *GetBlobDesc4BnInOp("h2h_weight") =
-      BlobDesc(Shape({hidden_size, hidden_size}));
+#define OF_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight) \
+  *GetBlobDesc4BnInOp(#i2h_weight) =                  \
+      BlobDesc(Shape({hidden_size, embedding_size})); \
+  *GetBlobDesc4BnInOp(#h2h_weight) =                  \
+  BlobDesc(Shape({hidden_size, hidden_size}))
+  OF_INFER_WEIGHT_DESCS(i2h_weight_r, h2h_weight_r);
+  OF_INFER_WEIGHT_DESCS(i2h_weight_z, h2h_weight_z);
+  OF_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight);
+#undef OF_INFER_WEIGHT_DESCS
 
   if (GetBoolFromCustomizedConf("use_bias")) {
     *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));

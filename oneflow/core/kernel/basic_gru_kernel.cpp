@@ -56,10 +56,10 @@ template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
+  // const Blob* in_blob = BnInOp2Blob("in");
   Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* hidden_diff_blob = this->GetHiddenBlob(BnInOp2Blob);
-  const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
+  // const Blob* rec_out_diff_blob = BnInOp2Blob("rec_out_diff");
   const Blob* update_gate_data_blob = BnInOp2Blob("update_gate_data");
   const Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
   Blob* update_gate_out_diff_blob = BnInOp2Blob("update_gate_out_diff");
@@ -83,13 +83,14 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
       ->CopyDataContentFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
 
   Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out_diff");
-  if (in_blob->col_id() != in_blob->max_col_id()) {
+  if (BnInOp2Blob("in")->col_id() != BnInOp2Blob("in")->max_col_id()) {
     // plus_op_out_diff += rec_out_diff
     KernelUtil<device_type, T>::Axpy(
         ctx.device_ctx,
         static_cast<T>(plus_op_out_diff_blob->shape().elem_cnt()),
-        static_cast<T>(1), rec_out_diff_blob->dptr<T>(), static_cast<T>(1),
-        plus_op_out_diff_blob->mut_dptr<T>(), static_cast<T>(1));
+        static_cast<T>(1), BnInOp2Blob("rec_out_diff")->dptr<T>(),
+        static_cast<T>(1), plus_op_out_diff_blob->mut_dptr<T>(),
+        static_cast<T>(1));
   }
 
   // candidate_hidden_out_diff = update_gate_our .* plus_op_out_diff
@@ -115,11 +116,11 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
       ctx.device_ctx, hidden_blob->shape().elem_cnt(), hidden_blob->dptr<T>(),
       plus_op_out_diff_blob->dptr<T>(),
       update_gate_out_a_diff_blob->mut_dptr<T>());
-  // update_gate_out_diff += update_gate_out_a
+  // update_gate_out_diff -= update_gate_out_a
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx,
       static_cast<T>(update_gate_out_a_diff_blob->shape().elem_cnt()),
-      static_cast<T>(1), update_gate_out_a_diff_blob->dptr<T>(),
+      static_cast<T>(-1), update_gate_out_a_diff_blob->dptr<T>(),
       static_cast<T>(1), update_gate_out_diff_blob->mut_dptr<T>(),
       static_cast<T>(1));
   // update_gate_data_diff = update_gate_out * (1 - update_gate_put) *
@@ -164,7 +165,7 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
         static_cast<T>(0), BnInOp2Blob("bias_multiplier_z"),
-        reset_gate_data_diff_blob, BnInOp2Blob("bias_diff_z"));
+        update_gate_data_diff_blob, BnInOp2Blob("bias_diff_z"));
   }
   if (BnInOp2Blob("bias_diff") != nullptr) {
     // bias_diff = bias_nultiplier * candidate_hidden_data_diff
@@ -249,48 +250,22 @@ template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
-                        i2h_weight_r_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("i2h_weiht_r"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
-                        h2h_weight_r_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("h2h_weiht_r"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_r_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("bias_r"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
-                        i2h_weight_z_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("i2h_weiht_z"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
-                        h2h_weight_z_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("h2h_weiht_z"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_z_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("bias_z"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
-                        i2h_weight_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("i2h_weiht"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),
-                        h2h_weight_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("h2h_weiht"));
-  KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx,
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_initializer),
-      (*random_seed_gen)(), BnInOp2Blob("bias"));
+#define OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(modelname)    \
+  KernelUtil<device_type, T>::InitializeWithProperConf(   \
+      ctx,                                                \
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), \
+                        modelname##_initializer),         \
+      (*random_seed_gen)(), BnInOp2Blob(#modelname))
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight_r);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight_r);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_r);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight_z);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight_z);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_z);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight);
+  OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias);
+#undef OF_INIT_MODEL_BLOB_WITH_RANDOM_SEED
 }
 
 template<DeviceType device_type, typename T>
@@ -298,38 +273,22 @@ void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* i2h_weight_r_blob = BnInOp2Blob("i2h_weigth_r");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, i2h_weight_r_blob, "i2h_weight_r",
-      i2h_weight_r_blob->shape().At(0), i2h_weight_r_blob->shape().Count(1));
-  Blob* h2h_weight_r_blob = BnInOp2Blob("h2h_weigth_r");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, h2h_weight_r_blob, "h2h_weight_r",
-      h2h_weight_r_blob->shape().At(0), h2h_weight_r_blob->shape().Count(1));
+#define OF_INIT_MODEL_BLOB_WITH_DIR(modelname)                         \
+  KernelUtil<device_type, T>::InitializeWithModelDir(                  \
+      ctx, part_id, part_num, model_load_dir, BnInOp2Blob(#modelname), \
+      #modelname, BnInOp2Blob(#modelname)->shape().At(0),              \
+      BnInOp2Blob(#modelname)->shape().Count(1))
+  OF_INIT_MODEL_BLOB_WITH_DIR(i2h_weight_r);
+  OF_INIT_MODEL_BLOB_WITH_DIR(h2h_weight_r);
+  OF_INIT_MODEL_BLOB_WITH_DIR(i2h_weight_z);
+  OF_INIT_MODEL_BLOB_WITH_DIR(h2h_weight_z);
+#undef OF_INIT_MODEL_BLOB_WITH_DIR
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_r"), "bias_r",
       BnInOp2Blob("bias_r")->shape().At(0), 1);
-
-  Blob* i2h_weight_z_blob = BnInOp2Blob("i2h_weigth_z");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, i2h_weight_z_blob, "i2h_weight_z",
-      i2h_weight_z_blob->shape().At(0), i2h_weight_z_blob->shape().Count(1));
-  Blob* h2h_weight_z_blob = BnInOp2Blob("h2h_weigth_z");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, h2h_weight_z_blob, "h2h_weight_z",
-      h2h_weight_z_blob->shape().At(0), h2h_weight_z_blob->shape().Count(1));
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_z"), "bias_z",
       BnInOp2Blob("bias_z")->shape().At(0), 1);
-
-  Blob* i2h_weight_blob = BnInOp2Blob("i2h_weigth");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, i2h_weight_blob, "i2h_weight",
-      i2h_weight_blob->shape().At(0), i2h_weight_blob->shape().Count(1));
-  Blob* h2h_weight_blob = BnInOp2Blob("h2h_weigth");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, h2h_weight_blob, "h2h_weight",
-      h2h_weight_blob->shape().At(0), h2h_weight_blob->shape().Count(1));
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
       BnInOp2Blob("bias")->shape().At(0), 1);
