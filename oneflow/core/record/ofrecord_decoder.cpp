@@ -3,8 +3,8 @@
 
 namespace oneflow {
 
-template<EncodeType encode_type, typename T>
-int32_t OFRecordDecoder<encode_type, T>::DecodeOneCol(
+template<EncodeCase encode_case, typename T>
+int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const std::string& name,
     int32_t col_id, Blob* out_blob) const {
   int32_t max_col_id = 0;
@@ -16,8 +16,8 @@ int32_t OFRecordDecoder<encode_type, T>::DecodeOneCol(
   return max_col_id;
 }
 
-template<EncodeType encode_type, typename T>
-int32_t OFRecordDecoder<encode_type, T>::ReadColNum(
+template<EncodeCase encode_case, typename T>
+int32_t OFRecordDecoder<encode_case, T>::ReadColNum(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const std::string& name,
     Blob* out_blob) const {
   int32_t i = 0;
@@ -33,8 +33,8 @@ int32_t OFRecordDecoder<encode_type, T>::ReadColNum(
   return max_col_num;
 }
 
-template<EncodeType encode_type, typename T>
-void OFRecordDecoder<encode_type, T>::ReadDataId(
+template<EncodeCase encode_case, typename T>
+void OFRecordDecoder<encode_case, T>::ReadDataId(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, Blob* out_blob) const {
   int64_t max_data_id_size = JobDesc::Singleton()->SizeOfOneDataId();
   int32_t i = 0;
@@ -57,8 +57,8 @@ void OFRecordDecoder<encode_type, T>::ReadDataId(
   }
 }
 
-template<EncodeType encode_type, typename T>
-void OFRecordDecoder<encode_type, T>::ReadDataContent(
+template<EncodeCase encode_case, typename T>
+void OFRecordDecoder<encode_case, T>::ReadDataContent(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const std::string& name,
     int32_t col_id, Blob* out_blob) const {
   int64_t one_col_elem_num = out_blob->shape().Count(1);
@@ -81,7 +81,7 @@ void OFRecordDecoder<encode_type, T>::ReadDataContent(
   }
 }
 
-OFRecordDecoderIf* GetOFRecordDecoder(EncodeType encode_type,
+OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase encode_case,
                                       DataType data_type) {
   static const HashMap<std::string, OFRecordDecoderIf*> obj = {
 
@@ -89,11 +89,11 @@ OFRecordDecoderIf* GetOFRecordDecoder(EncodeType encode_type,
   {GetHashKey(et, OF_PP_PAIR_SECOND(dt)), \
    new OFRecordDecoderImpl<et, OF_PP_PAIR_FIRST(dt)>},
 
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_TYPE_SEQ,
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_CASE_SEQ,
                                        ARITHMETIC_DATA_TYPE_SEQ)
 
   };
-  return obj.at(GetHashKey(encode_type, data_type));
+  return obj.at(GetHashKey(encode_case, data_type));
 }
 
 }  // namespace oneflow
