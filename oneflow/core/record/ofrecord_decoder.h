@@ -5,6 +5,8 @@
 
 namespace oneflow {
 
+using EncodeCase = BlobConf::EncodeCase;
+
 class OFRecordDecoderIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OFRecordDecoderIf);
@@ -20,7 +22,7 @@ class OFRecordDecoderIf {
  private:
 };
 
-template<EncodeType encode_type, typename T>
+template<EncodeCase encode_case, typename T>
 class OFRecordDecoder : public OFRecordDecoderIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OFRecordDecoder);
@@ -47,12 +49,12 @@ class OFRecordDecoder : public OFRecordDecoderIf {
                        Blob* out_blob) const;
 };
 
-template<EncodeType encode_type, typename T>
+template<EncodeCase encode_case, typename T>
 class OFRecordDecoderImpl;
 
-#define ENCODE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(EncodeType::kRaw)
+#define ENCODE_CASE_SEQ OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw)
 
-OFRecordDecoderIf* GetOFRecordDecoder(EncodeType, DataType);
+OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase, DataType);
 
 }  // namespace oneflow
 
