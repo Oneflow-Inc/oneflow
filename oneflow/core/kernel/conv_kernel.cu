@@ -45,7 +45,7 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     int32_t filters = this->GetInt32FromCustomizedOpConf("filters");
     std::vector<int32_t> bias_dim(this->KernelDim() + 2, 1);
-    std::vector<int32_t> stride_of_bias_tensor(6, 1);
+    std::vector<int32_t> stride_of_bias_tensor(this->KernelDim() + 2, 1);
     bias_dim[1] = filters;
     stride_of_bias_tensor[0] = filters;
 
@@ -122,7 +122,7 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnConvolutionBackwardBias(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->out_desc_->Get(),
-      BnInOp2Blob("out_diff")->dptr<T>(), CudnnDataType<T>::one,
+      BnInOp2Blob("out_diff")->dptr<T>(), CudnnDataType<T>::zero,
       this->bias_desc_->Get(), BnInOp2Blob("bias_diff")->mut_dptr<T>()));
 }
 

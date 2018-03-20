@@ -215,11 +215,11 @@ void ConvOp<NDims>::InferCudnnAlgo(
 
   std::vector<int32_t> stride_of_in_tensor(NDims + 2, 1);
   std::vector<int32_t> stride_of_out_tensor(NDims + 2, 1);
-  for (int32_t i = NDims + 2 - 1; i > 0; --i) {
-    for (int32_t j = NDims + 2 - 2; j >= 0; --j) {
-      stride_of_in_tensor[j] *= in_blob_desc->shape().At(i);
-      stride_of_out_tensor[j] *= out_blob_desc->shape().At(i);
-    }
+  for (int32_t i = NDims + 2 - 2; i >= 0; --i) {
+    stride_of_in_tensor[i] =
+        stride_of_in_tensor[i + 1] * in_blob_desc->shape().At(i + 1);
+    stride_of_out_tensor[i] =
+        stride_of_out_tensor[i + 1] * out_blob_desc->shape().At(i + 1);
   }
   std::vector<int32_t> in_tensor_dim(in_blob_desc->shape().dim_vec().begin(),
                                      in_blob_desc->shape().dim_vec().end());
