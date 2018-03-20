@@ -46,15 +46,14 @@ class ConvOp : public Operator {
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext*, DeviceType) const override;
 
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*) const override;
-
- protected:
-  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
 
+ private:
+  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, KernelConf*) const override;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(
       std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
