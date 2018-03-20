@@ -32,20 +32,24 @@ class ConvKernelIf : public KernelIf<device_type> {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  virtual void WeightForward(DeviceCtx*, const Blob* in, const Blob* weight,
-                             Blob* out, Blob* cudnn_workspace) const = 0;
-  virtual void BiasForward(DeviceCtx*, const Blob* bias, Blob* out) const = 0;
-  virtual void DataBackward(DeviceCtx*, const Blob* out_diff,
-                            const Blob* weight, Blob* in_diff,
-                            Blob* cudnn_workspace) const = 0;
-  virtual void WeightBackward(DeviceCtx*, const Blob* out_diff, const Blob* in,
-                              Blob* weight_diff,
-                              Blob* cudnn_workspace) const = 0;
-  virtual void BiasBackward(DeviceCtx*, const Blob* out_diff,
-                            Blob* bias_diff) const = 0;
+  virtual void WeightForward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void BiasForward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void DataBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void WeightBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void BiasBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
   const PbMessage& GetCustomizedOpConf() const override;
-  const ConvKernelConf& GetConvKernelConf() const;
+  const PbMessage& GetCustomizedKernelConf() const override;
   const int32_t KernelDim() const;
 };
 
@@ -61,15 +65,21 @@ class ConvKernel<DeviceType::kCPU, T> final
   ~ConvKernel() = default;
 
  private:
-  void WeightForward(DeviceCtx*, const Blob* in, const Blob* weight, Blob* out,
-                     Blob* cudnn_workspace) const override;
-  void BiasForward(DeviceCtx*, const Blob* bias, Blob* out) const override;
-  void DataBackward(DeviceCtx*, const Blob* out_diff, const Blob* weight,
-                    Blob* in_diff, Blob* cudnn_workspace) const override;
-  void WeightBackward(DeviceCtx*, const Blob* out_diff, const Blob* in,
-                      Blob* weight_diff, Blob* cudnn_workspace) const override;
-  void BiasBackward(DeviceCtx*, const Blob* out_diff,
-                    Blob* bias_diff) const override;
+  void WeightForward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasForward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void DataBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void WeightBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<typename T>
@@ -82,15 +92,21 @@ class ConvKernel<DeviceType::kGPU, T> final
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void WeightForward(DeviceCtx*, const Blob* in, const Blob* weight, Blob* out,
-                     Blob* cudnn_workspace) const override;
-  void BiasForward(DeviceCtx*, const Blob* bias, Blob* out) const override;
-  void DataBackward(DeviceCtx*, const Blob* out_diff, const Blob* weight,
-                    Blob* in_diff, Blob* cudnn_workspace) const override;
-  void WeightBackward(DeviceCtx*, const Blob* out_diff, const Blob* in,
-                      Blob* weight_diff, Blob* cudnn_workspace) const override;
-  void BiasBackward(DeviceCtx*, const Blob* out_diff,
-                    Blob* bias_diff) const override;
+  void WeightForward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasForward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void DataBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void WeightBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackward(
+      DeviceCtx*,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
   std::unique_ptr<CudnnTensorDesc> out_desc_;
