@@ -25,22 +25,9 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollModelBn("h2h_o_weight");
   EnrollModelBn("i2h_c_weight");
   EnrollModelBn("h2h_c_weight");
-  if (GetBoolFromCustomizedConf("use_f_bias")) {
-    EnrollModelBn("bias_f");
-    EnrollModelTmpBn("bias_f_multiplier");
-  }
-  if (GetBoolFromCustomizedConf("use_o_bias")) {
-    EnrollModelBn("bias_o");
-    EnrollModelTmpBn("bias_o_multiplier");
-  }
-  if (GetBoolFromCustomizedConf("use_i_bias")) {
-    EnrollModelBn("bias_i");
-    EnrollModelTmpBn("bias_i_multiplier");
-  }
-  if (GetBoolFromCustomizedConf("use_c_bias")) {
-    EnrollModelBn("bias_c");
-    EnrollModelTmpBn("bias_c_multiplier");
-  }
+
+  EnrollModelBn("bias_f");
+  EnrollModelTmpBn("bias_f_multiplier");
 }
 
 void BasicLstmOp::VirtualInferBlobDescs(
@@ -48,71 +35,44 @@ void BasicLstmOp::VirtualInferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  int64_t embedding_zie = in_blob_desc->shape().Count(1);
+  int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
 
-  *GetBlobDesc4BnInOp("f_gate_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("i_gate_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("o_gate_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("c_gate_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("update_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
+#define OF_INFER_LSTM_GATE_BLOBDESC(gate_name)                                 \
+  *GetBlobDesc4BnInOp(#gate_name) = BlobDesc(                                  \
+      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
+      false, true, in_blob_desc->max_col_num())
 
-  *GetBlobDesc4BnInOp("f_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("i_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("o_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
-  *GetBlobDesc4BnInOp("c_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
-      false, true, in_blob_desc->max_col_num());
+  OF_INFER_LSTM_GATE_BLOBDESC(f_gate_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(i_gate_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(o_gate_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(c_gate_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(update);
+  OF_INFER_LSTM_GATE_BLOBDESC(f_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(i_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(o_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(c_out);
 
   *GetBlobDesc4BnInOp("i2h_f_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_f_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("i2h_i_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_i_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("i2h_o_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_o_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("i2h_c_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
   *GetBlobDesc4BnInOp("h2h_c_weight") =
-      BlobDesc(Shape({hidden_size, embedding_zie}));
+      BlobDesc(Shape({hidden_size, embedding_size}));
 
-  if (GetBoolFromCustomizedConf("use_f_bias")) {
-    *GetBlobDesc4BnInOp("bias_f") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_f_multiplier") = BlobDesc(Shape({data_num, 1}));
-  }
-  if (GetBoolFromCustomizedConf("use_o_bias")) {
-    *GetBlobDesc4BnInOp("bias_o") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_o_multiplier") = BlobDesc(Shape({data_num, 1}));
-  }
-  if (GetBoolFromCustomizedConf("use_i_bias")) {
-    *GetBlobDesc4BnInOp("bias_i") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_i_multiplier") = BlobDesc(Shape({data_num, 1}));
-  }
-  if (GetBoolFromCustomizedConf("use_c_bias")) {
-    *GetBlobDesc4BnInOp("bias_c") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_c_multiplier") = BlobDesc(Shape({data_num, 1}));
-  }
+  *GetBlobDesc4BnInOp("bias_f") = BlobDesc(Shape({1, hidden_size}));
+  *GetBlobDesc4BnInOp("bias_f_multiplier") = BlobDesc(Shape({data_num, 1}));
+#undef OF_INFER_LSTM_GATE_BLOBDESC
 }
 
 REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);

@@ -13,9 +13,9 @@ class BasicLstmKernel : public KernelIf<device_type> {
   ~BasicLstmKernel() = default;
 
  private:
-  const PbMessage& GetBasicLstmOpConf() const override;
-  bool HasInitHiddenInitializer() const override;
-  bool HasInitCellInitializer() const override;
+  const PbMessage& GetBasicLstmOpConf() const;
+  bool HasInitHiddenInitializer() const;
+  bool HasInitCellInitializer() const;
   bool NeedExternalH0() const;
   bool NeedExternalC0() const;
   Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
@@ -41,10 +41,10 @@ class BasicLstmKernel : public KernelIf<device_type> {
   void VirtualInitModelBlobsWithDir(
       DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void VirtualInitModelBlobsWithRandomSeed(
       DeviceCtx*, std::mt19937*,
-      std::function<Blob*(const std::string&)>) const override;
+      std::function<Blob*(const std::string&)>) const;
   void VirtualKernelInit(const ParallelContext*) override;
 
  private:
@@ -54,12 +54,14 @@ class BasicLstmKernel : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct BasicLstmKernelUtil {
-  static void ComputeTanHDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                              const T* out_diff, const T* rec_out_diff,
-                              T* plus_out_diff);
-  static void ComputeSigmoidDiff(DeviceCtx* ctx, int64_t n, const T* out,
-                                 const T* out_diff, const T* rec_out_diff,
-                                 T* plus_op_out_diff);
+  static void ComputeForwardGateOut(const KernelCtx& ctx, Blob* gate_out,
+                                    const Blob* i2h_weight, const Blob* hidden,
+                                    const Blob* h2h_weight, const Blob* input);
+
+  static void ComputeBackwardWeightDiff(const KernelCtx& ctx, const Blob* input,
+                                        Blob* gate_out_diff, const Blob* hidden,
+                                        Blob* h2h_weight_diff,
+                                        Blob* i2h_weight_diff);
 };
 
 }  //  namespace oneflow

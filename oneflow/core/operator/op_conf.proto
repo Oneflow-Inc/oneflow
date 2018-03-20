@@ -334,22 +334,18 @@ message BasicLstmOpConf {
 	required int32 hidden_size = 4;
 
 	optional InitializerConf init_hidden_initializer = 7;
-	optional InitializerConf bias_f_initializer = 8 ;
-	optional InitializerConf bias_i_initializer = 9 ;
-	optional InitializerConf bias_o_initializer = 10 ;
-	optional InitializerConf bias_c_initializer = 11 ;
+	required InitializerConf bias_f_initializer = 8 ;
 
-	optional InitializerConf i2h_f_weight_initializer = 12;
-	optional InitializerConf h2h_f_weight_initializer = 13;	
-	optional InitializerConf i2h_i_weight_initializer = 14;
-	optional InitializerConf h2h_i_weight_initializer = 15;
-	optional InitializerConf i2h_o_weight_initializer = 16;
-	optional InitializerConf h2h_o_weight_initializer = 17;
-	optional InitializerConf i2h_c_weight_initializer = 18;
-	optional InitializerConf h2h_c_weight_initializer = 19;
+	optional InitializerConf i2h_f_weight_initializer = 9;
+	optional InitializerConf h2h_f_weight_initializer = 10;	
+	optional InitializerConf i2h_i_weight_initializer = 11;
+	optional InitializerConf h2h_i_weight_initializer = 12;
+	optional InitializerConf i2h_o_weight_initializer = 13;
+	optional InitializerConf h2h_o_weight_initializer = 14;
+	optional InitializerConf i2h_c_weight_initializer = 15;
+	optional InitializerConf h2h_c_weight_initializer = 16;
 	
-	optional bool is_init_hidden_trainable = 20 [default = true];
-	optional bool use_bias = 21 [default = true];
+	optional bool is_init_hidden_trainable = 17 [default = true];
 }
 
 
