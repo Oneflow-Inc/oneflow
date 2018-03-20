@@ -47,7 +47,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf_.name(); }
-  bool UseCudnn() const { return op_conf_.use_cudnn_on_gpu(); }
+  bool UseCudnnOnGpu() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
   virtual PbMessage* MutableCustomizedKernelConf(
@@ -97,17 +97,24 @@ class Operator {
 
 #undef DEFINE_SET_VAL_IN_CUSTOMIZED_CONF
 
-#define DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name)         \
-  void Set##func_name##InCustomizedKernelConf(                                \
-      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
-      const {                                                                 \
-    PbMessage* customized_kernel_conf_ptr =                                   \
-        MutableCustomizedKernelConf(kernel_conf);                             \
-    Set##func_name##InPbMessage(customized_kernel_conf_ptr, field_name, val); \
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name)       \
+  void Set##func_name##InCustomizedKernelConf(                              \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val) \
+      const {                                                               \
+    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);  \
+    Set##func_name##InPbMessage(customized_conf, field_name, val);          \
   }
 
   OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF,
                        PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+  template<typename T>
+  T* MutableMsgInCustomizedKernelConf(KernelConf* kernel_conf,
+                                      const std::string& field_name) const {
+    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
+    return static_cast<T*>(
+        MutableMessageInPbMessage(customized_conf, field_name));
+  }
 
 #undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
 
@@ -115,9 +122,8 @@ class Operator {
   void Add##func_name##ToPbRfInCustomizedKernelConf(                          \
       KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
       const {                                                                 \
-    PbMessage* customized_kernel_conf_ptr =                                   \
-        MutableCustomizedKernelConf(kernel_conf);                             \
-    Add##func_name##InPbRf(customized_kernel_conf_ptr, field_name, val);      \
+    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);    \
+    Add##func_name##InPbRf(customized_conf, field_name, val);                 \
   }
 
   OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF,
