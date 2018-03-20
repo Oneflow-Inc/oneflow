@@ -39,6 +39,12 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_PBMESSAGE,
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
+PbMessage* MutableMessageInPbMessage(PbMessage* msg,
+                                     const std::string& field_name) {
+  PROTOBUF_REFLECTION((*msg), field_name);
+  return r->MutableMessage(msg, fd);
+}
+
 #define DEFINE_ADD_VAL_IN_PBRF(val_type, func_name)                          \
   void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
                               val_type val) {                                \

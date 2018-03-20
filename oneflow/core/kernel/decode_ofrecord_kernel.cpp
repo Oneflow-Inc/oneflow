@@ -23,10 +23,12 @@ void DecodeOFRecordKernel::Forward(
     if (status->max_col_id_ == -1) {
       status->max_col_id_ = max_col_id;
     } else {
-      CHECK_EQ(status->max_col_id_, 1);
-      CHECK_EQ(max_col_id, 1);
+      CHECK_EQ(status->max_col_id_, 0);
+      CHECK_EQ(max_col_id, 0);
     }
+    CHECK_LT(status->max_col_id_, out_blob->max_col_num());
   }
+  CHECK_GE(status->max_col_id_, 0);
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kDecodeOfrecordConf,
