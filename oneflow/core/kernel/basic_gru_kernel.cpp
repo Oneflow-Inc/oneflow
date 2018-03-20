@@ -143,40 +143,40 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
       reset_gate_data_diff_blob->mut_dptr<T>());
 
   // h2h_weght_r_diff = reset_gate_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
-                                       reset_gate_data_diff_blob, hidden_blob,
-                                       BnInOp2Blob("h2h_weight_r"));
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+	  static_cast<T>(0), reset_gate_data_diff_blob, hidden_blob,
+	  BnInOp2Blob("h2h_weight_r_diff"));
 
   // i2h_weght_r_diff = reset_gate_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), reset_gate_data_diff_blob, BnInOp2Blob("in"),
-      BnInOp2Blob("i2h_weight_r"));
+      BnInOp2Blob("i2h_weight_r_diff"));
 
   // h2h_weght_z_diff = update_gate_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
-                                       update_gate_data_diff_blob, hidden_blob,
-                                       BnInOp2Blob("h2h_weight_z"));
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+	  static_cast<T>(0), update_gate_data_diff_blob, hidden_blob,
+	  BnInOp2Blob("h2h_weight_z_diff"));
 
   // i2h_weght_z_diff = reset_gate_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), update_gate_data_diff_blob, BnInOp2Blob("in"),
-      BnInOp2Blob("i2h_weight_z"));
+      BnInOp2Blob("i2h_weight_z_diff"));
 
   // h2h_weght_diff = candidate_hidden_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
-                                       reset_gate_data_diff_blob, hidden_blob,
-                                       BnInOp2Blob("h2h_weight_r"));
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+	  static_cast<T>(0), reset_gate_data_diff_blob, hidden_blob,
+	  BnInOp2Blob("h2h_weight_diff"));
 
   // i2h_weght_diff = candidate_hidden_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), candidate_hidden_data_diff_blob, BnInOp2Blob("in"),
-      BnInOp2Blob("i2h_weight_r"));
+      BnInOp2Blob("i2h_weight_diff"));
   if (BnInOp2Blob("bias_diff_r") != nullptr) {
     // bias_diff_r = bias_nultiplier_r * reset_gate_data_diff
     KernelUtil<device_type, T>::BlobGemm(
