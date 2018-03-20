@@ -142,11 +142,19 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
       reset_gate_out_diff_blob->dptr<T>(),
       reset_gate_data_diff_blob->mut_dptr<T>());
 
+  BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
+      ctx, BnInOp2Blob("in"), hidden_blob, reset_gate_data_diff_blob,
+      BnInOp2Blob("i2h_weight_r_diff"), BnInOp2Blob("h2h_weight_r_diff"));
+  BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
+      ctx, BnInOp2Blob("in"), hidden_blob, update_gate_data_diff_blob,
+      BnInOp2Blob("i2h_weight_z_diff"), BnInOp2Blob("h2h_weight_z_diff"));
+  BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
+      ctx, BnInOp2Blob("in"), hidden_blob, candidate_hidden_data_diff_blob,
+      BnInOp2Blob("i2h_weight_diff"), BnInOp2Blob("h2h_weight_diff"));
   // h2h_weght_r_diff = reset_gate_data_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-	  static_cast<T>(0), reset_gate_data_diff_blob, hidden_blob,
-	  BnInOp2Blob("h2h_weight_r_diff"));
+  /*KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans,
+  CblasNoTrans, static_cast<T>(1), static_cast<T>(0), reset_gate_data_diff_blob,
+  hidden_blob, BnInOp2Blob("h2h_weight_r_diff"));
 
   // i2h_weght_r_diff = reset_gate_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
@@ -157,8 +165,8 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   // h2h_weght_z_diff = update_gate_data_diff * hidden
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-	  static_cast<T>(0), update_gate_data_diff_blob, hidden_blob,
-	  BnInOp2Blob("h2h_weight_z_diff"));
+          static_cast<T>(0), update_gate_data_diff_blob, hidden_blob,
+          BnInOp2Blob("h2h_weight_z_diff"));
 
   // i2h_weght_z_diff = reset_gate_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
@@ -168,15 +176,15 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
 
   // h2h_weght_diff = candidate_hidden_data_diff * hidden
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-	  static_cast<T>(0), reset_gate_data_diff_blob, hidden_blob,
-	  BnInOp2Blob("h2h_weight_diff"));
+      ctx.device_ctx, CblasTrans, CblasNoTrans,
+          static_cast<T>(1), static_cast<T>(0), candidate_hidden_data_diff_blob,
+  hidden_blob, BnInOp2Blob("h2h_weight_diff"));
 
   // i2h_weght_diff = candidate_hidden_data_diff * in
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), candidate_hidden_data_diff_blob, BnInOp2Blob("in"),
-      BnInOp2Blob("i2h_weight_diff"));
+      BnInOp2Blob("i2h_weight_diff"));*/
   if (BnInOp2Blob("bias_diff_r") != nullptr) {
     // bias_diff_r = bias_nultiplier_r * reset_gate_data_diff
     KernelUtil<device_type, T>::BlobGemm(
@@ -435,6 +443,21 @@ void BasicGruKernelUtil<device_type, T>::ComputePlusOutForward(
       ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
       static_cast<T>(1), hidden->dptr<T>(), static_cast<T>(1),
       plus_out->mut_dptr<T>(), static_cast<T>(1));
+}
+
+template<DeviceType device_type, typename T>
+void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
+    const KernelCtx& ctx, const Blob* in_data, Blob* hidden, Blob* out_diff,
+    Blob* i2h_weight_diff, Blob* h2h_weight_diff) {
+  // h2h_weght_diff = out_diff * hidden
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       out_diff, hidden, h2h_weight_diff);
+
+  // i2h_weght_diff = out_diff * in
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       out_diff, in_data, i2h_weight_diff);
 }
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicGruConf, BasicGruKernel,
                            FLOATING_DATA_TYPE_SEQ);

@@ -49,6 +49,9 @@ struct BasicGruKernelUtil {
   static void ComputePlusOutForward(const KernelCtx& ctx, const Blob* hidden,
                                     Blob* candidate_out, Blob* temp_data,
                                     Blob* update_out, Blob* plus_out);
+  static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
+                                Blob* hidden, Blob* out_diff,
+                                Blob* i2h_weight_diff, Blob* h2h_weight_diff);
 };
 
 }  // namespace oneflow
