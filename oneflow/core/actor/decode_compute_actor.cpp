@@ -47,8 +47,9 @@ void DecodeCompActor::Act() {
     decode_status_.in_regst_ = nullptr;
     decode_status_.cur_col_id_ = 0;
     decode_status_.max_col_id_ = 0;
+  } else {
+    ++decode_status_.cur_col_id_;
   }
-  ++decode_status_.cur_col_id_;
 }
 
 bool DecodeCompActor::IsReadReady() { return !pending_in_regsts_.empty(); }
