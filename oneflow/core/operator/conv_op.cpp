@@ -92,7 +92,7 @@ void ConvOp<NDims>::InferBlobDescs(
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr,
                nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
-  int32_t dhw_offset = DhwOffset(data_format);
+  size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
     out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
   }
