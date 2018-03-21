@@ -105,38 +105,36 @@ void ConvOp<NDims>::InferBlobDescs(
   weight_shape[0] = filters;
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] =
-      GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
+        GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
   // bias and bias_multipler
   if (GetBoolFromCustomizedConf("use_bias")) {
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
-    std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
-    for (size_t i = 0; i != NDims; ++i) {
-      bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
+    if (!UseCudnnOnGpu()) {
+      std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
+      for (size_t i = 0; i != NDims; ++i) {
+        bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
+      }
+      GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape(bias_mul_shape);
     }
-    GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape(bias_mul_shape);
   }
 
   // col_buf
-  std::vector<int64_t> col_buf_shape(2 * NDims + 1);
-  for (size_t i = 0; i != NDims + 1; ++i) {
-    col_buf_shape[i] = weight_shape[i + 1];
+  if (device_type == DeviceType::kCPU || !UseCudnnOnGpu()) {
+    std::vector<int64_t> col_buf_shape(2 * NDims + 1);
+    for (size_t i = 0; i != NDims + 1; ++i) {
+      col_buf_shape[i] = weight_shape[i + 1];
+    }
+    for (size_t i = 0; i != NDims; ++i) {
+      col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
+    }
+    GetBlobDesc4BnInOp("col_buf")->mut_shape() = Shape(col_buf_shape);
   }
-  for (size_t i = 0; i != NDims; ++i) {
-    col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
-  }
-  GetBlobDesc4BnInOp("col_buf")->mut_shape() = Shape(col_buf_shape);
-
 
 #ifdef WITH_CUDA
   if (device_type == DeviceType::kGPU) {
-
-    // clean col_buf and bias_multipler
-    GetBlobDesc4BnInOp("col_buf")->mut_shape() = Shape();
-    GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape();
-
     // cudnn_buf
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
