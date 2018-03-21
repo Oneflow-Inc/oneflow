@@ -84,7 +84,7 @@ void NormalBackwardCompTaskNode::VirtualBuildInDiffRegst() {
   });
 }
 
-void NormalBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
+void NormalBackwardCompTaskNode::VirtualConsumeRegst(TaskEdge* edge) {
   ConsumeRegst("out_diff", edge->GetSoleRegst());
 }
 

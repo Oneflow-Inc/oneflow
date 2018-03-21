@@ -4,17 +4,13 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
+  ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
     } else {
-      edge->AddRegst("out", out_regst);
-      if (IsBackwardTaskType(dst_node->GetTaskType())) {
-        edge->AddRegst("activation", ProduceRegst("activation"));
-        edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
-      }
+      VirtualProduceRegst(edge);
     }
   }
 }
@@ -26,16 +22,17 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      VirtualConsumeInRegst(edge);
+      VirtualConsumeRegst(edge);
     }
   }
 }
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
-  BuildExecGphStructAndBindInRegst();
-  BuildOutRegst();
+  VirtualBuildExecGphStructAndBindInRegst();
+  VirtualBuildOutRegst();
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
+  VirtualBuildOtherRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->InferBlobDescs(parallel_ctx(), device_type());
   });
@@ -45,6 +42,7 @@ void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
   TryLockConsumedRegst("model_tmp");
+  VirtualLockRegsts();
 }
 
 void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {

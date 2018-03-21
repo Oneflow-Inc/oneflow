@@ -20,6 +20,7 @@ class BackwardCompTaskNode : public CompTaskNode {
   virtual void VirtualBuildExecGphAndBindOutDiffRegst() { UNIMPLEMENTED(); }
   virtual void VirtualBuildActivationDiffRegst() {}
   virtual void VirtualBuildInDiffRegst() { UNIMPLEMENTED(); }
+  virtual void VirtualBuildOtherRegsts() {}
   virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
     UNIMPLEMENTED();
   };
@@ -28,8 +29,8 @@ class BackwardCompTaskNode : public CompTaskNode {
   }
   virtual void VirtualProduceActivationDiff() {}
   virtual void VirtualConsumeActivation(TaskEdge* edge) {}
-  virtual void VirtualConsumeDiffRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
-  virtual void VirtualConsumeInRegst() { UNIMPLEMENTED(); };
+  virtual void VirtualConsumeRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualConsumeInRegst() { UNIMPLEMENTED(); }
   virtual void VirtualInferBlobDescInActivationDiff() {}
   virtual void VirtualInferBlobDescInHiddenDiff() {}
 

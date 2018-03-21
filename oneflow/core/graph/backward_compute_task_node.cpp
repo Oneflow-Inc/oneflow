@@ -31,7 +31,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      VirtualConsumeDiffRegst(edge);
+      VirtualConsumeRegst(edge);
     }
   }
   VirtualConsumeInRegst();
@@ -42,6 +42,7 @@ void BackwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildActivationDiffRegst();
   VirtualBuildInDiffRegst();
   BindModelDiffRegst();
+  VirtualBuildOtherRegsts();
   InferBlobDescsInProducedRegsts();
 }
 
