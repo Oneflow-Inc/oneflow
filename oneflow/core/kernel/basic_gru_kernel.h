@@ -52,6 +52,13 @@ struct BasicGruKernelUtil {
   static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
                                 Blob* hidden, Blob* out_diff,
                                 Blob* i2h_weight_diff, Blob* h2h_weight_diff);
+  static void ComputeTemModelDiff(
+      const KernelCtx& ctx, const Blob* candidate_out,
+      const Blob* candidate_data, const Blob* update_out,
+      const Blob* update_data, const Blob* reset_out, const Blob* reset_data,
+      Blob* hiddden, Blob* candidate_o_diff, Blob* candidate_d_diff,
+      Blob* update_o_diff, Blob* update_o_bran_diff, Blob* update_d_diff,
+      Blob* reset_o_diff, Blob* reset_d_diff, Blob* plus_out_diff);
 };
 
 }  // namespace oneflow
