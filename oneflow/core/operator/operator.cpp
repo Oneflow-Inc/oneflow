@@ -41,6 +41,10 @@ void Operator::ModifyLbn4BnInOp(const std::string& bn_in_op,
   CHECK_EQ(TryModifyLbn4BnInOp(bn_in_op, lbn), 0);
 }
 
+bool Operator::UseCudnn(DeviceType device_type) const {
+  device_type == DeviceType::kGPU&& UseCudnnOnGpu();
+}
+
 const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns_.size(), 1);
   return *(input_bns_.begin());
