@@ -42,7 +42,7 @@ void Operator::ModifyLbn4BnInOp(const std::string& bn_in_op,
 }
 
 bool Operator::UseCudnn(DeviceType device_type) const {
-  device_type == DeviceType::kGPU&& UseCudnnOnGpu();
+  return device_type == DeviceType::kGPU&& op_conf_.use_cudnn_on_gpu();
 }
 
 const std::string& Operator::SoleIbn() const {
