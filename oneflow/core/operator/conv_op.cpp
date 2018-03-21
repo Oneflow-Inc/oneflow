@@ -109,8 +109,8 @@ void ConvOp<NDims>::InferBlobDescs(
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
-  // bias and bias_multipler
   if (GetBoolFromCustomizedConf("use_bias")) {
+    // bias and bias_multipler
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
     if (!UseCudnnOnGpu()) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
@@ -121,8 +121,8 @@ void ConvOp<NDims>::InferBlobDescs(
     }
   }
 
-  // col_buf
   if (device_type == DeviceType::kCPU || !UseCudnnOnGpu()) {
+    // col_buf
     std::vector<int64_t> col_buf_shape(2 * NDims + 1);
     for (size_t i = 0; i != NDims + 1; ++i) {
       col_buf_shape[i] = weight_shape[i + 1];
