@@ -14,6 +14,14 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
 }
 
+void ForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
+  edge->AddRegst("out", GetProducedRegst("out"));
+  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
+    edge->AddRegst("activation", ProduceRegst("activation"));
+    edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
+  }
+}
+
 void ForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();

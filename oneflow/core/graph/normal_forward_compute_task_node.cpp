@@ -8,14 +8,6 @@ void NormalForwardCompTaskNode::VirtualConsumeRegstOnInEdge(TaskEdge* edge) {
   ConsumeRegst("in", edge->GetSoleRegst());
 }
 
-void NormalForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
-  edge->AddRegst("out", GetProducedRegst("out"));
-  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
-    edge->AddRegst("activation", ProduceRegst("activation"));
-    edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
-  }
-}
-
 void NormalForwardCompTaskNode::VirtualBuildExecGphStructAndBindInRegst() {
   HashMap<std::string, std::pair<ExecNode*, std::string>> lbn2producer;
   for (std::shared_ptr<const Operator> op : chain_node()->op_vec()) {
