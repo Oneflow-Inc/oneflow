@@ -42,7 +42,7 @@ void BackwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildActivationDiffRegst();
   VirtualBuildInDiffRegst();
   BindModelDiffRegst();
-  VirtualBuildOtherRegsts();
+  VirtualBuildExtraRegsts();
   InferBlobDescsInProducedRegsts();
 }
 

@@ -31,7 +31,7 @@ void ForwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildOutRegst();
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
-  VirtualBuildOtherRegsts();
+  VirtualBuildExtraRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->InferBlobDescs(parallel_ctx(), device_type());
   });
@@ -41,7 +41,7 @@ void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
   TryLockConsumedRegst("model_tmp");
-  VirtualLockRegsts();
+  VirtualLockExtraRegsts();
 }
 
 void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
