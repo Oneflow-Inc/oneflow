@@ -101,9 +101,11 @@ void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(
   if (data_format == "channel_first") {
     im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
     col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
+    forward_order_ = CblasNoTrans;
   } else {
     im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
     col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
+    forward_order_ = CblasTrans;
   }
 }
 
@@ -128,7 +130,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
 
     // out = col_buf * weight
     KernelUtil<DeviceType::kCPU, T>::Gemm(
-        ctx.device_ctx, CblasRowMajor, CblasNoTrans, CblasNoTrans,
+        ctx.device_ctx, CblasRowMajor, forward_order_, forward_order_,
         out_blob->shape().At(1), out_blob->shape().Count(2),
         weight_blob->shape().Count(1), static_cast<T>(1),
         weight_blob->dptr<T>(), weight_blob->shape().Count(1),
@@ -140,7 +142,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
       const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
       // out += bias * bias_mul
       KernelUtil<DeviceType::kCPU, T>::Gemm(
-          ctx.device_ctx, CblasRowMajor, CblasNoTrans, CblasNoTrans,
+          ctx.device_ctx, CblasRowMajor, forward_order_, forward_order_,
           out_blob->shape().At(1), out_blob->shape().Count(2),
           bias_blob->shape().At(0), static_cast<T>(1), bias_blob->dptr<T>(),
           bias_blob->shape().At(0), bias_mul_blob->dptr<T>(),
@@ -234,6 +236,42 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+void ConvKernelUtil<T>::NCDHWIm2Col(
+    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf) {
+  auto Im2Col = [=](int64_t c, int64_t kd, int64_t kh, int64_t kw,
+                    const Shape& in_shape, const Shape& out_shape) {
+    int64_t id = kd * dilation_rate[0] - padding_before[0];
+    for (int64_t od = out_shape.At(2); od > 0; od--) {
+      if (id < 0 || id >= in_shape.At(2)) {
+        FOR_RANGE(int64_t, out, 0, id_size) { *(col_buf++) = 0; }
+      } else {
+        int64_t ih = kh * dilation_rate[1] - padding_before[1];
+        for (int64_t oh = out_shape.At(3); oh > 0; oh--) {
+          if (ih < 0 || ih >= in_shape.At(3)) {
+            FOR_RANGE(int64_t, out, 0, ih_size) { *(col_buf++) = 0; }
+          } else {
+            int64_t iw = kw * dilation_rate[2] - padding_before[2];
+            for (int64_t ow = out_shape.At(4); ow > 0; ow--) {
+              if (iw < 0 || iw >= in_shape.At(4)) {
+                *(col_buf++) = 0;
+              } else {
+                *(col_buf++) = in_dptr[id * id_size + ih * ih_size + iw];
+              }
+              iw += strides[2];
+            }
+          }
+          ih += strides[1];
+        }
+      }
+      id += strides[0];
+    }
+  }
+  NCDWHFunc(weight_shape, Im2Col
+}
 
 template<typename T>
 void ConvKernelUtil<T>::NCDHWIm2Col(
