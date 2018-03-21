@@ -15,8 +15,8 @@ class NormalForwardCompTaskNode final : public ForwardCompTaskNode {
   bool IsReadyForBuild() override;
 
  private:
-  void VirtualConsumeRegst(TaskEdge* edge) override;
-  void VirtualProduceRegst(TaskEdge* edge) override;
+  void VirtualConsumeRegstOnInEdge(TaskEdge* edge) override;
+  void VirtualProduceRegstOnOutEdge(TaskEdge* edge) override;
   void VirtualBuildExecGphStructAndBindInRegst() override;
   void VirtualBuildOutRegst() override;
 };

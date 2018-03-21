@@ -4,11 +4,11 @@
 
 namespace oneflow {
 
-void NormalForwardCompTaskNode::VirtualConsumeRegst(TaskEdge* edge) {
+void NormalForwardCompTaskNode::VirtualConsumeRegstOnInEdge(TaskEdge* edge) {
   ConsumeRegst("in", edge->GetSoleRegst());
 }
 
-void NormalForwardCompTaskNode::VirtualProduceRegst(TaskEdge* edge) {
+void NormalForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
   edge->AddRegst("out", GetProducedRegst("out"));
   if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
     edge->AddRegst("activation", ProduceRegst("activation"));

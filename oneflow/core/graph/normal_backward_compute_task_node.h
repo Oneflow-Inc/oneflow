@@ -17,7 +17,7 @@ class NormalBackwardCompTaskNode final : public BackwardCompTaskNode {
   void VirtualBuildExecGphAndBindOutDiffRegst() override;
   void VirtualBuildActivationDiffRegst() override;
   void VirtualBuildInDiffRegst() override;
-  void VirtualConsumeRegst(TaskEdge* edge) override;
+  void VirtualConsumeRegstOnInEdge(TaskEdge* edge) override;
   void VirtualConsumeInRegst() override;
   void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override;
   void VirtualProduceActivationDiff() override;

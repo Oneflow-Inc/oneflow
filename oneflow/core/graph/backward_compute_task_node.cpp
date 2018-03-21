@@ -31,7 +31,7 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      VirtualConsumeRegst(edge);
+      VirtualConsumeRegstOnInEdge(edge);
     }
   }
   VirtualConsumeInRegst();

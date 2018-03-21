@@ -29,7 +29,7 @@ class BackwardCompTaskNode : public CompTaskNode {
   }
   virtual void VirtualProduceActivationDiff() {}
   virtual void VirtualConsumeActivation(TaskEdge* edge) {}
-  virtual void VirtualConsumeRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualConsumeRegstOnInEdge(TaskEdge* edge) { UNIMPLEMENTED(); }
   virtual void VirtualConsumeInRegst() { UNIMPLEMENTED(); }
   virtual void VirtualInferBlobDescInActivationDiff() {}
   virtual void VirtualInferBlobDescInHiddenDiff() {}

@@ -6,11 +6,10 @@ namespace oneflow {
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
     } else {
-      VirtualProduceRegst(edge);
+      VirtualProduceRegstOnOutEdge(edge);
     }
   }
 }
@@ -22,7 +21,7 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      VirtualConsumeRegst(edge);
+      VirtualConsumeRegstOnInEdge(edge);
     }
   }
 }

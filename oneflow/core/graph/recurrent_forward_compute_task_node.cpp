@@ -15,7 +15,7 @@ void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
   }
 }
 
-void RecurrentForwardCompTaskNode::VirtualConsumeRegst(TaskEdge* edge) {
+void RecurrentForwardCompTaskNode::VirtualConsumeRegstOnInEdge(TaskEdge* edge) {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
   const HashSet<std::string>& lbns =
@@ -33,7 +33,8 @@ void RecurrentForwardCompTaskNode::VirtualConsumeRegst(TaskEdge* edge) {
   }
 }
 
-void RecurrentForwardCompTaskNode::VirtualProduceRegst(TaskEdge* edge) {
+void RecurrentForwardCompTaskNode::VirtualProduceRegstOnOutEdge(
+    TaskEdge* edge) {
   edge->AddRegst("out", GetProducedRegst("out"));
   if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
     edge->AddRegst("activation", ProduceRegst("activation"));

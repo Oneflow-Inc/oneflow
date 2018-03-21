@@ -21,8 +21,8 @@ class ForwardCompTaskNode : public CompTaskNode {
 
  protected:
   virtual void VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge);
-  virtual void VirtualConsumeRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
-  virtual void VirtualProduceRegst(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualConsumeRegstOnInEdge(TaskEdge* edge) { UNIMPLEMENTED(); }
+  virtual void VirtualProduceRegstOnOutEdge(TaskEdge* edge) { UNIMPLEMENTED(); }
   virtual void VirtualLockRegsts() {}
   virtual void VirtualBuildOtherRegsts() {}
   virtual void VirtualBuildExecGphStructAndBindInRegst() { UNIMPLEMENTED(); }
