@@ -150,7 +150,16 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
       ctx, BnInOp2Blob("in"), hidden_blob, candidate_hidden_data_diff_blob,
       BnInOp2Blob("i2h_weight_diff"), BnInOp2Blob("h2h_weight_diff"));
+  /*#define OF_COMPUTE_BIAS_DIFF(gatename,gatename)
+    if (BnInOp2Blob("bias_diff_r") != nullptr) {
+      // bias_diff = bias_nultiplier * data_diff
+      KernelUtil<device_type, T>::BlobGemm(
+          ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
+          static_cast<T>(0), BnInOp2Blob("bias_multiplier_r"),
+          reset_gate_data_diff_blob, BnInOp2Blob("bias_diff_r"));
+    }
 
+  #undef OF_COMPUTE_BIAS_DIFF*/
   if (BnInOp2Blob("bias_diff_r") != nullptr) {
     // bias_diff_r = bias_nultiplier_r * reset_gate_data_diff
     KernelUtil<device_type, T>::BlobGemm(
@@ -230,7 +239,16 @@ template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf bias_multiplier_r_fill_conf;
+#define OF_INIT_PURE_MODEL_TEM_BLON(modelname)                          \
+  InitializerConf modelname##_fill_conf;                                \
+  modelname##_fill_conf.mutable_constant_conf()->set_value(1.f);        \
+  KernelUtil<device_type, T>::Initialize(ctx, modelname##_fill_conf, 0, \
+                                         BnInOp2Blob(#modelname))
+  OF_INIT_PURE_MODEL_TEM_BLON(bias_miltiplier_r);
+  OF_INIT_PURE_MODEL_TEM_BLON(bias_miltiplier_z);
+  OF_INIT_PURE_MODEL_TEM_BLON(bias_miltiplier);
+#undef OF_INIT_PURE_MODEL_TEM_BLON
+  /*InitializerConf bias_multiplier_r_fill_conf;
   bias_multiplier_r_fill_conf.mutable_constant_conf()->set_value(1.f);
   KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_r_fill_conf, 0,
                                          BnInOp2Blob("bias_miltiplier_r"));
@@ -241,7 +259,7 @@ void BasicGruKernel<device_type, T>::InitPureModelTmpBlobs(
   InitializerConf bias_multiplier_fill_conf;
   bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
   KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_fill_conf, 0,
-                                         BnInOp2Blob("bias_miltiplier"));
+                                         BnInOp2Blob("bias_miltiplier"));*/
 }
 
 template<DeviceType device_type, typename T>
@@ -325,22 +343,18 @@ void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(reset_out->shape().elem_cnt()),
       reset_out->dptr<T>(), hidden->dptr<T>(), candidate_data->mut_dptr<T>());
-
   // candidate_hidden_data *= h2h_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
       static_cast<T>(0), candidate_data, h2h_weight, candidate_data);
-
   // candidate_hidden_data += in * i2h_weight
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(1),
                                        in_data, i2h_weight, candidate_data);
-
   // candidate_hidden_data += bias_multiplier * bias
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), bias_multiplier, bias, candidate_data);
-
   // candidate_hidden_out = tanh(candidate_hidden_data)
   KernelUtil<device_type, T>::TanH(
       ctx.device_ctx, candidate_data->shape().elem_cnt(),
@@ -359,7 +373,6 @@ void BasicGruKernelUtil<device_type, T>::ComputePlusOutForward(
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(update_out->shape().elem_cnt()),
       hidden->dptr<T>(), update_out->dptr<T>(), temp_data->mut_dptr<T>());
-
   // plus_op_out -= update_mul_hidden
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, static_cast<T>(temp_data->shape().elem_cnt()),
@@ -380,7 +393,6 @@ void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        out_diff, hidden, h2h_weight_diff);
-
   // i2h_weght_diff = out_diff * in
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
