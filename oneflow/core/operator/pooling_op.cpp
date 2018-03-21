@@ -126,7 +126,8 @@ void PoolingOp::VirtualGenKernelConf(
                   GetStringFromCustomizedConf("padding"), &out, &padding_before,
                   &padding_after);
 
-  PoolingKernelConf* pooling_conf = GetMutPoolingKernelConf(kernel_conf);
+  auto pooling_conf = MutableMsgInCustomizedKernelConf<PoolingKernelConf>(
+      kernel_conf, "pooling_conf");
   FOR_RANGE(size_t, i, 0, 3) {
     pooling_conf->mutable_pool_size()->Add(pool_size.at(i));
     pooling_conf->mutable_strides()->Add(strides.at(i));

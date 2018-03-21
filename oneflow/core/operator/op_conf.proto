@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/record/image.proto";
 
 enum ActivationType {
   kTanH = 0;
@@ -53,7 +54,7 @@ message Conv1DOpConf {
   required string out = 2;
   required int32 filters = 3;
   required string padding = 4;
-  required string data_format = 5;
+  required string data_format = 5 [default = "channels_last"];
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -67,7 +68,7 @@ message Conv2DOpConf {
   required string out = 2;
   required int32 filters = 3;
   required string padding = 4;
-  required string data_format = 5;
+  required string data_format = 5 [default = "channels_last"];
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -81,7 +82,7 @@ message Conv3DOpConf {
   required string out = 2;
   required int32 filters = 3;
   required string padding = 4;
-  required string data_format = 5;
+  required string data_format = 5 [default = "channels_last"];
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -345,9 +346,11 @@ message LocalResponseNormalizationOpConf {
   optional double beta = 6 [default = 0.5];
 }
 
-enum EncodeType {
-  kRaw = 0;
-  kJpeg = 1;
+message EncodeRaw {
+}
+
+message EncodeJpeg {
+  repeated ImagePreprocess preprocess = 1;
 }
 
 message BlobConf {
@@ -355,7 +358,10 @@ message BlobConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
-  optional EncodeType encode_type = 5 [default = kRaw];
+  oneof encode {
+    EncodeRaw raw = 101;
+    EncodeJpeg jpeg = 102;
+  }
 }
 
 message DecodeOFRecordOpConf {
