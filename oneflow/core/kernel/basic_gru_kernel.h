@@ -59,6 +59,13 @@ struct BasicGruKernelUtil {
       Blob* hiddden, Blob* candidate_o_diff, Blob* candidate_d_diff,
       Blob* update_o_diff, Blob* update_o_bran_diff, Blob* update_d_diff,
       Blob* reset_o_diff, Blob* reset_d_diff, Blob* plus_out_diff);
+  static void ComputeHiddenDiff(const KernelCtx& ctx, const Blob* h2h_weight_r,
+                                const Blob* h2h_weight_z,
+                                const Blob* h2h_weight, const Blob* reset_out,
+                                const Blob* update_out, Blob* hidden,
+                                Blob* hidden_diff, Blob* candidate_d_diff,
+                                Blob* reset_d_diff, Blob* update_d_diff,
+                                Blob* plus_out_diff);
 };
 
 }  // namespace oneflow

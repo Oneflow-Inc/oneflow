@@ -120,27 +120,6 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   OF_COMPUTE_BIAS_DIFF(bias_diff_z, bias_multiplier_z, update_gate)
   OF_COMPUTE_BIAS_DIFF(bias_diff, bias_multiplier, candidate_hidden)
 #undef OF_COMPUTE_BIAS_DIFF
-  /*if (BnInOp2Blob("bias_diff_r") != nullptr) {
-    // bias_diff_r = bias_nultiplier_r * reset_gate_data_diff
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), BnInOp2Blob("bias_multiplier_r"),
-        reset_gate_data_diff_blob, BnInOp2Blob("bias_diff_r"));
-  }
-  if (BnInOp2Blob("bias_diff_z") != nullptr) {
-    // bias_diff_z = bias_nultiplier_z * update_gate_data_diff
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), BnInOp2Blob("bias_multiplier_z"),
-        update_gate_data_diff_blob, BnInOp2Blob("bias_diff_z"));
-  }
-  if (BnInOp2Blob("bias_diff") != nullptr) {
-    // bias_diff = bias_nultiplier * candidate_hidden_data_diff
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
-        candidate_hidden_data_diff_blob, BnInOp2Blob("bias_diff"));
-  }*/
 
   if (BnInOp2Blob("in_diff") != nullptr) {
     // in_diff = reset_gate_data_diff * i2h_weght_r
@@ -163,35 +142,12 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
       || this->op_conf().basic_gru_conf().is_init_hidden_trainable()) {
     // compute hidden_diff
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), candidate_hidden_data_diff_blob,
-        BnInOp2Blob("h2h_weight"), hidden_diff_blob);
-    KernelUtil<device_type, T>::Mul(
-        ctx.device_ctx, hidden_diff_blob->shape().elem_cnt(),
-        hidden_diff_blob->dptr<T>(), reset_gate_out_blob->dptr<T>(),
-        hidden_diff_blob->mut_dptr<T>());
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(1), reset_gate_data_diff_blob,
-        BnInOp2Blob("h2h_weight_r"), hidden_diff_blob);
-    KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(1), update_gate_data_diff_blob,
-        BnInOp2Blob("h2h_weight_z"), hidden_diff_blob);
-    // reuse hidden_blob
-    KernelUtil<device_type, T>::Mul(
-        ctx.device_ctx, static_cast<T>(hidden_blob->shape().elem_cnt()),
-        update_gate_out_blob->dptr<T>(), plus_op_out_diff_blob->dptr<T>(),
-        hidden_blob->mut_dptr<T>());
-    KernelUtil<device_type, T>::Axpy(
-        ctx.device_ctx, static_cast<T>(hidden_blob->shape().elem_cnt()),
-        static_cast<T>(-1), plus_op_out_diff_blob->dptr<T>(), static_cast<T>(1),
-        hidden_blob->mut_dptr<T>(), static_cast<T>(1));
-    KernelUtil<device_type, T>::Axpy(
-        ctx.device_ctx, static_cast<T>(hidden_blob->shape().elem_cnt()),
-        static_cast<T>(-1), hidden_blob->dptr<T>(), static_cast<T>(1),
-        hidden_diff_blob->mut_dptr<T>(), static_cast<T>(1));
+    BasicGruKernelUtil<device_type, T>::ComputeHiddenDiff(
+        ctx, BnInOp2Blob("h2h_weight_r"), BnInOp2Blob("h2h_weight_z"),
+        BnInOp2Blob("h2h_weight"), reset_gate_out_blob, update_gate_out_blob,
+        hidden_blob, hidden_diff_blob, candidate_hidden_data_diff_blob,
+        reset_gate_data_diff_blob, update_gate_data_diff_blob,
+        plus_op_out_diff_blob);
   }
 }
 
@@ -346,6 +302,7 @@ void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
                                        static_cast<T>(1), static_cast<T>(0),
                                        out_diff, in_data, i2h_weight_diff);
 }
+
 template<DeviceType device_type, typename T>
 void BasicGruKernelUtil<device_type, T>::ComputeTemModelDiff(
     const KernelCtx& ctx, const Blob* candidate_out, const Blob* candidate_data,
@@ -383,7 +340,6 @@ void BasicGruKernelUtil<device_type, T>::ComputeTemModelDiff(
       ctx.device_ctx, update_out->shape().elem_cnt(), update_data->dptr<T>(),
       update_out->dptr<T>(), update_o_diff->dptr<T>(),
       update_d_diff->mut_dptr<T>());
-
   // reset_out_diff = hidden .* candidate_data_diff
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, hidden->shape().elem_cnt(), hidden->dptr<T>(),
@@ -393,6 +349,39 @@ void BasicGruKernelUtil<device_type, T>::ComputeTemModelDiff(
       ctx.device_ctx, reset_out->shape().elem_cnt(), reset_data->dptr<T>(),
       reset_out->dptr<T>(), reset_o_diff->dptr<T>(),
       reset_d_diff->mut_dptr<T>());
+}
+
+template<DeviceType device_type, typename T>
+void BasicGruKernelUtil<device_type, T>::ComputeHiddenDiff(
+    const KernelCtx& ctx, const Blob* h2h_weight_r, const Blob* h2h_weight_z,
+    const Blob* h2h_weight, const Blob* reset_out, const Blob* update_out,
+    Blob* hidden, Blob* hidden_diff, Blob* candidate_d_diff, Blob* reset_d_diff,
+    Blob* update_d_diff, Blob* plus_out_diff) {
+  // compute hidden_diff
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(0), candidate_d_diff, h2h_weight, hidden_diff);
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, hidden_diff->shape().elem_cnt(), hidden_diff->dptr<T>(),
+      reset_out->dptr<T>(), hidden_diff->mut_dptr<T>());
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(1), reset_d_diff, h2h_weight_r, hidden_diff);
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(1), update_d_diff, h2h_weight_z, hidden_diff);
+  // reuse hidden_blob
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
+      update_out->dptr<T>(), plus_out_diff->dptr<T>(), hidden->mut_dptr<T>());
+  KernelUtil<device_type, T>::Axpy(
+      ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
+      static_cast<T>(-1), plus_out_diff->dptr<T>(), static_cast<T>(1),
+      hidden->mut_dptr<T>(), static_cast<T>(1));
+  KernelUtil<device_type, T>::Axpy(
+      ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
+      static_cast<T>(-1), hidden->dptr<T>(), static_cast<T>(1),
+      hidden_diff->mut_dptr<T>(), static_cast<T>(1));
 }
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicGruConf, BasicGruKernel,
                            FLOATING_DATA_TYPE_SEQ);
