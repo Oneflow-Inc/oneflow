@@ -15,8 +15,10 @@ void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf,
   if (out) { out->assign(opkernel_dim, 0); }
   if (pad_small_side) { pad_small_side->assign(opkernel_dim, 0); }
   if (pad_large_side) { pad_large_side->assign(opkernel_dim, 0); }
-  const auto& data_format = GetStringFromPbMessage(conv_conf, "data_format");
-  const std::string& padding = GetStringFromPbMessage(conv_conf, "padding");
+  const auto& data_format =
+      GetValFromPbMessage<std::string>(conv_conf, "data_format");
+  const std::string& padding =
+      GetValFromPbMessage<std::string>(conv_conf, "padding");
   const PbRf<int32_t>& dilation_rate =
       GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
   const auto& strides = GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
@@ -62,7 +64,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
-  if (GetBoolFromCustomizedConf("use_bias")) {
+  if (GetValFromCustomizedConf<bool>("use_bias")) {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multipler");
   }
@@ -74,7 +76,8 @@ template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type) const {
-  const std::string& data_format = GetStringFromCustomizedConf("data_format");
+  const std::string& data_format =
+      GetValFromCustomizedConf<std::string>("data_format");
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -83,7 +86,7 @@ void ConvOp<NDims>::InferBlobDescs(
 
   // out
   int64_t data_num = in_blob_desc->shape().At(0);
-  int32_t filters = GetInt32FromCustomizedConf("filters");
+  int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
     filters = splitter.At(parallel_ctx->parallel_id()).size();
@@ -109,7 +112,7 @@ void ConvOp<NDims>::InferBlobDescs(
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
-  if (GetBoolFromCustomizedConf("use_bias")) {
+  if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multipler
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
     if (!UseCudnn(device_type)) {
@@ -162,23 +165,23 @@ void ConvOp<NDims>::VirtualGenKernelConf(
                &pad_small_side, &pad_large_side);
 
   for (size_t i = 0; i < NDims; ++i) {
-    AddInt32ToPbRfInCustomizedKernelConf(kernel_conf, "pad_small_side",
-                                         pad_small_side[i]);
-    AddInt32ToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side",
-                                         pad_large_side[i]);
+    AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_small_side",
+                                       pad_small_side[i]);
+    AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side",
+                                       pad_large_side[i]);
   }
 
 #ifdef WITH_CUDA
   if (kernel_conf->device_type() == DeviceType::kGPU) {
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
-    SetInt32InCustomizedKernelConf(
+    SetValInCustomizedKernelConf(
         kernel_conf, "cudnn_fwd_algo",
         static_cast<int32_t>(conv_ctx.fwd_algo_perf.algo));
-    SetInt32InCustomizedKernelConf(
+    SetValInCustomizedKernelConf(
         kernel_conf, "cudnn_bwd_filter_algo",
         static_cast<int32_t>(conv_ctx.bwd_filter_algo_perf.algo));
-    SetInt32InCustomizedKernelConf(
+    SetValInCustomizedKernelConf(
         kernel_conf, "cudnn_bwd_data_algo",
         static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
@@ -193,9 +196,11 @@ PbMessage* ConvOp<NDims>::MutableCustomizedKernelConf(
 
 template<int32_t NDims>
 int32_t ConvOp<NDims>::ModelSplitAxis() const {
-  if (GetStringFromCustomizedConf("data_format") == "channels_first") {
+  if (GetValFromCustomizedConf<std::string>("data_format")
+      == "channels_first") {
     return 1;
-  } else if (GetStringFromCustomizedConf("data_format") == "channels_last") {
+  } else if (GetValFromCustomizedConf<std::string>("data_format")
+             == "channels_last") {
     return NDims + 1;
   } else {
     UNIMPLEMENTED();
@@ -204,7 +209,7 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
 
 template<int32_t NDims>
 int32_t ConvOp<NDims>::MaxModelSplitNum() const {
-  return GetInt32FromCustomizedConf("filters");
+  return GetValFromCustomizedConf<int32_t>("filters");
 }
 
 #ifdef WITH_CUDA
@@ -236,8 +241,9 @@ void ConvOp<NDims>::InferCudnnAlgo(
                           stride_of_in_tensor.data());
   CudnnTensorDesc out_desc(data_type, out_tensor_dim.size(),
                            out_tensor_dim.data(), stride_of_out_tensor.data());
-  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
-                              GetStringFromCustomizedConf("data_format"));
+  CudnnFilterDesc filter_desc(
+      data_type, weight_blob_desc->shape(),
+      GetValFromCustomizedConf<std::string>("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(),
                           GetCustomizedConf());
 

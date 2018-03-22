@@ -45,7 +45,8 @@ int64_t JobDesc::TotalBatchNum() const {
 }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
   CHECK(IsTrain());
-  return OF_PB_POINTER_GET(job_conf_.train_conf(), default_initializer_conf);
+  return GetMsgPtrFromPbMessage<InitializerConf>(job_conf_.train_conf(),
+                                                 "default_initializer_conf");
 }
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());

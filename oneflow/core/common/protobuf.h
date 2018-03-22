@@ -27,7 +27,6 @@ using PbMapPair = google::protobuf::MapPair<T1, T2>;
   OF_PP_MAKE_TUPLE_SEQ(int64_t, Int64)      \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UInt64)    \
   OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
-  OF_PP_MAKE_TUPLE_SEQ(int32_t, EnumValue)  \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
 #define PROTOBUF_REFLECTION(msg, field_name)                               \
@@ -43,15 +42,10 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 
 // Get From PbMessage
 
-#define DECLARE_GET_VAL_FROM_PBMESSAGE(ret_type, func_name)    \
-  ret_type Get##func_name##FromPbMessage(const PbMessage& msg, \
-                                         const std::string& field_name);
+template<typename T>
+T GetValFromPbMessage(const PbMessage&, const std::string& field_name);
 
-OF_PP_FOR_EACH_TUPLE(DECLARE_GET_VAL_FROM_PBMESSAGE,
-                     PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
-                         const PbMessage&, Message))
-
-#undef DECLARE_GET_VAL_FROM_PBMESSAGE
+int32_t GetEnumFromPbMessage(const PbMessage&, const std::string& field_name);
 
 template<typename T>
 const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
@@ -69,25 +63,16 @@ const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg,
 
 // Set In PbMessage
 
-#define DECLARE_SET_VAL_IN_PBMESSAGE(val_type, func_name) \
-  void Set##func_name##InPbMessage(                       \
-      PbMessage* msg, const std::string& field_name, val_type val);
-
-OF_PP_FOR_EACH_TUPLE(DECLARE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
+template<typename T>
+void SetValInPbMessage(PbMessage* msg, const std::string& field_name,
+                       const T& val);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 
-#undef DECLARE_SET_VAL_IN_PBMESSAGE
-
 // Add In PbMessage RepeatedField
 
-#define DECLARE_ADD_VAL_IN_PBRF(val_type, func_name)                         \
-  void Add##func_name##InPbRf(PbMessage* msg, const std::string& field_name, \
-                              val_type val);
-
-OF_PP_FOR_EACH_TUPLE(DECLARE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
-
-#undef DECLARE_ADD_VAL_IN_PBRF
+template<typename T>
+void AddValInPbRf(PbMessage*, const std::string& field_name, const T& val);
 
 // PbRf <-> std::vector
 
@@ -138,15 +123,17 @@ inline bool operator!=(const google::protobuf::MessageLite& lhs,
 
 // Hack Oneof Getter
 
-bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name);
-
-#define OF_PB_POINTER_GET(obj, field) \
-  obj.has_##field() ? &(obj.field()) : nullptr
-
-#define OF_SPECIAL_FIELD_POINTER_GET(ret_type, obj, field)                   \
-  (HasFieldInPbMessage(obj, field))                                          \
-      ? (static_cast<const ret_type*>(&GetMessageFromPbMessage(obj, field))) \
-      : (nullptr)
+template<typename T = PbMessage>
+const T* GetMsgPtrFromPbMessage(const PbMessage& msg,
+                                const std::string& field_name) {
+  PROTOBUF_REFLECTION(msg, field_name);
+  if (r->HasField(msg, fd)) {
+    return static_cast<const T*>(
+        &(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
+  } else {
+    return nullptr;
+  }
+}
 
 }  // namespace oneflow
 
