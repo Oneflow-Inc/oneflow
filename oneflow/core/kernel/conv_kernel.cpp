@@ -97,6 +97,11 @@ const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
 }
 
 template<DeviceType device_type, typename T>
+const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedKernelConf() const {
+  return this->kernel_conf().conv_conf();
+}
+
+template<DeviceType device_type, typename T>
 const ConvKernelConf& ConvKernelIf<device_type, T>::GetConvKernelConf() const {
   return this->kernel_conf().conv_conf();
 }

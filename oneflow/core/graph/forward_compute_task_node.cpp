@@ -5,6 +5,8 @@ namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
+  std::shared_ptr<RegstDesc> activation_regst = ProduceRegst("activation");
+  std::shared_ptr<RegstDesc> data_tmp_regst = ProduceRegst("data_tmp");
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
@@ -12,8 +14,8 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     } else {
       edge->AddRegst("out", out_regst);
       if (IsBackwardTaskType(dst_node->GetTaskType())) {
-        edge->AddRegst("activation", ProduceRegst("activation"));
-        edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
+        edge->AddRegst("activation", activation_regst);
+        edge->AddRegst("data_tmp", data_tmp_regst);
       }
     }
   }
