@@ -19,8 +19,8 @@ const PbMessage& DropoutOp::GetCustomizedConf() const {
 void DropoutOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
-           GetBlobDesc4BnInOp("in")->shape().NumAxes());
+  // CHECK_EQ(op_conf().dropout_conf().noise_shape().dim_size(),
+  //          GetBlobDesc4BnInOp("in")->shape().NumAxes());
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   if (JobDesc::Singleton()->IsTrain()) {
     *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
