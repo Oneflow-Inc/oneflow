@@ -12,7 +12,7 @@ data_part_num: 6
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
-  model_save_snapshots_path: "/willzhang/snapshots"
+  model_save_snapshots_path: "willzhang/snapshots"
   num_of_batches_in_snapshot: 10
   staleness: 0
   total_batch_num: 1000
@@ -25,7 +25,7 @@ train_conf {
   piece_num_of_print_loss: 5
   num_of_pieces_in_batch: 10
   model_update_conf {
-    normal_conf {
+    naive_conf {
       learning_rate: 0.01
     }
   }
