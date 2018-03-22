@@ -6,12 +6,9 @@ namespace oneflow {
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
-  Shape in_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("in")));
-  Shape out_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("out")));
-  Shape weight_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("weight")));
+  Shape in_shape(this->GetConvKernelConf().in());
+  Shape out_shape(this->GetConvKernelConf().out());
+  Shape weight_shape(this->GetConvKernelConf().weight());
 
   std::vector<int32_t> stride_of_in_tensor(this->KernelDim() + 2, 1);
   std::vector<int32_t> stride_of_out_tensor(this->KernelDim() + 2, 1);

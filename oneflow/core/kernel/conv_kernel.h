@@ -46,7 +46,6 @@ class ConvKernelIf : public KernelIf<device_type> {
                             Blob* bias_diff) const = 0;
 
   const PbMessage& GetCustomizedOpConf() const override;
-  const PbMessage& GetCustomizedKernelConf() const override;
   const ConvKernelConf& GetConvKernelConf() const;
   const int32_t KernelDim() const;
 };
