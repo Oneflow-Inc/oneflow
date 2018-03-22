@@ -62,8 +62,12 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
-  if (GetBoolFromCustomizedConf("use_bias")) { EnrollModelBn("bias"); }
+  if (GetBoolFromCustomizedConf("use_bias")) {
+    EnrollModelBn("bias");
+    EnrollModelTmpBn("bias_multipler");
+  }
   EnrollDataTmpBn("cudnn_buf");
+  EnrollDataTmpBn("col_buf");
 }
 
 template<int32_t NDims>
@@ -88,8 +92,9 @@ void ConvOp<NDims>::InferBlobDescs(
   GetOutAndPad(in_blob_desc->shape(), GetCustomizedConf(), &out, nullptr,
                nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
+  size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
-    out_shape.insert(out_shape.begin() + DhwOffset(data_format) + i, out[i]);
+    out_shape.insert(out_shape.begin() + dhw_offset + i, out[i]);
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
@@ -99,14 +104,33 @@ void ConvOp<NDims>::InferBlobDescs(
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
   weight_shape[0] = filters;
   for (size_t i = 0; i < NDims; ++i) {
-    weight_shape[DhwOffset(data_format) + i] =
+    weight_shape[dhw_offset + i] =
         GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
-  // bias
   if (GetBoolFromCustomizedConf("use_bias")) {
-    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters});
+    // bias and bias_multipler
+    GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
+    if (!UseCudnn(device_type)) {
+      std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
+      for (size_t i = 0; i != NDims; ++i) {
+        bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
+      }
+      GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape(bias_mul_shape);
+    }
+  }
+
+  if (!UseCudnn(device_type)) {
+    // col_buf
+    std::vector<int64_t> col_buf_shape(2 * NDims + 1);
+    for (size_t i = 0; i != NDims + 1; ++i) {
+      col_buf_shape[i] = weight_shape[i + 1];
+    }
+    for (size_t i = 0; i != NDims; ++i) {
+      col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
+    }
+    GetBlobDesc4BnInOp("col_buf")->mut_shape() = Shape(col_buf_shape);
   }
 
 #ifdef WITH_CUDA
@@ -198,11 +222,11 @@ void ConvOp<NDims>::InferCudnnAlgo(
 
   std::vector<int32_t> stride_of_in_tensor(NDims + 2, 1);
   std::vector<int32_t> stride_of_out_tensor(NDims + 2, 1);
-  for (int32_t i = NDims + 2 - 1; i > 0; --i) {
-    for (int32_t j = NDims + 2 - 2; j >= 0; --j) {
-      stride_of_in_tensor[j] *= in_blob_desc->shape().At(i);
-      stride_of_out_tensor[j] *= out_blob_desc->shape().At(i);
-    }
+  for (int32_t i = NDims + 2 - 2; i >= 0; --i) {
+    stride_of_in_tensor[i] =
+        stride_of_in_tensor[i + 1] * in_blob_desc->shape().At(i + 1);
+    stride_of_out_tensor[i] =
+        stride_of_out_tensor[i + 1] * out_blob_desc->shape().At(i + 1);
   }
   std::vector<int32_t> in_tensor_dim(in_blob_desc->shape().dim_vec().begin(),
                                      in_blob_desc->shape().dim_vec().end());

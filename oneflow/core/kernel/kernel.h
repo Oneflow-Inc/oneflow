@@ -157,6 +157,10 @@ class KernelIf : public Kernel {
                  const PbRpf<std::string>& from_bns,
                  const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+
+  bool UseCudnn() const {
+    return device_type == DeviceType::kGPU && op_conf().use_cudnn_on_gpu();
+  }
 };
 
 using KernelCreator1 = std::function<Kernel*(const KernelConf&)>;

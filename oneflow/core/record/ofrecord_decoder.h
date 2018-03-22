@@ -57,6 +57,17 @@ class OFRecordDecoderImpl;
 
 OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase, DataType);
 
+template<typename T, typename U>
+void CopyElem(const T* in_dptr, U* out_dptr, int64_t elem_num) {
+  if (std::is_same<T, U>::value) {
+    Memcpy<DeviceType::kCPU>(nullptr, out_dptr, in_dptr, elem_num * sizeof(T));
+  } else {
+    FOR_RANGE(int64_t, i, 0, elem_num) {
+      *(out_dptr++) = static_cast<U>(*(in_dptr++));
+    }
+  }
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_RECORD_OFRECORD_DECODER_H_
