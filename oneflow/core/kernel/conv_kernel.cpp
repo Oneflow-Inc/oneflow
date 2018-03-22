@@ -35,8 +35,7 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->GetBoolFromCustomizedOpConf("use_bias")
-      && !this->op_conf().use_cudnn_on_gpu()) {
+  if (this->GetBoolFromCustomizedOpConf("use_bias") && !this->UseCudnn()) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::Initialize(ctx,
@@ -49,22 +48,18 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const InitializerConf* weight_initializer =
-      (HasFieldInPbMessage(this->GetCustomizedOpConf(), "weight_initializer"))
-          ? (static_cast<const InitializerConf*>(
-                &(this->GetMessageFromCustomizedOpConf("weight_initializer"))))
-          : (nullptr);
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, weight_initializer, (*random_seed_gen)(), BnInOp2Blob("weight"));
+      ctx,
+      OF_SPECIAL_FIELD_POINTER_GET(InitializerConf, this->GetCustomizedOpConf(),
+                                   "weight_initializer"),
+      (*random_seed_gen)(), BnInOp2Blob("weight"));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    const InitializerConf* bias_initializer =
-        (HasFieldInPbMessage(this->GetCustomizedOpConf(), "bias_initializer"))
-            ? (static_cast<const InitializerConf*>(
-                  &(this->GetMessageFromCustomizedOpConf("bias_initializer"))))
-            : (nullptr);
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, bias_initializer, (*random_seed_gen)(), BnInOp2Blob("bias"));
+        ctx,
+        OF_SPECIAL_FIELD_POINTER_GET(
+            InitializerConf, this->GetCustomizedOpConf(), "bias_initializer"),
+        (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }
 
