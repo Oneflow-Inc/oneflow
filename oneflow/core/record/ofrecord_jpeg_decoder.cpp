@@ -17,8 +17,7 @@ void DoPreprocess(std::vector<uint8_t>* image_data, Shape* image_shape,
 template<typename T>
 int32_t OFRecordDecoderImpl<EncodeCase::kJpeg, T>::GetColNumOfFeature(
     const Feature& feature, int64_t one_col_elem_num) const {
-  // single jpeg just has 1 column
-  return 1;
+  return 1;  // single jpeg just has 1 column
 }
 
 template<typename T>
@@ -35,7 +34,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
     DoPreprocess(&image_data, &image_shape, blob_conf.jpeg().preprocess(i));
   }
   CHECK_EQ(image_shape, Shape(blob_conf.shape()));
-  CopyElem<uint8_t, T>(image_data.data(), out_dptr, one_col_elem_num);
+  CopyElem(image_data.data(), out_dptr, one_col_elem_num);
 }
 
 template<typename T>
