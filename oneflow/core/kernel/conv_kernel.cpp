@@ -83,7 +83,7 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
 template<DeviceType device_type, typename T>
 const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
   CHECK(this->kernel_conf().has_conv_conf());
-  switch (KernelDim()) {
+  switch (OpKernelDim()) {
     case 1: return this->op_conf().conv_1d_conf();
     case 2: return this->op_conf().conv_2d_conf();
     case 3: return this->op_conf().conv_3d_conf();
@@ -97,7 +97,7 @@ const ConvKernelConf& ConvKernelIf<device_type, T>::GetConvKernelConf() const {
 }
 
 template<DeviceType device_type, typename T>
-const int32_t ConvKernelIf<device_type, T>::KernelDim() const {
+const int32_t ConvKernelIf<device_type, T>::OpKernelDim() const {
   return this->GetConvKernelConf().in().dim_size() - 2;
 }
 
