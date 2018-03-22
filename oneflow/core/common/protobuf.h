@@ -138,8 +138,15 @@ inline bool operator!=(const google::protobuf::MessageLite& lhs,
 
 // Hack Oneof Getter
 
+bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name);
+
 #define OF_PB_POINTER_GET(obj, field) \
   obj.has_##field() ? &(obj.field()) : nullptr
+
+#define OF_SPECIAL_FIELD_POINTER_GET(ret_type, obj, field)                   \
+  (HasFieldInPbMessage(obj, field))                                          \
+      ? (static_cast<const ret_type*>(&GetMessageFromPbMessage(obj, field))) \
+      : (nullptr)
 
 }  // namespace oneflow
 
