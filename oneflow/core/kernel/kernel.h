@@ -79,16 +79,16 @@ class Kernel {
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, conf_type) \
-  ret_type Get##func_name##FromCustomized##conf_type(                       \
-      const std::string& field_name) const {                                \
-    const PbMessage& customized_conf = GetCustomized##conf_type();          \
-    return Get##func_name##FromPbMessage(customized_conf, field_name);      \
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(cpp_type, pb_type_name, conf_type) \
+  cpp_type Get##pb_type_name##FromCustomized##conf_type(                       \
+      const std::string& field_name) const {                                   \
+    const PbMessage& customized_conf = GetCustomized##conf_type();             \
+    return GetValFromPbMessage<cpp_type>(customized_conf, field_name);         \
   }
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE(ret_type, func_name) \
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, OpConf);   \
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, KernelConf);
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE(cpp_type, pb_type_name) \
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(cpp_type, pb_type_name, OpConf);   \
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(cpp_type, pb_type_name, KernelConf);
 
   OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE,
                        PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(

@@ -21,11 +21,12 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   } else {
     UNIMPLEMENTED();
   }
-  std::string data_dir = decode_op->GetStringFromCustomizedConf("data_dir");
+  std::string data_dir =
+      decode_op->GetValFromCustomizedConf<std::string>("data_dir");
   std::string part_name_prefix =
-      decode_op->GetStringFromCustomizedConf("part_name_prefix");
+      decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");
   int32_t part_name_suffix_length =
-      decode_op->GetInt32FromCustomizedConf("part_name_suffix_length");
+      decode_op->GetValFromCustomizedConf<int32_t>("part_name_suffix_length");
   std::string num = std::to_string(parallel_id());
   int32_t zero_count =
       std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);

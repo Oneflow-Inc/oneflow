@@ -6,10 +6,10 @@ namespace oneflow {
 void RecurrentOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollInputBn("rec_in");
-  if (!GetStringFromCustomizedConf("init_hidden").empty()) {
-    CHECK(!GetBoolFromCustomizedConf("has_init_hidden_initializer"));
+  if (!GetValFromCustomizedConf<std::string>("init_hidden").empty()) {
+    CHECK(!GetValFromCustomizedConf<bool>("has_init_hidden_initializer"));
     EnrollInputBn("h0");
-  } else if (GetBoolFromCustomizedConf("is_init_hidden_trainable")) {
+  } else if (GetValFromCustomizedConf<bool>("is_init_hidden_trainable")) {
     EnrollModelBn("h0");
   } else {
     EnrollModelTmpBn("h0");
@@ -20,7 +20,7 @@ void RecurrentOp::InitFromOpConf() {
 }
 
 int32_t RecurrentOp::MaxModelSplitNum() const {
-  return GetInt32FromCustomizedConf("hidden_size");
+  return GetValFromCustomizedConf<int32_t>("hidden_size");
 }
 
 void RecurrentOp::InferBlobDescs(
@@ -32,9 +32,9 @@ void RecurrentOp::InferBlobDescs(
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(in_blob_desc->has_col_num_field(), true);
   int64_t data_num = in_blob_desc->shape().At(0);
-  int32_t hidden_size = GetInt32FromCustomizedConf("hidden_size");
+  int32_t hidden_size = GetValFromCustomizedConf<int32_t>("hidden_size");
   Shape h0_shape = Shape({data_num, hidden_size});
-  if (!GetStringFromCustomizedConf("init_hidden").empty()) {
+  if (!GetValFromCustomizedConf<std::string>("init_hidden").empty()) {
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
     CHECK_EQ(h0_blob_desc->shape(), h0_shape);
@@ -66,9 +66,9 @@ std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
   if (input_bn == "rec_in") {
     return obn2lbn("rec_out");
   } else if (input_bn == "h0") {
-    return GetStringFromCustomizedConf("init_hidden");
+    return GetValFromCustomizedConf<std::string>("init_hidden");
   } else if (input_bn == "in") {
-    return GetStringFromCustomizedConf("in");
+    return GetValFromCustomizedConf<std::string>("in");
   } else {
     UNIMPLEMENTED();
     return "";
@@ -77,9 +77,9 @@ std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
 
 std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
   if (output_bn == "out") {
-    return op_name() + "/" + GetStringFromCustomizedConf("out");
+    return op_name() + "/" + GetValFromCustomizedConf<std::string>("out");
   } else if (output_bn == "rec_out") {
-    return op_name() + "/rec_" + GetStringFromCustomizedConf("out");
+    return op_name() + "/rec_" + GetValFromCustomizedConf<std::string>("out");
   } else {
     UNIMPLEMENTED();
     return "";

@@ -32,11 +32,11 @@ const PbMessage& BoxingOp::GetCustomizedConf() const {
 }
 
 std::string BoxingOp::ibn2lbn(const std::string& input_bn) const {
-  return GetStringFromCustomizedConf("lbn");
+  return GetValFromCustomizedConf<std::string>("lbn");
 }
 
 std::string BoxingOp::obn2lbn(const std::string& output_bn) const {
-  return GetStringFromCustomizedConf("lbn");
+  return GetValFromCustomizedConf<std::string>("lbn");
 }
 
 void BoxingOp::InferBlobDescs(
