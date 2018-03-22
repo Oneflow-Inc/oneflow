@@ -20,9 +20,7 @@ class CudnnConvDesc final {
   ~CudnnConvDesc();
 
   CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                const int kernel_dim, const int* dilation_rate,
-                const int* strides, const int* kernel_size,
-                const std::string& data_format, const std::string& padding);
+                const PbMessage& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -44,18 +42,16 @@ class ConvOp : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+      const ParallelContext*, DeviceType) const override;
 
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
-
- protected:
-  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
 
+ private:
+  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, KernelConf*) const override;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(
       std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

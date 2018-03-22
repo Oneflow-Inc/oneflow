@@ -50,10 +50,6 @@ class Operator {
   bool UseCudnnOnGpu() const { return op_conf_.use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
-  virtual PbMessage* MutableCustomizedKernelConf(
-      KernelConf* kernel_conf) const {
-    UNIMPLEMENTED();
-  }
 
 #define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name)             \
   ret_type Get##func_name##FromCustomizedConf(const std::string& field_name) \
@@ -83,47 +79,6 @@ class Operator {
   }
 
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
-
-#define DEFINE_SET_VAL_IN_CUSTOMIZED_CONF(val_type, func_name)                 \
-  void Set##func_name##InCustomizedConf(const std::string& field_name,         \
-                                        val_type val) const {                  \
-    const PbMessage& customized_conf = GetCustomizedConf();                    \
-    PbMessage* customized_conf_ptr = &const_cast<PbMessage&>(customized_conf); \
-    Set##func_name##InPbMessage(customized_conf_ptr, field_name, val);         \
-  }
-
-  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_CONF,
-                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
-
-#undef DEFINE_SET_VAL_IN_CUSTOMIZED_CONF
-
-#define DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name)         \
-  void Set##func_name##InCustomizedKernelConf(                                \
-      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
-      const {                                                                 \
-    PbMessage* customized_kernel_conf_ptr =                                   \
-        MutableCustomizedKernelConf(kernel_conf);                             \
-    Set##func_name##InPbMessage(customized_kernel_conf_ptr, field_name, val); \
-  }
-
-  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF,
-                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
-
-#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
-
-#define DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name) \
-  void Add##func_name##ToPbRfInCustomizedKernelConf(                          \
-      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
-      const {                                                                 \
-    PbMessage* customized_kernel_conf_ptr =                                   \
-        MutableCustomizedKernelConf(kernel_conf);                             \
-    Add##func_name##InPbRf(customized_kernel_conf_ptr, field_name, val);      \
-  }
-
-  OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF,
-                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
-
-#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
 
   const std::string& SoleIbn() const;
   const std::string& SoleIdbn() const;
@@ -163,6 +118,56 @@ class Operator {
       bool is_forward, DeviceType, const ParallelContext*, KernelConf*) const;
 
  protected:
+  virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
+    UNIMPLEMENTED();
+  }
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_CONF(val_type, func_name)                 \
+  void Set##func_name##InCustomizedConf(const std::string& field_name,         \
+                                        val_type val) const {                  \
+    const PbMessage& customized_conf = GetCustomizedConf();                    \
+    PbMessage* customized_conf_ptr = &const_cast<PbMessage&>(customized_conf); \
+    Set##func_name##InPbMessage(customized_conf_ptr, field_name, val);         \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_CONF
+
+#define DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name)       \
+  void Set##func_name##InCustomizedKernelConf(                              \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val) \
+      const {                                                               \
+    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);  \
+    Set##func_name##InPbMessage(customized_conf, field_name, val);          \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+  template<typename T>
+  T* MutableMsgInCustomizedKernelConf(KernelConf* kernel_conf,
+                                      const std::string& field_name) const {
+    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
+    return static_cast<T*>(
+        MutableMessageInPbMessage(customized_conf, field_name));
+  }
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
+
+#define DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF(val_type, func_name) \
+  void Add##func_name##ToPbRfInCustomizedKernelConf(                          \
+      KernelConf* kernel_conf, const std::string& field_name, val_type val)   \
+      const {                                                                 \
+    PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);    \
+    Add##func_name##InPbRf(customized_conf, field_name, val);                 \
+  }
+
+  OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_TO_PBRF_IN_CUSTOMIZED_KERNEL_CONF,
+                       PROTOBUF_BASIC_DATA_TYPE_SEQ);
+
+#undef DEFINE_SET_VAL_IN_CUSTOMIZED_KERNEL_CONF
+
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

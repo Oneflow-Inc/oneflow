@@ -75,6 +75,8 @@ const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg,
 
 OF_PP_FOR_EACH_TUPLE(DECLARE_SET_VAL_IN_PBMESSAGE, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
+PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
+
 #undef DECLARE_SET_VAL_IN_PBMESSAGE
 
 // Add In PbMessage RepeatedField
