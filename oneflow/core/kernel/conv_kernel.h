@@ -47,7 +47,7 @@ class ConvKernelIf : public KernelIf<device_type> {
 
   const PbMessage& GetCustomizedOpConf() const override;
   const ConvKernelConf& GetConvKernelConf() const;
-  const int32_t KernelDim() const;
+  const int32_t OpKernelDim() const;
 };
 
 template<DeviceType device_type, typename T>
