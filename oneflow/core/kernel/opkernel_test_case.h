@@ -5,6 +5,9 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/kernel/kernel_context.h"
 
 namespace oneflow {
 
@@ -16,76 +19,71 @@ class OpKernelTestCaseBuilder final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCaseBuilder);
   explicit OpKernelTestCaseBuilder(OpKernelTestCase* opkernel_test_case)
-    : opkernel_test_case_(opkernel_test_case) {}
+      : opkernel_test_case_(opkernel_test_case) {}
 
-  JobConfProto* mut_job_conf_proto() {
-    return opkernel_test_case_->mut_job_conf_proto();
-  }
-  OperatorConf* mut_op_conf() { return opkernel_test_case_->mut_op_conf(); }
+  JobConf* mut_job_conf_proto();
+  OperatorConf* mut_op_conf();
+  ParallelContext* mut_parallel_ctx();
+  void set_device_type(DeviceType device_type);
+  void set_is_forward(bool is_forward);
+  void InitBlob(const std::string&, Blob* blob);
+  void ForwardAssertEqBlob(const std::string&, Blob* blob);
+  void BackwardAssertEqBlob(const std::string&, Blob* blob);
 
-  void InitBlob(const std::string&, std::unique_ptr<Blob>&& blob);
-  void ForwardAssertEqBlob(const std::string&, std::unique_ptr<Blob>&& blob);
-  void BackwardAssertEqBlob(const std::string&, std::unique_ptr<Blob>&& blob);
-  
  private:
-  HashMap<std::string, std::unique_ptr<Blob>>* mut_bn_in_op2blob() {
-    return opkernel_test_case_->mut_bn_in_op2blob();
-  }
+  HashMap<std::string, Blob*>* mut_bn_in_op2blob();
   OpKernelTestCase* opkernel_test_case_;
 };
 
 class OpKernelTestCase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
-  OpKernelTestCase()
-    : bn_in_op2blob_(new HashMap<std::string, std::unique_ptr<Blob>>()),
-      bn_in_op2blob_desc_(new HashMap<std::string, std::unique_ptr<BlobDesc*>>()) {}
+  OpKernelTestCase();
   ~OpKernelTestCase() = default;
 
-  virtual void Run() const = 0;
+  void Run();
 
-  void Build();
-  virtual void Build(OpKernelTestCaseBuilder* builder) = 0;
-
-  std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob() const;
-  std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc() const;
-  const JobConfProto& job_conf_proto() const { return job_conf_proto_; }
-  const OperatorConf& op_conf() const { return op_conf_; }
-  const std::list<std::string>& forward_asserted_blob() const {
-    return forward_asserted_blob_;
+  //  Setters
+  HashMap<std::string, Blob*>* mut_bn_in_op2blob() { return &bn_in_op2blob_; }
+  HashMap<std::string, BlobDesc>* mut_bn_in_op2blob_desc() {
+    return &bn_in_op2blob_desc_;
   }
-  const std::list<std::string>& backward_asserted_blob() const {
-    return backward_asserted_blob_;
-  }
-  
-  HashMap<std::string, std::unique_ptr<Blob>>* mut_bn_in_op2blob() {
-    return bn_in_op2blob_.get();
-  }
-  HashMap<std::string, std::unique_ptr<BlobDesc>>* mut_bn_in_op2blob_desc() {
-    return bn_in_op2blob_desc_.get();
-  }
-  JobConfProto* mut_job_conf_proto() { return &job_conf_proto_; }
+  JobConf* mut_job_conf_proto() { return &job_conf_proto_; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
-  std::list<std::string>* mut_forward_asserted_blob() {
-    return &forward_asserted_blob_;
+  ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
+  std::list<std::string>* mut_forward_asserted_blob_names() {
+    return &forward_asserted_blob_names_;
   }
-  std::list<std::string>* mut_backward_asserted_blob() {
-    return &backward_asserted_blob_;
+  std::list<std::string>* mut_backward_asserted_blob_names() {
+    return &backward_asserted_blob_names_;
   }
-  
+  void set_device_type(DeviceType device_type) { device_type_ = device_type; }
+  void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
+
  private:
-  std::shared_ptr<HashMap<std::string, std::unique_ptr<Blob>>> bn_in_op2blob_;
-  std::shared_ptr<HashMap<std::string, std::unique_ptr<BlobDesc*>>>
-    bn_in_op2blob_desc_;
-  JobConfProto job_conf_proto_;
+  //  Getters
+  std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
+  std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
+
+  void InitBeforeRun();
+  void AssertAfterRun() const;
+  HashMap<std::string, Blob*> bn_in_op2blob_;
+  HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
+  JobConf job_conf_proto_;
   OperatorConf op_conf_;
-  std::list<std::string> forward_asserted_blob_;
-  std::list<std::string> backward_asserted_blob_;
-  std::string model_save_dir_;
+  std::list<std::string> forward_asserted_blob_names_;
+  std::list<std::string> backward_asserted_blob_names_;
+  ParallelContext parallel_ctx_;
+  KernelCtx kernel_ctx_;
+  DeviceType device_type_;
+  bool is_forward_;
 };
 
-}
+}  // namespace test
 
-}
+}  // namespace oneflow
+
+#define OF_PP_DEF_OPKERNEL_TEST_CASE(class_name, template_arg_tuple, \
+                                     run_arg_tuple, builder)
 
 #endif  // ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
