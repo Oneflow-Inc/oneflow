@@ -7,25 +7,31 @@ const PbMessage& BasicGruOp::GetCustomizedConf() const {
 }
 
 void BasicGruOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("plus_op_out");
+#define OF_GRU_ENROLL_DATA_TMP_BN(modelname) EnrollDataTmpBn
+#undef OF_GRU_ENROLL_DATA_TMP_BN
   EnrollDataTmpBn("reset_gate_data");
-  EnrollDataTmpBn("update_gate_data");
-  EnrollDataTmpBn("candidate_hidden_data");
-  EnrollDataTmpBn("reset_gate_out");
-  EnrollDataTmpBn("update_gate_out");
-  EnrollDataTmpBn("candidate_hidden_out");
-  EnrollDataTmpBn("reset_mul_hidden");
-  EnrollDataTmpBn("update_mul_hidden");
-  EnrollDataTmpBn("update_mul_candidate_hidden");
-
   EnrollModelBn("i2h_weight_r");
   EnrollModelBn("h2h_weight_r");
+  EnrollDataTmpBn("reset_gate_out");
+  EnrollDataTmpBn("reset_gate_data_diff");
+  EnrollDataTmpBn("reset_gate_out_diff");
 
+  EnrollDataTmpBn("update_gate_data");
   EnrollModelBn("i2h_weight_z");
   EnrollModelBn("h2h_weight_z");
+  EnrollDataTmpBn("update_gate_out");
+  EnrollDataTmpBn("update_gate_data_diff");
+  EnrollDataTmpBn("update_gate_out_diff");
 
+  EnrollDataTmpBn("candidate_hidden_data");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
+  EnrollDataTmpBn("candidate_hidden_out");
+  EnrollDataTmpBn("candidate_hidden_data_diff");
+  EnrollDataTmpBn("candidate_hidden_out_diff");
+
+  EnrollDataTmpBn("temp_data");
+  EnrollDataTmpBn("plus_op_out");
 
   if (GetBoolFromCustomizedConf("use_bias")) {
     EnrollModelBn("bias_r");
@@ -46,30 +52,28 @@ void BasicGruOp::VirtualInferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
-#define OF_INFER_BLOB_DESCS(modelname)                                         \
+#define OF_GRU_INFER_BLOB_DESCS(modelname)                                     \
   *GetBlobDesc4BnInOp(#modelname) = BlobDesc(                                  \
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
       false, true, in_blob_desc->max_col_num())
-  OF_INFER_BLOB_DESCS(plus_op_out);
-  OF_INFER_BLOB_DESCS(reset_gate_data);
-  OF_INFER_BLOB_DESCS(update_gate_data);
-  OF_INFER_BLOB_DESCS(candidate_hidden_data);
-  OF_INFER_BLOB_DESCS(reset_gate_out);
-  OF_INFER_BLOB_DESCS(update_gate_out);
-  OF_INFER_BLOB_DESCS(candidate_hidden_out);
-  OF_INFER_BLOB_DESCS(reset_mul_hidden);
-  OF_INFER_BLOB_DESCS(update_mul_hidden);
-  OF_INFER_BLOB_DESCS(update_mul_candidate_hidden);
-#undef OF_INFER_BLOB_DESCS
+  OF_GRU_INFER_BLOB_DESCS(reset_gate_data);
+  OF_GRU_INFER_BLOB_DESCS(reset_gate_out);
+  OF_GRU_INFER_BLOB_DESCS(update_gate_data);
+  OF_GRU_INFER_BLOB_DESCS(update_gate_out);
+  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_data);
+  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_out);
+  OF_GRU_INFER_BLOB_DESCS(temp_data);
+  OF_GRU_INFER_BLOB_DESCS(plus_op_out);
+#undef OF_GRU_INFER_BLOB_DESCS
 
-#define OF_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight) \
-  *GetBlobDesc4BnInOp(#i2h_weight) =                  \
-      BlobDesc(Shape({hidden_size, embedding_size})); \
+#define OF_GRU_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight) \
+  *GetBlobDesc4BnInOp(#i2h_weight) =                      \
+      BlobDesc(Shape({hidden_size, embedding_size}));     \
   *GetBlobDesc4BnInOp(#h2h_weight) = BlobDesc(Shape({hidden_size, hidden_size}))
-  OF_INFER_WEIGHT_DESCS(i2h_weight_r, h2h_weight_r);
-  OF_INFER_WEIGHT_DESCS(i2h_weight_z, h2h_weight_z);
-  OF_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight);
-#undef OF_INFER_WEIGHT_DESCS
+  OF_GRU_INFER_WEIGHT_DESCS(i2h_weight_r, h2h_weight_r);
+  OF_GRU_INFER_WEIGHT_DESCS(i2h_weight_z, h2h_weight_z);
+  OF_GRU_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight);
+#undef OF_GRU_INFER_WEIGHT_DESCS
 
   if (GetBoolFromCustomizedConf("use_bias")) {
     *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));

@@ -45,14 +45,14 @@ struct BasicGruKernelUtil {
       const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
       const Blob* bias_multiplier, const Blob* i2h_weight,
       const Blob* h2h_weight, const Blob* bias, Blob* candidate_data,
-      Blob* dandidate_out, Blob* reset_out);
+      Blob* dandidate_out, Blob* reset_out, Blob* temp_data);
   static void ComputePlusOutForward(const KernelCtx& ctx, const Blob* hidden,
                                     Blob* candidate_out, Blob* temp_data,
                                     Blob* update_out, Blob* plus_out);
   static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
                                 Blob* hidden, Blob* out_diff,
                                 Blob* i2h_weight_diff, Blob* h2h_weight_diff);
-  static void ComputeTemModelDiff(
+  static void ComputeTmpModelDiff(
       const KernelCtx& ctx, const Blob* candidate_out,
       const Blob* candidate_data, const Blob* update_out,
       const Blob* update_data, const Blob* reset_out, const Blob* reset_data,
