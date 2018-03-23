@@ -12,7 +12,15 @@ placement_group {
 
 placement_group {
   op_set {
-    op_name: "conv"
+    op_name: "conv1"
+    op_name: "relu1"
+    op_name: "pool1"
+    op_name: "conv2"
+    op_name: "relu2"
+    op_name: "pool2"
+    op_name: "ip1024"
+    op_name: "relu3"
+    op_name: "dropout"
     op_name: "ip10"
     op_name: "softmax_loss"
   }
