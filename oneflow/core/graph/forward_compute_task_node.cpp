@@ -4,20 +4,23 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
-  std::shared_ptr<RegstDesc> activation_regst = ProduceRegst("activation");
-  std::shared_ptr<RegstDesc> data_tmp_regst = ProduceRegst("data_tmp");
+  ProduceRegst("out");
+  ProduceRegst("activation");
+  ProduceRegst("data_tmp");
   for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
     } else {
-      edge->AddRegst("out", out_regst);
-      if (IsBackwardTaskType(dst_node->GetTaskType())) {
-        edge->AddRegst("activation", activation_regst);
-        edge->AddRegst("data_tmp", data_tmp_regst);
-      }
+      VirtualProduceRegstOnOutEdge(edge);
     }
+  }
+}
+
+void ForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
+  edge->AddRegst("out", GetProducedRegst("out"));
+  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
+    edge->AddRegst("activation", GetProducedRegst("activation"));
+    edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
   }
 }
 
@@ -28,16 +31,17 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      VirtualConsumeInRegst(edge);
+      VirtualConsumeRegstOnInEdge(edge);
     }
   }
 }
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
-  BuildExecGphStructAndBindInRegst();
-  BuildOutRegst();
+  VirtualBuildExecGphStructAndBindInRegst();
+  VirtualBuildOutRegst();
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
+  VirtualBuildExtraRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->InferBlobDescs(parallel_ctx(), device_type());
   });
@@ -47,6 +51,7 @@ void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
   TryLockConsumedRegst("model_tmp");
+  VirtualLockExtraRegsts();
 }
 
 void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
