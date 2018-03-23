@@ -78,14 +78,14 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx,
-      OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
-                        weight_initializer),
+      GetMsgPtrFromPbMessage(this->op_conf().fully_connected_conf(),
+                             "weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"));
   if (this->op_conf().fully_connected_conf().use_bias()) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx,
-        OF_PB_POINTER_GET(this->op_conf().fully_connected_conf(),
-                          bias_initializer),
+        GetMsgPtrFromPbMessage(this->op_conf().fully_connected_conf(),
+                               "bias_initializer"),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }

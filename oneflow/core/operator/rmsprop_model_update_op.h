@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_RMSPROP_MODEL_UPDATE_OP_H_
 #define ONEFLOW_CORE_OPERATOR_RMSPROP_MODEL_UPDATE_OP_H_
 
-#include "oneflow/core/operator/model_update_op.h"
+#include "oneflow/core/operator/normal_model_update_op.h"
 
 namespace oneflow {
 
-class RMSPropModelUpdateOp final : public ModelUpdtOp {
+class RMSPropModelUpdateOp final : public NormalModelUpdtOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RMSPropModelUpdateOp);
   RMSPropModelUpdateOp() = default;

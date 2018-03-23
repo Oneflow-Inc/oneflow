@@ -1,7 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/data_type.proto";
+enum RecordTypeProto {
+  kOFRecord = 0;
+}
 
 message BytesList {
   repeated bytes value = 1;
@@ -25,6 +27,6 @@ message Feature {
   }
 }
 
-message OfRecord {
+message OFRecord {
   map<string, Feature> feature = 1;
 }

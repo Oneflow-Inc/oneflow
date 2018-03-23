@@ -7,6 +7,12 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
+struct CudnnConvAlgoCtx final {
+  cudnnConvolutionFwdAlgoPerf_t fwd_algo_perf;
+  cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo_perf;
+  cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo_perf;
+};
+
 class CudnnConvDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvDesc);
@@ -14,9 +20,7 @@ class CudnnConvDesc final {
   ~CudnnConvDesc();
 
   CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                const int kernel_dim, const int* dilation_rate,
-                const int* strides, const int* kernel_size,
-                const std::string& data_format, const std::string& padding);
+                const PbMessage& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -38,23 +42,20 @@ class ConvOp : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type,
-      std::function<void(OpContext*)> EnrollOpContext) const override;
+      const ParallelContext*, DeviceType) const override;
 
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, const OpContext* op_ctx,
-      KernelConf* kernel_conf) const override;
-
- protected:
-  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
 
-#ifdef WITH_CUDA
-  size_t InferCudnnWorkspaceSize(
+ private:
+  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
+  void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      std::function<void(OpContext*)> EnrollOpContext) const;
+      const ParallelContext*, KernelConf*) const override;
+#ifdef WITH_CUDA
+  void InferCudnnAlgo(
+      std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      CudnnConvAlgoCtx* conv_ctx) const;
 #endif  // WITH_CUDA
 };
 

@@ -59,8 +59,8 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::Init() {
-  CommNet::Singleton()->set_comm_network_ptr(new EpollCommNet());
+void EpollCommNet::Init(const Plan& plan) {
+  CommNet::Singleton()->set_comm_network_ptr(new EpollCommNet(plan));
 }
 
 const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
@@ -91,7 +91,8 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollCommNet::EpollCommNet() {
+EpollCommNet::EpollCommNet(const Plan& plan) {
+  GenConnectionInfo(plan);
   pollers_.resize(JobDesc::Singleton()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) {
     pollers_[i] = new IOEventPoller;
@@ -129,19 +130,24 @@ void EpollCommNet::InitSockets() {
     }
   }
   CHECK_LT(this_listen_port, listen_port_max);
+  int32_t src_machine_count = 0;
   // connect
-  FOR_RANGE(int64_t, peer_machine_id, this_machine_id + 1, total_machine_num) {
-    uint16_t peer_port = PullPort(peer_machine_id);
-    sockaddr_in peer_sockaddr = GetSockAddr(peer_machine_id, peer_port);
+  for (int64_t peer_id : peer_machine_id()) {
+    if (peer_id < this_machine_id) {
+      ++src_machine_count;
+      continue;
+    }
+    uint16_t peer_port = PullPort(peer_id);
+    sockaddr_in peer_sockaddr = GetSockAddr(peer_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
                    sizeof(peer_sockaddr))
            == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
-    machine_id2sockfd_[peer_machine_id] = sockfd;
+    machine_id2sockfd_[peer_id] = sockfd;
   }
   // accept
-  FOR_RANGE(int64_t, idx, 0, this_machine_id) {
+  FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
     int sockfd = accept(listen_sockfd,

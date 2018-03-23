@@ -35,7 +35,7 @@ class LossOp : public Operator {
     if (output_bn == "reduction_coefficient") {
       return op_name() + "/reduction_coefficient";
     } else {
-      return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
+      return op_name() + "/" + GetValFromCustomizedConf<std::string>(output_bn);
     }
   }
 };

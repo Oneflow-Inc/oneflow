@@ -34,8 +34,11 @@ const char* Blob::data_id(int32_t no) const {
 }
 
 int32_t Blob::col_num(int32_t no) const {
-  CHECK_NOTNULL(col_num_ptr_);
-  return *(col_num_ptr_ + no);
+  if (col_num_ptr_ == nullptr) {
+    return 1;
+  } else {
+    return *(col_num_ptr_ + no);
+  }
 }
 
 void Blob::set_col_num(int32_t no, int32_t val) {

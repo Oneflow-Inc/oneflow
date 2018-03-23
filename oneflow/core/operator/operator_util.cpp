@@ -22,22 +22,25 @@ void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
 
   int32_t effective_filter_size = (filter_size - 1) * dilation_rate + 1;
   if (padding_type == "valid") {
-    *output_size = (input_size - effective_filter_size + stride) / stride;
+    if (output_size) {
+      *output_size = (input_size - effective_filter_size + stride) / stride;
+    }
     if (padding_before) { *padding_before = 0; }
     if (padding_after) { *padding_after = 0; }
   } else if (padding_type == "same") {
-    *output_size = (input_size + stride - 1) / stride;
+    int64_t tmp_output_size = (input_size + stride - 1) / stride;
+    if (output_size) { *output_size = tmp_output_size; }
     const int32_t padding_needed =
-        std::max(0, static_cast<int32_t>((*output_size - 1) * stride
+        std::max(0, static_cast<int32_t>((tmp_output_size - 1) * stride
                                          + effective_filter_size - input_size));
     // For odd values of total padding, add more padding at the 'right'
     // side of the given dimension.
     if (padding_before) { *padding_before = padding_needed / 2; }
-    if (padding_after) { *padding_after = padding_needed - *padding_before; }
+    if (padding_after) { *padding_after = padding_needed - padding_needed / 2; }
   } else {
     UNIMPLEMENTED();
   }
-  CHECK_GE((*output_size), 0);
+  if (output_size) { CHECK_GE((*output_size), 0); }
 }
 
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,

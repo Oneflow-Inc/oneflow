@@ -18,10 +18,11 @@ class CloneOp final : public Operator {
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
+  bool IsCloneOp() const override { return true; }
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
-    return GetStringFromCustomizedConf("lbn");
+    return GetValFromCustomizedConf<std::string>("lbn");
   }
   std::string obn2lbn(const std::string& output_bn) const override {
     return op_name() + "/" + output_bn;

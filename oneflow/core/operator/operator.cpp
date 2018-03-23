@@ -19,7 +19,7 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
-    op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnn());
+    op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnnOnGpu());
   }
   InitFromOpConf();
 }
@@ -39,6 +39,10 @@ int8_t Operator::TryModifyLbn4BnInOp(const std::string& bn_in_op,
 void Operator::ModifyLbn4BnInOp(const std::string& bn_in_op,
                                 const std::string& lbn) {
   CHECK_EQ(TryModifyLbn4BnInOp(bn_in_op, lbn), 0);
+}
+
+bool Operator::UseCudnn(DeviceType device_type) const {
+  return device_type == DeviceType::kGPU && op_conf_.use_cudnn_on_gpu();
 }
 
 const std::string& Operator::SoleIbn() const {
@@ -62,12 +66,6 @@ const std::string& Operator::SoleDtbn() const {
   return *(data_tmp_bns_.begin());
 }
 
-void Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
-    std::function<void(OpContext*)> EnrollOpContext) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
-}
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type) const {
@@ -129,8 +127,7 @@ static bool HasBlobDescWithField(
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     bool is_forward, DeviceType device_type,
-    const ParallelContext* parallel_ctx, const OpContext* op_ctx,
-    KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -162,13 +159,6 @@ void Operator::GenKernelConf(
   }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
-  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, op_ctx, kernel_conf);
-}
-
-void Operator::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const OpContext*,
-    KernelConf* kernel_conf) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
@@ -177,7 +167,7 @@ std::string Operator::ibn2lbn(const std::string& input_bn) const {
       GetCustomizedConf().GetDescriptor();
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
   if (fd) {
-    return GetStringFromCustomizedConf(input_bn);
+    return GetValFromCustomizedConf<std::string>(input_bn);
   } else {
     size_t underline_pos = input_bn.rfind('_');
     CHECK_NE(underline_pos, std::string::npos);
@@ -187,7 +177,7 @@ std::string Operator::ibn2lbn(const std::string& input_bn) const {
   }
 }
 std::string Operator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetStringFromCustomizedConf(output_bn);
+  return op_name() + "/" + GetValFromCustomizedConf<std::string>(output_bn);
 }
 std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
   return op_name() + "/" + model_tmp_bn;
@@ -263,10 +253,10 @@ void Operator::EnrollModelTmpBn(const std::string& mtbn) {
 }
 
 void Operator::StrFieldTolower(const std::string& field_name) {
-  std::string field_val = GetStringFromCustomizedConf(field_name);
+  std::string field_val = GetValFromCustomizedConf<std::string>(field_name);
   std::transform(field_val.begin(), field_val.end(), field_val.begin(),
                  ::tolower);
-  SetStringInCustomizedConf(field_name, field_val);
+  SetValInCustomizedConf(field_name, field_val);
 }
 
 std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {

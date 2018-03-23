@@ -4,38 +4,44 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
+  ProduceRegst("out");
+  ProduceRegst("activation");
+  ProduceRegst("data_tmp");
   for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
     } else {
-      edge->AddRegst("out", out_regst);
-      if (IsBackwardTaskType(dst_node->GetTaskType())) {
-        edge->AddRegst("activation", ProduceRegst("activation"));
-        edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
-      }
+      VirtualProduceRegstOnOutEdge(edge);
     }
+  }
+}
+
+void ForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
+  edge->AddRegst("out", GetProducedRegst("out"));
+  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
+    edge->AddRegst("activation", GetProducedRegst("activation"));
+    edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
   }
 }
 
 void ForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kMdUpdt) {
+    if (src_node->GetTaskType() == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      VirtualConsumeInRegst(edge);
+      VirtualConsumeRegstOnInEdge(edge);
     }
   }
 }
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
-  BuildExecGphStructAndBindInRegst();
-  BuildOutRegst();
+  VirtualBuildExecGphStructAndBindInRegst();
+  VirtualBuildOutRegst();
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
+  VirtualBuildExtraRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->InferBlobDescs(parallel_ctx(), device_type());
   });
@@ -45,6 +51,7 @@ void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
   TryLockConsumedRegst("model_tmp");
+  VirtualLockExtraRegsts();
 }
 
 void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
@@ -59,8 +66,10 @@ void ForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(TaskEdge* edge) {
 void ForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
-    activation_regst->AddLbn(edge->lbn());
-    edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+    if (activation_regst->GetBlobDesc(edge->lbn()) == nullptr) {
+      activation_regst->AddLbn(edge->lbn());
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+    }
     edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
   });
 }

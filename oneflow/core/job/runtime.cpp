@@ -5,6 +5,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -36,9 +37,9 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     if (task.machine_id() != MachineCtx::Singleton()->this_machine_id()) {
       continue;
     }
-    if (task.task_type() == TaskType::kMdUpdt) {
+    if (IsMdUpdtTaskType(task.task_type())) {
       mdupdt_tasks.push_back(&task);
-    } else if (task.task_type() == TaskType::kDecode) {
+    } else if (task.task_type() == TaskType::kRecordLoad) {
       source_tasks.push_back(&task);
     } else {
       other_tasks.push_back(&task);
@@ -86,12 +87,12 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
 #ifdef PLATFORM_POSIX
   if (JobDesc::Singleton()->use_rdma()) {
 #ifdef WITH_RDMA
-    IBVerbsCommNet::Init();
+    IBVerbsCommNet::Init(plan);
 #else
     LOG(FATAL) << "RDMA components not found";
 #endif
   } else {
-    EpollCommNet::Init();
+    EpollCommNet::Init(plan);
   }
 #endif
   SnapshotMgr::NewSingleton(plan);

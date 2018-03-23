@@ -1,8 +1,8 @@
 #ifndef ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
-#include "oneflow/core/device/cuda_util.h"
 #include "unsupported/Eigen/CXX11/Tensor"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 

@@ -1,27 +1,26 @@
 #ifndef ONEFLOW_CORE_OPERATOR_NORMAL_MODEL_UPDATE_OP_H_
 #define ONEFLOW_CORE_OPERATOR_NORMAL_MODEL_UPDATE_OP_H_
 
-#include "oneflow/core/operator/model_update_op.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class NormalModelUpdateOp final : public ModelUpdtOp {
+class NormalModelUpdtOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(NormalModelUpdateOp);
-  NormalModelUpdateOp() = default;
-  ~NormalModelUpdateOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalModelUpdtOp);
+  virtual ~NormalModelUpdtOp() = default;
 
-  void InferBlobDescs(
+  virtual void InitFromOpConf();
+
+  virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override {}
+      const ParallelContext* parallel_ctx) {}
+
+ protected:
+  NormalModelUpdtOp() = default;
+  virtual void MdUpdtVirtualInitFromOpConf() {}
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
-  }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
-  }
 };
 
 }  // namespace oneflow

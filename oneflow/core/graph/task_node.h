@@ -10,6 +10,7 @@ namespace oneflow {
 
 bool IsForwardTaskType(TaskType);
 bool IsBackwardTaskType(TaskType);
+bool IsMdUpdtTaskType(TaskType);
 
 class TaskEdge;
 
@@ -37,7 +38,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ConsumeAllRegsts() = 0;
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
-  void EraseEmptyProducedRegst();
+  virtual void EraseEmptyProducedRegst();
   void InferMemCaseOfProducedRegst();
 
   // Others
@@ -45,6 +46,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
+  virtual bool IsPersistence() const { return false; }
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
