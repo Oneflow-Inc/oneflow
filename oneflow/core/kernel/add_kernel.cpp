@@ -9,10 +9,10 @@ void AddKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob_0);
-  const int64_t count = out_blob->shape().elem_cnt();
+  const int64_t elem_cnt = out_blob->shape().elem_cnt();
   FOR_RANGE(size_t, i, 1, this->kernel_conf().input_bns().size()) {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(i));
-    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, count, static_cast<T>(1),
+    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, static_cast<T>(1),
                                      in_blob->dptr<T>(), 1,
                                      out_blob->mut_dptr<T>(), 1);
   }
