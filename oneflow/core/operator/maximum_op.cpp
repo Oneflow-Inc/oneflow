@@ -17,7 +17,7 @@ void MaximumOp::VirtualInferBlobDescs(
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
   BlobDesc* mask_blob_desc = GetBlobDesc4BnInOp("mask");
   *mask_blob_desc = *in_0_blob_desc;
-  mask_blob_desc->set_data_type(GetDataType<int32_t>::val);
+  mask_blob_desc->set_data_type(GetDataType<DataType::kInt32>::val);
   mask_blob_desc->set_has_data_id_field(false);
 }
 
