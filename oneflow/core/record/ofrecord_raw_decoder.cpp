@@ -5,17 +5,10 @@ namespace oneflow {
 namespace {
 
 template<typename T, typename U>
-void ReadFromDptrToDptr(DeviceCtx* ctx, const T* in_dptr, int32_t col_id,
-                        int64_t one_col_elem_num, U* out_dptr) {
+void FixInDptrThenCopyElem(DeviceCtx* ctx, const T* in_dptr, int32_t col_id,
+                           int64_t one_col_elem_num, U* out_dptr) {
   in_dptr = in_dptr + col_id * one_col_elem_num;
-  if (std::is_same<T, U>::value) {
-    Memcpy<DeviceType::kCPU>(ctx, out_dptr, in_dptr,
-                             one_col_elem_num * sizeof(T));
-  } else {
-    FOR_RANGE(int64_t, i, 0, one_col_elem_num) {
-      *(out_dptr++) = static_cast<U>(*(in_dptr++));
-    }
-  }
+  CopyElem(in_dptr, out_dptr, one_col_elem_num);
 }
 
 }  // namespace
@@ -45,20 +38,20 @@ int32_t OFRecordDecoderImpl<EncodeCase::kRaw, T>::GetColNumOfFeature(
 
 template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
-    DeviceCtx* ctx, const Feature& feature, int32_t col_id, T* out_dptr,
-    int64_t one_col_elem_num) const {
+    DeviceCtx* ctx, const Feature& feature, const BlobConf& blob_conf,
+    int32_t col_id, T* out_dptr, int64_t one_col_elem_num) const {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     auto in_dptr =
         reinterpret_cast<const int8_t*>(feature.bytes_list().value(0).c_str());
-    ReadFromDptrToDptr<int8_t, T>(ctx, in_dptr, col_id, one_col_elem_num,
-                                  out_dptr);
+    FixInDptrThenCopyElem<int8_t, T>(ctx, in_dptr, col_id, one_col_elem_num,
+                                     out_dptr);
   }
-#define DEFINE_ONE_ELIF(PbT, CppT)                                      \
-  else if (feature.has_##PbT##_list()) {                                \
-    const CppT* in_dptr = feature.PbT##_list().value().data();          \
-    ReadFromDptrToDptr<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, \
-                                out_dptr);                              \
+#define DEFINE_ONE_ELIF(PbT, CppT)                                         \
+  else if (feature.has_##PbT##_list()) {                                   \
+    const CppT* in_dptr = feature.PbT##_list().value().data();             \
+    FixInDptrThenCopyElem<CppT, T>(ctx, in_dptr, col_id, one_col_elem_num, \
+                                   out_dptr);                              \
   }
   DEFINE_ONE_ELIF(float, float)
   DEFINE_ONE_ELIF(double, double)

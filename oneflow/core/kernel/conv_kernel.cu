@@ -6,31 +6,26 @@ namespace oneflow {
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
-  Shape in_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("in")));
-  Shape out_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("out")));
-  Shape weight_shape(static_cast<const ShapeProto&>(
-      this->GetMessageFromCustomizedKernelConf("weight")));
+  Shape in_shape(this->GetConvKernelConf().in());
+  Shape out_shape(this->GetConvKernelConf().out());
+  Shape weight_shape(this->GetConvKernelConf().weight());
 
-  std::vector<int32_t> stride_of_in_tensor(this->KernelDim(), 1);
-  std::vector<int32_t> stride_of_out_tensor(this->KernelDim(), 1);
-  for (int32_t i = this->KernelDim() + 2 - 1; i > 0; --i) {
-    for (int32_t j = this->KernelDim() + 2 - 2; j >= 0; --j) {
-      stride_of_in_tensor[j] *= in_shape.At(i);
-      stride_of_out_tensor[j] *= out_shape.At(i);
-    }
+  std::vector<int32_t> stride_of_in_tensor(this->OpKernelDim() + 2, 1);
+  std::vector<int32_t> stride_of_out_tensor(this->OpKernelDim() + 2, 1);
+  for (int32_t i = this->OpKernelDim() + 2 - 2; i >= 0; --i) {
+    stride_of_in_tensor[i] = stride_of_in_tensor[i + 1] * in_shape.At(i + 1);
+    stride_of_out_tensor[i] = stride_of_out_tensor[i + 1] * out_shape.At(i + 1);
   }
   std::vector<int32_t> in_dim(in_shape.dim_vec().begin(),
                               in_shape.dim_vec().end());
   std::vector<int32_t> out_dim(out_shape.dim_vec().begin(),
                                out_shape.dim_vec().end());
 
-  this->in_desc_.reset(new CudnnTensorDesc(GetDataType<T>::val,
-                                           this->KernelDim() + 2, in_dim.data(),
-                                           stride_of_in_tensor.data()));
+  this->in_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::val, this->OpKernelDim() + 2,
+                          in_dim.data(), stride_of_in_tensor.data()));
   this->out_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::val, this->KernelDim() + 2,
+      new CudnnTensorDesc(GetDataType<T>::val, this->OpKernelDim() + 2,
                           out_dim.data(), stride_of_out_tensor.data()));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<T>::val, weight_shape,
@@ -40,9 +35,14 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     int32_t filters = this->GetInt32FromCustomizedOpConf("filters");
-    int32_t stride_of_bias_tensor = 1;
-    this->bias_desc_.reset(new CudnnTensorDesc(GetDataType<T>::val, 1, &filters,
-                                               &stride_of_bias_tensor));
+    std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
+    std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
+    bias_dim[1] = filters;
+    stride_of_bias_tensor[0] = filters;
+
+    this->bias_desc_.reset(
+        new CudnnTensorDesc(GetDataType<T>::val, this->OpKernelDim() + 2,
+                            bias_dim.data(), stride_of_bias_tensor.data()));
   }
 }
 
@@ -56,7 +56,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightForward(
       in->dptr<T>(), this->filter_desc_->Get(), weight->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(
-          this->GetInt32FromCustomizedKernelConf("cudnn_fwd_algo")),
+          this->GetConvKernelConf().cudnn_fwd_algo()),
       cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
       CudnnDataType<T>::zero, this->out_desc_->Get(), out->mut_dptr<T>()));
 }
@@ -81,7 +81,7 @@ void ConvKernel<DeviceType::kGPU, T>::DataBackward(
       this->filter_desc_->Get(), weight->dptr<T>(), this->out_desc_->Get(),
       out_diff->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdDataAlgo_t>(
-          this->GetInt32FromCustomizedKernelConf("cudnn_bwd_data_algo")),
+          this->GetConvKernelConf().cudnn_bwd_data_algo()),
       cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
       CudnnDataType<T>::zero, this->in_desc_->Get(), in_diff->mut_dptr<T>()));
 }
@@ -97,9 +97,10 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
       in->dptr<T>(), this->out_desc_->Get(), out_diff->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-          this->GetInt32FromCustomizedKernelConf("cudnn_bwd_filter_algo")),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0), CudnnDataType<T>::one,
-      this->filter_desc_->Get(), weight_diff->mut_dptr<T>()));
+          this->GetConvKernelConf().cudnn_bwd_filter_algo()),
+      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
+      CudnnDataType<T>::zero, this->filter_desc_->Get(),
+      weight_diff->mut_dptr<T>()));
 }
 
 template<typename T>
@@ -108,7 +109,7 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackward(DeviceCtx* device_ctx,
                                                    Blob* bias_diff) const {
   CudaCheck(cudnnConvolutionBackwardBias(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->out_desc_->Get(),
-      out_diff->dptr<T>(), CudnnDataType<T>::one, this->bias_desc_->Get(),
+      out_diff->dptr<T>(), CudnnDataType<T>::zero, this->bias_desc_->Get(),
       bias_diff->mut_dptr<T>()));
 }
 

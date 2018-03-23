@@ -372,9 +372,11 @@ message DecodeOFRecordOpConf {
 }
 
 message DropoutOpConf {
-  required double rate = 1;
-  optional ShapeProto noise_shape = 2;
-  optional int64 seed = 3;
+  required string in = 1;
+  required string out = 2;
+  required double rate = 3;
+  optional ShapeProto noise_shape = 4;
+  optional int64 seed = 5;
 }
 
 message OperatorConf {
