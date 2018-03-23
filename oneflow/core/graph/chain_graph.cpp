@@ -96,7 +96,6 @@ void ModelMergeChains(std::list<Chain>* chain_list,
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
     CHECK(pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get()));
     if (pred_node->op()->IsRecurrentOp()) { continue; }
-    // if (pred_node->op()->IsNormalizationOp()) { continue; }
     if (pred_node->shared_model_nodes()) { continue; }
     // Get chain
     ChainIt pred_chain = logical2chain_it->at(pred_node);
@@ -211,7 +210,6 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->op()->IsDecodeOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
-    if (cur_logi_node->op()->IsNormalizationOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }

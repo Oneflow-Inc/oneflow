@@ -49,7 +49,6 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   const std::vector<std::shared_ptr<Operator>>& op_vec() const;
   std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
-  bool HasSoleNormalizationOp() const;
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
@@ -271,15 +270,6 @@ class NormalMdUpdtChainNode final : public ChainNode {
   void FixCompTaskNode(CompTaskNode*) const override;
 
   uint32_t random_seed_;
-};
-
-class NormalizationMdUpdtChainNode final : public ChainNode {
- public:
-  CHAIN_NODE_BOILERPLATE(NormalizationMdUpdtChainNode);
-
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
-                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (Forward));
 };
 
 class MdSaveChainNode final : public ChainNode {

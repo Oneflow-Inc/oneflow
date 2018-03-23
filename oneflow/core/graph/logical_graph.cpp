@@ -102,8 +102,7 @@ void LogicalGraph::FillNodeWithParallelDesc(
   ForEachNode([&](LogicalNode* cur_node) {
     if (cur_node->op()->IsElemWiseOp()) {
       LogicalNode* pred_node = cur_node;
-      while (pred_node->op()->IsElemWiseOp()
-             && !pred_node->op()->IsNormalizationOp()) {
+      while (pred_node->op()->IsElemWiseOp()) {
         pred_node = pred_node->SoleInEdge()->src_node();
       }
       if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
