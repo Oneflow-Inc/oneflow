@@ -14,8 +14,6 @@ class OFRecordDecoderImpl<EncodeCase::kJpeg, T> final
                              int64_t one_col_elem_num) const override;
   void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf&, int32_t col_id,
                   T* out_dptr, int64_t one_col_elem_num) const override;
-  void DecodeImage(const std::string& src_data,
-                   std::vector<uint8_t>* image_data, Shape* image_shape) const;
 };
 
 }  // namespace oneflow
