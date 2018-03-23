@@ -29,12 +29,11 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
   CHECK_EQ(col_id, 0);
   const std::string& src_data = feature.bytes_list().value(0);
   cv::_InputArray image_data(src_data.data(), src_data.size());
-  cv::Mat image = cv::imdecode(image_data, 1);
+  cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
   CHECK(image.isContinuous());
-  CHECK_EQ(blob_conf.jpeg().preprocess_size(), 0);
-  // FOR_RANGE(size_t, i, 0, blob_conf.jpeg().preprocess_size()) {
-  //   DoPreprocess(&image, blob_conf.jpeg().preprocess(i));
-  // }
+  FOR_RANGE(size_t, i, 0, blob_conf.jpeg().preprocess_size()) {
+    DoPreprocess(&image, blob_conf.jpeg().preprocess(i));
+  }
   CHECK_EQ(blob_conf.shape().dim_size(), image.dims);
   FOR_RANGE(size_t, i, 0, image.dims) {
     CHECK_EQ(blob_conf.shape().dim(i), image.size[i]);
