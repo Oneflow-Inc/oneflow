@@ -18,7 +18,6 @@ class ElementwiseOp : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  protected:
- protected:
   virtual void VirtualInitFromOpConf() { UNIMPLEMENTED(); }
 
   virtual void VirtualInferBlobDescs(
