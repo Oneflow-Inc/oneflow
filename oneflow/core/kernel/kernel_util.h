@@ -62,7 +62,7 @@ struct KernelUtil final {
   // max(x) temp_storage is for gpu
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
-  
+
   // y = exp(x)
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
 

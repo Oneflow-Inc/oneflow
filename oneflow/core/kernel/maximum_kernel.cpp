@@ -16,8 +16,8 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
   FOR_RANGE(size_t, i, 1, this->kernel_conf().input_bns().size()) {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(i));
     MaximumKernelUtil<device_type, T>::ElementwiseMaxWithMask(
-        ctx.device_ctx, elem_cnt, out_blob->mut_dptr<T>(), in_blob->dptr<T>(), i,
-        mask_blob->mut_dptr<int32_t>());
+        ctx.device_ctx, elem_cnt, out_blob->mut_dptr<T>(), in_blob->dptr<T>(),
+        i, mask_blob->mut_dptr<int32_t>());
   }
 }
 
