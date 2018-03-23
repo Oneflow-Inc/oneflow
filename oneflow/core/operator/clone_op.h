@@ -22,7 +22,7 @@ class CloneOp final : public Operator {
 
  private:
   std::string ibn2lbn(const std::string& input_bn) const override {
-    return GetStringFromCustomizedConf("lbn");
+    return GetValFromCustomizedConf<std::string>("lbn");
   }
   std::string obn2lbn(const std::string& output_bn) const override {
     return op_name() + "/" + output_bn;

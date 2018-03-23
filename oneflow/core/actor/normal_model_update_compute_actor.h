@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_ACTOR_MODEL_UPDATE_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_MODEL_UPDATE_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_NORMAL_MODEL_UPDATE_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_NORMAL_MODEL_UPDATE_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 #include "oneflow/core/actor/naive_readable_register_manager.h"
 
 namespace oneflow {
 
-class MdUpdtCompActor final : public CompActor {
+class NormalMdUpdtCompActor final : public CompActor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(MdUpdtCompActor);
-  MdUpdtCompActor() = default;
-  ~MdUpdtCompActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(NormalMdUpdtCompActor);
+  NormalMdUpdtCompActor() = default;
+  ~NormalMdUpdtCompActor() = default;
 
   void VirtualCompActorInit(const TaskProto&) override;
 
@@ -42,4 +42,4 @@ class MdUpdtCompActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_MODEL_UPDATE_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_NORMAL_MODEL_UPDATE_COMPUTE_ACTOR_H_

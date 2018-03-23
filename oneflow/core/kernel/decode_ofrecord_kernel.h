@@ -12,6 +12,18 @@ struct DecodeStatus {
   int32_t max_col_id_;
 };
 
+class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DecodeOFRecordKernel);
+  DecodeOFRecordKernel() = default;
+  ~DecodeOFRecordKernel() = default;
+
+ private:
+  void Forward(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_DECODE_OFRECORD_KERNEL_H_

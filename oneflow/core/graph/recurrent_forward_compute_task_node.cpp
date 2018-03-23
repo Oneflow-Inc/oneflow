@@ -33,15 +33,6 @@ void RecurrentForwardCompTaskNode::VirtualConsumeRegstOnInEdge(TaskEdge* edge) {
   }
 }
 
-void RecurrentForwardCompTaskNode::VirtualProduceRegstOnOutEdge(
-    TaskEdge* edge) {
-  edge->AddRegst("out", GetProducedRegst("out"));
-  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
-    edge->AddRegst("activation", ProduceRegst("activation"));
-    edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
-  }
-}
-
 void RecurrentForwardCompTaskNode::VirtualBuildExecGphStructAndBindInRegst() {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   CHECK(op->IsRecurrentOp());

@@ -1,5 +1,5 @@
 #include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/kernel/model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.h"
 
 namespace oneflow {
 
@@ -17,7 +17,7 @@ __global__ void DiffAveragingL1RegularizationGpu(const int64_t n, T l1,
 
 }  // namespace
 template<typename T>
-class MdUpdateKernelUtil<DeviceType::kGPU, T> final {
+class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n,
                                                float l1, const T* model,
@@ -31,7 +31,7 @@ class MdUpdateKernelUtil<DeviceType::kGPU, T> final {
 };
 
 #define INSTANTIATE_GPU_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct MdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
+  template struct NormalMdUpdateKernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_GPU_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

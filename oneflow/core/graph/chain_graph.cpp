@@ -310,6 +310,7 @@ void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, int32_t> data_info2suffix_length;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
     std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
+<<<<<<< HEAD
     std::string data_dir = decode_op->GetStringFromCustomizedConf("data_dir");
     std::string part_name_prefix =
         decode_op->GetStringFromCustomizedConf("part_name_prefix");
@@ -317,6 +318,16 @@ void ChainGraph::BuildRecordLoadStruct() {
     data_info2decode_nodes[data_info].emplace_back(decode_node);
     int32_t part_name_suffix_length =
         decode_op->GetInt32FromCustomizedConf("part_name_suffix_length");
+=======
+    std::string data_dir =
+        decode_op->GetValFromCustomizedConf<std::string>("data_dir");
+    std::string part_name_prefix =
+        decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");
+    std::string data_info = data_dir + "_" + part_name_prefix;
+    data_info2decode_nodes[data_info].emplace_back(decode_node);
+    int32_t part_name_suffix_length =
+        decode_op->GetValFromCustomizedConf<int32_t>("part_name_suffix_length");
+>>>>>>> origin/master
     if (data_info2suffix_length.find(data_info)
         != data_info2suffix_length.end()) {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
@@ -427,15 +438,15 @@ void ChainGraph::BuildLossPrintStruct() {
     loss_print_op_conf.mutable_loss_print_conf();
     loss_print_op_conf.mutable_loss_print_conf()->set_loss_lbn(
         sum_op->Lbn4BnInOp("out"));
-    if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
+    if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       loss_print_op_conf.mutable_loss_print_conf()->set_reduction_lbn(
           loss_op->Lbn4BnInOp("reduction_coefficient"));
     }
     loss_print_op_conf.mutable_loss_print_conf()->set_weight_scalar(
-        loss_op->GetFloatFromCustomizedConf("weight_scalar"));
+        loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_op_conf.mutable_loss_print_conf()->set_reduction_type(
         static_cast<LossReductionType>(
-            loss_op->GetEnumValueFromCustomizedConf("reduction")));
+            loss_op->GetEnumFromCustomizedConf("reduction")));
     auto loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);

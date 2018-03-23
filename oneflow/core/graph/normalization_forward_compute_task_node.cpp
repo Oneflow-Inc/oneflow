@@ -19,8 +19,8 @@ void NormalizationForwardCompTaskNode::VirtualProduceRegstOnOutEdge(
   } else {
     edge->AddRegst("out", GetProducedRegst("out"));
     if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
-      edge->AddRegst("activation", ProduceRegst("activation"));
-      edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
+      edge->AddRegst("activation", GetProducedRegst("activation"));
+      edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
     }
   }
 }

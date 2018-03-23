@@ -2,9 +2,9 @@
 
 namespace oneflow {
 
-PoolingKernelConf* AveragePoolingOp::GetMutPoolingKernelConf(
+PbMessage* AveragePoolingOp::MutableCustomizedKernelConf(
     KernelConf* kernel_conf) const {
-  return kernel_conf->mutable_average_pooling_conf()->mutable_pooling_conf();
+  return kernel_conf->mutable_average_pooling_conf();
 }
 
 }  // namespace oneflow
