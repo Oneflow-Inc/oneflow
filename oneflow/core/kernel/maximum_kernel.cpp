@@ -59,9 +59,6 @@ struct MaximumKernelUtil<DeviceType::kCPU, T> {
     }
   }
 };
-#define INSTANTIATE_MAXIMUM_KERNEL_UTIL(type_cpp, type_proto) \
-  template struct MaximumKernelUtil<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_MAXIMUM_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kMaximumConf, MaximumKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
