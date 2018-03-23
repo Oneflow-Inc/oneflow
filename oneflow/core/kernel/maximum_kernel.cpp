@@ -7,14 +7,14 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob("out");
-  const Blob* in_blob0 = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
-  out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob0);
+  const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
+  out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob_0);
   Blob* mask_blob = BnInOp2Blob("mask");
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
                       mask_blob->ByteSizeOfDataContentField());
   const int64_t count = out_blob->shape().elem_cnt();
   FOR_RANGE(size_t, i, 1, this->kernel_conf().input_bns().size()) {
-    const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns()[i]);
+    const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(i));
     MaximumKernelUtil<device_type, T>::ElementwiseMaxWithMask(
         ctx.device_ctx, count, out_blob->mut_dptr<T>(), in_blob->dptr<T>(), i,
         mask_blob->mut_dptr<int32_t>());

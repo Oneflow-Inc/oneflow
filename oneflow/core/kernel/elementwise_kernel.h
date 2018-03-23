@@ -32,7 +32,7 @@ class ElementwiseKernel : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
     for (size_t i = 0; i < this->kernel_conf().input_diff_bns().size(); ++i) {
-      Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns()[i]);
+      Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(i));
       in_diff_blob->CopyColNumFrom(ctx.device_ctx, out_diff_blob);
     }
   }
