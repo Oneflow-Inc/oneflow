@@ -4,17 +4,12 @@
 namespace oneflow {
 
 void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
+  ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
     } else {
-      edge->AddRegst("out", out_regst);
-      if (IsBackwardTaskType(dst_node->GetTaskType())) {
-        edge->AddRegst("activation", ProduceRegst("activation"));
-        edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
-      }
+      VirtualProduceRegstOnOutEdge(edge);
     }
   }
 }
@@ -25,19 +20,18 @@ void ForwardCompTaskNode::ConsumeAllRegsts() {
     if (src_node->GetTaskType() == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
-    } else if (src_node->GetTaskType() == TaskType::kNormalizationMdUpdt) {
-      ConsumeRegst("other_model", edge->GetSoleRegst());
     } else {
-      VirtualConsumeInRegst(edge);
+      VirtualConsumeRegstOnInEdge(edge);
     }
   }
 }
 
 void ForwardCompTaskNode::BuildExecGphAndRegst() {
-  BuildExecGphStructAndBindInRegst();
-  BuildOutRegst();
+  VirtualBuildExecGphStructAndBindInRegst();
+  VirtualBuildOutRegst();
   BuildActivationRegst();
   BuildModelAndTmpRegsts();
+  VirtualBuildExtraRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
     node->InferBlobDescs(parallel_ctx(), device_type());
   });
@@ -47,7 +41,7 @@ void ForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
   TryLockConsumedRegst("model_tmp");
-  TryLockConsumedRegst("other_model");
+  VirtualLockExtraRegsts();
 }
 
 void ForwardCompTaskNode::ToProto(TaskProto* task_proto) {
@@ -93,15 +87,6 @@ void ForwardCompTaskNode::BuildModelAndTmpRegsts() {
         model_regst->AddLbn(lbn);
       }
       node->BindBnInOpAndRegst(mbn, model_regst);
-    }
-    if (node->op()->IsNormalizationOp()) {
-      std::shared_ptr<RegstDesc> other_model_regst =
-          GetConsumedRegst("other_model");
-      for (const std::string& otbn : node->op()->other_bns()) {
-        const std::string& lbn = node->op()->Lbn4BnInOp(otbn);
-        other_model_regst->AddLbn(lbn);
-        node->BindBnInOpAndRegst(otbn, other_model_regst);
-      }
     }
   });
 }

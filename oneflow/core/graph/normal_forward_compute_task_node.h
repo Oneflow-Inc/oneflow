@@ -15,9 +15,10 @@ class NormalForwardCompTaskNode final : public ForwardCompTaskNode {
   bool IsReadyForBuild() override;
 
  private:
-  void VirtualConsumeInRegst(TaskEdge* edge) override;
-  void BuildExecGphStructAndBindInRegst() override;
-  void BuildOutRegst() override;
+  void VirtualConsumeRegstOnInEdge(TaskEdge* edge) override;
+  void VirtualProduceRegstOnOutEdge(TaskEdge* edge) override;
+  void VirtualBuildExecGphStructAndBindInRegst() override;
+  void VirtualBuildOutRegst() override;
 };
 
 }  // namespace oneflow

@@ -3,26 +3,47 @@
 namespace oneflow {
 
 void NormalizationMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> other_model_regst =
-      ProduceRegst("other_model", 1, 1);
+  int32_t min_model_regst = -1;
+  int32_t max_model_regst = -1;
+  if (JobDesc::Singleton()->IsPredict()) {
+    min_model_regst = 1;
+    max_model_regst = 1;
+  } else if (JobDesc::Singleton()->Staleness() == -1) {
+    min_model_regst = 2;
+    max_model_regst = kMaxRegisterNum;
+  } else {
+    min_model_regst = 1;
+    max_model_regst = JobDesc::Singleton()->Staleness() + 1;
+  }
+  std::shared_ptr<RegstDesc> norm_model_regst =
+      ProduceRegst("norm_model", min_model_regst, max_model_regst);
   for (TaskEdge* out_edge : out_edges()) {
-    out_edge->AddRegst("other_model", other_model_regst);
+    out_edge->AddRegst("norm_model", norm_model_regst);
+  }
+}
+
+void NormalizationMdUpdtCompTaskNode::ConsumeAllRegsts() {
+  if (JobDesc::Singleton()->IsPredict()) { return; }
+  for (TaskEdge* in_edge : in_edges()) {
+    ConsumeRegst("norm_acc", in_edge->GetSoleRegst());
   }
 }
 
 bool NormalizationMdUpdtCompTaskNode::IsReadyForBuild() {
-  return GetProducedRegst("other_model")->IsLocked();
+  return GetProducedRegst("norm_model")->IsLocked();
 }
 
 void NormalizationMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (JobDesc::Singleton()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
-  OperatorConf op_conf;
-  op_conf.set_name("norm_md_update_" + NewUniqueId());
-  op_conf.mutable_normalization_mdupdt_conf();
-  node->mut_op() = ConstructOp(op_conf);
+  node->mut_op() = chain_node()->SoleOp();
   for (const std::string& obn : node->op()->output_bns()) {
-    node->BindBnInOpAndRegst(obn, GetProducedRegst("other_model"));
+    node->BindBnInOpAndRegst(obn, GetProducedRegst("norm_model"));
+  }
+  if (JobDesc::Singleton()->IsTrain()) {
+    for (const std::string& ibn : node->op()->input_bns()) {
+      node->BindBnInOpAndRegst(ibn, GetConsumedRegst("norm_acc"));
+    }
   }
 }
 
@@ -33,13 +54,9 @@ void NormalizationMdUpdtCompTaskNode::ToProto(TaskProto* task_proto) {
       if (task_proto->related_init_model_task_id() == -1) {
         task_proto->set_related_init_model_task_id(node->task_id());
       }
-    } else if (IsBackwardTaskType(node->GetTaskType())) {
-      // do nothing
-    } else if (node->GetTaskType() == TaskType::kMdSave) {
+    } else {
       CHECK_EQ(task_proto->related_save_model_task_id(), -1);
       task_proto->set_related_save_model_task_id(node->task_id());
-    } else {
-      UNIMPLEMENTED();
     }
   });
 }

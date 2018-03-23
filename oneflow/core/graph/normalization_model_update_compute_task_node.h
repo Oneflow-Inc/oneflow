@@ -12,7 +12,7 @@ class NormalizationMdUpdtCompTaskNode final : public CompTaskNode {
   ~NormalizationMdUpdtCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
-  void ConsumeAllRegsts() override {}
+  void ConsumeAllRegsts() override;
   bool IsReadyForBuild() override;
   void BuildExecGphAndRegst() override;
   void LockRegsts() override {}

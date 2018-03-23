@@ -154,9 +154,9 @@ class BackwardChainNode final : public ChainNode {
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
 
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-      OVERRIDE_FROM_METHOD, (BldSubTskGphMthd GetMthdForBldSubTskGph),
-      (Forward)(Backward)(Loss)(NormalMdUpdt)(NormalizationMdUpdt));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Forward)(Backward)(Loss)(NormalMdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
       (Backward)(Loss));
@@ -277,6 +277,10 @@ class NormalMdUpdtChainNode final : public ChainNode {
 class NormalizationMdUpdtChainNode final : public ChainNode {
  public:
   CHAIN_NODE_BOILERPLATE(NormalizationMdUpdtChainNode);
+
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Forward));
 };
 
 class MdSaveChainNode final : public ChainNode {

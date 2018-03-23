@@ -15,7 +15,7 @@ void RecurrentForwardCompTaskNode::VirtualAddRegstOnRecurrentOutEdge(
   }
 }
 
-void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
+void RecurrentForwardCompTaskNode::VirtualConsumeRegstOnInEdge(TaskEdge* edge) {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
   const HashSet<std::string>& lbns =
@@ -33,7 +33,16 @@ void RecurrentForwardCompTaskNode::VirtualConsumeInRegst(TaskEdge* edge) {
   }
 }
 
-void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
+void RecurrentForwardCompTaskNode::VirtualProduceRegstOnOutEdge(
+    TaskEdge* edge) {
+  edge->AddRegst("out", GetProducedRegst("out"));
+  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
+    edge->AddRegst("activation", ProduceRegst("activation"));
+    edge->AddRegst("data_tmp", ProduceRegst("data_tmp"));
+  }
+}
+
+void RecurrentForwardCompTaskNode::VirtualBuildExecGphStructAndBindInRegst() {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   CHECK(op->IsRecurrentOp());
   ExecNode* exec_node = mut_exec_gph().NewNode();
@@ -50,7 +59,7 @@ void RecurrentForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   if (h0_regst) { exec_node->BindBnInOpAndRegst("h0", h0_regst); }
 }
 
-void RecurrentForwardCompTaskNode::BuildOutRegst() {
+void RecurrentForwardCompTaskNode::VirtualBuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> rec_out_regst = GetProducedRegst("rec_out");
   CHECK(out_regst && rec_out_regst);

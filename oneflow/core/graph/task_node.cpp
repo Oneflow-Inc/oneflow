@@ -5,6 +5,7 @@ namespace oneflow {
 std::map<TaskType, std::string> task_type2color = {
     {kInvalid, "0"},
     {kNormalForward, "2"},
+    {kNormalizationForward, "2"},
     {kRecurrentForward, "2"},
     {kNormalBackward, "3"},
     {kRecurrentBackward, "3"},
@@ -24,7 +25,8 @@ std::map<TaskType, std::string> task_type2color = {
 };
 
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
+  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward
+         || tt == TaskType::kNormalizationForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {

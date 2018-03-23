@@ -3,6 +3,7 @@
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/recurrent_forward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/normalization_forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
@@ -245,6 +246,8 @@ void ForwardChainNode::set_data_output_lbns() {
 CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
   if (HasSoleRecurrentOp()) {
     return new RecurrentForwardCompTaskNode;
+  } else if (HasSoleNormalizationOp()) {
+    return new NormalizationForwardCompTaskNode;
   } else {
     return new NormalForwardCompTaskNode;
   }
@@ -268,11 +271,6 @@ BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromLoss(
   return &TaskGraph::BldSubTskGphByBoxing;
 }
 BldSubTskGphMthd BackwardChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
-BldSubTskGphMthd
-BackwardChainNode::GetMthdForBldSubTskGphFromNormalizationMdUpdt(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
@@ -447,6 +445,13 @@ void NormalMdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
   } else {
     UNIMPLEMENTED();
   }
+}
+
+// NormalizationMdUpdtChainNode
+BldSubTskGphMthd
+NormalizationMdUpdtChainNode::GetMthdForBldSubTskGphFromForward(
+    const ChainNode*) const {
+  return &TaskGraph::BldSubTskGphByOneToOne;
 }
 
 // MdSaveChainNode

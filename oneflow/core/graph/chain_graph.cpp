@@ -309,14 +309,14 @@ void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, std::vector<DecodeChainNode*>> data_info2decode_nodes;
   HashMap<std::string, int32_t> data_info2suffix_length;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
-    std::shared_ptr<const Operator> op_conf = decode_node->SoleOp();
-    std::string data_dir = op_conf->GetStringFromCustomizedConf("data_dir");
+    std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
+    std::string data_dir = decode_op->GetStringFromCustomizedConf("data_dir");
     std::string part_name_prefix =
-        op_conf->GetStringFromCustomizedConf("part_name_prefix");
+        decode_op->GetStringFromCustomizedConf("part_name_prefix");
     std::string data_info = data_dir + "_" + part_name_prefix;
     data_info2decode_nodes[data_info].emplace_back(decode_node);
     int32_t part_name_suffix_length =
-        op_conf->GetInt32FromCustomizedConf("part_name_suffix_length");
+        decode_op->GetInt32FromCustomizedConf("part_name_suffix_length");
     if (data_info2suffix_length.find(data_info)
         != data_info2suffix_length.end()) {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
@@ -473,13 +473,19 @@ ChainGraph::BuildNormalizationMdUpdtAndMdSaveStruct(
   NormalizationMdUpdtChainNode* md_updt_chain =
       NewNode<NormalizationMdUpdtChainNode>();
   md_updt_chain->mut_parallel_desc() = fw_chain->parallel_desc();
+  OperatorConf md_updt_op_conf;
+  md_updt_op_conf.set_name("norm_md_update_" + NewUniqueId());
+  md_updt_op_conf.mutable_normalization_mdupdt_conf()->set_momentum(
+      fw_chain->SoleOp()->op_conf().normalization_conf().momentum());
+  md_updt_chain->mut_op_vec() = {ConstructOp(md_updt_op_conf)};
   if (is_train) {
     OperatorConf model_save_op_conf;
     model_save_op_conf.set_name("md_save_" + NewUniqueId());
     std::shared_ptr<const Operator> op = fw_chain->SoleOp();
-    for (const std::string& otbn : op->other_bns()) {
-      model_save_op_conf.mutable_model_save_conf()->add_lbn(
-          op->Lbn4BnInOp(otbn));
+    std::vector<std::string> norm_model_bns = {"moving_mean",
+                                               "moving_variance"};
+    for (const std::string& bn : norm_model_bns) {
+      model_save_op_conf.mutable_model_save_conf()->add_lbn(op->Lbn4BnInOp(bn));
     }
     BuildMdSaveStruct(fw_chain, model_save_op_conf, md_updt_chain);
   }
@@ -496,6 +502,7 @@ MdSaveChainNode* ChainGraph::BuildMdSaveStruct(
   if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
     md_save_pr_desc->RemoveNeedlessDevice(1);
   }
+  md_save_pr_desc->set_device_type(DeviceType::kCPU);
   md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
   Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
   return md_save_chain;
@@ -526,11 +533,13 @@ void ChainGraph::BuildModelStruct(
     }
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
     // Normalization MdUpdt
-    NormalizationMdUpdtChainNode* norm_md_updt_chain = nullptr;
     if (fw_chain->HasSoleNormalizationOp()) {
-      norm_md_updt_chain =
+      NormalizationMdUpdtChainNode* norm_md_updt_chain =
           BuildNormalizationMdUpdtAndMdSaveStruct(is_train, fw_chain);
       Connect<ChainNode>(norm_md_updt_chain, NewEdge(), fw_chain);
+      if (is_train) {
+        Connect<ChainNode>(fw_chain, NewEdge(), norm_md_updt_chain);
+      }
     }
 
     if (is_train == false) { return; }
@@ -548,10 +557,6 @@ void ChainGraph::BuildModelStruct(
     md_diff_acc_chain->mut_parallel_desc().reset(md_diff_acc_pr_desc);
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
     Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
-
-    if (fw_chain->HasSoleNormalizationOp()) {
-      Connect<ChainNode>(norm_md_updt_chain, NewEdge(), bw_chain);
-    }
   });
 }
 
@@ -566,12 +571,10 @@ void ChainGraph::BuildRecurrentStruct() {
 void ChainGraph::RemoveNeedlessCloneOp() {
   TopoForEachNode([&](ChainNode* chain_node) {
     HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
-    std::vector<std::shared_ptr<const Operator>> clone_ops;
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
     for (std::shared_ptr<const Operator> op : fw_chain_node->op_vec()) {
       if (!op->IsCloneOp()) { continue; }
-      clone_ops.push_back(op);
       const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
       for (const std::string& obn : op->output_bns()) {
         CHECK(olbn2ilbn_in_clone_op.emplace(op->Lbn4BnInOp(obn), ilbn).second);
@@ -582,13 +585,9 @@ void ChainGraph::RemoveNeedlessCloneOp() {
       ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
     });
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
-    for (std::shared_ptr<const Operator> clone_op : clone_ops) {
-      auto clone_op_it =
-          std::find(op_vec_in_fw.begin(), op_vec_in_fw.end(), clone_op);
-      if (clone_op_it != op_vec_in_fw.end()) {
-        op_vec_in_fw.erase(clone_op_it);
-      }
-    }
+    Erase<std::vector<std::shared_ptr<Operator>>>(
+        op_vec_in_fw,
+        [&](const std::shared_ptr<Operator>& op) { return op->IsCloneOp(); });
   });
 }
 
