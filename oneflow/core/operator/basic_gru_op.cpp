@@ -7,8 +7,6 @@ const PbMessage& BasicGruOp::GetCustomizedConf() const {
 }
 
 void BasicGruOp::VirtualInitFromOpConf() {
-#define OF_GRU_ENROLL_DATA_TMP_BN(modelname) EnrollDataTmpBn
-#undef OF_GRU_ENROLL_DATA_TMP_BN
   EnrollDataTmpBn("reset_gate_data");
   EnrollModelBn("i2h_weight_r");
   EnrollModelBn("h2h_weight_r");
