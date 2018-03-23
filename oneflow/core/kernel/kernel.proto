@@ -72,6 +72,10 @@ message LocalResponseNormalizationKernelConf {
   required ShapeProto batch = 1;
 }
 
+message NormalizationKernelConf {
+  required int64 inputs_elem_cnt = 1;
+}
+
 message KernelConf {
   required OperatorConf op_conf = 1;
   map<string, string> bn_in_op2lbn = 2;
@@ -103,6 +107,7 @@ message KernelConf {
     DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
+    NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
   }
 }
