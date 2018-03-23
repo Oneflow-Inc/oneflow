@@ -33,9 +33,7 @@ bool IsBackwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
 }
 
-bool IsMdUpdtTaskType(TaskType tt) {
-  return tt == TaskType::kNormalMdUpdt || tt == TaskType::kNormalizationMdUpdt;
-}
+bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
 

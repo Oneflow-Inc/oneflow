@@ -3,14 +3,12 @@
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/recurrent_forward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
-#include "oneflow/core/graph/normalization_forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
 #include "oneflow/core/graph/loss_print_compute_task_node.h"
 #include "oneflow/core/graph/model_diff_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/model_save_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
-#include "oneflow/core/graph/normalization_model_update_compute_task_node.h"
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
@@ -102,10 +100,6 @@ const std::vector<std::shared_ptr<Operator>>& ChainNode::op_vec() const {
 
 bool ChainNode::HasSoleRecurrentOp() const {
   return op_vec_.size() == 1 && op_vec_.front()->IsRecurrentOp();
-}
-
-bool ChainNode::HasSoleNormalizationOp() const {
-  return op_vec_.size() == 1 && op_vec_.front()->IsNormalizationOp();
 }
 
 std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
@@ -212,11 +206,6 @@ BldSubTskGphMthd ForwardChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     const ChainNode*) const {
   return &TaskGraph::BldSubTskGphByOneToOne;
 }
-BldSubTskGphMthd
-ForwardChainNode::GetMthdForBldSubTskGphFromNormalizationMdUpdt(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
 BldBoxingOpConfMthd ForwardChainNode::GetMthdForBldBoxingOpConfFromForward(
     const ChainNode* node) const {
   if (this == node) { CHECK_EQ(parallel_desc()->policy(), kModelParallel); }
@@ -246,8 +235,6 @@ void ForwardChainNode::set_data_output_lbns() {
 CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
   if (HasSoleRecurrentOp()) {
     return new RecurrentForwardCompTaskNode;
-  } else if (HasSoleNormalizationOp()) {
-    return new NormalizationForwardCompTaskNode;
   } else {
     return new NormalForwardCompTaskNode;
   }
@@ -447,13 +434,6 @@ void NormalMdUpdtChainNode::FixCompTaskNode(CompTaskNode* node) const {
   }
 }
 
-// NormalizationMdUpdtChainNode
-BldSubTskGphMthd
-NormalizationMdUpdtChainNode::GetMthdForBldSubTskGphFromForward(
-    const ChainNode*) const {
-  return &TaskGraph::BldSubTskGphByOneToOne;
-}
-
 // MdSaveChainNode
 BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     const ChainNode*) const {
@@ -463,7 +443,7 @@ BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
 }
-BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromNormalizationMdUpdt(
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromForward(
     const ChainNode*) const {
   if (parallel_desc()->parallel_num() == 1) {
     return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;

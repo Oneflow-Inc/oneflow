@@ -14,12 +14,11 @@ void NormalizationOp::InitFromOpConf() {
   CHECK_LE(normalization_conf.momentum(), 1);
   EnrollInputBn("inputs");
   EnrollOutputBn("outputs");
+  EnrollDataTmpBn("new_mean");
+  EnrollDataTmpBn("new_variance");
   // norm_model
   EnrollOtherBn("moving_mean");
   EnrollOtherBn("moving_variance");
-  // norm_acc
-  EnrollOtherBn("new_mean");
-  EnrollOtherBn("new_variance");
 
   if (normalization_conf.center()) { EnrollModelBn("beta"); }
   if (normalization_conf.scale()) { EnrollModelBn("gamma"); }

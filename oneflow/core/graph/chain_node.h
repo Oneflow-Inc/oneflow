@@ -26,18 +26,17 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
     int64_t out_parallel_num, BoxingOpConf*);
 
-#define CHAIN_TYPE_SEQ                      \
-  OF_PP_MAKE_TUPLE_SEQ(Forward)             \
-  OF_PP_MAKE_TUPLE_SEQ(Backward)            \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad)          \
-  OF_PP_MAKE_TUPLE_SEQ(Decode)              \
-  OF_PP_MAKE_TUPLE_SEQ(Loss)                \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc)             \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint)           \
-  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt)        \
-  OF_PP_MAKE_TUPLE_SEQ(NormalizationMdUpdt) \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave)              \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)           \
+#define CHAIN_TYPE_SEQ               \
+  OF_PP_MAKE_TUPLE_SEQ(Forward)      \
+  OF_PP_MAKE_TUPLE_SEQ(Backward)     \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad)   \
+  OF_PP_MAKE_TUPLE_SEQ(Decode)       \
+  OF_PP_MAKE_TUPLE_SEQ(Loss)         \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc)      \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint)    \
+  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt) \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave)       \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)    \
   OF_PP_MAKE_TUPLE_SEQ(Print)
 
 class ChainNode : public Node<ChainNode, ChainEdge> {
@@ -129,9 +128,9 @@ class ForwardChainNode final : public ChainNode {
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
 
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-      OVERRIDE_FROM_METHOD, (BldSubTskGphMthd GetMthdForBldSubTskGph),
-      (Forward)(Decode)(NormalMdUpdt)(NormalizationMdUpdt));
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
+                                   (BldSubTskGphMthd GetMthdForBldSubTskGph),
+                                   (Forward)(Decode)(NormalMdUpdt));
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
       OVERRIDE_FROM_METHOD, (BldBoxingOpConfMthd GetMthdForBldBoxingOpConf),
       (Forward)(Decode));
@@ -289,7 +288,7 @@ class MdSaveChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (NormalMdUpdt)(NormalizationMdUpdt));
+                                   (NormalMdUpdt)(Forward));
 };
 
 class MdDiffAccChainNode final : public ChainNode {
