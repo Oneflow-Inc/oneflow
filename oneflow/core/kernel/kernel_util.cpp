@@ -148,8 +148,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
-    *max_ptr = x[0];
-    for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
+    *max_ptr = *std::max_element(x, x + n);
   }
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
@@ -254,7 +253,12 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
   template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);               \
+  template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kCPU, T>::Max(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
   template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
