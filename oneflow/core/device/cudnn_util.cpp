@@ -30,7 +30,36 @@ CudnnTensorDesc::CudnnTensorDesc(cudnnTensorFormat_t format, DataType data_type,
   CudaCheck(cudnnSetTensor4dDescriptor(
       val_, format, GetCudnnDataType(data_type), n, c, h, w));
 }
-
+CudnnTensorDesc::CudnnTensorDesc(const std::string& data_format, DataType type,
+                                 int size, int n, int c, int h, int w, int d) {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+  if (data_format == "channels_last") {
+    if (size == 4) {
+      CudaCheck(cudnnSetTensor4dDescriptorEx(val_, GetCudnnDataType(type), n, c,
+                                             h, w, h * w * c, 1, w * c, c));
+    } else {
+      // need check
+      std::vector<int> dims = {n, h, w, d, c};
+      std::vector<int> strides = {h * w * d * c, w * d * c, d * c, c, 1};
+      CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(type),
+                                           size > 3 ? size : 4, dims.data(),
+                                           strides.data()));
+    }
+  } else if (data_format == "channels_first") {
+    if (size == 4) {
+      CudaCheck(cudnnSetTensor4dDescriptorEx(val_, GetCudnnDataType(type), n, c,
+                                             h, w, c * h * w, h * w, w, 1));
+    } else {
+      std::vector<int> dims = {n, c, h, w, d};
+      std::vector<int> strides = {c * h * w * d, h * w * d, w * d, d, 1};
+      CudaCheck(cudnnSetTensorNdDescriptor(val_, GetCudnnDataType(type),
+                                           size > 3 ? size : 4, dims.data(),
+                                           strides.data()));
+    }
+  } else {
+    LOG(FATAL) << "Unknown data format";
+  }
+}
 CudnnTensorDesc::CudnnTensorDesc(DataType data_type, int dims, const int* dim,
                                  const int* stride) {
   CudaCheck(cudnnCreateTensorDescriptor(&val_));
@@ -54,10 +83,25 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
     UNIMPLEMENTED();
   }
 
-  std::vector<int> dim(shape.dim_vec().begin(), shape.dim_vec().end());
-  CudaCheck(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type),
-                                       cudnn_data_format, dim.size(),
-                                       dim.data()));
+  if (shape.NumAxes() == 4) {
+    int filters = static_cast<int>(shape.At(0));
+    int kernel_h = data_format == "channels_first"
+                       ? static_cast<int>(shape.At(2))
+                       : static_cast<int>(shape.At(1));
+    int kernel_w = data_format == "channels_first"
+                       ? static_cast<int>(shape.At(3))
+                       : static_cast<int>(shape.At(2));
+    int c = data_format == "channels_first" ? static_cast<int>(shape.At(1))
+                                            : static_cast<int>(shape.At(3));
+    CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type),
+                                         cudnn_data_format, filters, c,
+                                         kernel_h, kernel_w));
+  } else {
+    std::vector<int> dims(shape.dim_vec().begin(), shape.dim_vec().end());
+    CudaCheck(cudnnSetFilterNdDescriptor(val_, GetCudnnDataType(data_type),
+                                         cudnn_data_format, dims.size(),
+                                         dims.data()));
+  }
 }
 
 CudnnActivationDesc::CudnnActivationDesc(cudnnActivationMode_t mode,
