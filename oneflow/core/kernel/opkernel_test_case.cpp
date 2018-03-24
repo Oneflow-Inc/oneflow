@@ -27,64 +27,62 @@ void BlobCmp(DeviceType device_type, const Blob* lhs, const Blob* rhs) {
   UNIMPLEMENTED();
 }
 
+Blob* CreateBlobWithRandomVal(DeviceType device_type,
+                              const BlobDesc* blob_desc) {
+#define CREATE_BLOB_ENTRY(dev_type, data_type_pair)                     \
+  if (device_type == dev_type                                           \
+      && blob_desc->data_type() == OF_PP_PAIR_SECOND(data_type_pair)) { \
+    return KTCommon<dev_type, OF_PP_PAIR_FIRST(data_type_pair)>::       \
+        CreateBlobWithRandomVal(blob_desc);                             \
+  }
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(CREATE_BLOB_ENTRY, DEVICE_TYPE_SEQ,
+                                   ALL_DATA_TYPE_SEQ);
+  UNIMPLEMENTED();
+  return nullptr;
+}
+
 }  // namespace
 
-JobConf* OpKernelTestCaseBuilder::mut_job_conf_proto() {
-  return opkernel_test_case_->mut_job_conf_proto();
-}
-OperatorConf* OpKernelTestCaseBuilder::mut_op_conf() {
-  return opkernel_test_case_->mut_op_conf();
-}
-ParallelContext* OpKernelTestCaseBuilder::mut_parallel_ctx() {
-  return opkernel_test_case_->mut_parallel_ctx();
+void OpKernelTestCase::InitBlob(const std::string& name, Blob* blob) {
+  CHECK(bn_in_op2blob_.emplace(name, blob).second);
 }
 
-void OpKernelTestCaseBuilder::set_device_type(DeviceType device_type) {
-  opkernel_test_case_->set_device_type(device_type);
+void OpKernelTestCase::ForwardCheckBlob(const std::string& name,
+                                        DeviceType device_type, Blob* blob) {
+  forward_asserted_blob_names_.push_back(name);
+  InitBlob(name, CreateBlobWithRandomVal(device_type, blob->blob_desc_ptr()));
+  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
 }
 
-void OpKernelTestCaseBuilder::set_is_forward(bool is_forward) {
-  opkernel_test_case_->set_is_forward(is_forward);
-}
-
-HashMap<std::string, Blob*>* OpKernelTestCaseBuilder::mut_bn_in_op2blob() {
-  return opkernel_test_case_->mut_bn_in_op2blob();
-}
-
-void OpKernelTestCaseBuilder::InitBlob(const std::string& name, Blob* blob) {
-  CHECK(mut_bn_in_op2blob()->emplace(name, blob).second);
-}
-
-void OpKernelTestCaseBuilder::ForwardAssertEqBlob(const std::string& name,
-                                                  Blob* blob) {
-  opkernel_test_case_->mut_forward_asserted_blob_names()->push_back(name);
-  CHECK(mut_bn_in_op2blob()->emplace(ExpectedBlobName(name), blob).second);
-}
-
-void OpKernelTestCaseBuilder::BackwardAssertEqBlob(const std::string& name,
-                                                   Blob* blob) {
-  opkernel_test_case_->mut_backward_asserted_blob_names()->push_back(name);
-  CHECK(mut_bn_in_op2blob()->emplace(ExpectedBlobName(name), blob).second);
+void OpKernelTestCase::BackwardCheckBlob(const std::string& name,
+                                         DeviceType device_type, Blob* blob) {
+  backward_asserted_blob_names_.push_back(name);
+  InitBlob(name, CreateBlobWithRandomVal(device_type, blob->blob_desc_ptr()));
+  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
 }
 
 std::function<Blob*(const std::string&)>
 OpKernelTestCase::MakeGetterBnInOp2Blob() {
   return [this](const std::string& bn_in_op) {
-    bn_in_op2blob_[bn_in_op] =
-        NewBlob(nullptr, nullptr, nullptr, nullptr, DeviceType::kCPU);
+    if (bn_in_op2blob_[bn_in_op] == nullptr) {
+      bn_in_op2blob_[bn_in_op] = CreateBlobWithRandomVal(
+          device_type_, &bn_in_op2blob_desc_.at(bn_in_op));
+    }
     return bn_in_op2blob_.at(bn_in_op);
   };
 }
 
-void OpKernelTestCase::InitBeforeRun() {
-  JobDescProto job_desc_proto;
-  *job_desc_proto.mutable_job_conf() = job_conf_proto_;
-  JobDesc::DeleteSingleton();
-  JobDesc::NewSingleton(job_desc_proto);
-
+OpKernelTestCase::OpKernelTestCase() {
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
+}
+
+void OpKernelTestCase::InitBeforeRun() {
+  JobDescProto job_desc_proto;
+  *job_desc_proto.mutable_job_conf() = job_conf_;
+  JobDesc::DeleteSingleton();
+  JobDesc::NewSingleton(job_desc_proto);
 
   for (const auto& pair : bn_in_op2blob_) {
     bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
@@ -99,6 +97,14 @@ void OpKernelTestCase::InitBeforeRun() {
   }
 }
 
+void OpKernelTestCase::set_is_train(bool is_train) {
+  if (is_train) {
+    mut_job_conf()->mutable_train_conf();
+  } else {
+    mut_job_conf()->mutable_predict_conf();
+  }
+}
+
 void OpKernelTestCase::AssertAfterRun() const {
   const std::list<std::string>* asserted_blob_names = nullptr;
   if (JobDesc::Singleton()->IsPredict() || is_forward_) {
@@ -106,7 +112,6 @@ void OpKernelTestCase::AssertAfterRun() const {
   } else {
     asserted_blob_names = &backward_asserted_blob_names_;
   }
-
   for (const auto& blob_name : *asserted_blob_names) {
     BlobCmp(device_type_, bn_in_op2blob_.at(blob_name),
             bn_in_op2blob_.at(ExpectedBlobName(blob_name)));
@@ -115,15 +120,23 @@ void OpKernelTestCase::AssertAfterRun() const {
 
 void OpKernelTestCase::Run() {
   InitBeforeRun();
-  if (JobDesc::Singleton()->IsPredict() && !is_forward_) { return; }
   auto op = ConstructOp(op_conf_);
   auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
-  KernelConf kernel_conf;
   op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type_);
-  op->GenKernelConf(BnInOp2BlobDesc, is_forward_, device_type_, &parallel_ctx_,
-                    &kernel_conf);
-  auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
-  kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
+  std::list<bool> is_forward_launch_types;
+  if (JobDesc::Singleton()->IsPredict() || is_forward_) {
+    is_forward_launch_types = {true};
+  } else {
+    is_forward_launch_types = {true, false};
+  }
+  auto BnInOp2Blob = MakeGetterBnInOp2Blob();
+  for (bool is_forward : is_forward_launch_types) {
+    KernelConf kernel_conf;
+    op->GenKernelConf(BnInOp2BlobDesc, is_forward, device_type_, &parallel_ctx_,
+                      &kernel_conf);
+    auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
+    kernel->Launch(kernel_ctx_, BnInOp2Blob);
+  }
   AssertAfterRun();
 }
 

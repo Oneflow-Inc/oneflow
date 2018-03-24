@@ -13,28 +13,6 @@ namespace oneflow {
 
 namespace test {
 
-class OpKernelTestCase;
-
-class OpKernelTestCaseBuilder final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCaseBuilder);
-  explicit OpKernelTestCaseBuilder(OpKernelTestCase* opkernel_test_case)
-      : opkernel_test_case_(opkernel_test_case) {}
-
-  JobConf* mut_job_conf_proto();
-  OperatorConf* mut_op_conf();
-  ParallelContext* mut_parallel_ctx();
-  void set_device_type(DeviceType device_type);
-  void set_is_forward(bool is_forward);
-  void InitBlob(const std::string&, Blob* blob);
-  void ForwardAssertEqBlob(const std::string&, Blob* blob);
-  void BackwardAssertEqBlob(const std::string&, Blob* blob);
-
- private:
-  HashMap<std::string, Blob*>* mut_bn_in_op2blob();
-  OpKernelTestCase* opkernel_test_case_;
-};
-
 class OpKernelTestCase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
@@ -44,20 +22,14 @@ class OpKernelTestCase {
   void Run();
 
   //  Setters
-  HashMap<std::string, Blob*>* mut_bn_in_op2blob() { return &bn_in_op2blob_; }
-  HashMap<std::string, BlobDesc>* mut_bn_in_op2blob_desc() {
-    return &bn_in_op2blob_desc_;
-  }
-  JobConf* mut_job_conf_proto() { return &job_conf_proto_; }
-  OperatorConf* mut_op_conf() { return &op_conf_; }
-  ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
-  std::list<std::string>* mut_forward_asserted_blob_names() {
-    return &forward_asserted_blob_names_;
-  }
-  std::list<std::string>* mut_backward_asserted_blob_names() {
-    return &backward_asserted_blob_names_;
-  }
+  JobConf* mut_job_conf() { return &job_conf_; }
+  void set_is_train(bool is_train);
   void set_device_type(DeviceType device_type) { device_type_ = device_type; }
+  OperatorConf* mut_op_conf() { return &op_conf_; }
+  void InitBlob(const std::string&, Blob* blob);
+  void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob);
+  void BackwardCheckBlob(const std::string&, DeviceType device_type,
+                         Blob* blob);
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
 
  private:
@@ -69,7 +41,7 @@ class OpKernelTestCase {
   void AssertAfterRun() const;
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
-  JobConf job_conf_proto_;
+  JobConf job_conf_;
   OperatorConf op_conf_;
   std::list<std::string> forward_asserted_blob_names_;
   std::list<std::string> backward_asserted_blob_names_;
