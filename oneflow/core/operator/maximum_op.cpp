@@ -14,7 +14,7 @@ const PbMessage& MaximumOp::GetCustomizedConf() const {
 void MaximumOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns(0));
+  const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
   BlobDesc* mask_blob_desc = GetBlobDesc4BnInOp("mask");
   *mask_blob_desc = *in_0_blob_desc;
   mask_blob_desc->set_data_type(DataType::kInt32);
