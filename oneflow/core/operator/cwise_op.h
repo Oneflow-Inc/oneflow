@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_ELEMENTWISE_OP_H_
-#define ONEFLOW_CORE_OPERATOR_ELEMENTWISE_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_cwise_op_H_
+#define ONEFLOW_CORE_OPERATOR_cwise_op_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ElementwiseOp : public Operator {
+class CWiseOp : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ElementwiseOp);
-  ElementwiseOp() = default;
-  virtual ~ElementwiseOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CWiseOp);
+  CWiseOp() = default;
+  virtual ~CWiseOp() = default;
 
   void InitFromOpConf() override;
 
@@ -27,4 +27,4 @@ class ElementwiseOp : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_ELEMENTWISE_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_cwise_op_H_

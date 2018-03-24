@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_KERNEL_ELEMENTWISE_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_ELEMENTWISE_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_cwise_kernel_H_
+#define ONEFLOW_CORE_KERNEL_cwise_kernel_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
 template<DeviceType device_type>
-class ElementwiseKernel : public KernelIf<device_type> {
+class CWiseKernel : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ElementwiseKernel);
-  ElementwiseKernel() = default;
-  virtual ~ElementwiseKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(CWiseKernel);
+  CWiseKernel() = default;
+  virtual ~CWiseKernel() = default;
 
  private:
   void ForwardDataId(

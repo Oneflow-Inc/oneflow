@@ -1,11 +1,11 @@
 #ifndef ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
 #define ONEFLOW_CORE_OPERATOR_MAXIMUM_OP_H_
 
-#include "oneflow/core/operator/elementwise_op.h"
+#include "oneflow/core/operator/cwise_op.h"
 
 namespace oneflow {
 
-class MaximumOp final : public ElementwiseOp {
+class MaximumOp final : public CWiseOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MaximumOp);
   MaximumOp() = default;

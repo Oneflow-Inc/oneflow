@@ -1,14 +1,14 @@
-#include "oneflow/core/operator/elementwise_op.h"
+#include "oneflow/core/operator/cwise_op.h"
 
 namespace oneflow {
 
-void ElementwiseOp::InitFromOpConf() {
+void CWiseOp::InitFromOpConf() {
   EnrollRepeatedInputBn("in");
   EnrollOutputBn("out");
   VirtualInitFromOpConf();
 }
 
-void ElementwiseOp::InferBlobDescs(
+void CWiseOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
