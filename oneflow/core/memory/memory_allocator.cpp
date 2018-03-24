@@ -24,7 +24,7 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
       dptr = reinterpret_cast<char*>(malloc(size));
     }
     if (mem_case.host_pinned_mem().used_by_network()) {
-      comm_net_token = CommNet::Singleton()->RegisterMemory(dptr, size);
+      comm_net_token = Global<CommNet>::Get()->RegisterMemory(dptr, size);
     }
     memset(dptr, memset_val, size);
   }
@@ -51,7 +51,7 @@ void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
     free(dptr);
   } else if (mem_case.has_host_pinned_mem()) {
     if (mem_case.host_pinned_mem().used_by_network()) {
-      CommNet::Singleton()->UnRegisterMemory(comm_net_token);
+      Global<CommNet>::Get()->UnRegisterMemory(comm_net_token);
     }
     if (mem_case.host_pinned_mem().used_by_device()) {
 #ifdef WITH_CUDA

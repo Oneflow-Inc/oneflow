@@ -10,7 +10,7 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   piece_id_ = 0;
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
-  if (JobDesc::Singleton()->IsTrain()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     in_stream_.reset(
         new CyclicPersistentInStream(GlobalFS(), task_proto.data_path()));
   } else {
@@ -38,14 +38,14 @@ void RecordLoadActor::Act() {
   regst->set_piece_id(piece_id_++);
   RecordBlobIf* blob = regst->GetRecordBlobIf();
   blob->ReadFrom(in_stream_.get());
-  if (blob->record_num() < JobDesc::Singleton()->SinglePieceSize()) {
+  if (blob->record_num() < Global<JobDesc>::Get()->SinglePieceSize()) {
     is_eof_ = true;
   }
   if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 
 bool RecordLoadActor::IsReadReady() {
-  return !is_eof_ && piece_id_ < RuntimeCtx::Singleton()->total_piece_num();
+  return !is_eof_ && piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
 }
 
 REGISTER_ACTOR(kRecordLoad, RecordLoadActor);

@@ -14,8 +14,8 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.dst_actor_id_ = consumer;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
-  if (IDMgr::Singleton()->MachineId4ActorId(consumer)
-      == MachineCtx::Singleton()->this_machine_id()) {
+  if (Global<IDMgr>::Get()->MachineId4ActorId(consumer)
+      == Global<MachineCtx>::Get()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
   } else {
     msg.regst_wrapper_.comm_net_token =
@@ -55,7 +55,7 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
 }
 
 int64_t ActorMsg::SrcMachineId() const {
-  return IDMgr::Singleton()->MachineId4ActorId(src_actor_id_);
+  return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
 }
 
 ActorCmd ActorMsg::actor_cmd() const {

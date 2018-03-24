@@ -23,7 +23,7 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   Regst* regst = GetCurWriteableRegst(regst_desc_id);
   ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(
       actor_id(), related_init_model_actor_id_, regst);
-  ActorMsgBus::Singleton()->SendMsg(msg);
+  Global<ActorMsgBus>::Get()->SendMsg(msg);
 }
 
 int NormalMdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
@@ -38,7 +38,7 @@ int NormalMdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   }
   if (init_remaining_cnt_ == 0) {
     OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerSendInitialModel);
-    RuntimeCtx::Singleton()->DecreaseCounter("model_init_cnt");
+    Global<RuntimeCtx>::Get()->DecreaseCounter("model_init_cnt");
   }
   return 0;
 }
@@ -51,7 +51,7 @@ int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
     return true;
   });
   next_model_version_id_ += 1;
-  if (JobDesc::Singleton()->IsTrain()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -93,7 +93,7 @@ void NormalMdUpdtCompActor::Act() {
     }
   });
   readable_regst_mgr_.ReturnToProducerAndPopCurReadable(this);
-  const JobDesc* job_desc = JobDesc::Singleton();
+  const JobDesc* job_desc = Global<JobDesc>::Get();
   auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   if (next_model_version_id_ == job_desc->TotalBatchNum()) {
     AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {

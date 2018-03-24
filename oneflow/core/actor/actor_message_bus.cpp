@@ -8,12 +8,12 @@ namespace oneflow {
 
 void ActorMsgBus::SendMsg(const ActorMsg& msg) {
   int64_t dst_machine_id =
-      IDMgr::Singleton()->MachineId4ActorId(msg.dst_actor_id());
-  if (dst_machine_id == MachineCtx::Singleton()->this_machine_id()) {
-    int64_t thrd_id = IDMgr::Singleton()->ThrdId4ActorId(msg.dst_actor_id());
-    ThreadMgr::Singleton()->GetThrd(thrd_id)->GetMsgChannelPtr()->Send(msg);
+      Global<IDMgr>::Get()->MachineId4ActorId(msg.dst_actor_id());
+  if (dst_machine_id == Global<MachineCtx>::Get()->this_machine_id()) {
+    int64_t thrd_id = Global<IDMgr>::Get()->ThrdId4ActorId(msg.dst_actor_id());
+    Global<ThreadMgr>::Get()->GetThrd(thrd_id)->GetMsgChannelPtr()->Send(msg);
   } else {
-    CommNet::Singleton()->SendActorMsg(dst_machine_id, msg);
+    Global<CommNet>::Get()->SendActorMsg(dst_machine_id, msg);
   }
 }
 

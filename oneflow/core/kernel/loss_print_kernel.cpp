@@ -16,8 +16,8 @@ void LossPrintKernel<T>::Forward(
     auto conf = kernel_conf().op_conf().loss_print_conf();
     reduction_coefficient = GetReductionCoefficient(
         conf.weight_scalar(), conf.reduction_type(),
-        JobDesc::Singleton()->ParallelPieceSize()
-            * JobDesc::Singleton()->PieceNumOfPrintLoss());
+        Global<JobDesc>::Get()->ParallelPieceSize()
+            * Global<JobDesc>::Get()->PieceNumOfPrintLoss());
   }
   loss_reduced /= reduction_coefficient;
   const char* loss_op_name = op_conf().name().c_str() + 11;

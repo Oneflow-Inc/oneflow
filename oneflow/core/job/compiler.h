@@ -11,15 +11,12 @@ namespace oneflow {
 class Compiler final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Compiler);
+  Compiler() = default;
   ~Compiler() = default;
-
-  OF_SINGLETON(Compiler);
 
   Plan Compile();
 
  private:
-  Compiler() = default;
-
   Plan DoCompile();
 };
 
