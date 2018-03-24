@@ -127,7 +127,7 @@ struct KernelUtil final {
                                        const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
     if (initializer_conf == nullptr) {
-      initializer_conf = JobDesc::Singleton()->DefaultInitializerConf();
+      initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
     Initialize(ctx, *initializer_conf, random_seed, blob);
   }

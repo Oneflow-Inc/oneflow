@@ -30,7 +30,7 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
 
 const char* Blob::data_id(int32_t no) const {
   CHECK_NOTNULL(data_id_ptr_);
-  return data_id_ptr_ + no * JobDesc::Singleton()->SizeOfOneDataId();
+  return data_id_ptr_ + no * Global<JobDesc>::Get()->SizeOfOneDataId();
 }
 
 int32_t Blob::col_num(int32_t no) const {

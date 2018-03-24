@@ -53,18 +53,18 @@ EndpointManager::~EndpointManager() {
 }
 
 void EndpointManager::InitRdma() {
-  int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
-  for (int64_t peer_machine_id : CommNet::Singleton()->peer_machine_id()) {
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  for (int64_t peer_machine_id : Global<CommNet>::Get()->peer_machine_id()) {
     IBVerbsConnection* conn = NewIBVerbsConnection();
     connection_pool_.emplace(peer_machine_id, conn);
-    CtrlClient::Singleton()->PushKV(
+    Global<CtrlClient>::Get()->PushKV(
         GenConnInfoKey(this_machine_id, peer_machine_id),
         conn->mut_this_machine_conn_info());
   }
   OF_BARRIER();
-  for (int64_t peer_machine_id : CommNet::Singleton()->peer_machine_id()) {
+  for (int64_t peer_machine_id : Global<CommNet>::Get()->peer_machine_id()) {
     IBVerbsConnection* conn = connection_pool_[peer_machine_id];
-    CtrlClient::Singleton()->PullKV(
+    Global<CtrlClient>::Get()->PullKV(
         GenConnInfoKey(peer_machine_id, this_machine_id),
         conn->mut_peer_machine_conn_info_ptr());
     for (size_t i = 0; i != kPrePostRecvNum; ++i) {
@@ -176,7 +176,7 @@ void EndpointManager::PollSendQueue() {
       return;
     }
     case IBV_WC_RDMA_READ: {
-      CommNet::Singleton()->ReadDone(reinterpret_cast<void*>(wc.wr_id));
+      Global<CommNet>::Get()->ReadDone(reinterpret_cast<void*>(wc.wr_id));
       return;
     }
     default: return;
@@ -194,7 +194,7 @@ void EndpointManager::PollRecvQueue() {
   }
   ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
 
-  ActorMsgBus::Singleton()->SendMsg(*msg);
+  Global<ActorMsgBus>::Get()->SendMsg(*msg);
   CHECK(recv_msg2conn_ptr_.find(msg) != recv_msg2conn_ptr_.end());
   IBVerbsConnection* conn = recv_msg2conn_ptr_.at(msg);
   auto msg2mem_it = recv_msg2mem_desc_.find(msg);

@@ -14,8 +14,6 @@ class RuntimeCtx final {
   RuntimeCtx() = delete;
   ~RuntimeCtx() = default;
 
-  OF_SINGLETON(RuntimeCtx);
-
   int64_t total_piece_num() const { return total_piece_num_; }
   bool is_experiment_phase() const { return is_experiment_phase_; }
 
@@ -26,6 +24,7 @@ class RuntimeCtx final {
   int32_t Staleness() const;
 
  private:
+  friend class Global<RuntimeCtx>;
   RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase);
 
   int64_t total_piece_num_;

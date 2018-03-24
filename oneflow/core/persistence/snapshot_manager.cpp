@@ -5,12 +5,12 @@
 namespace oneflow {
 
 SnapshotMgr::SnapshotMgr(const Plan& plan) {
-  if (JobDesc::Singleton()->IsTrain()) {
-    model_save_snapshots_path_ = JobDesc::Singleton()->MdSaveSnapshotsPath();
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    model_save_snapshots_path_ = Global<JobDesc>::Get()->MdSaveSnapshotsPath();
     OF_CALL_ONCE(model_save_snapshots_path_,
                  GlobalFS()->MakeEmptyDir(model_save_snapshots_path_));
   }
-  const std::string& load_path = JobDesc::Singleton()->MdLoadSnapshotPath();
+  const std::string& load_path = Global<JobDesc>::Get()->MdLoadSnapshotPath();
   if (load_path != "") { readable_snapshot_.reset(new Snapshot(load_path)); }
   total_mbn_num_ = plan.total_mbn_num();
 }
