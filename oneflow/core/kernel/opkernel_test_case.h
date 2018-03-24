@@ -13,7 +13,7 @@ namespace oneflow {
 
 namespace test {
 
-class OpKernelTestCase {
+class OpKernelTestCase final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
   OpKernelTestCase();
@@ -54,8 +54,5 @@ class OpKernelTestCase {
 }  // namespace test
 
 }  // namespace oneflow
-
-#define OF_PP_DEF_OPKERNEL_TEST_CASE(class_name, template_arg_tuple, \
-                                     run_arg_tuple, builder)
 
 #endif  // ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
