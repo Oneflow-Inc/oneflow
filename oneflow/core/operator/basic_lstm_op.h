@@ -1,8 +1,6 @@
 #ifndef ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
 #define ONEFLOW_CORE_OPERATOR_BASIC_LSTM_OP_H_
 
-#define ENROLL_BN_FOR_LSTM_GATE
-
 #include "oneflow/core/operator/recurrent_op.h"
 
 namespace oneflow {
