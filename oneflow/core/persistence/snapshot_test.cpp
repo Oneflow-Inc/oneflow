@@ -12,7 +12,7 @@ TEST(Snapshot, write_and_read) {
   gfs_conf->set_allocated_localfs_conf(new LocalFsConf);
   auto resource = jb_desc_proto.mutable_resource();
   resource->add_machine();
-  JobDesc::Singleton()->InitFromProto(jb_desc_proto);
+  Global<JobDesc>::Get()->InitFromProto(jb_desc_proto);
 
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');

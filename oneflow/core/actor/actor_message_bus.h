@@ -13,8 +13,6 @@ class ActorMsgBus final {
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgBus);
   ~ActorMsgBus() = default;
 
-  OF_SINGLETON(ActorMsgBus);
-
   void SendMsg(const ActorMsg& msg);
 
  private:

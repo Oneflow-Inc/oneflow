@@ -16,8 +16,6 @@ class JobDesc final {
   JobDesc() = default;
   ~JobDesc() = default;
 
-  OF_SINGLETON(JobDesc);
-
   // Common
   const JobConf& job_conf() const { return job_conf_; }
   const DLNetConf& dlnet_conf() const { return dlnet_conf_; }
@@ -54,6 +52,7 @@ class JobDesc final {
   float L2() const;
 
  private:
+  friend class Global<JobDesc>;
   JobDesc(const JobDescProto&);
   void SplitDecodeOps();
 

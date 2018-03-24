@@ -13,14 +13,13 @@ class ActEventLogger final {
   OF_DISALLOW_COPY_AND_MOVE(ActEventLogger);
   ~ActEventLogger() = default;
 
-  OF_SINGLETON(ActEventLogger);
-
   void PrintActEventToLogDir(const ActEvent&);
 
   static const std::string act_event_bin_filename_;
   static const std::string act_event_txt_filename_;
 
  private:
+  friend class Global<ActEventLogger>;
   ActEventLogger();
 
   PersistentOutStream bin_out_stream_;

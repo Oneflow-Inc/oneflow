@@ -13,11 +13,10 @@ class ThreadMgr final {
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
   ~ThreadMgr();
 
-  OF_SINGLETON(ThreadMgr);
-
   Thread* GetThrd(int64_t thrd_id);
 
  private:
+  friend class Global<ThreadMgr>;
   ThreadMgr();
 
   std::vector<Thread*> threads_;

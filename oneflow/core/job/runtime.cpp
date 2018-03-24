@@ -14,13 +14,13 @@ namespace {
 void SendCmdMsg(const std::vector<const TaskProto*>& tasks, ActorCmd cmd) {
   for (const TaskProto* task : tasks) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(task->task_id(), cmd);
-    ActorMsgBus::Singleton()->SendMsg(msg);
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
   }
 }
 
 void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   for (const TaskProto* task : tasks) {
-    ThreadMgr::Singleton()->GetThrd(task->thrd_id())->AddTask(*task);
+    Global<ThreadMgr>::Get()->GetThrd(task->thrd_id())->AddTask(*task);
   }
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
@@ -28,13 +28,13 @@ void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
-  NewAllSingleton(plan, is_experiment_phase);
+  NewAllGlobal(plan, is_experiment_phase);
   std::vector<const TaskProto*> mdupdt_tasks;
   std::vector<const TaskProto*> source_tasks;
   std::vector<const TaskProto*> other_tasks;
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != MachineCtx::Singleton()->this_machine_id()) {
+    if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) {
       continue;
     }
     if (IsMdUpdtTaskType(task.task_type())) {
@@ -46,7 +46,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     }
     this_machine_task_num += 1;
   }
-  RuntimeCtx* runtime_ctx = RuntimeCtx::Singleton();
+  RuntimeCtx* runtime_ctx = Global<RuntimeCtx>::Get();
   runtime_ctx->NewCounter("constructing_actor_cnt", this_machine_task_num);
   HandoutTasks(mdupdt_tasks);
   HandoutTasks(source_tasks);
@@ -55,7 +55,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
   LOG(INFO) << "All actor on this machine are constructed";
   OF_BARRIER();
   LOG(INFO) << "All actor on all machine are constructed";
-  CommNet::Singleton()->RegisterMemoryDone();
+  Global<CommNet>::Get()->RegisterMemoryDone();
   runtime_ctx->NewCounter("model_init_cnt", mdupdt_tasks.size());
   SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
   runtime_ctx->WaitUntilCntEqualZero("model_init_cnt");
@@ -67,15 +67,15 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
   SendCmdMsg(source_tasks, ActorCmd::kStart);
   runtime_ctx->WaitUntilCntEqualZero("running_actor_cnt");
   OF_BARRIER();
-  DeleteAllSingleton();
+  DeleteAllGlobal();
 }
 
-void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
-  const JobDesc* job_desc = JobDesc::Singleton();
+void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
+  const JobDesc* job_desc = Global<JobDesc>::Get();
   int64_t piece_num = 0;
   if (is_experiment_phase) {
     piece_num = job_desc->piece_num_of_experiment_phase();
-    ActEventLogger::NewSingleton();
+    Global<ActEventLogger>::New();
   } else {
     if (job_desc->IsTrain()) {
       piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
@@ -83,9 +83,9 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
       piece_num = std::numeric_limits<int64_t>::max();
     }
   }
-  RuntimeCtx::NewSingleton(piece_num, is_experiment_phase);
+  Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
 #ifdef PLATFORM_POSIX
-  if (JobDesc::Singleton()->use_rdma()) {
+  if (job_desc->use_rdma()) {
 #ifdef WITH_RDMA
     IBVerbsCommNet::Init(plan);
 #else
@@ -95,22 +95,22 @@ void Runtime::NewAllSingleton(const Plan& plan, bool is_experiment_phase) {
     EpollCommNet::Init(plan);
   }
 #endif
-  SnapshotMgr::NewSingleton(plan);
-  MemoryAllocator::NewSingleton();
-  RegstMgr::NewSingleton();
-  ActorMsgBus::NewSingleton();
-  ThreadMgr::NewSingleton();
+  Global<SnapshotMgr>::New(plan);
+  Global<MemoryAllocator>::New();
+  Global<RegstMgr>::New();
+  Global<ActorMsgBus>::New();
+  Global<ThreadMgr>::New();
 }
 
-void Runtime::DeleteAllSingleton() {
-  ThreadMgr::DeleteSingleton();
-  ActorMsgBus::DeleteSingleton();
-  RegstMgr::DeleteSingleton();
-  MemoryAllocator::DeleteSingleton();
-  SnapshotMgr::DeleteSingleton();
-  delete CommNet::Singleton();
-  RuntimeCtx::DeleteSingleton();
-  ActEventLogger::DeleteSingleton();
+void Runtime::DeleteAllGlobal() {
+  Global<ThreadMgr>::Delete();
+  Global<ActorMsgBus>::Delete();
+  Global<RegstMgr>::Delete();
+  Global<MemoryAllocator>::Delete();
+  Global<SnapshotMgr>::Delete();
+  Global<CommNet>::Delete();
+  Global<RuntimeCtx>::Delete();
+  Global<ActEventLogger>::Delete();
 }
 
 }  // namespace oneflow
