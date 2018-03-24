@@ -7,7 +7,7 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob("out");
-  const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns()[0]);
+  const Blob* in_blob_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
   out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob_0);
   Blob* mask_blob = BnInOp2Blob("mask");
   Memset<device_type>(ctx.device_ctx, mask_blob->mut_dptr(), 0,
@@ -29,7 +29,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
   const int64_t elem_cnt = mask_blob->shape().elem_cnt();
   FOR_RANGE(size_t, i, 0, this->kernel_conf().input_diff_bns().size()) {
-    Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns()[i]);
+    Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(i));
     Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                         in_diff_blob->ByteSizeOfDataContentField());
     MaximumKernelUtil<device_type, T>::ElementwiseSetWithMask(
