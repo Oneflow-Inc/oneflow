@@ -27,8 +27,8 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  virtual bool NeedExtraInDiffMemWhenBackward() const { return true; }
-  virtual bool NeedOutWhenBackward() const { return true; }
+  virtual bool NeedForwardInWhenBackward() const { return true; }
+  virtual bool NeedForwardOutWhenBackward() const { return true; }
   virtual bool IsLossOp() const { return false; }
   virtual bool IsPrintOp() const { return false; }
   virtual bool IsDecodeOp() const { return false; }

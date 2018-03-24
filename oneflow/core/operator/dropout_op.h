@@ -13,8 +13,8 @@ class DropoutOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
-  bool NeedOutWhenBackward() const override { return false; }
+  bool NeedForwardInWhenBackward() const override { return false; }
+  bool NeedForwardOutWhenBackward() const override { return false; }
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
