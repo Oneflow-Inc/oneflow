@@ -24,4 +24,4 @@ class AddKernel final : public CWiseKernel<device_type> {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_Add_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_ADD_KERNEL_H_
