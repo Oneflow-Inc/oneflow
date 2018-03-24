@@ -8,11 +8,13 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
+  other_model_regst_desc_id_ = RegstDescId4Name("other_model");
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
   if (random_seed_ == -1
-      || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
+      || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1
+          && other_model_regst_desc_id_ == -1)) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   } else {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelAndModelTmp);
@@ -46,6 +48,11 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
           if (blob == nullptr && model_tmp_regst_) {
             blob = model_tmp_regst_->GetBlobByLbn(lbn);
           }
+          if (blob == nullptr) {
+            blob = GetCurWriteableRegst(other_model_regst_desc_id_)
+                       ->GetBlobByLbn(lbn);
+          }
+          CHECK_NOTNULL(blob);
           return blob;
         });
   }
@@ -77,6 +84,8 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
     } else {
       CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
     }
+    LOG(WARNING) << "forward read ready: " << IsReadReady();
+    LOG(WARNING) << "forward write ready: " << IsWriteReady();
     ActUntilFail();
   } else {
     UNIMPLEMENTED();
@@ -96,6 +105,7 @@ bool ForwardCompActor::IsReadAlwaysUnReadyFromNow() {
 }
 
 void ForwardCompActor::Act() {
+  LOG(WARNING) << "forward act";
   Regst* in_regst = pending_in_regsts_.front();
   pending_in_regsts_.pop();
   int64_t model_version_id = -1;
@@ -115,12 +125,35 @@ void ForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(in_regst->piece_id());
     regst->set_model_version_id(model_version_id);
-    return true;
+    return regst->regst_desc_id() != other_model_regst_desc_id_;
   });
-  if (JobDesc::Singleton()->IsTrain() && model_regst_) {
-    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
-    CHECK_LE(in_regst->piece_id(), last_piece_id);
-    if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
+  if (JobDesc::Singleton()->IsTrain()) {
+    if (model_regst_) {
+      int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
+      CHECK_LE(in_regst->piece_id(), last_piece_id);
+      if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
+    }
+    if (other_model_regst_desc_id_ != -1) {
+      if ((in_regst->piece_id() + 1)
+              % JobDesc::Singleton()->NumOfPiecesInBatch()
+          == 0) {
+        if (model_version_id + 1 == JobDesc::Singleton()->TotalBatchNum()) {
+          AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+            regst->set_piece_id(in_regst->piece_id());
+            regst->set_model_version_id(model_version_id);
+            return regst->regst_desc_id() == other_model_regst_desc_id_;
+          });
+        } else if ((model_version_id + 1)
+                       % JobDesc::Singleton()->NumOfBatchesInSnapshot()
+                   == 0) {
+          AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+            regst->set_piece_id(in_regst->piece_id());
+            regst->set_model_version_id(model_version_id);
+            return regst->regst_desc_id() == other_model_regst_desc_id_;
+          });
+        }
+      }
+    }
   }
   AsyncSendRegstMsgToProducer(in_regst);
 }
