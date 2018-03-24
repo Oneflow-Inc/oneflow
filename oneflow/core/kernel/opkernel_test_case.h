@@ -33,12 +33,11 @@ class OpKernelTestCase final {
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
 
  private:
-  //  Getters
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
-
   void InitBeforeRun();
   void AssertAfterRun() const;
+
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
   JobConf job_conf_;
