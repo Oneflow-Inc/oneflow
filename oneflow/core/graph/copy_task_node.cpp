@@ -38,7 +38,7 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
-  set_thrd_id(IDMgr::Singleton()->CommNetThrdId());
+  set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
 }
 
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {

@@ -19,7 +19,7 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   op_conf_ = op_conf;
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
-    op_conf_.set_use_cudnn_on_gpu(JobDesc::Singleton()->UseCudnnOnGpu());
+    op_conf_.set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
   InitFromOpConf();
 }
@@ -80,7 +80,7 @@ void Operator::InferBlobDescs(
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDecodeOp()) {
     CHECK_EQ(pr_desc->parallel_num(),
-             JobDesc::Singleton()->job_conf().data_part_num())
+             Global<JobDesc>::Get()->job_conf().data_part_num())
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
@@ -96,7 +96,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   }
   if (pr_desc->policy() == kDataParallel) {
     pr_desc->RemoveNeedlessDevice(op_name(),
-                                  JobDesc::Singleton()->ParallelPieceSize());
+                                  Global<JobDesc>::Get()->ParallelPieceSize());
   }
   VirtualFixParallelDesc(pr_desc);
 }

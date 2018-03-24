@@ -13,13 +13,11 @@ class Runtime final {
   Runtime() = delete;
   ~Runtime() = default;
 
-  OF_SINGLETON(Runtime);
-
- private:
   Runtime(const Plan& plan, bool is_experiment_phase);
 
-  void NewAllSingleton(const Plan& plan, bool is_experiment_phase);
-  void DeleteAllSingleton();
+ private:
+  void NewAllGlobal(const Plan& plan, bool is_experiment_phase);
+  void DeleteAllGlobal();
 };
 
 }  // namespace oneflow

@@ -22,7 +22,7 @@ class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
   static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n,
                                                float l1, const T* model,
                                                T* model_diff_acc) {
-    int32_t batch_size = JobDesc::Singleton()->BatchSize();
+    int32_t batch_size = Global<JobDesc>::Get()->BatchSize();
     DiffAveragingL1RegularizationGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(n, static_cast<T>(l1), batch_size, model,
