@@ -56,14 +56,13 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   OF_DISALLOW_COPY_AND_MOVE(LogicalGraph);
   ~LogicalGraph() = default;
 
-  OF_SINGLETON(LogicalGraph);
-
   const char* TypeName() const override { return "LogicalGraph"; }
   std::shared_ptr<const Operator> GetProducerOp(const std::string& lbn);
   void SetProducerOp(const std::string& lbn, std::weak_ptr<const Operator> op);
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
+  friend class Global<LogicalGraph>;
   LogicalGraph();
   void NaiveBuildGraphStruct(
       HashMap<LogicalEdge*, std::string>* edge2lbn,

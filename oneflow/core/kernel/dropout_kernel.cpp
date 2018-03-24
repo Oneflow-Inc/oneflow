@@ -18,7 +18,7 @@ void DropoutKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int64_t elem_cnt = BnInOp2Blob("in")->shape().elem_cnt();
-  if (JobDesc::Singleton()->IsTrain()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     Dropout(ctx.device_ctx, elem_cnt, this->op_conf().dropout_conf().rate(),
             BnInOp2Blob("in")->dptr<T>(),
             BnInOp2Blob("random_mask")->mut_dptr<float>(),

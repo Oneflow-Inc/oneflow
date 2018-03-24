@@ -13,8 +13,6 @@ class SnapshotMgr {
   SnapshotMgr() = delete;
   ~SnapshotMgr() = default;
 
-  OF_SINGLETON(SnapshotMgr);
-
   Snapshot* GetWriteableSnapshot(int64_t snapshot_id);
 
   const Snapshot* GetReadableSnapshot() { return readable_snapshot_.get(); }
@@ -22,6 +20,7 @@ class SnapshotMgr {
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
+  friend class Global<SnapshotMgr>;
   SnapshotMgr(const Plan& plan);
 
   std::string model_save_snapshots_path_;

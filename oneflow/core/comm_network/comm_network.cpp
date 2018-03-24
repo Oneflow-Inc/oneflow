@@ -2,8 +2,6 @@
 
 namespace oneflow {
 
-CommNet* CommNet::comm_network_ptr_;
-
 void* CommNet::NewActorReadId() { return new ActorReadContext; }
 
 void CommNet::DeleteActorReadId(void* actor_read_id) {
@@ -77,7 +75,7 @@ void CommNet::FinishOneRead(ReadContext* read_ctx) {
 void CommNet::GenConnectionInfo(const Plan& plan) {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
-  int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
 
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {

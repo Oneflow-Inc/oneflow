@@ -27,7 +27,7 @@ Blob* NormalMdUpdateKernel<device_type, T>::DiffAveragingAndL1Regularization(
                                      1);
   }
   const Blob* model = BnInOp2Blob("model");
-  float l1 = JobDesc::Singleton()->L1();
+  float l1 = Global<JobDesc>::Get()->L1();
   NormalMdUpdateKernelUtil<device_type, T>::DiffAveragingAndL1Regularization(
       ctx, model->shape().elem_cnt(), l1, model->dptr<T>(),
       in_0->mut_dptr<T>());
@@ -42,7 +42,7 @@ class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                                                T* model_diff_acc) {
     T zero = static_cast<T>(0);
     for (int64_t i = 0; i != n; ++i) {
-      model_diff_acc[i] /= JobDesc::Singleton()->BatchSize();
+      model_diff_acc[i] /= Global<JobDesc>::Get()->BatchSize();
       model_diff_acc[i] += l1 * ((model[i] >= zero) - (model[i] <= zero));
     }
   }

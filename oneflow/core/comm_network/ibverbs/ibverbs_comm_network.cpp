@@ -15,7 +15,7 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 
 void IBVerbsCommNet::Init(const Plan& plan) {
   IBVerbsCommNet* comm_net = new IBVerbsCommNet(plan);
-  CommNet::Singleton()->set_comm_network_ptr(comm_net);
+  Global<CommNet>::SetAllocated(comm_net);
   comm_net->endpoint_manager_.reset(new EndpointManager());
 }
 
@@ -31,8 +31,8 @@ void IBVerbsCommNet::UnRegisterMemory(const void* token) {
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
-  int64_t total_machine_num = JobDesc::Singleton()->TotalMachineNum();
-  int64_t this_machine_id = MachineCtx::Singleton()->this_machine_id();
+  int64_t total_machine_num = Global<JobDesc>::Get()->TotalMachineNum();
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   IBVerbsTokensMsg this_machine_tokens_msg;
   const std::list<IBVerbsMemDesc*> mem_descs = mem_desc_mgr_.mem_descs();
   for (auto mem_desc : mem_descs) {
@@ -40,16 +40,16 @@ void IBVerbsCommNet::RegisterMemoryDone() {
         {reinterpret_cast<uint64_t>(mem_desc),
          mem_desc->IBVerbsMemDescToProto()});
   }
-  CtrlClient::Singleton()->PushKV(GenTokensMsgKey(this_machine_id),
-                                  this_machine_tokens_msg);
+  Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id),
+                                    this_machine_tokens_msg);
   OF_BARRIER();
   FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    if (peer_machine_id == MachineCtx::Singleton()->this_machine_id()) {
+    if (peer_machine_id == Global<MachineCtx>::Get()->this_machine_id()) {
       continue;
     }
     IBVerbsTokensMsg peer_machine_tokens_msg;
-    CtrlClient::Singleton()->PullKV(GenTokensMsgKey(peer_machine_id),
-                                    &peer_machine_tokens_msg);
+    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_machine_id),
+                                      &peer_machine_tokens_msg);
     for (const auto& pair : peer_machine_tokens_msg.token2mem_desc_proto()) {
       CHECK(token2mem_desc_proto_.insert({pair.first, pair.second}).second);
     }

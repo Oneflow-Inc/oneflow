@@ -127,7 +127,7 @@ class RecordBlob final : public RecordBlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
   RecordBlob()
-      : records_(JobDesc::Singleton()->SinglePieceSize()), record_num_(0) {}
+      : records_(Global<JobDesc>::Get()->SinglePieceSize()), record_num_(0) {}
   ~RecordBlob() = default;
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {

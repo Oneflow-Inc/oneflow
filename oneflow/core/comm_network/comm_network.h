@@ -13,8 +13,6 @@ class CommNet {
   OF_DISALLOW_COPY_AND_MOVE(CommNet);
   virtual ~CommNet() = default;
 
-  static CommNet* Singleton() { return comm_network_ptr_; }
-
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
   virtual const void* RegisterMemory(void* dptr, size_t byte_size) = 0;
@@ -37,8 +35,6 @@ class CommNet {
 
  protected:
   CommNet() = default;
-  static void set_comm_network_ptr(CommNet* val) { comm_network_ptr_ = val; }
-
   struct ActorReadContext;
   struct ReadContext {
     ActorReadContext* actor_read_ctx;
@@ -56,11 +52,11 @@ class CommNet {
   void GenConnectionInfo(const Plan& plan);
 
  private:
+  friend class Global<CommNet>;
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneRead(ReadContext*);
 
   HashSet<int64_t> peer_machine_id_;
-  static CommNet* comm_network_ptr_;
 };
 
 }  // namespace oneflow

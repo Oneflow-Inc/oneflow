@@ -38,7 +38,7 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
     kernel_ctx.other = &random_seed_;
     exec_kernel.kernel->InitModelAndModelTmp(
         kernel_ctx, parallel_ctx(),
-        SnapshotMgr::Singleton()->GetReadableSnapshot(),
+        Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
           Blob* blob = nullptr;
@@ -117,7 +117,7 @@ void ForwardCompActor::Act() {
     regst->set_model_version_id(model_version_id);
     return true;
   });
-  if (JobDesc::Singleton()->IsTrain() && model_regst_) {
+  if (Global<JobDesc>::Get()->IsTrain() && model_regst_) {
     int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
     CHECK_LE(in_regst->piece_id(), last_piece_id);
     if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
