@@ -180,6 +180,7 @@ void Actor::AsyncSendRegstMsgToConsumer(
     std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
+    if (pair.second.empty()) { continue; }
     Regst* regst = pair.second.front();
     if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);

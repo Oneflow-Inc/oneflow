@@ -19,7 +19,7 @@ class RecurrentBackwardCompTaskNode final : public BackwardCompTaskNode {
   void VirtualBuildInDiffRegst() override;
   void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) override;
   void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) override;
-  void VirtualConsumeDiffRegst(TaskEdge* edge) override;
+  void VirtualConsumeRegstOnInEdge(TaskEdge* edge) override;
   void VirtualConsumeInRegst();
   void VirtualInferBlobDescInHiddenDiff() override;
   bool CanBindInDiff(TaskEdge* edge);

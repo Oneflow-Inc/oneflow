@@ -73,7 +73,8 @@ void RecurrentBackwardCompTaskNode::VirtualProduceRegstOnRecurrentEdge(
   edge->AddRegst("rec_in_diff", ProduceRegst("rec_in_diff", 1, 1));
 }
 
-void RecurrentBackwardCompTaskNode::VirtualConsumeDiffRegst(TaskEdge* edge) {
+void RecurrentBackwardCompTaskNode::VirtualConsumeRegstOnInEdge(
+    TaskEdge* edge) {
   std::shared_ptr<const Operator> op = chain_node()->SoleOp();
   std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
   const auto& lbns = PredChainNodeOnEdge(edge)->data_output_lbns();
