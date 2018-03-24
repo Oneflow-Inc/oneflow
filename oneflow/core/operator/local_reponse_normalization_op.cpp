@@ -47,4 +47,7 @@ void LocalResponseNormalizationOp::VirtualGenKernelConf(
                        ->mutable_batch());
 }
 
+REGISTER_OP(OperatorConf::kLocalResponseNormalizationConf,
+            LocalResponseNormalizationOp);
+
 }  // namespace oneflow
