@@ -149,18 +149,6 @@ void ConvOp<NDims>::InferBlobDescs(
     GetBlobDesc4BnInOp("cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
   }
 #endif  // WITH_CUDA
-
-  // col_buf
-  if (!UseCudnn()) {
-    int64_t output_size = GetBlobDesc4BnInOp("out")->shape().Count(
-        DhwOffset(data_format), DhwOffset(data_format) + NDims);
-    GetBlobDesc4BnInOp("col_buf")->mut_shape() =
-        Shape({output_size, GetBlobDesc4BnInOp("weight")->shape().Count(1)});
-    if (GetBoolFromCustomizedConf("use_bias")) {
-      GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
-          Shape({1, output_size});
-    }
-  }
 }
 
 template<int32_t NDims>
