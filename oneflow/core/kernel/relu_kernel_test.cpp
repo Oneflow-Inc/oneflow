@@ -16,11 +16,7 @@ OpKernelTestCase* ReluTestCase(bool is_train, bool is_forward) {
   relu_test_case->set_is_train(is_train);
   relu_test_case->set_is_forward(is_forward);
   relu_test_case->set_device_type(device_type);
-
-  relu_test_case->mut_op_conf()->set_name("relu_op_test");
-  auto* relu_conf = relu_test_case->mut_op_conf()->mutable_relu_conf();
-  relu_conf->set_in("relu/in");
-  relu_conf->set_out("relu/out");
+  relu_test_case->mut_op_conf()->mutable_relu_conf();
 
   using KTC = KTCommon<device_type, T>;
   BlobDesc* blob_desc =
