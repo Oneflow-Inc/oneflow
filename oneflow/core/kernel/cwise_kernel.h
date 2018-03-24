@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_KERNEL_cwise_kernel_H_
-#define ONEFLOW_CORE_KERNEL_cwise_kernel_H_
+#ifndef ONEFLOW_CORE_KERNEL_CWISE_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_CWISE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 

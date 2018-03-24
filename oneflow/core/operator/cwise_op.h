@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_OPERATOR_cwise_op_H_
-#define ONEFLOW_CORE_OPERATOR_cwise_op_H_
+#ifndef ONEFLOW_CORE_OPERATOR_CWISE_OP_H_
+#define ONEFLOW_CORE_OPERATOR_CWISE_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
