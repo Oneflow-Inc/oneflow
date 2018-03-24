@@ -192,7 +192,8 @@ struct KernelUtil<DeviceType::kCPU, T> final {
   }
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx) {
-    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
+    T zero = static_cast<T>(0.0);
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
