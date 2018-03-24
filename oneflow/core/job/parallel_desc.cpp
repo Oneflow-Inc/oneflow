@@ -35,7 +35,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       CHECK_STREQ(device_tag.c_str(), "gpu");
       device_type_ = DeviceType::kGPU;
     }
-    int64_t machine_id = IDMgr::Singleton()->MachineID4MachineName(mchn_name);
+    int64_t machine_id = Global<IDMgr>::Get()->MachineID4MachineName(mchn_name);
     sorted_machine_ids_.push_back(machine_id);
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {
@@ -97,7 +97,7 @@ void ParallelDesc::RemoveInvalidDevice(const std::string& op_name) {
     auto& sorted_dev_ids = machine_id2sorted_dev_phy_ids_.at(machine_id);
     auto bound_it =
         std::lower_bound(sorted_dev_ids.begin(), sorted_dev_ids.end(),
-                         JobDesc::Singleton()->XpuDeviceNum());
+                         Global<JobDesc>::Get()->XpuDeviceNum());
     if (bound_it == sorted_dev_ids.end()) {
       continue;
     } else {

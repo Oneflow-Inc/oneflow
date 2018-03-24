@@ -34,7 +34,7 @@ int64_t IDMgr::GetPersistenceThrdId(int64_t offset) const {
 
 int64_t IDMgr::CommNetThrdId() const {
   return gpu_device_num_ + cpu_device_num_
-         + JobDesc::Singleton()->PersistenceWorkerNum();
+         + Global<JobDesc>::Get()->PersistenceWorkerNum();
 }
 
 int64_t IDMgr::GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const {
@@ -74,7 +74,7 @@ int64_t IDMgr::NewWorkStreamId(int64_t machine_id, int64_t thrd_id) {
 }
 
 IDMgr::IDMgr() {
-  const Resource& resource = JobDesc::Singleton()->resource();
+  const Resource& resource = Global<JobDesc>::Get()->resource();
   int64_t machine_num = resource.machine_size();
   CHECK_LT(machine_num, static_cast<int64_t>(1) << machine_id_bit_num_);
   gpu_device_num_ = resource.gpu_device_num();

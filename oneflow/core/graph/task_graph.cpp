@@ -10,7 +10,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
   HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_in_box;
   HashMap<const ChainNode*, std::vector<TaskNode*>> chain2sorted_out_box;
 
-  const JobDesc* job_desc = JobDesc::Singleton();
+  const JobDesc* job_desc = Global<JobDesc>::Get();
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
   std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
@@ -18,11 +18,11 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
     int64_t ret = -1;
     if (task_node->IsPersistence() == false) {
       int64_t& offset = cpu_device_offset.at(task_node->machine_id());
-      ret = IDMgr::Singleton()->GetCpuDeviceThrdId(offset);
+      ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
       offset = (offset + 1) % job_desc->CpuDeviceNum();
     } else {
       int64_t& offset = persistence_offset.at(task_node->machine_id());
-      ret = IDMgr::Singleton()->GetPersistenceThrdId(offset);
+      ret = Global<IDMgr>::Get()->GetPersistenceThrdId(offset);
       offset = (offset + 1) % job_desc->PersistenceWorkerNum();
     }
     return ret;

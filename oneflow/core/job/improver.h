@@ -15,12 +15,11 @@ class Improver final {
   Improver() = delete;
   ~Improver() = default;
 
-  OF_SINGLETON(Improver);
+  explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
 
   Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
 
  private:
-  explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
   void MemoryLimitedAllocate(
       const ActGraph& graph, double base_ii,
       const std::function<void(int64_t, size_t)>& Handler) const;

@@ -17,7 +17,7 @@ ThreadMgr::~ThreadMgr() {
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
 
 ThreadMgr::ThreadMgr() {
-  const JobDesc* job_desc = JobDesc::Singleton();
+  const JobDesc* job_desc = Global<JobDesc>::Get();
   int64_t thrd_id = 0;
 
 #ifdef WITH_CUDA

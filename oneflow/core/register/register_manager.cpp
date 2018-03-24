@@ -21,7 +21,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     if (lbns.size() > 0) {
       std::sort(lbns.begin(), lbns.end());
       std::tuple<char*, const void*, std::function<void()>> allocation_result =
-          MemoryAllocator::Singleton()->Allocate(
+          Global<MemoryAllocator>::Get()->Allocate(
               regst_desc_proto.mem_case(),
               runtime_regst_desc->packed_blob_desc()->TotalByteSize());
       char* cur_pointer = std::get<0>(allocation_result);

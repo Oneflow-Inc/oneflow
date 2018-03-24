@@ -43,14 +43,15 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
 }  // namespace
 
 Plan Compiler::Compile() {
-  LogicalGraph::NewSingleton();
+  Global<LogicalGraph>::New();
   Plan plan = DoCompile();
-  LogicalGraph::DeleteSingleton();
+  Global<LogicalGraph>::Delete();
   return plan;
 }
 
 Plan Compiler::DoCompile() {
-  auto chain_gph = of_make_unique<ChainGraph>(JobDesc::Singleton()->IsTrain());
+  auto chain_gph =
+      of_make_unique<ChainGraph>(Global<JobDesc>::Get()->IsTrain());
   auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
@@ -64,7 +65,7 @@ Plan Compiler::DoCompile() {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan.mutable_task()->Add());
   });
-  plan.set_total_mbn_num(LogicalGraph::Singleton()->total_mbn_num());
+  plan.set_total_mbn_num(Global<LogicalGraph>::Get()->total_mbn_num());
   ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
   return plan;
 }

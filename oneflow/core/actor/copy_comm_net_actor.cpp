@@ -6,7 +6,7 @@
 namespace oneflow {
 
 CopyCommNetActor::~CopyCommNetActor() {
-  CommNet::Singleton()->DeleteActorReadId(actor_read_id_);
+  Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_);
 }
 
 class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
@@ -21,7 +21,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   }
 
   void AddCallBack(std::function<void()> callback) const override {
-    CommNet::Singleton()->AddReadCallBack(actor_read_id_, read_id_, callback);
+    Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);
   }
 
   void set_read_id(void* val) { read_id_ = val; }
@@ -33,7 +33,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
-  actor_read_id_ = CommNet::Singleton()->NewActorReadId();
+  actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
   comm_net_device_ctx_ =
       new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
   next_piece_id_ = 0;
@@ -50,7 +50,7 @@ int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
     is_in_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == MachineCtx::Singleton()->this_machine_id()) {
+    if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
       CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
     } else {
       RegstCtx regst_ctx;
@@ -73,13 +73,14 @@ void CopyCommNetActor::Act() {
   const void* readable_token = readable_it->second.comm_net_token;
   Regst* readable_regst = readable_it->second.regst_raw_ptr;
   int64_t src_actor_id = readable_it->second.producer;
-  int64_t src_machine_id = IDMgr::Singleton()->MachineId4ActorId(src_actor_id);
+  int64_t src_machine_id =
+      Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
   const void* writeable_token = writeable_blob->comm_net_token();
   // Async
-  void* read_id = CommNet::Singleton()->Read(actor_read_id_, src_machine_id,
-                                             readable_token, writeable_token);
+  void* read_id = Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id,
+                                               readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(next_piece_id_);
@@ -87,7 +88,7 @@ void CopyCommNetActor::Act() {
   });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
-  CommNet::Singleton()->AddReadCallBackDone(read_id);
+  Global<CommNet>::Get()->AddReadCallBackDone(read_id);
   piece_id2regst_ctx.erase(readable_it);
   next_piece_id_ += 1;
 }
