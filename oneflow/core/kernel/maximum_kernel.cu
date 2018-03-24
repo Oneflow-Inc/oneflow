@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 template<typename T>
-__global__ void ElementwiseMaxWithMaskGpu(const int64_t n, T* x, const T* y,
+__global__ void CWiseMaxWithMaskGpu(const int64_t n, T* x, const T* y,
                                           const int y_idx, int32_t* mask) {
   CUDA_1D_KERNEL_LOOP(i, n) {
     if (y[i] > x[i]) {
@@ -15,7 +15,7 @@ __global__ void ElementwiseMaxWithMaskGpu(const int64_t n, T* x, const T* y,
 }
 
 template<typename T>
-__global__ void ElementwiseSetWithMaskGpu(const int64_t n, T* x, const T* y,
+__global__ void CWiseSetWithMaskGpu(const int64_t n, T* x, const T* y,
                                           const int x_idx,
                                           const int32_t* mask) {
   CUDA_1D_KERNEL_LOOP(i, n) {
@@ -26,18 +26,18 @@ __global__ void ElementwiseSetWithMaskGpu(const int64_t n, T* x, const T* y,
 
 template<typename T>
 struct MaximumKernelUtil<DeviceType::kGPU, T> {
-  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+  static void CWiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
                                      const T* y, const int y_idx,
                                      int32_t* mask) {
-    ElementwiseMaxWithMaskGpu<T>
+    CWiseMaxWithMaskGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(n, x, y, y_idx, mask);
   }
 
-  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+  static void CWiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
                                      const T* y, const int x_idx,
                                      const int32_t* mask) {
-    ElementwiseSetWithMaskGpu<T>
+    CWiseSetWithMaskGpu<T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(n, x, y, x_idx, mask);
   }

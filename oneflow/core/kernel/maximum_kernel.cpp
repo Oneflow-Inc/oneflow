@@ -15,7 +15,7 @@ void MaximumKernel<device_type, T>::ForwardDataContent(
   const int64_t elem_cnt = out_blob->shape().elem_cnt();
   FOR_RANGE(size_t, i, 1, this->kernel_conf().input_bns().size()) {
     const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(i));
-    MaximumKernelUtil<device_type, T>::ElementwiseMaxWithMask(
+    MaximumKernelUtil<device_type, T>::CWiseMaxWithMask(
         ctx.device_ctx, elem_cnt, out_blob->mut_dptr<T>(), in_blob->dptr<T>(),
         i, mask_blob->mut_dptr<int32_t>());
   }
@@ -32,7 +32,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
     Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(i));
     Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                         in_diff_blob->ByteSizeOfDataContentField());
-    MaximumKernelUtil<device_type, T>::ElementwiseSetWithMask(
+    MaximumKernelUtil<device_type, T>::CWiseSetWithMask(
         ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
         out_diff_blob->dptr<T>(), i, mask_blob->dptr<int32_t>());
   }
@@ -40,7 +40,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
 
 template<typename T>
 struct MaximumKernelUtil<DeviceType::kCPU, T> {
-  static void ElementwiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+  static void CWiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
                                      const T* y, const int y_idx,
                                      int32_t* mask) {
     for (int64_t i = 0; i < n; ++i) {
@@ -51,7 +51,7 @@ struct MaximumKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  static void ElementwiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
+  static void CWiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
                                      const T* y, const int x_idx,
                                      const int32_t* mask) {
     for (int i = 0; i < n; ++i) {
