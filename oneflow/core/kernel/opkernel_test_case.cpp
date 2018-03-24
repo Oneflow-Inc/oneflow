@@ -81,8 +81,8 @@ OpKernelTestCase::OpKernelTestCase() {
 void OpKernelTestCase::InitBeforeRun() {
   JobDescProto job_desc_proto;
   *job_desc_proto.mutable_job_conf() = job_conf_;
-  JobDesc::DeleteSingleton();
-  JobDesc::NewSingleton(job_desc_proto);
+  if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
+  Global<JobDesc>::New(job_desc_proto);
 
   for (const auto& pair : bn_in_op2blob_) {
     bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
@@ -107,7 +107,7 @@ void OpKernelTestCase::set_is_train(bool is_train) {
 
 void OpKernelTestCase::AssertAfterRun() const {
   const std::list<std::string>* asserted_blob_names = nullptr;
-  if (JobDesc::Singleton()->IsPredict() || is_forward_) {
+  if (Global<JobDesc>::Get()->IsPredict() || is_forward_) {
     asserted_blob_names = &forward_asserted_blob_names_;
   } else {
     asserted_blob_names = &backward_asserted_blob_names_;
@@ -124,7 +124,7 @@ void OpKernelTestCase::Run() {
   auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
   op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type_);
   std::list<bool> is_forward_launch_types;
-  if (JobDesc::Singleton()->IsPredict() || is_forward_) {
+  if (Global<JobDesc>::Get()->IsPredict() || is_forward_) {
     is_forward_launch_types = {true};
   } else {
     is_forward_launch_types = {true, false};
