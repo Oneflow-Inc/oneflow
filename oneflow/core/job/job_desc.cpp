@@ -45,7 +45,8 @@ int64_t JobDesc::TotalBatchNum() const {
 }
 const InitializerConf* JobDesc::DefaultInitializerConf() const {
   CHECK(IsTrain());
-  return OF_PB_POINTER_GET(job_conf_.train_conf(), default_initializer_conf);
+  return GetMsgPtrFromPbMessage<InitializerConf>(job_conf_.train_conf(),
+                                                 "default_initializer_conf");
 }
 int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
@@ -81,6 +82,9 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
                               * train_conf->num_of_pieces_in_batch());
     piece_experiment = std::max<int64_t>(piece_experiment,
                                          train_conf->piece_num_of_print_loss());
+    piece_experiment = std::min<int64_t>(
+        piece_experiment,
+        train_conf->total_batch_num() * train_conf->num_of_pieces_in_batch());
     if (piece_experiment != job_conf_.piece_num_of_experiment_phase()) {
       LOG(WARNING) << "Set piece_num_of_experiment_phase " << piece_experiment;
       job_conf_.set_piece_num_of_experiment_phase(piece_experiment);

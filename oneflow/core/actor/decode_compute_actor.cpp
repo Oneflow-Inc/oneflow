@@ -13,6 +13,7 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     is_in_eord_ = true;
+    DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) == -1) {
@@ -34,7 +35,6 @@ void DecodeCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
     return GetCurWriteableRegst(regst_desc_id);
   });
-  CHECK_GT(decode_status_.max_col_id_, 0);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(decode_status_.in_regst_->piece_id());
     regst->set_col_id(decode_status_.cur_col_id_);
@@ -47,8 +47,9 @@ void DecodeCompActor::Act() {
     decode_status_.in_regst_ = nullptr;
     decode_status_.cur_col_id_ = 0;
     decode_status_.max_col_id_ = 0;
+  } else {
+    ++decode_status_.cur_col_id_;
   }
-  ++decode_status_.cur_col_id_;
 }
 
 bool DecodeCompActor::IsReadReady() { return !pending_in_regsts_.empty(); }

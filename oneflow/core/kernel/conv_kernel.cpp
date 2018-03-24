@@ -31,7 +31,7 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
+  if (this->GetBoolFromCustomizedOpConf("use_bias") && !this->UseCudnn()) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::Initialize(ctx,
@@ -45,12 +45,14 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   KernelUtil<device_type, T>::InitializeWithProperConf(
-      ctx, this->GetMessageFromCustomizedOpConf("weight_initializer"),
+      ctx,
+      GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
-        ctx, this->GetMessageFromCustomizedOpConf("bias_initializer"),
+        ctx,
+        GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "bias_initializer"),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
   }
 }
@@ -75,7 +77,7 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
 template<DeviceType device_type, typename T>
 const PbMessage& ConvKernelIf<device_type, T>::GetCustomizedOpConf() const {
   CHECK(this->kernel_conf().has_conv_conf());
-  switch (KernelDim()) {
+  switch (OpKernelDim()) {
     case 1: return this->op_conf().conv_1d_conf();
     case 2: return this->op_conf().conv_2d_conf();
     case 3: return this->op_conf().conv_3d_conf();
@@ -89,8 +91,8 @@ const ConvKernelConf& ConvKernelIf<device_type, T>::GetConvKernelConf() const {
 }
 
 template<DeviceType device_type, typename T>
-const int32_t ConvKernelIf<device_type, T>::KernelDim() const {
-  return GetConvKernelConf().in().dim_size() - 2;
+const int32_t ConvKernelIf<device_type, T>::OpKernelDim() const {
+  return this->GetConvKernelConf().in().dim_size() - 2;
 }
 
 template<typename T>

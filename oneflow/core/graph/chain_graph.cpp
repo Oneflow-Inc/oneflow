@@ -307,14 +307,15 @@ void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, std::vector<DecodeChainNode*>> data_info2decode_nodes;
   HashMap<std::string, int32_t> data_info2suffix_length;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
-    std::shared_ptr<const Operator> op_conf = decode_node->SoleOp();
-    std::string data_dir = op_conf->GetStringFromCustomizedConf("data_dir");
+    std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
+    std::string data_dir =
+        decode_op->GetValFromCustomizedConf<std::string>("data_dir");
     std::string part_name_prefix =
-        op_conf->GetStringFromCustomizedConf("part_name_prefix");
+        decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");
     std::string data_info = data_dir + "_" + part_name_prefix;
     data_info2decode_nodes[data_info].emplace_back(decode_node);
     int32_t part_name_suffix_length =
-        op_conf->GetInt32FromCustomizedConf("part_name_suffix_length");
+        decode_op->GetValFromCustomizedConf<int32_t>("part_name_suffix_length");
     if (data_info2suffix_length.find(data_info)
         != data_info2suffix_length.end()) {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
@@ -425,15 +426,15 @@ void ChainGraph::BuildLossPrintStruct() {
     loss_print_op_conf.mutable_loss_print_conf();
     loss_print_op_conf.mutable_loss_print_conf()->set_loss_lbn(
         sum_op->Lbn4BnInOp("out"));
-    if (!loss_op->GetStringFromCustomizedConf("weight").empty()) {
+    if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
       loss_print_op_conf.mutable_loss_print_conf()->set_reduction_lbn(
           loss_op->Lbn4BnInOp("reduction_coefficient"));
     }
     loss_print_op_conf.mutable_loss_print_conf()->set_weight_scalar(
-        loss_op->GetFloatFromCustomizedConf("weight_scalar"));
+        loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_op_conf.mutable_loss_print_conf()->set_reduction_type(
         static_cast<LossReductionType>(
-            loss_op->GetEnumValueFromCustomizedConf("reduction")));
+            loss_op->GetEnumFromCustomizedConf("reduction")));
     auto loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
@@ -467,6 +468,7 @@ NormalMdUpdtChainNode* ChainGraph::BuildNormalMdUpdtAndMdSaveStruct(
     if (fw_chain->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
       md_save_pr_desc->RemoveNeedlessDevice(1);
     }
+    md_save_pr_desc->set_device_type(DeviceType::kCPU);
     md_save_chain->mut_parallel_desc().reset(md_save_pr_desc);
     Connect<ChainNode>(md_updt_chain, NewEdge(), md_save_chain);
   }
@@ -526,12 +528,10 @@ void ChainGraph::BuildRecurrentStruct() {
 void ChainGraph::RemoveNeedlessCloneOp() {
   TopoForEachNode([&](ChainNode* chain_node) {
     HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
-    std::vector<std::shared_ptr<const Operator>> clone_ops;
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
     for (std::shared_ptr<const Operator> op : fw_chain_node->op_vec()) {
       if (!op->IsCloneOp()) { continue; }
-      clone_ops.push_back(op);
       const std::string& ilbn = op->Lbn4BnInOp(op->SoleIbn());
       for (const std::string& obn : op->output_bns()) {
         CHECK(olbn2ilbn_in_clone_op.emplace(op->Lbn4BnInOp(obn), ilbn).second);
@@ -542,13 +542,9 @@ void ChainGraph::RemoveNeedlessCloneOp() {
       ModifyOpLbn4BnInChainNode(olbn2ilbn_in_clone_op, succ_chain_node);
     });
     auto& op_vec_in_fw = fw_chain_node->mut_op_vec();
-    for (std::shared_ptr<const Operator> clone_op : clone_ops) {
-      auto clone_op_it =
-          std::find(op_vec_in_fw.begin(), op_vec_in_fw.end(), clone_op);
-      if (clone_op_it != op_vec_in_fw.end()) {
-        op_vec_in_fw.erase(clone_op_it);
-      }
-    }
+    Erase<std::vector<std::shared_ptr<Operator>>>(
+        op_vec_in_fw,
+        [&](const std::shared_ptr<Operator>& op) { return op->IsCloneOp(); });
   });
 }
 

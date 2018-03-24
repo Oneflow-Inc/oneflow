@@ -34,7 +34,7 @@ class LocalResponseNormalizationKernel final : public KernelIf<device_type> {
   void VirtualKernelInit(const ParallelContext*) override {
 #ifdef WITH_CUDA
     const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
-        GetMessageFromPbMessage(
+        GetValFromPbMessage<const PbMessage&>(
             this->kernel_conf().local_response_normalization_conf(), "batch"),
         "dim");
     std::vector<int> dims(shape.begin(), shape.end());
