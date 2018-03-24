@@ -47,35 +47,53 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::WeightForward(
-    DeviceCtx* device_ctx, const Blob* in, const Blob* weight, Blob* out,
+void ConvKernel<DeviceType::kGPU, T>::ForwardDataContent(
+    const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in = BnInOp2Blob("in");
+  const Blob* weight = BnInOp2Blob("weight");
+  Blob* out = BnInOp2Blob("out");
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
   CudaCheck(cudnnConvolutionForward(
-      device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_->Get(),
-      in->dptr<T>(), this->filter_desc_->Get(), weight->dptr<T>(),
-      this->conv_desc_->Get(),
+      ctx.device_ctx->cudnn_handle(), CudnnDataType<T>::one,
+      this->in_desc_->Get(), in->dptr<T>(), this->filter_desc_->Get(),
+      weight->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(
           this->GetConvKernelConf().cudnn_fwd_algo()),
       cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
       CudnnDataType<T>::zero, this->out_desc_->Get(), out->mut_dptr<T>()));
+
+  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
+    const Blob* bias = BnInOp2Blob("bias");
+    CudaCheck(cudnnAddTensor(ctx.device_ctx->cudnn_handle(),
+                             CudnnDataType<T>::one, this->bias_desc_->Get(),
+                             bias->dptr<T>(), CudnnDataType<T>::one,
+                             this->out_desc_->Get(), out->mut_dptr<T>()));
+  }
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::BiasForward(DeviceCtx* device_ctx,
-                                                  const Blob* bias,
-                                                  Blob* out) const {
-  CudaCheck(cudnnAddTensor(device_ctx->cudnn_handle(), CudnnDataType<T>::one,
-                           this->bias_desc_->Get(), bias->dptr<T>(),
-                           CudnnDataType<T>::one, this->out_desc_->Get(),
-                           out->mut_dptr<T>()));
-}
-
-template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::DataBackward(
-    DeviceCtx* device_ctx, const Blob* out_diff, const Blob* weight,
-    Blob* in_diff, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
+    DeviceCtx* device_ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  const Blob* in = BnInOp2Blob("in");
+  const Blob* weight = BnInOp2Blob("weight");
+  Blob* weight_diff = BnInOp2Blob("weight_diff");
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  CudaCheck(cudnnConvolutionBackwardFilter(
+      device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_->Get(),
+      in->dptr<T>(), this->out_desc_->Get(), out_diff->dptr<T>(),
+      this->conv_desc_->Get(),
+      static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+          this->GetConvKernelConf().cudnn_bwd_filter_algo()),
+      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
+      CudnnDataType<T>::zero, this->filter_desc_->Get(),
+      weight_diff->mut_dptr<T>()));
+
+  Blob* in_diff = BnInOp2Blob("in_diff");
+  if (in_diff == nullptr) { return; }
+
   CudaCheck(cudnnConvolutionBackwardData(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one,
       this->filter_desc_->Get(), weight->dptr<T>(), this->out_desc_->Get(),
@@ -87,26 +105,11 @@ void ConvKernel<DeviceType::kGPU, T>::DataBackward(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
-    DeviceCtx* device_ctx, const Blob* out_diff, const Blob* in,
-    Blob* weight_diff,
+void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
+    DeviceCtx* device_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
-  CudaCheck(cudnnConvolutionBackwardFilter(
-      device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_->Get(),
-      in->dptr<T>(), this->out_desc_->Get(), out_diff->dptr<T>(),
-      this->conv_desc_->Get(),
-      static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-          this->GetConvKernelConf().cudnn_bwd_filter_algo()),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
-      CudnnDataType<T>::zero, this->filter_desc_->Get(),
-      weight_diff->mut_dptr<T>()));
-}
-
-template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::BiasBackward(DeviceCtx* device_ctx,
-                                                   const Blob* out_diff,
-                                                   Blob* bias_diff) const {
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  Blob* bias_diff = BnInOp2Blob("bias_diff");
   CudaCheck(cudnnConvolutionBackwardBias(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->out_desc_->Get(),
       out_diff->dptr<T>(), CudnnDataType<T>::zero, this->bias_desc_->Get(),
