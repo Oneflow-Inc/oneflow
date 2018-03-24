@@ -27,7 +27,8 @@ template<PreprocessCase preprocess_case>
 class ImagePreprocessImpl;
 
 template<>
-class ImagePreprocessImpl<PreprocessCase::kResize> : public ImagePreprocessIf {
+class ImagePreprocessImpl<PreprocessCase::kResize> final
+    : public ImagePreprocessIf {
  public:
  private:
   void DoPreprocess(cv::Mat* image,
@@ -35,7 +36,8 @@ class ImagePreprocessImpl<PreprocessCase::kResize> : public ImagePreprocessIf {
 };
 
 template<>
-class ImagePreprocessImpl<PreprocessCase::kCrop> : public ImagePreprocessIf {
+class ImagePreprocessImpl<PreprocessCase::kCrop> final
+    : public ImagePreprocessIf {
  public:
  private:
   void DoPreprocess(cv::Mat* image,
