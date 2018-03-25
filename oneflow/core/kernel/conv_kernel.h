@@ -55,6 +55,12 @@ using Col2ImFunc = void (*)(DeviceCtx* device_ctx, const T* col_buf,
                             const int32_t* dilation_rate,
                             const int32_t* padding_before, T* in_diff_ptr);
 
+template<typename T>
+using GemmFunc = void (*)(DeviceCtx* ctx, enum CBLAS_TRANSPOSE,
+                          enum CBLAS_TRANSPOSE, const int m, const int n,
+                          const int k, const T alpha, const T* a, const T* b,
+                          const T beta, T* c);
+
 template<DeviceType device_type, typename T>
 class ConvKernel;
 
@@ -79,7 +85,9 @@ class ConvKernel<DeviceType::kCPU, T> final
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
-  enum CBLAS_TRANSPOSE forward_order_;
+  enum CBLAS_TRANSPOSE order_;
+  GemmFunc<T> forward_func_;
+  size_t dhw_offset_;
 };
 
 template<typename T>
@@ -112,8 +120,8 @@ class ConvKernel<DeviceType::kGPU, T> final
 template<typename T>
 class ColBufWriter final {
  public:
-  ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t id_size, int64_t ih_size,
-               int64_t iw_size, int64_t c_size);
+  ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
+               int64_t ih_size, int64_t iw_size);
   void Im2ColDHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void Im2ColCDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void WriteZero() { *(dst_ptr_++) = 0; }
@@ -130,10 +138,10 @@ class ColBufWriter final {
  private:
   const T* src_ptr_;
   T* dst_ptr_;
+  int64_t c_size_;
   int64_t id_size_;
   int64_t ih_size_;
   int64_t iw_size_;
-  int64_t c_size_;
 };
 
 template<typename T>
@@ -195,6 +203,7 @@ struct ConvKernelUtil final {
                           const int32_t* dilation_rate,
                           const int32_t* padding_before, T* in_diff_ptr);
 
+ private:
   static void DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
                           ColBufWriter<T>& col_buf_writer);
 
