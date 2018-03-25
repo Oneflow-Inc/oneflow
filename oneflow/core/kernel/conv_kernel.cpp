@@ -100,7 +100,7 @@ void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
   const std::string& data_format =
       this->template GetStringFromCustomizedOpConf("data_format");
-  if (data_format == "channel_first") {
+  if (data_format == "channels_first") {
     im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
     col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
     forward_func_ = KernelUtil<DeviceType::kCPU, T>::OFGemm;
@@ -134,8 +134,8 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
             .data(),
         col_buf_blob->mut_dptr<T>());
 
-    // channel first: out = weight * col_buf
-    // channel last:  out = (weight * col_buf)(T)
+    // channels first: out = weight * col_buf
+    // channels last:  out = (weight * col_buf)(T)
     forward_func_(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                   weight_blob->shape().At(0),      // filter
                   col_buf_blob->shape().Count(4),  // od * oh * ow
@@ -147,8 +147,8 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
     if (this->GetBoolFromCustomizedOpConf("use_bias")) {
       const Blob* bias_blob = BnInOp2Blob("bias");
       const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-      // channel first:  out += bias * bias_mul
-      // channel last:   out += (bias * bias_mul)(T)
+      // channels first:  out += bias * bias_mul
+      // channels last:   out += (bias * bias_mul)(T)
       forward_func_(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                     weight_blob->shape().At(0),      // filter
                     col_buf_blob->shape().Count(4),  // od * oh * ow
@@ -182,8 +182,8 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
             .data(),
         col_buf_blob->mut_dptr<T>());
 
-    // channel first:  weight' += out[i]' * col_buf(T)
-    // channel last :  weight' += out[i]'(T) * col_buf(T)
+    // channels first:  weight' += out[i]' * col_buf(T)
+    // channels last :  weight' += out[i]'(T) * col_buf(T)
     KernelUtil<DeviceType::kCPU, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasTrans,
         weight_diff_blob->shape().At(1),     //  filter
@@ -193,8 +193,8 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
         col_buf_blob->dptr<T>(), static_cast<T>(1),
         weight_diff_blob->mut_dptr<T>());
 
-    // channel first:  col_buf' = weight(T) * out[i]'
-    // channel last :  col_buf' = weight(T) * out[i]'(T)
+    // channels first:  col_buf' = weight(T) * out[i]'
+    // channels last :  col_buf' = weight(T) * out[i]'(T)
     KernelUtil<DeviceType::kCPU, T>::OFGemm(
         ctx, CblasTrans, is_out_diff_need_trans_,
         col_buf_blob->shape().Count(0, 4),  //  ci * kd * kh * kw
@@ -231,8 +231,8 @@ void ConvKernel<DeviceType::kCPU, T>::BiasBackward(
                            bias_diff_blob->ByteSizeOfDataContentField());
 
   FOR_RANGE(int64_t, i, 0, out_diff_blob->shape().At(0)) {
-    // channel first:  bias' += out' * bias_mul
-    // channel last:   bias' += out'(T) * bias_mul
+    // channels first:  bias' += out' * bias_mul
+    // channels last:   bias' += out'(T) * bias_mul
     KernelUtil<DeviceType::kCPU, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasNoTrans,
         bias_diff_blob->shape().At(0),  //  filter
