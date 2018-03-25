@@ -85,8 +85,8 @@ class ConvKernel<DeviceType::kCPU, T> final
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
-  enum CBLAS_TRANSPOSE order_;
   GemmFunc<T> forward_func_;
+  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
   size_t dhw_offset_;
 };
 
