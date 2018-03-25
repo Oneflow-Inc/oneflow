@@ -161,12 +161,12 @@ class ColBufUtil final {
                   int64_t kh, int64_t kw);
 
  private:
-  int64_t id_size_;
-  int64_t ih_size_;
-  int64_t iw_size_;
-  int64_t od_size_;
-  int64_t oh_size_;
-  int64_t ow_size_;
+  int64_t id_dim_;
+  int64_t ih_dim_;
+  int64_t iw_dim_;
+  int64_t od_dim_;
+  int64_t oh_dim_;
+  int64_t ow_dim_;
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;

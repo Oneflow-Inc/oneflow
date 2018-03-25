@@ -309,17 +309,17 @@ ColBufUtil<T>::ColBufUtil(const Shape& in_shape, const Shape& out_shape,
     : strides_(strides),
       dilation_rate_(dilation_rate),
       padding_before_(padding_before) {
-  id_size_ = in_shape.At(dhw_offset);
-  ih_size_ = in_shape.At(dhw_offset + 1);
-  iw_size_ = in_shape.At(dhw_offset + 2);
-  od_size_ = out_shape.At(dhw_offset);
-  oh_size_ = out_shape.At(dhw_offset + 1);
-  ow_size_ = out_shape.At(dhw_offset + 2);
+  id_dim_ = in_shape.At(dhw_offset);
+  ih_dim_ = in_shape.At(dhw_offset + 1);
+  iw_dim_ = in_shape.At(dhw_offset + 2);
+  od_dim_ = out_shape.At(dhw_offset);
+  oh_dim_ = out_shape.At(dhw_offset + 1);
+  ow_dim_ = out_shape.At(dhw_offset + 2);
   if (is_im2col == true) {
     d_invalid_func_ = &ColBufWriter<T>::CleanIdSize;
     h_invalid_func_ = &ColBufWriter<T>::CleanIhSize;
     w_invalid_func_ = &ColBufWriter<T>::WriteZero;
-    if (dhw_offset == 1) {
+    if (dhw_offset == 2) {
       dhw_valid_func_ = &ColBufWriter<T>::Im2ColCDHWWrite;
     } else {
       dhw_valid_func_ = &ColBufWriter<T>::Im2ColDHWCWrite;
@@ -328,7 +328,7 @@ ColBufUtil<T>::ColBufUtil(const Shape& in_shape, const Shape& out_shape,
     d_invalid_func_ = &ColBufWriter<T>::SkipIdSize;
     h_invalid_func_ = &ColBufWriter<T>::SkipIhSize;
     w_invalid_func_ = &ColBufWriter<T>::SkipIwSize;
-    if (dhw_offset == 1) {
+    if (dhw_offset == 2) {
       dhw_valid_func_ = &ColBufWriter<T>::Col2ImCDHWWrite;
     } else {
       dhw_valid_func_ = &ColBufWriter<T>::Col2ImDHWCWrite;
@@ -340,18 +340,18 @@ template<typename T>
 void ColBufUtil<T>::operator()(ColBufWriter<T>& col_buf_writer, int64_t c,
                                int64_t kd, int64_t kh, int64_t kw) {
   int64_t id = kd * dilation_rate_[0] - padding_before_[0];
-  FOR_RANGE(int64_t, od, 0, od_size_) {
-    if (id < 0 || id >= id_size_) {
+  FOR_RANGE(int64_t, od, 0, od_dim_) {
+    if (id < 0 || id >= id_dim_) {
       (col_buf_writer.*d_invalid_func_)();
     } else {
       int64_t ih = kh * dilation_rate_[1] - padding_before_[1];
-      FOR_RANGE(int64_t, oh, 0, oh_size_) {
-        if (ih < 0 || ih >= ih_size_) {
+      FOR_RANGE(int64_t, oh, 0, oh_dim_) {
+        if (ih < 0 || ih >= ih_dim_) {
           (col_buf_writer.*h_invalid_func_)();
         } else {
           int64_t iw = kw * dilation_rate_[2] - padding_before_[2];
-          FOR_RANGE(int64_t, ow, 0, ow_size_) {
-            if (iw < 0 || iw >= iw_size_) {
+          FOR_RANGE(int64_t, ow, 0, ow_dim_) {
+            if (iw < 0 || iw >= iw_dim_) {
               (col_buf_writer.*w_invalid_func_)();
             } else {
               (col_buf_writer.*dhw_valid_func_)(c, id, ih, iw);
