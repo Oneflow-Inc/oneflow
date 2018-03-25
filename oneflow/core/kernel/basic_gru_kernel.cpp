@@ -56,10 +56,6 @@ template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* reset_gate_data_blob = BnInOp2Blob("reset_gate_data");
-  const Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
-  Blob* reset_gate_out_diff_blob = BnInOp2Blob("reset_gate_out_diff");
-  Blob* reset_gate_data_diff_blob = BnInOp2Blob("reset_gate_data_diff");
   const Blob* update_gate_data_blob = BnInOp2Blob("update_gate_data");
   const Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
   Blob* update_gate_out_diff_blob = BnInOp2Blob("update_gate_out_diff");
@@ -68,9 +64,13 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   const Blob* candidate_hidden_out_blob = BnInOp2Blob("candidate_hidden_out");
   Blob* candidate_hidden_data_diff_blob =
       BnInOp2Blob("candidate_hidden_data_diff");
-
   Blob* candidate_hidden_out_diff_blob =
       BnInOp2Blob("candidate_hidden_out_diff");
+  Blob* temp_data_blob = BnInOp2Blob("temp_data");
+  const Blob* reset_gate_data_blob = BnInOp2Blob("reset_gate_data");
+  const Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
+  Blob* reset_gate_out_diff_blob = BnInOp2Blob("reset_gate_out_diff");
+  Blob* reset_gate_data_diff_blob = BnInOp2Blob("reset_gate_data_diff");
   Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* hidden_diff_blob = this->GetHiddenBlob(BnInOp2Blob);
   // reuse memory
@@ -93,13 +93,13 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   }
 
   BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
-      ctx, candidate_hidden_out_blob, candidate_hidden_data_blob,
-      update_gate_out_blob, update_gate_data_blob, reset_gate_out_blob,
-      reset_gate_data_blob, hidden_blob, candidate_hidden_out_diff_blob,
-      candidate_hidden_data_diff_blob, update_gate_out_diff_blob,
-      update_gate_out_bran_diff_blob, update_gate_data_diff_blob,
-      reset_gate_out_diff_blob, reset_gate_data_diff_blob,
-      plus_op_out_diff_blob);
+      ctx, update_gate_out_blob, update_gate_data_blob,
+      candidate_hidden_out_blob, candidate_hidden_data_blob,
+      reset_gate_out_blob, reset_gate_data_blob, plus_op_out_diff_blob,
+      hidden_blob, update_gate_out_diff_blob, update_gate_out_bran_diff_blob,
+      update_gate_data_diff_blob, candidate_hidden_out_diff_blob,
+      candidate_hidden_data_diff_blob, BnInOp2Blob("h2h_weight"),
+      temp_data_blob, reset_gate_out_diff_blob, reset_gate_data_diff_blob);
 
   BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
       ctx, BnInOp2Blob("in"), hidden_blob, reset_gate_data_diff_blob,
@@ -307,22 +307,13 @@ void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
 
 template<DeviceType device_type, typename T>
 void BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
-    const KernelCtx& ctx, const Blob* candidate_out, const Blob* candidate_data,
-    const Blob* update_out, const Blob* update_data, const Blob* reset_out,
-    const Blob* reset_data, Blob* hidden, Blob* candidate_o_diff,
-    Blob* candidate_d_diff, Blob* update_o_diff, Blob* update_o_bran_diff,
-    Blob* update_d_diff, Blob* reset_o_diff, Blob* reset_d_diff,
-    Blob* plus_out_diff) {
-  // candidate_o_diff = update_out .* plus_out_diff
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, update_out->shape().elem_cnt(), update_out->dptr<T>(),
-      plus_out_diff->dptr<T>(), candidate_o_diff->mut_dptr<T>());
-  // candidate_d_diff = (1 - candidate_out^2) .*
-  // candidate_o_diff
-  KernelUtil<device_type, T>::TanHBackward(
-      ctx.device_ctx, candidate_out->shape().elem_cnt(),
-      candidate_data->dptr<T>(), candidate_out->dptr<T>(),
-      candidate_o_diff->dptr<T>(), candidate_d_diff->mut_dptr<T>());
+    const KernelCtx& ctx, const Blob* update_out, const Blob* update_data,
+    const Blob* candidate_out, const Blob* candidate_data,
+    const Blob* reset_out, const Blob* reset_data, Blob* plus_out_diff,
+    Blob* hidden, Blob* update_o_diff, Blob* update_o_bran_diff,
+    Blob* update_d_diff, Blob* candidate_o_diff, Blob* candidate_d_diff,
+    const Blob* h2h_weight, Blob* temp_data, Blob* reset_o_diff,
+    Blob* reset_d_diff) {
   // update_o_diff = candidate_out .* plus_out_diff
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, update_out->shape().elem_cnt(), candidate_out->dptr<T>(),
@@ -342,10 +333,24 @@ void BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
       ctx.device_ctx, update_out->shape().elem_cnt(), update_data->dptr<T>(),
       update_out->dptr<T>(), update_o_diff->dptr<T>(),
       update_d_diff->mut_dptr<T>());
-  // reset_o_diff = hidden .* candidate_d_diff
+  // candidate_o_diff = update_out .* plus_out_diff
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, hidden->shape().elem_cnt(), hidden->dptr<T>(),
-      candidate_d_diff->dptr<T>(), reset_o_diff->mut_dptr<T>());
+      ctx.device_ctx, update_out->shape().elem_cnt(), update_out->dptr<T>(),
+      plus_out_diff->dptr<T>(), candidate_o_diff->mut_dptr<T>());
+  // candidate_d_diff = (1 - candidate_out^2) .*
+  // candidate_o_diff
+  KernelUtil<device_type, T>::TanHBackward(
+      ctx.device_ctx, candidate_out->shape().elem_cnt(),
+      candidate_data->dptr<T>(), candidate_out->dptr<T>(),
+      candidate_o_diff->dptr<T>(), candidate_d_diff->mut_dptr<T>());
+  // temp_data = candidate_d_diff * h2h_weight
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
+      static_cast<T>(0), candidate_d_diff, h2h_weight, temp_data);
+  // reset_o_diff = hidden .* temp_data
+  KernelUtil<device_type, T>::Mul(ctx.device_ctx, hidden->shape().elem_cnt(),
+                                  hidden->dptr<T>(), temp_data->dptr<T>(),
+                                  reset_o_diff->mut_dptr<T>());
   // reset_d_diff
   KernelUtil<device_type, T>::SigmoidBackward(
       ctx.device_ctx, reset_out->shape().elem_cnt(), reset_data->dptr<T>(),
