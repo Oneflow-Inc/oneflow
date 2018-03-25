@@ -56,10 +56,16 @@ void BasicGruOp::VirtualInferBlobDescs(
       false, true, in_blob_desc->max_col_num())
   OF_GRU_INFER_BLOB_DESCS(reset_gate_data);
   OF_GRU_INFER_BLOB_DESCS(reset_gate_out);
+  OF_GRU_INFER_BLOB_DESCS(reset_gate_data_diff);
+  OF_GRU_INFER_BLOB_DESCS(reset_gate_out_diff);
   OF_GRU_INFER_BLOB_DESCS(update_gate_data);
   OF_GRU_INFER_BLOB_DESCS(update_gate_out);
+  OF_GRU_INFER_BLOB_DESCS(update_gate_data_diff);
+  OF_GRU_INFER_BLOB_DESCS(update_gate_out_diff);
   OF_GRU_INFER_BLOB_DESCS(candidate_hidden_data);
   OF_GRU_INFER_BLOB_DESCS(candidate_hidden_out);
+  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_data_diff);
+  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_out_diff);
   OF_GRU_INFER_BLOB_DESCS(temp_data);
   OF_GRU_INFER_BLOB_DESCS(plus_op_out);
 #undef OF_GRU_INFER_BLOB_DESCS

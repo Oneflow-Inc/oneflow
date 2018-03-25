@@ -249,15 +249,10 @@ void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(reset_out->shape().elem_cnt()),
       reset_out->dptr<T>(), hidden->dptr<T>(), candidate_data->mut_dptr<T>());
-  // candidate_data += temp_data
-  KernelUtil<device_type, T>::Axpy(
-      ctx.device_ctx, static_cast<T>(temp_data->shape().elem_cnt()),
-      static_cast<T>(1), temp_data->dptr<T>(), static_cast<T>(1),
-      candidate_data->mut_dptr<T>(), static_cast<T>(1));
-  // candidate_data *= h2h_weight
-  KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
-      static_cast<T>(0), candidate_data, h2h_weight, candidate_data);
+  // candidate_data = temp_data * h2h_weight
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       temp_data, h2h_weight, candidate_data);
   // candidate_data += in * i2h_weight
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(1),
