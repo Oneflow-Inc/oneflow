@@ -65,6 +65,11 @@ struct BasicLstmKernelUtil {
                                         Blob* gate_out_diff, const Blob* hidden,
                                         Blob* h2h_weight_diff,
                                         Blob* i2h_weight_diff);
+  static void ComputeBackwardHiddenDiff(
+      const KernelCtx& ctx, Blob* f_gate_out_diff, const Blob* h2h_f_weight,
+      Blob* i_gate_out_diff, const Blob* h2h_i_23ight, Blob* c_state_out_diff,
+      const Blob* h2h_c_weight, Blob* o_gate_out_diff, const Blob* h2h_o_weight,
+      Blob* hidden_diff);
 };
 
 }  //  namespace oneflow
