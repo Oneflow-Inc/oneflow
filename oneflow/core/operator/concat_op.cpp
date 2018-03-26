@@ -24,7 +24,7 @@ void ConcatOp::InferBlobDescs(
   CHECK_GE(concat_axis, 1);
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().at(i));
-    for (int64_t j = 1; j < in_i_blob_desc->shape().NumAxes(); ++j) {
+    for (int64_t j = 0; j < in_i_blob_desc->shape().NumAxes(); ++j) {
       if (j == concat_axis) {
         out_dim_vec[j] += in_i_blob_desc->shape().At(j);
       } else {
