@@ -88,9 +88,6 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
     CHECK(model_tmp_bns_.empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
-  if (IsDecodeOp() == false && IsPrintOp() == false) {
-    pr_desc->RemoveInvalidDevice(op_name());
-  }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
   }
