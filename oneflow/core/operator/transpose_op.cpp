@@ -7,10 +7,10 @@ namespace {
 void CheckIsPerm(const PbRf<int32_t>& perm) {
   std::vector<bool> is_used(perm.size(), 0);
   FOR_RANGE(size_t, i, 0, perm.size()) {
-    CHECK_GE(perm[i], 0);
-    CHECK_LT(perm[i], perm.size());
-    CHECK_EQ(is_used[perm[i]], false);
-    is_used[perm[i]] = true;
+    CHECK_GE(perm[i], 1);
+    CHECK_LE(perm[i], perm.size());
+    CHECK_EQ(is_used[perm[i] - 1], false);
+    is_used[perm[i] - 1] = true;
   }
 }
 
@@ -37,7 +37,7 @@ void TransposeOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   FOR_RANGE(size_t, i, 0, perm.size()) {
-    out_blob_desc->mut_shape().Set(i + 1, in_blob_shape.At(perm[i] + 1));
+    out_blob_desc->mut_shape().Set(i + 1, in_blob_shape.At(perm[i]));
   }
 }
 
