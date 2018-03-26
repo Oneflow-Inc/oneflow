@@ -19,12 +19,17 @@ Blob* CreateBlob<DeviceType::kGPU>(const BlobDesc* blob_desc) {
 template<>
 void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   cudaStream_t* cuda_stream = new cudaStream_t;
-  cublasHandle_t* cublas_handle = new cublasHandle_t;
+  cublasHandle_t* cublas_pmh_handle = new cublasHandle_t;
+  cublasHandle_t* cublas_pmd_handle = new cublasHandle_t;
   CudaCheck(cudaStreamCreate(cuda_stream));
-  CudaCheck(cublasCreate(cublas_handle));
-  CudaCheck(cublasSetStream(*cublas_handle, *cuda_stream));
-  ctx->device_ctx =
-      new CudaDeviceCtx(-1, cuda_stream, cublas_handle, nullptr, nullptr);
+  CudaCheck(cublasCreate(cublas_pmh_handle));
+  CudaCheck(cublasCreate(cublas_pmd_handle));
+  CudaCheck(cublasSetStream(*cublas_pmh_handle, *cuda_stream));
+  CudaCheck(cublasSetStream(*cublas_pmd_handle, *cuda_stream));
+  CudaCheck(
+      cublasSetPointerMode(*cublas_pmd_handle, CUBLAS_POINTER_MODE_DEVICE));
+  ctx->device_ctx = new CudaDeviceCtx(-1, cuda_stream, cublas_pmh_handle,
+                                      cublas_pmd_handle, nullptr, nullptr);
 }
 
 template<>
