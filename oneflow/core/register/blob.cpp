@@ -33,11 +33,13 @@ const char* Blob::data_id(int32_t no) const {
 
 int32_t Blob::col_num(int32_t no) const {
   CHECK_NOTNULL(col_num_ptr_);
+  CHECK_LT(no, shape().At(0));
   return *(col_num_ptr_ + no);
 }
 
 void Blob::set_col_num(int32_t no, int32_t val) {
   CHECK_NOTNULL(col_num_ptr_);
+  CHECK_LT(no, shape().At(0));
   *(col_num_ptr_ + no) = val;
 }
 

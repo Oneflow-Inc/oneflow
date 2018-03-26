@@ -260,6 +260,11 @@ message BasicRnnOpConf {
 message BasicLstmOpConf {
 }
 
+message GatherOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message ReshapeOpConf {
   required string in = 1;
   required string out = 2;
@@ -293,6 +298,7 @@ message OperatorConf {
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
+    GatherOpConf gather_conf = 125;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }
