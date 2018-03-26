@@ -10,23 +10,12 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
 
-  std::vector<int32_t> stride_of_in_tensor(this->OpKernelDim() + 2, 1);
-  std::vector<int32_t> stride_of_out_tensor(this->OpKernelDim() + 2, 1);
-  for (int32_t i = this->OpKernelDim() + 2 - 2; i >= 0; --i) {
-    stride_of_in_tensor[i] = stride_of_in_tensor[i + 1] * in_shape.At(i + 1);
-    stride_of_out_tensor[i] = stride_of_out_tensor[i + 1] * out_shape.At(i + 1);
-  }
-  std::vector<int32_t> in_dim(in_shape.dim_vec().begin(),
-                              in_shape.dim_vec().end());
-  std::vector<int32_t> out_dim(out_shape.dim_vec().begin(),
-                               out_shape.dim_vec().end());
-
   this->in_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::val, this->OpKernelDim() + 2,
-                          in_dim.data(), stride_of_in_tensor.data()));
+      new CudnnTensorDesc(GetDataType<T>::val, in_shape,
+                          this->GetStringFromCustomizedOpConf("data_format")));
   this->out_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::val, this->OpKernelDim() + 2,
-                          out_dim.data(), stride_of_out_tensor.data()));
+      new CudnnTensorDesc(GetDataType<T>::val, out_shape,
+                          this->GetStringFromCustomizedOpConf("data_format")));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<T>::val, weight_shape,
                           this->GetStringFromCustomizedOpConf("data_format")));
