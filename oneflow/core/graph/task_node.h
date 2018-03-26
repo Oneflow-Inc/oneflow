@@ -61,7 +61,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
-  void FixRegisterNumRange();
+  virtual void FixRegisterNumRange();
 
  private:
   void UpdateTaskId();
