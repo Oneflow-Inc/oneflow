@@ -40,14 +40,20 @@ void ConvKernel<DeviceType::kGPU, T>::WeightForward(
     DeviceCtx* device_ctx, const Blob* in, const Blob* weight, Blob* out,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  int64_t cudnn_buf_size = 0;
+  T* cudnn_buf_dptr = nullptr;
+  if (cudnn_buf) {
+    int64_t cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
+  }
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_->Get(),
       in->dptr<T>(), this->filter_desc_->Get(), weight->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(
           this->GetConvKernelConf().cudnn_fwd_algo()),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
-      CudnnDataType<T>::zero, this->out_desc_->Get(), out->mut_dptr<T>()));
+      cudnn_buf_dptr, cudnn_buf_size, CudnnDataType<T>::zero,
+      this->out_desc_->Get(), out->mut_dptr<T>()));
 }
 
 template<typename T>
@@ -65,14 +71,20 @@ void ConvKernel<DeviceType::kGPU, T>::DataBackward(
     DeviceCtx* device_ctx, const Blob* out_diff, const Blob* weight,
     Blob* in_diff, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  int64_t cudnn_buf_size = 0;
+  T* cudnn_buf_dptr = nullptr;
+  if (cudnn_buf) {
+    int64_t cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
+  }
   CudaCheck(cudnnConvolutionBackwardData(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one,
       this->filter_desc_->Get(), weight->dptr<T>(), this->out_desc_->Get(),
       out_diff->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdDataAlgo_t>(
           this->GetConvKernelConf().cudnn_bwd_data_algo()),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
-      CudnnDataType<T>::zero, this->in_desc_->Get(), in_diff->mut_dptr<T>()));
+      cudnn_buf_dptr, cudnn_buf_size, CudnnDataType<T>::zero,
+      this->in_desc_->Get(), in_diff->mut_dptr<T>()));
 }
 
 template<typename T>
@@ -81,15 +93,20 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     Blob* weight_diff,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  int64_t cudnn_buf_size = 0;
+  T* cudnn_buf_dptr = nullptr;
+  if (cudnn_buf) {
+    int64_t cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
+  }
   CudaCheck(cudnnConvolutionBackwardFilter(
       device_ctx->cudnn_handle(), CudnnDataType<T>::one, this->in_desc_->Get(),
       in->dptr<T>(), this->out_desc_->Get(), out_diff->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
           this->GetConvKernelConf().cudnn_bwd_filter_algo()),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0),
-      CudnnDataType<T>::zero, this->filter_desc_->Get(),
-      weight_diff->mut_dptr<T>()));
+      cudnn_buf_dptr, cudnn_buf_size, CudnnDataType<T>::zero,
+      this->filter_desc_->Get(), weight_diff->mut_dptr<T>()));
 }
 
 template<typename T>

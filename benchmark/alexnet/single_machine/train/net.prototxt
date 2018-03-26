@@ -1,0 +1,93 @@
+op {
+  name: "decode"
+  decode_ofrecord_conf {
+    data_dir: "/datasets/imagenet_OfRecord/train"
+    blob {
+      name: "encoded"
+      data_type: kFloat
+      shape {
+        dim: 224
+        dim: 224
+        dim: 3
+      }
+      jpeg {
+      }
+    }
+    blob {
+      name: "class/label"
+      data_type: kInt32
+      shape {
+      }
+      raw {
+      }
+    }
+  }
+}
+
+op {
+  name: "conv1"
+  conv_2d_conf {
+    in: "decode/encoded"
+    out: "out"
+    filters: 1
+    padding: "SAME"
+    kernel_size: 11
+    kernel_size: 11
+    strides: 4
+    strides: 4
+    dilation_rate: 1
+    dilation_rate: 1
+    use_bias: true
+  }
+}
+
+op {
+  name: "relu1"
+  relu_conf {
+    in: "conv1/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "lrn1"
+  local_response_normalization_conf {
+    in: "relu1/out"
+    out: "out"
+    depth_radius: 2
+    bias: 2
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+
+op {
+  name: "pool1"
+  max_pooling_2d_conf {
+    in: "lrn1/out"
+    out: "out"
+    padding: "VALID"
+    pool_size: 3
+    pool_size: 3
+    strides: 2
+    strides: 2
+  }
+}
+
+op {
+  name: "fc1"
+  fully_connected_conf {
+    in: "pool1/out"
+    out: "out"
+    units: 1000
+  }
+}
+
+op {
+  name: "softmax_loss"
+  sparse_softmax_cross_entropy_loss_conf {
+    prediction: "fc1/out"
+    label: "decode/class/label"
+    loss: "loss"
+  }
+}
