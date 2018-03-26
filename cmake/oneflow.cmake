@@ -1,6 +1,6 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/kernel/relu_kernel_test.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/kernel/pooling_kernel_test.cpp)
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
