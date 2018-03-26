@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 
-#include "oneflow/core/blas/cblas_template.h"
-#include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/common/blas.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cudnn_util.h"
