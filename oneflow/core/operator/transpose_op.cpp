@@ -32,6 +32,7 @@ void TransposeOp::InferBlobDescs(
   const Shape& in_blob_shape = in_blob_desc->shape();
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
   CHECK_EQ(perm.size(), in_blob_shape.NumAxes());
+  CHECK_EQ(perm[0], 0) << "You can't change the data num (dim[0]) of one blob";
   CheckIsPerm(perm);
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
