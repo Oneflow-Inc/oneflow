@@ -40,7 +40,7 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
     kernel_ctx.other = &random_seed_;
     exec_kernel.kernel->InitModelAndModelTmp(
         kernel_ctx, parallel_ctx(),
-        SnapshotMgr::Singleton()->GetReadableSnapshot(),
+        Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
           Blob* blob = nullptr;
@@ -84,8 +84,6 @@ int ForwardCompActor::HandlerNormal(const ActorMsg& msg) {
     } else {
       CHECK_EQ(TryUpdtStateAsProducedRegst(regst), 0);
     }
-    LOG(WARNING) << "forward read ready: " << IsReadReady();
-    LOG(WARNING) << "forward write ready: " << IsWriteReady();
     ActUntilFail();
   } else {
     UNIMPLEMENTED();
@@ -105,7 +103,6 @@ bool ForwardCompActor::IsReadAlwaysUnReadyFromNow() {
 }
 
 void ForwardCompActor::Act() {
-  LOG(WARNING) << "forward act";
   Regst* in_regst = pending_in_regsts_.front();
   pending_in_regsts_.pop();
   int64_t model_version_id = -1;

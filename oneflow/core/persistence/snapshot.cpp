@@ -1,4 +1,3 @@
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/operator/operator.h"
@@ -81,7 +80,7 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
         GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));
   }
   if (GlobalFS()->ListDir(done_dir).size()
-      == SnapshotMgr::Singleton()->total_mbn_num()) {
+      == Global<SnapshotMgr>::Get()->total_mbn_num()) {
     std::string done_file = JoinPath(root_path_, "snapshot_done");
     OF_CALL_ONCE(done_file, GlobalFS()->RecursivelyDeleteDir(done_dir);
                  { PersistentOutStream out_stream(GlobalFS(), done_file); });

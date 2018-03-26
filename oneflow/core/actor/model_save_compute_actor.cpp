@@ -9,7 +9,7 @@ void MdSaveCompActor::VirtualSinkCompActorInit(const TaskProto& task_proto) {
 KernelCtx MdSaveCompActor::GenSinkKernelCtx() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other =
-      SnapshotMgr::Singleton()->GetWriteableSnapshot(next_snapshot_id_++);
+      Global<SnapshotMgr>::Get()->GetWriteableSnapshot(next_snapshot_id_++);
   return kernel_ctx;
 }
 

@@ -12,7 +12,7 @@ void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
     if (blob->has_data_id_field()) {
       size_t data_id_size = 0;
-      for (; data_id_size != JobDesc::Singleton()->SizeOfOneDataId();
+      for (; data_id_size != Global<JobDesc>::Get()->SizeOfOneDataId();
            ++data_id_size) {
         if (*(blob->data_id(i) + data_id_size) == '\0') { break; }
       }

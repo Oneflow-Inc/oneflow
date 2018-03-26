@@ -12,8 +12,6 @@ class CtrlClient final {
   OF_DISALLOW_COPY_AND_MOVE(CtrlClient);
   ~CtrlClient() = default;
 
-  OF_SINGLETON(CtrlClient);
-
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
 
@@ -47,6 +45,7 @@ class CtrlClient final {
   void Clear();
 
  private:
+  friend class Global<CtrlClient>;
   CtrlClient();
   void LoadServer(const std::string& server_addr, CtrlService::Stub* stub);
   CtrlService::Stub* GetMasterStub() { return stubs_[0].get(); }
@@ -60,20 +59,20 @@ class CtrlClient final {
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)
 
-#define OF_BARRIER() CtrlClient::Singleton()->Barrier(FILE_LINE_STR)
+#define OF_BARRIER() Global<CtrlClient>::Get()->Barrier(FILE_LINE_STR)
 
-#define OF_CALL_ONCE(name, ...)                                      \
-  do {                                                               \
-    TryLockResult lock_ret = CtrlClient::Singleton()->TryLock(name); \
-    if (lock_ret == TryLockResult::kLocked) {                        \
-      __VA_ARGS__;                                                   \
-      CtrlClient::Singleton()->NotifyDone(name);                     \
-    } else if (lock_ret == TryLockResult::kDone) {                   \
-    } else if (lock_ret == TryLockResult::kDoing) {                  \
-      CtrlClient::Singleton()->WaitUntilDone(name);                  \
-    } else {                                                         \
-      UNIMPLEMENTED();                                               \
-    }                                                                \
+#define OF_CALL_ONCE(name, ...)                                        \
+  do {                                                                 \
+    TryLockResult lock_ret = Global<CtrlClient>::Get()->TryLock(name); \
+    if (lock_ret == TryLockResult::kLocked) {                          \
+      __VA_ARGS__;                                                     \
+      Global<CtrlClient>::Get()->NotifyDone(name);                     \
+    } else if (lock_ret == TryLockResult::kDone) {                     \
+    } else if (lock_ret == TryLockResult::kDoing) {                    \
+      Global<CtrlClient>::Get()->WaitUntilDone(name);                  \
+    } else {                                                           \
+      UNIMPLEMENTED();                                                 \
+    }                                                                  \
   } while (0)
 
 }  // namespace oneflow

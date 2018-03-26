@@ -11,7 +11,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   int out_num = 40;
   JobConf job_conf;
   job_conf.set_DefaultDataType(GetDataType<T>::val);
-  JobDesc::Singleton()->InitFromJobConf(job_conf);
+  Global<JobDesc>::Get()->InitFromJobConf(job_conf);
 
   OperatorConf op_conf;
   op_conf.set_name("innerproduct_test");

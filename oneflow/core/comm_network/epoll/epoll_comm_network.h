@@ -15,10 +15,6 @@ class EpollCommNet final : public CommNet {
   OF_DISALLOW_COPY_AND_MOVE(EpollCommNet);
   ~EpollCommNet();
 
-  static EpollCommNet* Singleton() {
-    return static_cast<EpollCommNet*>(CommNet::Singleton());
-  }
-
   static void Init(const Plan& plan);
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
@@ -41,6 +37,14 @@ class EpollCommNet final : public CommNet {
   std::vector<IOEventPoller*> pollers_;
   std::vector<int> machine_id2sockfd_;
   HashMap<int, SocketHelper*> sockfd2helper_;
+};
+
+template<>
+class Global<EpollCommNet> final {
+ public:
+  static EpollCommNet* Get() {
+    return static_cast<EpollCommNet*>(Global<CommNet>::Get());
+  }
 };
 
 }  // namespace oneflow

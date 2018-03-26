@@ -15,10 +15,6 @@ class IBVerbsCommNet final : public CommNet {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   ~IBVerbsCommNet() = default;
 
-  static IBVerbsCommNet* Singleton() {
-    return static_cast<IBVerbsCommNet*>(CommNet::Singleton());
-  }
-
   static void Init(const Plan& plan);
 
   const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
@@ -35,6 +31,14 @@ class IBVerbsCommNet final : public CommNet {
   MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
   std::unique_ptr<EndpointManager> endpoint_manager_;
   HashMap<uint64_t, IBVerbsMemDescProto> token2mem_desc_proto_;
+};
+
+template<>
+class Global<IBVerbsCommNet> final {
+ public:
+  static IBVerbsCommNet* Get() {
+    return static_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
+  }
 };
 
 }  // namespace oneflow

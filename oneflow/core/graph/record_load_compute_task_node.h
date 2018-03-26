@@ -17,6 +17,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   void ToProto(TaskProto*) override;
   bool IsMeaningLess() override { return false; }
   void EraseEmptyProducedRegst() override {}
+  void FixRegisterNumRange() override {}
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
   bool IsPersistence() const override { return true; }

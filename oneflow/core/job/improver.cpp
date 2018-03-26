@@ -141,7 +141,7 @@ int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
   if (mem_case.has_device_cuda_mem()) {
     return mem_case.device_cuda_mem().device_id();
   } else {
-    return JobDesc::Singleton()->GpuDeviceNum();
+    return Global<JobDesc>::Get()->GpuDeviceNum();
   }
 }
 

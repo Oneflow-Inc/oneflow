@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 
-#include "oneflow/core/blas/cblas_template.h"
-#include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/common/blas.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cudnn_util.h"
@@ -127,7 +126,7 @@ struct KernelUtil final {
                                        const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
     if (initializer_conf == nullptr) {
-      initializer_conf = JobDesc::Singleton()->DefaultInitializerConf();
+      initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
     Initialize(ctx, *initializer_conf, random_seed, blob);
   }

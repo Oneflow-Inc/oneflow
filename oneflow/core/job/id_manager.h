@@ -12,8 +12,6 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  OF_SINGLETON(IDMgr);
-
   // Compile
   int64_t MachineID4MachineName(const std::string& machine_name) const;
   const std::string& MachineName4MachineId(int64_t machine_id) const;
@@ -45,6 +43,7 @@ class IDMgr final {
   int64_t NewWorkStreamId(int64_t machine_id, int64_t thrd_id);
 
  private:
+  friend class Global<IDMgr>;
   IDMgr();
   int64_t GetMachineThrdId(int64_t machine_id, int64_t thrd_id);
 

@@ -11,8 +11,6 @@ class MemoryAllocator final {
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
   ~MemoryAllocator() = default;
 
-  OF_SINGLETON(MemoryAllocator);
-
   std::tuple<char*, const void*, std::function<void()>> Allocate(
       MemoryCase mem_case, std::size_t size);
 

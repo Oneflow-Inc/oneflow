@@ -25,7 +25,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    RegstMgr::Singleton()->NewRegsts(
+    Global<RegstMgr>::Get()->NewRegsts(
         pair.second, GetDeviceType(), task_proto.record_type(),
         [this](Regst* regst) {
           produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
@@ -51,11 +51,11 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 }
 
 int64_t Actor::machine_id() const {
-  return IDMgr::Singleton()->MachineId4ActorId(actor_id_);
+  return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_);
 }
 
 int64_t Actor::thrd_id() const {
-  return IDMgr::Singleton()->ThrdId4ActorId(actor_id_);
+  return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
 }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
@@ -115,7 +115,7 @@ void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
     ActEvent* act_event = nullptr;
-    if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+    if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
       act_event->set_act_id(act_id_);
@@ -128,10 +128,10 @@ void Actor::ActUntilFail() {
           [act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     Act();
-    if (RuntimeCtx::Singleton()->is_experiment_phase()) {
+    if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
       device_ctx_->AddCallBack([act_event]() {
         act_event->set_stop_time(GetCurTime());
-        CtrlClient::Singleton()->PushActEvent(*act_event);
+        Global<CtrlClient>::Get()->PushActEvent(*act_event);
         delete act_event;
       });
     }
@@ -170,7 +170,6 @@ void Actor::AsyncLaunchKernel(
       }
       Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
       const std::string& lbn = ek.kernel->Lbn4BnInOp(bn_in_op);
-      CHECK_NOTNULL(regst->GetBlobByLbn(lbn));
       return regst->GetBlobByLbn(lbn);
     });
   }
@@ -194,7 +193,7 @@ void Actor::AsyncSendRegstMsgToConsumer(
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
         ActorMsg msg =
             ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
-        ActorMsgBus::Singleton()->SendMsg(std::move(msg));
+        Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
       });
     }
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
@@ -223,7 +222,7 @@ void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
       ActorMsg msg =
           ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
-      ActorMsgBus::Singleton()->SendMsg(std::move(msg));
+      Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
     }
   });
 }
@@ -240,7 +239,8 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
-  device_ctx_->AddCallBack([msg]() { ActorMsgBus::Singleton()->SendMsg(msg); });
+  device_ctx_->AddCallBack(
+      [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); });
 }
 
 void Actor::AsyncDo(std::function<void()> func) {
@@ -278,16 +278,16 @@ Regst* Actor::GetCurSoleWriteableRegst() {
 }
 
 int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
-  return IDMgr::Singleton()->GetReservedWorkStreamId(machine_id(), thrd_id(),
-                                                     reserved_id);
+  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(),
+                                                       reserved_id);
 }
 
 int64_t Actor::NewWorkStreamId() {
-  return IDMgr::Singleton()->NewWorkStreamId(machine_id(), thrd_id());
+  return Global<IDMgr>::Get()->NewWorkStreamId(machine_id(), thrd_id());
 }
 
 DeviceType Actor::GetDeviceType() const {
-  return IDMgr::Singleton()->GetDeviceTypeFromActorId(actor_id_);
+  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
 }
 
 static HashMap<int, std::function<Actor*()>>& ActorCreatorMap() {
