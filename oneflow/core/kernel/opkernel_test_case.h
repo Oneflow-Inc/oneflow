@@ -74,7 +74,7 @@ class OpKernelTestCase final {
 
 #define MAKE_OPKERNEL_TEST_ENTRY(func_name, device_type_pair, data_type_pair, \
                                  ...)                                         \
-  TEST(class_name,                                                            \
+  TEST(func_name,                                                            \
        OF_PP_JOIN(_, __COUNTER__, OF_PP_PAIR_FIRST(device_type_pair),         \
                   OF_PP_PAIR_FIRST(data_type_pair), ##__VA_ARGS__)) {         \
     func_name<OF_PP_PAIR_SECOND(device_type_pair),                            \
