@@ -21,6 +21,7 @@ void ConcatOp::InferBlobDescs(
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
   int32_t concat_axis = conf.axis();
   if (concat_axis < 0) { concat_axis += out_dim_vec.size(); }
+  CHECK_GE(concat_axis, 1);
   for (size_t i = 1; i < input_bns().size(); ++i) {
     const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().at(i));
     for (int64_t j = 0; j < in_i_blob_desc->shape().NumAxes(); ++j) {
