@@ -9,6 +9,56 @@
 #define OF_PP_INTERNAL_CAT(a, b) OF_PP_INTERNAL_CAT_I(a, b)
 #define OF_PP_INTERNAL_CAT_I(a, b) a##b
 
+#define OF_PP_INTERNAL_JOIN(...)                                      \
+  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_JOIN_,         \
+                                        OF_PP_INTERNAL_VARIADIC_SIZE( \
+                                            __VA_ARGS__))(__VA_ARGS__), )
+
+#define OF_PP_INTERNAL_JOIN_0()
+#define OF_PP_INTERNAL_JOIN_1(x) x
+#define OF_PP_INTERNAL_JOIN_2(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_1(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_3(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_2(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_4(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_3(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_5(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_4(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_6(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_5(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_7(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_6(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_8(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_7(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_9(x, ...) \
+  OF_PP_INTERNAL_CAT(                 \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_8(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_10(x, ...) \
+  OF_PP_INTERNAL_CAT(                  \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_9(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_11(x, ...) \
+  OF_PP_INTERNAL_CAT(                  \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_10(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_12(x, ...) \
+  OF_PP_INTERNAL_CAT(                  \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_11(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_13(x, ...) \
+  OF_PP_INTERNAL_CAT(                  \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_12(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_14(x, ...) \
+  OF_PP_INTERNAL_CAT(                  \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_13(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_15(x, ...) \
+  OF_PP_INTERNAL_CAT(                  \
+      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_14(__VA_ARGS__)), )
+
 #define OF_PP_INTERNAL_SEQ_HEAD(seq) \
   OF_PP_INTERNAL_PAIR_FIRST(OF_PP_INTERNAL_SEQ_TO_PAIR(seq))
 #define OF_PP_INTERNAL_SEQ_TAIL(seq) \

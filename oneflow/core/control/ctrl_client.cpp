@@ -11,7 +11,7 @@ const int64_t sleep_seconds = 10;
 }  // namespace
 
 void CtrlClient::Barrier(const std::string& barrier_name) {
-  Barrier(barrier_name, JobDesc::Singleton()->TotalMachineNum());
+  Barrier(barrier_name, Global<JobDesc>::Get()->TotalMachineNum());
 }
 
 void CtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
@@ -120,9 +120,9 @@ void CtrlClient::Clear() {
 }
 
 CtrlClient::CtrlClient() {
-  stubs_.reserve(JobDesc::Singleton()->TotalMachineNum());
-  for (int64_t i = 0; i < JobDesc::Singleton()->TotalMachineNum(); ++i) {
-    std::string addr = MachineCtx::Singleton()->GetCtrlAddr(i);
+  stubs_.reserve(Global<JobDesc>::Get()->TotalMachineNum());
+  for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
+    std::string addr = Global<MachineCtx>::Get()->GetCtrlAddr(i);
     stubs_.push_back(CtrlService::NewStub(addr));
     LoadServer(addr, stubs_[i].get());
   }
@@ -153,12 +153,12 @@ void CtrlClient::LoadServer(const std::string& server_addr,
 }
 
 CtrlService::Stub* CtrlClient::GetThisStub() {
-  return stubs_[MachineCtx::Singleton()->this_machine_id()].get();
+  return stubs_[Global<MachineCtx>::Get()->this_machine_id()].get();
 }
 
 CtrlService::Stub* CtrlClient::GetResponsibleStub(const std::string& key) {
-  int64_t machine_id =
-      (std::hash<std::string>{}(key)) % JobDesc::Singleton()->TotalMachineNum();
+  int64_t machine_id = (std::hash<std::string>{}(key))
+                       % Global<JobDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }
 

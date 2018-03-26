@@ -43,25 +43,30 @@ namespace oneflow {
 
 #define TODO() LOG(FATAL) << "TODO";
 
-#define OF_SINGLETON(ClassName)                                    \
-  static ClassName* Singleton() { return *SingletonPPtr(); }       \
-  static ClassName** SingletonPPtr() {                             \
-    static ClassName* ptr = nullptr;                               \
-    return &ptr;                                                   \
-  }                                                                \
-  template<typename... Args>                                       \
-  static void NewSingleton(Args&&... args) {                       \
-    DeleteSingleton();                                             \
-    LOG(INFO) << "NewSingleton " << #ClassName;                    \
-    *SingletonPPtr() = new ClassName(std::forward<Args>(args)...); \
-  }                                                                \
-  static void DeleteSingleton() {                                  \
-    if (Singleton()) {                                             \
-      LOG(INFO) << "DeleteSingleton " << #ClassName;               \
-      delete Singleton();                                          \
-      *SingletonPPtr() = nullptr;                                  \
-    }                                                              \
+template<typename T>
+class Global final {
+ public:
+  static T* Get() { return *GetPPtr(); }
+  static void SetAllocated(T* val) { *GetPPtr() = val; }
+  template<typename... Args>
+  static void New(Args&&... args) {
+    CHECK(Get() == nullptr);
+    LOG(INFO) << "NewGlobal " << typeid(T).name();
+    *GetPPtr() = new T(std::forward<Args>(args)...);
   }
+  static void Delete() {
+    CHECK_NOTNULL(Get());
+    LOG(INFO) << "DeleteGlobal " << typeid(T).name();
+    delete Get();
+    *GetPPtr() = nullptr;
+  }
+
+ private:
+  static T** GetPPtr() {
+    static T* ptr = nullptr;
+    return &ptr;
+  }
+};
 
 #define COMMAND(...)                                                \
   namespace {                                                       \
