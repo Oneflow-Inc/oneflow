@@ -96,7 +96,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
   PushAvailableMemDescOfThisMachine();
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
-    Improver improver(PullAvailableMemDesc());
+    Global<Improver>::New(PullAvailableMemDesc());
     plan = Global<Improver>::Get()->Improve(
         plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
