@@ -129,19 +129,19 @@ template<typename T>
 struct KernelUtil<DeviceType::kCPU, T> final {
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
                   const T* y, const int incy, T* result) {
-    *result = cblas_dot(n, x, incx, y, incy);
+    *result = cblas_dot<T>(n, x, incx, y, incy);
   }
   static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
                    T* y, const int incy) {
-    cblas_copy(n, x, incx, y, incy);
+    cblas_copy<T>(n, x, incx, y, incy);
   }
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy) {
-    cblas_axpy(n, alpha, x, incx, y, incy);
+    cblas_axpy<T>(n, alpha, x, incx, y, incy);
   }
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cblas_scal(n, *alpha, x, incx);
+    cblas_scal<T>(n, *alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
@@ -198,8 +198,8 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
     // Set col major to keep it as the same with cublas
-    cblas_gemv(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x, incx,
-               beta, y, incy);
+    cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x,
+                  incx, beta, y, incy);
   }
   static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                    const enum CBLAS_TRANSPOSE trans_a,
@@ -207,8 +207,8 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int k, const T alpha, const T* a, const int lda,
                    const T* b, const int ldb, const T beta, T* c,
                    const int ldc) {
-    cblas_gemm(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c,
-               ldc);
+    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta,
+                  c, ldc);
   }
 
   static void Initialize(DeviceCtx* ctx,
