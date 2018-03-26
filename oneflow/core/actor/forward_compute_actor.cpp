@@ -124,31 +124,28 @@ void ForwardCompActor::Act() {
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != other_model_regst_desc_id_;
   });
-  if (JobDesc::Singleton()->IsTrain()) {
+  if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
       int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
       CHECK_LE(in_regst->piece_id(), last_piece_id);
       if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
     }
     if (other_model_regst_desc_id_ != -1) {
-      if ((in_regst->piece_id() + 1)
-              % JobDesc::Singleton()->NumOfPiecesInBatch()
-          == 0) {
-        if (model_version_id + 1 == JobDesc::Singleton()->TotalBatchNum()) {
-          AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-            regst->set_piece_id(in_regst->piece_id());
-            regst->set_model_version_id(model_version_id);
-            return regst->regst_desc_id() == other_model_regst_desc_id_;
-          });
-        } else if ((model_version_id + 1)
-                       % JobDesc::Singleton()->NumOfBatchesInSnapshot()
-                   == 0) {
-          AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-            regst->set_piece_id(in_regst->piece_id());
-            regst->set_model_version_id(model_version_id);
-            return regst->regst_desc_id() == other_model_regst_desc_id_;
-          });
-        }
+      bool is_last_piece_in_batch =
+          (in_regst->piece_id() + 1)
+              % Global<JobDesc>::Get()->NumOfPiecesInBatch()
+          == 0;
+      bool is_need_save =
+          model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
+          || (model_version_id + 1)
+                     % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+                 == 0;
+      if (is_last_piece_in_batch && is_need_save) {
+        AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+          regst->set_piece_id(in_regst->piece_id());
+          regst->set_model_version_id(model_version_id);
+          return regst->regst_desc_id() == other_model_regst_desc_id_;
+        });
       }
     }
   }
