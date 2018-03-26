@@ -381,19 +381,6 @@ message DecodeOFRecordOpConf {
   repeated BlobConf blob = 4;
 }
 
-message NormalizationOpConf {
-  required string inputs = 1;
-  required string outputs = 2;
-  optional float momentum = 3 [default = 0.99];
-  optional float epsilon = 4 [default = 0.001];
-  optional bool center = 5 [default = true];
-  optional bool scale = 6 [default = true];
-  optional float beta_init = 7 [default = 0.0];
-  optional float gamma_init = 8 [default = 1.0];
-  optional float mean_init = 9 [default = 0.0];
-  optional float variance_init = 10 [default = 1.0];
-}
-
 message DropoutOpConf {
   required string in = 1;
   required string out = 2;
@@ -449,7 +436,6 @@ message OperatorConf {
     AddOpConf add_conf = 301;
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
-    NormalizationOpConf normalization_conf = 350;
   }
 }
 
