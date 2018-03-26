@@ -101,16 +101,17 @@ void LogicalGraph::FillNodeWithParallelDesc(
   }
   ForEachNode([&](LogicalNode* cur_node) {
     if (cur_node->op()->IsElemWiseOp()) {
+      LogicalNode* tmp_node = cur_node;
       LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
       while (pred_node->parallel_desc()->device_type()
                  == cur_node->parallel_desc()->device_type()
              && pred_node->op()->IsElemWiseOp()) {
+        tmp_node = pred_node;
         pred_node = pred_node->SoleInEdge()->src_node();
       }
-      // only merge same device_type
       if (pred_node->parallel_desc()->device_type()
           != cur_node->parallel_desc()->device_type()) {
-        pred_node = pred_node->SoleOutEdge()->dst_node();
+        pred_node = tmp_node;
       }
       if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
           == false) {
