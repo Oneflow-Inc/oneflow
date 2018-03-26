@@ -9,7 +9,7 @@ void CheckIsPerm(const PbRf<int32_t>& perm) {
   FOR_RANGE(size_t, i, 0, perm.size()) {
     CHECK_GE(perm[i], 0);
     CHECK_LT(perm[i], perm.size());
-    CHECK(is_used[perm[i]] == false);
+    CHECK_EQ(is_used[perm[i]], false);
     is_used[perm[i]] = true;
   }
 }
@@ -32,11 +32,6 @@ void TransposeOp::InferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_blob_shape = in_blob_desc->shape();
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
-  // perm is for in_blob.dim[1] to in_blob.dim[n - 1]
-  // example:   change blob NHWC to NCHW
-  //        in_blob_shape = {100, 256, 256, 3}
-  //        perm = {2, 0, 1}
-  //  then: out_blob_shape = {100, 3, 256, 256}
   CHECK_EQ(perm.size(), in_blob_shape.NumAxes() - 1);
   CheckIsPerm(perm);
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
