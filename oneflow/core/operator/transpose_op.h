@@ -21,6 +21,9 @@ class TransposeOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  private:
+  void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, KernelConf*) const override;
 };
 
 }  // namespace oneflow
