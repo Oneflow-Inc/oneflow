@@ -41,8 +41,7 @@ void MaximumKernel<device_type, T>::BackwardDataContent(
 template<typename T>
 struct MaximumKernelUtil<DeviceType::kCPU, T> {
   static void CWiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int y_idx,
-                                     int32_t* mask) {
+                               const T* y, const int y_idx, int32_t* mask) {
     for (int64_t i = 0; i < n; ++i) {
       if (y[i] > x[i]) {
         x[i] = y[i];
@@ -52,8 +51,8 @@ struct MaximumKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void CWiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int x_idx,
-                                     const int32_t* mask) {
+                               const T* y, const int x_idx,
+                               const int32_t* mask) {
     for (int i = 0; i < n; ++i) {
       if (x_idx == mask[i]) { x[i] = y[i]; }
     }

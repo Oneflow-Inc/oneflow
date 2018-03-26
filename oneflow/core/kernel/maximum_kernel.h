@@ -25,11 +25,10 @@ class MaximumKernel final : public CWiseKernel<device_type> {
 template<DeviceType device_type, typename T>
 struct MaximumKernelUtil {
   static void CWiseMaxWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int y_idx,
-                                     int32_t* mask);
+                               const T* y, const int y_idx, int32_t* mask);
   static void CWiseSetWithMask(DeviceCtx* ctx, const int64_t n, T* x,
-                                     const T* y, const int x_idx,
-                                     const int32_t* mask);
+                               const T* y, const int x_idx,
+                               const int32_t* mask);
 };
 }  // namespace oneflow
 
