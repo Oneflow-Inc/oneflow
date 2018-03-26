@@ -24,7 +24,6 @@ void NormalizationOp::InitFromOpConf() {
   if (normalization_conf.scale()) { EnrollModelBn("gamma"); }
   if (HasScaleOrCenter()) { EnrollDataTmpBn("normalized_inputs"); }
   EnrollDataTmpBn("inv_var");
-  EnrollModelTmpBn("inv_elem_num");
   EnrollModelTmpBn("tmp_storage_for_sum");
 }
 
@@ -41,13 +40,18 @@ void NormalizationOp::InferBlobDescs(
     *GetBlobDesc4BnInOp("normalized_inputs") = *inputs_blob_desc;
   }
   *GetBlobDesc4BnInOp("outputs") = *inputs_blob_desc;
-  BlobDesc blob_desc(Shape({1}), JobDesc::Singleton()->DefaultDataType(), false,
-                     false, 1);
+  BlobDesc blob_desc(Shape({1}), Global<JobDesc>::Get()->DefaultDataType(),
+                     false, false, 1);
   std::list<std::string> scalar_blob_names = {"moving_mean", "moving_variance",
-                                              "new_mean",    "new_variance",
-                                              "inv_var",     "inv_elem_num"};
+                                              "inv_var"};
+  std::list<std::string> bns_needless_in_predict = {"new_mean", "new_variance"};
   if (normalization_conf.center()) { scalar_blob_names.push_back("beta"); }
   if (normalization_conf.scale()) { scalar_blob_names.push_back("gamma"); }
+  if (Global<JobDesc>::Get()->IsTrain()) {
+    for (const std::string& bn : bns_needless_in_predict) {
+      scalar_blob_names.push_back(bn);
+    }
+  }
   for (const auto& bn_in_op : scalar_blob_names) {
     GetBlobDesc4BnInOp(bn_in_op)->mut_shape() = Shape({1});
   }
@@ -60,8 +64,9 @@ void NormalizationOp::InferBlobDescs(
 void NormalizationOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext*, KernelConf* kernel_conf) const {
-  int64_t elem_cnt = GetBlobDesc4BnInOp("inputs")->shape().elem_cnt();
-  kernel_conf->mutable_normalization_conf()->set_inputs_elem_cnt(elem_cnt);
+  int64_t inv_elem_cnt = GetBlobDesc4BnInOp("inputs")->shape().elem_cnt();
+  kernel_conf->mutable_normalization_conf()->set_inv_inputs_elem_cnt(
+      1.0 / inv_elem_cnt);
 }
 
 REGISTER_OP(OperatorConf::kNormalizationConf, NormalizationOp);

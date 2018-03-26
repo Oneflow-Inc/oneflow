@@ -25,7 +25,7 @@ int32_t RuntimeCtx::Staleness() const {
   if (is_experiment_phase_) {
     return 0;
   } else {
-    return JobDesc::Singleton()->Staleness();
+    return Global<JobDesc>::Get()->Staleness();
   }
 }
 

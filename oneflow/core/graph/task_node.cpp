@@ -44,7 +44,7 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
 }
 
 DeviceType TaskNode::device_type() const {
-  return IDMgr::Singleton()->GetDeviceTypeFromThrdId(thrd_id_);
+  return Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id_);
 }
 
 void TaskNode::set_machine_id(int64_t val) {
@@ -87,7 +87,7 @@ void TaskNode::InferMemCaseOfProducedRegst() {
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = IDMgr::Singleton()->NewTaskId(machine_id_, thrd_id_);
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
 }
 
 std::string TaskNode::VisualStr() const {

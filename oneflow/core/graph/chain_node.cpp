@@ -134,7 +134,7 @@ void ChainNode::GenSortedCompTaskNodes(
       comp_task_node->set_machine_id(machine_id);
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
         comp_task_node->set_thrd_id(
-            IDMgr::Singleton()->GetGpuDeviceThrdId(dev_phy_id));
+            Global<IDMgr>::Get()->GetGpuDeviceThrdId(dev_phy_id));
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         comp_task_node->set_thrd_id(AllocateCpuThrdId(comp_task_node));
       } else {

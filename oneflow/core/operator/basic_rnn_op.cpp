@@ -24,7 +24,7 @@ void BasicRnnOp::VirtualInferBlobDescs(
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
   *GetBlobDesc4BnInOp("plus_op_out") = BlobDesc(
-      Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(),
+      Shape({data_num, hidden_size}), Global<JobDesc>::Get()->DefaultDataType(),
       false, true, in_blob_desc->max_col_num());
   *GetBlobDesc4BnInOp("i2h_weight") =
       BlobDesc(Shape({hidden_size, embedding_size}));

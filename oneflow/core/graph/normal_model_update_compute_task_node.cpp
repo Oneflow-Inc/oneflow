@@ -6,15 +6,15 @@ namespace oneflow {
 void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t min_model_regst = -1;
   int32_t max_model_regst = -1;
-  if (JobDesc::Singleton()->IsPredict()) {
+  if (Global<JobDesc>::Get()->IsPredict()) {
     min_model_regst = 1;
     max_model_regst = 1;
-  } else if (JobDesc::Singleton()->Staleness() == -1) {
+  } else if (Global<JobDesc>::Get()->Staleness() == -1) {
     min_model_regst = 2;
     max_model_regst = kMaxRegisterNum;
   } else {
     min_model_regst = 1;
-    max_model_regst = JobDesc::Singleton()->Staleness() + 1;
+    max_model_regst = Global<JobDesc>::Get()->Staleness() + 1;
   }
   auto model_regst = ProduceRegst("model", min_model_regst, max_model_regst);
   auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
@@ -39,7 +39,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
-  if (JobDesc::Singleton()->IsPredict()) { return; }
+  if (Global<JobDesc>::Get()->IsPredict()) { return; }
   for (TaskEdge* edge : in_edges()) {
     ConsumeRegst("model_diff_acc_" + NewUniqueId(), edge->GetSoleRegst());
   }
@@ -54,7 +54,7 @@ static std::shared_ptr<const Operator> ConstructModelUpdateOp(int32_t in_num) {
   OperatorConf op_conf;
   op_conf.set_name("md_update_" + NewUniqueId());
   NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
-  const JobDesc* job_desc = JobDesc::Singleton();
+  const JobDesc* job_desc = Global<JobDesc>::Get();
   if (job_desc->IsTrain()) {
     *(mdupdt_conf->mutable_user_conf()) =
         job_desc->job_conf().train_conf().model_update_conf();
@@ -64,7 +64,7 @@ static std::shared_ptr<const Operator> ConstructModelUpdateOp(int32_t in_num) {
 }
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
-  if (JobDesc::Singleton()->IsPredict()) { return; }
+  if (Global<JobDesc>::Get()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = ConstructModelUpdateOp(consumed_regsts().size());
   size_t ibn_idx = 0;
