@@ -27,9 +27,9 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
         UNIMPLEMENTED();
       }
     } else if (conf.weight_scalar() > 1.0 || conf.weight_scalar() < 1.0) {
-      PredType weight_scalar = static_cast<PredType>(conf.weight_scalar());
-      KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, &weight_scalar,
-                                              prediction_diff, 1);
+      KernelUtil<device_type, PredType>::Scal(
+          ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()),
+          prediction_diff, 1);
     }
   }
 
