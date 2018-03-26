@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_BLAS_CBLAS_H_
-#define ONEFLOW_CORE_BLAS_CBLAS_H_
+#ifndef ONEFLOW_CORE_COMMON_CBLAS_H_
+#define ONEFLOW_CORE_COMMON_CBLAS_H_
 #include <stddef.h>
 
 /*

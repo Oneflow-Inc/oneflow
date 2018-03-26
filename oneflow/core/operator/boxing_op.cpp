@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/boxing_op.h"
-#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
