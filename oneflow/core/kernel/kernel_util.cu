@@ -55,19 +55,19 @@ template<typename T>
 struct KernelUtil<DeviceType::kGPU, T> final {
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
                   const T* y, const int incy, T* result) {
-    cublas_dot(ctx->cublas_handle(), n, x, incx, y, incy, result);
+    cublas_dot<T>(ctx->cublas_handle(), n, x, incx, y, incy, result);
   }
   static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
                    T* y, const int incy) {
-    cublas_copy(ctx->cublas_handle(), n, x, incx, y, incy);
+    cublas_copy<T>(ctx->cublas_handle(), n, x, incx, y, incy);
   }
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy) {
-    cublas_axpy(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
+    cublas_axpy<T>(ctx->cublas_handle(), n, &alpha, x, incx, y, incy);
   }
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cublas_scal(ctx->cublas_handle(), n, alpha, x, incx);
+    cublas_scal<T>(ctx->cublas_handle(), n, alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
@@ -140,8 +140,8 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
     cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
-    cublas_gemv(ctx->cublas_handle(), cublas_trans, n, m, &alpha, a, lda, x,
-                incx, &beta, y, incy);
+    cublas_gemv<T>(ctx->cublas_handle(), cublas_trans, n, m, &alpha, a, lda, x,
+                   incx, &beta, y, incy);
   }
   static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                    const enum CBLAS_TRANSPOSE trans_a,
@@ -151,8 +151,8 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    const int ldc) {
     cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
     cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-    cublas_gemm(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                &alpha, b, ldb, a, lda, &beta, c, ldc);
+    cublas_gemm<T>(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m,
+                   k, &alpha, b, ldb, a, lda, &beta, c, ldc);
   }
 
   static void Initialize(DeviceCtx* ctx,
