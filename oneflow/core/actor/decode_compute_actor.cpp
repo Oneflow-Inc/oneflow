@@ -19,10 +19,10 @@ int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
     if (TryUpdtStateAsProducedRegst(regst) == -1) {
       pending_in_regsts_.push(regst);
     }
+    ActUntilFail();
   } else {
     UNIMPLEMENTED();
   }
-  ActUntilFail();
   return TrySwitchToZombieOrFinish();
 }
 
