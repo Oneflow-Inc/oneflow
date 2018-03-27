@@ -39,11 +39,24 @@ void BackwardCompTaskNode::ConsumeAllRegsts() {
 
 void BackwardCompTaskNode::BuildExecGphAndRegst() {
   VirtualBuildExecGphAndBindOutDiffRegst();
+  LinkFwExecNode();
   VirtualBuildActivationDiffRegst();
   VirtualBuildInDiffRegst();
   BindModelDiffRegst();
   VirtualBuildExtraRegsts();
   InferBlobDescsInProducedRegsts();
+}
+
+void BackwardCompTaskNode::LinkFwExecNode() {
+  CompTaskNode* fw_task = GetRelatedFwTaskNode();
+  HashMap<std::string, ExecNode*> op_name2fw_exec;
+  fw_task->exec_gph().ForEachNode([&](ExecNode* fw_exec) {
+    CHECK(op_name2fw_exec.emplace(fw_exec->op()->op_name(), fw_exec).second);
+  });
+  mut_exec_gph().ForEachNode([&](ExecNode* bw_exec) {
+    ExecNode* fw_exec = op_name2fw_exec.at(bw_exec->op()->op_name());
+    bw_exec->set_fw_node(fw_exec);
+  });
 }
 
 void BackwardCompTaskNode::BindModelDiffRegst() {

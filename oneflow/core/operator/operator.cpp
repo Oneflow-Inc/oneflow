@@ -68,6 +68,13 @@ const std::string& Operator::SoleDtbn() const {
 
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
+}
+
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
@@ -87,9 +94,6 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (model_bns_.empty()) {
     CHECK(model_tmp_bns_.empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
-  }
-  if (IsDecodeOp() == false && IsPrintOp() == false) {
-    pr_desc->RemoveInvalidDevice(op_name());
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
@@ -127,7 +131,8 @@ static bool HasBlobDescWithField(
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     bool is_forward, DeviceType device_type,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
+    const OpContext* op_ctx) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -159,6 +164,13 @@ void Operator::GenKernelConf(
   }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
+}
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
+    const OpContext* op_ctx) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 

@@ -67,7 +67,7 @@ SoftmaxOpCtx SoftmaxOp::GetSoftmaxOpCtx(const Shape& in_shape) const {
   op_ctx.dims = in_shape.NumAxes();
   if (op_ctx.axis < 0) { op_ctx.axis += op_ctx.dims; }
   CHECK_GE(op_ctx.dims, 2);
-  CHECK_GE(op_ctx.axis, 0);
+  CHECK_GE(op_ctx.axis, 1);
   CHECK_LT(op_ctx.axis, op_ctx.dims);
   op_ctx.transpose_cols = in_shape.At(op_ctx.axis);
   op_ctx.transpose_rows = in_shape.elem_cnt() / op_ctx.transpose_cols;
