@@ -21,6 +21,7 @@ void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
 ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   policy_ = user_conf.policy();
   HashSet<std::string> machine_name_set;
+  device_type_ = DeviceType::kInvalidDevice;
   for (const std::string& device_name : user_conf.device_name()) {
     std::string mchn_name;
     std::string device_tag;
@@ -30,9 +31,13 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     if (device_tag == "cpu") {
       int64_t part_num = oneflow_cast<int64_t>(device_id_str);
       device_id_str = "0-" + std::to_string(part_num - 1);
+      CHECK(device_type_ == DeviceType::kInvalidDevice
+            || device_type_ == DeviceType::kCPU);
       device_type_ = DeviceType::kCPU;
     } else {
       CHECK_STREQ(device_tag.c_str(), "gpu");
+      CHECK(device_type_ == DeviceType::kInvalidDevice
+            || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
     }
     int64_t machine_id = Global<IDMgr>::Get()->MachineID4MachineName(mchn_name);
@@ -46,6 +51,9 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     int64_t max_id = oneflow_cast<int64_t>(device_id_str.substr(minus_pos + 1));
     CHECK_LE(min_id, max_id);
     for (int64_t dev_phy_id = min_id; dev_phy_id <= max_id; ++dev_phy_id) {
+      if (device_type_ == DeviceType::kGPU) {
+        CHECK_LT(dev_phy_id, Global<JobDesc>::Get()->GpuDeviceNum());
+      }
       machine_id2sorted_dev_phy_ids_[machine_id].push_back(dev_phy_id);
     }
   }
@@ -90,25 +98,6 @@ void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name,
         return it->first > max_machine_id;
       });
   parallel_num_ = max_device_num;
-}
-
-void ParallelDesc::RemoveInvalidDevice(const std::string& op_name) {
-  for (int64_t machine_id : sorted_machine_ids_) {
-    auto& sorted_dev_ids = machine_id2sorted_dev_phy_ids_.at(machine_id);
-    auto bound_it =
-        std::lower_bound(sorted_dev_ids.begin(), sorted_dev_ids.end(),
-                         Global<JobDesc>::Get()->XpuDeviceNum());
-    if (bound_it == sorted_dev_ids.end()) {
-      continue;
-    } else {
-      for (auto it = bound_it; it != sorted_dev_ids.end(); ++it) {
-        LOG_IF(WARNING, op_name != "")
-            << op_name << " use invalid device_id " << *it;
-      }
-      sorted_dev_ids.erase(bound_it, sorted_dev_ids.end());
-    }
-  }
-  ClearUp();
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {

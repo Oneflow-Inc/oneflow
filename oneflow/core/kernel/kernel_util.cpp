@@ -129,27 +129,34 @@ template<typename T>
 struct KernelUtil<DeviceType::kCPU, T> final {
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
                   const T* y, const int incy, T* result) {
-    *result = cblas_dot(n, x, incx, y, incy);
+    *result = cblas_dot<T>(n, x, incx, y, incy);
   }
   static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
                    T* y, const int incy) {
-    cblas_copy(n, x, incx, y, incy);
+    cblas_copy<T>(n, x, incx, y, incy);
   }
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy) {
-    cblas_axpy(n, alpha, x, incx, y, incy);
+    cblas_axpy<T>(n, alpha, x, incx, y, incy);
+  }
+  static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
+                   const int incx, T* y, const int incy) {
+    Axpy(ctx, n, *alpha, x, incx, y, incy);
+  }
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+                   const int incx) {
+    cblas_scal<T>(n, alpha, x, incx);
   }
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx) {
-    cblas_scal(n, *alpha, x, incx);
+    Scal(ctx, n, *alpha, x, incx);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
   }
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
-    *max_ptr = x[0];
-    for (int64_t i = 0; i < n; ++i) { *max_ptr = std::max(*max_ptr, x[i]); }
+    *max_ptr = *std::max_element(x, x + n);
   }
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     for (int64_t i = 0; i < n; ++i) { y[i] = std::exp(x[i]); }
@@ -192,14 +199,20 @@ struct KernelUtil<DeviceType::kCPU, T> final {
   }
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx) {
-    for (int64_t i = 0; i != n; ++i) { dx[i] = y[i] * dy[i]; }
+    T zero = static_cast<T>(0.0);
+    for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
     // Set col major to keep it as the same with cublas
-    cblas_gemv(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x, incx,
-               beta, y, incy);
+    cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x,
+                  incx, beta, y, incy);
+  }
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                   int n, const T* alpha, const T* a, int lda, const T* x,
+                   const int incx, const T* beta, T* y, const int incy) {
+    Gemv(ctx, trans, m, n, *alpha, a, lda, x, incx, *beta, y, incy);
   }
   static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                    const enum CBLAS_TRANSPOSE trans_a,
@@ -207,10 +220,18 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int k, const T alpha, const T* a, const int lda,
                    const T* b, const int ldb, const T beta, T* c,
                    const int ldc) {
-    cblas_gemm(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c,
-               ldc);
+    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta,
+                  c, ldc);
   }
-
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                   const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                   const int k, const T* alpha, const T* a, const int lda,
+                   const T* b, const int ldb, const T* beta, T* c,
+                   const int ldc) {
+    Gemm(ctx, order, trans_a, trans_b, m, n, k, *alpha, a, lda, b, ldb, *beta,
+         c, ldc);
+  }
   static void Initialize(DeviceCtx* ctx,
                          const InitializerConf& initializer_conf,
                          uint32_t random_seed, Blob* blob) {
@@ -253,7 +274,12 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
 #define DEFINE_INT_KERNEL_UTIL(T, type_proto)                                 \
   template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);               \
+  template void KernelUtil<DeviceType::kCPU, T>::Sum(                         \
       DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,                \
+      T* temp_storage, size_t temp_storage_bytes);                            \
+  template void KernelUtil<DeviceType::kCPU, T>::Max(                         \
+      DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,                \
       T* temp_storage, size_t temp_storage_bytes);                            \
   template void KernelUtil<DeviceType::kCPU, T>::Relu(                        \
       DeviceCtx* ctx, const int64_t n, const T* x, T* y);                     \
