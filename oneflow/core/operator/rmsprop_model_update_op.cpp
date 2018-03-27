@@ -11,7 +11,7 @@ void RMSPropModelUpdateOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const BlobDesc* model_blob_desc = GetBlobDesc4BnInOp("model");
   CHECK_EQ(model_blob_desc->data_type(),
-           JobDesc::Singleton()->DefaultDataType());
+           Global<JobDesc>::Get()->DefaultDataType());
   CHECK_EQ(model_blob_desc->has_data_id_field(), false);
   *GetBlobDesc4BnInOp("mean_square") = *model_blob_desc;
 }

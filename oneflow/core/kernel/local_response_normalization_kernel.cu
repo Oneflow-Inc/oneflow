@@ -5,7 +5,6 @@ namespace oneflow {
 template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     const ParallelContext*) {
-#ifdef WITH_CUDA
   const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
       GetValFromPbMessage<const PbMessage&>(
           this->kernel_conf().local_response_normalization_conf(), "batch"),
@@ -19,7 +18,6 @@ void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit(
       this->op_conf().local_response_normalization_conf();
   normalize_desc_.reset(new CudnnLRNDesc(
       op_conf.depth_radius(), op_conf.alpha(), op_conf.beta(), op_conf.bias()));
-#endif  // WITH_CUDA
 }
 
 template<typename T>

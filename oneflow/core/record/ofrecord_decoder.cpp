@@ -37,7 +37,7 @@ int32_t OFRecordDecoder<encode_case, T>::ReadColNum(
 template<EncodeCase encode_case, typename T>
 void OFRecordDecoder<encode_case, T>::ReadDataId(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, Blob* out_blob) const {
-  int64_t max_data_id_size = JobDesc::Singleton()->SizeOfOneDataId();
+  int64_t max_data_id_size = Global<JobDesc>::Get()->SizeOfOneDataId();
   int32_t i = 0;
   record_blob->ForEachRecord([&](const OFRecord& record) {
     const Feature& feature = record.feature().at("data_id");

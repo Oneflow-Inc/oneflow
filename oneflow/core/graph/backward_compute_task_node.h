@@ -35,6 +35,7 @@ class BackwardCompTaskNode : public CompTaskNode {
   virtual void VirtualInferBlobDescInHiddenDiff() {}
 
  private:
+  void LinkFwExecNode();
   void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
 };

@@ -36,7 +36,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
     HashMap<LogicalEdge*, std::string>* edge2lbn,
     HashMap<LogicalEdge*, std::string>* edge2ibn,
     HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes) {
-  const DLNetConf& dlnet_conf = JobDesc::Singleton()->dlnet_conf();
+  const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
   HashMap<std::string, LogicalNode*> lbn2producer;
   for (const OperatorConf& cur_op_conf : dlnet_conf.op()) {
     LogicalNode* cur_node = NewNode();
@@ -87,7 +87,7 @@ void LogicalGraph::NaiveBuildGraphStruct(
 
 void LogicalGraph::FillNodeWithParallelDesc(
     const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
-  const Placement& placement = JobDesc::Singleton()->placement();
+  const Placement& placement = Global<JobDesc>::Get()->placement();
   for (const PlacementGroup& cur_group : placement.placement_group()) {
     for (const std::string& op_name : cur_group.op_set().op_name()) {
       const std::vector<LogicalNode*>& nodes = op_name2nodes.at(op_name);
@@ -101,9 +101,17 @@ void LogicalGraph::FillNodeWithParallelDesc(
   }
   ForEachNode([&](LogicalNode* cur_node) {
     if (cur_node->op()->IsElemWiseOp()) {
-      LogicalNode* pred_node = cur_node;
-      while (pred_node->op()->IsElemWiseOp()) {
+      LogicalNode* tmp_node = cur_node;
+      LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
+      while (pred_node->parallel_desc()->device_type()
+                 == cur_node->parallel_desc()->device_type()
+             && pred_node->op()->IsElemWiseOp()) {
+        tmp_node = pred_node;
         pred_node = pred_node->SoleInEdge()->src_node();
+      }
+      if (pred_node->parallel_desc()->device_type()
+          != cur_node->parallel_desc()->device_type()) {
+        pred_node = tmp_node;
       }
       if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
           == false) {

@@ -6,7 +6,7 @@
 namespace oneflow {
 
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = IDMgr::Singleton()->NewRegstDescId();
+  regst_desc_id_ = Global<IDMgr>::Get()->NewRegstDescId();
   producer_ = nullptr;
   min_register_num_ = -1;
   max_register_num_ = -1;
@@ -101,7 +101,7 @@ void RegstDesc::InferMemCase() {
   if (auto cp_hd_producer = dynamic_cast<const CopyHdTaskNode*>(producer_)) {
     if (cp_hd_producer->copy_type() == CopyHdOpConf::H2D) {
       mem_case_.mutable_device_cuda_mem()->set_device_id(
-          IDMgr::Singleton()->GetGpuDevPhyIdFromThrdId(thrd_id));
+          Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id));
     } else {
       mem_case_.mutable_host_pinned_mem()->set_used_by_device(true);
       SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
@@ -112,7 +112,7 @@ void RegstDesc::InferMemCase() {
   } else {
     if (producer_->device_type() == kGPU) {
       mem_case_.mutable_device_cuda_mem()->set_device_id(
-          IDMgr::Singleton()->GetGpuDevPhyIdFromThrdId(thrd_id));
+          Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id));
     } else {
       mem_case_.mutable_host_pageable_mem();
       SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);

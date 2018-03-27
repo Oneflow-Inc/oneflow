@@ -181,7 +181,7 @@ void CtrlServer::PushActEventHandler(
     CtrlCall<PushActEventRequest, PushActEventResponse>* call) {
   ActEvent act_event = call->request().act_event();
   call->SendResponse();
-  ActEventLogger::Singleton()->PrintActEventToLogDir(act_event);
+  Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
   ENQUEUE_REQUEST(PushActEvent);
 }
 

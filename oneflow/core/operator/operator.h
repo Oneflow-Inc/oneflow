@@ -16,6 +16,10 @@ namespace oneflow {
 // bn  : blob name
 // lbn : logical blob name
 
+struct OpContext {
+  virtual ~OpContext() {}
+};
+
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
@@ -101,10 +105,14 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type) const;
+      const ParallelContext*, DeviceType,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+      const ParallelContext*, DeviceType) const;
+  virtual void InferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const;
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbnWhenShareModel(const std::string& shared_op_name);
@@ -112,7 +120,8 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, DeviceType, const ParallelContext*, KernelConf*) const;
+      bool is_forward, DeviceType, const ParallelContext*, KernelConf*,
+      const OpContext*) const;
 
  protected:
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
@@ -150,6 +159,9 @@ class Operator {
   }
 
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, KernelConf*, const OpContext*) const;
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const {}

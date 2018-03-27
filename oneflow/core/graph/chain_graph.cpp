@@ -37,7 +37,7 @@ void InitChains(std::list<Chain>* chain_list,
                 Logical2ChainItMap* logical2chain_it) {
   chain_list->clear();
   logical2chain_it->clear();
-  LogicalGraph::Singleton()->ForEachNode([&](const LogicalNode* node) {
+  Global<LogicalGraph>::Get()->ForEachNode([&](const LogicalNode* node) {
     // Init one Chain with one Node
     chain_list->emplace_back();
     logical2chain_it->insert({node, --chain_list->end()});
@@ -45,7 +45,7 @@ void InitChains(std::list<Chain>* chain_list,
     cur_chain.nodes = {node};
   });
   // Init ancestors
-  LogicalGraph::Singleton()->TopoForEachNode([&](LogicalNode* node) {
+  Global<LogicalGraph>::Get()->TopoForEachNode([&](LogicalNode* node) {
     ChainIt cur_chain = logical2chain_it->at(node);
     cur_chain->ancestors.clear();
     cur_chain->ancestors_and_this.clear();
@@ -65,7 +65,7 @@ void InitChains(std::list<Chain>* chain_list,
                                          cur_chain->ancestors.end());
   });
   // Init descendants
-  LogicalGraph::Singleton()->ReverseTopoForEachNode([&](LogicalNode* node) {
+  Global<LogicalGraph>::Get()->ReverseTopoForEachNode([&](LogicalNode* node) {
     ChainIt cur_chain = logical2chain_it->at(node);
     cur_chain->descendants.clear();
     cur_chain->descendants_and_this.clear();
@@ -439,7 +439,7 @@ void ChainGraph::BuildLossPrintStruct() {
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(
-        IDMgr::Singleton()->MachineName4MachineId(0) + ":cpu:1");
+        Global<IDMgr>::Get()->MachineName4MachineId(0) + ":cpu:1");
     auto loss_print_chain = NewNode<LossPrintChainNode>();
     loss_print_chain->mut_op_vec() = {loss_print_op};
     loss_print_chain->mut_parallel_desc().reset(

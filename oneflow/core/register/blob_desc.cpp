@@ -4,7 +4,7 @@
 namespace oneflow {
 
 BlobDesc::BlobDesc()
-    : BlobDesc(Shape(), JobDesc::Singleton()->DefaultDataType(), false, false,
+    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false,
                1) {}
 
 BlobDesc::BlobDesc(Shape shape, DataType data_type, bool has_data_id_field,
@@ -33,7 +33,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (has_data_id_field_) {
-    return shape_.At(0) * JobDesc::Singleton()->SizeOfOneDataId();
+    return shape_.At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
   } else {
     return 0;
   }
