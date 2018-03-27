@@ -11,10 +11,11 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-OpKernelTestCase* ReluTestCase(bool is_train, bool is_forward) {
+OpKernelTestCase* ReluTestCase(const std::string& job_type,
+                               const std::string& forward_or_backward) {
   OpKernelTestCase* relu_test_case = new OpKernelTestCase();
-  relu_test_case->set_is_train(is_train);
-  relu_test_case->set_is_forward(is_forward);
+  relu_test_case->set_is_train(job_type == "train");
+  relu_test_case->set_is_forward(forward_or_backward == "forward");
   relu_test_case->set_device_type(device_type);
   relu_test_case->mut_op_conf()->mutable_relu_conf();
 
@@ -37,20 +38,9 @@ OpKernelTestCase* ReluTestCase(bool is_train, bool is_forward) {
   return relu_test_case;
 }
 
-#define MAKE_ENTRY(device_type, data_type_pair, is_train, is_forward)        \
-  TEST(ReluKernel, OF_PP_JOIN(relu_, __COUNTER__, _, device_type, _,         \
-                              OF_PP_PAIR_FIRST(data_type_pair), _, is_train, \
-                              _, is_forward)) {                              \
-    ReluTestCase<DeviceType::k##device_type,                                 \
-                 OF_PP_PAIR_FIRST(data_type_pair)>(                          \
-        std::string(#is_train) == "train",                                   \
-        std::string(#is_forward) == "forward")                               \
-        ->Run();                                                             \
-  }
-
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-    MAKE_ENTRY, (CPU), FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ,
-    (train)(predict), (forward)(backward))
+TEST_CPU_ONLY_OPKERNEL(ReluTestCase,
+                       FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ,
+                       (train)(predict), (forward)(backward));
 
 }  // namespace test
 
