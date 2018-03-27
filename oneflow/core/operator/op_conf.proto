@@ -389,6 +389,12 @@ message DropoutOpConf {
   optional int64 seed = 5;
 }
 
+message TransposeOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 perm = 3;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -419,6 +425,7 @@ message OperatorConf {
     Conv1DOpConf conv_1d_conf = 125;
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
+    TransposeOpConf transpose_conf = 128;
     DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
