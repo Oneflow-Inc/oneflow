@@ -15,14 +15,16 @@ class CudaDeviceCtx final : public DeviceCtx {
   ~CudaDeviceCtx() = default;
 
   CudaDeviceCtx(int64_t work_stream_id, const cudaStream_t* cuda_stream,
-                const cublasHandle_t* cublas_handle = nullptr,
+                const cublasHandle_t* cublas_pmh_handle = nullptr,
+                const cublasHandle_t* cublas_pmd_handle = nullptr,
                 const cudnnHandle_t* cudnn_handle = nullptr,
                 const Eigen::GpuDevice* eigen_gpu_device = nullptr
 
   ) {
     set_work_stream_id(work_stream_id);
     set_cuda_stream(cuda_stream);
-    set_cublas_handle(cublas_handle);
+    set_cublas_pmh_handle(cublas_pmh_handle);
+    set_cublas_pmd_handle(cublas_pmd_handle);
     set_cudnn_handle(cudnn_handle);
     set_eigen_gpu_device(eigen_gpu_device);
   }
