@@ -331,20 +331,6 @@ void BasicGruKernelUtil<device_type, T>::ComputePlusOutForward(
 }
 
 template<DeviceType device_type, typename T>
-void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
-    const KernelCtx& ctx, const Blob* in_data, Blob* hidden, Blob* out_diff,
-    Blob* i2h_weight_diff, Blob* h2h_weight_diff) {
-  // h2h_weght_diff = out_diff * hidden
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
-                                       out_diff, hidden, h2h_weight_diff);
-  // i2h_weght_diff = out_diff * in
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
-                                       out_diff, in_data, i2h_weight_diff);
-}
-
-template<DeviceType device_type, typename T>
 void BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
     const KernelCtx& ctx, const Blob* update_out, const Blob* update_data,
     const Blob* candidate_out, const Blob* candidate_data,
@@ -394,6 +380,20 @@ void BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
       ctx.device_ctx, reset_out->shape().elem_cnt(), reset_data->dptr<T>(),
       reset_out->dptr<T>(), reset_o_diff->dptr<T>(),
       reset_d_diff->mut_dptr<T>());
+}
+
+template<DeviceType device_type, typename T>
+void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
+    const KernelCtx& ctx, const Blob* in_data, Blob* hidden, Blob* out_diff,
+    Blob* i2h_weight_diff, Blob* h2h_weight_diff) {
+  // h2h_weght_diff = out_diff * hidden
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       out_diff, hidden, h2h_weight_diff);
+  // i2h_weght_diff = out_diff * in
+  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
+                                       static_cast<T>(1), static_cast<T>(0),
+                                       out_diff, in_data, i2h_weight_diff);
 }
 
 template<DeviceType device_type, typename T>

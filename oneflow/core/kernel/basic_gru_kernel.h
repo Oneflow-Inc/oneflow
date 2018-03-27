@@ -62,9 +62,6 @@ struct BasicGruKernelUtil {
   static void ComputePlusOutForward(const KernelCtx& ctx, const Blob* hidden,
                                     Blob* candidate_out, Blob* temp_data,
                                     Blob* update_out, Blob* plus_out);
-  static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
-                                Blob* hidden, Blob* out_diff,
-                                Blob* i2h_weight_diff, Blob* h2h_weight_diff);
   static void ComputeTmpModelDiff(
       const KernelCtx& ctx, const Blob* update_out, const Blob* update_data,
       const Blob* candiate_out, const Blob* candiate_data,
@@ -73,6 +70,9 @@ struct BasicGruKernelUtil {
       Blob* update_d_diff, Blob* candidate_o_diff, Blob* candidate_d_diff,
       const Blob* h2h_weight, Blob* temp_data, Blob* reset_o_diff,
       Blob* reset_d_diff, BwActivationFunc<device_type, T> activation_bw_func_);
+  static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
+                                Blob* hidden, Blob* out_diff,
+                                Blob* i2h_weight_diff, Blob* h2h_weight_diff);
   static void ComputeHiddenDiff(const KernelCtx& ctx, const Blob* h2h_weight_r,
                                 const Blob* h2h_weight_z,
                                 const Blob* h2h_weight, const Blob* reset_out,
