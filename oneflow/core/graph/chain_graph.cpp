@@ -466,6 +466,27 @@ NormalMdUpdtChainNode* ChainGraph::BuildNormalMdUpdtAndMdSaveStruct(
   return md_updt_chain;
 }
 
+void ChainGraph::BuildNormalizationStruct(ForwardChainNode* fw_chain) {
+  std::shared_ptr<const Operator> norm_op;
+  for (const std::shared_ptr<Operator>& op : fw_chain->op_vec()) {
+    if (op->IsNormalizationOp()) {
+      norm_op = op;
+      break;
+    }
+  }
+  if (norm_op != nullptr) {
+    OperatorConf norm_md_save_op_conf;
+    norm_md_save_op_conf.set_name("norm_md_save_" + NewUniqueId());
+    std::vector<std::string> norm_model_bns = {"moving_mean",
+                                               "moving_variance"};
+    for (const std::string& bn : norm_model_bns) {
+      norm_md_save_op_conf.mutable_model_save_conf()->add_lbn(
+          norm_op->Lbn4BnInOp(bn));
+    }
+    BuildMdSaveStruct(fw_chain, norm_md_save_op_conf, fw_chain);
+  }
+}
+
 MdSaveChainNode* ChainGraph::BuildMdSaveStruct(
     const ForwardChainNode* fw_chain, const OperatorConf model_save_op_conf,
     ChainNode* need_save_chain) {
@@ -522,25 +543,8 @@ void ChainGraph::BuildModelStruct(
     md_diff_acc_chain->mut_parallel_desc().reset(md_diff_acc_pr_desc);
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
     Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
-    // Normalization
-    std::shared_ptr<const Operator> norm_op;
-    for (const std::shared_ptr<Operator>& op : fw_chain->op_vec()) {
-      if (op->IsNormalizationOp()) {
-        norm_op = op;
-        break;
-      }
-    }
-    if (norm_op != nullptr) {
-      OperatorConf norm_md_save_op_conf;
-      norm_md_save_op_conf.set_name("norm_md_save_" + NewUniqueId());
-      std::vector<std::string> norm_model_bns = {"moving_mean",
-                                                 "moving_variance"};
-      for (const std::string& bn : norm_model_bns) {
-        norm_md_save_op_conf.mutable_model_save_conf()->add_lbn(
-            norm_op->Lbn4BnInOp(bn));
-      }
-      BuildMdSaveStruct(fw_chain, norm_md_save_op_conf, fw_chain);
-    }
+
+    BuildNormalizationStruct(fw_chain);
   });
 }
 
