@@ -37,13 +37,15 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
 class ExecNode final : public Node<ExecNode, ExecEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ExecNode);
-  ExecNode() = default;
+  ExecNode() : fw_node_(nullptr) {}
   ~ExecNode() = default;
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
   void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
+
+  void set_fw_node(ExecNode* val) { fw_node_ = val; }
 
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(bool is_forward, DeviceType, const ParallelContext*,
@@ -57,6 +59,9 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
+  ExecNode* fw_node_;
+
+  std::unique_ptr<OpContext> op_ctx_;
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {

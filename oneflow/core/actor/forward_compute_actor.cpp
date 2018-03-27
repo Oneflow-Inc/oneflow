@@ -107,34 +107,34 @@ void ForwardCompActor::Act() {
   pending_in_regsts_.pop();
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [&](int64_t regst_desc_id) -> Regst* {
-                      if (regst_desc_id == in_regst_desc_id_) {
-                        return in_regst;
-                      } else if (regst_desc_id == model_regst_desc_id_) {
-                        return model_regst_;
-                      } else if (regst_desc_id == model_tmp_regst_desc_id_) {
-                        return model_tmp_regst_;
-                      } else {
-                        return GetCurWriteableRegst(regst_desc_id);
-                      }
-                    });
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  int64_t piece_id = in_regst->piece_id();
+  kernel_ctx.other = &piece_id;
+  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+    if (regst_desc_id == in_regst_desc_id_) {
+      return in_regst;
+    } else if (regst_desc_id == model_regst_desc_id_) {
+      return model_regst_;
+    } else if (regst_desc_id == model_tmp_regst_desc_id_) {
+      return model_tmp_regst_;
+    } else {
+      return GetCurWriteableRegst(regst_desc_id);
+    }
+  });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(in_regst->piece_id());
+    regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != other_model_regst_desc_id_;
   });
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
       int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
-      CHECK_LE(in_regst->piece_id(), last_piece_id);
-      if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
+      CHECK_LE(piece_id, last_piece_id);
+      if (piece_id == last_piece_id) { AsyncReturnModelRegst(); }
     }
     if (other_model_regst_desc_id_ != -1) {
       bool is_last_piece_in_batch =
-          (in_regst->piece_id() + 1)
-              % Global<JobDesc>::Get()->NumOfPiecesInBatch()
-          == 0;
+          (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
       bool is_need_save =
           model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
           || (model_version_id + 1)
@@ -142,7 +142,7 @@ void ForwardCompActor::Act() {
                  == 0;
       if (is_last_piece_in_batch && is_need_save) {
         AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-          regst->set_piece_id(in_regst->piece_id());
+          regst->set_piece_id(piece_id);
           regst->set_model_version_id(model_version_id);
           return regst->regst_desc_id() == other_model_regst_desc_id_;
         });
