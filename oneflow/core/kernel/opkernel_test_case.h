@@ -37,8 +37,13 @@ class OpKernelTestCase final {
   void set_is_train(bool is_train);
   void set_device_type(DeviceType device_type) { device_type_ = device_type; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
+  KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
   void InitBlob(const std::string&, Blob* blob);
   void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob);
+  void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob,
+                        bool need_random_init);
+  void BackwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob,
+                         bool need_random_init);
   void BackwardCheckBlob(const std::string&, DeviceType device_type,
                          Blob* blob);
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }

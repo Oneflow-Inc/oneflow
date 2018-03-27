@@ -51,25 +51,19 @@ void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
 template<typename T>
 class KTCommon<DeviceType::kCPU, T> final {
  public:
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
-    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
-                         ret->ByteSizeOfDataContentField(),
-                         cudaMemcpyHostToHost));
-    return ret;
-  }
-
-  static void BlobCmp(const Blob* lhs, const Blob* rhs) {
-    ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc());
+  static void BlobCmp(const std::string& blob_name, const Blob* lhs,
+                      const Blob* rhs) {
+    ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc()) << blob_name;
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
-        ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]);
+        ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]) << blob_name;
       }
     } else {
       ASSERT_EQ(
           memcmp(lhs->dptr(), rhs->dptr(), lhs->ByteSizeOfDataContentField()),
-          0);
+          0)
+          << blob_name;
     }
   }
 
@@ -87,6 +81,16 @@ class KTCommon<DeviceType::kCPU, T> final {
     } else {
       UNIMPLEMENTED();
     }
+  }
+
+ private:
+  static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc* blob_desc,
+                                             T* val) {
+    Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
+    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
+                         ret->ByteSizeOfDataContentField(),
+                         cudaMemcpyHostToHost));
+    return ret;
   }
 };
 
