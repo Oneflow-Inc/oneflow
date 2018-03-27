@@ -57,7 +57,7 @@ class KTCommon<DeviceType::kCPU, T> final {
     CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
     if (IsFloatingPoint(lhs->data_type())) {
       for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
-        ASSERT_FLOAT_EQ(lhs->dptr<T>()[i], rhs->dptr<T>()[i]) << blob_name;
+        ASSERT_NEAR(lhs->dptr<T>()[i], rhs->dptr<T>()[i], 1e-6) << blob_name;
       }
     } else {
       ASSERT_EQ(
