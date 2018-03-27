@@ -32,7 +32,7 @@ class SoftmaxOp final : public Operator {
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*, const OpContext*) const override;
-  SoftmaxOpCtx* GetSoftmaxOpCtx(const Shape& in_shape) const;
+  SoftmaxOpCtx* NewSoftmaxOpCtx(const Shape& in_shape) const;
 };
 
 }  // namespace oneflow

@@ -25,7 +25,7 @@ void SoftmaxOp::InferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // out
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
-  SoftmaxOpCtx* op_ctx = GetSoftmaxOpCtx(in_blob_desc->shape());
+  SoftmaxOpCtx* op_ctx = NewSoftmaxOpCtx(in_blob_desc->shape());
   EnrollOpCtx(op_ctx);
 
   // 1D blob store tmp calculate result
@@ -51,7 +51,7 @@ void SoftmaxOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
     const OpContext* op_ctx) const {
   SoftmaxKernelConf* conf = kernel_conf->mutable_softmax_conf();
-  const SoftmaxOpCtx* softmax_ctx = dynamic_cast<const SoftmaxOpCtx*>(op_ctx);
+  const SoftmaxOpCtx* softmax_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
   conf->set_axis(softmax_ctx->axis);
   conf->set_transpose_rows(softmax_ctx->transpose_rows);
   conf->set_transpose_cols(softmax_ctx->transpose_cols);
@@ -65,7 +65,7 @@ void SoftmaxOp::VirtualGenKernelConf(
   }
 }
 
-SoftmaxOpCtx* SoftmaxOp::GetSoftmaxOpCtx(const Shape& in_shape) const {
+SoftmaxOpCtx* SoftmaxOp::NewSoftmaxOpCtx(const Shape& in_shape) const {
   SoftmaxOpCtx* op_ctx = new SoftmaxOpCtx();
   op_ctx->axis = op_conf().softmax_conf().axis();
   op_ctx->dims = in_shape.NumAxes();
