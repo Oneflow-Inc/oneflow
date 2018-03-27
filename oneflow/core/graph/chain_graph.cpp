@@ -527,7 +527,6 @@ void ChainGraph::BuildModelStruct(
       }
     }
     Connect<ChainNode>(md_updt_chain, NewEdge(), fw_chain);
-
     if (is_train == false) { return; }
     // Model Diff Accumulate Chain
     BackwardChainNode* bw_chain = fw_chain->bw_node();
@@ -543,7 +542,6 @@ void ChainGraph::BuildModelStruct(
     md_diff_acc_chain->mut_parallel_desc().reset(md_diff_acc_pr_desc);
     Connect<ChainNode>(bw_chain, NewEdge(), md_diff_acc_chain);
     Connect<ChainNode>(md_diff_acc_chain, NewEdge(), md_updt_chain);
-
     BuildNormalizationStruct(fw_chain);
   });
 }

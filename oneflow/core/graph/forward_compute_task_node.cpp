@@ -18,18 +18,20 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
-  bool has_succ_mdsave = false;
+  bool is_succ_mdsave = false;
   const TaskNode* dst_task_node = edge->dst_node();
   if (dst_task_node->GetTaskType() == TaskType::kMdSave) {
-    has_succ_mdsave = true;
+    is_succ_mdsave = true;
   } else if (dst_task_node->GetTaskType() == TaskType::kCopyHd
              && dst_task_node->out_edges().size() == 1) {
     if (dst_task_node->SoleOutEdge()->dst_node()->GetTaskType()
         == TaskType::kMdSave) {
-      has_succ_mdsave = true;
+      is_succ_mdsave = true;
     }
+  } else {
+    // do nothing
   }
-  if (has_succ_mdsave) {
+  if (is_succ_mdsave) {
     edge->AddRegst("other_model", GetProducedRegst("other_model"));
   } else {
     edge->AddRegst("out", GetProducedRegst("out"));
