@@ -10,11 +10,11 @@ void GatherKernel<device_type, T>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   int32_t col_id = *(static_cast<int32_t*>(ctx.other));
-  int32_t data_num = in_blob->shape().At(0);
-  int32_t hid_dim = in_blob->shape().Count(1);
+  int64_t data_num = in_blob->shape().At(0);
+  int64_t hid_dim = in_blob->shape().Count(1);
   CHECK_EQ(hid_dim, out_blob->shape().Count(1));
 
-  for (int32_t i = 0; i < data_num; ++i) {
+  for (int64_t i = 0; i < data_num; ++i) {
     if (in_blob->col_num(i) == col_id) {
       Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>() + i * hid_dim,
                           in_blob->dptr<T>() + i * hid_dim, hid_dim);
@@ -47,13 +47,13 @@ void GatherKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   int32_t col_id = *(static_cast<int32_t*>(ctx.other));
-  int32_t data_num = out_diff_blob->shape().At(0);
-  int32_t hid_dim = out_diff_blob->shape().Count(1);
+  int64_t data_num = out_diff_blob->shape().At(0);
+  int64_t hid_dim = out_diff_blob->shape().Count(1);
   CHECK_EQ(hid_dim, in_diff_blob->shape().Count(1));
 
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
-  for (int32_t i = 0; i < data_num; ++i) {
+  for (int64_t i = 0; i < data_num; ++i) {
     if (out_diff_blob->col_num(i) == col_id) {
       Memcpy<device_type>(ctx.device_ctx,
                           in_diff_blob->mut_dptr<T>() + i * hid_dim,
