@@ -6,13 +6,13 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-const T* img_offset(const Blob* blob, int32_t idx) {
+const T* GetImgDptr(const Blob* blob, int32_t idx) {
   return blob->dptr<T>() + blob->shape().At(0) * idx;
 }
 
 template<typename T>
-T* mut_img_offset(Blob* blob, int32_t idx) {
-  return const_cast<T*>(img_offset<T>(blob, idx));
+T* GetImgMutDptr(Blob* blob, int32_t idx) {
+  return const_cast<T*>(GetImgDptr<T>(blob, idx));
 }
 
 }  // namespace
@@ -22,9 +22,12 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    BiasBackward(ctx.device_ctx, BnInOp2Blob);
+    BiasBackward(ctx.device_ctx, BnInOp2Blob("out_diff"),
+                 BnInOp2Blob("bias_diff"), BnInOp2Blob);
   }
-  WeightBackward(ctx.device_ctx, BnInOp2Blob);
+  WeightBackward(ctx.device_ctx, BnInOp2Blob("out_diff"), BnInOp2Blob("in"),
+                 BnInOp2Blob("weight_diff"), BnInOp2Blob("in_diff"),
+                 BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -125,7 +128,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   FOR_RANGE(int64_t, i, 0, in_blob->shape().At(0)) {
     im2col_func_(
-        ctx.device_ctx, img_offset<T>(in_blob, i), in_blob->shape(),
+        ctx.device_ctx, GetImgDptr<T>(in_blob, i), in_blob->shape(),
         weight_blob->shape(), out_blob->shape(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
         this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
@@ -142,7 +145,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
                   weight_blob->shape().Count(1),   // ci * kd * kh * kw
                   static_cast<T>(1), weight_blob->dptr<T>(),
                   col_buf_blob->dptr<T>(), static_cast<T>(0),
-                  mut_img_offset<T>(out_blob, i));
+                  GetImgMutDptr<T>(out_blob, i));
 
     if (this->GetBoolFromCustomizedOpConf("use_bias")) {
       const Blob* bias_blob = BnInOp2Blob("bias");
@@ -155,19 +158,17 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
                     1,                               // 1
                     static_cast<T>(1), bias_blob->dptr<T>(),
                     bias_mul_blob->dptr<T>(), static_cast<T>(1),
-                    mut_img_offset<T>(out_blob, i));
+                    GetImgMutDptr<T>(out_blob, i));
     }
   }
 }  //
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
-    DeviceCtx* ctx,
+    DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob,
+    Blob* weight_diff_blob, Blob* in_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   Memset<DeviceType::kCPU>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
                            weight_diff_blob->ByteSizeOfDataContentField());
@@ -189,7 +190,7 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
         weight_diff_blob->shape().At(1),     //  filter
         weight_diff_blob->shape().Count(1),  //  ci * kd * kh * kw
         col_buf_blob->shape().Count(4),      //  od * oh * ow
-        static_cast<T>(1), img_offset<T>(out_diff_blob, i),
+        static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i),
         col_buf_blob->dptr<T>(), static_cast<T>(1),
         weight_diff_blob->mut_dptr<T>());
 
@@ -201,31 +202,28 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
         col_buf_blob->shape().Count(4),     //  od * oh * ow
         weight_blob->shape().At(0),         //  filter
         static_cast<T>(1), weight_blob->dptr<T>(),
-        img_offset<T>(out_diff_blob, i), static_cast<T>(0),
+        GetImgDptr<T>(out_diff_blob, i), static_cast<T>(0),
         col_buf_blob->mut_dptr<T>());
 
-    Blob* in_diff_blob = BnInOp2Blob("in_diff");
-    if (in_diff_blob == nullptr) { return; }
-
-    // col2im(col_buf')
-    col2im_func_(
-        ctx, col_buf_blob->dptr<T>(), in_blob->shape(), weight_blob->shape(),
-        out_diff_blob->shape(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
-            .data(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("padding_before")
-            .data(),
-        mut_img_offset<T>(in_diff_blob, i));
+    if (in_diff_blob != nullptr) {
+      // col2im(col_buf')
+      col2im_func_(
+          ctx, col_buf_blob->dptr<T>(), in_blob->shape(), weight_blob->shape(),
+          out_diff_blob->shape(),
+          this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
+          this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
+              .data(),
+          this->template GetPbRfFromCustomizedOpConf<int32_t>("padding_before")
+              .data(),
+          GetImgMutDptr<T>(in_diff_blob, i));
+    }
   }
 }
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::BiasBackward(
-    DeviceCtx* ctx,
+    DeviceCtx* ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
   Memset<DeviceType::kCPU>(ctx, bias_diff_blob->mut_dptr<T>(), 0,
                            bias_diff_blob->ByteSizeOfDataContentField());
@@ -239,7 +237,7 @@ void ConvKernel<DeviceType::kCPU, T>::BiasBackward(
         1,                              //  1
         out_diff_blob->shape().Count(dhw_offset_,
                                      dhw_offset_ + 3),  // od * oh * ow
-        static_cast<T>(1), img_offset<T>(out_diff_blob, i),
+        static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i),
         bias_mul_blob->dptr<T>(), static_cast<T>(1),
         bias_diff_blob->mut_dptr<T>());
   }

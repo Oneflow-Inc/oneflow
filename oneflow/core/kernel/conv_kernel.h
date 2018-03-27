@@ -30,10 +30,11 @@ class ConvKernelIf : public KernelIf<device_type> {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   virtual void WeightBackward(
-      DeviceCtx*,
+      DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+      Blob* weight_diff_blob, Blob* in_diff_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void BiasBackward(
-      DeviceCtx*,
+      DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 
   const PbMessage& GetCustomizedOpConf() const override;
@@ -78,10 +79,11 @@ class ConvKernel<DeviceType::kCPU, T> final
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackward(
-      DeviceCtx*,
+      DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+      Blob* weight_diff_blob, Blob* in_diff_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackward(
-      DeviceCtx*,
+      DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
@@ -104,10 +106,11 @@ class ConvKernel<DeviceType::kGPU, T> final
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackward(
-      DeviceCtx*,
+      DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+      Blob* weight_diff_blob, Blob* in_diff_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackward(
-      DeviceCtx*,
+      DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
