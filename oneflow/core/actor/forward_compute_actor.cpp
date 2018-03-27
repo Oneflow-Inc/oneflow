@@ -100,27 +100,29 @@ void ForwardCompActor::Act() {
   pending_in_regsts_.pop();
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [&](int64_t regst_desc_id) -> Regst* {
-                      if (regst_desc_id == in_regst_desc_id_) {
-                        return in_regst;
-                      } else if (regst_desc_id == model_regst_desc_id_) {
-                        return model_regst_;
-                      } else if (regst_desc_id == model_tmp_regst_desc_id_) {
-                        return model_tmp_regst_;
-                      } else {
-                        return GetCurWriteableRegst(regst_desc_id);
-                      }
-                    });
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  int64_t piece_id = in_regst->piece_id();
+  kernel_ctx.other = &piece_id;
+  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+    if (regst_desc_id == in_regst_desc_id_) {
+      return in_regst;
+    } else if (regst_desc_id == model_regst_desc_id_) {
+      return model_regst_;
+    } else if (regst_desc_id == model_tmp_regst_desc_id_) {
+      return model_tmp_regst_;
+    } else {
+      return GetCurWriteableRegst(regst_desc_id);
+    }
+  });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(in_regst->piece_id());
+    regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
     return true;
   });
   if (Global<JobDesc>::Get()->IsTrain() && model_regst_) {
     int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
-    CHECK_LE(in_regst->piece_id(), last_piece_id);
-    if (in_regst->piece_id() == last_piece_id) { AsyncReturnModelRegst(); }
+    CHECK_LE(piece_id, last_piece_id);
+    if (piece_id == last_piece_id) { AsyncReturnModelRegst(); }
   }
   AsyncSendRegstMsgToProducer(in_regst);
 }
