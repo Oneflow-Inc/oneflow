@@ -12,13 +12,15 @@ std::string ExpectedBlobName(const std::string& name) {
   return name + "_$expected$";
 }
 
-void BlobCmp(DeviceType device_type, const Blob* lhs, const Blob* rhs) {
+void BlobCmp(const std::string& blob_name, DeviceType device_type,
+             const Blob* lhs, const Blob* rhs) {
   DataType data_type = lhs->data_type();
 
 #define BLOB_CMP_ENTRY(dev_type, data_type_pair)                             \
   if (device_type == dev_type                                                \
       && data_type == OF_PP_PAIR_SECOND(data_type_pair)) {                   \
-    KTCommon<dev_type, OF_PP_PAIR_FIRST(data_type_pair)>::BlobCmp(lhs, rhs); \
+    KTCommon<dev_type, OF_PP_PAIR_FIRST(data_type_pair)>::BlobCmp(blob_name, \
+                                                                  lhs, rhs); \
     return;                                                                  \
   }
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(BLOB_CMP_ENTRY, DEVICE_TYPE_SEQ,
@@ -48,17 +50,33 @@ void OpKernelTestCase::InitBlob(const std::string& name, Blob* blob) {
 }
 
 void OpKernelTestCase::ForwardCheckBlob(const std::string& name,
-                                        DeviceType device_type, Blob* blob) {
+                                        DeviceType device_type, Blob* blob,
+                                        bool need_random_init) {
   forward_asserted_blob_names_.push_back(name);
-  InitBlob(name, CreateBlobWithRandomVal(device_type, blob->blob_desc_ptr()));
+  if (need_random_init) {
+    InitBlob(name, CreateBlobWithRandomVal(device_type, blob->blob_desc_ptr()));
+  }
+  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
+}
+
+void OpKernelTestCase::ForwardCheckBlob(const std::string& name,
+                                        DeviceType device_type, Blob* blob) {
+  ForwardCheckBlob(name, device_type, blob, true);
+}
+
+void OpKernelTestCase::BackwardCheckBlob(const std::string& name,
+                                         DeviceType device_type, Blob* blob,
+                                         bool need_random_init) {
+  backward_asserted_blob_names_.push_back(name);
+  if (need_random_init) {
+    InitBlob(name, CreateBlobWithRandomVal(device_type, blob->blob_desc_ptr()));
+  }
   CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
 }
 
 void OpKernelTestCase::BackwardCheckBlob(const std::string& name,
                                          DeviceType device_type, Blob* blob) {
-  backward_asserted_blob_names_.push_back(name);
-  InitBlob(name, CreateBlobWithRandomVal(device_type, blob->blob_desc_ptr()));
-  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
+  BackwardCheckBlob(name, device_type, blob, true);
 }
 
 std::function<Blob*(const std::string&)>
@@ -113,7 +131,7 @@ void OpKernelTestCase::AssertAfterRun() const {
     asserted_blob_names = &backward_asserted_blob_names_;
   }
   for (const auto& blob_name : *asserted_blob_names) {
-    BlobCmp(device_type_, bn_in_op2blob_.at(blob_name),
+    BlobCmp(blob_name, device_type_, bn_in_op2blob_.at(blob_name),
             bn_in_op2blob_.at(ExpectedBlobName(blob_name)));
   }
 }

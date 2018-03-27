@@ -40,15 +40,8 @@ void SyncStream<DeviceType::kGPU>(KernelCtx* ctx) {
 template<typename T>
 class KTCommon<DeviceType::kGPU, T> final {
  public:
-  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc, T* val) {
-    Blob* ret = CreateBlob<DeviceType::kGPU>(blob_desc);
-    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
-                         ret->ByteSizeOfDataContentField(),
-                         cudaMemcpyHostToDevice));
-    return ret;
-  }
-
-  static void BlobCmp(const Blob* lhs, const Blob* rhs) {
+  static void BlobCmp(const std::string& blob_name, const Blob* lhs,
+                      const Blob* rhs) {
     Blob* cpu_lhs = CreateBlob<DeviceType::kCPU>(lhs->blob_desc_ptr());
     Blob* cpu_rhs = CreateBlob<DeviceType::kCPU>(rhs->blob_desc_ptr());
     CudaCheck(cudaMemcpy(cpu_lhs->mut_dptr(), lhs->dptr(),
@@ -57,7 +50,7 @@ class KTCommon<DeviceType::kGPU, T> final {
     CudaCheck(cudaMemcpy(cpu_rhs->mut_dptr(), rhs->dptr(),
                          rhs->ByteSizeOfDataContentField(),
                          cudaMemcpyDeviceToHost));
-    KTCommon<DeviceType::kCPU, T>::BlobCmp(cpu_lhs, cpu_rhs);
+    KTCommon<DeviceType::kCPU, T>::BlobCmp(blob_name, cpu_lhs, cpu_rhs);
   }
 
   static void CheckInitializeResult(const Blob* blob,
@@ -68,6 +61,16 @@ class KTCommon<DeviceType::kGPU, T> final {
                          cudaMemcpyDeviceToHost));
     KTCommon<DeviceType::kCPU, T>::CheckInitializeResult(cpu_blob,
                                                          initializer_conf);
+  }
+
+ private:
+  static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc* blob_desc,
+                                             T* val) {
+    Blob* ret = CreateBlob<DeviceType::kGPU>(blob_desc);
+    CudaCheck(cudaMemcpy(ret->mut_dptr(), val,
+                         ret->ByteSizeOfDataContentField(),
+                         cudaMemcpyHostToDevice));
+    return ret;
   }
 };
 
