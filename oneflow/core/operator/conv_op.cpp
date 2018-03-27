@@ -247,15 +247,15 @@ void ConvOp<NDims>::InferCudnnAlgo(
                           GetCustomizedConf());
 
   int returned_algo_count = -1;
-  CudaCheck(cudnnFindConvolutionForwardAlgorithm(
+  CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
       conv_desc.Get(), out_desc.Get(), 1, &returned_algo_count,
       &conv_ctx->fwd_algo_perf));
-  CudaCheck(cudnnFindConvolutionBackwardFilterAlgorithm(
+  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
       *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(),
       conv_desc.Get(), filter_desc.Get(), 1, &returned_algo_count,
       &conv_ctx->bwd_filter_algo_perf));
-  CudaCheck(cudnnFindConvolutionBackwardDataAlgorithm(
+  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(),
       conv_desc.Get(), in_desc.Get(), 1, &returned_algo_count,
       &conv_ctx->bwd_data_algo_perf));
