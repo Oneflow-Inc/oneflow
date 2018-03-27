@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 
-#include "oneflow/core/blas/cblas_template.h"
-#include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/common/blas.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cudnn_util.h"
@@ -52,8 +51,12 @@ struct KernelUtil final {
   // y = a*x + y
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy);
+  static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
+                   const int incx, T* y, const int incy);
 
   // x = a*x
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
+                   const int incx);
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx);
   // max(x) only cpu
@@ -108,6 +111,9 @@ struct KernelUtil final {
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy);
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                   int n, const T* alpha, const T* a, int lda, const T* x,
+                   const int incx, const T* beta, T* y, const int incy);
 
   // matrix matrix multiply
   static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
@@ -115,6 +121,12 @@ struct KernelUtil final {
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
                    const int k, const T alpha, const T* a, const int lda,
                    const T* b, const int ldb, const T beta, T* c,
+                   const int ldc);
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                   const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                   const int k, const T* alpha, const T* a, const int lda,
+                   const T* b, const int ldb, const T* beta, T* c,
                    const int ldc);
 
   // Generate random number of specific distribution
@@ -167,17 +179,23 @@ struct KernelUtil final {
     OFGemm(ctx, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
   }
 
-  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                       enum CBLAS_TRANSPOSE trans_b, T alpha, T beta,
-                       const Blob* a, const Blob* b, Blob* c) {
-    const int m = c->shape().At(0);
-    const int n = c->shape().Count(1);
-    const int k =
-        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
-
-    OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(),
-           beta, c->mut_dptr<T>());
+#define GEN_BLOB_GEMM_FUNC(type)                                              \
+  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,          \
+                       enum CBLAS_TRANSPOSE trans_b, type alpha, type beta,   \
+                       const Blob* a, const Blob* b, Blob* c) {               \
+    const int m = c->shape().At(0);                                           \
+    const int n = c->shape().Count(1);                                        \
+    const int k =                                                             \
+        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);   \
+                                                                              \
+    OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), \
+           beta, c->mut_dptr<T>());                                           \
   }
+
+  GEN_BLOB_GEMM_FUNC(T)
+  GEN_BLOB_GEMM_FUNC(T*)
+
+#undef GEN_BLOB_GEMM_FUNC
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
