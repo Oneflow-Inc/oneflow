@@ -7,6 +7,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out");
   ProduceRegst("activation");
   ProduceRegst("data_tmp");
+  ProduceRegst("other_model");
   for (TaskEdge* edge : out_edges()) {
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
@@ -17,10 +18,27 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
-  edge->AddRegst("out", GetProducedRegst("out"));
-  if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
-    edge->AddRegst("activation", GetProducedRegst("activation"));
-    edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
+  bool is_succ_mdsave = false;
+  const TaskNode* dst_task_node = edge->dst_node();
+  if (dst_task_node->GetTaskType() == TaskType::kMdSave) {
+    is_succ_mdsave = true;
+  } else if (dst_task_node->GetTaskType() == TaskType::kCopyHd
+             && dst_task_node->out_edges().size() == 1) {
+    if (dst_task_node->SoleOutEdge()->dst_node()->GetTaskType()
+        == TaskType::kMdSave) {
+      is_succ_mdsave = true;
+    }
+  } else {
+    // do nothing
+  }
+  if (is_succ_mdsave) {
+    edge->AddRegst("other_model", GetProducedRegst("other_model"));
+  } else {
+    edge->AddRegst("out", GetProducedRegst("out"));
+    if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
+      edge->AddRegst("activation", GetProducedRegst("activation"));
+      edge->AddRegst("data_tmp", GetProducedRegst("data_tmp"));
+    }
   }
 }
 
