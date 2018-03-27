@@ -9,55 +9,70 @@
 #define OF_PP_INTERNAL_CAT(a, b) OF_PP_INTERNAL_CAT_I(a, b)
 #define OF_PP_INTERNAL_CAT_I(a, b) a##b
 
-#define OF_PP_INTERNAL_JOIN(...)                                      \
-  OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_JOIN_,         \
-                                        OF_PP_INTERNAL_VARIADIC_SIZE( \
-                                            __VA_ARGS__))(__VA_ARGS__), )
+#define OF_PP_INTERNAL_JOIN(glue, ...)                               \
+  OF_PP_INTERNAL_CAT(                                                \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_JOIN_,                       \
+                         OF_PP_INTERNAL_VARIADIC_SIZE(__VA_ARGS__))( \
+          glue, __VA_ARGS__), )
 
-#define OF_PP_INTERNAL_JOIN_0()
-#define OF_PP_INTERNAL_JOIN_1(x) x
-#define OF_PP_INTERNAL_JOIN_2(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_1(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_3(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_2(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_4(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_3(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_5(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_4(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_6(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_5(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_7(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_6(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_8(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_7(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_9(x, ...) \
-  OF_PP_INTERNAL_CAT(                 \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_8(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_10(x, ...) \
-  OF_PP_INTERNAL_CAT(                  \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_9(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_11(x, ...) \
-  OF_PP_INTERNAL_CAT(                  \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_10(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_12(x, ...) \
-  OF_PP_INTERNAL_CAT(                  \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_11(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_13(x, ...) \
-  OF_PP_INTERNAL_CAT(                  \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_12(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_14(x, ...) \
-  OF_PP_INTERNAL_CAT(                  \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_13(__VA_ARGS__)), )
-#define OF_PP_INTERNAL_JOIN_15(x, ...) \
-  OF_PP_INTERNAL_CAT(                  \
-      OF_PP_INTERNAL_CAT(x, OF_PP_INTERNAL_JOIN_14(__VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_0(glue)
+#define OF_PP_INTERNAL_JOIN_1(glue, x) x
+#define OF_PP_INTERNAL_JOIN_2(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_1(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_3(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_2(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_4(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_3(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_5(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_4(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_6(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_5(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_7(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_6(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_8(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_7(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_9(glue, x, ...)           \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_8(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_10(glue, x, ...)          \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_9(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_11(glue, x, ...)          \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_10(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_12(glue, x, ...)          \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_11(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_13(glue, x, ...)          \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_12(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_14(glue, x, ...)          \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_13(glue, __VA_ARGS__)), )
+#define OF_PP_INTERNAL_JOIN_15(glue, x, ...)          \
+  OF_PP_INTERNAL_CAT(                                 \
+      OF_PP_INTERNAL_CAT(OF_PP_INTERNAL_CAT(x, glue), \
+                         OF_PP_INTERNAL_JOIN_14(glue, __VA_ARGS__)), )
 
 #define OF_PP_INTERNAL_SEQ_HEAD(seq) \
   OF_PP_INTERNAL_PAIR_FIRST(OF_PP_INTERNAL_SEQ_TO_PAIR(seq))
@@ -229,18 +244,33 @@
 #define OF_PP_INTERNAL_SEQ_PRODUCT_0()
 #define OF_PP_INTERNAL_SEQ_PRODUCT_1(seq0) \
   OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ((()), seq0)
-#define OF_PP_INTERNAL_SEQ_PRODUCT_2(seq0, seq1)                            \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(OF_PP_INTERNAL_SEQ_PRODUCT_1(seq1), \
-                                        seq0)
-#define OF_PP_INTERNAL_SEQ_PRODUCT_3(seq0, seq1, seq2) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(               \
-      OF_PP_INTERNAL_SEQ_PRODUCT_2(seq1, seq2), seq0)
-#define OF_PP_INTERNAL_SEQ_PRODUCT_4(seq0, seq1, seq2, seq3) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(                     \
-      OF_PP_INTERNAL_SEQ_PRODUCT_3(seq1, seq2, seq3), seq0)
-#define OF_PP_INTERNAL_SEQ_PRODUCT_5(seq0, seq1, seq2, seq3, seq4) \
-  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(                           \
-      OF_PP_INTERNAL_SEQ_PRODUCT_4(seq1, seq2, seq3, seq4), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_2(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_1(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_3(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_2(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_4(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_3(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_5(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_4(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_6(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_5(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_7(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_6(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_8(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_7(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_9(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(        \
+      OF_PP_INTERNAL_SEQ_PRODUCT_8(__VA_ARGS__), seq0)
+#define OF_PP_INTERNAL_SEQ_PRODUCT_10(seq0, ...) \
+  OF_PP_INTERNAL_TUPLE_SEQ_X_ATOMIC_SEQ(         \
+      OF_PP_INTERNAL_SEQ_PRODUCT_9(__VA_ARGS__), seq0)
 
 // Seq ForEach
 
