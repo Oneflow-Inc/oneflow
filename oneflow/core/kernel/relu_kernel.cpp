@@ -24,6 +24,6 @@ void ReluKernel<device_type, T>::BackwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReluConf, ReluKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

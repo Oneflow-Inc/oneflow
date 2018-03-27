@@ -155,6 +155,11 @@ void OpKernelTestCase::Run() {
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, BnInOp2Blob);
   }
+  if (device_type_ == DeviceType::kCPU) {
+    SyncStream<DeviceType::kCPU>(&kernel_ctx_);
+  } else if (device_type_ == DeviceType::kGPU) {
+    SyncStream<DeviceType::kGPU>(&kernel_ctx_);
+  }
   AssertAfterRun();
 }
 

@@ -21,6 +21,7 @@ void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   cudaStream_t* cuda_stream = new cudaStream_t;
   cublasHandle_t* cublas_pmh_handle = new cublasHandle_t;
   cublasHandle_t* cublas_pmd_handle = new cublasHandle_t;
+  cudnnHandle_t* cudnn_handle = new cudnnHandle_t;
   CudaCheck(cudaStreamCreate(cuda_stream));
   CudaCheck(cublasCreate(cublas_pmh_handle));
   CudaCheck(cublasCreate(cublas_pmd_handle));
@@ -28,8 +29,10 @@ void BuildKernelCtx<DeviceType::kGPU>(KernelCtx* ctx) {
   CudaCheck(cublasSetStream(*cublas_pmd_handle, *cuda_stream));
   CudaCheck(
       cublasSetPointerMode(*cublas_pmd_handle, CUBLAS_POINTER_MODE_DEVICE));
+  CudaCheck(cudnnCreate(cudnn_handle));
+  CudaCheck(cudnnSetStream(*cudnn_handle, *cuda_stream));
   ctx->device_ctx = new CudaDeviceCtx(-1, cuda_stream, cublas_pmh_handle,
-                                      cublas_pmd_handle, nullptr, nullptr);
+                                      cublas_pmd_handle, cudnn_handle, nullptr);
 }
 
 template<>
