@@ -7,7 +7,7 @@ global_fs_conf {
     namenode: "hdfs://192.168.1.11:9000"
   }
 }
-single_piece_size: 1
+single_piece_size: 10
 data_part_num: 6
 model_load_snapshot_path: ""
 max_data_id_length: 0
