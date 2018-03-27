@@ -43,7 +43,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightForward(
   int64_t cudnn_buf_size = 0;
   T* cudnn_buf_dptr = nullptr;
   if (cudnn_buf) {
-    int64_t cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_size = cudnn_buf->shape().At(0);
     cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
   }
   CudaCheck(cudnnConvolutionForward(
@@ -74,7 +74,7 @@ void ConvKernel<DeviceType::kGPU, T>::DataBackward(
   int64_t cudnn_buf_size = 0;
   T* cudnn_buf_dptr = nullptr;
   if (cudnn_buf) {
-    int64_t cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_size = cudnn_buf->shape().At(0);
     cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
   }
   CudaCheck(cudnnConvolutionBackwardData(
@@ -96,7 +96,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
   int64_t cudnn_buf_size = 0;
   T* cudnn_buf_dptr = nullptr;
   if (cudnn_buf) {
-    int64_t cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_size = cudnn_buf->shape().At(0);
     cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
   }
   CudaCheck(cudnnConvolutionBackwardFilter(
