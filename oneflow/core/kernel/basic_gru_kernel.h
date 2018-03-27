@@ -6,6 +6,13 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
+using FwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, T*);
+
+template<DeviceType device_type, typename T>
+using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, const T*,
+                                  const T*, T*);
+
+template<DeviceType device_type, typename T>
 class BasicGruKernel final : public RecurrentKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BasicGruKernel);
@@ -13,6 +20,7 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
   ~BasicGruKernel() = default;
 
  private:
+  void VirtualKernelInit(const ParallelContext*) override;
   const PbMessage& GetRecurrentOpConf() const override;
   bool HasInitHiddenInitializer() const override;
   void ForwardDataContent(
@@ -31,6 +39,10 @@ class BasicGruKernel final : public RecurrentKernel<device_type, T> {
   void InitModelTmpBlobs(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
+  FwActivationFunc<device_type, T> activation_fw_func_;
+  BwActivationFunc<device_type, T> activation_bw_func_;
 };
 
 template<DeviceType device_type, typename T>
@@ -45,7 +57,8 @@ struct BasicGruKernelUtil {
       const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
       const Blob* bias_multiplier, const Blob* i2h_weight,
       const Blob* h2h_weight, const Blob* bias, Blob* candidate_data,
-      Blob* dandidate_out, Blob* reset_out, Blob* temp_data);
+      Blob* dandidate_out, Blob* reset_out, Blob* temp_data,
+      FwActivationFunc<device_type, T> activation_fw_func_);
   static void ComputePlusOutForward(const KernelCtx& ctx, const Blob* hidden,
                                     Blob* candidate_out, Blob* temp_data,
                                     Blob* update_out, Blob* plus_out);
@@ -59,7 +72,7 @@ struct BasicGruKernelUtil {
       Blob* hiddden, Blob* update_o_diff, Blob* update_o_bran_diff,
       Blob* update_d_diff, Blob* candidate_o_diff, Blob* candidate_d_diff,
       const Blob* h2h_weight, Blob* temp_data, Blob* reset_o_diff,
-      Blob* reset_d_diff);
+      Blob* reset_d_diff, BwActivationFunc<device_type, T> activation_bw_func_);
   static void ComputeHiddenDiff(const KernelCtx& ctx, const Blob* h2h_weight_r,
                                 const Blob* h2h_weight_z,
                                 const Blob* h2h_weight, const Blob* reset_out,
