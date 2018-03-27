@@ -1,5 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
 #define ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/job/job_desc.h"
@@ -8,6 +9,7 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
 
 namespace oneflow {
 
