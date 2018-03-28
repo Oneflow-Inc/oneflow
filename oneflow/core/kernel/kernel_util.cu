@@ -55,7 +55,7 @@ template<typename T>
 struct KernelUtil<DeviceType::kGPU, T> final {
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
                   const T* y, const int incy, T* result) {
-    cublas_dot<T>(ctx->cublas_pmh_handle(), n, x, incx, y, incy, result);
+    cublas_dot<T>(ctx->cublas_pmd_handle(), n, x, incx, y, incy, result);
   }
   static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
                    T* y, const int incy) {
