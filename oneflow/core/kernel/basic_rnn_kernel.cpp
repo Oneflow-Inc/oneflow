@@ -46,20 +46,20 @@ void BasicRnnKernel<device_type, T>::ForwardDataContent(
 
   // plus_op_out = in * i2h_weight
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
-      static_cast<T>(0), BnInOp2Blob("in"), BnInOp2Blob("i2h_weight"),
+      ctx.device_ctx, CblasNoTrans, CblasTrans, OneVal<T>::value,
+      ZeroVal<T>::value, BnInOp2Blob("in"), BnInOp2Blob("i2h_weight"),
       plus_op_out_blob);
 
   // plus_op_out += hidden * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
-                                       static_cast<T>(1), static_cast<T>(1),
+                                       OneVal<T>::value, OneVal<T>::value,
                                        hidden_blob, BnInOp2Blob("h2h_weight"),
                                        plus_op_out_blob);
 
   // plus_op_out += bias_multiplier * bias
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias"),
+      ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
+      OneVal<T>::value, BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias"),
       plus_op_out_blob);
 
   // out = activation(plus_op_out)
@@ -96,29 +96,29 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
 
   // h2h_weight_diff = plus_op_out_diff * hidden
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
+                                       OneVal<T>::value, ZeroVal<T>::value,
                                        plus_op_out_diff_blob, hidden_blob,
                                        BnInOp2Blob("h2h_weight_diff"));
 
   // i2h_weight_diff = plus_op_out_diff * in
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
+                                       OneVal<T>::value, ZeroVal<T>::value,
                                        plus_op_out_diff_blob, BnInOp2Blob("in"),
                                        BnInOp2Blob("i2h_weight_diff"));
 
   if (BnInOp2Blob("in_diff") != nullptr) {
     // in_diff = plus_op_out_diff * i2h_weight
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
+        ZeroVal<T>::value, plus_op_out_diff_blob, BnInOp2Blob("i2h_weight"),
         BnInOp2Blob("in_diff"));
   }
 
   if (BnInOp2Blob("bias_diff") != nullptr) {
     // bias_diff = bias_multiplier * plus_op_out_diff
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), BnInOp2Blob("bias_multiplier"),
+        ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
+        ZeroVal<T>::value, BnInOp2Blob("bias_multiplier"),
         plus_op_out_diff_blob, BnInOp2Blob("bias_diff"));
   }
 
@@ -126,8 +126,8 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
       || this->op_conf().basic_rnn_conf().is_init_hidden_trainable()) {
     // hidden_diff = plus_op_out_diff * h2h_weight
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
+        ZeroVal<T>::value, plus_op_out_diff_blob, BnInOp2Blob("h2h_weight"),
         this->GetHiddenDiffBlob(BnInOp2Blob));
   }
 }

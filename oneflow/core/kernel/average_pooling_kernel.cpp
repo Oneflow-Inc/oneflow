@@ -4,7 +4,7 @@ namespace oneflow {
 
 template<typename T>
 T AveragePoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
-  return static_cast<T>(0);
+  return ZeroVal<T>::value;
 }
 
 template<typename T>
