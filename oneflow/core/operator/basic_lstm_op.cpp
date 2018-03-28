@@ -7,25 +7,32 @@ const PbMessage& BasicLstmOp::GetCustomizedConf() const {
 }
 
 void BasicLstmOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("f_gate_out");
+  EnrollDataTmpBn("state_data");
+  EnrollDataTmpBn("candidate_out");
+
   EnrollDataTmpBn("f_out");
   EnrollModelBn("i2h_f_weight");
   EnrollModelBn("h2h_f_weight");
+  EnrollDataTmpBn("f_data_diff");
+  EnrollDataTmpBn("f_out_diff");
 
-  EnrollDataTmpBn("i_gate_out");
   EnrollDataTmpBn("i_out");
   EnrollModelBn("i2h_i_weight");
   EnrollModelBn("h2h_i_weight");
+  EnrollDataTmpBn("i_data_diff");
+  EnrollDataTmpBn("i_out_diff");
 
-  EnrollDataTmpBn("c_state_out");
   EnrollDataTmpBn("c_out");
   EnrollModelBn("i2h_c_weight");
   EnrollModelBn("h2h_c_weight");
+  EnrollDataTmpBn("c_data_diff");
+  EnrollDataTmpBn("c_out_diff");
 
-  EnrollDataTmpBn("o_gate_out");
   EnrollDataTmpBn("o_out");
   EnrollModelBn("i2h_o_weight");
   EnrollModelBn("h2h_o_weight");
+  EnrollDataTmpBn("o_data_diff");
+  EnrollDataTmpBn("o_out_diff");
 
   EnrollDataTmpBn("update_out");
 
@@ -47,10 +54,10 @@ void BasicLstmOp::VirtualInferBlobDescs(
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
 
-#define OF_INFER_LSTM_GATE_BLOBDESC(gate_name)                                 \
-  *GetBlobDesc4BnInOp(#gate_name) = BlobDesc(                                  \
+#define OF_INFER_LSTM_GATE_BLOBDESC(out_name)                                  \
+  *GetBlobDesc4BnInOp(#out_name) = BlobDesc(                                   \
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
-      false, true, in_blob_desc->max_col_num())
+      false, true, in_blob_desc->shape().At(0));
 
 #define OF_INFER_LSTM_MODEL_BLOBDESC(model_i2h_name, model_h2h_name) \
   *GetBlobDesc4BnInOp(#model_i2h_name) =                             \
@@ -62,23 +69,30 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#bias_name) = BlobDesc(Shape({1, hidden_size})); \
   *GetBlobDesc4BnInOp(#bias_mul_name) = BlobDesc(Shape({data_num, 1}));
 
-  OF_INFER_LSTM_GATE_BLOBDESC(f_gate_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(state_data);
+  OF_INFER_LSTM_GATE_BLOBDESC(candidate_out);
+
   OF_INFER_LSTM_GATE_BLOBDESC(f_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(f_data_diff);
+  OF_INFER_LSTM_GATE_BLOBDESC(f_out_diff);
   OF_INFER_LSTM_MODEL_BLOBDESC(i2h_f_weight, h2h_f_weight);
   OF_INFER_LSTM_BIAS_BLOBDESC(bias_f, bias_f_multiplier);
 
-  OF_INFER_LSTM_GATE_BLOBDESC(i_gate_out);
   OF_INFER_LSTM_GATE_BLOBDESC(i_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(i_data_diff);
+  OF_INFER_LSTM_GATE_BLOBDESC(i_out_diff);
   OF_INFER_LSTM_MODEL_BLOBDESC(i2h_i_weight, h2h_i_weight);
   OF_INFER_LSTM_BIAS_BLOBDESC(bias_i, bias_i_multiplier);
 
-  OF_INFER_LSTM_GATE_BLOBDESC(c_state_out);
   OF_INFER_LSTM_GATE_BLOBDESC(c_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(c_data_diff);
+  OF_INFER_LSTM_GATE_BLOBDESC(c_out_diff);
   OF_INFER_LSTM_MODEL_BLOBDESC(i2h_c_weight, h2h_c_weight);
   OF_INFER_LSTM_BIAS_BLOBDESC(bias_c, bias_c_multiplier);
 
-  OF_INFER_LSTM_GATE_BLOBDESC(o_gate_out);
   OF_INFER_LSTM_GATE_BLOBDESC(o_out);
+  OF_INFER_LSTM_GATE_BLOBDESC(o_data_diff);
+  OF_INFER_LSTM_GATE_BLOBDESC(o_out_diff);
   OF_INFER_LSTM_MODEL_BLOBDESC(i2h_o_weight, h2h_o_weight);
   OF_INFER_LSTM_BIAS_BLOBDESC(bias_o, bias_o_multiplier);
 

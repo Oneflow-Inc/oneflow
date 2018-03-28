@@ -332,6 +332,7 @@ message BasicLstmOpConf {
 	optional string init_hidden = 2;
 	required string out = 3;
 	required int32 hidden_size = 4;
+	optional ActivationType activation = 5 [default = kTanH];
 
 	optional InitializerConf init_hidden_initializer = 7;
 	optional InitializerConf init_cell_initializer = 8;
