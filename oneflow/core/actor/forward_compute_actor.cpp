@@ -64,6 +64,12 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
     AsyncSendRegstMsgToProducer(model_tmp_regst_);
     model_tmp_regst_ = nullptr;
   }
+  if (other_model_regst_desc_id_ != -1) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_model_version_id(0);
+      return regst->regst_desc_id() == other_model_regst_desc_id_;
+    });
+  }
   OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   return 0;
 }
@@ -135,15 +141,15 @@ void ForwardCompActor::Act() {
     if (other_model_regst_desc_id_ != -1) {
       bool is_last_piece_in_batch =
           (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
-      bool is_need_save =
-          model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
-          || (model_version_id + 1)
-                     % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+      int64_t batch_id =
+          piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
+      bool need_save =
+          batch_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
+          || (batch_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
                  == 0;
-      if (is_last_piece_in_batch && is_need_save) {
+      if (is_last_piece_in_batch && need_save) {
         AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-          regst->set_piece_id(piece_id);
-          regst->set_model_version_id(model_version_id);
+          regst->set_model_version_id(batch_id);
           return regst->regst_desc_id() == other_model_regst_desc_id_;
         });
       }
