@@ -443,6 +443,14 @@ BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromNormalMdUpdt(
     return &TaskGraph::BldSubTskGphByOneToOne;
   }
 }
+BldSubTskGphMthd MdSaveChainNode::GetMthdForBldSubTskGphFromForward(
+    const ChainNode*) const {
+  if (parallel_desc()->parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
+  } else {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
+}
 
 // MdDiffAccChainNode
 BldSubTskGphMthd MdDiffAccChainNode::GetMthdForBldSubTskGphFromBackward(

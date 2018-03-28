@@ -68,8 +68,17 @@ message SoftmaxKernelConf {
   repeated int32 perm = 5;
 }
 
+message TransposeKernelConf {
+  repeated int32 perm = 1;
+  repeated int32 invert_perm = 2; 
+}
+
 message LocalResponseNormalizationKernelConf {
   required ShapeProto batch = 1;
+}
+
+message NormalizationKernelConf {
+  required int64 inputs_elem_cnt = 1;
 }
 
 message KernelConf {
@@ -85,6 +94,8 @@ message KernelConf {
   repeated string model_bns = 8;
   repeated string model_diff_bns = 9;
   repeated string model_tmp_bns = 10;
+  
+  repeated string other_bns = 11;
 
   required bool need_do_data_id = 12;
   required bool need_do_col_num = 13;
@@ -96,11 +107,13 @@ message KernelConf {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     SoftmaxKernelConf softmax_conf = 116;
+    TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     ConvKernelConf conv_conf = 127;
     DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
+    NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
   }
 }

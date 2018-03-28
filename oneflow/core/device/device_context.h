@@ -15,7 +15,14 @@ class DeviceCtx {
 
 #ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const { return *cuda_stream_; }
-  const cublasHandle_t& cublas_handle() const { return *cublas_handle_; }
+  // cublas handle with POINTER_MODE_HOST(pmh)
+  const cublasHandle_t& cublas_pmh_handle() const {
+    return *cublas_pmh_handle_;
+  }
+  // cublas handle with POINTER_MODE_DEVICE(pmd)
+  const cublasHandle_t& cublas_pmd_handle() const {
+    return *cublas_pmd_handle_;
+  }
   const cudnnHandle_t& cudnn_handle() const { return *cudnn_handle_; }
   const Eigen::GpuDevice& eigen_gpu_device() const {
     return *eigen_gpu_device_;
@@ -30,7 +37,8 @@ class DeviceCtx {
 #ifdef WITH_CUDA
         ,
         cuda_stream_(nullptr),
-        cublas_handle_(nullptr),
+        cublas_pmh_handle_(nullptr),
+        cublas_pmd_handle_(nullptr),
         cudnn_handle_(nullptr),
         eigen_gpu_device_(nullptr)
 #endif
@@ -41,7 +49,12 @@ class DeviceCtx {
 
 #ifdef WITH_CUDA
   void set_cuda_stream(const cudaStream_t* val) { cuda_stream_ = val; }
-  void set_cublas_handle(const cublasHandle_t* val) { cublas_handle_ = val; }
+  void set_cublas_pmh_handle(const cublasHandle_t* val) {
+    cublas_pmh_handle_ = val;
+  }
+  void set_cublas_pmd_handle(const cublasHandle_t* val) {
+    cublas_pmd_handle_ = val;
+  }
   void set_cudnn_handle(const cudnnHandle_t* val) { cudnn_handle_ = val; }
   void set_eigen_gpu_device(const Eigen::GpuDevice* val) {
     eigen_gpu_device_ = val;
@@ -52,7 +65,8 @@ class DeviceCtx {
   int64_t work_stream_id_;
 #ifdef WITH_CUDA
   const cudaStream_t* cuda_stream_;
-  const cublasHandle_t* cublas_handle_;
+  const cublasHandle_t* cublas_pmh_handle_;
+  const cublasHandle_t* cublas_pmd_handle_;
   const cudnnHandle_t* cudnn_handle_;
   const Eigen::GpuDevice* eigen_gpu_device_;
 #endif

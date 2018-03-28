@@ -52,6 +52,20 @@ void NormalForwardCompTaskNode::VirtualBuildOutRegst() {
   });
 }
 
+void NormalForwardCompTaskNode::VirtualBuildExtraRegsts() {
+  std::shared_ptr<RegstDesc> other_model_regst =
+      GetProducedRegst("other_model");
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    std::shared_ptr<const Operator> cur_op = cur_node->op();
+    if (cur_op->IsNormalizationOp()) {
+      for (const std::string& norm_mbn : cur_op->other_bns()) {
+        other_model_regst->AddLbn(cur_op->Lbn4BnInOp(norm_mbn));
+        cur_node->BindBnInOpAndRegst(norm_mbn, other_model_regst);
+      }
+    }
+  });
+}
+
 bool NormalForwardCompTaskNode::IsReadyForBuild() {
   return GetConsumedRegst("in")->IsLocked();
 }
