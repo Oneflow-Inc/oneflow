@@ -7,36 +7,34 @@ const PbMessage& BasicGruOp::GetSpecialConf() const {
 }
 
 void BasicGruOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("reset_gate_data");
-  EnrollModelBn("i2h_weight_r");
-  EnrollModelBn("h2h_weight_r");
-  EnrollDataTmpBn("reset_gate_out");
-  EnrollDataTmpBn("reset_gate_data_diff");
-  EnrollDataTmpBn("reset_gate_out_diff");
+  EnrollDataTmpBn("state_data");
 
-  EnrollDataTmpBn("update_gate_data");
-  EnrollModelBn("i2h_weight_z");
-  EnrollModelBn("h2h_weight_z");
-  EnrollDataTmpBn("update_gate_out");
-  EnrollDataTmpBn("update_gate_data_diff");
-  EnrollDataTmpBn("update_gate_out_diff");
+  EnrollDataTmpBn("reset_out");
+  EnrollModelBn("i2h_r_weight");
+  EnrollModelBn("h2h_r_weight");
+  EnrollDataTmpBn("reset_data_diff");
+  EnrollDataTmpBn("reset_out_diff");
 
-  EnrollDataTmpBn("candidate_hidden_data");
+  EnrollDataTmpBn("update_out");
+  EnrollModelBn("i2h_z_weight");
+  EnrollModelBn("h2h_z_weight");
+  EnrollDataTmpBn("update_data_diff");
+  EnrollDataTmpBn("update_out_diff");
+
+  EnrollDataTmpBn("candidate_out");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
-  EnrollDataTmpBn("candidate_hidden_out");
-  EnrollDataTmpBn("candidate_hidden_data_diff");
-  EnrollDataTmpBn("candidate_hidden_out_diff");
+  EnrollDataTmpBn("candidate_data_diff");
+  EnrollDataTmpBn("candidate_out_diff");
 
-  EnrollDataTmpBn("temp_data");
-  EnrollDataTmpBn("plus_op_out");
+  EnrollDataTmpBn("tmp_data");
 
   if (GetBoolFromSpecialConf("use_bias")) {
     EnrollModelBn("bias_r");
-    EnrollModelTmpBn("bias_multiplier_r");
+    EnrollModelTmpBn("bias_r_multiplier");
 
     EnrollModelBn("bias_z");
-    EnrollModelTmpBn("bias_multiplier_z");
+    EnrollModelTmpBn("bias_z_multiplier");
 
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
@@ -54,37 +52,33 @@ void BasicGruOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#modelname) = BlobDesc(                                  \
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
       false, true, in_blob_desc->max_col_num())
-  OF_GRU_INFER_BLOB_DESCS(reset_gate_data);
-  OF_GRU_INFER_BLOB_DESCS(reset_gate_out);
-  OF_GRU_INFER_BLOB_DESCS(reset_gate_data_diff);
-  OF_GRU_INFER_BLOB_DESCS(reset_gate_out_diff);
-  OF_GRU_INFER_BLOB_DESCS(update_gate_data);
-  OF_GRU_INFER_BLOB_DESCS(update_gate_out);
-  OF_GRU_INFER_BLOB_DESCS(update_gate_data_diff);
-  OF_GRU_INFER_BLOB_DESCS(update_gate_out_diff);
-  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_data);
-  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_out);
-  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_data_diff);
-  OF_GRU_INFER_BLOB_DESCS(candidate_hidden_out_diff);
-  OF_GRU_INFER_BLOB_DESCS(temp_data);
-  OF_GRU_INFER_BLOB_DESCS(plus_op_out);
+  OF_GRU_INFER_BLOB_DESCS(state_data);
+  OF_GRU_INFER_BLOB_DESCS(reset_out);
+  OF_GRU_INFER_BLOB_DESCS(reset_data_diff);
+  OF_GRU_INFER_BLOB_DESCS(reset_out_diff);
+  OF_GRU_INFER_BLOB_DESCS(update_out);
+  OF_GRU_INFER_BLOB_DESCS(update_data_diff);
+  OF_GRU_INFER_BLOB_DESCS(update_out_diff);
+  OF_GRU_INFER_BLOB_DESCS(candidate_out);
+  OF_GRU_INFER_BLOB_DESCS(candidate_data_diff);
+  OF_GRU_INFER_BLOB_DESCS(candidate_out_diff);
 #undef OF_GRU_INFER_BLOB_DESCS
 
 #define OF_GRU_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight) \
   *GetBlobDesc4BnInOp(#i2h_weight) =                      \
       BlobDesc(Shape({hidden_size, embedding_size}));     \
   *GetBlobDesc4BnInOp(#h2h_weight) = BlobDesc(Shape({hidden_size, hidden_size}))
-  OF_GRU_INFER_WEIGHT_DESCS(i2h_weight_r, h2h_weight_r);
-  OF_GRU_INFER_WEIGHT_DESCS(i2h_weight_z, h2h_weight_z);
+  OF_GRU_INFER_WEIGHT_DESCS(i2h_r_weight, h2h_r_weight);
+  OF_GRU_INFER_WEIGHT_DESCS(i2h_z_weight, h2h_z_weight);
   OF_GRU_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight);
 #undef OF_GRU_INFER_WEIGHT_DESCS
 
   if (GetBoolFromSpecialConf("use_bias")) {
     *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_multiplier_r") = BlobDesc(Shape({data_num, 1}));
+    *GetBlobDesc4BnInOp("bias_r_multiplier") = BlobDesc(Shape({data_num, 1}));
 
     *GetBlobDesc4BnInOp("bias_z") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_multiplier_z") = BlobDesc(Shape({data_num, 1}));
+    *GetBlobDesc4BnInOp("bias_z_multiplier") = BlobDesc(Shape({data_num, 1}));
 
     *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));

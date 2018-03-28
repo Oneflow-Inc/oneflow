@@ -36,101 +36,87 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
-  Blob* reset_gate_data_blob = BnInOp2Blob("reset_gate_data");
-  Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
-  Blob* update_gate_data_blob = BnInOp2Blob("update_gate_data");
-  Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
-  Blob* candidate_hidden_data_blob = BnInOp2Blob("candidate_hidden_data");
-  Blob* candidate_hidden_out_blob = BnInOp2Blob("candidate_hidden_out");
-  Blob* temp_data_blob = BnInOp2Blob("temp_data");
-  Blob* plus_op_out_blob = BnInOp2Blob("plus_op_out");
+  Blob* state_data_blob =
+      BnInOp2Blob("state_data");  // reused by three activation
+  Blob* reset_out_blob = BnInOp2Blob("reset_out");
+  Blob* update_out_blob = BnInOp2Blob("update_out");
+  Blob* candidate_out_blob = BnInOp2Blob("candidate_out");
+  Blob* tmp_data_blob = BnInOp2Blob("tmp_data");
+  Blob* out_blob = BnInOp2Blob("out");
 
   BasicGruKernelUtil<device_type, T>::ComputeGateForward(
-      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_multiplier_r"),
-      BnInOp2Blob("i2h_weight_r"), BnInOp2Blob("h2h_weight_r"),
-      BnInOp2Blob("bias_r"), reset_gate_data_blob, reset_gate_out_blob);
+      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_r_multiplier"),
+      BnInOp2Blob("i2h_r_weight"), BnInOp2Blob("h2h_r_weight"),
+      BnInOp2Blob("bias_r"), state_data_blob, reset_out_blob);
 
   BasicGruKernelUtil<device_type, T>::ComputeGateForward(
-      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_multiplier_z"),
-      BnInOp2Blob("i2h_weight_z"), BnInOp2Blob("h2h_weight_z"),
-      BnInOp2Blob("bias_z"), update_gate_data_blob, update_gate_out_blob);
+      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_z_multiplier"),
+      BnInOp2Blob("i2h_z_weight"), BnInOp2Blob("h2h_z_weight"),
+      BnInOp2Blob("bias_z"), state_data_blob, update_out_blob);
 
   BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
       ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_multiplier"),
       BnInOp2Blob("i2h_weight"), BnInOp2Blob("h2h_weight"), BnInOp2Blob("bias"),
-      candidate_hidden_data_blob, candidate_hidden_out_blob,
-      reset_gate_out_blob, temp_data_blob, activation_fw_func_);
+      state_data_blob, candidate_out_blob, reset_out_blob, tmp_data_blob,
+      activation_fw_func_);
 
-  BasicGruKernelUtil<device_type, T>::ComputePlusOutForward(
-      ctx, hidden_blob, candidate_hidden_out_blob, temp_data_blob,
-      update_gate_out_blob, plus_op_out_blob);
+  BasicGruKernelUtil<device_type, T>::ComputeOutForward(
+      ctx, hidden_blob, candidate_out_blob, tmp_data_blob, update_out_blob,
+      out_blob);
 
-  // out = plus_op_out
-  BnInOp2Blob("out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                       plus_op_out_blob);
-  // rec_out = plus_op_out
+  // rec_out = out
   BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                           plus_op_out_blob);
+                                                           out_blob);
 }
 
 template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* update_gate_data_blob = BnInOp2Blob("update_gate_data");
-  const Blob* update_gate_out_blob = BnInOp2Blob("update_gate_out");
-  Blob* update_gate_out_diff_blob = BnInOp2Blob("update_gate_out_diff");
-  Blob* update_gate_data_diff_blob = BnInOp2Blob("update_gate_data_diff");
-  const Blob* candidate_hidden_data_blob = BnInOp2Blob("candidate_hidden_data");
-  const Blob* candidate_hidden_out_blob = BnInOp2Blob("candidate_hidden_out");
-  Blob* candidate_hidden_data_diff_blob =
-      BnInOp2Blob("candidate_hidden_data_diff");
-  Blob* candidate_hidden_out_diff_blob =
-      BnInOp2Blob("candidate_hidden_out_diff");
-  Blob* temp_data_blob = BnInOp2Blob("temp_data");
-  const Blob* reset_gate_data_blob = BnInOp2Blob("reset_gate_data");
-  const Blob* reset_gate_out_blob = BnInOp2Blob("reset_gate_out");
-  Blob* reset_gate_out_diff_blob = BnInOp2Blob("reset_gate_out_diff");
-  Blob* reset_gate_data_diff_blob = BnInOp2Blob("reset_gate_data_diff");
+  const Blob* state_data_blob = BnInOp2Blob("state_data");
+  const Blob* candidate_out_blob = BnInOp2Blob("candidate_out");
+  Blob* candidate_data_diff_blob = BnInOp2Blob("candidate_data_diff");
+  Blob* candidate_out_diff_blob = BnInOp2Blob("candidate_out_diff");
+  const Blob* update_out_blob = BnInOp2Blob("update_out");
+  Blob* update_out_diff_blob = BnInOp2Blob("update_out_diff");
+  Blob* update_data_diff_blob = BnInOp2Blob("update_data_diff");
+  Blob* tmp_data_blob = BnInOp2Blob("tmp_data");
+  const Blob* reset_out_blob = BnInOp2Blob("reset_out");
+  Blob* reset_out_diff_blob = BnInOp2Blob("reset_out_diff");
+  Blob* reset_data_diff_blob = BnInOp2Blob("reset_data_diff");
   Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* hidden_diff_blob = this->GetHiddenBlob(BnInOp2Blob);
+  Blob* out_diff_blob = BnInOp2Blob("out_diff");
   // reuse memory
-  Blob* update_gate_out_bran_diff_blob = BnInOp2Blob("update_mul_hidden");
-  // plus_op_out_diff = out_diff
-  Blob* plus_op_out_diff_blob = BnInOp2Blob("plus_op_out");
-  KernelUtil<device_type, T>::Copy(ctx.device_ctx,
-                                   plus_op_out_diff_blob->shape().elem_cnt(),
-                                   BnInOp2Blob("out_diff")->dptr<T>(), 1,
-                                   plus_op_out_diff_blob->mut_dptr<T>(), 1);
+  Blob* update_out_bran_diff_blob = BnInOp2Blob("out");
 
   if (BnInOp2Blob("in")->col_id() != BnInOp2Blob("in")->max_col_id()) {
-    // plus_op_out_diff += rec_out_diff
+    // out_diff += rec_out_diff
     KernelUtil<device_type, T>::Axpy(
-        ctx.device_ctx,
-        static_cast<T>(plus_op_out_diff_blob->shape().elem_cnt()),
+        ctx.device_ctx, static_cast<T>(out_diff_blob->shape().elem_cnt()),
         static_cast<T>(1), BnInOp2Blob("rec_out_diff")->dptr<T>(),
-        static_cast<T>(1), plus_op_out_diff_blob->mut_dptr<T>(),
-        static_cast<T>(1));
+        static_cast<T>(1), out_diff_blob->mut_dptr<T>(), static_cast<T>(1));
   }
 
   BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
-      ctx, update_gate_out_blob, update_gate_data_blob,
-      candidate_hidden_out_blob, candidate_hidden_data_blob,
-      reset_gate_out_blob, reset_gate_data_blob, plus_op_out_diff_blob,
-      hidden_blob, update_gate_out_diff_blob, update_gate_out_bran_diff_blob,
-      update_gate_data_diff_blob, candidate_hidden_out_diff_blob,
-      candidate_hidden_data_diff_blob, BnInOp2Blob("h2h_weight"),
-      temp_data_blob, reset_gate_out_diff_blob, reset_gate_data_diff_blob,
-      activation_bw_func_);
+      ctx, state_data_blob, update_out_blob, candidate_out_blob, reset_out_blob,
+      out_diff_blob, hidden_blob, update_out_diff_blob,
+      update_out_bran_diff_blob, update_data_diff_blob, candidate_out_diff_blob,
+      candidate_data_diff_blob, BnInOp2Blob("h2h_weight"), tmp_data_blob,
+      reset_out_diff_blob, reset_data_diff_blob, activation_bw_func_);
 
   BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
-      ctx, BnInOp2Blob("in"), hidden_blob, reset_gate_data_diff_blob,
-      BnInOp2Blob("i2h_weight_r_diff"), BnInOp2Blob("h2h_weight_r_diff"));
+      ctx, BnInOp2Blob("in"), hidden_blob, reset_data_diff_blob,
+      BnInOp2Blob("i2h_r_weight_diff"), BnInOp2Blob("h2h_r_weight_diff"));
   BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
-      ctx, BnInOp2Blob("in"), hidden_blob, update_gate_data_diff_blob,
-      BnInOp2Blob("i2h_weight_z_diff"), BnInOp2Blob("h2h_weight_z_diff"));
+      ctx, BnInOp2Blob("in"), hidden_blob, update_data_diff_blob,
+      BnInOp2Blob("i2h_z_weight_diff"), BnInOp2Blob("h2h_z_weight_diff"));
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, reset_out_blob->shape().elem_cnt(),
+      hidden_blob->dptr<T>(), reset_out_blob->dptr<T>(),
+      tmp_data_blob->mut_dptr<T>());
   BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
-      ctx, BnInOp2Blob("in"), hidden_blob, candidate_hidden_data_diff_blob,
+      ctx, BnInOp2Blob("in"), tmp_data_blob, candidate_data_diff_blob,
       BnInOp2Blob("i2h_weight_diff"), BnInOp2Blob("h2h_weight_diff"));
 // bias_diff = bias_nultiplier * data_diff
 #define OF_GRU_COMPUTE_BIAS_DIFF(model, tmpmodel, gatename)                   \
@@ -140,38 +126,37 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
         static_cast<T>(0), BnInOp2Blob(#tmpmodel), gatename##_data_diff_blob, \
         BnInOp2Blob(#model));                                                 \
   }
-  OF_GRU_COMPUTE_BIAS_DIFF(bias_diff_r, bias_multiplier_r, reset_gate)
-  OF_GRU_COMPUTE_BIAS_DIFF(bias_diff_z, bias_multiplier_z, update_gate)
-  OF_GRU_COMPUTE_BIAS_DIFF(bias_diff, bias_multiplier, candidate_hidden)
+  OF_GRU_COMPUTE_BIAS_DIFF(bias_r_diff, bias_r_multiplier, reset)
+  OF_GRU_COMPUTE_BIAS_DIFF(bias_z_diff, bias_z_multiplier, update)
+  OF_GRU_COMPUTE_BIAS_DIFF(bias_diff, bias_multiplier, candidate)
 #undef OF_GRU_COMPUTE_BIAS_DIFF
 
   if (BnInOp2Blob("in_diff") != nullptr) {
-    // in_diff = reset_gate_data_diff * i2h_weght_r
+    // in_diff = reset_data_diff * i2h_r_weght
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(0), reset_gate_data_diff_blob,
-        BnInOp2Blob("i2h_weight_r"), BnInOp2Blob("in_diff"));
-    // in_diff += update_gate_data_diff * i2h_weght_z
+        static_cast<T>(0), reset_data_diff_blob, BnInOp2Blob("i2h_r_weight"),
+        BnInOp2Blob("in_diff"));
+    // in_diff += update_data_diff * i2h_z_weght
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(1), update_gate_data_diff_blob,
-        BnInOp2Blob("i2h_weight_z"), BnInOp2Blob("in_diff"));
-    // in_diff += candidate_hidden_data_diff * i2h_weght
+        static_cast<T>(1), update_data_diff_blob, BnInOp2Blob("i2h_z_weight"),
+        BnInOp2Blob("in_diff"));
+    // in_diff += candidate_data_diff * i2h_weght
     KernelUtil<device_type, T>::BlobGemm(
         ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-        static_cast<T>(1), candidate_hidden_data_diff_blob,
-        BnInOp2Blob("i2h_weight"), BnInOp2Blob("in_diff"));
+        static_cast<T>(1), candidate_data_diff_blob, BnInOp2Blob("i2h_weight"),
+        BnInOp2Blob("in_diff"));
   }
 
   if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
       || this->op_conf().basic_gru_conf().is_init_hidden_trainable()) {
     // compute hidden_diff
     BasicGruKernelUtil<device_type, T>::ComputeHiddenDiff(
-        ctx, BnInOp2Blob("h2h_weight_r"), BnInOp2Blob("h2h_weight_z"),
-        BnInOp2Blob("h2h_weight"), reset_gate_out_blob, update_gate_out_blob,
-        hidden_blob, hidden_diff_blob, candidate_hidden_data_diff_blob,
-        reset_gate_data_diff_blob, update_gate_data_diff_blob,
-        plus_op_out_diff_blob);
+        ctx, BnInOp2Blob("h2h_r_weight"), BnInOp2Blob("h2h_z_weight"),
+        BnInOp2Blob("h2h_weight"), reset_out_blob, update_out_blob, hidden_blob,
+        hidden_diff_blob, candidate_data_diff_blob, reset_data_diff_blob,
+        update_data_diff_blob, out_diff_blob, tmp_data_blob);
   }
 }
 
@@ -185,11 +170,11 @@ void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
       OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),  \
                         modelname##_initializer),          \
       random_seed_gen(), BnInOp2Blob(#modelname))
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight_r);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight_r);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_r_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_r_weight);
   OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_r);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight_z);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight_z);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_z_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_z_weight);
   OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_z);
   OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight);
   OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight);
@@ -208,10 +193,10 @@ void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithDir(
       BnInOp2Blob(#modelname), #modelname,               \
       BnInOp2Blob(#modelname)->shape().At(0),            \
       BnInOp2Blob(#modelname)->shape().Count(1))
-  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(i2h_weight_r);
-  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(h2h_weight_r);
-  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(i2h_weight_z);
-  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(h2h_weight_z);
+  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(i2h_r_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(h2h_r_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(i2h_z_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_DIR(h2h_z_weight);
 #undef OF_GRU_INIT_MODEL_BLOB_WITH_DIR
   KernelUtil<device_type, T>::InitializeWithModelDir(
       ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias_r"),
@@ -247,8 +232,8 @@ void BasicGruKernel<device_type, T>::InitModelTmpBlobs(
   KernelUtil<device_type, T>::Initialize(                        \
       ctx.device_ctx, modelname##_fill_conf, 0, BnInOp2Blob(#modelname))
   if (this->op_conf().basic_gru_conf().use_bias()) {
-    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_miltiplier_r);
-    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_miltiplier_z);
+    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_r_miltiplier);
+    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_z_miltiplier);
     OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_miltiplier);
   }
 #undef OF_GRU_INIT_PURE_MODEL_TMP_BLON
@@ -307,77 +292,75 @@ void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
 }
 
 template<DeviceType device_type, typename T>
-void BasicGruKernelUtil<device_type, T>::ComputePlusOutForward(
+void BasicGruKernelUtil<device_type, T>::ComputeOutForward(
     const KernelCtx& ctx, const Blob* hidden, Blob* candidate_out,
-    Blob* temp_data, Blob* update_out, Blob* plus_out) {
-  // plus_out = candidate_out .* update_out
+    Blob* temp_data, Blob* update_out, Blob* out) {
+  // out = candidate_out .* update_out
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(update_out->shape().elem_cnt()),
-      candidate_out->dptr<T>(), update_out->dptr<T>(), plus_out->mut_dptr<T>());
+      candidate_out->dptr<T>(), update_out->dptr<T>(), out->mut_dptr<T>());
   // temp_data = hidden .* update_out
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(update_out->shape().elem_cnt()),
-      hidden->dptr<T>(), update_out->dptr<T>(), temp_data->mut_dptr<T>());
-  // plus_out -= temp_data
+      hidden->dptr<T>(), out->dptr<T>(), temp_data->mut_dptr<T>());
+  // out -= temp_data
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, static_cast<T>(temp_data->shape().elem_cnt()),
       static_cast<T>(-1), temp_data->dptr<T>(), static_cast<T>(1),
-      plus_out->mut_dptr<T>(), static_cast<T>(1));
-  // plus_out += hidden
+      out->mut_dptr<T>(), static_cast<T>(1));
+  // out += hidden
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
       static_cast<T>(1), hidden->dptr<T>(), static_cast<T>(1),
-      plus_out->mut_dptr<T>(), static_cast<T>(1));
+      out->mut_dptr<T>(), static_cast<T>(1));
 }
 
 template<DeviceType device_type, typename T>
 void BasicGruKernelUtil<device_type, T>::ComputeTmpModelDiff(
-    const KernelCtx& ctx, const Blob* update_out, const Blob* update_data,
-    const Blob* candidate_out, const Blob* candidate_data,
-    const Blob* reset_out, const Blob* reset_data, Blob* plus_out_diff,
+    const KernelCtx& ctx, const Blob* state_data, const Blob* update_out,
+    const Blob* candidate_out, const Blob* reset_out, Blob* out_diff,
     Blob* hidden, Blob* update_o_diff, Blob* update_o_bran_diff,
     Blob* update_d_diff, Blob* candidate_o_diff, Blob* candidate_d_diff,
-    const Blob* h2h_weight, Blob* temp_data, Blob* reset_o_diff,
+    const Blob* h2h_weight, Blob* tmp_data, Blob* reset_o_diff,
     Blob* reset_d_diff, BwActivationFunc<device_type, T> activation_bw_func_) {
-  // update_o_diff = candidate_out .* plus_out_diff
+  // candidate_o_diff = update_out .* out_diff
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, update_out->shape().elem_cnt(), update_out->dptr<T>(),
+      out_diff->dptr<T>(), candidate_o_diff->mut_dptr<T>());
+  // candidate_d_diff = activation_bw_func_(canidate_out, canidate_o_diff)
+  (*activation_bw_func_)(ctx.device_ctx, candidate_out->shape().elem_cnt(),
+                         state_data->dptr<T>(), candidate_out->dptr<T>(),
+                         candidate_o_diff->dptr<T>(),
+                         candidate_d_diff->mut_dptr<T>());
+  // update_o_diff = candidate_out .* out_diff
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, update_out->shape().elem_cnt(), candidate_out->dptr<T>(),
-      plus_out_diff->dptr<T>(), update_o_diff->mut_dptr<T>());
-  // update_o_bran_diff = hidden .* plus_out_diff
+      out_diff->dptr<T>(), update_o_diff->mut_dptr<T>());
+  // update_o_bran_diff = hidden .* out_diff
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, hidden->shape().elem_cnt(),
-                                  hidden->dptr<T>(), plus_out_diff->dptr<T>(),
+                                  hidden->dptr<T>(), out_diff->dptr<T>(),
                                   update_o_bran_diff->mut_dptr<T>());
   // update_o_diff -= update_o_bran_diff
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, static_cast<T>(update_o_bran_diff->shape().elem_cnt()),
       static_cast<T>(-1), update_o_bran_diff->dptr<T>(), static_cast<T>(1),
       update_o_diff->mut_dptr<T>(), static_cast<T>(1));
-  // update_d_diff = update_out * (1 - update_out) *
-  // update_o_diff
+  // update_d_diff = update_out * (1 - update_out) * update_o_diff
   KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, update_out->shape().elem_cnt(), update_data->dptr<T>(),
+      ctx.device_ctx, update_out->shape().elem_cnt(), state_data->dptr<T>(),
       update_out->dptr<T>(), update_o_diff->dptr<T>(),
       update_d_diff->mut_dptr<T>());
-  // candidate_o_diff = update_out .* plus_out_diff
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, update_out->shape().elem_cnt(), update_out->dptr<T>(),
-      plus_out_diff->dptr<T>(), candidate_o_diff->mut_dptr<T>());
-  // candidate_d_diff = activation_bw_func_(canidate_out, canidate_o_diff)
-  (*activation_bw_func_)(ctx.device_ctx, candidate_out->shape().elem_cnt(),
-                         candidate_data->dptr<T>(), candidate_out->dptr<T>(),
-                         candidate_o_diff->dptr<T>(),
-                         candidate_d_diff->mut_dptr<T>());
-  // temp_data = candidate_d_diff * h2h_weight
+  // tmp_data = candidate_d_diff * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), candidate_d_diff, h2h_weight, temp_data);
-  // reset_o_diff = hidden .* temp_data
+      static_cast<T>(0), candidate_d_diff, h2h_weight, tmp_data);
+  // reset_o_diff = hidden .* tmp_data
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, hidden->shape().elem_cnt(),
-                                  hidden->dptr<T>(), temp_data->dptr<T>(),
+                                  hidden->dptr<T>(), tmp_data->dptr<T>(),
                                   reset_o_diff->mut_dptr<T>());
   // reset_d_diff
   KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, reset_out->shape().elem_cnt(), reset_data->dptr<T>(),
+      ctx.device_ctx, reset_out->shape().elem_cnt(), state_data->dptr<T>(),
       reset_out->dptr<T>(), reset_o_diff->dptr<T>(),
       reset_d_diff->mut_dptr<T>());
 }
@@ -398,31 +381,37 @@ void BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
 
 template<DeviceType device_type, typename T>
 void BasicGruKernelUtil<device_type, T>::ComputeHiddenDiff(
-    const KernelCtx& ctx, const Blob* h2h_weight_r, const Blob* h2h_weight_z,
+    const KernelCtx& ctx, const Blob* h2h_r_weight, const Blob* h2h_z_weight,
     const Blob* h2h_weight, const Blob* reset_out, const Blob* update_out,
     Blob* hidden, Blob* hidden_diff, Blob* candidate_d_diff, Blob* reset_d_diff,
-    Blob* update_d_diff, Blob* plus_out_diff) {
-  // compute hidden_diff
+    Blob* update_d_diff, Blob* out_diff, Blob* tmp_diff) {
+  // tmp_diff = candidate_d_diff * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), candidate_d_diff, h2h_weight, hidden_diff);
+      static_cast<T>(0), candidate_d_diff, h2h_weight, tmp_diff);
+  // hidden_diff = reset_out .* tmp_diff
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, hidden_diff->shape().elem_cnt(), hidden_diff->dptr<T>(),
-      reset_out->dptr<T>(), hidden_diff->mut_dptr<T>());
+      ctx.device_ctx, hidden_diff->shape().elem_cnt(), reset_out->dptr<T>(),
+      tmp_diff->dptr<T>(), hidden_diff->mut_dptr<T>());
+  // hidden_diff += reset_d_diff * h2h_r_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), reset_d_diff, h2h_weight_r, hidden_diff);
+      static_cast<T>(1), reset_d_diff, h2h_r_weight, hidden_diff);
+  // hidden_diff += update_d_diff * h2h_z_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), update_d_diff, h2h_weight_z, hidden_diff);
+      static_cast<T>(1), update_d_diff, h2h_z_weight, hidden_diff);
   // reuse hidden_blob
+  // hidden = out_diff .* update_out
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
-      update_out->dptr<T>(), plus_out_diff->dptr<T>(), hidden->mut_dptr<T>());
+      out_diff->dptr<T>(), update_out->dptr<T>(), hidden->mut_dptr<T>());
+  // hidden -= out_diff
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
-      static_cast<T>(-1), plus_out_diff->dptr<T>(), static_cast<T>(1),
+      static_cast<T>(-1), out_diff->dptr<T>(), static_cast<T>(1),
       hidden->mut_dptr<T>(), static_cast<T>(1));
+  // hidden_diff -= hidden
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, static_cast<T>(hidden->shape().elem_cnt()),
       static_cast<T>(-1), hidden->dptr<T>(), static_cast<T>(1),

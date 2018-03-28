@@ -270,12 +270,12 @@ message BasicGruOpConf {
   optional InitializerConf init_hidden_initializer = 6;
 
   optional InitializerConf bias_r_initializer = 7;
-  optional InitializerConf i2h_weight_r_initializer = 8;
-  optional InitializerConf h2h_weight_r_initializer = 9;
+  optional InitializerConf i2h_r_weight_initializer = 8;
+  optional InitializerConf h2h_r_weight_initializer = 9;
 
   optional InitializerConf bias_z_initializer = 10;
-  optional InitializerConf i2h_weight_z_initializer = 11;
-  optional InitializerConf h2h_weight_z_initializer = 12;
+  optional InitializerConf i2h_z_weight_initializer = 11;
+  optional InitializerConf h2h_z_weight_initializer = 12;
 
   optional InitializerConf bias_initializer = 13;
   optional InitializerConf i2h_weight_initializer = 15;

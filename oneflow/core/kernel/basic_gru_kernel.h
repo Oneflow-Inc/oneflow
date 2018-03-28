@@ -59,27 +59,26 @@ struct BasicGruKernelUtil {
       const Blob* h2h_weight, const Blob* bias, Blob* candidate_data,
       Blob* dandidate_out, Blob* reset_out, Blob* temp_data,
       FwActivationFunc<device_type, T> activation_fw_func_);
-  static void ComputePlusOutForward(const KernelCtx& ctx, const Blob* hidden,
-                                    Blob* candidate_out, Blob* temp_data,
-                                    Blob* update_out, Blob* plus_out);
+  static void ComputeOutForward(const KernelCtx& ctx, const Blob* hidden,
+                                Blob* candidate_out, Blob* temp_data,
+                                Blob* update_out, Blob* out);
   static void ComputeTmpModelDiff(
-      const KernelCtx& ctx, const Blob* update_out, const Blob* update_data,
-      const Blob* candiate_out, const Blob* candiate_data,
-      const Blob* reset_out, const Blob* reset_data, Blob* plus_out_diff,
+      const KernelCtx& ctx, const Blob* state_data, const Blob* update_out,
+      const Blob* candiate_out, const Blob* reset_out, Blob* out_diff,
       Blob* hiddden, Blob* update_o_diff, Blob* update_o_bran_diff,
       Blob* update_d_diff, Blob* candidate_o_diff, Blob* candidate_d_diff,
-      const Blob* h2h_weight, Blob* temp_data, Blob* reset_o_diff,
+      const Blob* h2h_weight, Blob* tmp_data, Blob* reset_o_diff,
       Blob* reset_d_diff, BwActivationFunc<device_type, T> activation_bw_func_);
   static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
                                 Blob* hidden, Blob* out_diff,
                                 Blob* i2h_weight_diff, Blob* h2h_weight_diff);
-  static void ComputeHiddenDiff(const KernelCtx& ctx, const Blob* h2h_weight_r,
-                                const Blob* h2h_weight_z,
+  static void ComputeHiddenDiff(const KernelCtx& ctx, const Blob* h2h_r_weight,
+                                const Blob* h2h_z_weight,
                                 const Blob* h2h_weight, const Blob* reset_out,
                                 const Blob* update_out, Blob* hidden,
                                 Blob* hidden_diff, Blob* candidate_d_diff,
                                 Blob* reset_d_diff, Blob* update_d_diff,
-                                Blob* plus_out_diff);
+                                Blob* out_diff, Blob* tmp_diff);
 };
 
 }  // namespace oneflow
