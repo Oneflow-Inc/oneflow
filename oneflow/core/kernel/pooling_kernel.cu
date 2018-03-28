@@ -9,9 +9,9 @@ void PoolingKernel<DeviceType::kGPU, T>::PoolingForward(
     const Blob* in_blob, Blob* out_blob) const {
   CudaCheck(cudnnPoolingForward(
       kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(),
-      CudnnDataType<T>::one, pooling_ctx.cudnn_in_tensor_desc(),
-      in_blob->dptr(), CudnnDataType<T>::zero,
-      pooling_ctx.cudnn_out_tensor_desc(), out_blob->mut_dptr()));
+      OnePtr<T>::value, pooling_ctx.cudnn_in_tensor_desc(), in_blob->dptr(),
+      ZeroPtr<T>::value, pooling_ctx.cudnn_out_tensor_desc(),
+      out_blob->mut_dptr()));
 }
 
 template<typename T>
@@ -21,10 +21,9 @@ void PoolingKernel<DeviceType::kGPU, T>::PoolingBackward(
     Blob* in_diff_blob) const {
   CudaCheck(cudnnPoolingBackward(
       kernel_ctx.device_ctx->cudnn_handle(), pooling_ctx.cudnn_pooling_desc(),
-      CudnnDataType<T>::one, pooling_ctx.cudnn_out_tensor_desc(),
-      out_blob->dptr(), pooling_ctx.cudnn_out_tensor_desc(),
-      out_diff_blob->dptr(), pooling_ctx.cudnn_in_tensor_desc(),
-      in_blob->dptr(), CudnnDataType<T>::zero,
+      OnePtr<T>::value, pooling_ctx.cudnn_out_tensor_desc(), out_blob->dptr(),
+      pooling_ctx.cudnn_out_tensor_desc(), out_diff_blob->dptr(),
+      pooling_ctx.cudnn_in_tensor_desc(), in_blob->dptr(), ZeroPtr<T>::value,
       pooling_ctx.cudnn_in_tensor_desc(), in_diff_blob->mut_dptr()));
 }
 

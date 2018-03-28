@@ -362,3 +362,4 @@ TEST_CPU_ONLY_OPKERNEL(AveragePooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
 }  // namespace test
 
 }  // namespace oneflow
+

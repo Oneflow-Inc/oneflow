@@ -20,7 +20,7 @@ Kernel* BuildConcatKernel() {
   concat_conf->add_in("concat/in2");
   concat_conf->set_axis(1);
   concat_conf->set_out("concat_kernel_test");
-  concat_conf->set_data_type(GetDataType<T>::val);
+  concat_conf->set_data_type(GetDataType<T>::value);
   auto concat_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   concat_op->ToProto(&op_proto);
@@ -35,11 +35,11 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
 
   auto bn2blob = new HashMap<std::string, Blob*>;
   BlobDesc* blob_desc212 =
-      new BlobDesc(Shape({2, 1, 2}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({2, 1, 2}), GetDataType<T>::value, false);
   BlobDesc* blob_desc222 =
-      new BlobDesc(Shape({2, 2, 2}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({2, 2, 2}), GetDataType<T>::value, false);
   BlobDesc* blob_desc242 =
-      new BlobDesc(Shape({2, 4, 2}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({2, 4, 2}), GetDataType<T>::value, false);
 
   (*bn2blob)["in_0"] =
       KTC::CreateBlobWithSpecifiedVal(blob_desc212, {1, 2, 3, 4});

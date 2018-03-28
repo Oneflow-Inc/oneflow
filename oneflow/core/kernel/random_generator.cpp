@@ -23,7 +23,7 @@ template<typename T>
 struct RandomGeneratorUtil<DeviceType::kCPU, T> final {
   static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
                       T* dptr) {
-    Uniform(rand_gen, elem_cnt, static_cast<T>(0), static_cast<T>(1), dptr);
+    Uniform(rand_gen, elem_cnt, ZeroVal<T>::value, OneVal<T>::value, dptr);
   }
 
   static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,

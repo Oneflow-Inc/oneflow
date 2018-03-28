@@ -67,7 +67,7 @@ void RandomNormalInitializer(
 
 template<typename T>
 T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
-  T fan = static_cast<T>(0);
+  T fan = ZeroVal<T>::value;
   T fan_in = static_cast<T>(blob->shape().Count(1));
   T fan_out = static_cast<T>(blob->shape().Count(0) / blob->shape().At(1));
   if (variance_norm == VarianceNorm::kAverage) {
@@ -101,7 +101,7 @@ void MsraInitializer(const MsraInitializerConf& initializer_conf,
   VarianceNorm variance_norm =
       static_cast<VarianceNorm>(initializer_conf.variance_norm());
   T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
-  RngNormal<T>(blob->shape().elem_cnt(), static_cast<T>(0), static_cast<T>(std),
+  RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std),
                random_seed, blob->mut_dptr<T>());
 }
 
@@ -194,12 +194,12 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     for (int64_t i = 0; i != n; ++i) { dx[i] = (1 - y[i] * y[i]) * dy[i]; }
   }
   static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
-    T zero = static_cast<T>(0.0);
+    T zero = ZeroVal<T>::value;
     for (int64_t i = 0; i != n; ++i) { y[i] = std::max(x[i], zero); }
   }
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx) {
-    T zero = static_cast<T>(0.0);
+    T zero = ZeroVal<T>::value;
     for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
   }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
