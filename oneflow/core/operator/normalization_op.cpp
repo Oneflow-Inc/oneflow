@@ -36,12 +36,15 @@ void NormalizationOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const auto& normalization_conf = op_conf().normalization_conf();
   const BlobDesc* inputs_blob_desc = GetBlobDesc4BnInOp("inputs");
+  // check
+  CHECK_EQ(inputs_blob_desc->data_type(),
+           Global<JobDesc>::Get()->DefaultDataType());
   if (HasScaleOrCenter()) {
     *GetBlobDesc4BnInOp("normalized_inputs") = *inputs_blob_desc;
   }
   *GetBlobDesc4BnInOp("outputs") = *inputs_blob_desc;
-  BlobDesc blob_desc(Shape({1}), Global<JobDesc>::Get()->DefaultDataType(),
-                     false, false, 1);
+  BlobDesc blob_desc(Shape({1}), inputs_blob_desc->data_type(), false, false,
+                     1);
   std::list<std::string> scalar_blob_names = {"moving_mean", "moving_variance",
                                               "inv_var"};
   std::list<std::string> bns_needless_in_predict = {"new_mean", "new_variance"};
@@ -57,6 +60,7 @@ void NormalizationOp::InferBlobDescs(
   }
   int64_t tmp_storage_size =
       std::sqrt(GetBlobDesc4BnInOp("inputs")->shape().elem_cnt());
+  *GetBlobDesc4BnInOp("tmp_storage_for_sum") = *inputs_blob_desc;
   GetBlobDesc4BnInOp("tmp_storage_for_sum")->mut_shape() =
       Shape({tmp_storage_size + 1});
 }
