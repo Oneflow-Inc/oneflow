@@ -142,7 +142,7 @@ OpKernelTestCase* MaxPooling3DTestCase(const std::string& job_type,
 }
 
 template<DeviceType device_type, typename T>
-OpKernelTestCase* AveragePoolingTestCase(
+OpKernelTestCase* AveragePooling2DTestCase(
     const std::string& job_type, const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
   pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
@@ -212,6 +212,79 @@ OpKernelTestCase* AveragePoolingTestCase(
   return pooling_test_case;
 }
 
+template<DeviceType device_type, typename T>
+OpKernelTestCase* AveragePooling3DTestCase(
+    const std::string& job_type, const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  AveragePooling3DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_average_pooling_3d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(1);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(1);
+  pooling_conf->add_strides(2);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
+
+  using KTC = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
+  BlobDesc* in_blob_desc = new BlobDesc(Shape({1, 1, 1, 5, 5}),
+                                        GetDataType<T>::val, false, false, 1);
+  BlobDesc* out_blob_desc = new BlobDesc(Shape({1, 1, 1, 3, 3}),
+                                         GetDataType<T>::val, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"),
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {16.0f / 4, 33.0f / 6, 28.0f / 4, 69.0f / 6, 13,
+                          87.0f / 6, 76.0f / 4, 123.0f / 6, 88.0f / 4}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {16.0f / 4, 33.0f / 6, 28.0f / 4, 69.0f / 6, 13,
+                          87.0f / 6, 76.0f / 4, 123.0f / 6, 88.0f / 4}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc,
+          {16.0f / 4 / 4,
+           16.0f / 4 / 4 + 33.0f / 6 / 6,
+           33.0f / 6 / 6,
+           33.0f / 6 / 6 + 28.0f / 4 / 4,
+           28.0f / 4 / 4,
+           16.0f / 4 / 4 + 69.0f / 6 / 6,
+           16.0f / 4 / 4 + 33.0f / 6 / 6 + 69.0f / 6 / 6 + 13.0f / 9,
+           33.0f / 6 / 6 + 13.0f / 9,
+           33.0f / 6 / 6 + 28.0f / 4 / 4 + 13.0f / 9 + 87.0f / 6 / 6,
+           28.0f / 4 / 4 + 87.0f / 6 / 6,
+           69.0f / 6 / 6,
+           69.0f / 6 / 6 + 13.0f / 9,
+           13.0f / 9,
+           13.0f / 9 + 87.0f / 6 / 6,
+           87.0f / 6 / 6,
+           69.0f / 6 / 6 + 76.0f / 4 / 4,
+           69.0f / 6 / 6 + 13.0f / 9 + 76.0f / 4 / 4 + 123.0f / 6 / 6,
+           13.0f / 9 + 123.0f / 6 / 6,
+           13.0f / 9 + 87.0f / 6 / 6 + 123.0f / 6 / 6 + 88.0f / 4 / 4,
+           87.0f / 6 / 6 + 88.0f / 4 / 4,
+           76.0f / 4 / 4,
+           76.0f / 4 / 4 + 123.0f / 6 / 6,
+           123.0f / 6 / 6,
+           123.0f / 6 / 6 + 88.0f / 4 / 4,
+           88.0f / 4 / 4}));
+
+  return pooling_test_case;
+}
+
 TEST_CPU_ONLY_OPKERNEL(MaxPooling1DTestCase, ARITHMETIC_DATA_TYPE_SEQ,
                        (train)(predict), (forward)(backward));
 
@@ -221,7 +294,10 @@ TEST_CPU_ONLY_OPKERNEL(MaxPooling2DTestCase, ARITHMETIC_DATA_TYPE_SEQ,
 TEST_CPU_ONLY_OPKERNEL(MaxPooling3DTestCase, ARITHMETIC_DATA_TYPE_SEQ,
                        (train)(predict), (forward)(backward));
 
-TEST_CPU_ONLY_OPKERNEL(AveragePoolingTestCase, FLOATING_DATA_TYPE_SEQ,
+TEST_CPU_ONLY_OPKERNEL(AveragePooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
+                       (train)(predict), (forward)(backward));
+
+TEST_CPU_ONLY_OPKERNEL(AveragePooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
                        (train)(predict), (forward)(backward));
 
 }  // namespace test
