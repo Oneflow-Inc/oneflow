@@ -15,7 +15,8 @@ template<DeviceType device_type, typename T>
 OpKernelTestCase* MaxPooling1DTestCase(const std::string& job_type,
                                        const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
-  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
@@ -28,9 +29,9 @@ OpKernelTestCase* MaxPooling1DTestCase(const std::string& job_type,
 
   using KTC = KTCommon<device_type, T>;
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::value, false, false, 1);
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::value, false, false, 1);
   pooling_test_case->InitBlob(
       "in",
       KTC::CreateBlobWithSpecifiedVal(
@@ -57,7 +58,8 @@ template<DeviceType device_type, typename T>
 OpKernelTestCase* MaxPooling2DTestCase(const std::string& job_type,
                                        const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
-  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
@@ -72,9 +74,9 @@ OpKernelTestCase* MaxPooling2DTestCase(const std::string& job_type,
 
   using KTC = KTCommon<device_type, T>;
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::value, false, false, 1);
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
   pooling_test_case->InitBlob(
       "in",
       KTC::CreateBlobWithSpecifiedVal(
@@ -100,7 +102,8 @@ template<DeviceType device_type, typename T>
 OpKernelTestCase* MaxPooling3DTestCase(const std::string& job_type,
                                        const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
-  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
@@ -117,9 +120,9 @@ OpKernelTestCase* MaxPooling3DTestCase(const std::string& job_type,
 
   using KTC = KTCommon<device_type, T>;
   BlobDesc* in_blob_desc = new BlobDesc(Shape({1, 1, 1, 5, 5}),
-                                        GetDataType<T>::val, false, false, 1);
-  BlobDesc* out_blob_desc = new BlobDesc(Shape({1, 1, 1, 3, 3}),
-                                         GetDataType<T>::val, false, false, 1);
+                                        GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc = new BlobDesc(
+      Shape({1, 1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
   pooling_test_case->InitBlob(
       "in",
       KTC::CreateBlobWithSpecifiedVal(
@@ -145,7 +148,8 @@ template<DeviceType device_type, typename T>
 OpKernelTestCase* AveragePooling1DTestCase(
     const std::string& job_type, const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
-  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
@@ -159,9 +163,9 @@ OpKernelTestCase* AveragePooling1DTestCase(
   using KTC = KTCommon<device_type, T>;
   using KTC = KTCommon<device_type, T>;
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::value, false, false, 1);
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::value, false, false, 1);
   pooling_test_case->InitBlob(
       "in",
       KTC::CreateBlobWithSpecifiedVal(
@@ -201,7 +205,8 @@ template<DeviceType device_type, typename T>
 OpKernelTestCase* AveragePooling2DTestCase(
     const std::string& job_type, const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
-  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
@@ -217,9 +222,9 @@ OpKernelTestCase* AveragePooling2DTestCase(
   using KTC = KTCommon<device_type, T>;
   using KTC = KTCommon<device_type, T>;
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::value, false, false, 1);
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
   pooling_test_case->InitBlob(
       "in",
       KTC::CreateBlobWithSpecifiedVal(
@@ -272,7 +277,8 @@ template<DeviceType device_type, typename T>
 OpKernelTestCase* AveragePooling3DTestCase(
     const std::string& job_type, const std::string& forward_or_backward) {
   OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
-  pooling_test_case->mut_job_conf()->set_default_data_type(GetDataType<T>::val);
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
@@ -290,9 +296,9 @@ OpKernelTestCase* AveragePooling3DTestCase(
   using KTC = KTCommon<device_type, T>;
   using KTC = KTCommon<device_type, T>;
   BlobDesc* in_blob_desc = new BlobDesc(Shape({1, 1, 1, 5, 5}),
-                                        GetDataType<T>::val, false, false, 1);
-  BlobDesc* out_blob_desc = new BlobDesc(Shape({1, 1, 1, 3, 3}),
-                                         GetDataType<T>::val, false, false, 1);
+                                        GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc = new BlobDesc(
+      Shape({1, 1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
   pooling_test_case->InitBlob(
       "in",
       KTC::CreateBlobWithSpecifiedVal(
@@ -341,25 +347,24 @@ OpKernelTestCase* AveragePooling3DTestCase(
   return pooling_test_case;
 }
 
-TEST_CPU_ONLY_OPKERNEL(MaxPooling1DTestCase, ARITHMETIC_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(MaxPooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
-TEST_CPU_ONLY_OPKERNEL(MaxPooling2DTestCase, ARITHMETIC_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(MaxPooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
-TEST_CPU_ONLY_OPKERNEL(MaxPooling3DTestCase, ARITHMETIC_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(MaxPooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
-TEST_CPU_ONLY_OPKERNEL(AveragePooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(AveragePooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
-TEST_CPU_ONLY_OPKERNEL(AveragePooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(AveragePooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
-TEST_CPU_ONLY_OPKERNEL(AveragePooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(AveragePooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 }  // namespace test
 
 }  // namespace oneflow
-
