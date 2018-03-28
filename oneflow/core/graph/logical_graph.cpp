@@ -28,6 +28,9 @@ LogicalGraph::LogicalGraph() {
       CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
     total_mbn_num_ += node->op()->model_bns().size();
+    if (node->op()->IsNormalizationOp()) {
+      total_mbn_num_ += node->op()->other_bns().size();
+    }
   });
   ToDotWithAutoFilePath();
 }

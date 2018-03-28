@@ -1,5 +1,5 @@
 #include "oneflow/core/graph/chain_node.h"
-#include "oneflow/core/graph/model_save_compute_task_node.h"
+#include "oneflow/core/graph/sink_compute_task_node.h"
 
 namespace oneflow {
 

@@ -38,6 +38,7 @@ class Operator {
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsCloneOp() const { return false; }
+  virtual bool IsNormalizationOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
     return !model_bns_.empty() || !model_tmp_bns_.empty();
@@ -98,6 +99,7 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(model_bns);
   DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
+  DEFINE_BLOB_NAMES_GETTER(other_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
@@ -170,6 +172,7 @@ class Operator {
   virtual std::string obn2lbn(const std::string& output_bn) const;
   virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const;
   virtual std::string mbn2lbn(const std::string& model_bn) const;
+  virtual std::string otbn2lbn(const std::string& other_bn) const;
 
   OperatorConf& mut_op_conf() { return op_conf_; }
 
@@ -189,6 +192,8 @@ class Operator {
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
 
+  void EnrollOtherBn(const std::string& otbn);
+
   void StrFieldTolower(const std::string& field_name);
 
  private:
@@ -207,6 +212,8 @@ class Operator {
   std::vector<std::string> model_bns_;
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
+
+  std::vector<std::string> other_bns_;
 };
 
 std::string GenDiffBn(const std::string& bn);

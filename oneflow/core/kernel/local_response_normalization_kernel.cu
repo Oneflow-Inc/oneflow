@@ -2,8 +2,26 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-void LocalResponseNormalizationKernel<device_type, T>::ForwardDataContent(
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit(
+    const ParallelContext*) {
+  const PbRf<int64_t>& shape = GetPbRfFromPbMessage<int64_t>(
+      GetValFromPbMessage<const PbMessage&>(
+          this->kernel_conf().local_response_normalization_conf(), "batch"),
+      "dim");
+  std::vector<int> dims(shape.begin(), shape.end());
+  std::vector<int> strides{dims[1] * dims[2] * dims[3], 1, dims[2] * dims[3],
+                           dims[3]};
+  batch_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::val, 4, dims.data(), strides.data()));
+  const LocalResponseNormalizationOpConf& op_conf =
+      this->op_conf().local_response_normalization_conf();
+  normalize_desc_.reset(new CudnnLRNDesc(
+      op_conf.depth_radius(), op_conf.alpha(), op_conf.beta(), op_conf.bias()));
+}
+
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnLRNCrossChannelForward(
@@ -13,8 +31,8 @@ void LocalResponseNormalizationKernel<device_type, T>::ForwardDataContent(
       BnInOp2Blob("out")->mut_dptr()));
 }
 
-template<DeviceType device_type, typename T>
-void LocalResponseNormalizationKernel<device_type, T>::BackwardDataContent(
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnLRNCrossChannelBackward(
