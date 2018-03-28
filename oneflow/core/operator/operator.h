@@ -16,6 +16,10 @@ namespace oneflow {
 // bn  : blob name
 // lbn : logical blob name
 
+struct OpContext {
+  virtual ~OpContext() {}
+};
+
 class Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Operator);
@@ -34,6 +38,7 @@ class Operator {
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsCloneOp() const { return false; }
+  virtual bool IsNormalizationOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
     return !model_bns_.empty() || !model_tmp_bns_.empty();
@@ -94,6 +99,7 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(model_bns);
   DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
+  DEFINE_BLOB_NAMES_GETTER(other_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
@@ -101,10 +107,14 @@ class Operator {
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type) const;
+      const ParallelContext*, DeviceType,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+      const ParallelContext*, DeviceType) const;
+  virtual void InferBlobDescs(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const;
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbnWhenShareModel(const std::string& shared_op_name);
@@ -112,7 +122,8 @@ class Operator {
   virtual int32_t MaxModelSplitNum() const { return -1; }
   void GenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, DeviceType, const ParallelContext*, KernelConf*) const;
+      bool is_forward, DeviceType, const ParallelContext*, KernelConf*,
+      const OpContext*) const;
 
  protected:
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
@@ -152,12 +163,16 @@ class Operator {
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext*, KernelConf*, const OpContext*) const;
+  virtual void VirtualGenKernelConf(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const {}
 
   virtual std::string ibn2lbn(const std::string& input_bn) const;
   virtual std::string obn2lbn(const std::string& output_bn) const;
   virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const;
   virtual std::string mbn2lbn(const std::string& model_bn) const;
+  virtual std::string otbn2lbn(const std::string& other_bn) const;
 
   OperatorConf& mut_op_conf() { return op_conf_; }
 
@@ -177,6 +192,8 @@ class Operator {
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
 
+  void EnrollOtherBn(const std::string& otbn);
+
   void StrFieldTolower(const std::string& field_name);
 
  private:
@@ -195,6 +212,8 @@ class Operator {
   std::vector<std::string> model_bns_;
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
+
+  std::vector<std::string> other_bns_;
 };
 
 std::string GenDiffBn(const std::string& bn);

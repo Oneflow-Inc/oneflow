@@ -53,8 +53,8 @@ message Conv1DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  required string padding = 4;
-  required string data_format = 5 [default = "channels_last"];
+  optional string padding = 4 [default = "valid"];
+  optional string data_format = 5 [default = "channels_last"];
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -67,8 +67,8 @@ message Conv2DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  required string padding = 4;
-  required string data_format = 5 [default = "channels_last"];
+  optional string padding = 4 [default = "valid"];
+  optional string data_format = 5 [default = "channels_last"];
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -81,8 +81,8 @@ message Conv3DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  required string padding = 4;
-  required string data_format = 5 [default = "channels_last"];
+  optional string padding = 4 [default = "valid"];
+  optional string data_format = 5 [default = "channels_last"];
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -104,8 +104,8 @@ message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  optional string data_format = 4 [default = "channels_last"];
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -114,8 +114,8 @@ message MaxPooling1DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  optional string data_format = 4 [default = "channels_last"];
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -124,8 +124,8 @@ message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  optional string data_format = 4 [default = "channels_last"];
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -134,8 +134,8 @@ message MaxPooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  optional string data_format = 4 [default = "channels_last"];
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -144,8 +144,8 @@ message AveragePooling3DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  optional string data_format = 4 [default = "channels_last"];
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -154,8 +154,8 @@ message MaxPooling3DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  optional string data_format = 4 [default = "channels_last"];
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }

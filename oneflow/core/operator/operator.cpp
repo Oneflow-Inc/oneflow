@@ -68,6 +68,13 @@ const std::string& Operator::SoleDtbn() const {
 
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
+}
+
+void Operator::InferBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
@@ -124,7 +131,8 @@ static bool HasBlobDescWithField(
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     bool is_forward, DeviceType device_type,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
+    const OpContext* op_ctx) const {
   *(kernel_conf->mutable_op_conf()) = op_conf_;
   *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
   *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
@@ -135,6 +143,7 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
   *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
   *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
+  *(kernel_conf->mutable_other_bns()) = StdVec2PbRpf(other_bns_);
   kernel_conf->set_need_do_data_id(false);
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
                            &BlobDesc::has_data_id_field)) {
@@ -156,6 +165,13 @@ void Operator::GenKernelConf(
   }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
+  VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
+}
+
+void Operator::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
+    const OpContext* op_ctx) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
@@ -181,6 +197,9 @@ std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
 }
 std::string Operator::mbn2lbn(const std::string& model_bn) const {
   return op_name() + "/" + model_bn;
+}
+std::string Operator::otbn2lbn(const std::string& other_bn) const {
+  return op_name() + "/" + other_bn;
 }
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
@@ -247,6 +266,11 @@ void Operator::EnrollModelBn(const std::string& mbn) {
 void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   model_tmp_bns_.push_back(mtbn);
   CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);
+}
+void Operator::EnrollOtherBn(const std::string& otbn) {
+  std::string lbn = otbn2lbn(otbn);
+  other_bns_.push_back(otbn);
+  CHECK(bn_in_op2lbn_.emplace(otbn, lbn).second);
 }
 
 void Operator::StrFieldTolower(const std::string& field_name) {

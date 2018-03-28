@@ -28,6 +28,9 @@ LogicalGraph::LogicalGraph() {
       CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
     total_mbn_num_ += node->op()->model_bns().size();
+    if (node->op()->IsNormalizationOp()) {
+      total_mbn_num_ += node->op()->other_bns().size();
+    }
   });
   ToDotWithAutoFilePath();
 }
@@ -101,9 +104,17 @@ void LogicalGraph::FillNodeWithParallelDesc(
   }
   ForEachNode([&](LogicalNode* cur_node) {
     if (cur_node->op()->IsElemWiseOp()) {
-      LogicalNode* pred_node = cur_node;
-      while (pred_node->op()->IsElemWiseOp()) {
+      LogicalNode* tmp_node = cur_node;
+      LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
+      while (pred_node->parallel_desc()->device_type()
+                 == cur_node->parallel_desc()->device_type()
+             && pred_node->op()->IsElemWiseOp()) {
+        tmp_node = pred_node;
         pred_node = pred_node->SoleInEdge()->src_node();
+      }
+      if (pred_node->parallel_desc()->device_type()
+          != cur_node->parallel_desc()->device_type()) {
+        pred_node = tmp_node;
       }
       if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
           == false) {

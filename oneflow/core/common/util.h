@@ -55,10 +55,11 @@ class Global final {
     *GetPPtr() = new T(std::forward<Args>(args)...);
   }
   static void Delete() {
-    CHECK_NOTNULL(Get());
-    LOG(INFO) << "DeleteGlobal " << typeid(T).name();
-    delete Get();
-    *GetPPtr() = nullptr;
+    if (Get() != nullptr) {
+      LOG(INFO) << "DeleteGlobal " << typeid(T).name();
+      delete Get();
+      *GetPPtr() = nullptr;
+    }
   }
 
  private:
