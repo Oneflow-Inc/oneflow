@@ -19,7 +19,7 @@ OpKernelTestCase* MaxPoolingTestCase(const std::string& job_type,
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
-  ::oneflow::MaxPooling2DOpConf* pooling_conf =
+  MaxPooling2DOpConf* pooling_conf =
       pooling_test_case->mut_op_conf()->mutable_max_pooling_2d_conf();
   pooling_conf->set_padding("SAME");
   pooling_conf->add_pool_size(3);
@@ -62,7 +62,7 @@ OpKernelTestCase* AveragePoolingTestCase(
   pooling_test_case->set_is_train(job_type == "train");
   pooling_test_case->set_is_forward(forward_or_backward == "forward");
   pooling_test_case->set_device_type(device_type);
-  ::oneflow::AveragePooling2DOpConf* pooling_conf =
+  AveragePooling2DOpConf* pooling_conf =
       pooling_test_case->mut_op_conf()->mutable_average_pooling_2d_conf();
   pooling_conf->set_padding("SAME");
   pooling_conf->add_pool_size(3);
