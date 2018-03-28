@@ -26,6 +26,7 @@ class NormalizationOp final : public Operator {
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const override;
+  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
 
   bool HasScaleOrCenter() const;
 };

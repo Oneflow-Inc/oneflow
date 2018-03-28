@@ -73,6 +73,10 @@ void NormalizationOp::VirtualGenKernelConf(
       1.0 / inv_elem_cnt);
 }
 
+void NormalizationOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
+  pr_desc->set_policy(ParallelPolicy::kDataParallel);
+}
+
 REGISTER_OP(OperatorConf::kNormalizationConf, NormalizationOp);
 
 }  // namespace oneflow
