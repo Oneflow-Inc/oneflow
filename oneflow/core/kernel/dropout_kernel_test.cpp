@@ -18,6 +18,7 @@ void RngUniform<DeviceType::kCPU>(std::vector<float>* random_mask,
                                                     &random_mask->front());
 }
 
+#ifdef WITH_CUDA
 template<>
 void RngUniform<DeviceType::kGPU>(std::vector<float>* random_mask,
                                   int64_t seed) {
@@ -30,6 +31,7 @@ void RngUniform<DeviceType::kGPU>(std::vector<float>* random_mask,
   CudaCheck(cudaMemcpy(&random_mask->front(), mem_ptr, buf_size,
                        cudaMemcpyDeviceToHost));
 }
+#endif
 
 template<DeviceType device_type, typename T>
 std::vector<T> Dropout(const std::vector<T>& input,
