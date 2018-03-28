@@ -24,6 +24,7 @@ namespace test {
       ((cpu, DeviceType::kCPU))((gpu, DeviceType::kGPU)), data_type_seq, \
       __VA_ARGS__)
 
+template<DeviceType device_type>
 class OpKernelTestCase final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
@@ -35,20 +36,41 @@ class OpKernelTestCase final {
   //  Setters
   JobConf* mut_job_conf() { return &job_conf_; }
   void set_is_train(bool is_train);
-  void set_device_type(DeviceType device_type) { device_type_ = device_type; }
+  void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
   KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
-  void InitBlob(const std::string&, Blob* blob);
-  void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob);
-  void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob,
-                        bool need_random_init);
-  void BackwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob,
-                         bool need_random_init);
-  void BackwardCheckBlob(const std::string&, DeviceType device_type,
-                         Blob* blob);
-  void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
+  template<typename T>
+  void InitBlob(const std::string&, const BlobDesc* blob_desc,
+                const std::vector<T>& val);
+  template<typename T>
+  void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                        const std::vector<T>& val);
+  template<typename T>
+  void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                        const std::vector<T>& val, bool need_random_init);
+  template<typename T>
+  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                         const std::vector<T>& val, bool need_random_init);
+  template<typename T>
+  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                         const std::vector<T>& val);
+
+  template<typename T>
+  void BlobCmp(const std::string& blob_name, const Blob* lhs,
+               const Blob* rhs) const;
 
  private:
+  template<typename T>
+  Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc) const;
+  Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc) const;
+  template<typename T>
+  Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
+                                   std::vector<T> val) const;
+  template<typename T>
+  Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val) const;
+
+  void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
+                     const Blob* rhs) const;
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
   void InitBeforeRun();
@@ -62,8 +84,29 @@ class OpKernelTestCase final {
   std::list<std::string> backward_asserted_blob_names_;
   ParallelContext parallel_ctx_;
   KernelCtx kernel_ctx_;
-  DeviceType device_type_;
   bool is_forward_;
+};
+
+std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
+    std::shared_ptr<Operator>);
+
+template<DeviceType device_type>
+Blob* CreateBlob(const BlobDesc*);
+
+template<DeviceType device_type>
+void BuildKernelCtx(KernelCtx* ctx);
+
+template<DeviceType device_type>
+void SyncStream(KernelCtx* ctx);
+
+template<DeviceType device_type, typename T>
+class KTCommon final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KTCommon);
+  KTCommon() = delete;
+
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf);
 };
 
 #define STRINGIZE_OPKERNEL_TEST_ARGS(...)            \
