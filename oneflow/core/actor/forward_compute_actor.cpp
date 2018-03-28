@@ -14,7 +14,7 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
   if (other_model_regst_desc_id_ != -1) {
-    AsyncLaunchInitModelKernel();
+    AsyncInitModel();
     other_model_initialized = true;
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
       regst->set_model_version_id(0);
@@ -28,7 +28,7 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-void ForwardCompActor::AsyncLaunchInitModelKernel() {
+void ForwardCompActor::AsyncInitModel() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     kernel_ctx.other = &random_seed_;
@@ -67,7 +67,7 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) {
     return 0;
   }
-  AsyncLaunchInitModelKernel();
+  AsyncInitModel();
   if (model_regst_) {
     AsyncSendRegstMsgToProducer(model_regst_);
     model_regst_ = nullptr;
@@ -151,7 +151,6 @@ void ForwardCompActor::Act() {
 
 void ForwardCompActor::TrySendMsgToOtherModelSaveActor(const int64_t piece_id) {
   if (other_model_regst_desc_id_ == -1) { return; }
-
   bool is_last_piece_in_batch =
       (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
   int64_t batch_id = piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
