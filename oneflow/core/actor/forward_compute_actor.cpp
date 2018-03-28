@@ -12,13 +12,33 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  if (random_seed_ == -1
-      || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1
-          && other_model_regst_desc_id_ == -1)) {
+  if (other_model_regst_desc_id_ != -1) { InitOtherModel(); }
+  if (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   } else {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelAndModelTmp);
   }
+}
+
+void ForwardCompActor::InitOtherModel() {
+  for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
+    KernelCtx kernel_ctx = GenDefaultKernelCtx();
+    kernel_ctx.other = &random_seed_;
+    exec_kernel.kernel->InitOtherModel(
+        kernel_ctx, parallel_ctx(),
+        Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
+        [&](const std::string& bn_in_op) {
+          const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
+          Blob* blob = GetCurWriteableRegst(other_model_regst_desc_id_)
+                           ->GetBlobByLbn(lbn);
+          CHECK_NOTNULL(blob);
+          return blob;
+        });
+  }
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_model_version_id(0);
+    return regst->regst_desc_id() == other_model_regst_desc_id_;
+  });
 }
 
 int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
@@ -48,10 +68,6 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
           if (blob == nullptr && model_tmp_regst_) {
             blob = model_tmp_regst_->GetBlobByLbn(lbn);
           }
-          if (blob == nullptr) {
-            blob = GetCurWriteableRegst(other_model_regst_desc_id_)
-                       ->GetBlobByLbn(lbn);
-          }
           CHECK_NOTNULL(blob);
           return blob;
         });
@@ -63,12 +79,6 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (model_tmp_regst_) {
     AsyncSendRegstMsgToProducer(model_tmp_regst_);
     model_tmp_regst_ = nullptr;
-  }
-  if (other_model_regst_desc_id_ != -1) {
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-      regst->set_model_version_id(0);
-      return regst->regst_desc_id() == other_model_regst_desc_id_;
-    });
   }
   OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   return 0;
@@ -138,24 +148,26 @@ void ForwardCompActor::Act() {
       CHECK_LE(piece_id, last_piece_id);
       if (piece_id == last_piece_id) { AsyncReturnModelRegst(); }
     }
-    if (other_model_regst_desc_id_ != -1) {
-      bool is_last_piece_in_batch =
-          (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
-      int64_t batch_id =
-          piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
-      bool need_save =
-          batch_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
-          || (batch_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
-                 == 0;
-      if (is_last_piece_in_batch && need_save) {
-        AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-          regst->set_model_version_id(batch_id);
-          return regst->regst_desc_id() == other_model_regst_desc_id_;
-        });
-      }
-    }
+    TrySendMsgToOtherModelSaveActor(piece_id);
   }
   AsyncSendRegstMsgToProducer(in_regst);
+}
+
+void ForwardCompActor::TrySendMsgToOtherModelSaveActor(const int64_t piece_id) {
+  if (other_model_regst_desc_id_ == -1) { return; }
+
+  bool is_last_piece_in_batch =
+      (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
+  int64_t batch_id = piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
+  bool need_save =
+      batch_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
+      || (batch_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
+  if (is_last_piece_in_batch && need_save) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_model_version_id(batch_id);
+      return regst->regst_desc_id() == other_model_regst_desc_id_;
+    });
+  }
 }
 
 void ForwardCompActor::AsyncReturnAllReadableRegst() {

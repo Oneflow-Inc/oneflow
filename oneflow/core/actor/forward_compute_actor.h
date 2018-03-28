@@ -17,6 +17,8 @@ class ForwardCompActor final : public CompActor {
   int HandlerInitModelAndModelTmp(const ActorMsg&);
   int HandlerNormal(const ActorMsg&) override;
 
+  void InitOtherModel();
+
   bool IsReadReady() override;
   bool IsReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllReadableRegst() override;
@@ -27,6 +29,7 @@ class ForwardCompActor final : public CompActor {
   void AsyncReturnModelRegst();
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();
+  void TrySendMsgToOtherModelSaveActor(const int64_t piece_id);
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
