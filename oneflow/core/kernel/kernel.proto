@@ -78,7 +78,7 @@ message LocalResponseNormalizationKernelConf {
 }
 
 message NormalizationKernelConf {
-  required int64 inputs_elem_cnt = 1;
+  required float inv_inputs_elem_cnt = 1;
 }
 
 message KernelConf {
