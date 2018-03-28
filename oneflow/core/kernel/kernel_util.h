@@ -158,21 +158,38 @@ struct KernelUtil final {
                                      const std::string& bn_in_op,
                                      int32_t dim_num, int64_t num_in_each_dim);
 
-#define GEN_BLOB_GEMM_FUNC(type)                                             \
-  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,         \
-                       enum CBLAS_TRANSPOSE trans_b, type alpha, type beta,  \
-                       const Blob* a, const Blob* b, Blob* c) {              \
-    const int m = c->shape().At(0);                                          \
-    const int n = c->shape().Count(1);                                       \
-    const int k =                                                            \
-        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);  \
-                                                                             \
-    const int lda = (trans_a == CblasNoTrans) ? k : m;                       \
-    const int ldb = (trans_b == CblasNoTrans) ? n : k;                       \
-    const int ldc = n;                                                       \
-                                                                             \
-    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), \
-         lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);               \
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                     enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                     const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb,
+         beta, c, ldc);
+  }
+
+  static void OFGemmTrans(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                          enum CBLAS_TRANSPOSE trans_b, const int m,
+                          const int n, const int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c) {
+    trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    OFGemm(ctx, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  }
+
+#define GEN_BLOB_GEMM_FUNC(type)                                              \
+  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,          \
+                       enum CBLAS_TRANSPOSE trans_b, type alpha, type beta,   \
+                       const Blob* a, const Blob* b, Blob* c) {               \
+    const int m = c->shape().At(0);                                           \
+    const int n = c->shape().Count(1);                                        \
+    const int k =                                                             \
+        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);   \
+                                                                              \
+    OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), \
+           beta, c->mut_dptr<T>());                                           \
   }
 
   GEN_BLOB_GEMM_FUNC(T)
