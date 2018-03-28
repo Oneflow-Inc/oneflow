@@ -27,7 +27,7 @@ void CalcSumOfBlobs(DeviceCtx* ctx,
     const T* src_ptr = src_blob_i->dptr<T>();
     T* dst_ptr = dst_blob->mut_dptr<T>();
     FOR_RANGE(size_t, j, 0, dst_blob->shape().elem_cnt()) {
-      *(dst_ptr + j) = *(src_ptr + j);
+      *(dst_ptr + j) += *(src_ptr + j);
     }
     // KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, dst_blob->shape().elem_cnt(),
     //                                       1.0, src_blob_i->dptr<T>(), 1,
