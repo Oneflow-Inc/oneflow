@@ -9,7 +9,7 @@ void AccumulateKernel<device_type, T>::ForwardDataContent(
   const Blob* in_blob = BnInOp2Blob("one");
   Blob* out_blob = BnInOp2Blob("acc");
   KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_blob->shape().elem_cnt(),
-                                   static_cast<T>(1.0), in_blob->dptr<T>(), 1,
+                                   OneVal<T>::value, in_blob->dptr<T>(), 1,
                                    out_blob->mut_dptr<T>(), 1);
 }
 

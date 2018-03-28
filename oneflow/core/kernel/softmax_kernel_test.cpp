@@ -13,7 +13,7 @@ template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
   using KTC = KTCommon<device_type, T>;
 
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   auto bn2blob = new HashMap<std::string, Blob*>;
   (*bn2blob)["in"] = KTC::CreateBlobWithSpecifiedVal(
       new BlobDesc(Shape({2, 4}), data_type, false), {1, 2, 3, 4, 0, 0, 0, 0});

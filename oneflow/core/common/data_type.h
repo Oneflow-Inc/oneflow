@@ -7,6 +7,8 @@
 
 namespace oneflow {
 
+// SEQ
+
 #define FLOATING_DATA_TYPE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(float, DataType::kFloat) \
   OF_PP_MAKE_TUPLE_SEQ(double, DataType::kDouble)
@@ -25,51 +27,69 @@ namespace oneflow {
 
 #define ALL_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ
 
-bool IsIntegral(DataType data_type);
-bool IsFloatingPoint(DataType data_type);
+// Type Trait: IsFloating
+
+template<typename T>
+struct IsFloating : std::integral_constant<bool, false> {};
+
+#define SPECIALIZE_TRUE_FLOATING(type_cpp, type_proto) \
+  template<>                                           \
+  struct IsFloating<type_cpp> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_FLOATING, FLOATING_DATA_TYPE_SEQ);
+#undef SPECIALIZE_TRUE_FLOATING
+
+// Type Trait: IsIntegral
+
+template<typename T>
+struct IsIntegral : std::integral_constant<bool, false> {};
+
+#define SPECIALIZE_TRUE_INTEGRAL(type_cpp, type_proto) \
+  template<>                                           \
+  struct IsIntegral<type_cpp> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
+#undef SPECIALIZE_TRUE_INTEGRAL
+
+// Type Trait: GetDataType
 
 template<typename T>
 struct GetDataType;
 
 template<>
-struct GetDataType<void> {
-  static const DataType val;
-};
+struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 
-#define DECLARE_GET_DATA_TYPE(type_cpp, type_proto) \
-  template<>                                        \
-  struct GetDataType<type_cpp> {                    \
-    static const DataType val;                      \
-  };
-OF_PP_FOR_EACH_TUPLE(DECLARE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
+#define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto) \
+  template<>                                           \
+  struct GetDataType<type_cpp>                         \
+      : std::integral_constant<DataType, type_proto> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
+#undef SPECIALIZE_GET_DATA_TYPE
 
-template<DataType data_type>
-struct GetTypename;
+// Type Trait: const var
 
-#define DECLARE_GET_TYPENAME(type_cpp, type_proto) \
-  template<>                                       \
-  struct GetTypename<type_proto> {                 \
-    using val = type_cpp;                          \
-  };
-OF_PP_FOR_EACH_TUPLE(DECLARE_GET_TYPENAME, ALL_DATA_TYPE_SEQ);
+#define TRAIT_CONST_VAR(var_name, var_val)                   \
+  template<typename T>                                       \
+  struct var_name##Val {                                     \
+    static const T value;                                    \
+  };                                                         \
+  template<typename T>                                       \
+  const T var_name##Val<T>::value = static_cast<T>(var_val); \
+  template<typename T>                                       \
+  struct var_name##Ptr {                                     \
+    static const T* value;                                   \
+  };                                                         \
+  template<typename T>                                       \
+  const T* var_name##Ptr<T>::value = &var_name##Val<T>::value;
 
-template<DataType data_type>
-struct GetSizeOf;
+TRAIT_CONST_VAR(Zero, 0);
+TRAIT_CONST_VAR(One, 1);
 
-#define DECLARE_GET_SIZE_OF(type_cpp, type_proto) \
-  template<>                                      \
-  struct GetSizeOf<type_proto> {                  \
-    static const size_t val;                      \
-  };
-OF_PP_FOR_EACH_TUPLE(DECLARE_GET_SIZE_OF, ALL_DATA_TYPE_SEQ);
+#undef TRAIT_CONST_VAR
 
-inline size_t GetSizeOfDataType(DataType data_type) {
-  static const HashMap<int, size_t> data_type2size = {
-#define SIZE_OF_DATA_TYPE_ENTRY(type_cpp, type_proto) \
-  {type_proto, sizeof(type_cpp)},
-      OF_PP_FOR_EACH_TUPLE(SIZE_OF_DATA_TYPE_ENTRY, ALL_DATA_TYPE_SEQ)};
-  return data_type2size.at(data_type);
-}
+// Func
+
+bool IsIntegralDataType(DataType data_type);
+bool IsFloatingDataType(DataType data_type);
+size_t GetSizeOfDataType(DataType data_type);
 
 }  // namespace oneflow
 

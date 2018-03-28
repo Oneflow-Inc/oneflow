@@ -32,7 +32,7 @@ void LossOp::InferBlobDescs(
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(),
            label_blob_desc->has_data_id_field());
-  CHECK(IsIntegral(label_blob_desc->data_type()));
+  CHECK(IsIntegralDataType(label_blob_desc->data_type()));
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(label_blob_desc->shape(), Shape({pred_blob_desc->shape().At(0)}));
   // loss
