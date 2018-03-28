@@ -6,7 +6,7 @@ template<typename T, bool has_data_id_field>
 void TestReluOp() {
   // create relu_op with input shape 3x5x4
   OperatorConf op_conf;
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   op_conf.set_name("relu_test");
   op_conf.mutable_relu_conf()->set_in("relu/in");
   op_conf.mutable_relu_conf()->set_out("relu/out");

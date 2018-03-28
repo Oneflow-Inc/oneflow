@@ -10,7 +10,7 @@ void TestBoxingOp() {
   // in3 {10, 4, 6, 6}
   // in3 {10, 4, 6, 6}
   OperatorConf op_conf;
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   op_conf.set_name("boxing_test");
   BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
   boxing_conf->set_data_type(data_type);

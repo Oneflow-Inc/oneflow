@@ -44,7 +44,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap(
     const std::vector<std::vector<int64_t>>& in_dim_vecs,
     const std::vector<std::vector<int64_t>>& out_dim_vecs,
     const std::vector<int64_t> middle_dim = {0, 0, 0, 0}) {
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   using KTC = KTCommon<DeviceType::kCPU, T>;
   // construct mapping from bns to blobs
   auto bn2blob = new std::map<std::string, Blob*>;
@@ -80,7 +80,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap(
     const std::vector<int64_t> middle_dim = {0, 0, 0, 0}) {
   using KTC = KTCommon<DeviceType::kCPU, T>;
 
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   auto bn2blob = new std::map<std::string, Blob*>;
   for (size_t i = 0; i < out_dim_vecs.size(); ++i) {
     (*bn2blob)["in_" + std::to_string(i)] = bn2bptr("out_" + std::to_string(i));
@@ -108,7 +108,7 @@ template<typename T>
 void TestBoxingKernelConcatClone(bool need_backward) {
   using KTC = KTCommon<DeviceType::kCPU, T>;
 
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   KernelCtx ctx;
   BuildKernelCtx<DeviceType::kCPU>(&ctx);
 
@@ -162,7 +162,7 @@ void TestBoxingKernelConcatSplit_1(bool need_backward) {
   // Create cpu_device and kernel contexts
   using KTC = KTCommon<DeviceType::kCPU, T>;
 
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   KernelCtx ctx;
   BuildKernelCtx<DeviceType::kCPU>(&ctx);
 
@@ -214,7 +214,7 @@ void TestBoxingKernelConcatSplit(bool need_backward) {
   // Create cpu_device and kernel contexts
   using KTC = KTCommon<DeviceType::kCPU, T>;
 
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   KernelCtx ctx;
   BuildKernelCtx<DeviceType::kCPU>(&ctx);
 
@@ -269,7 +269,7 @@ void TestBoxingKernelConcatSplitNull(bool need_backward) {
   // Create cpu_device and kernel contexts
   using KTCommon = KTCommon<DeviceType::kCPU, T>;
 
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   KernelCtx ctx;
   BuildKernelCtx<DeviceType::kCPU>(&ctx);
 
@@ -345,7 +345,7 @@ void TestBoxingKernelAddClone() {
 
   // check if add-results is the same as expected.
   Blob* expected_add_b = KTCommon::CreateBlobWithSameVal(
-      new BlobDesc(Shape(out_dim_vecs[0]), GetDataType<T>::val, false), 10);
+      new BlobDesc(Shape(out_dim_vecs[0]), GetDataType<T>::value, false), 10);
   for (size_t i = 0; i < out_dim_vecs.size(); ++i) {
     KTCommon::BlobCmp(bn2blob("out_" + std::to_string(i)), expected_add_b);
   }

@@ -12,7 +12,7 @@ template<typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(
     CopyHdOpConf::Type hd_type) {
   BlobDesc* blob_desc =
-      new BlobDesc(Shape({3, 4, 5, 6}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({3, 4, 5, 6}), GetDataType<T>::value, false);
 
   auto bn2blob = new HashMap<std::string, Blob*>;
 

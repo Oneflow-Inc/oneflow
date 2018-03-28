@@ -29,7 +29,8 @@ template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobMap() {
   using KTC = KTCommon<device_type, T>;
 
-  BlobDesc* blob_desc = new BlobDesc(Shape({2, 4}), GetDataType<T>::val, false);
+  BlobDesc* blob_desc =
+      new BlobDesc(Shape({2, 4}), GetDataType<T>::value, false);
 
   auto bn2blob = new HashMap<std::string, Blob*>;
 

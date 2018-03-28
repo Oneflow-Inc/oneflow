@@ -21,7 +21,7 @@ OpKernelTestCase* ReluTestCase(const std::string& job_type,
 
   using KTC = KTCommon<device_type, T>;
   BlobDesc* blob_desc =
-      new BlobDesc(Shape({1, 8}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 8}), GetDataType<T>::value, false, false, 1);
   relu_test_case->InitBlob(
       "in", KTC::CreateBlobWithSpecifiedVal(blob_desc,
                                             {1, -1, -2, 2, 0, 5, -10, 100}));
