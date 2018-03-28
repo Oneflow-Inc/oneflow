@@ -14,8 +14,8 @@ CudnnLRNDesc::CudnnLRNDesc(unsigned depth_radius, double alpha, double beta,
 CudnnLRNDesc::~CudnnLRNDesc() { CudaCheck(cudnnDestroyLRNDescriptor(val_)); }
 #endif  // WITH_CUDA
 
-template<DeviceType device_type, typename T>
-void LocalResponseNormalizationKernel<device_type, T>::ForwardDataContent(
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -23,12 +23,12 @@ void LocalResponseNormalizationKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* padded_square_blob = BnInOp2Blob("padded_square");
   Blob* normalize_coef_blob = BnInOp2Blob("normalize_coef");
-  Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr(), 0,
-                      out_blob->ByteSizeOfDataContentField());
-  Memset<device_type>(ctx.device_ctx, padded_square_blob->mut_dptr(), 0,
-                      padded_square_blob->ByteSizeOfDataContentField());
-  Memset<device_type>(ctx.device_ctx, normalize_coef_blob->mut_dptr(), 0,
-                      normalize_coef_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr(), 0,
+                           out_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, padded_square_blob->mut_dptr(), 0,
+                           padded_square_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, normalize_coef_blob->mut_dptr(), 0,
+                           normalize_coef_blob->ByteSizeOfDataContentField());
   ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in_shape.At(3),
                                 in_shape.elem_cnt() / in_shape.At(3));
   EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), in_shape.At(3),
@@ -70,8 +70,8 @@ void LocalResponseNormalizationKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-template<DeviceType device_type, typename T>
-void LocalResponseNormalizationKernel<device_type, T>::BackwardDataContent(
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
@@ -81,8 +81,8 @@ void LocalResponseNormalizationKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   if (in_diff_blob == nullptr) { return; }
-  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
-                      in_diff_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
+                           in_diff_blob->ByteSizeOfDataContentField());
   ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in_shape.At(3),
                                 in_shape.elem_cnt() / in_shape.At(3));
   ConstEigenMatrixMap<T> out_mat(out_blob->dptr<T>(), in_shape.At(3),

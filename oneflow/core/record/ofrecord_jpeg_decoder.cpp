@@ -23,7 +23,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
         GetImagePreprocess(blob_conf.jpeg().preprocess(i).preprocess_case());
     preprocess->DoPreprocess(&image, blob_conf.jpeg().preprocess(i));
   }
-  CHECK_EQ(blob_conf.shape().dim_size(), image.dims);
+  CHECK_EQ(blob_conf.shape().dim_size(), 3);
   FOR_RANGE(size_t, i, 0, image.dims) {
     CHECK_EQ(blob_conf.shape().dim(i), image.size[i]);
   }

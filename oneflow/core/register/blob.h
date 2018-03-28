@@ -94,8 +94,8 @@ class Blob : public BlobIf {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false
                    && std::is_same<T, char>::value == false
                    && blob_desc_->data_type() != DataType::kChar
-                   && blob_desc_->data_type() != GetDataType<T>::val))
-        << blob_desc_->data_type() << " " << GetDataType<T>::val;
+                   && blob_desc_->data_type() != GetDataType<T>::value))
+        << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
 
   void* mem_ptr_;
