@@ -72,7 +72,7 @@ class PoolingKernelIf : public KernelIf<device_type> {
 #ifdef WITH_CUDA
                                           ,
                                       this->GetCudnnPoolingMode(),
-                                      GetDataType<T>::val
+                                      GetDataType<T>::value
 #endif  // WITH_CUDA
                                       ));
   }

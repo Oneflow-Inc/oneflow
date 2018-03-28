@@ -17,7 +17,7 @@ Kernel* BuildCloneKernel(int out_num) {
   CloneOpConf* clone_conf = op_conf.mutable_clone_conf();
   clone_conf->set_out_num(out_num);
   clone_conf->set_lbn("clone_lbn");
-  clone_conf->set_data_type(GetDataType<T>::val);
+  clone_conf->set_data_type(GetDataType<T>::value);
   auto clone_op = ConstructOp(op_conf);
   OperatorProto op_proto;
   clone_op->ToProto(&op_proto);
@@ -28,7 +28,7 @@ Kernel* BuildCloneKernel(int out_num) {
 
 template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2BlobFunc(int out_num) {
-  auto blob_desc = new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
+  auto blob_desc = new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::value, false);
 
   using KTC = KTCommon<device_type, T>;
 

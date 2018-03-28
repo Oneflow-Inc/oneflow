@@ -14,15 +14,15 @@ template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildBnInOp2Blob(bool has_bias_term) {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   BlobDesc* blob_desc2122 =
-      new BlobDesc(Shape({2, 1, 2, 2}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({2, 1, 2, 2}), GetDataType<T>::value, false);
   BlobDesc* blob_desc34 =
-      new BlobDesc(Shape({3, 4}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({3, 4}), GetDataType<T>::value, false);
   BlobDesc* blob_desc23 =
-      new BlobDesc(Shape({2, 3}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({2, 3}), GetDataType<T>::value, false);
   BlobDesc* blob_desc13 =
-      new BlobDesc(Shape({1, 3}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({1, 3}), GetDataType<T>::value, false);
   BlobDesc* blob_desc21 =
-      new BlobDesc(Shape({2, 1}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({2, 1}), GetDataType<T>::value, false);
   (*bn2blob_ptr)["in"] = KTCommon<device_type, T>::CreateBlobWithSpecifiedVal(
       blob_desc2122, {1, 2, 3, 4, 5, 6, 7, 8});
   (*bn2blob_ptr)["weight"] =
@@ -77,7 +77,7 @@ template<DeviceType device_type, typename T>
 std::function<Blob*(const std::string&)> BuildEmptyMdlForFill() {
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   BlobDesc* blob_desc_fill =
-      new BlobDesc(Shape({100, 100}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({100, 100}), GetDataType<T>::value, false);
   (*bn2blob_ptr)["weight"] =
       KTCommon<device_type, T>::CreateBlobWithRandomVal(blob_desc_fill);
   (*bn2blob_ptr)["bias"] =
