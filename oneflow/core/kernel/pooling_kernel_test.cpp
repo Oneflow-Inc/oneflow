@@ -347,23 +347,18 @@ OpKernelTestCase* AveragePooling3DTestCase(
   return pooling_test_case;
 }
 
-TEST_CPU_AND_GPU_OPKERNEL(MaxPooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
+#define FOR_EACH_POOLING_TEST_CASE(__do_each_macro)                           \
+  __do_each_macro(MaxPooling1DTestCase) __do_each_macro(MaxPooling2DTestCase) \
+      __do_each_macro(MaxPooling3DTestCase)                                   \
+          __do_each_macro(AveragePooling1DTestCase)                           \
+              __do_each_macro(AveragePooling2DTestCase)                       \
+                  __do_each_macro(AveragePooling3DTestCase)
 
-TEST_CPU_AND_GPU_OPKERNEL(MaxPooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
+#define TEST_ONE_FUNC(test_case_func_name)                               \
+  TEST_CPU_AND_GPU_OPKERNEL(test_case_func_name, FLOATING_DATA_TYPE_SEQ, \
+                            (train)(predict), (forward)(backward));
 
-TEST_CPU_AND_GPU_OPKERNEL(MaxPooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
-
-TEST_CPU_AND_GPU_OPKERNEL(AveragePooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
-
-TEST_CPU_AND_GPU_OPKERNEL(AveragePooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
-
-TEST_CPU_AND_GPU_OPKERNEL(AveragePooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
+FOR_EACH_POOLING_TEST_CASE(TEST_ONE_FUNC);
 
 }  // namespace test
 
