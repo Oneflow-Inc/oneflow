@@ -159,6 +159,8 @@ void OpKernelTestCase::Run() {
     SyncStream<DeviceType::kCPU>(&kernel_ctx_);
   } else if (device_type_ == DeviceType::kGPU) {
     SyncStream<DeviceType::kGPU>(&kernel_ctx_);
+  } else {
+    UNIMPLEMENTED();
   }
   AssertAfterRun();
 }
