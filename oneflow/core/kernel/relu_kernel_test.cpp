@@ -38,9 +38,8 @@ OpKernelTestCase* ReluTestCase(const std::string& job_type,
   return relu_test_case;
 }
 
-TEST_CPU_ONLY_OPKERNEL(ReluTestCase,
-                       FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ReluTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 }  // namespace test
 
