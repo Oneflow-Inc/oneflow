@@ -4,6 +4,7 @@ namespace oneflow {
 
 void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
+  other_model_initialized = false;
   in_regst_desc_id_ = RegstDescId4Name("in");
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
@@ -12,7 +13,14 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  if (other_model_regst_desc_id_ != -1) { InitOtherModel(); }
+  if (other_model_regst_desc_id_ != -1) {
+    AsyncLaunchInitModelKernel();
+    other_model_initialized = true;
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_model_version_id(0);
+      return regst->regst_desc_id() == other_model_regst_desc_id_;
+    });
+  }
   if (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1) {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   } else {
@@ -20,25 +28,29 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-void ForwardCompActor::InitOtherModel() {
+void ForwardCompActor::AsyncLaunchInitModelKernel() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     kernel_ctx.other = &random_seed_;
-    exec_kernel.kernel->InitOtherModel(
+    exec_kernel.kernel->InitModelAndModelTmp(
         kernel_ctx, parallel_ctx(),
         Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
-          Blob* blob = GetCurWriteableRegst(other_model_regst_desc_id_)
-                           ->GetBlobByLbn(lbn);
+          Blob* blob = nullptr;
+          if (model_regst_) { blob = model_regst_->GetBlobByLbn(lbn); }
+          if (blob == nullptr && model_tmp_regst_) {
+            blob = model_tmp_regst_->GetBlobByLbn(lbn);
+          }
+          if (blob == nullptr && other_model_regst_desc_id_ != -1
+              && !other_model_initialized) {
+            blob = GetCurWriteableRegst(other_model_regst_desc_id_)
+                       ->GetBlobByLbn(lbn);
+          }
           CHECK_NOTNULL(blob);
           return blob;
         });
   }
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_model_version_id(0);
-    return regst->regst_desc_id() == other_model_regst_desc_id_;
-  });
 }
 
 int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
@@ -55,23 +67,7 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) {
     return 0;
   }
-  for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
-    KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    kernel_ctx.other = &random_seed_;
-    exec_kernel.kernel->InitModelAndModelTmp(
-        kernel_ctx, parallel_ctx(),
-        Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
-        [&](const std::string& bn_in_op) {
-          const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
-          Blob* blob = nullptr;
-          if (model_regst_) { blob = model_regst_->GetBlobByLbn(lbn); }
-          if (blob == nullptr && model_tmp_regst_) {
-            blob = model_tmp_regst_->GetBlobByLbn(lbn);
-          }
-          CHECK_NOTNULL(blob);
-          return blob;
-        });
-  }
+  AsyncLaunchInitModelKernel();
   if (model_regst_) {
     AsyncSendRegstMsgToProducer(model_regst_);
     model_regst_ = nullptr;

@@ -27,11 +27,12 @@ class ForwardCompTaskNode : public CompTaskNode {
   virtual void VirtualBuildExtraRegsts() {}
   virtual void VirtualBuildExecGphStructAndBindInRegst() { UNIMPLEMENTED(); }
   virtual void VirtualBuildOutRegst() { UNIMPLEMENTED(); }
-  int64_t random_seed_;
 
  private:
   void BuildActivationRegst();
   void BuildModelAndTmpRegsts();
+
+  int64_t random_seed_;
 };
 
 }  // namespace oneflow
