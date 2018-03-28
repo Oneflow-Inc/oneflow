@@ -156,7 +156,7 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
         ctx, BnInOp2Blob("h2h_r_weight"), BnInOp2Blob("h2h_z_weight"),
         BnInOp2Blob("h2h_weight"), reset_out_blob, update_out_blob, hidden_blob,
         hidden_diff_blob, candidate_data_diff_blob, reset_data_diff_blob,
-        update_data_diff_blob, out_diff_blob, tmp_data_blob);
+        update_data_diff_blob, out_diff_blob);
   }
 }
 
@@ -384,15 +384,15 @@ void BasicGruKernelUtil<device_type, T>::ComputeHiddenDiff(
     const KernelCtx& ctx, const Blob* h2h_r_weight, const Blob* h2h_z_weight,
     const Blob* h2h_weight, const Blob* reset_out, const Blob* update_out,
     Blob* hidden, Blob* hidden_diff, Blob* candidate_d_diff, Blob* reset_d_diff,
-    Blob* update_d_diff, Blob* out_diff, Blob* tmp_diff) {
-  // tmp_diff = candidate_d_diff * h2h_weight
+    Blob* update_d_diff, Blob* out_diff) {
+  // hidden_diff = candidate_d_diff * h2h_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), candidate_d_diff, h2h_weight, tmp_diff);
-  // hidden_diff = reset_out .* tmp_diff
+      static_cast<T>(0), candidate_d_diff, h2h_weight, hidden_diff);
+  // hidden_diff = reset_out .* hidden_diff
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, hidden_diff->shape().elem_cnt(), reset_out->dptr<T>(),
-      tmp_diff->dptr<T>(), hidden_diff->mut_dptr<T>());
+      hidden_diff->dptr<T>(), hidden_diff->mut_dptr<T>());
   // hidden_diff += reset_d_diff * h2h_r_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),

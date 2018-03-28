@@ -78,7 +78,7 @@ struct BasicGruKernelUtil {
                                 const Blob* update_out, Blob* hidden,
                                 Blob* hidden_diff, Blob* candidate_d_diff,
                                 Blob* reset_d_diff, Blob* update_d_diff,
-                                Blob* out_diff, Blob* tmp_diff);
+                                Blob* out_diff);
 };
 
 }  // namespace oneflow
