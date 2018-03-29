@@ -49,6 +49,9 @@ struct KernelUtil final {
                    const int incx, T* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
                    const int incx, T* y, const int incy);
+  // x = 1.0 / sqrt(x + epsilon)
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  // x = a*x
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
                    const int incx);
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,

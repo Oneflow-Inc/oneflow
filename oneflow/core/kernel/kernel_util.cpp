@@ -151,6 +151,10 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int incx) {
     Scal(ctx, n, *alpha, x, incx);
   }
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x,
+                    const float epsilon) {
+    for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
