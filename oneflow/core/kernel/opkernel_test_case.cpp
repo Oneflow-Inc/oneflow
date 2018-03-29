@@ -8,73 +8,6 @@ namespace oneflow {
 
 namespace test {
 
-#if defined(WITH_CUDA)
-
-std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
-    std::shared_ptr<Operator> op) {
-  auto InsertBnsWithEmptyBlobDesc2Map =
-      [](const std::vector<std::string>& bns,
-         HashMap<std::string, BlobDesc*>* bn2blobdesc_map) {
-        for (const std::string& bn : bns) {
-          CHECK(bn2blobdesc_map->insert({bn, new BlobDesc}).second);
-        }
-      };
-  auto bn2blobdesc_map = new HashMap<std::string, BlobDesc*>();
-  InsertBnsWithEmptyBlobDesc2Map(op->data_tmp_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->input_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->input_diff_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->output_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->output_diff_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->model_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->model_diff_bns(), bn2blobdesc_map);
-  InsertBnsWithEmptyBlobDesc2Map(op->model_tmp_bns(), bn2blobdesc_map);
-  return [bn2blobdesc_map](const std::string& bn) {
-    return bn2blobdesc_map->at(bn);
-  };
-}
-
-template<>
-Blob* CreateBlob<DeviceType::kCPU>(const BlobDesc* blob_desc) {
-  void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
-                 DeviceType::kCPU);
-}
-
-template<>
-void BuildKernelCtx<DeviceType::kCPU>(KernelCtx* ctx) {
-  ctx->device_ctx = new CpuDeviceCtx(-1);
-}
-
-template<>
-void SyncStream<DeviceType::kCPU>(KernelCtx* ctx) {}
-
-template<typename T>
-class KTCommon<DeviceType::kCPU, T> final {
- public:
-  static void CheckInitializeResult(const Blob* blob,
-                                    const InitializerConf& initializer_conf) {
-    if (initializer_conf.has_constant_conf()) {
-      for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
-        ASSERT_FLOAT_EQ(blob->dptr<T>()[i],
-                        initializer_conf.constant_conf().value());
-      }
-    } else if (initializer_conf.has_random_uniform_conf()) {
-      TODO();
-    } else if (initializer_conf.has_random_normal_conf()) {
-      TODO();
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-};
-
-#define INSTANTIATE_KTCOMMON(type_cpp, type_proto) \
-  template class KTCommon<DeviceType::kCPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KTCOMMON, ALL_DATA_TYPE_SEQ)
-
-#endif
-
 namespace {
 
 std::string ExpectedBlobName(const std::string& name) {
@@ -83,20 +16,57 @@ std::string ExpectedBlobName(const std::string& name) {
 
 }  // namespace
 
+#if defined(WITH_CUDA)
+
+template<>
+Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
+    const BlobDesc* blob_desc) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
+  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+                 DeviceType::kCPU);
+}
+
+#endif
+
+template<>
+void OpKernelTestCase<DeviceType::kCPU>::BuildKernelCtx(KernelCtx* ctx) {
+  ctx->device_ctx = new CpuDeviceCtx(-1);
+}
+
+template<>
+void OpKernelTestCase<DeviceType::kCPU>::SyncStream(KernelCtx* ctx) {}
+
 template<DeviceType device_type>
 template<typename T>
 Blob* OpKernelTestCase<device_type>::CreateBlobWithSpecifiedVal(
-    const BlobDesc* blob_desc, std::vector<T> val) const {
-  //  return KTCommon<device_type, T>::CreateBlobWithSpecifiedValPtr(blob_desc,
-  //                                                               &(val[0]));
+    const BlobDesc* blob_desc, std::vector<T> val) {
   return CreateBlobWithSpecifiedValPtr(blob_desc, &(val[0]));
 }
 
 template<>
 template<typename T>
+void OpKernelTestCase<DeviceType::kCPU>::CheckInitializeResult(
+    const Blob* blob, const InitializerConf& initializer_conf) {
+  if (initializer_conf.has_constant_conf()) {
+    for (int64_t i = 0; i < blob->shape().elem_cnt(); ++i) {
+      ASSERT_FLOAT_EQ(blob->dptr<T>()[i],
+                      initializer_conf.constant_conf().value());
+    }
+  } else if (initializer_conf.has_random_uniform_conf()) {
+    TODO();
+  } else if (initializer_conf.has_random_normal_conf()) {
+    TODO();
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<>
+template<typename T>
 Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlobWithSpecifiedValPtr(
-    const BlobDesc* blob_desc, T* val) const {
-  Blob* ret = CreateBlob<DeviceType::kCPU>(blob_desc);
+    const BlobDesc* blob_desc, T* val) {
+  Blob* ret = CreateBlob(blob_desc);
   CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataContentField(),
                        cudaMemcpyHostToHost));
   return ret;
@@ -105,7 +75,7 @@ Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlobWithSpecifiedValPtr(
 template<DeviceType device_type>
 template<typename T>
 Blob* OpKernelTestCase<device_type>::CreateBlobWithRandomVal(
-    const BlobDesc* blob_desc) const {
+    const BlobDesc* blob_desc) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(0, 10);
@@ -176,7 +146,7 @@ void OpKernelTestCase<device_type>::BackwardCheckBlob(
 
 template<DeviceType device_type>
 Blob* OpKernelTestCase<device_type>::SwitchCreateBlobWithRandomVal(
-    const BlobDesc* blob_desc) const {
+    const BlobDesc* blob_desc) {
   switch (blob_desc->data_type()) {
 #define CREATE_BLOB_WITH_RANDOM_VAL_ENTRY(type_cpp, type_proto) \
   case type_proto: return CreateBlobWithRandomVal<type_cpp>(blob_desc);
@@ -206,26 +176,36 @@ OpKernelTestCase<device_type>::OpKernelTestCase() {
 }
 
 template<DeviceType device_type>
-void OpKernelTestCase<device_type>::InitBeforeRun() {
+void OpKernelTestCase<device_type>::InitJobConf(
+    const std::function<void(JobConf*)>& Init) {
+  Init(&job_conf_);
+  UpdateGlobalJobDesc();
+}
+
+template<DeviceType device_type>
+void OpKernelTestCase<device_type>::UpdateGlobalJobDesc() {
   JobDescProto job_desc_proto;
   *job_desc_proto.mutable_job_conf() = job_conf_;
   if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
   Global<JobDesc>::New(job_desc_proto);
+}
 
+template<DeviceType device_type>
+void OpKernelTestCase<device_type>::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
     bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
   }
-
-  BuildKernelCtx<device_type>(&kernel_ctx_);
+  BuildKernelCtx(&kernel_ctx_);
 }
 
 template<DeviceType device_type>
 void OpKernelTestCase<device_type>::set_is_train(bool is_train) {
   if (is_train) {
-    mut_job_conf()->mutable_train_conf();
+    job_conf_.mutable_train_conf();
   } else {
-    mut_job_conf()->mutable_predict_conf();
+    job_conf_.mutable_predict_conf();
   }
+  UpdateGlobalJobDesc();
 }
 
 template<DeviceType device_type>
@@ -246,7 +226,7 @@ template<>
 template<typename T>
 void OpKernelTestCase<DeviceType::kCPU>::BlobCmp(const std::string& blob_name,
                                                  const Blob* lhs,
-                                                 const Blob* rhs) const {
+                                                 const Blob* rhs) {
   ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc()) << blob_name;
   CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
   if (IsFloatingPoint(lhs->data_type())) {
@@ -263,11 +243,23 @@ void OpKernelTestCase<DeviceType::kCPU>::BlobCmp(const std::string& blob_name,
 template<DeviceType device_type>
 void OpKernelTestCase<device_type>::SwitchBlobCmp(const std::string& blob_name,
                                                   const Blob* lhs,
-                                                  const Blob* rhs) const {
+                                                  const Blob* rhs) {
   switch (lhs->data_type()) {
 #define BLOB_CMP_ENTRY(type_cpp, type_proto) \
   case type_proto: return BlobCmp<type_cpp>(blob_name, lhs, rhs);
     OF_PP_FOR_EACH_TUPLE(BLOB_CMP_ENTRY, ALL_DATA_TYPE_SEQ);
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type>
+void OpKernelTestCase<device_type>::SwitchCheckInitializeResult(
+    const Blob* blob, const InitializerConf& initializer_conf) {
+  switch (blob->data_type()) {
+#define CHECK_INITIALIZED_RESULT_ENTRY(type_cpp, type_proto) \
+  case type_proto:                                           \
+    return CheckInitializeResult<type_cpp>(blob, initializer_conf);
+    OF_PP_FOR_EACH_TUPLE(CHECK_INITIALIZED_RESULT_ENTRY, ALL_DATA_TYPE_SEQ);
     default: UNIMPLEMENTED();
   }
 }
@@ -292,7 +284,7 @@ void OpKernelTestCase<device_type>::Run() {
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, BnInOp2Blob);
   }
-  SyncStream<device_type>(&kernel_ctx_);
+  SyncStream(&kernel_ctx_);
   AssertAfterRun();
 }
 

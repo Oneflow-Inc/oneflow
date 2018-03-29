@@ -34,7 +34,7 @@ class OpKernelTestCase final {
   void Run();
 
   //  Setters
-  JobConf* mut_job_conf() { return &job_conf_; }
+  void InitJobConf(const std::function<void(JobConf*)>& Init);
   void set_is_train(bool is_train);
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
@@ -46,31 +46,44 @@ class OpKernelTestCase final {
   void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
                         const std::vector<T>& val);
   template<typename T>
+  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                         const std::vector<T>& val);
+
+  template<typename T>
   void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
                         const std::vector<T>& val, bool need_random_init);
   template<typename T>
   void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
                          const std::vector<T>& val, bool need_random_init);
-  template<typename T>
-  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
-                         const std::vector<T>& val);
 
   template<typename T>
-  void BlobCmp(const std::string& blob_name, const Blob* lhs,
-               const Blob* rhs) const;
+  static void BlobCmp(const std::string& blob_name, const Blob* lhs,
+                      const Blob* rhs);
+
+  template<typename T>
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf);
+  static Blob* CreateBlob(const BlobDesc*);
 
  private:
   template<typename T>
-  Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc) const;
-  Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc) const;
-  template<typename T>
-  Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
-                                   std::vector<T> val) const;
-  template<typename T>
-  Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val) const;
+  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc);
 
-  void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
-                     const Blob* rhs) const;
+  template<typename T>
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
+                                          std::vector<T> val);
+  template<typename T>
+  static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val);
+
+  static Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc);
+  static void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
+                            const Blob* rhs);
+  static void SwitchCheckInitializeResult(
+      const Blob* blob, const InitializerConf& initializer_conf);
+  static void BuildKernelCtx(KernelCtx* ctx);
+  static void SyncStream(KernelCtx* ctx);
+  void UpdateGlobalJobDesc();
+
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
   void InitBeforeRun();
@@ -85,28 +98,6 @@ class OpKernelTestCase final {
   ParallelContext parallel_ctx_;
   KernelCtx kernel_ctx_;
   bool is_forward_;
-};
-
-std::function<BlobDesc*(const std::string)> ConstructBn2BlobDescFunc(
-    std::shared_ptr<Operator>);
-
-template<DeviceType device_type>
-Blob* CreateBlob(const BlobDesc*);
-
-template<DeviceType device_type>
-void BuildKernelCtx(KernelCtx* ctx);
-
-template<DeviceType device_type>
-void SyncStream(KernelCtx* ctx);
-
-template<DeviceType device_type, typename T>
-class KTCommon final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KTCommon);
-  KTCommon() = delete;
-
-  static void CheckInitializeResult(const Blob* blob,
-                                    const InitializerConf& initializer_conf);
 };
 
 #define STRINGIZE_OPKERNEL_TEST_ARGS(...)            \

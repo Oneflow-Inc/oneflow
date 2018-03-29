@@ -1,9 +1,3 @@
-#include "oneflow/core/kernel/relu_kernel.h"
-#include "oneflow/core/device/cpu_device_context.h"
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/job/job_conf.pb.h"
-#include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/kernel/opkernel_test_common.h"
 #include "oneflow/core/kernel/opkernel_test_case.h"
 
 namespace oneflow {
