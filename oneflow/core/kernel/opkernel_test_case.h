@@ -9,7 +9,6 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/kernel/opkernel_test_common.h"
 
 namespace oneflow {
 
