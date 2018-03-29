@@ -223,7 +223,12 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
     const KernelCtx& ctx,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  int64_t piece_id = *reinterpret_cast<int64_t*>(ctx.other);
+  auto tpl = reinterpret_cast<
+      std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*>(
+      ctx.other);
+  int64_t piece_id = std::get<0>(*tpl);
+  std::function<const Blob*(const std::string&)> lbn2preblob =
+      std::get<1>(*tpl);
   const Blob* mean_blob = BnInOp2Blob("new_mean");
   const Blob* variance_blob = BnInOp2Blob("new_variance");
   Blob* moving_mean_blob = BnInOp2Blob("moving_mean");
@@ -236,6 +241,17 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
                         variance_blob->dptr<T>(),
                         variance_blob->shape().elem_cnt() * sizeof(T));
     return;
+  }
+  const std::string& mean_lbn = this->Lbn4BnInOp("moving_mean");
+  const Blob* pre_moving_mean_blob = lbn2preblob(mean_lbn);
+  if (pre_moving_mean_blob != moving_mean_blob) {
+    moving_mean_blob->CopyDataContentFrom(ctx.device_ctx, pre_moving_mean_blob);
+  }
+  const std::string& variance_lbn = this->Lbn4BnInOp("moving_variance");
+  const Blob* pre_moving_variance_blob = lbn2preblob(variance_lbn);
+  if (pre_moving_variance_blob != moving_variance_blob) {
+    moving_variance_blob->CopyDataContentFrom(ctx.device_ctx,
+                                              pre_moving_variance_blob);
   }
   const T momentum = this->op_conf().normalization_conf().momentum();
   const T one_minus_momentum = 1 - momentum;
