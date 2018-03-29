@@ -8,11 +8,11 @@ void TestCloneOp() {
   op_conf.set_name("clone_test");
   op_conf.mutable_clone_conf()->set_out_num(3);
   op_conf.mutable_clone_conf()->set_lbn("clone_lbn");
-  op_conf.mutable_clone_conf()->set_data_type(GetDataType<T>::val);
+  op_conf.mutable_clone_conf()->set_data_type(GetDataType<T>::value);
   auto clone_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
   bn2blobdesc_map[clone_op->SoleIbn()] =
-      new BlobDesc(Shape({4, 3}), GetDataType<T>::val, has_data_id_field);
+      new BlobDesc(Shape({4, 3}), GetDataType<T>::value, has_data_id_field);
   for (const std::string& obn : clone_op->output_bns()) {
     bn2blobdesc_map[obn] = new BlobDesc;
   }

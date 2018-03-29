@@ -9,7 +9,7 @@ template<typename T>
 __global__ void DiffAveragingL1RegularizationGpu(const int64_t n, T l1,
                                                  int32_t batch_size, const T* x,
                                                  T* y) {
-  T zero = static_cast<T>(0);
+  T zero = ZeroVal<T>::value;
   CUDA_1D_KERNEL_LOOP(i, n) {
     y[i] = y[i] / batch_size + l1 * ((x[i] >= zero) - (x[i] <= zero));
   }

@@ -116,12 +116,15 @@ class OpKernelTestCase final {
   TEST(func_name,                                                             \
        OF_PP_JOIN(_, __COUNTER__, OF_PP_PAIR_FIRST(device_type_pair),         \
                   OF_PP_PAIR_FIRST(data_type_pair), ##__VA_ARGS__)) {         \
+    OpKernelTestCase<OF_PP_PAIR_SECOND(device_type_pair)> opkernel_test_case; \
     func_name<OF_PP_PAIR_SECOND(device_type_pair),                            \
               OF_PP_PAIR_FIRST(data_type_pair)>                               \
-        STRINGIZE_OPKERNEL_TEST_ARGS(__VA_ARGS__)->Run();                     \
+        OF_PP_TUPLE_PUSH_FRONT(STRINGIZE_OPKERNEL_TEST_ARGS(__VA_ARGS__),     \
+                               &opkernel_test_case);                          \
+    opkernel_test_case.Run();                                                 \
   }
 
-}  // namespace test
+}  // namespace oneflow
 
 }  // namespace oneflow
 

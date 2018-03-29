@@ -228,8 +228,8 @@ void OpKernelTestCase<DeviceType::kCPU>::BlobCmp(const std::string& blob_name,
                                                  const Blob* lhs,
                                                  const Blob* rhs) {
   ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc()) << blob_name;
-  CHECK_EQ(lhs->data_type(), GetDataType<T>::val);
-  if (IsFloatingPoint(lhs->data_type())) {
+  CHECK_EQ(lhs->data_type(), GetDataType<T>::value);
+  if (IsFloatingDataType(lhs->data_type())) {
     for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
       ASSERT_NEAR(lhs->dptr<T>()[i], rhs->dptr<T>()[i], 1e-6) << blob_name;
     }

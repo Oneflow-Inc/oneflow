@@ -7,7 +7,7 @@ namespace {
 
 template<typename T>
 void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
-  CHECK_EQ(GetDataType<T>::val, blob->data_type());
+  CHECK_EQ(GetDataType<T>::value, blob->data_type());
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
     if (blob->has_data_id_field()) {
