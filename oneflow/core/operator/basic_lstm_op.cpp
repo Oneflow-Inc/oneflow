@@ -9,41 +9,25 @@ const PbMessage& BasicLstmOp::GetCustomizedConf() const {
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("state_data");
   EnrollDataTmpBn("candidate_out");
+#define OF_INIT_LSTM_GATE_FROM_OP_CONF(out_name, i2h_weight, h2h_weight,    \
+                                       data_diff, out_diff, bias, bias_mul) \
+  EnrollDataTmpBn(#out_name);                                               \
+  EnrollDataTmpBn(#data_diff);                                              \
+  EnrollDataTmpBn(#out_diff);                                               \
+  EnrollModelBn(#i2h_weight);                                               \
+  EnrollModelBn(#h2h_weight);                                               \
+  EnrollModelBn(#bias);                                                     \
+  EnrollModelTmpBn(#bias_mul);
 
-  EnrollDataTmpBn("f_out");
-  EnrollModelBn("i2h_f_weight");
-  EnrollModelBn("h2h_f_weight");
-  EnrollDataTmpBn("f_data_diff");
-  EnrollDataTmpBn("f_out_diff");
-
-  EnrollDataTmpBn("i_out");
-  EnrollModelBn("i2h_i_weight");
-  EnrollModelBn("h2h_i_weight");
-  EnrollDataTmpBn("i_data_diff");
-  EnrollDataTmpBn("i_out_diff");
-
-  EnrollDataTmpBn("c_out");
-  EnrollModelBn("i2h_c_weight");
-  EnrollModelBn("h2h_c_weight");
-  EnrollDataTmpBn("c_data_diff");
-  EnrollDataTmpBn("c_out_diff");
-
-  EnrollDataTmpBn("o_out");
-  EnrollModelBn("i2h_o_weight");
-  EnrollModelBn("h2h_o_weight");
-  EnrollDataTmpBn("o_data_diff");
-  EnrollDataTmpBn("o_out_diff");
-
-  EnrollDataTmpBn("update_out");
-
-  EnrollModelBn("bias_f");
-  EnrollModelTmpBn("bias_f_multiplier");
-  EnrollModelBn("bias_i");
-  EnrollModelTmpBn("bias_i_multiplier");
-  EnrollModelBn("bias_c");
-  EnrollModelTmpBn("bias_c_multiplier");
-  EnrollModelBn("bias_o");
-  EnrollModelTmpBn("bias_o_multiplier");
+  OF_INIT_LSTM_GATE_FROM_OP_CONF(f_out, i2h_f_weight, h2h_f_weight, f_data_diff,
+                                 f_out_diff, bias_f, bias_f_multiplier);
+  OF_INIT_LSTM_GATE_FROM_OP_CONF(i_out, i2h_i_weight, h2h_i_weight, i_data_diff,
+                                 i_out_diff, bias_i, bias_i_multiplier);
+  OF_INIT_LSTM_GATE_FROM_OP_CONF(c_out, i2h_c_weight, h2h_c_weight, c_data_diff,
+                                 c_out_diff, bias_c, bias_c_multiplier);
+  OF_INIT_LSTM_GATE_FROM_OP_CONF(o_out, i2h_o_weight, h2h_o_weight, o_data_diff,
+                                 o_out_diff, bias_i, bias_i_multiplier);
+#undef OF_INIT_LSTM_GATE_FROM_OP_CONF
 }
 
 void BasicLstmOp::VirtualInferBlobDescs(
@@ -54,8 +38,8 @@ void BasicLstmOp::VirtualInferBlobDescs(
   int64_t embedding_size = in_blob_desc->shape().Count(1);
   int64_t data_num = in_blob_desc->shape().At(0);
 
-#define OF_INFER_LSTM_GATE_BLOBDESC(out_name)                                  \
-  *GetBlobDesc4BnInOp(#out_name) = BlobDesc(                                   \
+#define OF_INFER_LSTM_GATE_BLOBDESC(model_name)                                \
+  *GetBlobDesc4BnInOp(#model_name) = BlobDesc(                                 \
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
       false, true, in_blob_desc->shape().At(0));
 
@@ -96,7 +80,6 @@ void BasicLstmOp::VirtualInferBlobDescs(
   OF_INFER_LSTM_MODEL_BLOBDESC(i2h_o_weight, h2h_o_weight);
   OF_INFER_LSTM_BIAS_BLOBDESC(bias_o, bias_o_multiplier);
 
-  OF_INFER_LSTM_GATE_BLOBDESC(update);
 #undef OF_INFER_LSTM_GATE_BLOBDESC
 #undef OF_INFER_LSTM_MODEL_BLOBDESC
 #undef OF_INFER_LSTM_BIAS_BLOBDESC

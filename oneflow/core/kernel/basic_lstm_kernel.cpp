@@ -122,7 +122,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   Blob* i_out_blob = BnInOp2Blob("i_out");
   Blob* c_out_blob = BnInOp2Blob("c_out");
   Blob* o_out_blob = BnInOp2Blob("o_out");
-  // f_out = act( in * i2h_f_weight + hidden * h2h_f_weight + bias )
+
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, state_data_blob, BnInOp2Blob("i2h_f_weight"), hidden_blob,
       BnInOp2Blob("h2h_f_weight"), BnInOp2Blob("in"),
@@ -131,7 +131,6 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       ctx.device_ctx, out_blob->shape().elem_cnt(), state_data_blob->dptr<T>(),
       f_out_blob->mut_dptr<T>());
 
-  // i_out = act( in * i2h_i_weight + hidden * h2h_i_weight + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, state_data_blob, BnInOp2Blob("i2h_i_weight"), hidden_blob,
       BnInOp2Blob("h2h_i_weight"), BnInOp2Blob("in"),
@@ -140,7 +139,6 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       ctx.device_ctx, out_blob->shape().elem_cnt(), state_data_blob->dptr<T>(),
       i_out_blob->mut_dptr<T>());
 
-  // o_out = act( in * i2h_o_weight + hidden * h2h_o_weight + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, state_data_blob, BnInOp2Blob("i2h_o_weight"), hidden_blob,
       BnInOp2Blob("h2h_o_weight"), BnInOp2Blob("in"),
@@ -149,7 +147,6 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       ctx.device_ctx, out_blob->shape().elem_cnt(), state_data_blob->dptr<T>(),
       o_out_blob->mut_dptr<T>());
 
-  // c_out = act( in * i2h_c_weight + hidden * h2h_c_weight + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, state_data_blob, BnInOp2Blob("i2h_c_weight"), hidden_blob,
       BnInOp2Blob("h2h_c_weight"), BnInOp2Blob("in"),
@@ -157,7 +154,6 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   (*activation_fw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
                          state_data_blob->dptr<T>(), c_out_blob->mut_dptr<T>());
 
-  // cell_out = f_out * cell_in + i_out *  c_out
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, out_blob->shape().elem_cnt(), f_out_blob->dptr<T>(),
       cell_in_blob->dptr<T>(), cell_out_blob->mut_dptr<T>());
@@ -169,14 +165,12 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       candidate_out_blob->dptr<T>(), static_cast<T>(1),
       cell_out_blob->mut_dptr<T>(), static_cast<T>(1));
 
-  // out = o_out *  tanh(cell_out)
   (*activation_fw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
                          cell_out_blob->dptr<T>(),
                          candidate_out_blob->mut_dptr<T>());
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, out_blob->shape().elem_cnt(), o_out_blob->dptr<T>(),
       candidate_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
-
   // rec_out = out
   BnInOp2Blob("rec_out")->CopyDataContentFrom(ctx.device_ctx, out_blob);
 }  // namespace oneflow
@@ -218,8 +212,8 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
     // cell_out_diff = (rec_out_diff + out_diff) * o_out * [1 -
     // tanh(cell_out) * tanh(cell_out)]	+ cell_out_diff
     BasicLstmKernelUtil<device_type, T>::ComputeBackwardCellOutDiff(
-        ctx, candidate_out_blob, cell_out_blob, cell_out_diff_blob, o_out_blob,
-        rec_out_diff_blob, out_diff_blob, activation_bw_func_);
+        ctx, rec_out_diff_blob, candidate_out_blob, cell_out_blob,
+        cell_out_diff_blob, o_out_blob, out_diff_blob, activation_bw_func_);
   } else {
     cell_out_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
   }
@@ -235,7 +229,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
       f_data_diff_blob->mut_dptr<T>());
   // f_gate weight diff
   BasicLstmKernelUtil<device_type, T>::ComputeBackwardWeightDiff(
-      ctx, BnInOp2Blob("in"), f_out_diff_blob, hidden_blob,
+      ctx, BnInOp2Blob("in"), hidden_blob, f_out_diff_blob,
       BnInOp2Blob("h2h_f_weight_diff"), BnInOp2Blob("i2h_f_weight_diff"));
 
   // i_out_diff = cell_out_diff * c_out
@@ -250,7 +244,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
       i_data_diff_blob->mut_dptr<T>());
   //  i_gate weight_diff
   BasicLstmKernelUtil<device_type, T>::ComputeBackwardWeightDiff(
-      ctx, BnInOp2Blob("in"), i_out_diff_blob, hidden_blob,
+      ctx, BnInOp2Blob("in"), hidden_blob, i_out_diff_blob,
       BnInOp2Blob("h2h_i_weight_diff"), BnInOp2Blob("i2h_i_weight_diff"));
 
   //  c_out_diff = cell_out_diff * i_out
@@ -265,7 +259,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
                          c_data_diff_blob->mut_dptr<T>());
   //  c_out weight diff
   BasicLstmKernelUtil<device_type, T>::ComputeBackwardWeightDiff(
-      ctx, BnInOp2Blob("in"), c_data_diff_blob, hidden_blob,
+      ctx, BnInOp2Blob("in"), hidden_blob, c_data_diff_blob,
       BnInOp2Blob("h2h_c_weight_diff"), BnInOp2Blob("i2h_c_weight_diff"));
 
   // o_out_diff = rec_out_diff * tanh(cell_out)
@@ -280,7 +274,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
       o_data_diff_blob->mut_dptr<T>());
   // o_gate weight diff
   BasicLstmKernelUtil<device_type, T>::ComputeBackwardWeightDiff(
-      ctx, BnInOp2Blob("in"), o_out_diff_blob, hidden_blob,
+      ctx, BnInOp2Blob("in"), hidden_blob, o_out_diff_blob,
       BnInOp2Blob("h2h_o_weight_diff"), BnInOp2Blob("i2h_o_weight_diff"));
 
   // in_diff
@@ -321,10 +315,10 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
   if (BnInOp2Blob("in")->col_id() != 0 || NeedExternalH0()
       || this->op_conf().basic_lstm_conf().is_init_hidden_trainable()) {
     BasicLstmKernelUtil<device_type, T>::ComputeBackwardHiddenDiff(
-        ctx, f_data_diff_blob, BnInOp2Blob("h2h_f_weight"), i_data_diff_blob,
-        BnInOp2Blob("h2h_i_weight"), c_data_diff_blob,
-        BnInOp2Blob("h2h_c_weight"), o_data_diff_blob,
-        BnInOp2Blob("h2h_o_weight"), hidden_diff_blob);
+        ctx, BnInOp2Blob("h2h_f_weight"), BnInOp2Blob("h2h_i_weight"),
+        BnInOp2Blob("h2h_c_weight"), BnInOp2Blob("h2h_o_weight"),
+        f_data_diff_blob, i_data_diff_blob, c_data_diff_blob, o_data_diff_blob,
+        hidden_diff_blob);
   }
 }
 
@@ -427,24 +421,24 @@ void BasicLstmKernel<device_type, T>::InitPureModelTmpBlobs(
 
 template<DeviceType device_type, typename T>
 void BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
-    const KernelCtx& ctx, Blob* gate_out, const Blob* i2h_weight,
-    const Blob* hidden, const Blob* h2h_weight, const Blob* input,
-    const Blob* bias, const Blob* bias_mul) {
+    const KernelCtx& ctx, const Blob* i2h_weight, const Blob* hidden,
+    const Blob* h2h_weight, const Blob* input, const Blob* bias,
+    const Blob* bias_mul, Blob* state_data) {
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(0),
-                                       input, i2h_weight, gate_out);
+                                       input, i2h_weight, state_data);
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(1),
-                                       hidden, h2h_weight, gate_out);
+                                       hidden, h2h_weight, state_data);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), bias_mul, bias, gate_out);
+      static_cast<T>(1), bias_mul, bias, state_data);
 }
 
 template<DeviceType device_type, typename T>
 void BasicLstmKernelUtil<device_type, T>::ComputeBackwardCellOutDiff(
-    const KernelCtx& ctx, Blob* candidate_out, Blob* cell_out,
-    Blob* cell_out_diff, Blob* o_out, const Blob* rec_out_diff, Blob* out_diff,
+    const KernelCtx& ctx, const Blob* rec_out_diff, Blob* candidate_out,
+    Blob* cell_out, Blob* cell_out_diff, Blob* o_out, Blob* out_diff,
     BwActivationFunc<device_type, T> activation_bw_func_) {
   KernelUtil<device_type, T>::Axpy(ctx.device_ctx, o_out->shape().elem_cnt(),
                                    static_cast<T>(1), rec_out_diff->dptr<T>(),
@@ -464,8 +458,8 @@ void BasicLstmKernelUtil<device_type, T>::ComputeBackwardCellOutDiff(
 
 template<DeviceType device_type, typename T>
 void BasicLstmKernelUtil<device_type, T>::ComputeBackwardWeightDiff(
-    const KernelCtx& ctx, const Blob* input, Blob* gate_out_diff,
-    const Blob* hidden, Blob* h2h_weight_diff, Blob* i2h_weight_diff) {
+    const KernelCtx& ctx, const Blob* input, const Blob* hidden,
+    Blob* gate_out_diff, Blob* h2h_weight_diff, Blob* i2h_weight_diff) {
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        gate_out_diff, hidden, h2h_weight_diff);
@@ -477,22 +471,22 @@ void BasicLstmKernelUtil<device_type, T>::ComputeBackwardWeightDiff(
 
 template<DeviceType device_type, typename T>
 void BasicLstmKernelUtil<device_type, T>::ComputeBackwardHiddenDiff(
-    const KernelCtx& ctx, Blob* f_gate_out_diff, const Blob* h2h_f_weight,
-    Blob* i_gate_out_diff, const Blob* h2h_i_weight, Blob* c_state_out_diff,
-    const Blob* h2h_c_weight, Blob* o_gate_out_diff, const Blob* h2h_o_weight,
+    const KernelCtx& ctx, const Blob* h2h_f_weight, const Blob* h2h_i_weight,
+    const Blob* h2h_c_weight, const Blob* h2h_o_weight, Blob* f_data_diff,
+    Blob* i_data_diff, Blob* c_data_diff, Blob* o_data_diff,
     Blob* hidden_diff) {
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(0), f_gate_out_diff, h2h_f_weight, hidden_diff);
+      static_cast<T>(0), f_data_diff, h2h_f_weight, hidden_diff);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), i_gate_out_diff, h2h_i_weight, hidden_diff);
+      static_cast<T>(1), i_data_diff, h2h_i_weight, hidden_diff);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), c_state_out_diff, h2h_c_weight, hidden_diff);
+      static_cast<T>(1), c_data_diff, h2h_c_weight, hidden_diff);
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), o_gate_out_diff, h2h_o_weight, hidden_diff);
+      static_cast<T>(1), o_data_diff, h2h_o_weight, hidden_diff);
 }
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kBasicLstmConf, BasicLstmKernel,
                            FLOATING_DATA_TYPE_SEQ)

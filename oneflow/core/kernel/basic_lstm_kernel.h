@@ -63,23 +63,24 @@ class BasicLstmKernel : public KernelIf<device_type> {
 
 template<DeviceType device_type, typename T>
 struct BasicLstmKernelUtil {
-  static void ComputeForwardGateOut(const KernelCtx& ctx, Blob* gate_out,
+  static void ComputeForwardGateOut(const KernelCtx& ctx,
                                     const Blob* i2h_weight, const Blob* hidden,
                                     const Blob* h2h_weight, const Blob* input,
-                                    const Blob* bias_mul, const Blob* bias);
+                                    const Blob* bias_mul, const Blob* bias,
+                                    Blob* state_data);
 
   static void ComputeBackwardCellOutDiff(
-      const KernelCtx& ctx, Blob* candidate_out, Blob* cell_out,
-      Blob* cell_out_diff, Blob* o_out, const Blob* rec_out_diff,
-      Blob* out_diff, BwActivationFunc<device_type, T> acticaiton_bw_func_);
+      const KernelCtx& ctx, const Blob* rec_out_diff, Blob* candidate_out,
+      Blob* cell_out, Blob* cell_out_diff, Blob* o_out, Blob* out_diff,
+      BwActivationFunc<device_type, T> acticaiton_bw_func_);
   static void ComputeBackwardWeightDiff(const KernelCtx& ctx, const Blob* input,
-                                        Blob* gate_out_diff, const Blob* hidden,
+                                        const Blob* hidden, Blob* gate_out_diff,
                                         Blob* h2h_weight_diff,
                                         Blob* i2h_weight_diff);
   static void ComputeBackwardHiddenDiff(
-      const KernelCtx& ctx, Blob* f_gate_out_diff, const Blob* h2h_f_weight,
-      Blob* i_gate_out_diff, const Blob* h2h_i_23ight, Blob* c_state_out_diff,
-      const Blob* h2h_c_weight, Blob* o_gate_out_diff, const Blob* h2h_o_weight,
+      const KernelCtx& ctx, const Blob* h2h_f_weight, const Blob* h2h_i_weight,
+      const Blob* h2h_c_weight, const Blob* h2h_o_weight, Blob* f_data_diff,
+      Blob* i_data_blob, Blob* c_data_diff, Blob* o_data_diff,
       Blob* hidden_diff);
 };
 
