@@ -3,3 +3,6 @@
 /examples/*/*/oneflow
 *plan*
 core.*
+
+.idea
+.vscode
