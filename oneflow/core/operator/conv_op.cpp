@@ -48,11 +48,21 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type,
   CudaCheck(cudnnCreateConvolutionDescriptor(&val_));
   std::vector<int32_t> pad_large_side;
   GetOutAndPad(in_blob_shape, conv_conf, nullptr, nullptr, &pad_large_side);
-  CudaCheck(cudnnSetConvolutionNdDescriptor(
-      val_, opkernel_dim, pad_large_side.data(),
-      GetPbRfFromPbMessage<int32_t>(conv_conf, "strides").data(),
-      GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate").data(),
-      CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+  const PbRf<int32_t>& strides =
+      GetPbRfFromPbMessage<int32_t>(conv_conf, "strides");
+  const PbRf<int32_t>& dilation_rate =
+      GetPbRfFromPbMessage<int32_t>(conv_conf, "dilation_rate");
+  if (opkernel_dim == 2) {
+    CudaCheck(cudnnSetConvolution2dDescriptor(
+        val_, pad_large_side[0], pad_large_side[1], strides.Get(0),
+        strides.Get(1), dilation_rate.Get(0), dilation_rate.Get(1),
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+  } else {
+    CudaCheck(cudnnSetConvolutionNdDescriptor(
+        val_, opkernel_dim, pad_large_side.data(), strides.data(),
+        dilation_rate.data(), CUDNN_CROSS_CORRELATION,
+        GetCudnnDataType(data_type)));
+  }
 }
 #endif  // WITH_CUDA
 
@@ -225,23 +235,11 @@ void ConvOp<NDims>::InferCudnnAlgo(
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
   DataType data_type = in_blob_desc->data_type();
-
-  std::vector<int32_t> stride_of_in_tensor(NDims + 2, 1);
-  std::vector<int32_t> stride_of_out_tensor(NDims + 2, 1);
-  for (int32_t i = NDims + 2 - 2; i >= 0; --i) {
-    stride_of_in_tensor[i] =
-        stride_of_in_tensor[i + 1] * in_blob_desc->shape().At(i + 1);
-    stride_of_out_tensor[i] =
-        stride_of_out_tensor[i + 1] * out_blob_desc->shape().At(i + 1);
-  }
-  std::vector<int32_t> in_tensor_dim(in_blob_desc->shape().dim_vec().begin(),
-                                     in_blob_desc->shape().dim_vec().end());
-  std::vector<int32_t> out_tensor_dim(out_blob_desc->shape().dim_vec().begin(),
-                                      out_blob_desc->shape().dim_vec().end());
-  CudnnTensorDesc in_desc(data_type, in_tensor_dim.size(), in_tensor_dim.data(),
-                          stride_of_in_tensor.data());
-  CudnnTensorDesc out_desc(data_type, out_tensor_dim.size(),
-                           out_tensor_dim.data(), stride_of_out_tensor.data());
+  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape(),
+                          GetValFromCustomizedConf<std::string>("data_format"));
+  CudnnTensorDesc out_desc(
+      data_type, out_blob_desc->shape(),
+      GetValFromCustomizedConf<std::string>("data_format"));
   CudnnFilterDesc filter_desc(
       data_type, weight_blob_desc->shape(),
       GetValFromCustomizedConf<std::string>("data_format"));
