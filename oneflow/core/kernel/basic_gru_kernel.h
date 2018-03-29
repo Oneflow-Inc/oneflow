@@ -63,7 +63,7 @@ struct BasicGruKernelUtil {
                                 Blob* candidate_out, Blob* temp_data,
                                 Blob* update_out, Blob* out);
   static void ComputeTmpModelDiff(
-      const KernelCtx& ctx, const Blob* state_data, const Blob* update_out,
+      const KernelCtx& ctx, const Blob* gate_input, const Blob* update_out,
       const Blob* candiate_out, const Blob* reset_out, Blob* out_diff,
       Blob* hiddden, Blob* update_o_diff, Blob* update_o_bran_diff,
       Blob* update_d_diff, Blob* candidate_o_diff, Blob* candidate_d_diff,

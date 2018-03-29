@@ -7,35 +7,31 @@ const PbMessage& BasicGruOp::GetSpecialConf() const {
 }
 
 void BasicGruOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("state_data");
+  EnrollDataTmpBn("gate_input");
 
   EnrollDataTmpBn("reset_out");
   EnrollModelBn("i2h_r_weight");
   EnrollModelBn("h2h_r_weight");
+  EnrollModelBn("bias_r");
   EnrollDataTmpBn("reset_data_diff");
   EnrollDataTmpBn("reset_out_diff");
 
   EnrollDataTmpBn("update_out");
   EnrollModelBn("i2h_z_weight");
   EnrollModelBn("h2h_z_weight");
+  EnrollModelBn("bias_z");
   EnrollDataTmpBn("update_data_diff");
   EnrollDataTmpBn("update_out_diff");
 
   EnrollDataTmpBn("candidate_out");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
+  EnrollModelBn("bias");
   EnrollDataTmpBn("candidate_data_diff");
   EnrollDataTmpBn("candidate_out_diff");
 
   EnrollDataTmpBn("tmp_data");
 
-  EnrollModelBn("bias_r");
-  EnrollModelTmpBn("bias_r_multiplier");
-
-  EnrollModelBn("bias_z");
-  EnrollModelTmpBn("bias_z_multiplier");
-
-  EnrollModelBn("bias");
   EnrollModelTmpBn("bias_multiplier");
 }
 
@@ -50,7 +46,7 @@ void BasicGruOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#modelname) = BlobDesc(                                  \
       Shape({data_num, hidden_size}), JobDesc::Singleton()->DefaultDataType(), \
       false, true, in_blob_desc->max_col_num())
-  OF_GRU_INFER_BLOB_DESCS(state_data);
+  OF_GRU_INFER_BLOB_DESCS(gate_input);
   OF_GRU_INFER_BLOB_DESCS(reset_out);
   OF_GRU_INFER_BLOB_DESCS(reset_data_diff);
   OF_GRU_INFER_BLOB_DESCS(reset_out_diff);
@@ -72,12 +68,9 @@ void BasicGruOp::VirtualInferBlobDescs(
 #undef OF_GRU_INFER_WEIGHT_DESCS
 
   *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));
-  *GetBlobDesc4BnInOp("bias_r_multiplier") = BlobDesc(Shape({data_num, 1}));
-
   *GetBlobDesc4BnInOp("bias_z") = BlobDesc(Shape({1, hidden_size}));
-  *GetBlobDesc4BnInOp("bias_z_multiplier") = BlobDesc(Shape({data_num, 1}));
-
   *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+
   *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
 }
 
