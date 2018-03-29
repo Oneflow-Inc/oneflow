@@ -7,7 +7,7 @@ void ForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out");
   ProduceRegst("activation");
   ProduceRegst("data_tmp");
-  ProduceRegst("other_model");
+  ProduceRegst("forward_model");
   for (TaskEdge* edge : out_edges()) {
     if (SuccChainNodeOnEdge(edge) == chain_node()) {
       VirtualAddRegstOnRecurrentOutEdge(edge);
@@ -32,7 +32,7 @@ void ForwardCompTaskNode::VirtualProduceRegstOnOutEdge(TaskEdge* edge) {
     // do nothing
   }
   if (is_succ_mdsave) {
-    edge->AddRegst("other_model", GetProducedRegst("other_model"));
+    edge->AddRegst("forward_model", GetProducedRegst("forward_model"));
   } else {
     edge->AddRegst("out", GetProducedRegst("out"));
     if (IsBackwardTaskType(edge->dst_node()->GetTaskType())) {
