@@ -9,11 +9,11 @@ namespace test {
 #if defined(WITH_CUDA)
 
 template<>
-Blob* OpKernelTestCase<DeviceType::kGPU>::CreateBlob(
-    const BlobDesc* blob_desc) {
+Blob* OpKernelTestCase<DeviceType::kGPU>::CreateBlob(const BlobDesc* blob_desc,
+                                                     Regst* regst) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMalloc(&mem_ptr, blob_desc->TotalByteSize()));
-  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+  return NewBlob(regst, blob_desc, static_cast<char*>(mem_ptr), nullptr,
                  DeviceType::kGPU);
 }
 
@@ -44,8 +44,8 @@ void OpKernelTestCase<DeviceType::kGPU>::SyncStream(KernelCtx* ctx) {
 template<>
 template<typename T>
 Blob* OpKernelTestCase<DeviceType::kGPU>::CreateBlobWithSpecifiedValPtr(
-    const BlobDesc* blob_desc, T* val) {
-  Blob* ret = CreateBlob(blob_desc);
+    const BlobDesc* blob_desc, T* val, Regst* regst) {
+  Blob* ret = CreateBlob(blob_desc, regst);
   CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataContentField(),
                        cudaMemcpyHostToDevice));
   return ret;
@@ -56,10 +56,10 @@ template<typename T>
 void OpKernelTestCase<DeviceType::kGPU>::BlobCmp(const std::string& blob_name,
                                                  const Blob* lhs,
                                                  const Blob* rhs) {
-  Blob* cpu_lhs =
-      OpKernelTestCase<DeviceType::kCPU>::CreateBlob(lhs->blob_desc_ptr());
-  Blob* cpu_rhs =
-      OpKernelTestCase<DeviceType::kCPU>::CreateBlob(rhs->blob_desc_ptr());
+  Blob* cpu_lhs = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
+      lhs->blob_desc_ptr(), nullptr);
+  Blob* cpu_rhs = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
+      rhs->blob_desc_ptr(), nullptr);
   CudaCheck(cudaMemcpy(cpu_lhs->mut_dptr(), lhs->dptr(),
                        lhs->ByteSizeOfDataContentField(),
                        cudaMemcpyDeviceToHost));
@@ -74,8 +74,8 @@ template<>
 template<typename T>
 void OpKernelTestCase<DeviceType::kGPU>::CheckInitializeResult(
     const Blob* blob, const InitializerConf& initializer_conf) {
-  Blob* cpu_blob =
-      OpKernelTestCase<DeviceType::kCPU>::CreateBlob(blob->blob_desc_ptr());
+  Blob* cpu_blob = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
+      blob->blob_desc_ptr(), nullptr);
   CudaCheck(cudaMemcpy(cpu_blob->mut_dptr(), blob->dptr(),
                        blob->ByteSizeOfDataContentField(),
                        cudaMemcpyDeviceToHost));
@@ -86,7 +86,7 @@ void OpKernelTestCase<DeviceType::kGPU>::CheckInitializeResult(
 #define INSTANTIATE_METHODS(type_cpp, type_proto)                      \
   template Blob*                                                       \
   OpKernelTestCase<DeviceType::kGPU>::CreateBlobWithSpecifiedValPtr(   \
-      const BlobDesc* blob_desc, type_cpp* val);                       \
+      const BlobDesc* blob_desc, type_cpp* val, Regst* regst);         \
   template void OpKernelTestCase<DeviceType::kGPU>::BlobCmp<type_cpp>( \
       const std::string& blob_name, const Blob* lhs, const Blob* rhs); \
   template void                                                        \

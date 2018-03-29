@@ -48,13 +48,13 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::InitializeWithProperConf(
+  KernelUtil<device_type, T>::Initialize(
       ctx,
       GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    KernelUtil<device_type, T>::InitializeWithProperConf(
+    KernelUtil<device_type, T>::Initialize(
         ctx,
         GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "bias_initializer"),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
@@ -68,13 +68,13 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->GetInt32FromCustomizedOpConf("filters");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
-      ctx, part_id, part_num, model_load_dir, weight_blob, "weight", dim_num,
-      weight_blob->shape().Count(1));
+  KernelUtil<device_type, T>::Initialize(ctx, part_id, part_num, model_load_dir,
+                                         weight_blob, "weight", dim_num,
+                                         weight_blob->shape().Count(1));
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    KernelUtil<device_type, T>::InitializeWithModelDir(
-        ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
-        dim_num, 1);
+    KernelUtil<device_type, T>::Initialize(ctx, part_id, part_num,
+                                           model_load_dir, BnInOp2Blob("bias"),
+                                           "bias", dim_num, 1);
   }
 }
 
