@@ -38,6 +38,8 @@ void MaxPooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
       {0,  2, 0,  4, 0,  6, 0,  8, 0,  10, 0,  12, 0,
        14, 0, 16, 0, 18, 0, 20, 0, 22, 0,  24, 25});
 }
+TEST_CPU_AND_GPU_OPKERNEL(MaxPooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void MaxPooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
@@ -74,6 +76,8 @@ void MaxPooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
       {0, 0, 0, 0,  0, 0,  7,  0, 9,  10, 0,  0, 0,
        0, 0, 0, 17, 0, 19, 20, 0, 22, 0,  24, 25});
 }
+TEST_CPU_AND_GPU_OPKERNEL(MaxPooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void MaxPooling3DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
@@ -112,6 +116,8 @@ void MaxPooling3DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
       {0, 0, 0, 0,  0, 0,  7,  0, 9,  10, 0,  0, 0,
        0, 0, 0, 17, 0, 19, 20, 0, 22, 0,  24, 25});
 }
+TEST_CPU_AND_GPU_OPKERNEL(MaxPooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void AveragePooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
@@ -159,6 +165,8 @@ void AveragePooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
                                       23.0f / 3,    23.0f / 3 + 49.0f / 2 / 2,
                                       49.0f / 2 / 2});
 }
+TEST_CPU_AND_GPU_OPKERNEL(AveragePooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void AveragePooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
@@ -221,6 +229,8 @@ void AveragePooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
        123.0f / 6 / 6 + 88.0f / 4 / 4,
        88.0f / 4 / 4});
 }
+TEST_CPU_AND_GPU_OPKERNEL(AveragePooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void AveragePooling3DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
@@ -285,19 +295,8 @@ void AveragePooling3DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
        123.0f / 6 / 6 + 88.0f / 4 / 4,
        88.0f / 4 / 4});
 }
-
-#define FOR_EACH_POOLING_TEST_CASE(__do_each_macro)                           \
-  __do_each_macro(MaxPooling1DTestCase) __do_each_macro(MaxPooling2DTestCase) \
-      __do_each_macro(MaxPooling3DTestCase)                                   \
-          __do_each_macro(AveragePooling1DTestCase)                           \
-              __do_each_macro(AveragePooling2DTestCase)                       \
-                  __do_each_macro(AveragePooling3DTestCase)
-
-#define TEST_ONE_FUNC(test_case_func_name)                               \
-  TEST_CPU_AND_GPU_OPKERNEL(test_case_func_name, FLOATING_DATA_TYPE_SEQ, \
-                            (train)(predict), (forward)(backward));
-
-FOR_EACH_POOLING_TEST_CASE(TEST_ONE_FUNC)
+TEST_CPU_AND_GPU_OPKERNEL(AveragePooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 }  // namespace test
 
