@@ -97,7 +97,7 @@ template<typename T>
 Blob* OpKernelTestCase<device_type>::InitBlob(const std::string& name,
                                               const BlobDesc* blob_desc,
                                               const std::vector<T>& val) {
-  Blob* blob = 
+  Blob* blob =
       CreateBlobWithSpecifiedVal<T>(blob_desc, val, bn_in_op2regst_[name]);
   CHECK(bn_in_op2blob_.emplace(name, blob).second);
   return blob;
