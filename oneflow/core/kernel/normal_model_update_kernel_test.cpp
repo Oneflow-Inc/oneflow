@@ -35,7 +35,7 @@ std::function<Blob*(const std::string&)> BuildBnInOp2Blob() {
   using KTC = KTCommon<device_type, T>;
 
   BlobDesc* blob_desc =
-      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::value, false);
 
   auto bn2blob = new HashMap<std::string, Blob*>;
   (*bn2blob)["model"] = KTC::CreateBlobWithSameVal(blob_desc, 2);

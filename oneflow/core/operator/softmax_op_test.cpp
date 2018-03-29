@@ -6,7 +6,7 @@ template<typename T, bool has_data_id_field>
 void TestSoftmaxOp() {
   // create softmax_op
   OperatorConf op_conf;
-  DataType data_type = GetDataType<T>::val;
+  DataType data_type = GetDataType<T>::value;
   op_conf.set_name("softmax_test");
   op_conf.mutable_softmax_conf()->set_in("softmax/in");
   op_conf.mutable_softmax_conf()->set_out("softmax/out");

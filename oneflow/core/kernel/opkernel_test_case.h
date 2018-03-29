@@ -24,6 +24,7 @@ namespace test {
       ((cpu, DeviceType::kCPU))((gpu, DeviceType::kGPU)), data_type_seq, \
       __VA_ARGS__)
 
+template<DeviceType device_type>
 class OpKernelTestCase final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
@@ -33,22 +34,56 @@ class OpKernelTestCase final {
   void Run();
 
   //  Setters
-  JobConf* mut_job_conf() { return &job_conf_; }
+  void InitJobConf(const std::function<void(JobConf*)>& Init);
   void set_is_train(bool is_train);
-  void set_device_type(DeviceType device_type) { device_type_ = device_type; }
+  void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
   KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
-  void InitBlob(const std::string&, Blob* blob);
-  void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob);
-  void ForwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob,
-                        bool need_random_init);
-  void BackwardCheckBlob(const std::string&, DeviceType device_type, Blob* blob,
-                         bool need_random_init);
-  void BackwardCheckBlob(const std::string&, DeviceType device_type,
-                         Blob* blob);
-  void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
+  template<typename T>
+  void InitBlob(const std::string&, const BlobDesc* blob_desc,
+                const std::vector<T>& val);
+  template<typename T>
+  void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                        const std::vector<T>& val);
+  template<typename T>
+  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                         const std::vector<T>& val);
+
+  template<typename T>
+  void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                        const std::vector<T>& val, bool need_random_init);
+  template<typename T>
+  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                         const std::vector<T>& val, bool need_random_init);
+
+  template<typename T>
+  static void BlobCmp(const std::string& blob_name, const Blob* lhs,
+                      const Blob* rhs);
+
+  template<typename T>
+  static void CheckInitializeResult(const Blob* blob,
+                                    const InitializerConf& initializer_conf);
+  static Blob* CreateBlob(const BlobDesc*);
 
  private:
+  template<typename T>
+  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc);
+
+  template<typename T>
+  static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
+                                          std::vector<T> val);
+  template<typename T>
+  static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val);
+
+  static Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc);
+  static void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
+                            const Blob* rhs);
+  static void SwitchCheckInitializeResult(
+      const Blob* blob, const InitializerConf& initializer_conf);
+  static void BuildKernelCtx(KernelCtx* ctx);
+  static void SyncStream(KernelCtx* ctx);
+  void UpdateGlobalJobDesc();
+
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
   void InitBeforeRun();
@@ -62,7 +97,6 @@ class OpKernelTestCase final {
   std::list<std::string> backward_asserted_blob_names_;
   ParallelContext parallel_ctx_;
   KernelCtx kernel_ctx_;
-  DeviceType device_type_;
   bool is_forward_;
 };
 
@@ -82,12 +116,15 @@ class OpKernelTestCase final {
   TEST(func_name,                                                             \
        OF_PP_JOIN(_, __COUNTER__, OF_PP_PAIR_FIRST(device_type_pair),         \
                   OF_PP_PAIR_FIRST(data_type_pair), ##__VA_ARGS__)) {         \
+    OpKernelTestCase<OF_PP_PAIR_SECOND(device_type_pair)> opkernel_test_case; \
     func_name<OF_PP_PAIR_SECOND(device_type_pair),                            \
               OF_PP_PAIR_FIRST(data_type_pair)>                               \
-        STRINGIZE_OPKERNEL_TEST_ARGS(__VA_ARGS__)->Run();                     \
+        OF_PP_TUPLE_PUSH_FRONT(STRINGIZE_OPKERNEL_TEST_ARGS(__VA_ARGS__),     \
+                               &opkernel_test_case);                          \
+    opkernel_test_case.Run();                                                 \
   }
 
-}  // namespace test
+}  // namespace oneflow
 
 }  // namespace oneflow
 

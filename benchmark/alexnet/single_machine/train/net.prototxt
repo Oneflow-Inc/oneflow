@@ -1,0 +1,265 @@
+op {
+  name: "decode"
+  decode_ofrecord_conf {
+    data_dir: "/datasets/imagenet_OfRecord/train"
+    blob {
+      name: "encoded"
+      data_type: kFloat
+      shape {
+        dim: 224
+        dim: 224
+        dim: 3
+      }
+      jpeg {
+      }
+    }
+    blob {
+      name: "class/label"
+      data_type: kInt32
+      shape {
+      }
+      raw {
+      }
+    }
+  }
+}
+
+op {
+  name: "conv1"
+  conv_2d_conf {
+    in: "decode/encoded"
+    out: "out"
+    filters: 96
+    padding: "SAME"
+    kernel_size: 11
+    kernel_size: 11
+    strides: 4
+    strides: 4
+    dilation_rate: 1
+    dilation_rate: 1
+    use_bias: true
+  }
+}
+
+op {
+  name: "relu1"
+  relu_conf {
+    in: "conv1/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "lrn1"
+  local_response_normalization_conf {
+    in: "relu1/out"
+    out: "out"
+    depth_radius: 2
+    bias: 2
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+
+op {
+  name: "pool1"
+  max_pooling_2d_conf {
+    in: "lrn1/out"
+    out: "out"
+    padding: "VALID"
+    pool_size: 3
+    pool_size: 3
+    strides: 2
+    strides: 2
+  }
+}
+
+op {
+  name: "conv2"
+  conv_2d_conf {
+    in: "pool1/out"
+    out: "out"
+    filters: 192
+    padding: "SAME"
+    kernel_size: 5
+    kernel_size: 5
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    use_bias: true
+  }
+}
+
+op {
+  name: "relu2"
+  relu_conf {
+    in: "conv2/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "lrn2"
+  local_response_normalization_conf {
+    in: "relu2/out"
+    out: "out"
+    depth_radius: 2
+    bias: 2
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+
+op {
+  name: "pool2"
+  max_pooling_2d_conf {
+    in: "lrn2/out"
+    out: "out"
+    padding: "VALID"
+    pool_size: 3
+    pool_size: 3
+    strides: 2
+    strides: 2
+  }
+}
+
+op {
+  name: "conv3"
+  conv_2d_conf {
+    in: "pool2/out"
+    out: "out"
+    filters: 384
+    padding: "SAME"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    use_bias: true
+  }
+}
+
+op {
+  name: "relu3"
+  relu_conf {
+    in: "conv3/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "conv4"
+  conv_2d_conf {
+    in: "relu3/out"
+    out: "out"
+    filters: 256
+    padding: "SAME"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    use_bias: true
+  }
+}
+
+op {
+  name: "relu4"
+  relu_conf {
+    in: "conv4/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "conv5"
+  conv_2d_conf {
+    in: "relu4/out"
+    out: "out"
+    filters: 256
+    padding: "SAME"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    use_bias: true
+  }
+}
+
+op {
+  name: "relu5"
+  relu_conf {
+    in: "conv5/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "pool5"
+  max_pooling_2d_conf {
+    in: "relu5/out"
+    out: "out"
+    padding: "VALID"
+    pool_size: 3
+    pool_size: 3
+    strides: 2
+    strides: 2
+  }
+}
+
+op {
+  name: "fc1"
+  fully_connected_conf {
+    in: "pool5/out"
+    out: "out"
+    units: 4096
+  }
+}
+
+op {
+  name: "relu_fc1"
+  relu_conf {
+    in: "fc1/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "fc2"
+  fully_connected_conf {
+    in: "relu_fc1/out"
+    out: "out"
+    units: 4096
+  }
+}
+
+op {
+  name: "relu_fc2"
+  relu_conf {
+    in: "fc2/out"
+    out: "out"
+  }
+}
+
+op {
+  name: "fc3"
+  fully_connected_conf {
+    in: "relu_fc2/out"
+    out: "out"
+    units: 1000
+  }
+}
+
+op {
+  name: "softmax_loss"
+  sparse_softmax_cross_entropy_loss_conf {
+    prediction: "fc3/out"
+    label: "decode/class/label"
+    loss: "loss"
+  }
+}

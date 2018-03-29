@@ -117,10 +117,21 @@ std::string ChainNode::VisualStr() const {
 }
 
 bool ChainNode::HasOpWithModelOrModelTmpBlob() const {
-  for (std::shared_ptr<const Operator> op : op_vec_) {
-    if (op->HasModelOrModelTmpBlob()) { return true; }
-  }
-  return false;
+  return HasOpWithCondition([](const Operator* op) {
+    return op->model_bns().empty() == false
+           || op->model_tmp_bns().empty() == false;
+  });
+}
+
+bool ChainNode::HasOpWithModelBlob() const {
+  return HasOpWithCondition(
+      [](const Operator* op) { return op->model_bns().empty() == false; });
+}
+
+bool ChainNode::HasOpWithForwardModelBlob() const {
+  return HasOpWithCondition([](const Operator* op) {
+    return op->forward_model_bns().empty() == false;
+  });
 }
 
 void ChainNode::GenSortedCompTaskNodes(
@@ -187,6 +198,14 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, CHAIN_TYPE_SEQ)
 void ChainNode::AddDataOutputLbnsTo(const ChainNode* to_node) {
   std::vector<std::string> lbns = FindLbnsTo(to_node);
   data_output_lbns_.insert(lbns.begin(), lbns.end());
+}
+
+bool ChainNode::HasOpWithCondition(
+    std::function<bool(const Operator*)> cond) const {
+  for (std::shared_ptr<const Operator> op : op_vec_) {
+    if (cond(op.get())) { return true; }
+  }
+  return false;
 }
 
 // ForwardChainNode
