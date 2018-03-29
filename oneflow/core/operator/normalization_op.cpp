@@ -16,9 +16,8 @@ void NormalizationOp::InitFromOpConf() {
   EnrollOutputBn("outputs");
   EnrollDataTmpBn("new_mean");
   EnrollDataTmpBn("new_variance");
-  // norm_model
-  EnrollOtherBn("moving_mean");
-  EnrollOtherBn("moving_variance");
+  EnrollForwardModelBn("moving_mean");
+  EnrollForwardModelBn("moving_variance");
 
   if (normalization_conf.center()) { EnrollModelBn("beta"); }
   if (normalization_conf.scale()) { EnrollModelBn("gamma"); }
