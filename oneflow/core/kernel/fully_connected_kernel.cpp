@@ -13,7 +13,7 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
 
   // out = in * weight
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
-                                       static_cast<T>(1.0), static_cast<T>(0.0),
+                                       OneVal<T>::value, ZeroVal<T>::value,
                                        in_blob, weight_blob, out_blob);
 
   if (this->op_conf().fully_connected_conf().use_bias()) {
@@ -22,8 +22,8 @@ void FullyConnectedKernel<device_type, T>::ForwardDataContent(
 
     // out = bias_multiplier * bias + out
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
-        static_cast<T>(1.0), bias_mul_blob, bias_blob, out_blob);
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
+        OneVal<T>::value, bias_mul_blob, bias_blob, out_blob);
   }
 }
 
@@ -40,14 +40,14 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
 
   // weight_diff = out_diff * in
   KernelUtil<device_type, T>::BlobGemm(
-      ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0),
-      static_cast<T>(0.0), out_diff_blob, in_blob, weight_diff_blob);
+      ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
+      ZeroVal<T>::value, out_diff_blob, in_blob, weight_diff_blob);
 
   // in_diff = out_diff * weight
   if (in_diff_blob != nullptr) {
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1.0),
-        static_cast<T>(0.0), out_diff_blob, weight_blob, in_diff_blob);
+        ctx.device_ctx, CblasNoTrans, CblasNoTrans, OneVal<T>::value,
+        ZeroVal<T>::value, out_diff_blob, weight_blob, in_diff_blob);
   }
 
   if (this->op_conf().fully_connected_conf().use_bias()) {
@@ -56,8 +56,8 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
 
     // bias_diff = bias_multiplier * out_diff
     KernelUtil<device_type, T>::BlobGemm(
-        ctx.device_ctx, CblasTrans, CblasNoTrans, static_cast<T>(1.0),
-        static_cast<T>(0.0), bias_mul_blob, out_diff_blob, bias_diff_blob);
+        ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
+        ZeroVal<T>::value, bias_mul_blob, out_diff_blob, bias_diff_blob);
   }
 }
 

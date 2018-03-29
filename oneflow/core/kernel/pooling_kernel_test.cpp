@@ -39,11 +39,11 @@ std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
 
   auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::value, false);
   BlobDesc* idx_blob_desc =
       new BlobDesc(Shape({1, 1, 5, 5}), DataType::kUInt32, false);
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::val, false);
+      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::value, false);
   (*bn2blob_ptr)["in"] = KTC::CreateBlobWithSpecifiedVal(
       in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
                      14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});

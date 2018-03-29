@@ -278,7 +278,7 @@ class MdSaveChainNode final : public ChainNode {
 
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OVERRIDE_FROM_METHOD,
                                    (BldSubTskGphMthd GetMthdForBldSubTskGph),
-                                   (NormalMdUpdt));
+                                   (NormalMdUpdt)(Forward));
 };
 
 class MdDiffAccChainNode final : public ChainNode {

@@ -21,7 +21,7 @@ OpKernelTestCase* ReluTestCase(const std::string& job_type,
 
   using KTC = KTCommon<device_type, T>;
   BlobDesc* blob_desc =
-      new BlobDesc(Shape({1, 8}), GetDataType<T>::val, false, false, 1);
+      new BlobDesc(Shape({1, 8}), GetDataType<T>::value, false, false, 1);
   relu_test_case->InitBlob(
       "in", KTC::CreateBlobWithSpecifiedVal(blob_desc,
                                             {1, -1, -2, 2, 0, 5, -10, 100}));
@@ -38,9 +38,8 @@ OpKernelTestCase* ReluTestCase(const std::string& job_type,
   return relu_test_case;
 }
 
-TEST_CPU_ONLY_OPKERNEL(ReluTestCase,
-                       FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ReluTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 }  // namespace test
 
