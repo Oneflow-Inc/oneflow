@@ -7,7 +7,8 @@ namespace test {
 template<DeviceType device_type, typename T>
 void MaxPooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
                           const std::string& job_type,
-                          const std::string& forward_or_backward) {
+                          const std::string& forward_or_backward,
+                          const std::string& data_format) {
   pooling_test_case->InitJobConf([](JobConf* job_conf) {
     job_conf->set_default_data_type(GetDataType<T>::value);
   });
@@ -18,12 +19,25 @@ void MaxPooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
   pooling_conf->set_padding("SAME");
   pooling_conf->add_pool_size(3);
   pooling_conf->add_strides(2);
-  pooling_conf->set_data_format("channels_first");
+  pooling_conf->set_data_format(data_format);
+
+  std::vector<int64_t> in_dims;
+  std::vector<int64_t> out_dims;
+  if (data_format == "channels_first") {
+    in_dims = {1, 1, 25};
+    out_dims = {1, 1, 13};
+  } else if (data_format == "channels_last") {
+    in_dims = {1, 25, 1};
+    out_dims = {1, 13, 1};
+  } else {
+    UNIMPLEMENTED();
+  }
 
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::value, false, false, 1);
+      new BlobDesc(Shape(in_dims), GetDataType<T>::value, false, false, 1);
+
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::value, false, false, 1);
+      new BlobDesc(Shape(out_dims), GetDataType<T>::value, false, false, 1);
 
   pooling_test_case->template InitBlob<T>(
       "in", in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
@@ -39,7 +53,8 @@ void MaxPooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
        14, 0, 16, 0, 18, 0, 20, 0, 22, 0,  24, 25});
 }
 TEST_CPU_AND_GPU_OPKERNEL(MaxPooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
-                          (train)(predict), (forward)(backward));
+                          (train)(predict), (forward)(backward),
+                          (channels_first)(channels_last));
 
 template<DeviceType device_type, typename T>
 void MaxPooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
