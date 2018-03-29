@@ -1,5 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
 #define ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/job/job_desc.h"
@@ -13,16 +14,25 @@ namespace oneflow {
 
 namespace test {
 
-#define TEST_CPU_ONLY_OPKERNEL(func_name, data_type_seq, ...)                \
+#define TEST_CPU_ONLY_OPKERNEL TEST_CPU_OPKERNEL
+#define TEST_GPU_ONLY_OPKERNEL TEST_GPU_OPKERNEL
+#define TEST_CPU_AND_GPU_OPKERNEL(func_name, data_type_seq, ...) \
+  TEST_CPU_OPKERNEL(func_name, data_type_seq, __VA_ARGS__)       \
+  TEST_GPU_OPKERNEL(func_name, data_type_seq, __VA_ARGS__)
+
+#define TEST_CPU_OPKERNEL(func_name, data_type_seq, ...)                     \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OPKERNEL_TEST_ENTRY, (func_name),    \
                                    ((cpu, DeviceType::kCPU)), data_type_seq, \
                                    __VA_ARGS__)
 
-#define TEST_CPU_AND_GPU_OPKERNEL(func_name, data_type_seq, ...)         \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                      \
-      MAKE_OPKERNEL_TEST_ENTRY, (func_name),                             \
-      ((cpu, DeviceType::kCPU))((gpu, DeviceType::kGPU)), data_type_seq, \
-      __VA_ARGS__)
+#ifdef WITH_CUDA
+#define TEST_GPU_OPKERNEL(func_name, data_type_seq, ...)                     \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OPKERNEL_TEST_ENTRY, (func_name),    \
+                                   ((gpu, DeviceType::kGPU)), data_type_seq, \
+                                   __VA_ARGS__)
+#else
+#define TEST_GPU_OPKERNEL(func_name, data_type_seq, ...)
+#endif
 
 template<DeviceType device_type>
 class OpKernelTestCase final {
