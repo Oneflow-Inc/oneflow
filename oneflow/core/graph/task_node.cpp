@@ -3,11 +3,15 @@
 namespace oneflow {
 
 bool IsForwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
+  return tt == TaskType::kNormalForward 
+         || tt == TaskType::kRecurrentForward
+         || tt == TaskType::kGatherForward;
 }
 
 bool IsBackwardTaskType(TaskType tt) {
-  return tt == TaskType::kNormalBackward || tt == TaskType::kRecurrentBackward;
+  return tt == TaskType::kNormalBackward 
+         || tt == TaskType::kRecurrentBackward
+         || tt == TaskType::kGatherBackward;
 }
 
 TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
