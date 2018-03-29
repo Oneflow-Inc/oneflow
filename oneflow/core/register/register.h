@@ -32,6 +32,10 @@ class Regst final {
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbn(const std::string& lbn);
+  const HashMap<std::string, std::unique_ptr<BlobIf>>& lbn2blob() const {
+    return lbn2blob_;
+  }
+
   Blob* packed_blob() { return static_cast<Blob*>(packed_blob_.get()); }
   template<typename RecordType>
   RecordBlob<RecordType>* GetRecordBlob() {
