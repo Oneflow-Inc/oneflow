@@ -54,14 +54,6 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
   } else {
     UNIMPLEMENTED();
   }
-  for (auto dim : in_dim) { std::cout << dim << " "; }
-  std::cout << "\n";
-  for (auto dim : in_stride) { std::cout << dim << " "; }
-  std::cout << "\n";
-  for (auto dim : out_dim) { std::cout << dim << " "; }
-  std::cout << "\n";
-  for (auto dim : out_stride) { std::cout << dim << " "; }
-  std::cout << "\n";
   pooling_desc_.reset(
       new CudnnPoolingDesc(pooling_mode_, 3, kernel_conf_.pool_size().data(),
                            padding.data(), kernel_conf_.strides().data()));
