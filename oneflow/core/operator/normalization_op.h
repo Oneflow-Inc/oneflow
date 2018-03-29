@@ -16,7 +16,6 @@ class NormalizationOp final : public Operator {
   bool IsElemWiseOp() const override { return true; }
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
-  bool IsNormalizationOp() const override { return true; }
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
