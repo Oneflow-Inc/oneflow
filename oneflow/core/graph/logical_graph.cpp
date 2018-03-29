@@ -27,10 +27,8 @@ LogicalGraph::LogicalGraph() {
       const std::string& lbn = node->op()->Lbn4BnInOp(obn);
       CHECK(lbn2producer_.emplace(lbn, node->op()).second);
     }
-    total_mbn_num_ += node->op()->model_bns().size();
-    if (node->op()->IsNormalizationOp()) {
-      total_mbn_num_ += node->op()->other_bns().size();
-    }
+    total_mbn_num_ +=
+        node->op()->model_bns().size() + node->op()->forward_model_bns().size();
   });
   ToDotWithAutoFilePath();
 }

@@ -10,23 +10,12 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
 
-  std::vector<int32_t> stride_of_in_tensor(this->OpKernelDim() + 2, 1);
-  std::vector<int32_t> stride_of_out_tensor(this->OpKernelDim() + 2, 1);
-  for (int32_t i = this->OpKernelDim() + 2 - 2; i >= 0; --i) {
-    stride_of_in_tensor[i] = stride_of_in_tensor[i + 1] * in_shape.At(i + 1);
-    stride_of_out_tensor[i] = stride_of_out_tensor[i + 1] * out_shape.At(i + 1);
-  }
-  std::vector<int32_t> in_dim(in_shape.dim_vec().begin(),
-                              in_shape.dim_vec().end());
-  std::vector<int32_t> out_dim(out_shape.dim_vec().begin(),
-                               out_shape.dim_vec().end());
-
   this->in_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::value, this->OpKernelDim() + 2,
-                          in_dim.data(), stride_of_in_tensor.data()));
+      new CudnnTensorDesc(GetDataType<T>::value, in_shape,
+                          this->GetStringFromCustomizedOpConf("data_format")));
   this->out_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::value, this->OpKernelDim() + 2,
-                          out_dim.data(), stride_of_out_tensor.data()));
+      new CudnnTensorDesc(GetDataType<T>::value, out_shape,
+                          this->GetStringFromCustomizedOpConf("data_format")));
   this->filter_desc_.reset(
       new CudnnFilterDesc(GetDataType<T>::value, weight_shape,
                           this->GetStringFromCustomizedOpConf("data_format")));
@@ -54,14 +43,20 @@ void ConvKernel<DeviceType::kGPU, T>::ForwardDataContent(
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* out_blob = BnInOp2Blob("out");
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  int64_t cudnn_buf_size = 0;
+  T* cudnn_buf_dptr = nullptr;
+  if (cudnn_buf) {
+    cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
+  }
   CudaCheck(cudnnConvolutionForward(
       ctx.device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(),
       in_blob->dptr<T>(), this->filter_desc_->Get(), weight_blob->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(
           this->GetConvKernelConf().cudnn_fwd_algo()),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0), ZeroPtr<T>::value,
-      this->out_desc_->Get(), out_blob->mut_dptr<T>()));
+      cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
+      out_blob->mut_dptr<T>()));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
@@ -79,13 +74,19 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  int64_t cudnn_buf_size = 0;
+  T* cudnn_buf_dptr = nullptr;
+  if (cudnn_buf) {
+    cudnn_buf_size = cudnn_buf->shape().At(0);
+    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
+  }
   CudaCheck(cudnnConvolutionBackwardFilter(
       device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(),
       in_blob->dptr<T>(), this->out_desc_->Get(), out_diff_blob->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
           this->GetConvKernelConf().cudnn_bwd_filter_algo()),
-      cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0), ZeroPtr<T>::value,
+      cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value,
       this->filter_desc_->Get(), weight_diff_blob->mut_dptr<T>()));
 
   if (in_diff_blob != nullptr) {
@@ -95,7 +96,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
         out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(
             this->GetConvKernelConf().cudnn_bwd_data_algo()),
-        cudnn_buf->mut_dptr<T>(), cudnn_buf->shape().At(0), ZeroPtr<T>::value,
+        cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value,
         this->in_desc_->Get(), in_diff_blob->mut_dptr<T>()));
   }
 }

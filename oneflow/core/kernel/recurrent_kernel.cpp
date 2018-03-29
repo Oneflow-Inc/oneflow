@@ -65,7 +65,7 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithRandomSeed(
       init_hidden_initializer = GetMsgPtrFromPbMessage(
           GetRecurrentOpConf(), "init_hidden_initializer");
     }
-    KernelUtil<device_type, T>::InitializeWithProperConf(
+    KernelUtil<device_type, T>::Initialize(
         ctx, init_hidden_initializer, (*random_seed_gen)(), BnInOp2Blob("h0"));
   }
   VirtualInitModelBlobsWithRandomSeed(ctx, random_seed_gen, BnInOp2Blob);
@@ -77,7 +77,7 @@ void RecurrentKernel<device_type, T>::InitModelBlobsWithDir(
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (NeedExternalH0()) {
-    KernelUtil<device_type, T>::InitializeWithModelDir(
+    KernelUtil<device_type, T>::Initialize(
         ctx, part_id, part_num, model_load_dir, BnInOp2Blob("h0"), "h0",
         BnInOp2Blob("h0")->shape().At(0), 1);
   }

@@ -77,6 +77,25 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                    const int incx) {
     cublas_scal<T>(ctx->cublas_pmd_handle(), n, alpha, x, incx);
   }
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                   int n, const T alpha, const T* a, int lda, const T* x,
+                   const int incx, const T beta, T* y, const int incy) {
+    cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
+    cublas_gemv<T>(ctx->cublas_pmh_handle(), cublas_trans, n, m, &alpha, a, lda,
+                   x, incx, &beta, y, incy);
+  }
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                   const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                   const int k, const T alpha, const T* a, const int lda,
+                   const T* b, const int ldb, const T beta, T* c,
+                   const int ldc) {
+    cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
+    cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
+    cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n,
+                   m, k, &alpha, b, ldb, a, lda, &beta, c, ldc);
+  }
+
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes) {
     cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
@@ -100,6 +119,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                 ctx->cuda_stream()>>>(n, x, y, z);
   }
+
 #define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)               \
   CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, n, 1, 1, \
                          1);                                                \
@@ -147,42 +167,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                            const T* y, const T* dy, T* dx) {
     BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
   }
-  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                   int n, const T alpha, const T* a, int lda, const T* x,
-                   const int incx, const T beta, T* y, const int incy) {
-    cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
-    cublas_gemv<T>(ctx->cublas_pmh_handle(), cublas_trans, n, m, &alpha, a, lda,
-                   x, incx, &beta, y, incy);
-  }
-  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                   int n, const T* alpha, const T* a, int lda, const T* x,
-                   const int incx, const T* beta, T* y, const int incy) {
-    cublasOperation_t cublas_trans = CblasTrans2CublasTrans(trans);
-    cublas_gemv<T>(ctx->cublas_pmd_handle(), cublas_trans, n, m, alpha, a, lda,
-                   x, incx, beta, y, incy);
-  }
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                   const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                   const int k, const T alpha, const T* a, const int lda,
-                   const T* b, const int ldb, const T beta, T* c,
-                   const int ldc) {
-    cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
-    cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-    cublas_gemm<T>(ctx->cublas_pmh_handle(), cublas_trans_b, cublas_trans_a, n,
-                   m, k, &alpha, b, ldb, a, lda, &beta, c, ldc);
-  }
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                   const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                   const int k, const T* alpha, const T* a, const int lda,
-                   const T* b, const int ldb, const T* beta, T* c,
-                   const int ldc) {
-    cublasOperation_t cublas_trans_a = CblasTrans2CublasTrans(trans_a);
-    cublasOperation_t cublas_trans_b = CblasTrans2CublasTrans(trans_b);
-    cublas_gemm<T>(ctx->cublas_pmd_handle(), cublas_trans_b, cublas_trans_a, n,
-                   m, k, alpha, b, ldb, a, lda, beta, c, ldc);
-  }
+
   static void Initialize(DeviceCtx* ctx,
                          const InitializerConf& initializer_conf,
                          uint32_t random_seed, Blob* blob) {
@@ -204,18 +189,17 @@ struct KernelUtil<DeviceType::kGPU, T> final {
     CudaCheck(cudaFreeHost(host_raw_dptr));
   }
 
-  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim) {
+  static void Initialize(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                         const std::string& model_dir, Blob* blob,
+                         const std::string& bn_in_op, int32_t dim_num,
+                         int64_t num_in_each_dim) {
     BlobDesc blob_desc = BlobDesc(blob->blob_desc());
     char* host_raw_dptr = nullptr;
     CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
     std::unique_ptr<Blob> host_blob;
     host_blob.reset(
         NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
-    KernelUtil<DeviceType::kCPU, T>::InitializeWithModelDir(
+    KernelUtil<DeviceType::kCPU, T>::Initialize(
         ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
         num_in_each_dim);
 
