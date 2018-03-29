@@ -243,11 +243,9 @@ void BasicGruKernel<device_type, T>::InitModelTmpBlobs(
   modelname##_fill_conf.mutable_constant_conf()->set_value(1.f); \
   KernelUtil<device_type, T>::Initialize(                        \
       ctx.device_ctx, modelname##_fill_conf, 0, BnInOp2Blob(#modelname))
-  if (this->op_conf().basic_gru_conf().use_bias()) {
-    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_r_miltiplier);
-    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_z_miltiplier);
-    OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_miltiplier);
-  }
+  OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_r_miltiplier);
+  OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_z_miltiplier);
+  OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_miltiplier);
 #undef OF_GRU_INIT_PURE_MODEL_TMP_BLON
 }
 

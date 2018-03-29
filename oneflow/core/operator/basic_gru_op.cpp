@@ -29,16 +29,14 @@ void BasicGruOp::VirtualInitFromOpConf() {
 
   EnrollDataTmpBn("tmp_data");
 
-  if (GetBoolFromSpecialConf("use_bias")) {
-    EnrollModelBn("bias_r");
-    EnrollModelTmpBn("bias_r_multiplier");
+  EnrollModelBn("bias_r");
+  EnrollModelTmpBn("bias_r_multiplier");
 
-    EnrollModelBn("bias_z");
-    EnrollModelTmpBn("bias_z_multiplier");
+  EnrollModelBn("bias_z");
+  EnrollModelTmpBn("bias_z_multiplier");
 
-    EnrollModelBn("bias");
-    EnrollModelTmpBn("bias_multiplier");
-  }
+  EnrollModelBn("bias");
+  EnrollModelTmpBn("bias_multiplier");
 }
 
 void BasicGruOp::VirtualInferBlobDescs(
@@ -73,16 +71,14 @@ void BasicGruOp::VirtualInferBlobDescs(
   OF_GRU_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight);
 #undef OF_GRU_INFER_WEIGHT_DESCS
 
-  if (GetBoolFromSpecialConf("use_bias")) {
-    *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_r_multiplier") = BlobDesc(Shape({data_num, 1}));
+  *GetBlobDesc4BnInOp("bias_r") = BlobDesc(Shape({1, hidden_size}));
+  *GetBlobDesc4BnInOp("bias_r_multiplier") = BlobDesc(Shape({data_num, 1}));
 
-    *GetBlobDesc4BnInOp("bias_z") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_z_multiplier") = BlobDesc(Shape({data_num, 1}));
+  *GetBlobDesc4BnInOp("bias_z") = BlobDesc(Shape({1, hidden_size}));
+  *GetBlobDesc4BnInOp("bias_z_multiplier") = BlobDesc(Shape({data_num, 1}));
 
-    *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
-    *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
-  }
+  *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
+  *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
 }
 
 REGISTER_OP(OperatorConf::kBasicGruConf, BasicGruOp);
