@@ -49,6 +49,7 @@ class OpKernelTestCase final {
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
   KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
+  void EnrollBlobRegst(const std::string& blob_name, Regst*);
   template<typename T>
   void InitBlob(const std::string&, const BlobDesc* blob_desc,
                 const std::vector<T>& val);
@@ -73,19 +74,19 @@ class OpKernelTestCase final {
   template<typename T>
   static void CheckInitializeResult(const Blob* blob,
                                     const InitializerConf& initializer_conf);
-  static Blob* CreateBlob(const BlobDesc*);
+  static Blob* CreateBlob(const BlobDesc*, Regst* regst);
 
  private:
   template<typename T>
-  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc);
-
+  static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc, Regst* regst);
   template<typename T>
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
-                                          std::vector<T> val);
+                                          std::vector<T> val, Regst* regst);
   template<typename T>
-  static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val);
-
-  static Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc);
+  static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val,
+                                             Regst* regst);
+  static Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc,
+                                             Regst* regst);
   static void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
                             const Blob* rhs);
   static void SwitchCheckInitializeResult(
@@ -101,6 +102,7 @@ class OpKernelTestCase final {
 
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
+  HashMap<std::string, Regst*> bn_in_op2regst_;
   JobConf job_conf_;
   OperatorConf op_conf_;
   std::list<std::string> forward_asserted_blob_names_;
