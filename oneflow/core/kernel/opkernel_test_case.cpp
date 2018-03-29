@@ -19,11 +19,11 @@ std::string ExpectedBlobName(const std::string& name) {
 #if defined(WITH_CUDA)
 
 template<>
-Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
-    const BlobDesc* blob_desc) {
+Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc,
+                                                     Regst* regst) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return NewBlob(nullptr, blob_desc, static_cast<char*>(mem_ptr), nullptr,
+  return NewBlob(regst, blob_desc, static_cast<char*>(mem_ptr), nullptr,
                  DeviceType::kCPU);
 }
 
@@ -40,8 +40,8 @@ void OpKernelTestCase<DeviceType::kCPU>::SyncStream(KernelCtx* ctx) {}
 template<DeviceType device_type>
 template<typename T>
 Blob* OpKernelTestCase<device_type>::CreateBlobWithSpecifiedVal(
-    const BlobDesc* blob_desc, std::vector<T> val) {
-  return CreateBlobWithSpecifiedValPtr(blob_desc, &(val[0]));
+    const BlobDesc* blob_desc, std::vector<T> val, Regst* regst) {
+  return CreateBlobWithSpecifiedValPtr(blob_desc, &(val[0]), regst);
 }
 
 template<>
@@ -65,8 +65,8 @@ void OpKernelTestCase<DeviceType::kCPU>::CheckInitializeResult(
 template<>
 template<typename T>
 Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlobWithSpecifiedValPtr(
-    const BlobDesc* blob_desc, T* val) {
-  Blob* ret = CreateBlob(blob_desc);
+    const BlobDesc* blob_desc, T* val, Regst* regst) {
+  Blob* ret = CreateBlob(blob_desc, regst);
   CudaCheck(cudaMemcpy(ret->mut_dptr(), val, ret->ByteSizeOfDataContentField(),
                        cudaMemcpyHostToHost));
   return ret;
@@ -75,7 +75,7 @@ Blob* OpKernelTestCase<DeviceType::kCPU>::CreateBlobWithSpecifiedValPtr(
 template<DeviceType device_type>
 template<typename T>
 Blob* OpKernelTestCase<device_type>::CreateBlobWithRandomVal(
-    const BlobDesc* blob_desc) {
+    const BlobDesc* blob_desc, Regst* regst) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(0, 10);
@@ -83,7 +83,13 @@ Blob* OpKernelTestCase<device_type>::CreateBlobWithRandomVal(
   for (int64_t i = 0; i < blob_desc->shape().elem_cnt(); ++i) {
     val_vec[i] = static_cast<T>(dis(gen));
   }
-  return CreateBlobWithSpecifiedVal<T>(blob_desc, val_vec);
+  return CreateBlobWithSpecifiedVal<T>(blob_desc, val_vec, regst);
+}
+
+template<DeviceType device_type>
+void OpKernelTestCase<device_type>::EnrollBlobRegst(
+    const std::string& blob_name, Regst* regst) {
+  CHECK(bn_in_op2regst_.emplace(blob_name, regst).second);
 }
 
 template<DeviceType device_type>
@@ -91,7 +97,8 @@ template<typename T>
 void OpKernelTestCase<device_type>::InitBlob(const std::string& name,
                                              const BlobDesc* blob_desc,
                                              const std::vector<T>& val) {
-  Blob* blob = CreateBlobWithSpecifiedVal<T>(blob_desc, val);
+  Blob* blob =
+      CreateBlobWithSpecifiedVal<T>(blob_desc, val, bn_in_op2regst_[name]);
   CHECK(bn_in_op2blob_.emplace(name, blob).second);
 }
 
@@ -104,10 +111,11 @@ void OpKernelTestCase<device_type>::ForwardCheckBlob(const std::string& name,
                                                      bool need_random_init) {
   forward_asserted_blob_names_.push_back(name);
   if (need_random_init) {
-    Blob* blob = CreateBlobWithRandomVal<T>(blob_desc);
+    Blob* blob = CreateBlobWithRandomVal<T>(blob_desc, bn_in_op2regst_[name]);
     CHECK(bn_in_op2blob_.emplace(name, blob).second);
   }
-  Blob* blob = CreateBlobWithSpecifiedVal<T>(blob_desc, val);
+  Blob* blob =
+      CreateBlobWithSpecifiedVal<T>(blob_desc, val, bn_in_op2regst_[name]);
   CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
 }
 
@@ -129,10 +137,11 @@ void OpKernelTestCase<device_type>::BackwardCheckBlob(const std::string& name,
                                                       bool need_random_init) {
   backward_asserted_blob_names_.push_back(name);
   if (need_random_init) {
-    Blob* blob = CreateBlobWithRandomVal<T>(blob_desc);
+    Blob* blob = CreateBlobWithRandomVal<T>(blob_desc, bn_in_op2regst_[name]);
     CHECK(bn_in_op2blob_.emplace(name, blob).second);
   }
-  Blob* blob = CreateBlobWithSpecifiedVal<T>(blob_desc, val);
+  Blob* blob =
+      CreateBlobWithSpecifiedVal<T>(blob_desc, val, bn_in_op2regst_[name]);
   CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
 }
 
@@ -146,10 +155,10 @@ void OpKernelTestCase<device_type>::BackwardCheckBlob(
 
 template<DeviceType device_type>
 Blob* OpKernelTestCase<device_type>::SwitchCreateBlobWithRandomVal(
-    const BlobDesc* blob_desc) {
+    const BlobDesc* blob_desc, Regst* regst) {
   switch (blob_desc->data_type()) {
 #define CREATE_BLOB_WITH_RANDOM_VAL_ENTRY(type_cpp, type_proto) \
-  case type_proto: return CreateBlobWithRandomVal<type_cpp>(blob_desc);
+  case type_proto: return CreateBlobWithRandomVal<type_cpp>(blob_desc, regst);
     OF_PP_FOR_EACH_TUPLE(CREATE_BLOB_WITH_RANDOM_VAL_ENTRY, ALL_DATA_TYPE_SEQ);
     default: UNIMPLEMENTED();
   }
@@ -161,8 +170,8 @@ std::function<Blob*(const std::string&)>
 OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
   return [this](const std::string& bn_in_op) {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
-      bn_in_op2blob_[bn_in_op] =
-          SwitchCreateBlobWithRandomVal(&bn_in_op2blob_desc_.at(bn_in_op));
+      bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
+          &bn_in_op2blob_desc_.at(bn_in_op), bn_in_op2regst_[bn_in_op]);
     }
     return bn_in_op2blob_.at(bn_in_op);
   };
