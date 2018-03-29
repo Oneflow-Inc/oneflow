@@ -28,19 +28,19 @@ class ForwardCompActor final : public CompActor {
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();
   void AsyncInitModel();
-  void TrySendMsgToOtherModelSaveActor(const int64_t piece_id);
+  void TrySendMsgToForwardModelSaveActor(const int64_t piece_id);
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
   bool is_in_eord_;
-  bool other_model_initialized;
   int64_t in_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
-  int64_t other_model_regst_desc_id_;
+  int64_t forward_model_regst_desc_id_;
   int64_t random_seed_;
   Regst* model_regst_;
   Regst* model_tmp_regst_;
+  Regst* pre_forward_model_regst_;
   std::queue<Regst*> pending_in_regsts_;
 };
 

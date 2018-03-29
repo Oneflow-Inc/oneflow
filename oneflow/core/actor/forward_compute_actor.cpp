@@ -4,24 +4,27 @@ namespace oneflow {
 
 void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
-  other_model_initialized = false;
   in_regst_desc_id_ = RegstDescId4Name("in");
   CHECK_NE(in_regst_desc_id_, -1);
   model_regst_desc_id_ = RegstDescId4Name("model");
   model_tmp_regst_desc_id_ = RegstDescId4Name("model_tmp");
-  other_model_regst_desc_id_ = RegstDescId4Name("other_model");
+  forward_model_regst_desc_id_ = RegstDescId4Name("forward_model");
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
-  if (other_model_regst_desc_id_ != -1) {
-    AsyncInitModel();
-    other_model_initialized = true;
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-      regst->set_model_version_id(0);
-      return regst->regst_desc_id() == other_model_regst_desc_id_;
-    });
+  pre_forward_model_regst_ = nullptr;
+  if (forward_model_regst_desc_id_ != -1) {
+    pre_forward_model_regst_ =
+        GetCurWriteableRegst(forward_model_regst_desc_id_);
   }
   if (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1) {
+    if (forward_model_regst_desc_id_ != -1) {
+      AsyncInitModel();
+      AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+        regst->set_model_version_id(0);
+        return regst->regst_desc_id() == forward_model_regst_desc_id_;
+      });
+    }
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   } else {
     OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerInitModelAndModelTmp);
@@ -42,9 +45,8 @@ void ForwardCompActor::AsyncInitModel() {
           if (blob == nullptr && model_tmp_regst_) {
             blob = model_tmp_regst_->GetBlobByLbn(lbn);
           }
-          if (blob == nullptr && other_model_regst_desc_id_ != -1
-              && !other_model_initialized) {
-            blob = GetCurWriteableRegst(other_model_regst_desc_id_)
+          if (blob == nullptr && forward_model_regst_desc_id_ != -1) {
+            blob = GetCurWriteableRegst(forward_model_regst_desc_id_)
                        ->GetBlobByLbn(lbn);
           }
           return blob;
@@ -74,6 +76,12 @@ int ForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (model_tmp_regst_) {
     AsyncSendRegstMsgToProducer(model_tmp_regst_);
     model_tmp_regst_ = nullptr;
+  }
+  if (forward_model_regst_desc_id_ != -1) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_model_version_id(0);
+      return regst->regst_desc_id() == forward_model_regst_desc_id_;
+    });
   }
   OF_SET_MSG_HANDLER(&ForwardCompActor::HandlerNormal);
   return 0;
@@ -120,7 +128,16 @@ void ForwardCompActor::Act() {
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   int64_t piece_id = in_regst->piece_id();
-  kernel_ctx.other = &piece_id;
+  std::tuple<int64_t, std::function<const Blob*(const std::string&)>> other_val(
+      piece_id, [=](const std::string& lbn) -> const Blob* {
+        CHECK_NOTNULL(pre_forward_model_regst_);
+        return pre_forward_model_regst_->GetBlobByLbn(lbn);
+      });
+  kernel_ctx.other = &other_val;
+  if (forward_model_regst_desc_id_ != -1) {
+    pre_forward_model_regst_ =
+        GetCurWriteableRegst(forward_model_regst_desc_id_);
+  }
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == in_regst_desc_id_) {
       return in_regst;
@@ -135,7 +152,7 @@ void ForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
-    return regst->regst_desc_id() != other_model_regst_desc_id_;
+    return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
@@ -143,13 +160,14 @@ void ForwardCompActor::Act() {
       CHECK_LE(piece_id, last_piece_id);
       if (piece_id == last_piece_id) { AsyncReturnModelRegst(); }
     }
-    TrySendMsgToOtherModelSaveActor(piece_id);
+    TrySendMsgToForwardModelSaveActor(piece_id);
   }
   AsyncSendRegstMsgToProducer(in_regst);
 }
 
-void ForwardCompActor::TrySendMsgToOtherModelSaveActor(const int64_t piece_id) {
-  if (other_model_regst_desc_id_ == -1) { return; }
+void ForwardCompActor::TrySendMsgToForwardModelSaveActor(
+    const int64_t piece_id) {
+  if (forward_model_regst_desc_id_ == -1) { return; }
   bool is_last_piece_in_batch =
       (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
   int64_t batch_id = piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
@@ -159,7 +177,7 @@ void ForwardCompActor::TrySendMsgToOtherModelSaveActor(const int64_t piece_id) {
   if (is_last_piece_in_batch && need_save) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
       regst->set_model_version_id(batch_id);
-      return regst->regst_desc_id() == other_model_regst_desc_id_;
+      return regst->regst_desc_id() == forward_model_regst_desc_id_;
     });
   }
 }

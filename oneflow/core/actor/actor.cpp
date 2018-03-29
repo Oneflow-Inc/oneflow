@@ -46,8 +46,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
-  VirtualActorInit(task_proto);
   InitDeviceCtx(thread_ctx);
+  VirtualActorInit(task_proto);
 }
 
 int64_t Actor::machine_id() const {
