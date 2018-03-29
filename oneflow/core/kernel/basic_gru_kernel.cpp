@@ -164,21 +164,33 @@ template<DeviceType device_type, typename T>
 void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
     const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-#define OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(modelname) \
-  KernelUtil<device_type, T>::InitializeWithProperConf(    \
-      ctx.device_ctx,                                      \
-      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(),  \
-                        modelname##_initializer),          \
+#define OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(modelname, type)               \
+  KernelUtil<device_type, T>::InitializeWithProperConf(                        \
+      ctx.device_ctx,                                                          \
+      OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), type##_initializer), \
       random_seed_gen(), BnInOp2Blob(#modelname))
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_r_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_r_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_r);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_z_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_z_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_z);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_r_weight, i2h_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_r_weight, h2h_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_z_weight, i2h_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_z_weight, h2h_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight, i2h_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight, h2h_weight);
+  if ((OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_initializer))
+      == nullptr) {
+#define OF_GRU_INIT_MODEL_BIAS(modelname, default_value)                   \
+  InitializerConf modelname##_fill_conf;                                   \
+  modelname##_fill_conf.mutable_constant_conf()->set_value(default_value); \
+  KernelUtil<device_type, T>::Initialize(                                  \
+      ctx.device_ctx, modelname##_fill_conf, 0, BnInOp2Blob(#modelname))
+    OF_GRU_INIT_MODEL_BIAS(bias_r, 1.f);
+    OF_GRU_INIT_MODEL_BIAS(bias_z, 1.f);
+    OF_GRU_INIT_MODEL_BIAS(bias, 0.f);
+#undef OF_GRU_INIT_MODEL_BIAS
+  } else {
+    OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_r, bias);
+    OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_z, bias);
+    OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias, bias);
+  }
 #undef OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED
 }
 
