@@ -39,8 +39,6 @@ class CudnnTensorDesc final {
   ~CudnnTensorDesc();
 
   CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
-  CudnnTensorDesc(const std::string& data_format, DataType, int size, int n,
-                  int c, int h, int w, int d);
   CudnnTensorDesc(DataType data_type, int dims, const int* dim,
                   const int* stride);
   CudnnTensorDesc(DataType data_type, const Shape& shape,
