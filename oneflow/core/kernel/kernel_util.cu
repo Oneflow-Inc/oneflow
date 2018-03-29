@@ -86,6 +86,7 @@ struct KernelUtil<DeviceType::kGPU, T> final {
                     const float epsilon) {
     RsqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                   ctx->cuda_stream()>>>(n, x, epsilon);
+  }
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy) {
