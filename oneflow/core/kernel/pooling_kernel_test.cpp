@@ -1,128 +1,365 @@
-#include "oneflow/core/kernel/pooling_kernel.h"
+#include "oneflow/core/operator/max_pooling_2d_op.h"
+#include "oneflow/core/operator/average_pooling_2d_op.h"
 #include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/kernel/kernel_test_common.h"
+#include "oneflow/core/job/job_conf.pb.h"
+#include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/kernel/opkernel_test_common.h"
+#include "oneflow/core/kernel/opkernel_test_case.h"
 
 namespace oneflow {
 
 namespace test {
 
-namespace {
-
 template<DeviceType device_type, typename T>
-Kernel* BuildPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
-  OperatorConf op_conf;
-  op_conf.set_name("pooling_test");
-  PoolingOpConf* pooling_conf = op_conf.mutable_pooling_conf();
-  pooling_conf->set_in("pooling_in");
-  pooling_conf->set_out("pooling_out");
-  pooling_conf->set_pool(pooling_method);
-  pooling_conf->set_pad_h(1);
-  pooling_conf->set_pad_w(1);
-  pooling_conf->set_kernel_size_h(3);
-  pooling_conf->set_kernel_size_w(3);
-  pooling_conf->set_stride_h(2);
-  pooling_conf->set_stride_w(2);
+OpKernelTestCase* MaxPooling1DTestCase(const std::string& job_type,
+                                       const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  MaxPooling1DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_max_pooling_1d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
 
-  auto pooling_op = ConstructOp(op_conf);
-  OperatorProto op_proto;
-  pooling_op->ToProto(&op_proto);
-  auto pooling_kernel = new PoolingKernel<device_type, T>();
-  pooling_kernel->InitFromOpProto(op_proto);
-  return pooling_kernel;
-}
-
-template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
-    const PoolingOpConf::PoolMethod& pooling_method) {
   using KTC = KTCommon<device_type, T>;
-
-  auto bn2blob_ptr = new HashMap<std::string, Blob*>;
   BlobDesc* in_blob_desc =
-      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::value, false);
-  BlobDesc* idx_blob_desc =
-      new BlobDesc(Shape({1, 1, 5, 5}), DataType::kUInt32, false);
+      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::value, false, false, 1);
   BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::value, false);
-  (*bn2blob_ptr)["in"] = KTC::CreateBlobWithSpecifiedVal(
-      in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
-                     14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25});
-  (*bn2blob_ptr)["out"] = KTC::CreateBlobWithRandomVal(out_blob_desc);
-  (*bn2blob_ptr)["idx"] = KTC::CreateBlobWithRandomVal(idx_blob_desc);
-  (*bn2blob_ptr)["out_diff"] = (*bn2blob_ptr)["out"];
-  (*bn2blob_ptr)["in_diff"] = KTC::CreateBlobWithRandomVal(in_blob_desc);
-  if (pooling_method == PoolingOpConf::kMax) {
-    (*bn2blob_ptr)["expected_out"] = KTC::CreateBlobWithSpecifiedVal(
-        out_blob_desc, {7, 9, 10, 17, 19, 20, 22, 24, 25});
-    (*bn2blob_ptr)["expected_in_diff"] = KTC::CreateBlobWithSpecifiedVal(
-        in_blob_desc, {0, 0, 0, 0,  0, 0,  7,  0, 9,  10, 0,  0, 0,
-                       0, 0, 0, 17, 0, 19, 20, 0, 22, 0,  24, 25});
-  } else if (pooling_method == PoolingOpConf::kAve) {
-    (*bn2blob_ptr)["expected_out"] = KTC::CreateBlobWithSpecifiedVal(
-        out_blob_desc, {16.0f / 9, 33.0f / 9, 28.0f / 9, 69.0f / 9, 13,
-                        87.0f / 9, 76.0f / 9, 123.0f / 9, 88.0f / 9});
-    (*bn2blob_ptr)["expected_in_diff"] = KTC::CreateBlobWithSpecifiedVal(
-        in_blob_desc,
-        {16.0f / 9 / 9,
-         16.0f / 9 / 9 + 33.0f / 9 / 9,
-         33.0f / 9 / 9,
-         33.0f / 9 / 9 + 28.0f / 9 / 9,
-         28.0f / 9 / 9,
-         16.0f / 9 / 9 + 69.0f / 9 / 9,
-         16.0f / 9 / 9 + 33.0f / 9 / 9 + 69.0f / 9 / 9 + 13.0f / 9,
-         33.0f / 9 / 9 + 13.0f / 9,
-         33.0f / 9 / 9 + 28.0f / 9 / 9 + 13.0f / 9 + 87.0f / 9 / 9,
-         28.0f / 9 / 9 + 87.0f / 9 / 9,
-         69.0f / 9 / 9,
-         69.0f / 9 / 9 + 13.0f / 9,
-         13.0f / 9,
-         13.0f / 9 + 87.0f / 9 / 9,
-         87.0f / 9 / 9,
-         69.0f / 9 / 9 + 76.0f / 9 / 9,
-         69.0f / 9 / 9 + 13.0f / 9 + 76.0f / 9 / 9 + 123.0f / 9 / 9,
-         13.0f / 9 + 123.0f / 9 / 9,
-         13.0f / 9 + 87.0f / 9 / 9 + 123.0f / 9 / 9 + 88.0f / 9 / 9,
-         87.0f / 9 / 9 + 88.0f / 9 / 9,
-         76.0f / 9 / 9,
-         76.0f / 9 / 9 + 123.0f / 9 / 9,
-         123.0f / 9 / 9,
-         123.0f / 9 / 9 + 88.0f / 9 / 9,
-         88.0f / 9 / 9});
-  } else {
-    TODO();
-  }
+      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::value, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"),
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 25}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {0,  2, 0,  4, 0,  6, 0,  8, 0,  10, 0,  12, 0,
+                         14, 0, 16, 0, 18, 0, 20, 0, 22, 0,  24, 25}));
 
-  return [bn2blob_ptr](const std::string& bn) { return bn2blob_ptr->at(bn); };
+  return pooling_test_case;
 }
 
 template<DeviceType device_type, typename T>
-void TestPoolingKernel(const PoolingOpConf::PoolMethod& pooling_method) {
+OpKernelTestCase* MaxPooling2DTestCase(const std::string& job_type,
+                                       const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  MaxPooling2DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_max_pooling_2d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(2);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
+
   using KTC = KTCommon<device_type, T>;
-  KernelCtx ctx;
-  BuildKernelCtx<device_type>(&ctx);
+  BlobDesc* in_blob_desc =
+      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc =
+      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"), KTC::CreateBlobWithSpecifiedVal(
+                            out_blob_desc, {7, 9, 10, 17, 19, 20, 22, 24, 25}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(out_blob_desc,
+                                      {7, 9, 10, 17, 19, 20, 22, 24, 25}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {0, 0, 0, 0,  0, 0,  7,  0, 9,  10, 0,  0, 0,
+                         0, 0, 0, 17, 0, 19, 20, 0, 22, 0,  24, 25}));
 
-  auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(pooling_method);
-  auto pooling_kernel = BuildPoolingKernel<device_type, T>(pooling_method);
-
-  pooling_kernel->Forward(ctx, BnInOp2Blob);
-  pooling_kernel->Backward(ctx, BnInOp2Blob);
-  SyncStream<device_type>(&ctx);
-
-  KTC::CheckResult(BnInOp2Blob, "out", "expected_out");
-  KTC::CheckResult(BnInOp2Blob, "in_diff", "expected_in_diff");
+  return pooling_test_case;
 }
 
-}  // namespace
+template<DeviceType device_type, typename T>
+OpKernelTestCase* MaxPooling3DTestCase(const std::string& job_type,
+                                       const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  MaxPooling3DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_max_pooling_3d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(1);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(1);
+  pooling_conf->add_strides(2);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
+
+  using KTC = KTCommon<device_type, T>;
+  BlobDesc* in_blob_desc = new BlobDesc(Shape({1, 1, 1, 5, 5}),
+                                        GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc = new BlobDesc(
+      Shape({1, 1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"), KTC::CreateBlobWithSpecifiedVal(
+                            out_blob_desc, {7, 9, 10, 17, 19, 20, 22, 24, 25}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(out_blob_desc,
+                                      {7, 9, 10, 17, 19, 20, 22, 24, 25}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {0, 0, 0, 0,  0, 0,  7,  0, 9,  10, 0,  0, 0,
+                         0, 0, 0, 17, 0, 19, 20, 0, 22, 0,  24, 25}));
+
+  return pooling_test_case;
+}
+
+template<DeviceType device_type, typename T>
+OpKernelTestCase* AveragePooling1DTestCase(
+    const std::string& job_type, const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  AveragePooling1DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_average_pooling_1d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
+
+  using KTC = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
+  BlobDesc* in_blob_desc =
+      new BlobDesc(Shape({1, 1, 25}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc =
+      new BlobDesc(Shape({1, 1, 13}), GetDataType<T>::value, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"),
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {3.0f / 2, 3.0f, 5.0f, 7.0f, 9.0f, 11.0f, 13.0f, 15.0f,
+                          17.0f, 19.0f, 21.0f, 23.0f, 49.0f / 2}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {3.0f / 2, 3.0f, 5.0f, 7.0f, 9.0f, 11.0f, 13.0f, 15.0f,
+                          17.0f, 19.0f, 21.0f, 23.0f, 49.0f / 2}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(in_blob_desc,
+                                      {3.0f / 2 / 2, 3.0f / 2 / 2 + 3.0f / 3,
+                                       3.0f / 3,     3.0f / 3 + 5.0f / 3,
+                                       5.0f / 3,     5.0f / 3 + 7.0f / 3,
+                                       7.0f / 3,     7.0f / 3 + 9.0f / 3,
+                                       9.0f / 3,     9.0f / 3 + 11.0f / 3,
+                                       11.0f / 3,    11.0f / 3 + 13.0f / 3,
+                                       13.0f / 3,    13.0f / 3 + 15.0f / 3,
+                                       15.0f / 3,    15.0f / 3 + 17.0f / 3,
+                                       17.0f / 3,    17.0f / 3 + 19.0f / 3,
+                                       19.0f / 3,    19.0f / 3 + 21.0f / 3,
+                                       21.0f / 3,    21.0f / 3 + 23.0f / 3,
+                                       23.0f / 3,    23.0f / 3 + 49.0f / 2 / 2,
+                                       49.0f / 2 / 2}));
+
+  return pooling_test_case;
+}
+
+template<DeviceType device_type, typename T>
+OpKernelTestCase* AveragePooling2DTestCase(
+    const std::string& job_type, const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  AveragePooling2DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_average_pooling_2d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(2);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
+
+  using KTC = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
+  BlobDesc* in_blob_desc =
+      new BlobDesc(Shape({1, 1, 5, 5}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc =
+      new BlobDesc(Shape({1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"),
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {16.0f / 4, 33.0f / 6, 28.0f / 4, 69.0f / 6, 13,
+                          87.0f / 6, 76.0f / 4, 123.0f / 6, 88.0f / 4}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {16.0f / 4, 33.0f / 6, 28.0f / 4, 69.0f / 6, 13,
+                          87.0f / 6, 76.0f / 4, 123.0f / 6, 88.0f / 4}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc,
+          {16.0f / 4 / 4,
+           16.0f / 4 / 4 + 33.0f / 6 / 6,
+           33.0f / 6 / 6,
+           33.0f / 6 / 6 + 28.0f / 4 / 4,
+           28.0f / 4 / 4,
+           16.0f / 4 / 4 + 69.0f / 6 / 6,
+           16.0f / 4 / 4 + 33.0f / 6 / 6 + 69.0f / 6 / 6 + 13.0f / 9,
+           33.0f / 6 / 6 + 13.0f / 9,
+           33.0f / 6 / 6 + 28.0f / 4 / 4 + 13.0f / 9 + 87.0f / 6 / 6,
+           28.0f / 4 / 4 + 87.0f / 6 / 6,
+           69.0f / 6 / 6,
+           69.0f / 6 / 6 + 13.0f / 9,
+           13.0f / 9,
+           13.0f / 9 + 87.0f / 6 / 6,
+           87.0f / 6 / 6,
+           69.0f / 6 / 6 + 76.0f / 4 / 4,
+           69.0f / 6 / 6 + 13.0f / 9 + 76.0f / 4 / 4 + 123.0f / 6 / 6,
+           13.0f / 9 + 123.0f / 6 / 6,
+           13.0f / 9 + 87.0f / 6 / 6 + 123.0f / 6 / 6 + 88.0f / 4 / 4,
+           87.0f / 6 / 6 + 88.0f / 4 / 4,
+           76.0f / 4 / 4,
+           76.0f / 4 / 4 + 123.0f / 6 / 6,
+           123.0f / 6 / 6,
+           123.0f / 6 / 6 + 88.0f / 4 / 4,
+           88.0f / 4 / 4}));
+
+  return pooling_test_case;
+}
+
+template<DeviceType device_type, typename T>
+OpKernelTestCase* AveragePooling3DTestCase(
+    const std::string& job_type, const std::string& forward_or_backward) {
+  OpKernelTestCase* pooling_test_case = new OpKernelTestCase();
+  pooling_test_case->mut_job_conf()->set_default_data_type(
+      GetDataType<T>::value);
+  pooling_test_case->set_is_train(job_type == "train");
+  pooling_test_case->set_is_forward(forward_or_backward == "forward");
+  pooling_test_case->set_device_type(device_type);
+  AveragePooling3DOpConf* pooling_conf =
+      pooling_test_case->mut_op_conf()->mutable_average_pooling_3d_conf();
+  pooling_conf->set_padding("SAME");
+  pooling_conf->add_pool_size(1);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_pool_size(3);
+  pooling_conf->add_strides(1);
+  pooling_conf->add_strides(2);
+  pooling_conf->add_strides(2);
+  pooling_conf->set_data_format("channels_first");
+
+  using KTC = KTCommon<device_type, T>;
+  using KTC = KTCommon<device_type, T>;
+  BlobDesc* in_blob_desc = new BlobDesc(Shape({1, 1, 1, 5, 5}),
+                                        GetDataType<T>::value, false, false, 1);
+  BlobDesc* out_blob_desc = new BlobDesc(
+      Shape({1, 1, 1, 3, 3}), GetDataType<T>::value, false, false, 1);
+  pooling_test_case->InitBlob(
+      "in",
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc, {1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13,
+                         14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25}));
+  pooling_test_case->InitBlob(
+      GenDiffBn("out"),
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {16.0f / 4, 33.0f / 6, 28.0f / 4, 69.0f / 6, 13,
+                          87.0f / 6, 76.0f / 4, 123.0f / 6, 88.0f / 4}));
+  pooling_test_case->ForwardCheckBlob(
+      "out", device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          out_blob_desc, {16.0f / 4, 33.0f / 6, 28.0f / 4, 69.0f / 6, 13,
+                          87.0f / 6, 76.0f / 4, 123.0f / 6, 88.0f / 4}));
+  pooling_test_case->BackwardCheckBlob(
+      GenDiffBn("in"), device_type,
+      KTC::CreateBlobWithSpecifiedVal(
+          in_blob_desc,
+          {16.0f / 4 / 4,
+           16.0f / 4 / 4 + 33.0f / 6 / 6,
+           33.0f / 6 / 6,
+           33.0f / 6 / 6 + 28.0f / 4 / 4,
+           28.0f / 4 / 4,
+           16.0f / 4 / 4 + 69.0f / 6 / 6,
+           16.0f / 4 / 4 + 33.0f / 6 / 6 + 69.0f / 6 / 6 + 13.0f / 9,
+           33.0f / 6 / 6 + 13.0f / 9,
+           33.0f / 6 / 6 + 28.0f / 4 / 4 + 13.0f / 9 + 87.0f / 6 / 6,
+           28.0f / 4 / 4 + 87.0f / 6 / 6,
+           69.0f / 6 / 6,
+           69.0f / 6 / 6 + 13.0f / 9,
+           13.0f / 9,
+           13.0f / 9 + 87.0f / 6 / 6,
+           87.0f / 6 / 6,
+           69.0f / 6 / 6 + 76.0f / 4 / 4,
+           69.0f / 6 / 6 + 13.0f / 9 + 76.0f / 4 / 4 + 123.0f / 6 / 6,
+           13.0f / 9 + 123.0f / 6 / 6,
+           13.0f / 9 + 87.0f / 6 / 6 + 123.0f / 6 / 6 + 88.0f / 4 / 4,
+           87.0f / 6 / 6 + 88.0f / 4 / 4,
+           76.0f / 4 / 4,
+           76.0f / 4 / 4 + 123.0f / 6 / 6,
+           123.0f / 6 / 6,
+           123.0f / 6 / 6 + 88.0f / 4 / 4,
+           88.0f / 4 / 4}));
+
+  return pooling_test_case;
+}
+
+#define FOR_EACH_POOLING_TEST_CASE(__do_each_macro)                           \
+  __do_each_macro(MaxPooling1DTestCase) __do_each_macro(MaxPooling2DTestCase) \
+      __do_each_macro(MaxPooling3DTestCase)                                   \
+          __do_each_macro(AveragePooling1DTestCase)                           \
+              __do_each_macro(AveragePooling2DTestCase)                       \
+                  __do_each_macro(AveragePooling3DTestCase)
+
+#define TEST_ONE_FUNC(test_case_func_name)                               \
+  TEST_CPU_AND_GPU_OPKERNEL(test_case_func_name, FLOATING_DATA_TYPE_SEQ, \
+                            (train)(predict), (forward)(backward));
+
+FOR_EACH_POOLING_TEST_CASE(TEST_ONE_FUNC);
 
 }  // namespace test
-
-TEST(PoolingKernel, pooling) {
-#define POOLINGOPCONF (PoolingOpConf::kAve)(PoolingOpConf::kMax)
-#define MAKE_ENTRY(device_type, data_pair, poolingop_conf)           \
-  test::TestPoolingKernel<device_type, OF_PP_PAIR_FIRST(data_pair)>( \
-      poolingop_conf);
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
-                                   FLOATING_DATA_TYPE_SEQ, POOLINGOPCONF)
-}
 
 }  // namespace oneflow
