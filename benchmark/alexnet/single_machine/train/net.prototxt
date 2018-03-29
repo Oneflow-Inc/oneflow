@@ -222,18 +222,34 @@ op {
 }
 
 op {
+  name: "relu_fc1"
+  relu_conf {
+    in: "fc1/out"
+    out: "out"
+  }
+}
+
+op {
   name: "fc2"
   fully_connected_conf {
-    in: "fc1/out"
+    in: "relu_fc1/out"
     out: "out"
     units: 4096
   }
 }
 
 op {
+  name: "relu_fc2"
+  relu_conf {
+    in: "fc2/out"
+    out: "out"
+  }
+}
+
+op {
   name: "fc3"
   fully_connected_conf {
-    in: "fc2/out"
+    in: "relu_fc2/out"
     out: "out"
     units: 1000
   }
