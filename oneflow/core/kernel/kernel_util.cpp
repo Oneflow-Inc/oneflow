@@ -151,6 +151,23 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                    const int incx) {
     Scal(ctx, n, *alpha, x, incx);
   }
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
+                   int n, const T alpha, const T* a, int lda, const T* x,
+                   const int incx, const T beta, T* y, const int incy) {
+    // Set col major to keep it as the same with cublas
+    cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x,
+                  incx, beta, y, incy);
+  }
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
+                   const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                   const int k, const T alpha, const T* a, const int lda,
+                   const T* b, const int ldb, const T beta, T* c,
+                   const int ldc) {
+    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta,
+                  c, ldc);
+  }
+
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr) {
     Max(ctx, n, x, max_ptr, nullptr, 0);
   }
@@ -176,6 +193,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
                   T* z) {
     for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
   }
+
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
     T half = static_cast<T>(0.5);
     for (int64_t i = 0; i != n; ++i) {
@@ -202,36 +220,7 @@ struct KernelUtil<DeviceType::kCPU, T> final {
     T zero = ZeroVal<T>::value;
     for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
   }
-  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                   int n, const T alpha, const T* a, int lda, const T* x,
-                   const int incx, const T beta, T* y, const int incy) {
-    // Set col major to keep it as the same with cublas
-    cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x,
-                  incx, beta, y, incy);
-  }
-  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                   int n, const T* alpha, const T* a, int lda, const T* x,
-                   const int incx, const T* beta, T* y, const int incy) {
-    Gemv(ctx, trans, m, n, *alpha, a, lda, x, incx, *beta, y, incy);
-  }
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                   const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                   const int k, const T alpha, const T* a, const int lda,
-                   const T* b, const int ldb, const T beta, T* c,
-                   const int ldc) {
-    cblas_gemm<T>(order, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta,
-                  c, ldc);
-  }
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                   const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                   const int k, const T* alpha, const T* a, const int lda,
-                   const T* b, const int ldb, const T* beta, T* c,
-                   const int ldc) {
-    Gemm(ctx, order, trans_a, trans_b, m, n, k, *alpha, a, lda, b, ldb, *beta,
-         c, ldc);
-  }
+
   static void Initialize(DeviceCtx* ctx,
                          const InitializerConf& initializer_conf,
                          uint32_t random_seed, Blob* blob) {
@@ -251,11 +240,10 @@ struct KernelUtil<DeviceType::kCPU, T> final {
       UNIMPLEMENTED();
     }
   }
-  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim) {
+  static void Initialize(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                         const std::string& model_dir, Blob* blob,
+                         const std::string& bn_in_op, int32_t dim_num,
+                         int64_t num_in_each_dim) {
     int64_t blob_size = blob->ByteSizeOfDataContentField();
     int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
     std::string file_path = JoinPath(model_dir, bn_in_op);
