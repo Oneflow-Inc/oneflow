@@ -6,12 +6,12 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-const T* GetImgDptr(const Blob* blob, int32_t idx) {
-  return blob->dptr<T>() + blob->shape().At(0) * idx;
+const T* GetImgDptr(const Blob* blob, int64_t idx) {
+  return blob->dptr<T>() + blob->shape().Count(1) * idx;
 }
 
 template<typename T>
-T* GetImgMutDptr(Blob* blob, int32_t idx) {
+T* GetImgMutDptr(Blob* blob, int64_t idx) {
   return const_cast<T*>(GetImgDptr<T>(blob, idx));
 }
 
@@ -116,6 +116,12 @@ void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(
     dhw_offset_ = 1;
     is_out_diff_need_trans_ = CblasTrans;
   }
+  strides_ =
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data();
+  dilation_rate_ =
+      this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
+          .data();
+  padding_before_ = this->kernel_conf().conv_conf().pad_small_side().data();
 }
 
 template<typename T>
@@ -127,15 +133,9 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   FOR_RANGE(int64_t, i, 0, in_blob->shape().At(0)) {
-    im2col_func_(
-        ctx.device_ctx, GetImgDptr<T>(in_blob, i), in_blob->shape(),
-        weight_blob->shape(), out_blob->shape(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
-            .data(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("padding_before")
-            .data(),
-        col_buf_blob->mut_dptr<T>());
+    im2col_func_(ctx.device_ctx, GetImgDptr<T>(in_blob, i), in_blob->shape(),
+                 weight_blob->shape(), out_blob->shape(), strides_,
+                 dilation_rate_, padding_before_, col_buf_blob->mut_dptr<T>());
 
     // channels first: out = weight * col_buf
     // channels last:  out = (weight * col_buf)(T)
@@ -161,7 +161,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
                     GetImgMutDptr<T>(out_blob, i));
     }
   }
-}  //
+}
 
 template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
@@ -172,50 +172,43 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   Memset<DeviceType::kCPU>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
                            weight_diff_blob->ByteSizeOfDataContentField());
+  if (in_diff_blob != nullptr) {
+    Memset<DeviceType::kCPU>(ctx, in_diff_blob->mut_dptr<T>(), 0,
+                             in_diff_blob->ByteSizeOfDataContentField());
+  }
   FOR_RANGE(int64_t, i, 0, out_diff_blob->shape().At(0)) {
-    im2col_func_(
-        ctx, in_blob->dptr<T>() + i * in_blob->shape().Count(1),
-        in_blob->shape(), weight_diff_blob->shape(), out_diff_blob->shape(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
-            .data(),
-        this->template GetPbRfFromCustomizedOpConf<int32_t>("padding_before")
-            .data(),
-        col_buf_blob->mut_dptr<T>());
+    im2col_func_(ctx, GetImgDptr<T>(in_blob, i), in_blob->shape(),
+                 weight_diff_blob->shape(), out_diff_blob->shape(), strides_,
+                 dilation_rate_, padding_before_, col_buf_blob->mut_dptr<T>());
 
     // channels first:  weight' += out[i]' * col_buf(T)
     // channels last :  weight' += out[i]'(T) * col_buf(T)
     KernelUtil<DeviceType::kCPU, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasTrans,
-        weight_diff_blob->shape().At(1),     //  filter
+        weight_diff_blob->shape().At(0),     //  filter
         weight_diff_blob->shape().Count(1),  //  ci * kd * kh * kw
         col_buf_blob->shape().Count(4),      //  od * oh * ow
         static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i),
         col_buf_blob->dptr<T>(), static_cast<T>(1),
         weight_diff_blob->mut_dptr<T>());
 
-    // channels first:  col_buf' = weight(T) * out[i]'
-    // channels last :  col_buf' = weight(T) * out[i]'(T)
-    KernelUtil<DeviceType::kCPU, T>::OFGemm(
-        ctx, CblasTrans, is_out_diff_need_trans_,
-        col_buf_blob->shape().Count(0, 4),  //  ci * kd * kh * kw
-        col_buf_blob->shape().Count(4),     //  od * oh * ow
-        weight_blob->shape().At(0),         //  filter
-        static_cast<T>(1), weight_blob->dptr<T>(),
-        GetImgDptr<T>(out_diff_blob, i), static_cast<T>(0),
-        col_buf_blob->mut_dptr<T>());
-
     if (in_diff_blob != nullptr) {
-      // col2im(col_buf')
-      col2im_func_(
-          ctx, col_buf_blob->dptr<T>(), in_blob->shape(), weight_blob->shape(),
-          out_diff_blob->shape(),
-          this->template GetPbRfFromCustomizedOpConf<int32_t>("strides").data(),
-          this->template GetPbRfFromCustomizedOpConf<int32_t>("dilation_rate")
-              .data(),
-          this->template GetPbRfFromCustomizedOpConf<int32_t>("padding_before")
-              .data(),
-          GetImgMutDptr<T>(in_diff_blob, i));
+      // channels first:  col_buf' = weight(T) * out[i]'
+      // channels last :  col_buf' = weight(T) * out[i]'(T)
+      KernelUtil<DeviceType::kCPU, T>::OFGemm(
+          ctx, CblasTrans, is_out_diff_need_trans_,
+          col_buf_blob->shape().Count(0, 4),  //  ci * kd * kh * kw
+          col_buf_blob->shape().Count(4),     //  od * oh * ow
+          weight_blob->shape().At(0),         //  filter
+          static_cast<T>(1), weight_blob->dptr<T>(),
+          GetImgDptr<T>(out_diff_blob, i), static_cast<T>(0),
+          col_buf_blob->mut_dptr<T>());
+
+      // in' = col2im(col_buf')
+      col2im_func_(ctx, col_buf_blob->dptr<T>(), in_blob->shape(),
+                   weight_blob->shape(), out_diff_blob->shape(), strides_,
+                   dilation_rate_, padding_before_,
+                   GetImgMutDptr<T>(in_diff_blob, i));
     }
   }
 }
@@ -316,7 +309,7 @@ ColBufUtil<T>::ColBufUtil(const Shape& in_shape, const Shape& out_shape,
   if (is_im2col == true) {
     d_invalid_func_ = &ColBufWriter<T>::CleanIdSize;
     h_invalid_func_ = &ColBufWriter<T>::CleanIhSize;
-    w_invalid_func_ = &ColBufWriter<T>::WriteZero;
+    w_invalid_func_ = &ColBufWriter<T>::CleanIwSize;
     if (dhw_offset == 2) {
       dhw_valid_func_ = &ColBufWriter<T>::Im2ColCDHWWrite;
     } else {
@@ -368,7 +361,8 @@ template<typename T>
 void ConvKernelUtil<T>::DoNCDWHFunc(const Shape& weight_shape,
                                     ColBufUtil<T>& col_buf_util,
                                     ColBufWriter<T>& col_buf_writer) {
-  for (int64_t c = 0; c != weight_shape.At(1); col_buf_writer.NextCSize()) {
+  for (int64_t c = 0; c != weight_shape.At(1);
+       col_buf_writer.NextCSize(), ++c) {
     for (int64_t kd = 0; kd != weight_shape.At(2); ++kd) {
       for (int64_t kh = 0; kh != weight_shape.At(3); ++kh) {
         for (int64_t kw = 0; kw != weight_shape.At(4); ++kw) {

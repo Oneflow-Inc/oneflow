@@ -90,6 +90,9 @@ class ConvKernel<DeviceType::kCPU, T> final
   GemmFunc<T> forward_func_;
   enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
   size_t dhw_offset_;
+  const int32_t* strides_;
+  const int32_t* dilation_rate_;
+  const int32_t* padding_before_;
 };
 
 template<typename T>
@@ -131,9 +134,9 @@ class ColBufWriter final {
   void CleanIdSize();
   void CleanIhSize();
   void CleanIwSize();
-  void SkipIdSize() { dst_ptr_ += id_size_; }
-  void SkipIhSize() { dst_ptr_ += ih_size_; }
-  void SkipIwSize() { dst_ptr_ += iw_size_; }
+  void SkipIdSize() { src_ptr_ += id_size_; }
+  void SkipIhSize() { src_ptr_ += ih_size_; }
+  void SkipIwSize() { src_ptr_ += iw_size_; }
   void Col2ImDHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void Col2ImCDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void NextCSize() { src_ptr_ += c_size_; }
