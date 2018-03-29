@@ -47,7 +47,6 @@ void ForwardCompActor::AsyncInitModel() {
             blob = GetCurWriteableRegst(other_model_regst_desc_id_)
                        ->GetBlobByLbn(lbn);
           }
-          CHECK_NOTNULL(blob);
           return blob;
         });
   }
