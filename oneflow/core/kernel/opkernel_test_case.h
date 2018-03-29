@@ -51,8 +51,8 @@ class OpKernelTestCase final {
   KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
   template<typename T>
-  void InitBlob(const std::string&, const BlobDesc* blob_desc,
-                const std::vector<T>& val);
+  Blob* InitBlob(const std::string&, const BlobDesc* blob_desc,
+                 const std::vector<T>& val);
   template<typename T>
   void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
                         const std::vector<T>& val);

@@ -94,12 +94,13 @@ void OpKernelTestCase<device_type>::EnrollBlobRegst(
 
 template<DeviceType device_type>
 template<typename T>
-void OpKernelTestCase<device_type>::InitBlob(const std::string& name,
-                                             const BlobDesc* blob_desc,
-                                             const std::vector<T>& val) {
-  Blob* blob =
+Blob* OpKernelTestCase<device_type>::InitBlob(const std::string& name,
+                                              const BlobDesc* blob_desc,
+                                              const std::vector<T>& val) {
+  Blob* blob = 
       CreateBlobWithSpecifiedVal<T>(blob_desc, val, bn_in_op2regst_[name]);
   CHECK(bn_in_op2blob_.emplace(name, blob).second);
+  return blob;
 }
 
 template<DeviceType device_type>
@@ -240,7 +241,7 @@ void OpKernelTestCase<DeviceType::kCPU>::BlobCmp(const std::string& blob_name,
   CHECK_EQ(lhs->data_type(), GetDataType<T>::value);
   if (IsFloatingDataType(lhs->data_type())) {
     for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
-      ASSERT_NEAR(lhs->dptr<T>()[i], rhs->dptr<T>()[i], 1e-6) << blob_name;
+      ASSERT_NEAR(lhs->dptr<T>()[i], rhs->dptr<T>()[i], 1e-5) << blob_name;
     }
   } else {
     ASSERT_EQ(
@@ -311,7 +312,7 @@ OpKernelTestCase<device_type>::MakeGetterBnInOp2BlobDesc() {
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OPKERNEL_TEST_CASE, DEVICE_TYPE_SEQ);
 
 #define INSTANTIATE_OPKERNEL_TEST_CASE_METHODS(device_type, data_type_pair)  \
-  template void                                                              \
+  template Blob*                                                             \
   OpKernelTestCase<device_type>::InitBlob<OF_PP_PAIR_FIRST(data_type_pair)>( \
       const std::string&, const BlobDesc* blob_desc,                         \
       const std::vector<OF_PP_PAIR_FIRST(data_type_pair)>& val);             \
