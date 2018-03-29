@@ -10,7 +10,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
                         bool has_data_id_field) {
   int out_num = 40;
   JobConf job_conf;
-  job_conf.set_DefaultDataType(GetDataType<T>::val);
+  job_conf.set_DefaultDataType(GetDataType<T>::value);
   Global<JobDesc>::Get()->InitFromJobConf(job_conf);
 
   OperatorConf op_conf;
@@ -22,7 +22,7 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   auto ip_op = ConstructOp(op_conf);
 
   HashMap<std::string, BlobDesc*> bn2blob_desc = {
-      {"in", new BlobDesc(Shape({1000, 3, 256, 256}), GetDataType<T>::val,
+      {"in", new BlobDesc(Shape({1000, 3, 256, 256}), GetDataType<T>::value,
                           has_data_id_field)},
       {"out", new BlobDesc},
       {"weight", new BlobDesc},
@@ -43,17 +43,17 @@ void TestInnerProductOp(ParallelPolicy policy, bool has_bias_term,
   }
 
   ASSERT_TRUE(*bn2blob_desc.at("out")
-              == BlobDesc(Shape({1000, out_num}), GetDataType<T>::val,
+              == BlobDesc(Shape({1000, out_num}), GetDataType<T>::value,
                           has_data_id_field));
 
-  ASSERT_TRUE(
-      *bn2blob_desc.at("weight")
-      == BlobDesc(Shape({out_num, 3 * 256 * 256}), GetDataType<T>::val, false));
+  ASSERT_TRUE(*bn2blob_desc.at("weight")
+              == BlobDesc(Shape({out_num, 3 * 256 * 256}),
+                          GetDataType<T>::value, false));
   if (has_bias_term) {
     ASSERT_TRUE(*bn2blob_desc.at("bias")
-                == BlobDesc(Shape({1, out_num}), GetDataType<T>::val, false));
+                == BlobDesc(Shape({1, out_num}), GetDataType<T>::value, false));
     ASSERT_TRUE(*bn2blob_desc.at("bias_multiplier")
-                == BlobDesc(Shape({1000, 1}), GetDataType<T>::val, false));
+                == BlobDesc(Shape({1000, 1}), GetDataType<T>::value, false));
   }
 }
 

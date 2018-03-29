@@ -32,22 +32,25 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
                           kernel_conf_.padding_after().Get(i));
   }
   std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
-  std::vector<int> in_stride{in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
-                             in_dim[2] * in_dim[3] * in_dim[4],
-                             in_dim[3] * in_dim[4], in_dim[4]};
   std::vector<int> out_dim = GetStdVecFromShapeInKernelConf("out");
-  std::vector<int> out_stride = {
-      out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4],
-      out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4],
-      out_dim[4]};
+  std::vector<int> in_stride;
+  std::vector<int> out_stride;
 
   const std::string& data_format = kernel_conf_.data_format();
   if (data_format == "channels_first") {
-    in_stride.insert(in_stride.end(), 1);
-    out_stride.insert(out_stride.end(), 1);
+    in_stride = {in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4],
+                 in_dim[2] * in_dim[3] * in_dim[4], in_dim[3] * in_dim[4],
+                 in_dim[4], 1};
+    out_stride = {out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4],
+                  out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4],
+                  out_dim[4], 1};
   } else if (data_format == "channels_last") {
-    in_stride.insert(in_stride.begin() + 1, 1);
-    out_stride.insert(out_stride.begin() + 1, 1);
+    in_stride = {in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4], 1,
+                 in_dim[1] * in_dim[3] * in_dim[4], in_dim[1] * in_dim[4],
+                 in_dim[1]};
+    out_stride = {out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4], 1,
+                  out_dim[1] * out_dim[3] * out_dim[4], out_dim[1] * out_dim[4],
+                  out_dim[1]};
   } else {
     UNIMPLEMENTED();
   }

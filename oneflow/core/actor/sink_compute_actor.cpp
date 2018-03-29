@@ -21,9 +21,12 @@ int SinkCompActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void SinkCompActor::Act() {
-  AsyncLaunchKernel(GenSinkKernelCtx(),
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
+  kernel_ctx.other = NewOther();
+  AsyncLaunchKernel(kernel_ctx,
                     [&](int64_t regst_desc_id) -> Regst* { return in_regst_; });
   AsyncSendRegstMsgToProducer(in_regst_);
+  DeleteOther(kernel_ctx.other);
   in_regst_ = nullptr;
 }
 

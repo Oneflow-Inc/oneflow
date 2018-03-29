@@ -21,16 +21,12 @@ cudnnDataType_t GetCudnnDataType(DataType);
 template<typename T>
 struct CudnnDataType;
 
-#define DECLARE_CUDNN_DATA_TYPE(type_cpp, type_cudnn) \
-  template<>                                          \
-  struct CudnnDataType<type_cpp> {                    \
-    static const cudnnDataType_t val;                 \
-    static const type_cpp oneval;                     \
-    static const type_cpp zeroval;                    \
-    static const void* one;                           \
-    static const void* zero;                          \
-  };
-OF_PP_FOR_EACH_TUPLE(DECLARE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
+#define SPECIALIZE_CUDNN_DATA_TYPE(type_cpp, type_cudnn) \
+  template<>                                             \
+  struct CudnnDataType<type_cpp>                         \
+      : std::integral_constant<cudnnDataType_t, type_cudnn> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
+#undef SPECIALIZE_CUDNN_DATA_TYPE
 
 class CudnnTensorDesc final {
  public:
@@ -41,6 +37,8 @@ class CudnnTensorDesc final {
   CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
   CudnnTensorDesc(DataType data_type, int dims, const int* dim,
                   const int* stride);
+  CudnnTensorDesc(DataType data_type, const Shape& shape,
+                  const std::string& data_format);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 

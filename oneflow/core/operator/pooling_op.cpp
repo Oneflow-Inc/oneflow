@@ -45,7 +45,17 @@ void PoolingOp::InferBlobDescs(
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_shape.At(1), out);
+  std::string data_format =
+      GetValFromCustomizedConf<std::string>("data_format");
+  int64_t in_c = 0;
+  if (data_format == "channels_first") {
+    in_c = in_shape.At(1);
+  } else if (data_format == "channels_last") {
+    in_c = in_shape.At(in_shape.NumAxes() - 1);
+  } else {
+    UNIMPLEMENTED();
+  }
+  out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_c, out);
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {
@@ -147,11 +157,11 @@ void PoolingOp::VirtualGenKernelConf(
     Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
         .ToProto(pooling_conf->mutable_out());
   } else if (data_format == "channels_last") {
-    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2),
-           in_shape.At(in_shape.NumAxes() - 1)})
+    Shape({in_shape.At(0), in_shape.At(in_shape.NumAxes() - 1), in.at(0),
+           in.at(1), in.at(2)})
         .ToProto(pooling_conf->mutable_in());
-    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2),
-           in_shape.At(in_shape.NumAxes() - 1)})
+    Shape({in_shape.At(0), in_shape.At(in_shape.NumAxes() - 1), out.at(0),
+           out.at(1), out.at(2)})
         .ToProto(pooling_conf->mutable_out());
   } else {
     UNIMPLEMENTED();
