@@ -26,12 +26,6 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  /*
-  Blob* gamma_blob = BnInOp2Blob("gamma");
-  Blob* beta_blob = BnInOp2Blob("beta");
-  Blob* mean_blob = BnInOp2Blob("moving_mean");
-  Blob* variance_blob = BnInOp2Blob("moving_variance");
-  */
   if (this->op_conf().normalization_conf().scale()) {
     InitializerConf gamma_init_conf;
     float gamma_init = this->op_conf().normalization_conf().gamma_init();
@@ -63,12 +57,6 @@ void NormalizationKernel<device_type, T>::InitModelBlobsWithDir(
     DeviceCtx* ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  /*
-  Blob* gamma_blob = BnInOp2Blob("gamma");
-  Blob* beta_blob = BnInOp2Blob("beta");
-  Blob* mean_blob = BnInOp2Blob("moving_mean");
-  Blob* variance_blob = BnInOp2Blob("moving_variance");
-  */
   if (this->op_conf().normalization_conf().scale()) {
     KernelUtil<device_type, T>::InitializeWithModelDir(
         ctx, 0, part_num, model_load_dir, BnInOp2Blob("gamma"), "gamma", 1, 1);
