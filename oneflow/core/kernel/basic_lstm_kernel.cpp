@@ -6,8 +6,6 @@ template<DeviceType device_type, typename T>
 void BasicLstmKernel<device_type, T>::VirtualKernelInit(
     const ParallelContext* parallel_ctx) {
   auto& input_bns = this->kernel_conf().input_bns();
-  need_external_h0_ =
-      std::find(input_bns.begin(), input_bns.end(), "h0") != input_bns.end();
   need_external_c0_ =
       std::find(input_bns.begin(), input_bns.end(), "c0") != input_bns.end();
 
@@ -28,7 +26,7 @@ void BasicLstmKernel<device_type, T>::VirtualKernelInit(
 }
 
 template<DeviceType device_type, typename T>
-const PbMessage& BasicLstmKernel<device_type, T>::GetBasicLstmOpConf() const {
+const PbMessage& BasicLstmKernel<device_type, T>::GetRecurrentOpConf() const {
   return this->op_conf().basic_lstm_conf();
 }
 
@@ -43,20 +41,8 @@ bool BasicLstmKernel<device_type, T>::HasInitCellInitializer() const {
 }
 
 template<DeviceType device_type, typename T>
-bool BasicLstmKernel<device_type, T>::NeedExternalH0() const {
-  return need_external_h0_;
-}
-
-template<DeviceType device_type, typename T>
 bool BasicLstmKernel<device_type, T>::NeedExternalC0() const {
   return need_external_c0_;
-}
-
-template<DeviceType device_type, typename T>
-Blob* BasicLstmKernel<device_type, T>::GetHiddenBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (BnInOp2Blob("in")->col_id() == 0) { return BnInOp2Blob("h0"); }
-  return BnInOp2Blob("rec_in");
 }
 
 template<DeviceType device_type, typename T>
@@ -67,27 +53,11 @@ Blob* BasicLstmKernel<device_type, T>::GetCellBlob(
 }
 
 template<DeviceType device_type, typename T>
-Blob* BasicLstmKernel<device_type, T>::GetHiddenDiffBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (BnInOp2Blob("in")->col_id() == 0) { return BnInOp2Blob("h0_diff"); }
-  return BnInOp2Blob("rec_in_diff");
-}
-
-template<DeviceType device_type, typename T>
 Blob* BasicLstmKernel<device_type, T>::GetCellDiffBlob(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (BnInOp2Blob("in")->col_id() == 0) { return BnInOp2Blob("c0_diff"); }
   return BnInOp2Blob("cell_in_diff");
 }
-
-template<DeviceType device_type, typename T>
-void BasicLstmKernel<device_type, T>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("out")->CopyDataIdFrom<device_type>(ctx.device_ctx,
-                                                  BnInOp2Blob("in"));
-}
-
 template<DeviceType device_type, typename T>
 void BasicLstmKernel<device_type, T>::ForwardColNum(
     const KernelCtx& ctx,
@@ -320,7 +290,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
 #undef OF_LSTM_COMPUTE_BIAS_DIFF
 
   // hidden diff
-  if (BnInOp2Blob("in")->col_id() != 0 || NeedExternalH0()
+  if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalH0()
       || this->op_conf().basic_lstm_conf().is_init_hidden_trainable()) {
     BasicLstmKernelUtil<device_type, T>::ComputeBackwardHiddenDiff(
         ctx, BnInOp2Blob("h2h_f_weight"), BnInOp2Blob("h2h_i_weight"),
@@ -332,14 +302,14 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
 
 template<DeviceType device_type, typename T>
 void BasicLstmKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
-    DeviceCtx* ctx, std::mt19937* random_seed_gen,
+    const KernelCtx& ctx, std::mt19937 random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
 #define OF_INIT_LSTM_MODEL_WITH_RAND_SEED(model_name, type) \
   KernelUtil<device_type, T>::InitializeWithProperConf(     \
-      ctx,                                                  \
+      ctx.device_ctx,                                       \
       OF_PB_POINTER_GET(this->op_conf().basic_lstm_conf(),  \
                         type##_initializer),                \
-      (*random_seed_gen)(), BnInOp2Blob(#model_name))
+      random_seed_gen(), BnInOp2Blob(#model_name));
 
   OF_INIT_LSTM_MODEL_WITH_RAND_SEED(i2h_f_weight, i2h_weight);
   OF_INIT_LSTM_MODEL_WITH_RAND_SEED(i2h_i_weight, i2h_weight);
@@ -358,21 +328,23 @@ void BasicLstmKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
 
 template<DeviceType device_type, typename T>
 void BasicLstmKernel<device_type, T>::VirtualInitModelBlobsWithDir(
-    DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+    const KernelCtx& ctx, int32_t part_id, int32_t part_num,
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-#define OF_INIT_LSTM_MODEL_BLOBS_WITH_DIR(i2h_weight, h2h_weight, bias)       \
-  Blob* i2h_weight##_blob = BnInOp2Blob(#i2h_weight);                         \
-  Blob* h2h_weight##_blob = BnInOp2Blob(#h2h_weight);                         \
-  KernelUtil<device_type, T>::InitializeWithModelDir(                         \
-      ctx, part_id, part_num, model_load_dir, i2h_weight##_blob, #i2h_weight, \
-      i2h_weight##_blob->shape().At(0), i2h_weight##_blob->shape().Count(1)); \
-  KernelUtil<device_type, T>::InitializeWithModelDir(                         \
-      ctx, part_id, part_num, model_load_dir, h2h_weight##_blob, #h2h_weight, \
-      h2h_weight##_blob->shape().At(0), h2h_weight##_blob->shape().Count(1)); \
-  KernelUtil<device_type, T>::InitializeWithModelDir(                         \
-      ctx, part_id, part_num, model_load_dir, BnInOp2Blob(#bias), #bias,      \
-      BnInOp2Blob(#bias)->shape().At(0), 1);
+#define OF_INIT_LSTM_MODEL_BLOBS_WITH_DIR(i2h_weight, h2h_weight, bias)      \
+  Blob* i2h_weight##_blob = BnInOp2Blob(#i2h_weight);                        \
+  Blob* h2h_weight##_blob = BnInOp2Blob(#h2h_weight);                        \
+  KernelUtil<device_type, T>::InitializeWithModelDir(                        \
+      ctx.device_ctx, part_id, part_num, model_load_dir, i2h_weight##_blob,  \
+      #i2h_weight, i2h_weight##_blob->shape().At(0),                         \
+      i2h_weight##_blob->shape().Count(1));                                  \
+  KernelUtil<device_type, T>::InitializeWithModelDir(                        \
+      ctx.device_ctx, part_id, part_num, model_load_dir, h2h_weight##_blob,  \
+      #h2h_weight, h2h_weight##_blob->shape().At(0),                         \
+      h2h_weight##_blob->shape().Count(1));                                  \
+  KernelUtil<device_type, T>::InitializeWithModelDir(                        \
+      ctx.device_ctx, part_id, part_num, model_load_dir, BnInOp2Blob(#bias), \
+      #bias, BnInOp2Blob(#bias)->shape().At(0), 1);
 
   OF_INIT_LSTM_MODEL_BLOBS_WITH_DIR(i2h_f_weight, h2h_f_weight, bias_f);
   OF_INIT_LSTM_MODEL_BLOBS_WITH_DIR(i2h_i_weight, h2h_i_weight, bias_i);
@@ -392,7 +364,7 @@ void BasicLstmKernel<device_type, T>::InitModelTmpBlobs(
     if (HasInitHiddenInitializer()) {
       init_hidden_initializer =
           static_cast<const InitializerConf*>(&GetMessageFromPbMessage(
-              GetBasicLstmOpConf(), "init_hidden_initializer"));
+              GetRecurrentOpConf(), "init_hidden_initializer"));
     }
     int64_t random_seed = *static_cast<int64_t*>(ctx.other);
     std::mt19937 random_seed_gen(random_seed);

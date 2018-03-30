@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_BASIC_LSTM_KERNEL_H_
 #define ONEFLOW_CORE_KERNEL_BASIC_LSTM_KERNEL_H_
 
-#include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/recurrent_kernel.h"
 
 namespace oneflow {
 
@@ -13,26 +13,21 @@ using BwActivationFunc = void (*)(DeviceCtx* ctx, int64_t n, const T*, const T*,
                                   const T*, T*);
 
 template<DeviceType device_type, typename T>
-class BasicLstmKernel : public KernelIf<device_type> {
+class BasicLstmKernel : public RecurrentKernel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BasicLstmKernel);
   BasicLstmKernel() = default;
   ~BasicLstmKernel() = default;
 
  private:
-  const PbMessage& GetBasicLstmOpConf() const;
+  void VirtualKernelInit(const ParallelContext*) override;
+  const PbMessage& GetRecurrentOpConf() const override;
   bool HasInitHiddenInitializer() const;
   bool HasInitCellInitializer() const;
-  bool NeedExternalH0() const;
   bool NeedExternalC0() const;
-  Blob* GetHiddenBlob(std::function<Blob*(const std::string&)>) const;
-  Blob* GetHiddenDiffBlob(std::function<Blob*(const std::string&)>) const;
   Blob* GetCellBlob(std::function<Blob*(const std::string&)>) const;
   Blob* GetCellDiffBlob(std::function<Blob*(const std::string&)>) const;
-
   void ForwardColNum(const KernelCtx&,
-                     std::function<Blob*(const std::string&)>) const override;
-  void ForwardDataId(const KernelCtx&,
                      std::function<Blob*(const std::string&)>) const override;
   void BackwardColNum(const KernelCtx&,
                       std::function<Blob*(const std::string&)>) const override;
@@ -42,22 +37,20 @@ class BasicLstmKernel : public KernelIf<device_type> {
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
-  void InitModelTmpBlobs(
-      const KernelCtx&, const ParallelContext* parallel_ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void VirtualInitModelBlobsWithRandomSeed(
+      const KernelCtx&, std::mt19937,
+      std::function<Blob*(const std::string&)>) const override;
   void VirtualInitModelBlobsWithDir(
-      DeviceCtx*, int32_t part_id, int32_t part_num,
+      const KernelCtx& ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void VirtualInitModelBlobsWithRandomSeed(
-      DeviceCtx*, std::mt19937*,
-      std::function<Blob*(const std::string&)>) const;
-  void VirtualKernelInit(const ParallelContext*) override;
+  void InitModelTmpBlobs(
+      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
  private:
   FwActivationFunc<device_type, T> activation_fw_func_;
   BwActivationFunc<device_type, T> activation_bw_func_;
-  bool need_external_h0_;
   bool need_external_c0_;
 };
 
@@ -73,6 +66,7 @@ struct BasicLstmKernelUtil {
       const KernelCtx& ctx, const Blob* rec_out_diff, Blob* candidate_out,
       Blob* cell_out, Blob* cell_out_diff, Blob* o_out, Blob* out_diff,
       BwActivationFunc<device_type, T> acticaiton_bw_func_);
+
   static void ComputeBackwardWeightDiff(const KernelCtx& ctx, const Blob* input,
                                         const Blob* hidden, Blob* gate_out_diff,
                                         Blob* h2h_weight_diff,
