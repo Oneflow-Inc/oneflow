@@ -8,6 +8,26 @@ namespace oneflow {
 
 namespace test {
 
+template<DeviceType device_type, typename T>
+void CloneTestCase(OpKernelTestCase<device_type>* clone_test_case, const std::string& job_type, const std::string& forward_or_backward) {
+  const size_t copies = 3;
+  clone_test_case->set_is_train(job_type == "train");
+  clone_test_case->set_is_forward(forward_or_backward == "forward");
+  CloneOpConf* clone_conf = clone_test_case->mut_op_conf()->mutable_clone_conf();
+  clone_conf->set_out_num(copies);
+  clone_conf->set_lbn("clone_lbn");
+
+  auto blob_desc = new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::value, false, false, 1);
+  clone_test_case->template InitBlob<T>("in", blob_desc, {1, 2, 3, 4, 5, 6});
+  for (size_t i = 0; i < copies; ++i) {
+    clone_test_case->template ForwardCheckBlob<T>("out_" + std::to_string(i), blob_desc, {1, 2, 3, 4, 5, 6});
+    clone_test_case->template InitBlob<T>("out_" + std::to_string(i) + "_diff", blob_desc, {6, 5, 4, 3, 2, 1});
+  }
+  clone_test_case->template BackwardCheckBlob<T>(GenDiffBn("in"), blob_desc, {6, 5, 4, 3, 2, 1});
+}
+
+TEST_CPU_AND_GPU_OPKERNEL(CloneTestCase, FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ, (train)(predict), (forward)(backward));
+/*
 namespace {
 
 template<DeviceType device_type, typename T>
@@ -69,15 +89,16 @@ void TestCloneKernel(bool need_backward) {
 }
 
 }  // namespace
+*/
 
 }  // namespace test
 
-TEST(CloneKernel, clone) {
-#define MAKE_ENTRY(device_type, type_pair)                         \
-  test::TestCloneKernel<device_type, OF_PP_PAIR_FIRST(type_pair)>( \
-      IsFloatingPoint(OF_PP_PAIR_SECOND(type_pair)));
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
-                                   ALL_DATA_TYPE_SEQ)
-}
+// TEST(CloneKernel, clone) {
+// #define MAKE_ENTRY(device_type, type_pair)                         \
+//   test::TestCloneKernel<device_type, OF_PP_PAIR_FIRST(type_pair)>( \
+//       IsFloatingPoint(OF_PP_PAIR_SECOND(type_pair)));
+//   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, DEVICE_TYPE_SEQ,
+//                                    ALL_DATA_TYPE_SEQ)
+// }
 
 }  // namespace oneflow
