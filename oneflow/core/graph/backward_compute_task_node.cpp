@@ -87,7 +87,9 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   }
 
   std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
-  md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
+  if (md_diff_regst) {
+    md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
+  }
 
   VirtualInferBlobDescInActivationDiff();
   VirtualInferBlobDescInHiddenDiff();
