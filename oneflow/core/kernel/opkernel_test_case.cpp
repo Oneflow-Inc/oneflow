@@ -279,7 +279,7 @@ void OpKernelTestCase<device_type>::Run() {
   InitBeforeRun();
   auto op = ConstructOp(op_conf_);
   auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
-  OpContext* op_context;
+  OpContext* op_context = nullptr;
   op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type,
                      [&](OpContext* op_ctx) { op_context = op_ctx; });
   std::list<bool> is_forward_launch_types;
