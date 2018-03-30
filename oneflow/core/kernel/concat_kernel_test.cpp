@@ -13,7 +13,9 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void ConcatTestCase(OpKernelTestCase<device_type>* concat_test_case, const std::string& job_type, const std::string& forward_or_backward) {
+void ConcatTestCase(OpKernelTestCase<device_type>* concat_test_case,
+                    const std::string& job_type,
+                    const std::string& forward_or_backward) {
   static int64_t regst_desc_id = 0;
   concat_test_case->set_is_train(job_type == "train");
   concat_test_case->set_is_forward(forward_or_backward == "forward");
@@ -21,13 +23,9 @@ void ConcatTestCase(OpKernelTestCase<device_type>* concat_test_case, const std::
   JobDescProto job_desc_proto;
   JobConf job_conf;
   *job_desc_proto.mutable_job_conf() = job_conf;
-  if (!Global<JobDesc>::Get()) {
-    Global<JobDesc>::New(job_desc_proto);
-  }
+  if (!Global<JobDesc>::Get()) { Global<JobDesc>::New(job_desc_proto); }
 
-  if (!Global<RegstMgr>::Get()) {
-    Global<RegstMgr>::New();
-  }
+  if (!Global<RegstMgr>::Get()) { Global<RegstMgr>::New(); }
 
   auto concat_conf = concat_test_case->mut_op_conf()->mutable_concat_conf();
   concat_conf->set_axis(1);
@@ -45,9 +43,9 @@ void ConcatTestCase(OpKernelTestCase<device_type>* concat_test_case, const std::
   regst_desc_proto.mutable_mem_case()->mutable_host_pageable_mem();
 
   Regst* blob_regst = nullptr;
-  Global<RegstMgr>::Get()->NewRegsts(regst_desc_proto, device_type, RecordTypeProto::kOFRecord, [&blob_regst](Regst* regst) {
-    blob_regst = regst;
-  });
+  Global<RegstMgr>::Get()->NewRegsts(
+      regst_desc_proto, device_type, RecordTypeProto::kOFRecord,
+      [&blob_regst](Regst* regst) { blob_regst = regst; });
 
   concat_test_case->EnrollBlobRegst("in_0", blob_regst);
   concat_test_case->EnrollBlobRegst("in_1", blob_regst);
@@ -58,24 +56,37 @@ void ConcatTestCase(OpKernelTestCase<device_type>* concat_test_case, const std::
   concat_test_case->EnrollBlobRegst(GenDiffBn("in_1"), blob_regst);
   concat_test_case->EnrollBlobRegst(GenDiffBn("in_2"), blob_regst);
 
-  BlobDesc* blob_desc_212 = new BlobDesc(Shape({2, 1, 2}), GetDataType<T>::value, false, false, 1);
-  BlobDesc* blob_desc_222 = new BlobDesc(Shape({2, 2, 2}), GetDataType<T>::value, false, false, 1);
-  BlobDesc* blob_desc_242 = new BlobDesc(Shape({2, 4, 2}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* blob_desc_212 =
+      new BlobDesc(Shape({2, 1, 2}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* blob_desc_222 =
+      new BlobDesc(Shape({2, 2, 2}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* blob_desc_242 =
+      new BlobDesc(Shape({2, 4, 2}), GetDataType<T>::value, false, false, 1);
 
   concat_test_case->template InitBlob<T>("in_0", blob_desc_212, {1, 2, 3, 4});
-  concat_test_case->template InitBlob<T>("in_1", blob_desc_222, {5, 6, 7, 8, 9, 10, 11, 12});
-  concat_test_case->template InitBlob<T>("in_2", blob_desc_212, {13, 14, 15, 16});
-  concat_test_case->template ForwardCheckBlob<T>("out", blob_desc_242, {1, 2, 5, 6, 7, 8, 13, 14, 3, 4, 9, 10, 11, 12, 15, 16});
+  concat_test_case->template InitBlob<T>("in_1", blob_desc_222,
+                                         {5, 6, 7, 8, 9, 10, 11, 12});
+  concat_test_case->template InitBlob<T>("in_2", blob_desc_212,
+                                         {13, 14, 15, 16});
+  concat_test_case->template ForwardCheckBlob<T>(
+      "out", blob_desc_242,
+      {1, 2, 5, 6, 7, 8, 13, 14, 3, 4, 9, 10, 11, 12, 15, 16});
 
-  concat_test_case->template InitBlob<T>(GenDiffBn("out"), blob_desc_242, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
-  concat_test_case->template BackwardCheckBlob<T>(GenDiffBn("in_0"), blob_desc_212, {1, 2, 9, 10});
-  concat_test_case->template BackwardCheckBlob<T>(GenDiffBn("in_1"), blob_desc_222, {3, 4, 5, 6, 11, 12, 13, 14});
-  concat_test_case->template BackwardCheckBlob<T>(GenDiffBn("in_2"), blob_desc_212, {7, 8, 15, 16});
+  concat_test_case->template InitBlob<T>(
+      GenDiffBn("out"), blob_desc_242,
+      {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16});
+  concat_test_case->template BackwardCheckBlob<T>(GenDiffBn("in_0"),
+                                                  blob_desc_212, {1, 2, 9, 10});
+  concat_test_case->template BackwardCheckBlob<T>(
+      GenDiffBn("in_1"), blob_desc_222, {3, 4, 5, 6, 11, 12, 13, 14});
+  concat_test_case->template BackwardCheckBlob<T>(
+      GenDiffBn("in_2"), blob_desc_212, {7, 8, 15, 16});
 }
 
-TEST_CPU_ONLY_OPKERNEL(ConcatTestCase, FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ, (train)(predict), (forward)(backward));
+TEST_CPU_ONLY_OPKERNEL(ConcatTestCase,
+                       FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ,
+                       (train)(predict), (forward)(backward));
 
 }  // namespace test
 
 }  // namespace oneflow
-
