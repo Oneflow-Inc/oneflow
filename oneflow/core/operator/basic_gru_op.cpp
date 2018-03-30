@@ -23,6 +23,7 @@ void BasicGruOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("update_data_diff");
   EnrollDataTmpBn("update_out_diff");
 
+  EnrollDataTmpBn("candidate_data");
   EnrollDataTmpBn("candidate_out");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
@@ -53,6 +54,7 @@ void BasicGruOp::VirtualInferBlobDescs(
   OF_GRU_INFER_BLOB_DESCS(update_out);
   OF_GRU_INFER_BLOB_DESCS(update_data_diff);
   OF_GRU_INFER_BLOB_DESCS(update_out_diff);
+  OF_GRU_INFER_BLOB_DESCS(candidate_data);
   OF_GRU_INFER_BLOB_DESCS(candidate_out);
   OF_GRU_INFER_BLOB_DESCS(candidate_data_diff);
   OF_GRU_INFER_BLOB_DESCS(candidate_out_diff);
