@@ -198,6 +198,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
+    if (cur_logi_node->op()->IsGatherOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }
@@ -292,7 +293,8 @@ void ChainGraph::BuildBwStruct() {
   TopoForEachNode([&](ChainNode* chain_node) {
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
-    if (fw_chain_node->HasOpWithModelOrModelTmpBlob()) {
+    if (fw_chain_node->HasOpWithModelOrModelTmpBlob()
+        || fw_chain_node->SoleOp()->IsGatherOp()) {
       CHECK(fw_nodes_that_need_bw.insert(fw_chain_node).second);
       return;
     }

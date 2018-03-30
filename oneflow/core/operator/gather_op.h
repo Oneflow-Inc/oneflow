@@ -12,12 +12,14 @@ class GatherOp final : public Operator {
   ~GatherOp() = default;
 
   void InitFromOpConf() override;
+  bool IsGatherOp() const override { return true; }
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
   const PbMessage& GetSpecialConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
+  void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
 };
 
 }  // namespace oneflow

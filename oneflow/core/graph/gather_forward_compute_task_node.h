@@ -5,20 +5,21 @@
 
 namespace oneflow {
 
-class GatherBackwardCompTaskNode final : public CompTaskNode {
+class GatherForwardCompTaskNode final : public CompTaskNode {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(GatherBackwardCompTaskNode);
-  GatherBackwardCompTaskNode() = default;
-  ~GatherBackwardCompTaskNode() = default;
+  OF_DISALLOW_COPY_AND_MOVE(GatherForwardCompTaskNode);
+  GatherForwardCompTaskNode() = default;
+  ~GatherForwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
-  TaskType GetTaskType() const override { return TaskType::kGatherBackward; }
+  TaskType GetTaskType() const override { return TaskType::kGatherForward; }
+
  private:
 };
 
-} // namespace oneflow
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_GATHER_FORWARD_COMPUTE_TASK_NODE_H_

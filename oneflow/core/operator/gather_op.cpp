@@ -21,6 +21,10 @@ void GatherOp::InferBlobDescs(
   CHECK(out->has_col_num_field());
 }
 
+void GatherOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
+  pr_desc->set_policy(ParallelPolicy::kDataParallel);
+}
+
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
 
 }  // namespace oneflow

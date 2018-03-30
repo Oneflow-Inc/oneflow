@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/gather_forward_compute_task_node.h"
+#include "oneflow/core/graph/chain_node.h"
 
 namespace oneflow {
 
@@ -25,4 +26,4 @@ void GatherForwardCompTaskNode::BuildExecGphAndRegst() {
                              device_type());
 }
 
-} // namespace oneflow
+}  // namespace oneflow
