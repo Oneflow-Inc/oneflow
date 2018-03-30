@@ -53,7 +53,10 @@ void GatherBackwardActor::Act() {
     return true;
   });
   cur_generated_cid_ -= 1;
-  if (cur_generated_cid_ == -1) { out_diff_regst_.pop(); }
+  if (cur_generated_cid_ == -1) {
+    out_diff_regst_.pop();
+    AsyncSendRegstMsgToProducer(cur_regst);
+  }
 }
 
 bool GatherBackwardActor::IsReadAlwaysUnReadyFromNow() {
