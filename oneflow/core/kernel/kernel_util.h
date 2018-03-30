@@ -40,145 +40,88 @@ void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
 template<DeviceType device_type, typename T>
 struct KernelUtil final {
-  // dot product
+  // Blas
   static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
                   const T* y, const int incy, T* result);
-
-  // copy x into y
   static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
                    T* y, const int incy);
-
-  // y = a*x + y
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy);
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
                    const int incx, T* y, const int incy);
-
-  // x = a*x
   static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x,
                    const int incx);
   static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
                    const int incx);
-  // max(x) only cpu
-  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr);
-
-  // max(x) temp_storage is for gpu
-  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
-                  T* temp_storage, size_t temp_storage_bytes);
-
-  // y = exp(x)
-  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // sum(x), only cpu
-  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
-
-  // sum(x) temp_storage is for gpu parallel
-  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
-                  T* temp_storage, size_t temp_storage_bytes);
-
-  // x = x / a
-  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
-
-  // z[i] = x[i] * y[i]
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                  T* z);
-
-  // y = sigmoid(x)
-  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // y = sigmoid(x)
-  // x' = y * (1 - y) * y'
-  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
-                              const T* y, const T* dy, T* dx);
-
-  // y = tanh(x)
-  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // y = tanh(x)
-  // x' = (1 - y^2) * y'
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
-                           const T* y, const T* dy, T* dx);
-
-  // y = relu(x)
-  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // y = relu(x)
-  // x' = y * y'
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
-                           const T* y, const T* dy, T* dx);
-
-  // matrix vector multiply
   static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                    int n, const T alpha, const T* a, int lda, const T* x,
                    const int incx, const T beta, T* y, const int incy);
-  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                   int n, const T* alpha, const T* a, int lda, const T* x,
-                   const int incx, const T* beta, T* y, const int incy);
-
-  // matrix matrix multiply
   static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
                    const enum CBLAS_TRANSPOSE trans_a,
                    const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
                    const int k, const T alpha, const T* a, const int lda,
                    const T* b, const int ldb, const T beta, T* c,
                    const int ldc);
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                   const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                   const int k, const T* alpha, const T* a, const int lda,
-                   const T* b, const int ldb, const T* beta, T* c,
-                   const int ldc);
+  static void Gemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                   enum CBLAS_TRANSPOSE trans_b, T alpha, T beta, const Blob* a,
+                   const Blob* b, Blob* c) {
+    const int m = c->shape().At(0);
+    const int n = c->shape().Count(1);
+    const int k =
+        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
 
-  // Generate random number of specific distribution
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
+         lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);
+  }
+
+  // Math
+  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr);
+  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
+                  T* temp_storage, size_t temp_storage_bytes);
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
+                  T* temp_storage, size_t temp_storage_bytes);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
+                  T* z);
+
+  // Activation
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                              const T* y, const T* dy, T* dx);
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                           const T* y, const T* dy, T* dx);
+
+  // Initialize
   static void Initialize(DeviceCtx* ctx,
                          const InitializerConf& initializer_conf,
                          uint32_t random_seed, Blob* blob);
-
-  // detect initialize conf
-  static void InitializeWithProperConf(DeviceCtx* ctx,
-                                       const InitializerConf* initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
+  static void Initialize(DeviceCtx* ctx,
+                         const InitializerConf* initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
     if (initializer_conf == nullptr) {
       initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
     Initialize(ctx, *initializer_conf, random_seed, blob);
   }
-  static void InitializeWithProperConf(DeviceCtx* ctx,
-                                       const PbMessage* initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
-    InitializeWithProperConf(
-        ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
-        blob);
+  static void Initialize(DeviceCtx* ctx, const PbMessage* initializer_conf,
+                         uint32_t random_seed, Blob* blob) {
+    Initialize(ctx, static_cast<const InitializerConf*>(initializer_conf),
+               random_seed, blob);
   }
-
-  // initialize blob with model dir
-  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim);
-
-#define GEN_BLOB_GEMM_FUNC(type)                                             \
-  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,         \
-                       enum CBLAS_TRANSPOSE trans_b, type alpha, type beta,  \
-                       const Blob* a, const Blob* b, Blob* c) {              \
-    const int m = c->shape().At(0);                                          \
-    const int n = c->shape().Count(1);                                       \
-    const int k =                                                            \
-        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);  \
-                                                                             \
-    const int lda = (trans_a == CblasNoTrans) ? k : m;                       \
-    const int ldb = (trans_b == CblasNoTrans) ? n : k;                       \
-    const int ldc = n;                                                       \
-                                                                             \
-    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), \
-         lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);               \
-  }
-
-  GEN_BLOB_GEMM_FUNC(T)
-  GEN_BLOB_GEMM_FUNC(T*)
-
-#undef GEN_BLOB_GEMM_FUNC
+  static void Initialize(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                         const std::string& model_dir, Blob* blob,
+                         const std::string& bn_in_op, int32_t dim_num,
+                         int64_t num_in_each_dim);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);

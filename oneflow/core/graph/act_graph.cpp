@@ -73,7 +73,7 @@ RegstActSubGraph::RegstActSubGraph(
     }
   }
   int64_t min_depth = std::numeric_limits<int64_t>::max();
-  for (const ActNode* node : partial_producer_outs_) {
+  for (const ActNode* node : fake_sources_super_set) {
     min_depth = std::min(min_depth, node->depth());
   }
   int64_t max_depth = std::numeric_limits<int64_t>::min();
