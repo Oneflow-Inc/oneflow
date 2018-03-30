@@ -238,13 +238,11 @@ void BasicGruKernel<device_type, T>::InitModelTmpBlobs(
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx.device_ctx, init_hidden_initializer, random_seed_gen(), h0_blob);
   }
-#define OF_GRU_INIT_PURE_MODEL_TMP_BLON(modelname)               \
-  InitializerConf modelname##_fill_conf;                         \
-  modelname##_fill_conf.mutable_constant_conf()->set_value(1.f); \
-  KernelUtil<device_type, T>::Initialize(                        \
-      ctx.device_ctx, modelname##_fill_conf, 0, BnInOp2Blob(#modelname))
-  OF_GRU_INIT_PURE_MODEL_TMP_BLON(bias_miltiplier);
-#undef OF_GRU_INIT_PURE_MODEL_TMP_BLON
+  InitializerConf bias_multiplier_fill_conf;
+  bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
+  KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
+                                         bias_multiplier_fill_conf, 0,
+                                         BnInOp2Blob("bias_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
