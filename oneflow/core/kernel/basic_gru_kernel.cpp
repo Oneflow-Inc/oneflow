@@ -169,12 +169,12 @@ void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
       ctx.device_ctx,                                                          \
       OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), type##_initializer), \
       random_seed_gen(), BnInOp2Blob(#modelname))
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_r_weight, i2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_r_weight, h2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_z_weight, i2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_z_weight, h2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight, i2h_weight);
-  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight, h2h_weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_r_weight, weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_r_weight, weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_z_weight, weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_z_weight, weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(i2h_weight, weight);
+  OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight, weight);
   if ((OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_initializer))
       == nullptr) {
 #define OF_GRU_INIT_MODEL_BIAS(modelname, default_value)                   \
