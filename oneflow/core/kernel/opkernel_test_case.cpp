@@ -279,9 +279,7 @@ void OpKernelTestCase<device_type>::Run() {
   InitBeforeRun();
   auto op = ConstructOp(op_conf_);
   auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
-  OpContext* op_context;
-  op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type,
-                     [&](OpContext* op_ctx) { op_context = op_ctx; });
+  op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type);
   std::list<bool> is_forward_launch_types;
   if (Global<JobDesc>::Get()->IsPredict() || is_forward_) {
     is_forward_launch_types = {true};
@@ -292,7 +290,7 @@ void OpKernelTestCase<device_type>::Run() {
   for (bool is_forward : is_forward_launch_types) {
     KernelConf kernel_conf;
     op->GenKernelConf(BnInOp2BlobDesc, is_forward, device_type, &parallel_ctx_,
-                      &kernel_conf, op_context);
+                      &kernel_conf, nullptr);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, BnInOp2Blob);
   }
