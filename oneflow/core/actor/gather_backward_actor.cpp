@@ -4,6 +4,8 @@
 namespace oneflow {
 
 void GatherBackwardActor::VirtualActorInit(const TaskProto& task_proto) {
+  in_regst_desc_id_ = RegstDescId4Name("in");
+  out_diff_regst_desc_id_ = RegstDescId4Name("out_diff");
   is_out_diff_eord_ = false;
   cur_generated_cid_ = -1;
   OF_SET_MSG_HANDLER(&GatherBackwardActor::HandlerNormal);
@@ -14,8 +16,14 @@ int GatherBackwardActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
     is_out_diff_eord_ = true;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      out_diff_regst_.push(msg.regst());
+    Regst* cur_regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(cur_regst) != 0) {
+      if (cur_regst->regst_desc_id() == in_regst_desc_id_) {
+        AsyncSendRegstMsgToProducer(cur_regst);
+      } else {
+        CHECK_EQ(out_diff_regst_desc_id_, cur_regst->regst_desc_id());
+        out_diff_regst_.push(cur_regst);
+      }
     }
     ActUntilFail();
   } else {

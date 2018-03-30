@@ -22,6 +22,9 @@ class GatherBackwardActor final : public Actor {
   void AsyncReturnAllReadableRegst() override;
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
+  
+  int64_t in_regst_desc_id_;
+  int64_t out_diff_regst_desc_id_;
 
   bool is_out_diff_eord_;
   int32_t cur_generated_cid_;
