@@ -20,6 +20,11 @@ message RandomUniformInitializerConf {
   optional float max = 2 [default = 1];
 }
 
+message RandomIntUniformInitializerConf {
+  optional int32 min = 1 [default = 0];
+  required int32 max = 2;
+}
+
 message RandomNormalInitializerConf {
   optional float mean = 1 [default = 0];
   optional float std = 2 [default = 1];
@@ -378,6 +383,19 @@ message DecodeOFRecordOpConf {
   optional string part_name_prefix = 2 [default = "part-"];
   optional int32 part_name_suffix_length = 3 [default = -1];
   repeated BlobConf blob = 4;
+}
+
+message DecodeRandomOpConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+  optional int32 random_seed = 5;
+  oneof distribution {
+    RandomUniformInitializerConf uniform = 101;
+    RandomNormalInitializerConf normal = 102;
+    RandomIntUniformInitializerConf uniform_int = 103;
+  }
 }
 
 message NormalizationOpConf {

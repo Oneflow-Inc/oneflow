@@ -4,10 +4,28 @@ namespace oneflow {
 
 void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_in_eord_ = false;
+  has_in_regsts_ = true;
+  piece_id_ = 0;
   decode_status_.in_regst_ = nullptr;
   decode_status_.cur_col_id_ = 0;
   decode_status_.max_col_id_ = 0;
+  OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerWaitToStart);
+}
+
+int DecodeCompActor::HandlerWaitToStart(const ActorMsg& msg) {
+  if (msg.actor_cmd() == ActorCmd::kStart) {
+    has_in_regsts_ = false;
+  } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    is_in_eord_ = true;
+    DecreaseRemainingEordCnt();
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+    ActUntilFail();
+  } else {
+    UNIMPLEMENTED();
+  }
   OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
+  return 0;
 }
 
 int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
@@ -17,7 +35,11 @@ int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
     if (TryUpdtStateAsProducedRegst(regst) == -1) {
-      pending_in_regsts_.push(regst);
+      if (has_in_regsts_) {
+        pending_in_regsts_.push(regst);
+      } else {
+        UNIMPLEMENTED();
+      }
     }
     ActUntilFail();
   } else {
@@ -27,7 +49,7 @@ int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
 }
 
 void DecodeCompActor::Act() {
-  if (decode_status_.in_regst_ == nullptr) {
+  if (decode_status_.in_regst_ == nullptr && has_in_regsts_) {
     decode_status_.in_regst_ = pending_in_regsts_.front();
   }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -36,15 +58,22 @@ void DecodeCompActor::Act() {
     return GetCurWriteableRegst(regst_desc_id);
   });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(decode_status_.in_regst_->piece_id());
+    if (has_in_regsts_) {
+      regst->set_piece_id(decode_status_.in_regst_->piece_id());
+    } else {
+      // random decode op just allow max_seq_size = 1
+      regst->set_piece_id(piece_id_++);
+    }
     regst->set_col_id(decode_status_.cur_col_id_);
     regst->set_max_col_id(decode_status_.max_col_id_);
     return true;
   });
   if (decode_status_.cur_col_id_ == decode_status_.max_col_id_) {
-    AsyncSendRegstMsgToProducer(decode_status_.in_regst_);
-    pending_in_regsts_.pop();
-    decode_status_.in_regst_ = nullptr;
+    if (has_in_regsts_) {
+      AsyncSendRegstMsgToProducer(decode_status_.in_regst_);
+      pending_in_regsts_.pop();
+      decode_status_.in_regst_ = nullptr;
+    }
     decode_status_.cur_col_id_ = 0;
     decode_status_.max_col_id_ = 0;
   } else {
@@ -52,10 +81,20 @@ void DecodeCompActor::Act() {
   }
 }
 
-bool DecodeCompActor::IsReadReady() { return !pending_in_regsts_.empty(); }
+bool DecodeCompActor::IsReadReady() {
+  if (has_in_regsts_) {
+    return !pending_in_regsts_.empty();
+  } else {
+    return piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
+  }
+}
 
 bool DecodeCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_in_eord_ && pending_in_regsts_.empty();
+  if (has_in_regsts_) {
+    return is_in_eord_ && pending_in_regsts_.empty();
+  } else {
+    return piece_id_ >= Global<RuntimeCtx>::Get()->total_piece_num();
+  }
 }
 
 void DecodeCompActor::ForEachCurReadableRegst(

@@ -39,7 +39,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     }
     if (IsMdUpdtTaskType(task.task_type())) {
       mdupdt_tasks.push_back(&task);
-    } else if (task.task_type() == TaskType::kRecordLoad) {
+    } else if (task.consumed_regst_desc_id_size() == 0) {
       source_tasks.push_back(&task);
     } else {
       other_tasks.push_back(&task);
