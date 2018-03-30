@@ -38,7 +38,6 @@ class ConvOp : public Operator {
 
   void InitFromOpConf() override;
 
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
