@@ -67,7 +67,7 @@ struct BasicLstmKernelUtil {
                                     const Blob* i2h_weight, const Blob* hidden,
                                     const Blob* h2h_weight, const Blob* input,
                                     const Blob* bias_mul, const Blob* bias,
-                                    Blob* state_data);
+                                    Blob* gate_tmp_data);
 
   static void ComputeBackwardCellOutDiff(
       const KernelCtx& ctx, const Blob* rec_out_diff, Blob* candidate_out,

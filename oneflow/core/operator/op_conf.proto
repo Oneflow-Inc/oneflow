@@ -264,12 +264,13 @@ message BasicLstmOpConf {
 	required int32 hidden_size = 4;
 	optional ActivationType activation = 5 [default = kTanH];
 
-	optional InitializerConf init_hidden_initializer = 7;
-	optional InitializerConf init_cell_initializer = 8;
+	optional InitializerConf init_hidden_initializer = 6;
+	optional InitializerConf init_cell_initializer = 7;
 
-	optional InitializerConf i2h_weight_initializer = 9;
-	optional InitializerConf h2h_weight_initializer = 10;	
-  optional InitializerConf bias_initializer = 11;
+	optional InitializerConf i2h_weight_initializer = 8;
+	optional InitializerConf h2h_weight_initializer = 9;	
+  optional InitializerConf bias_initializer = 10;
+	optional bool use_forget_bias = 11 [default = true];
 	optional bool is_init_hidden_trainable = 12 [default = true];
 }
 
