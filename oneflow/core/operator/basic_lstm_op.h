@@ -17,6 +17,9 @@ class BasicLstmOp final : public RecurrentOp {
   void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const;
+
+  std::string ibn2lbn(const std::string& input_bn) const override;
+  std::string obn2lbn(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

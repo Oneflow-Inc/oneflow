@@ -9,6 +9,15 @@ const PbMessage& BasicLstmOp::GetSpecialConf() const {
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("gate_tmp_data");
   EnrollDataTmpBn("candidate_out");
+
+  EnrollInputBn("cell_in");
+  if (!GetStringFromSpecialConf("init_cell").empty()) {
+    CHECK(!GetBoolFromSpecialConf("has_init_cell_initializer"));
+    EnrollInputBn("c0");
+  } else {
+    EnrollModelTmpBn("h0");
+  }
+  EnrollOutputBn("cell_out");
 #define OF_INIT_LSTM_GATE_FROM_OP_CONF(out_name, i2h_weight, h2h_weight, \
                                        data_diff, out_diff)              \
   EnrollDataTmpBn(#out_name);                                            \
@@ -53,7 +62,7 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#model_i2h_name) =                             \
       BlobDesc(Shape({hidden_size, embedding_size}));                \
   *GetBlobDesc4BnInOp(#model_h2h_name) =                             \
-      BlobDesc(Shape({hidden_size, embedding_size}));
+      BlobDesc(Shape({hidden_size, hidden_size}));
 
 #define OF_INFER_LSTM_BIAS_BLOBDESC(bias_name) \
   *GetBlobDesc4BnInOp(#bias_name) = BlobDesc(Shape({1, hidden_size}));
@@ -93,6 +102,35 @@ void BasicLstmOp::VirtualInferBlobDescs(
 #undef OF_INFER_LSTM_BIAS_BLOBDESC
 }
 
+std::string BasicLstmOp::ibn2lbn(const std::string& input_bn) const {
+  if (input_bn == "rec_in") {
+    return obn2lbn("rec_out");
+  } else if (input_bn == "h0") {
+    return GetStringFromSpecialConf("init_hidden");
+  } else if (input_bn == "cell_in") {
+    return obn2lbn("cell_out");
+  } else if (input_bn == "c0") {
+    return GetStringFromSpecialConf("init_cell");
+  } else if (input_bn == "in") {
+    return GetStringFromSpecialConf("in");
+  } else {
+    UNEXPECTED_RUN();
+    return "";
+  }
+}
+
+std::string BasicLstmOp::obn2lbn(const std::string& output_bn) const {
+  if (output_bn == "out") {
+    return op_name() + "/" + GetStringFromSpecialConf("out");
+  } else if (output_bn == "rec_out") {
+    return op_name() + "/rec_" + GetStringFromSpecialConf("out");
+  } else if (output_bn == "cell_out") {
+    return op_name() + "/cell_" + GetStringFromSpecialConf("out");
+  } else {
+    UNEXPECTED_RUN();
+    return "";
+  }
+}
 REGISTER_OP(OperatorConf::kBasicLstmConf, BasicLstmOp);
 
 }  // namespace oneflow
