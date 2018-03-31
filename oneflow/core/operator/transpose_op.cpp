@@ -46,9 +46,8 @@ void TransposeOp::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const PbRf<int32_t>& src_perm = op_conf().transpose_conf().perm();
   PbRf<int32_t>* perm = kernel_conf->mutable_transpose_conf()->mutable_perm();
-  perm->Reserve(src_perm.size() + 1);
   perm->Add(0);
-  perm->CopyFrom(src_perm);
+  perm->MergeFrom(src_perm);
   CHECK_EQ(perm->size(), src_perm.size() + 1);
   PbRf<int32_t>* invert_perm =
       kernel_conf->mutable_transpose_conf()->mutable_invert_perm();
