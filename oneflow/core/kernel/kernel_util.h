@@ -58,7 +58,7 @@ struct KernelUtilIf {
                           const T* b, const T beta, T* c) {
     trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
     trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
-    OFGemm(ctx, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+    OFGemm(ctx, trans_b, trans_a, m, n, k, alpha, b, a, beta, c);
   }
 
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
