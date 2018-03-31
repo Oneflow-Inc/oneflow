@@ -20,11 +20,6 @@ message RandomUniformInitializerConf {
   optional float max = 2 [default = 1];
 }
 
-message RandomIntUniformInitializerConf {
-  optional int32 min = 1 [default = 0];
-  required int32 max = 2;
-}
-
 message RandomNormalInitializerConf {
   optional float mean = 1 [default = 0];
   optional float std = 2 [default = 1];
@@ -391,11 +386,7 @@ message DecodeRandomOpConf {
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
   optional int32 random_seed = 5;
-  oneof distribution {
-    RandomUniformInitializerConf uniform = 101;
-    RandomNormalInitializerConf normal = 102;
-    RandomIntUniformInitializerConf uniform_int = 103;
-  }
+  optional InitializerConf distribution = 7; 
 }
 
 message NormalizationOpConf {
