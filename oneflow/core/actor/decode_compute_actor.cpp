@@ -13,19 +13,14 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 int DecodeCompActor::HandlerWaitToStart(const ActorMsg& msg) {
+  OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
   if (msg.actor_cmd() == ActorCmd::kStart) {
     has_in_regsts_ = false;
-  } else if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    is_in_eord_ = true;
-    DecreaseRemainingEordCnt();
-  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
     ActUntilFail();
+    return 0;
   } else {
-    UNIMPLEMENTED();
+    return HandlerNormal(msg);
   }
-  OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
-  return 0;
 }
 
 int DecodeCompActor::HandlerNormal(const ActorMsg& msg) {
@@ -61,8 +56,7 @@ void DecodeCompActor::Act() {
     if (has_in_regsts_) {
       regst->set_piece_id(decode_status_.in_regst_->piece_id());
     } else {
-      // random decode op just allow max_seq_size = 1
-      regst->set_piece_id(piece_id_++);
+      regst->set_piece_id(piece_id_);
     }
     regst->set_col_id(decode_status_.cur_col_id_);
     regst->set_max_col_id(decode_status_.max_col_id_);
@@ -73,6 +67,8 @@ void DecodeCompActor::Act() {
       AsyncSendRegstMsgToProducer(decode_status_.in_regst_);
       pending_in_regsts_.pop();
       decode_status_.in_regst_ = nullptr;
+    } else {
+      ++piece_id_;
     }
     decode_status_.cur_col_id_ = 0;
     decode_status_.max_col_id_ = 0;
