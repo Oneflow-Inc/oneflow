@@ -290,6 +290,11 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
 }
+std::string GenUnCloneLbn(const std::string& clone_lbn) {
+  CHECK_STREQ(clone_lbn.substr(0, 6).c_str(), "clone_");
+  CHECK_STREQ(clone_lbn.substr(clone_lbn.size() - 6, 5).c_str(), "/out_");
+  return clone_lbn.substr(6, clone_lbn.size() - 12);
+}
 std::string GetOpNameFromLbn(const std::string& lbn) {
   return ParseLbn(lbn).first;
 }
