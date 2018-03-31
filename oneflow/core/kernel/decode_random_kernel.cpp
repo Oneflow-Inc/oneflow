@@ -2,41 +2,34 @@
 
 namespace oneflow {
 
-int32_t DecodeRandomKernel::GenNextRandomMaxColId() {
-  return max_col_id_dis_(max_col_id_gen_);
+namespace {
+
+void RandomFillBlob(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                    uint32_t random_seed, Blob* blob) {
+  static const HashMap<int, void (*)(DeviceCtx * ctx,
+                                     const InitializerConf& initializer_conf,
+                                     uint32_t random_seed, Blob* blob)>
+      fill_funcs = {
+#define RANDOM_FILL_ENTRY(type_cpp, type_proto) \
+  {type_proto, &KernelUtil<DeviceType::kCPU, type_cpp>::InitializeWithConf},
+          OF_PP_FOR_EACH_TUPLE(RANDOM_FILL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
+  fill_funcs.at(blob->data_type())(ctx, initializer_conf, random_seed, blob);
 }
+
+}  // namespace
 
 void DecodeRandomKernel::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
   CHECK(ctx.other);
   auto status = static_cast<DecodeStatus*>(ctx.other);
-  if(status->max_col_id_ == 0 && status->max_col_id == 0) {
-   status->max_col_id_ = GenNextRandomMaxColId(); 
+  if (conf.max_sequence_size() > 1 && status->max_col_id_ == 0
+      && status->cur_col_id_ == 0) {
+    status->max_col_id_ = NewRandomSeed() % conf.max_sequence_size();
   }
-  Blob* out_blob = BnInOp2Blob(kernel_conf().output_bns(0)); 
-  const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
-
-  TODO();
-  
-  
-  
-  FOR_RANGE(int32_t, i, 0, kernel_conf().output_bns_size()) {
-    
-    const BlobConf& blob_conf = decode_conf.blob(i);
-    OFRecordDecoderIf* decoder =
-        GetOFRecordDecoder(blob_conf.encode_case(), blob_conf.data_type());
-    int32_t max_col_id = decoder->DecodeOneCol(
-        ctx.device_ctx, record_blob, blob_conf, status->cur_col_id_, out_blob);
-    if (status->max_col_id_ == -1) {
-      status->max_col_id_ = max_col_id;
-    } else {
-      CHECK_EQ(status->max_col_id_, 0);
-      CHECK_EQ(max_col_id, 0);
-    }
-    CHECK_LT(status->max_col_id_, out_blob->max_col_num());
-  }
-  CHECK_GE(status->max_col_id_, 0);
+  RandomFillBlob(ctx.device_ctx, conf.distribution(), NewRandomSeed(),
+                 BnInOp2Blob(kernel_conf().output_bns(0)));
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kDecodeRandomConf,
