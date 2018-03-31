@@ -292,8 +292,10 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
 }
 std::string GenUnCloneLbn(const std::string& clone_lbn) {
   CHECK_STREQ(clone_lbn.substr(0, 6).c_str(), "clone_");
-  CHECK_STREQ(clone_lbn.substr(clone_lbn.size() - 6, 5).c_str(), "/out_");
-  return clone_lbn.substr(6, clone_lbn.size() - 12);
+  int32_t before_num = clone_lbn.size() - 1;
+  while (std::isdigit(clone_lbn.at(before_num))) { --before_num; }
+  CHECK_STREQ(clone_lbn.substr(before_num - 4, 5).c_str(), "/out_");
+  return clone_lbn.substr(6, before_num - 10);
 }
 std::string GetOpNameFromLbn(const std::string& lbn) {
   return ParseLbn(lbn).first;
