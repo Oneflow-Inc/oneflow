@@ -308,7 +308,7 @@ message OperatorConf {
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
-	BasicGruOpConf basic_gru_conf = 125;
+    BasicGruOpConf basic_gru_conf = 125;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }

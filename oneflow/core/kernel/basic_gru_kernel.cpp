@@ -88,18 +88,18 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   Blob* reset_data_diff_blob = BnInOp2Blob("reset_data_diff");
   Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* hidden_diff_blob = this->GetHiddenDiffBlob(BnInOp2Blob);
-  Blob* out_diff_blob = BnInOp2Blob("out_diff");
   // reuse memory
   Blob* update_out_bran_diff_blob = BnInOp2Blob("out");
-  //tmp blob to storage out diff
-  Blob* plus_diff_blob = BnInOp2Blob("tmp_data");//tmp blob to storage out diff
+  // tmp blob to storage out diff
+  Blob* plus_diff_blob =
+      BnInOp2Blob("tmp_data");  // tmp blob to storage out diff
   plus_diff_blob->CopyDataContentFrom<device_type>(ctx.device_ctx,
-                                                   out_diff_blob);
+                                                   BnInOp2Blob("out_diff"));
 
   if (BnInOp2Blob("in")->col_id() != BnInOp2Blob("in")->max_col_id()) {
-    //plus_diff += rec_out_diff
+    // plus_diff += rec_out_diff
     KernelUtil<device_type, T>::Axpy(
-        ctx.device_ctx, static_cast<T>(out_diff_blob->shape().elem_cnt()),
+        ctx.device_ctx, static_cast<T>(plus_diff_blob->shape().elem_cnt()),
         static_cast<T>(1), BnInOp2Blob("rec_out_diff")->dptr<T>(),
         static_cast<T>(1), plus_diff_blob->mut_dptr<T>(), static_cast<T>(1));
   }
@@ -163,7 +163,7 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
         ctx, BnInOp2Blob("h2h_r_weight"), BnInOp2Blob("h2h_z_weight"),
         BnInOp2Blob("h2h_weight"), reset_out_blob, update_out_blob, hidden_blob,
         hidden_diff_blob, candidate_data_diff_blob, reset_data_diff_blob,
-        update_data_diff_blob, out_diff_blob);
+        update_data_diff_blob, plus_diff_blob);
   }
 }
 
