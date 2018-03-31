@@ -380,6 +380,15 @@ message DecodeOFRecordOpConf {
   repeated BlobConf blob = 4;
 }
 
+message DecodeRandomOpConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+  optional int32 random_seed = 5;
+  optional InitializerConf distribution = 7; 
+}
+
 message NormalizationOpConf {
   required string inputs = 1;
   required string outputs = 2;
