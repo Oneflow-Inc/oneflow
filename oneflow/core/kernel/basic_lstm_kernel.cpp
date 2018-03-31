@@ -374,10 +374,11 @@ void BasicLstmKernel<device_type, T>::InitModelTmpBlobs(
 
   Blob* c0_blob = BnInOp2Blob("c0");
   if (!(this->NeedExternalC0()) && c0_blob != nullptr) {
-    InitializerConf init_cell_initializer;
-    init_cell_initializer.mutable_constant_conf()->set_value(0.f);
-    KernelUtil<device_type, T>::Initialize(ctx.device_ctx,
-                                           init_cell_initializer, 0, c0_blob);
+    InitializerConf init_cell_fill_conf;
+    init_cell_fill_conf.mutable_constant_conf()->set_value(0.f);
+    InitializerConf* init_cell_initializer = &init_cell_fill_conf;
+    KernelUtil<device_type, T>::InitializeWithProperConf(
+        ctx.device_ctx, init_cell_initializer, 0, c0_blob);
   }
 
   InitializerConf bias_multiplier_fill_conf;

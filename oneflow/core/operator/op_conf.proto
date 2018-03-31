@@ -304,7 +304,7 @@ message OperatorConf {
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
     ReduceSumOpConf reduce_sum_conf = 120;
-    BasicRnnOpConf basic_rnn_conf = 121;
+		BasicRnnOpConf basic_rnn_conf = 121;
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
