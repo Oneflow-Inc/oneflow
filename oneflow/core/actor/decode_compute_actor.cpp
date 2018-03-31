@@ -48,6 +48,7 @@ void DecodeCompActor::Act() {
   if (decode_status_.in_regst_ == nullptr && has_in_regsts_) {
     decode_status_.in_regst_ = pending_in_regsts_.front();
   }
+  CHECK_LE(decode_status_.cur_col_id_, decode_status_.max_col_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &decode_status_;
   AsyncLaunchKernel(kernel_ctx, [this](int64_t regst_desc_id) -> Regst* {
