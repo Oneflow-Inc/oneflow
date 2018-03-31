@@ -424,6 +424,7 @@ message OperatorConf {
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
     DecodeOFRecordOpConf decode_ofrecord_conf = 102;
+    DecodeRandomOpConf decode_random_conf = 103;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;

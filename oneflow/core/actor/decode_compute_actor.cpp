@@ -14,7 +14,8 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 
 int DecodeCompActor::HandlerWaitToStart(const ActorMsg& msg) {
   OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
-  if (msg.actor_cmd() == ActorCmd::kStart) {
+  if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     has_in_regsts_ = false;
     ActUntilFail();
     return 0;
