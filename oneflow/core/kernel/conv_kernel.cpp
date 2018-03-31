@@ -37,9 +37,9 @@ void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
   if (this->GetBoolFromCustomizedOpConf("use_bias") && !this->UseCudnn()) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-    KernelUtil<device_type, T>::Initialize(ctx,
-                                           bias_multiplier_initializer_conf, 0,
-                                           BnInOp2Blob("bias_multiplier"));
+    KernelUtil<device_type, T>::InitializeWithConf(
+        ctx, bias_multiplier_initializer_conf, 0,
+        BnInOp2Blob("bias_multiplier"));
   }
 }
 
@@ -47,13 +47,13 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelUtil<device_type, T>::Initialize(
+  KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx,
       GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
       (*random_seed_gen)(), BnInOp2Blob("weight"));
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    KernelUtil<device_type, T>::Initialize(
+    KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx,
         GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "bias_initializer"),
         (*random_seed_gen)(), BnInOp2Blob("bias"));
@@ -67,13 +67,13 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithDir(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->GetInt32FromCustomizedOpConf("filters");
-  KernelUtil<device_type, T>::Initialize(ctx, part_id, part_num, model_load_dir,
-                                         weight_blob, "weight", dim_num,
-                                         weight_blob->shape().Count(1));
+  KernelUtil<device_type, T>::InitializeWithDir(
+      ctx, part_id, part_num, model_load_dir, weight_blob, "weight", dim_num,
+      weight_blob->shape().Count(1));
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    KernelUtil<device_type, T>::Initialize(ctx, part_id, part_num,
-                                           model_load_dir, BnInOp2Blob("bias"),
-                                           "bias", dim_num, 1);
+    KernelUtil<device_type, T>::InitializeWithDir(
+        ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
+        dim_num, 1);
   }
 }
 
@@ -300,12 +300,12 @@ ColBufUtil<T>::ColBufUtil(const Shape& in_shape, const Shape& out_shape,
     : strides_(strides),
       dilation_rate_(dilation_rate),
       padding_before_(padding_before) {
-  id_dim_ = in_shape.At(dhw_offset);
-  ih_dim_ = in_shape.At(dhw_offset + 1);
-  iw_dim_ = in_shape.At(dhw_offset + 2);
-  od_dim_ = out_shape.At(dhw_offset);
-  oh_dim_ = out_shape.At(dhw_offset + 1);
-  ow_dim_ = out_shape.At(dhw_offset + 2);
+  id_num_ = in_shape.At(dhw_offset);
+  ih_num_ = in_shape.At(dhw_offset + 1);
+  iw_num_ = in_shape.At(dhw_offset + 2);
+  od_num_ = out_shape.At(dhw_offset);
+  oh_num_ = out_shape.At(dhw_offset + 1);
+  ow_num_ = out_shape.At(dhw_offset + 2);
   if (is_im2col == true) {
     d_invalid_func_ = &ColBufWriter<T>::CleanIdSize;
     h_invalid_func_ = &ColBufWriter<T>::CleanIhSize;
@@ -331,18 +331,18 @@ template<typename T>
 void ColBufUtil<T>::operator()(ColBufWriter<T>& col_buf_writer, int64_t c,
                                int64_t kd, int64_t kh, int64_t kw) {
   int64_t id = kd * dilation_rate_[0] - padding_before_[0];
-  FOR_RANGE(int64_t, od, 0, od_dim_) {
-    if (id < 0 || id >= id_dim_) {
+  FOR_RANGE(int64_t, od, 0, od_num_) {
+    if (id < 0 || id >= id_num_) {
       (col_buf_writer.*d_invalid_func_)();
     } else {
       int64_t ih = kh * dilation_rate_[1] - padding_before_[1];
-      FOR_RANGE(int64_t, oh, 0, oh_dim_) {
-        if (ih < 0 || ih >= ih_dim_) {
+      FOR_RANGE(int64_t, oh, 0, oh_num_) {
+        if (ih < 0 || ih >= ih_num_) {
           (col_buf_writer.*h_invalid_func_)();
         } else {
           int64_t iw = kw * dilation_rate_[2] - padding_before_[2];
-          FOR_RANGE(int64_t, ow, 0, ow_dim_) {
-            if (iw < 0 || iw >= iw_dim_) {
+          FOR_RANGE(int64_t, ow, 0, ow_num_) {
+            if (iw < 0 || iw >= iw_num_) {
               (col_buf_writer.*w_invalid_func_)();
             } else {
               (col_buf_writer.*dhw_valid_func_)(c, id, ih, iw);
