@@ -91,12 +91,13 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   Blob* out_diff_blob = BnInOp2Blob("out_diff");
   // reuse memory
   Blob* update_out_bran_diff_blob = BnInOp2Blob("out");
-  Blob* plus_diff_blob = BnInOp2Blob("tmp_data");
+  //tmp blob to storage out diff
+  Blob* plus_diff_blob = BnInOp2Blob("tmp_data");//tmp blob to storage out diff
   plus_diff_blob->CopyDataContentFrom<device_type>(ctx.device_ctx,
                                                    out_diff_blob);
 
   if (BnInOp2Blob("in")->col_id() != BnInOp2Blob("in")->max_col_id()) {
-    // out_diff += rec_out_diff
+    //plus_diff += rec_out_diff
     KernelUtil<device_type, T>::Axpy(
         ctx.device_ctx, static_cast<T>(out_diff_blob->shape().elem_cnt()),
         static_cast<T>(1), BnInOp2Blob("rec_out_diff")->dptr<T>(),
