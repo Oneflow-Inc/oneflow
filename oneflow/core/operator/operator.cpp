@@ -164,6 +164,9 @@ void Operator::GenKernelConf(
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
   }
+  if (IsCloneOp()) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns_);
+  }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
