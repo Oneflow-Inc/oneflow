@@ -81,6 +81,36 @@ class OpKernelTestCase final {
   static void BlobCmp(const std::string& blob_name, const Blob* lhs,
                       const Blob* rhs);
 
+#define MAKE_SWITCH_FUNC_ENTRY(make_template_func, func_name,    \
+                               switch_case_pair, func_args_type, \
+                               func_args_value)                  \
+  case OF_PP_PAIR_SECOND(switch_case_pair):                      \
+    return make_template_func(func_name, switch_case_pair)(      \
+        std::forward<func_args_type>(func_args_value)...);
+
+#define MAKE_ALL_SWITCH_ENTRIES(make_switch_entry, func_name, seq, args_type, \
+                                args)                                         \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_SWITCH_FUNC_ENTRY,                    \
+                                   (make_switch_entry), (func_name), seq,     \
+                                   (args_type), (args))
+
+#define DEFINE_SWITCH_FUNC(return_type, func_name, make_switch_entry,          \
+                           switch_type_and_values)                             \
+  template<typename... Args>                                                   \
+  return_type Switch##func_name(                                               \
+      std::tuple<OF_PP_PAIR_FIRST(switch_type_and_values)>&& switch_tuple,     \
+      Args&&... args) {                                                        \
+    switch (std::get<0>(switch_tuple)) {                                       \
+      MAKE_ALL_SWITCH_ENTRIES(make_switch_entry, func_name,                    \
+                              OF_PP_PAIR_SECOND(switch_type_and_values), Args, \
+                              args);                                           \
+      default: UNIMPLEMENTED();                                                \
+    }                                                                          \
+  }
+
+#define MAKE_OPKERNEL_TEST_CASE_SWITCH_ENTRY(func_name, data_type_pair) \
+  func_name<OF_PP_PAIR_FIRST(data_type_pair)>
+
   template<typename T>
   static void CheckInitializeResult(const Blob* blob,
                                     const InitializerConf& initializer_conf);
@@ -89,12 +119,16 @@ class OpKernelTestCase final {
  private:
   template<typename T>
   static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc, Regst* regst);
+  DEFINE_SWITCH_FUNC(Blob*, CreateBlobWithRandomVal,
+                     MAKE_OPKERNEL_TEST_CASE_SWITCH_ENTRY,
+                     (DataType, ALL_DATA_TYPE_SEQ));
   template<typename T>
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
                                           std::vector<T> val, Regst* regst);
   template<typename T>
   static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val,
                                              Regst* regst);
+
   static Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc,
                                              Regst* regst);
   static void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
