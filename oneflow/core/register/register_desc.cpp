@@ -54,7 +54,12 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
 void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbn2blob_desc_) {
-    *(pair.second) = *(rhs->lbn2blob_desc_.at(pair.first));
+    auto rhs_it = rhs->lbn2blob_desc_.find(pair.first);
+    if (rhs_it == rhs->lbn2blob_desc_.end()) {
+      *(pair.second) = *(rhs->lbn2blob_desc_.at(GenUnCloneLbn(pair.first)));
+    } else {
+      *(pair.second) = *(rhs_it->second);
+    }
   }
 }
 

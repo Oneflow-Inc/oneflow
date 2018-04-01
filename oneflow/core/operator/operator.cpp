@@ -164,6 +164,9 @@ void Operator::GenKernelConf(
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
   }
+  if (IsCloneOp()) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns_);
+  }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
@@ -289,6 +292,13 @@ std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
+}
+std::string GenUnCloneLbn(const std::string& clone_lbn) {
+  CHECK_STREQ(clone_lbn.substr(0, 6).c_str(), "clone_");
+  int32_t before_num = clone_lbn.size() - 1;
+  while (std::isdigit(clone_lbn.at(before_num))) { --before_num; }
+  CHECK_STREQ(clone_lbn.substr(before_num - 4, 5).c_str(), "/out_");
+  return clone_lbn.substr(6, before_num - 10);
 }
 std::string GetOpNameFromLbn(const std::string& lbn) {
   return ParseLbn(lbn).first;

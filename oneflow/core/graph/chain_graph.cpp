@@ -533,7 +533,7 @@ void ChainGraph::BuildRecurrentStruct() {
 }
 
 void ChainGraph::RemoveNeedlessCloneOp() {
-  TopoForEachNode([&](ChainNode* chain_node) {
+  ForEachNode([&](ChainNode* chain_node) {
     HashMap<std::string, std::string> olbn2ilbn_in_clone_op;
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
