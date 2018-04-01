@@ -29,7 +29,7 @@ class MomentumMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                           const T learning_rate, const T* model_diff,
                           const T* pre_model, T* momentum, T* model) {
     for (int64_t i = 0; i != n; ++i) {
-      momentum[i] = beta * momentum[i] + learning_rate * model_diff[i];
+      momentum[i] = beta * momentum[i] - learning_rate * model_diff[i];
       model[i] = pre_model[i] + momentum[i];
     }
   }
