@@ -14,10 +14,10 @@ class BasicGruOp final : public RecurrentOp {
   const PbMessage& GetSpecialConf() const override;
 
  private:
-  void VirtualInitFromOpConf();
+  void VirtualInitFromOpConf() override;
   void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+      const ParallelContext* parallel_ctx) const override;
 };
 
 }  // namespace oneflow
