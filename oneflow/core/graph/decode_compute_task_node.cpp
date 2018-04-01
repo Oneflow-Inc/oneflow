@@ -10,7 +10,11 @@ void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void DecodeCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("record", SoleInEdge()->GetSoleRegst());
+  if (in_edges().size() == 1) {
+    ConsumeRegst("record", SoleInEdge()->GetSoleRegst());
+  } else {
+    CHECK_EQ(in_edges().size(), 0);
+  }
 }
 
 void DecodeCompTaskNode::BuildExecGphAndRegst() {
