@@ -15,6 +15,9 @@ class ConvKernelIf : public KernelIf<device_type> {
   virtual ~ConvKernelIf() = default;
 
  protected:
+  void ForwardDataContent(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -29,6 +32,9 @@ class ConvKernelIf : public KernelIf<device_type> {
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  virtual void DoForwardDataContent(
+      DeviceCtx*, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void WeightBackward(
       DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
       Blob* weight_diff_blob, Blob* in_diff_blob,
@@ -75,8 +81,8 @@ class ConvKernel<DeviceType::kCPU, T> final
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(
-      const KernelCtx&,
+  void DoForwardDataContent(
+      DeviceCtx*, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackward(
       DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
@@ -105,8 +111,8 @@ class ConvKernel<DeviceType::kGPU, T> final
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(
-      const KernelCtx&,
+  void DoForwardDataContent(
+      DeviceCtx*, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackward(
       DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,

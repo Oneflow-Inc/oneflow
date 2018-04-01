@@ -36,12 +36,10 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::ForwardDataContent(
-    const KernelCtx& ctx,
+void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
+    DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob,
+    Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* out_blob = BnInOp2Blob("out");
   Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
   int64_t cudnn_buf_size = 0;
   T* cudnn_buf_dptr = nullptr;
@@ -50,7 +48,7 @@ void ConvKernel<DeviceType::kGPU, T>::ForwardDataContent(
     cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
   }
   CudaCheck(cudnnConvolutionForward(
-      ctx.device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(),
+      device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(),
       in_blob->dptr<T>(), this->filter_desc_->Get(), weight_blob->dptr<T>(),
       this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(
@@ -60,7 +58,7 @@ void ConvKernel<DeviceType::kGPU, T>::ForwardDataContent(
 
   if (this->GetBoolFromCustomizedOpConf("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
-    CudaCheck(cudnnAddTensor(ctx.device_ctx->cudnn_handle(), OnePtr<T>::value,
+    CudaCheck(cudnnAddTensor(device_ctx->cudnn_handle(), OnePtr<T>::value,
                              this->bias_desc_->Get(), bias->dptr<T>(),
                              OnePtr<T>::value, this->out_desc_->Get(),
                              out_blob->mut_dptr<T>()));

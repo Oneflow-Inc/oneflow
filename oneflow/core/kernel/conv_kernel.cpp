@@ -18,6 +18,17 @@ T* GetImgMutDptr(Blob* blob, int64_t idx) {
 }  // namespace
 
 template<DeviceType device_type, typename T>
+void ConvKernelIf<device_type, T>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* out_blob = BnInOp2Blob("out");
+  DoForwardDataContent(ctx.device_ctx, in_blob, weight_blob, out_blob,
+                       BnInOp2Blob);
+}
+
+template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -125,21 +136,19 @@ void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
-    const KernelCtx& ctx,
+void ConvKernel<DeviceType::kCPU, T>::DoForwardDataContent(
+    DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob,
+    Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob("in");
-  const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* out_blob = BnInOp2Blob("out");
   Blob* col_buf_blob = BnInOp2Blob("col_buf");
   FOR_RANGE(int64_t, i, 0, in_blob->shape().At(0)) {
-    im2col_func_(ctx.device_ctx, GetImgDptr<T>(in_blob, i), in_blob->shape(),
+    im2col_func_(device_ctx, GetImgDptr<T>(in_blob, i), in_blob->shape(),
                  weight_blob->shape(), out_blob->shape(), strides_,
                  dilation_rate_, padding_before_, col_buf_blob->mut_dptr<T>());
 
     // channels first: out = weight * col_buf
     // channels last:  out = (weight * col_buf)(T)
-    forward_func_(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+    forward_func_(device_ctx, CblasNoTrans, CblasNoTrans,
                   weight_blob->shape().At(0),      // filter
                   col_buf_blob->shape().Count(4),  // od * oh * ow
                   weight_blob->shape().Count(1),   // ci * kd * kh * kw
@@ -152,7 +161,7 @@ void ConvKernel<DeviceType::kCPU, T>::ForwardDataContent(
       const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
       // channels first:  out += bias * bias_mul
       // channels last:   out += (bias * bias_mul)(T)
-      forward_func_(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
+      forward_func_(device_ctx, CblasNoTrans, CblasNoTrans,
                     weight_blob->shape().At(0),      // filter
                     col_buf_blob->shape().Count(4),  // od * oh * ow
                     1,                               // 1
