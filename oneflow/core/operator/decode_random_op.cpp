@@ -11,6 +11,12 @@ const PbMessage& DecodeRandomOp::GetCustomizedConf() const {
   return op_conf().decode_random_conf();
 }
 
+void DecodeRandomOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->mutable_decode_random_conf()->set_random_seed(NewRandomSeed());
+}
+
 void DecodeRandomOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {

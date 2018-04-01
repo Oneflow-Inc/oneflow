@@ -19,7 +19,7 @@ void PrintProtoToTextFile(const PbMessage& proto,
   CHECK(google::protobuf::TextFormat::Print(proto, &output));
 }
 
-bool IsFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
+bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_GET_FIELDDESC(msg, field_name);
   return fd != nullptr;
 }

@@ -15,6 +15,11 @@ class DecodeRandomKernel final : public KernelIf<DeviceType::kCPU> {
   void Forward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void VirtualKernelInit(const ParallelContext*) override;
+  uint32_t GenNextRandomSeed() const;
+
+  std::unique_ptr<std::mt19937> gen_;
+  std::unique_ptr<std::uniform_int_distribution<uint32_t>> dis_;
 };
 
 }  // namespace oneflow

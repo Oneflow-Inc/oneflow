@@ -44,7 +44,7 @@ void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 
 // Does PbMessage have the field_name
-bool IsFieldInPbMessage(const PbMessage&, const std::string& field_name);
+bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
 

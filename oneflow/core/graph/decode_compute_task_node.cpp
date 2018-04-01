@@ -12,8 +12,8 @@ void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void DecodeCompTaskNode::ConsumeAllRegsts() {
   if (in_edges().size() == 1) {
     ConsumeRegst("record", SoleInEdge()->GetSoleRegst());
-  } else if (in_edges().size() > 1) {
-    UNIMPLEMENTED();
+  } else {
+    CHECK_EQ(in_edges().size(), 0);
   }
 }
 

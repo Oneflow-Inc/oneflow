@@ -55,8 +55,8 @@ class Operator {
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
-  bool IsFieldInCustomizedConf(const std::string& field_name) const {
-    return IsFieldInPbMessage(GetCustomizedConf(), field_name);
+  bool HasFieldInCustomizedConf(const std::string& field_name) const {
+    return HasFieldInPbMessage(GetCustomizedConf(), field_name);
   }
 
   template<typename T>
