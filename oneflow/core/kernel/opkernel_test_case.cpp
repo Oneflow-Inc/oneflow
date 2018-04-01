@@ -161,7 +161,7 @@ OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
     const BlobDesc* blob_desc = &bn_in_op2blob_desc_.at(bn_in_op);
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
       bn_in_op2blob_[bn_in_op] =
-          SwitchCreateBlobWithRandomVal(std::make_tuple(blob_desc->data_type()),
+          SwitchCreateBlobWithRandomVal(SWITCH_CASE(blob_desc->data_type()),
                                         blob_desc, bn_in_op2regst_[bn_in_op]);
     }
     return bn_in_op2blob_.at(bn_in_op);
@@ -173,6 +173,7 @@ OpKernelTestCase<device_type>::OpKernelTestCase() {
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
+  initiation_before_backward_ = []() {};
 }
 
 template<DeviceType device_type>
@@ -217,7 +218,9 @@ void OpKernelTestCase<device_type>::AssertAfterRun() const {
     asserted_blob_names = &backward_asserted_blob_names_;
   }
   for (const auto& blob_name : *asserted_blob_names) {
-    SwitchBlobCmp(blob_name, bn_in_op2blob_.at(blob_name),
+    DataType data_type = bn_in_op2blob_.at(blob_name)->data_type();
+    SwitchBlobCmp(SWITCH_CASE(data_type), blob_name,
+                  bn_in_op2blob_.at(blob_name),
                   bn_in_op2blob_.at(ExpectedBlobName(blob_name)));
   }
 }

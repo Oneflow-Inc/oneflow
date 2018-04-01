@@ -12,6 +12,45 @@
 
 namespace oneflow {
 
+#define SWITCH_CASE(arg0, ...) std::make_tuple(arg0, ##__VA_ARGS__)
+
+#define MAKE_DATA_TYPE_CSRVP_SEQ(data_type_seq) (DataType, data_type_seq)
+#define MAKE_REPLICATE_TUPE_SEQ(x) OF_PP_MAKE_TUPLE_SEQ(x, x)
+#define MAKE_DEVICE_TYPE_CSRVP_SEQ(device_type_seq) \
+  (DeviceType, OF_PP_FOR_EACH_TUPLE(MAKE_REPLICATE_TUPE_SEQ, device_type_seq))
+
+#define MAKE_SWITCH_FUNC_ENTRY(make_template_func, func_name, func_args_type,  \
+                               switch_case_pair)                               \
+  {SWITCH_CASE(OF_PP_PAIR_SECOND(switch_case_pair)),                           \
+   [](func_args_type&&... args) {                                              \
+     return make_template_func(func_name, OF_PP_PAIR_FIRST(switch_case_pair))( \
+         std::forward<func_args_type>(args)...);                               \
+   }},
+
+#define MAKE_ALL_SWITCH_ENTRIES(make_switch_entry, func_name, args_type, seq) \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_SWITCH_FUNC_ENTRY,                    \
+                                   (make_switch_entry), (func_name),          \
+                                   (args_type), seq)
+
+#define MAKE_OPK_DATA_TYPE_SWITCH_ENTRY(func_name, data_type_cpp) \
+  func_name<data_type_cpp>
+
+#define DEFINE_STATIC_SWITCH_FUNC(return_type, func_name, make_switch_entry, \
+                                  switch_type_and_values)                    \
+  template<typename... Args>                                                 \
+  static return_type Switch##func_name(                                      \
+      const std::tuple<OF_PP_PAIR_FIRST(switch_type_and_values)>&            \
+          switch_tuple,                                                      \
+      Args&&... args) {                                                      \
+    static const std::map<                                                   \
+        std::tuple<OF_PP_PAIR_FIRST(switch_type_and_values)>,                \
+        std::function<return_type(Args&&...)>>                               \
+        case_handlers{MAKE_ALL_SWITCH_ENTRIES(                               \
+            make_switch_entry, func_name, Args,                              \
+            OF_PP_PAIR_SECOND(switch_type_and_values))};                     \
+    return case_handlers.at(switch_tuple)(std::forward<Args>(args)...);      \
+  }
+
 namespace test {
 
 #define TEST_CPU_ONLY_OPKERNEL TEST_CPU_OPKERNEL
@@ -80,36 +119,8 @@ class OpKernelTestCase final {
   template<typename T>
   static void BlobCmp(const std::string& blob_name, const Blob* lhs,
                       const Blob* rhs);
-
-#define MAKE_SWITCH_FUNC_ENTRY(make_template_func, func_name,    \
-                               switch_case_pair, func_args_type, \
-                               func_args_value)                  \
-  case OF_PP_PAIR_SECOND(switch_case_pair):                      \
-    return make_template_func(func_name, switch_case_pair)(      \
-        std::forward<func_args_type>(func_args_value)...);
-
-#define MAKE_ALL_SWITCH_ENTRIES(make_switch_entry, func_name, seq, args_type, \
-                                args)                                         \
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_SWITCH_FUNC_ENTRY,                    \
-                                   (make_switch_entry), (func_name), seq,     \
-                                   (args_type), (args))
-
-#define DEFINE_SWITCH_FUNC(return_type, func_name, make_switch_entry,          \
-                           switch_type_and_values)                             \
-  template<typename... Args>                                                   \
-  return_type Switch##func_name(                                               \
-      std::tuple<OF_PP_PAIR_FIRST(switch_type_and_values)>&& switch_tuple,     \
-      Args&&... args) {                                                        \
-    switch (std::get<0>(switch_tuple)) {                                       \
-      MAKE_ALL_SWITCH_ENTRIES(make_switch_entry, func_name,                    \
-                              OF_PP_PAIR_SECOND(switch_type_and_values), Args, \
-                              args);                                           \
-      default: UNIMPLEMENTED();                                                \
-    }                                                                          \
-  }
-
-#define MAKE_OPKERNEL_TEST_CASE_SWITCH_ENTRY(func_name, data_type_pair) \
-  func_name<OF_PP_PAIR_FIRST(data_type_pair)>
+  DEFINE_STATIC_SWITCH_FUNC(void, BlobCmp, MAKE_OPK_DATA_TYPE_SWITCH_ENTRY,
+                            MAKE_DATA_TYPE_CSRVP_SEQ(ALL_DATA_TYPE_SEQ));
 
   template<typename T>
   static void CheckInitializeResult(const Blob* blob,
@@ -119,9 +130,9 @@ class OpKernelTestCase final {
  private:
   template<typename T>
   static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc, Regst* regst);
-  DEFINE_SWITCH_FUNC(Blob*, CreateBlobWithRandomVal,
-                     MAKE_OPKERNEL_TEST_CASE_SWITCH_ENTRY,
-                     (DataType, ALL_DATA_TYPE_SEQ));
+  DEFINE_STATIC_SWITCH_FUNC(Blob*, CreateBlobWithRandomVal,
+                            MAKE_OPK_DATA_TYPE_SWITCH_ENTRY,
+                            MAKE_DATA_TYPE_CSRVP_SEQ(ALL_DATA_TYPE_SEQ));
   template<typename T>
   static Blob* CreateBlobWithSpecifiedVal(const BlobDesc* blob_desc,
                                           std::vector<T> val, Regst* regst);
@@ -129,10 +140,9 @@ class OpKernelTestCase final {
   static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val,
                                              Regst* regst);
 
-  static Blob* SwitchCreateBlobWithRandomVal(const BlobDesc* blob_desc,
-                                             Regst* regst);
   static void SwitchBlobCmp(const std::string& blob_name, const Blob* lhs,
                             const Blob* rhs);
+
   static void SwitchCheckInitializeResult(
       const Blob* blob, const InitializerConf& initializer_conf);
   static void BuildKernelCtx(KernelCtx* ctx);
