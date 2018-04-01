@@ -40,6 +40,27 @@ void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
 template<DeviceType device_type, typename T, typename Derived>
 struct KernelUtilIf {
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                     enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                     const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
+    const int lda = (trans_a == CblasNoTrans) ? k : m;
+    const int ldb = (trans_b == CblasNoTrans) ? n : k;
+    const int ldc = n;
+
+    Derived::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, lda,
+                  b, ldb, beta, c, ldc);
+  }
+
+  static void OFGemmTrans(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                          enum CBLAS_TRANSPOSE trans_b, const int m,
+                          const int n, const int k, const T alpha, const T* a,
+                          const T* b, const T beta, T* c) {
+    trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    OFGemm(ctx, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  }
+
   static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
                        enum CBLAS_TRANSPOSE trans_b, T alpha, T beta,
                        const Blob* a, const Blob* b, Blob* c) {
@@ -48,13 +69,8 @@ struct KernelUtilIf {
     const int k =
         (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
 
-    const int lda = (trans_a == CblasNoTrans) ? k : m;
-    const int ldb = (trans_b == CblasNoTrans) ? n : k;
-    const int ldc = n;
-
-    Derived::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
-                  a->dptr<T>(), lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(),
-                  ldc);
+    OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(),
+           beta, c->mut_dptr<T>());
   }
 
   static void InitializeWithProperConf(DeviceCtx* ctx,
