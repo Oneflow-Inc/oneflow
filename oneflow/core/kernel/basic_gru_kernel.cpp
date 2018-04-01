@@ -37,7 +37,7 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
   Blob* gate_input_blob =
-      BnInOp2Blob("gate_input");  // reused by three activation
+      BnInOp2Blob("gate_input");  // reused by two activation
   Blob* reset_out_blob = BnInOp2Blob("reset_out");
   Blob* update_out_blob = BnInOp2Blob("update_out");
   Blob* candidate_data_blob = BnInOp2Blob("candidate_data");
@@ -125,7 +125,7 @@ void BasicGruKernel<device_type, T>::BackwardDataContent(
   BasicGruKernelUtil<device_type, T>::ComputeWeightDiff(
       ctx, BnInOp2Blob("in"), tmp_data_blob, candidate_data_diff_blob,
       BnInOp2Blob("i2h_weight_diff"), BnInOp2Blob("h2h_weight_diff"));
-// bias_diff = bias_nultiplier' * data_diff
+// bias_diff = bias_multiplier' * data_diff
 #define OF_GRU_COMPUTE_BIAS_DIFF(model, tmpmodel, gatename)                   \
   if (BnInOp2Blob(#model) != nullptr) {                                       \
     KernelUtil<device_type, T>::BlobGemm(                                     \

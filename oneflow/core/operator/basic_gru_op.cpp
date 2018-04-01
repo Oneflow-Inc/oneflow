@@ -58,6 +58,7 @@ void BasicGruOp::VirtualInferBlobDescs(
   OF_GRU_INFER_BLOB_DESCS(candidate_out);
   OF_GRU_INFER_BLOB_DESCS(candidate_data_diff);
   OF_GRU_INFER_BLOB_DESCS(candidate_out_diff);
+  OF_GRU_INFER_BLOB_DESCS(tmp_data);
 #undef OF_GRU_INFER_BLOB_DESCS
 
 #define OF_GRU_INFER_WEIGHT_DESCS(i2h_weight, h2h_weight) \
