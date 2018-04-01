@@ -183,6 +183,7 @@ OpKernelTestCase<device_type>::OpKernelTestCase() {
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
+  initiation_before_backward_ = []() {};
 }
 
 template<DeviceType device_type>
