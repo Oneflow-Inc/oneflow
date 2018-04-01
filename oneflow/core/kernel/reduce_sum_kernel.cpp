@@ -32,6 +32,13 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+void ReduceSumKernel<device_type, T>::BackwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  TODO();
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 
