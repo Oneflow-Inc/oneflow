@@ -217,6 +217,7 @@ class Operator {
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenUnCloneLbn(const std::string& clone_lbn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);

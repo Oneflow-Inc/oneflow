@@ -54,8 +54,12 @@ void BackwardCompTaskNode::LinkFwExecNode() {
     CHECK(op_name2fw_exec.emplace(fw_exec->op()->op_name(), fw_exec).second);
   });
   mut_exec_gph().ForEachNode([&](ExecNode* bw_exec) {
-    ExecNode* fw_exec = op_name2fw_exec.at(bw_exec->op()->op_name());
-    bw_exec->set_fw_node(fw_exec);
+    auto fw_exec_it = op_name2fw_exec.find(bw_exec->op()->op_name());
+    if (fw_exec_it == op_name2fw_exec.end()) {
+      CHECK(bw_exec->op()->IsCloneOp());
+    } else {
+      bw_exec->set_fw_node(fw_exec_it->second);
+    }
   });
 }
 

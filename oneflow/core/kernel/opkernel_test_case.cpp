@@ -183,6 +183,7 @@ OpKernelTestCase<device_type>::OpKernelTestCase() {
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
+  initiation_before_backward_ = []() {};
 }
 
 template<DeviceType device_type>
@@ -282,21 +283,20 @@ void OpKernelTestCase<device_type>::Run() {
   OpContext* op_context = nullptr;
   op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type,
                      [&](OpContext* op_ctx) { op_context = op_ctx; });
-  std::list<bool> is_forward_launch_types;
-  if (Global<JobDesc>::Get()->IsPredict() || is_forward_) {
-    is_forward_launch_types = {true};
-  } else {
-    is_forward_launch_types = {true, false};
-  }
   auto BnInOp2Blob = MakeGetterBnInOp2Blob();
-  for (bool is_forward : is_forward_launch_types) {
+  auto Launch = [&](bool is_forward) {
     KernelConf kernel_conf;
     op->GenKernelConf(BnInOp2BlobDesc, is_forward, device_type, &parallel_ctx_,
                       &kernel_conf, op_context);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, BnInOp2Blob);
+    SyncStream(&kernel_ctx_);
+  };
+  Launch(this);
+  if (Global<JobDesc>::Get()->IsTrain() && !is_forward_) {
+    initiation_before_backward_();
+    Launch(false);
   }
-  SyncStream(&kernel_ctx_);
   AssertAfterRun();
 }
 
