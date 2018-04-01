@@ -380,6 +380,14 @@ message DecodeOFRecordOpConf {
   repeated BlobConf blob = 4;
 }
 
+message DecodeRandomOpConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+  required InitializerConf distribution = 7; 
+}
+
 message NormalizationOpConf {
   required string inputs = 1;
   required string outputs = 2;
@@ -415,6 +423,7 @@ message OperatorConf {
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
     DecodeOFRecordOpConf decode_ofrecord_conf = 102;
+    DecodeRandomOpConf decode_random_conf = 103;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
