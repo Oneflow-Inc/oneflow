@@ -45,10 +45,12 @@ message JobConf {
   optional int32 max_data_id_length = 8 [default = 0];
   optional bool use_rdma = 9 [default = false];
   optional bool use_cudnn_on_gpu = 10 [default = true];
+  optional DataType default_data_type = 11 [default = kFloat]; // kFloat or kDouble
 
-  optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 101 [default = 100];
   optional float available_zone_mem_ratio = 102 [default = 0.95];
+  optional uint64 one_data_part_buffer_mbyte_size = 103 [default = 128];
+
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;
