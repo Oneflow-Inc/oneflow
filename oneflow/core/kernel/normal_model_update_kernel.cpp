@@ -40,7 +40,7 @@ class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n,
                                                float l1, const T* model,
                                                T* model_diff_acc) {
-    T zero = static_cast<T>(0);
+    T zero = ZeroVal<T>::value;
     for (int64_t i = 0; i != n; ++i) {
       model_diff_acc[i] /= Global<JobDesc>::Get()->BatchSize();
       model_diff_acc[i] += l1 * ((model[i] >= zero) - (model[i] <= zero));

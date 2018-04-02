@@ -12,18 +12,16 @@ void ModelSaveKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 void ModelSaveKernel::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Snapshot* snapshot = static_cast<Snapshot*>(kernel_ctx.other);
-  for (const std::string& ibn : kernel_conf().input_bns()) {
-    const std::string& lbn = Lbn4BnInOp(ibn);
-    Blob* blob_ptr = BnInOp2Blob(ibn);
+  auto tpl = static_cast<MdSaveOther*>(kernel_ctx.other);
+  Snapshot* snapshot = std::get<0>(*tpl);
+  std::get<1> (*tpl)([&](const std::string& lbn, const Blob* blob) {
     {
       std::unique_ptr<PersistentOutStream> out_stream =
           snapshot->GetOutStream(lbn, part_id_);
-      out_stream->Write(blob_ptr->dptr<char>(),
-                        blob_ptr->ByteSizeOfDataContentField());
+      out_stream->Write(blob->dptr<char>(), blob->ByteSizeOfDataContentField());
     }
     snapshot->OnePartDone(lbn, part_id_, part_num_);
-  }
+  });
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf,

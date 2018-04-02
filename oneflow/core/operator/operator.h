@@ -38,7 +38,6 @@ class Operator {
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsCloneOp() const { return false; }
-  virtual bool IsNormalizationOp() const { return false; }
 
   bool HasModelOrModelTmpBlob() const {
     return !model_bns_.empty() || !model_tmp_bns_.empty();
@@ -55,6 +54,10 @@ class Operator {
   bool UseCudnn(DeviceType device_type) const;
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
+
+  bool HasFieldInCustomizedConf(const std::string& field_name) const {
+    return HasFieldInPbMessage(GetCustomizedConf(), field_name);
+  }
 
   template<typename T>
   T GetValFromCustomizedConf(const std::string& field_name) const {
@@ -99,7 +102,7 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(model_bns);
   DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
-  DEFINE_BLOB_NAMES_GETTER(other_bns);
+  DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
@@ -172,7 +175,7 @@ class Operator {
   virtual std::string obn2lbn(const std::string& output_bn) const;
   virtual std::string mtbn2lbn(const std::string& model_tmp_bn) const;
   virtual std::string mbn2lbn(const std::string& model_bn) const;
-  virtual std::string otbn2lbn(const std::string& other_bn) const;
+  virtual std::string fwmbn2lbn(const std::string& forward_model_bn) const;
 
   OperatorConf& mut_op_conf() { return op_conf_; }
 
@@ -192,7 +195,7 @@ class Operator {
   void EnrollModelBn(const std::string& mbn);
   void EnrollModelTmpBn(const std::string& mtbn);
 
-  void EnrollOtherBn(const std::string& otbn);
+  void EnrollForwardModelBn(const std::string& fwmbn);
 
   void StrFieldTolower(const std::string& field_name);
 
@@ -213,11 +216,12 @@ class Operator {
   std::vector<std::string> model_diff_bns_;
   std::vector<std::string> model_tmp_bns_;
 
-  std::vector<std::string> other_bns_;
+  std::vector<std::string> forward_model_bns_;
 };
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenUnCloneLbn(const std::string& clone_lbn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);

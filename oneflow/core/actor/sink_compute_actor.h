@@ -13,7 +13,9 @@ class SinkCompActor : public CompActor {
 
  protected:
   virtual void VirtualSinkCompActorInit(const TaskProto&) {}
-  virtual KernelCtx GenSinkKernelCtx() { return GenDefaultKernelCtx(); }
+  Regst* in_regst() { return in_regst_; }
+  virtual void* NewOther() { return nullptr; }
+  virtual void DeleteOther(void*) {}
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;

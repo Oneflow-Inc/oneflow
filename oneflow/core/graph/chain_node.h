@@ -64,6 +64,8 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   virtual const char* TypeName() const = 0;
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
+  bool HasOpWithModelBlob() const;
+  bool HasOpWithForwardModelBlob() const;
   void GenSortedCompTaskNodes(
       std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
       CompTaskNodeHandler) const;
@@ -96,6 +98,8 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   void AddDataOutputLbnsTo(const ChainNode*);
 
  private:
+  bool HasOpWithCondition(std::function<bool(const Operator*)>) const;
+
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
 

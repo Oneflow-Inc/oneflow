@@ -143,7 +143,8 @@ void Operator::GenKernelConf(
   *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
   *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
   *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
-  *(kernel_conf->mutable_other_bns()) = StdVec2PbRpf(other_bns_);
+  *(kernel_conf->mutable_forward_model_bns()) =
+      StdVec2PbRpf(forward_model_bns_);
   kernel_conf->set_need_do_data_id(false);
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
                            &BlobDesc::has_data_id_field)) {
@@ -162,6 +163,9 @@ void Operator::GenKernelConf(
       GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
+  }
+  if (IsCloneOp()) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns_);
   }
   kernel_conf->set_data_type(data_type);
   kernel_conf->set_device_type(device_type);
@@ -198,8 +202,8 @@ std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
 std::string Operator::mbn2lbn(const std::string& model_bn) const {
   return op_name() + "/" + model_bn;
 }
-std::string Operator::otbn2lbn(const std::string& other_bn) const {
-  return op_name() + "/" + other_bn;
+std::string Operator::fwmbn2lbn(const std::string& forward_model_bn) const {
+  return op_name() + "/" + forward_model_bn;
 }
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
@@ -267,10 +271,10 @@ void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   model_tmp_bns_.push_back(mtbn);
   CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);
 }
-void Operator::EnrollOtherBn(const std::string& otbn) {
-  std::string lbn = otbn2lbn(otbn);
-  other_bns_.push_back(otbn);
-  CHECK(bn_in_op2lbn_.emplace(otbn, lbn).second);
+void Operator::EnrollForwardModelBn(const std::string& fwmbn) {
+  std::string lbn = fwmbn2lbn(fwmbn);
+  forward_model_bns_.push_back(fwmbn);
+  CHECK(bn_in_op2lbn_.emplace(fwmbn, lbn).second);
 }
 
 void Operator::StrFieldTolower(const std::string& field_name) {
@@ -288,6 +292,13 @@ std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
+}
+std::string GenUnCloneLbn(const std::string& clone_lbn) {
+  CHECK_STREQ(clone_lbn.substr(0, 6).c_str(), "clone_");
+  int32_t before_num = clone_lbn.size() - 1;
+  while (std::isdigit(clone_lbn.at(before_num))) { --before_num; }
+  CHECK_STREQ(clone_lbn.substr(before_num - 4, 5).c_str(), "/out_");
+  return clone_lbn.substr(6, before_num - 10);
 }
 std::string GetOpNameFromLbn(const std::string& lbn) {
   return ParseLbn(lbn).first;
