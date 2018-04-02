@@ -9,6 +9,11 @@ namespace oneflow {
 namespace {
 
 template<typename T>
+__global__ void RsqrtGpu(const int64_t n, T* x, const float epsilon) {
+  CUDA_1D_KERNEL_LOOP(i, n) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+}
+
+template<typename T>
 __global__ void ExpGpu(const int64_t n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::exp(x[i]); }
 }
@@ -71,8 +76,9 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
   void KernelUtil<DeviceType::kGPU, T, \
                   typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
-                       const T* y, const int incy, T* result) {
+KU_FLOATING_METHOD
+Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
+    const int incy, T* result) {
   cublas_dot<T>(ctx->cublas_pmd_handle(), n, x, incx, y, incy, result);
 }
 KU_FLOATING_METHOD Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
@@ -126,6 +132,11 @@ KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                        T* z) {
   MulGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
               ctx->cuda_stream()>>>(n, x, y, z);
+}
+KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x,
+                         const float epsilon) {
+  RsqrtGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                ctx->cuda_stream()>>>(n, x, epsilon);
 }
 
 #define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)               \
