@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/datasets/imagenet_OfRecord/train"
+    data_dir: "/dataset/imagenet/train"
     blob {
       name: "encoded"
       data_type: kFloat
