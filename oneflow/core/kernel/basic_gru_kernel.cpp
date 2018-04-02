@@ -248,16 +248,16 @@ void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
     const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
     const Blob* bias_multiplier, const Blob* i2h_weight, const Blob* h2h_weight,
     const Blob* bias, Blob* candidate_data, Blob* candidate_out,
-    Blob* reset_out, Blob* temp_data,
+    Blob* reset_out, Blob* tmp_data,
     FwActivationFunc<device_type, T> activation_fw_func_) {
-  // temp_data = hidden .*reset_out
+  // tmp_data = hidden .*reset_out
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, reset_out->shape().elem_cnt(),
                                   reset_out->dptr<T>(), hidden->dptr<T>(),
-                                  candidate_data->mut_dptr<T>());
-  // candidate_data = temp_data * h2h_weight'
+                                  tmp_data->mut_dptr<T>());
+  // candidate_data = tmp_data * h2h_weight'
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(0),
-                                       temp_data, h2h_weight, candidate_data);
+                                       tmp_data, h2h_weight, candidate_data);
   // candidate_data += in * i2h_weight'
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(1),

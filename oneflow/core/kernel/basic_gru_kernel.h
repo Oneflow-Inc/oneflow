@@ -57,7 +57,7 @@ struct BasicGruKernelUtil {
       const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
       const Blob* bias_multiplier, const Blob* i2h_weight,
       const Blob* h2h_weight, const Blob* bias, Blob* candidate_data,
-      Blob* dandidate_out, Blob* reset_out, Blob* temp_data,
+      Blob* dandidate_out, Blob* reset_out, Blob* tmp_data,
       FwActivationFunc<device_type, T> activation_fw_func_);
   static void ComputeOutForward(const KernelCtx& ctx, const Blob* hidden,
                                 Blob* candidate_out, Blob* temp_data,
