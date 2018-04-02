@@ -258,21 +258,21 @@ message BasicRnnOpConf {
 }
 
 message BasicLstmOpConf {
-	required string in = 1;
-	optional string init_hidden = 2;
-	optional string init_cell = 3;
-	required string out = 4;
-	required int32 hidden_size = 5;
-	optional ActivationType activation = 6 [default = kTanH];
+  required string in = 1;
+  optional string init_hidden = 2;
+  optional string init_cell = 3;
+  required string out = 4;
+  required int32 hidden_size = 5;
+  optional ActivationType activation = 6 [default = kTanH];
 
-	optional InitializerConf init_hidden_initializer = 7;
-	optional InitializerConf init_cell_initializer = 8;
+  optional InitializerConf init_hidden_initializer = 7;
+  optional InitializerConf init_cell_initializer = 8;
 
-	optional InitializerConf i2h_weight_initializer = 9;
-	optional InitializerConf h2h_weight_initializer = 10;	
+  optional InitializerConf i2h_weight_initializer = 9;
+  optional InitializerConf h2h_weight_initializer = 10;	
   optional InitializerConf bias_initializer = 11;
-	optional bool use_forget_bias = 12 [default = true];
-	optional bool is_init_hidden_trainable = 13 [default = true];
+  optional bool use_forget_bias = 12 [default = true];
+  optional bool is_init_hidden_trainable = 13 [default = true];
 }
 
 message ReshapeOpConf {
@@ -304,12 +304,12 @@ message OperatorConf {
     PrintOpConf print_conf = 118;
     LossPrintOpConf loss_print_conf = 119;
     ReduceSumOpConf reduce_sum_conf = 120;
-		BasicRnnOpConf basic_rnn_conf = 121;
+    BasicRnnOpConf basic_rnn_conf = 121;
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
 		
-		BasicLstmOpConf basic_lstm_conf = 125;
+    BasicLstmOpConf basic_lstm_conf = 125;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }

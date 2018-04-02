@@ -13,13 +13,15 @@ class BasicLstmOp final : public RecurrentOp {
   const PbMessage& GetSpecialConf() const override;
 
  private:
-  void VirtualInitFromOpConf();
+  void VirtualInitFromOpConf() override;
   void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+      const ParallelContext* parallel_ctx) const override;
 
-  std::string ibn2lbn(const std::string& input_bn) const override;
-  std::string obn2lbn(const std::string& output_bn) const override;
+  std::string Virtualibn2lbn(const std::string& input_bn) const override;
+  std::string Virtualobn2lbn(const std::string& output_bn) const override;
+
+  void InitCellFromOpConf();
 };
 
 }  // namespace oneflow

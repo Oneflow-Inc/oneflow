@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/basic_lstm_op.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -9,15 +10,14 @@ const PbMessage& BasicLstmOp::GetSpecialConf() const {
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("gate_tmp_data");
   EnrollDataTmpBn("candidate_out");
-
-  EnrollInputBn("cell_in");
-  if (!GetStringFromSpecialConf("init_cell").empty()) {
-    CHECK(!GetBoolFromSpecialConf("has_init_cell_initializer"));
-    EnrollInputBn("c0");
-  } else {
-    EnrollModelTmpBn("h0");
-  }
-  EnrollOutputBn("cell_out");
+/* EnrollInputBn("rec_cell_in");
+ if (!GetStringFromSpecialConf("init_cell").empty()) {
+   CHECK(!GetBoolFromSpecialConf("has_init_cell_initializer"));
+   EnrollInputBn("c0");
+ } else {
+   EnrollModelTmpBn("c0");
+ }
+ EnrollOutputBn("rec_cell_out");*/
 #define OF_INIT_LSTM_GATE_FROM_OP_CONF(out_name, i2h_weight, h2h_weight, \
                                        data_diff, out_diff)              \
   EnrollDataTmpBn(#out_name);                                            \
@@ -28,21 +28,30 @@ void BasicLstmOp::VirtualInitFromOpConf() {
 
   OF_INIT_LSTM_GATE_FROM_OP_CONF(f_out, i2h_f_weight, h2h_f_weight, f_data_diff,
                                  f_out_diff);
-  if (GetBoolFromSpecialConf("use_forget_bias")) { EnrollModelBn("bias_f"); }
-
   OF_INIT_LSTM_GATE_FROM_OP_CONF(i_out, i2h_i_weight, h2h_i_weight, i_data_diff,
                                  i_out_diff);
-  EnrollModelBn("bias_i");
-
   OF_INIT_LSTM_GATE_FROM_OP_CONF(c_out, i2h_c_weight, h2h_c_weight, c_data_diff,
                                  c_out_diff);
-  EnrollModelBn("bias_c");
   OF_INIT_LSTM_GATE_FROM_OP_CONF(o_out, i2h_o_weight, h2h_o_weight, o_data_diff,
                                  o_out_diff);
+  if (GetBoolFromSpecialConf("use_forget_bias")) { EnrollModelBn("bias_f"); }
+  EnrollModelBn("bias_f");
+  EnrollModelBn("bias_i");
+  EnrollModelBn("bais_c");
   EnrollModelBn("bias_o");
   EnrollModelTmpBn("bias_multiplier");
 #undef OF_INIT_LSTM_GATE_FROM_OP_CONF
 #undef OF_INIT_LSTM_GATE_BIAS_FROM_OP_CONF
+}
+void BasicLstmOp::InitCellFromOpConf() {
+  EnrollInputBn("rec_cell_in");
+  if (!GetStringFromSpecialConf("init_cell").empty()) {
+    CHECK(!GetBoolFromSpecialConf("has_init_cell_initializer"));
+    EnrollInputBn("c0");
+  } else {
+    EnrollModelTmpBn("c0");
+  }
+  EnrollOutputBn("rec_cell_out");
 }
 
 void BasicLstmOp::VirtualInferBlobDescs(
@@ -102,30 +111,20 @@ void BasicLstmOp::VirtualInferBlobDescs(
 #undef OF_INFER_LSTM_BIAS_BLOBDESC
 }
 
-std::string BasicLstmOp::ibn2lbn(const std::string& input_bn) const {
-  if (input_bn == "rec_in") {
-    return obn2lbn("rec_out");
-  } else if (input_bn == "h0") {
-    return GetStringFromSpecialConf("init_hidden");
-  } else if (input_bn == "cell_in") {
-    return obn2lbn("cell_out");
+std::string BasicLstmOp::Virtualibn2lbn(const std::string& input_bn) const {
+  if (input_bn == "rec_cell_in") {
+    return Virtualobn2lbn("rec_cell_out");
   } else if (input_bn == "c0") {
     return GetStringFromSpecialConf("init_cell");
-  } else if (input_bn == "in") {
-    return GetStringFromSpecialConf("in");
   } else {
     UNEXPECTED_RUN();
     return "";
   }
 }
 
-std::string BasicLstmOp::obn2lbn(const std::string& output_bn) const {
-  if (output_bn == "out") {
-    return op_name() + "/" + GetStringFromSpecialConf("out");
-  } else if (output_bn == "rec_out") {
-    return op_name() + "/rec_" + GetStringFromSpecialConf("out");
-  } else if (output_bn == "cell_out") {
-    return op_name() + "/cell_" + GetStringFromSpecialConf("out");
+std::string BasicLstmOp::Virtualobn2lbn(const std::string& output_bn) const {
+  if (output_bn == "rec_cell_out") {
+    return op_name() + "/rec_cell" + GetStringFromSpecialConf("out");
   } else {
     UNEXPECTED_RUN();
     return "";

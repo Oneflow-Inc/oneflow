@@ -29,6 +29,13 @@ class RecurrentOp : public Operator {
   }
   std::string ibn2lbn(const std::string& input_bn) const override;
   std::string obn2lbn(const std::string& output_bn) const override;
+
+  virtual std::string Virtualibn2lbn(const std::string& input_bn) const {
+    UNEXPECTED_RUN();
+  }
+  virtual std::string Virtualobn2lbn(const std::string& output_bn) const {
+    UNEXPECTED_RUN();
+  }
 };
 
 }  // namespace oneflow
