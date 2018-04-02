@@ -2,7 +2,10 @@
 #include "oneflow/core/kernel/kernel.h"
 #include <random>
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/switch_func.h"
+
 #include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
