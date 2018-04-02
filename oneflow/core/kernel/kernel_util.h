@@ -236,15 +236,6 @@ struct KernelUtil<DeviceType::kGPU, T,
   }
 };
 
-template<DeviceType device_type, typename T>
-struct KernelUtil<device_type, T,
-                  typename std::enable_if<std::is_same<T, char>::value>::type> {
-  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
-                   const int incx, T* y, const int incy) {
-    UNIMPLEMENTED();
-  }
-};
-
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
 
 template<DeviceType device_type, typename Iter>
