@@ -158,24 +158,16 @@ void OpKernelTestCase<device_type>::BackwardCheckBlob(
 }
 
 template<DeviceType device_type>
-Blob* OpKernelTestCase<device_type>::SwitchCreateBlobWithRandomVal(
-    const BlobDesc* blob_desc, Regst* regst) {
-  switch (blob_desc->data_type()) {
-#define CREATE_BLOB_WITH_RANDOM_VAL_ENTRY(type_cpp, type_proto) \
-  case type_proto: return CreateBlobWithRandomVal<type_cpp>(blob_desc, regst);
-    OF_PP_FOR_EACH_TUPLE(CREATE_BLOB_WITH_RANDOM_VAL_ENTRY, ALL_DATA_TYPE_SEQ);
-    default: UNIMPLEMENTED();
-  }
-  return nullptr;
-}
-
-template<DeviceType device_type>
 std::function<Blob*(const std::string&)>
 OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
   return [this](const std::string& bn_in_op) {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
-      bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
-          &bn_in_op2blob_desc_.at(bn_in_op), bn_in_op2regst_[bn_in_op]);
+      const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
+      if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+      const BlobDesc* blob_desc = &it->second;
+      bn_in_op2blob_[bn_in_op] =
+          SwitchCreateBlobWithRandomVal(SWITCH_CASE(blob_desc->data_type()),
+                                        blob_desc, bn_in_op2regst_[bn_in_op]);
     }
     return bn_in_op2blob_.at(bn_in_op);
   };
@@ -231,7 +223,9 @@ void OpKernelTestCase<device_type>::AssertAfterRun() const {
     asserted_blob_names = &backward_asserted_blob_names_;
   }
   for (const auto& blob_name : *asserted_blob_names) {
-    SwitchBlobCmp(blob_name, bn_in_op2blob_.at(blob_name),
+    DataType data_type = bn_in_op2blob_.at(blob_name)->data_type();
+    SwitchBlobCmp(SWITCH_CASE(data_type), blob_name,
+                  bn_in_op2blob_.at(blob_name),
                   bn_in_op2blob_.at(ExpectedBlobName(blob_name)));
   }
 }
