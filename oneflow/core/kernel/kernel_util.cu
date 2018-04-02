@@ -76,9 +76,8 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
   void KernelUtil<DeviceType::kGPU, T, \
                   typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD
-Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
-    const int incy, T* result) {
+KU_FLOATING_METHOD Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
+                       const T* y, const int incy, T* result) {
   cublas_dot<T>(ctx->cublas_pmd_handle(), n, x, incx, y, incy, result);
 }
 KU_FLOATING_METHOD Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
