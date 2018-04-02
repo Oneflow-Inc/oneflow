@@ -4,7 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:cpu:120"
+    device_name: "first:cpu:120"
   }
 }
 
@@ -36,6 +36,6 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:gpu:0-1"
+    device_name: "first:gpu:0-1"
   }
 }

@@ -1,6 +1,6 @@
-dlnet_filepath: "./net.prototxt"
+dlnet_filepath: "./train_net.prototxt"
 resource_filepath: "./resource.prototxt"
-placement_filepath: "./placement.prototxt"
+placement_filepath: "./train_placement.prototxt"
 use_rdma: false
 global_fs_conf {
   hdfs_conf {
@@ -13,7 +13,7 @@ data_part_num: 120
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
-  model_save_snapshots_path: "/zhuyi/snapshots"
+  model_save_snapshots_path: "/snapshot"
   num_of_batches_in_snapshot: 100
   staleness: 0
   total_batch_num: 30000
