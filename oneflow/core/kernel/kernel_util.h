@@ -134,6 +134,7 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
@@ -161,6 +162,9 @@ struct KernelUtil<DeviceType::kCPU, T,
       public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
 };
 
 template<typename T, typename Derived>
@@ -202,6 +206,7 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
@@ -230,15 +235,6 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy) {
     TODO();
-  }
-};
-
-template<DeviceType device_type, typename T>
-struct KernelUtil<device_type, T,
-                  typename std::enable_if<std::is_same<T, char>::value>::type> {
-  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
-                   const int incx, T* y, const int incy) {
-    UNIMPLEMENTED();
   }
 };
 

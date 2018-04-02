@@ -16,6 +16,7 @@ class DecodeCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
 
   int HandlerNormal(const ActorMsg&) override;
+  int HandlerWaitToStart(const ActorMsg&);
 
   void Act() override;
   bool IsReadReady() override;
@@ -23,7 +24,9 @@ class DecodeCompActor final : public CompActor {
   void AsyncReturnAllReadableRegst() override {}
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 
+  bool has_in_regsts_;
   bool is_in_eord_;
+  int32_t piece_id_;
   std::queue<Regst*> pending_in_regsts_;
   DecodeStatus decode_status_;
 };
