@@ -30,17 +30,22 @@ auto SwitchCase(Args&&... args)
     return case_handlers.at(switch_tuple)(std::forward<Args>(args)...); \
   }
 
-// CTRV: Compile-time Token and Runtime Value Pair, example: (float,
-// DataType::kFloat)
-#define MAKE_CTRV_SEQ(runtime_value_type, ctrv_pair_seq) \
+// CTRV: Compile-time Token and Runtime Value pair,
+// CTRV example: (float, DataType::kFloat)
+// TYPED_CTRV_SEQ example: (DataType, ((float, DataType::kFloat)))
+
+#define MAKE_TYPED_CTRV_SEQ(runtime_value_type, ctrv_pair_seq) \
   (runtime_value_type, ctrv_pair_seq)
 
 #define MAKE_DATA_TYPE_CTRV_SEQ(data_type_seq) \
-  MAKE_CTRV_SEQ(DataType, data_type_seq)
+  MAKE_TYPED_CTRV_SEQ(DataType, data_type_seq)
 #define MAKE_DEVICE_TYPE_CTRV_SEQ(device_type_seq) \
-  MAKE_CTRV_SEQ(                                   \
+  MAKE_TYPED_CTRV_SEQ(                             \
       DeviceType,                                  \
       OF_PP_FOR_EACH_TUPLE(OF_PP_I_MAKE_REPLICATE_TUPE_SEQ, device_type_seq))
+#define MAKE_NDIM_CTRV_SEQ(ndim_seq)                 \
+  MAKE_TYPED_CTRV_SEQ(int32_t, OF_PP_FOR_EACH_TUPLE( \
+                                   OF_PP_I_MAKE_REPLICATE_TUPE_SEQ, ndim_seq))
 
 //  internal preprocessor macros
 
@@ -99,8 +104,6 @@ auto SwitchCase(Args&&... args)
                         OF_PP_TUPLE_SIZE(t))(make_switch_entry, func_name,  \
                                              args_type, t))
 
-#define OF_PP_I_MAKE_ALL_SWITCH_ENTRIES_FROM_TUPLE_0(...) \
-  OF_PP_MACRO_UNIMPLEMENTED()
 #define OF_PP_I_MAKE_ALL_SWITCH_ENTRIES_FROM_TUPLE_1(                     \
     make_switch_entry, func_name, args_type, ctrv_seq_tuple)              \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(                                       \
@@ -132,7 +135,6 @@ auto SwitchCase(Args&&... args)
   OF_PP_FORCE(OF_PP_CAT(OF_PP_I_CTRV_SEQ_TUPLE2STD_TUPLE_TYPE_, \
                         OF_PP_TUPLE_SIZE(t))(t))
 
-#define OF_PP_I_CTRV_SEQ_TUPLE2STD_TUPLE_TYPE_0(t) OF_PP_MACRO_UNIMPLEMENTED()
 #define OF_PP_I_CTRV_SEQ_TUPLE2STD_TUPLE_TYPE_1(t) \
   std::tuple<OF_PP_PAIR_FIRST(OF_PP_TUPLE_ELEM(0, t))>
 #define OF_PP_I_CTRV_SEQ_TUPLE2STD_TUPLE_TYPE_2(t)     \
