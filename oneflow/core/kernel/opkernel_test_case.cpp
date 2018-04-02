@@ -174,8 +174,12 @@ std::function<Blob*(const std::string&)>
 OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
   return [this](const std::string& bn_in_op) {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
-      bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
-          &bn_in_op2blob_desc_.at(bn_in_op), bn_in_op2regst_[bn_in_op]);
+      const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
+      if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+      const BlobDesc* blob_desc = &it->second;
+      bn_in_op2blob_[bn_in_op] =
+          SwitchCreateBlobWithRandomVal(SWITCH_CASE(blob_desc->data_type()),
+                                        blob_desc, bn_in_op2regst_[bn_in_op]);
     }
     return bn_in_op2blob_.at(bn_in_op);
   };
