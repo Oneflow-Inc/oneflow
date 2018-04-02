@@ -32,6 +32,37 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+void ReduceSumKernel<device_type, T>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+
+  if (this->kernel_conf().reduce_sum_conf().has_axis() == false) {
+    T* dst_ptr = in_diff_blob->mut_dptr<T>();
+    const T* src_ptr = out_diff_blob->dptr<T>();
+    FOR_RANGE(int64_t, i, 0, in_diff_blob->shape().Count(0)) {
+      Memcpy<device_type>(ctx.device_ctx, dst_ptr++, src_ptr, sizeof(T));
+    }
+    return;
+  }
+
+  int32_t axis = this->kernel_conf().reduce_sum_conf().axis();
+  int64_t lhs_num = in_diff_blob->shape().Count(0, axis);
+  int64_t middle_num = in_diff_blob->shape().At(axis);
+  int64_t rhs_num = in_diff_blob->shape().Count(axis + 1);
+  FOR_RANGE(int64_t, lhs_i, 0, lhs_num) {
+    const T* src_ptr = out_diff_blob->dptr<T>() + lhs_i * rhs_num;
+    T* dst_ptr = in_diff_blob->mut_dptr<T>() + lhs_i * middle_num * rhs_num;
+    FOR_RANGE(int64_t, middle_i, 0, middle_num) {
+      Memcpy<device_type>(ctx.device_ctx, dst_ptr, src_ptr,
+                          rhs_num * sizeof(T));
+      dst_ptr += rhs_num;
+    }
+  }
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel,
                            ARITHMETIC_DATA_TYPE_SEQ);
 

@@ -34,6 +34,10 @@ namespace test {
 #define TEST_GPU_OPKERNEL(func_name, data_type_seq, ...)
 #endif
 
+inline std::string ExpectedBlobName(const std::string& name) {
+  return name + "_$expected$";
+}
+
 template<DeviceType device_type>
 class OpKernelTestCase final {
  public:
@@ -55,18 +59,24 @@ class OpKernelTestCase final {
   }
   void SetBlobSpecializedDeviceType(const std::string& blob_name,
                                     DeviceType dev_type) {
-    CHECK(bn_in_op2device_type_.emplace(blob_name, dev_type).second);
+    bn_in_op2device_type_.emplace(blob_name, dev_type);
   }
 
   //  Getters
   const HashMap<std::string, Blob*>& bn_in_op2blob() const {
     return bn_in_op2blob_;
   }
+  DeviceType GetBlobDeviceType(const std::string& blob_name) const {
+    const auto& it = bn_in_op2device_type_.find(blob_name);
+    return (it == bn_in_op2device_type_.end()) ? device_type : it->second;
+  }
 
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
   template<typename T>
   Blob* InitBlob(const std::string&, const BlobDesc* blob_desc,
                  const std::vector<T>& val);
+  template<typename T>
+  Blob* RandomInitBlob(const std::string&, const BlobDesc* blob_desc);
   template<typename T>
   void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
                         const std::vector<T>& val);
@@ -82,6 +92,15 @@ class OpKernelTestCase final {
                          const std::vector<T>& val, bool need_random_init);
 
   template<typename T>
+  void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                        const std::string& expected_existed_blob_name,
+                        bool need_random_init);
+  template<typename T>
+  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
+                         const std::string& expected_existed_blob_name,
+                         bool need_random_init);
+
+  template<typename T>
   static void BlobCmp(const std::string& blob_name, const Blob* lhs,
                       DeviceType lhs_device_type, const Blob* rhs,
                       DeviceType rhs_device_type);
@@ -95,12 +114,11 @@ class OpKernelTestCase final {
                                     const InitializerConf& initializer_conf);
 
   static Blob* CreateBlob(const BlobDesc*, Regst* regst);
+  static void BuildKernelCtx(KernelCtx* ctx);
+  static void SyncStream(KernelCtx* ctx);
 
  private:
-  DeviceType GetBlobDeviceType(const std::string& blob_name) const {
-    const auto& it = bn_in_op2device_type_.find(blob_name);
-    return (it == bn_in_op2device_type_.end()) ? device_type : it->second;
-  }
+  DeviceType KernelCtxDeviceType() const;
   template<typename T>
   static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val,
                                              Regst* regst);
@@ -108,8 +126,11 @@ class OpKernelTestCase final {
   void CheckBlob(const std::string&, const BlobDesc* blob_desc,
                  const std::vector<T>& val, bool need_random_init);
 
-  static void BuildKernelCtx(KernelCtx* ctx);
-  static void SyncStream(KernelCtx* ctx);
+  template<typename T>
+  void CheckBlob(const std::string&, const BlobDesc* blob_desc,
+                 const std::string& expected_existed_blob_name,
+                 bool need_random_init);
+
   void UpdateGlobalJobDesc();
 
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();

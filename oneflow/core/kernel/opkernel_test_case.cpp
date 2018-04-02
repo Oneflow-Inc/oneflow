@@ -11,10 +11,6 @@ namespace test {
 
 namespace {
 
-std::string ExpectedBlobName(const std::string& name) {
-  return name + "_$expected$";
-}
-
 #define MAKE_OPKTC_SWITCH_ENTRY(func_name, device_type, T) \
   OpKernelTestCase<device_type>::template func_name<T>
 
@@ -26,6 +22,19 @@ std::string ExpectedBlobName(const std::string& name) {
 DEFINE_OPKTC_STATIC_SWITCH_FUNC(void, BlobCmp);
 DEFINE_OPKTC_STATIC_SWITCH_FUNC(Blob*, CreateBlobWithRandomVal);
 DEFINE_OPKTC_STATIC_SWITCH_FUNC(void, CheckInitializeResult);
+
+#define MAKE_DEVICE_TYPE_SWITCH_ENTRY(func_name, device_type) \
+  OpKernelTestCase<device_type>::func_name
+DEFINE_STATIC_SWITCH_FUNC(void, BuildKernelCtx, MAKE_DEVICE_TYPE_SWITCH_ENTRY,
+                          MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ))
+DEFINE_STATIC_SWITCH_FUNC(void, SyncStream, MAKE_DEVICE_TYPE_SWITCH_ENTRY,
+                          MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ))
+
+bool NeedInferBlobDescs(Operator* op) {
+  static const HashSet<int> no_need_infer_op{OperatorConf::kCopyHdConf};
+  return no_need_infer_op.find(op->op_conf().op_type_case())
+         == no_need_infer_op.end();
+}
 
 }  // namespace
 
@@ -132,8 +141,18 @@ Blob* OpKernelTestCase<device_type>::InitBlob(const std::string& name,
 
 template<DeviceType device_type>
 template<typename T>
-void OpKernelTestCase<device_type>::CheckBlob(const std::string& name,
+Blob* OpKernelTestCase<device_type>::RandomInitBlob(const std::string& name,
+                                                    const BlobDesc* blob_desc) {
+  DeviceType dev_type = GetBlobDeviceType(name);
+  Blob* blob = OpkernelTestUtil<T>::SwitchCreateBlobWithRandomVal(
+      SwitchCase(dev_type), blob_desc, bn_in_op2regst_[name]);
+  CHECK(bn_in_op2blob_.emplace(name, blob).second);
+  return blob;
+}
 
+template<DeviceType device_type>
+template<typename T>
+void OpKernelTestCase<device_type>::CheckBlob(const std::string& name,
                                               const BlobDesc* blob_desc,
                                               const std::vector<T>& val,
                                               bool need_random_init) {
@@ -150,8 +169,24 @@ void OpKernelTestCase<device_type>::CheckBlob(const std::string& name,
 
 template<DeviceType device_type>
 template<typename T>
-void OpKernelTestCase<device_type>::ForwardCheckBlob(const std::string& name,
+void OpKernelTestCase<device_type>::CheckBlob(
+    const std::string& name, const BlobDesc* blob_desc,
+    const std::string& expected_existed_blob_name, bool need_random_init) {
+  DeviceType dev_type = GetBlobDeviceType(name);
+  if (need_random_init) {
+    Blob* blob = OpkernelTestUtil<T>::SwitchCreateBlobWithRandomVal(
+        SwitchCase(dev_type), blob_desc, bn_in_op2regst_[name]);
+    CHECK(bn_in_op2blob_.emplace(name, blob).second);
+  }
+  Blob* expected_blob = bn_in_op2blob_.at(expected_existed_blob_name);
+  SetBlobSpecializedDeviceType(ExpectedBlobName(name),
+                               GetBlobDeviceType(expected_existed_blob_name));
+  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), expected_blob).second);
+}
 
+template<DeviceType device_type>
+template<typename T>
+void OpKernelTestCase<device_type>::ForwardCheckBlob(const std::string& name,
                                                      const BlobDesc* blob_desc,
                                                      const std::vector<T>& val,
                                                      bool need_random_init) {
@@ -162,21 +197,37 @@ void OpKernelTestCase<device_type>::ForwardCheckBlob(const std::string& name,
 template<DeviceType device_type>
 template<typename T>
 void OpKernelTestCase<device_type>::ForwardCheckBlob(
-    const std::string& name,
+    const std::string& name, const BlobDesc* blob_desc,
+    const std::string& expected_exist_blob_name, bool need_random_init) {
+  forward_asserted_blob_names_.push_back(name);
+  CheckBlob<T>(name, blob_desc, expected_exist_blob_name, need_random_init);
+}
 
-    const BlobDesc* blob_desc, const std::vector<T>& val) {
+template<DeviceType device_type>
+template<typename T>
+void OpKernelTestCase<device_type>::ForwardCheckBlob(
+    const std::string& name, const BlobDesc* blob_desc,
+    const std::vector<T>& val) {
   ForwardCheckBlob(name, blob_desc, val, true);
 }
 
 template<DeviceType device_type>
 template<typename T>
 void OpKernelTestCase<device_type>::BackwardCheckBlob(const std::string& name,
-
                                                       const BlobDesc* blob_desc,
                                                       const std::vector<T>& val,
                                                       bool need_random_init) {
   backward_asserted_blob_names_.push_back(name);
   CheckBlob(name, blob_desc, val, need_random_init);
+}
+
+template<DeviceType device_type>
+template<typename T>
+void OpKernelTestCase<device_type>::BackwardCheckBlob(
+    const std::string& name, const BlobDesc* blob_desc,
+    const std::string& expected_exist_blob_name, bool need_random_init) {
+  backward_asserted_blob_names_.push_back(name);
+  CheckBlob<T>(name, blob_desc, expected_exist_blob_name, need_random_init);
 }
 
 template<DeviceType device_type>
@@ -190,10 +241,12 @@ void OpKernelTestCase<device_type>::BackwardCheckBlob(
 template<DeviceType device_type>
 std::function<Blob*(const std::string&)>
 OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
-  return [this](const std::string& bn_in_op) {
-    const BlobDesc* blob_desc = &bn_in_op2blob_desc_.at(bn_in_op);
+  return [this](const std::string& bn_in_op) -> Blob* {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
+      const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
+      if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
       DeviceType dev_type = GetBlobDeviceType(bn_in_op);
+      const BlobDesc* blob_desc = &it->second;
       bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
           SwitchCase(dev_type, blob_desc->data_type()), blob_desc,
           bn_in_op2regst_[bn_in_op]);
@@ -226,11 +279,20 @@ void OpKernelTestCase<device_type>::UpdateGlobalJobDesc() {
 }
 
 template<DeviceType device_type>
+DeviceType OpKernelTestCase<device_type>::KernelCtxDeviceType() const {
+  DeviceType dev_type = device_type;
+  if (op_conf_.op_type_case() == OperatorConf::kCopyHdConf) {
+    dev_type = DeviceType::kGPU;
+  }
+  return dev_type;
+}
+
+template<DeviceType device_type>
 void OpKernelTestCase<device_type>::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
     bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
   }
-  BuildKernelCtx(&kernel_ctx_);
+  SwitchBuildKernelCtx(SwitchCase(KernelCtxDeviceType()), &kernel_ctx_);
 }
 
 template<DeviceType device_type>
@@ -252,15 +314,16 @@ void OpKernelTestCase<device_type>::AssertAfterRun() const {
     asserted_blob_names = &backward_asserted_blob_names_;
   }
   for (const auto& blob_name : *asserted_blob_names) {
-    CHECK_EQ(GetBlobDeviceType(ExpectedBlobName(blob_name)), DeviceType::kCPU);
-    DeviceType dev_type = GetBlobDeviceType(blob_name);
-    DeviceType expected_dev_type =
-        GetBlobDeviceType(ExpectedBlobName(blob_name));
+    DeviceType lhs_dev_type = GetBlobDeviceType(blob_name);
+    DeviceType rhs_dev_type = GetBlobDeviceType(ExpectedBlobName(blob_name));
+    DeviceType dev_type = ((lhs_dev_type == DeviceType::kGPU)
+                                   || (rhs_dev_type == DeviceType::kGPU)
+                               ? DeviceType::kGPU
+                               : DeviceType::kCPU);
     DataType data_type = bn_in_op2blob_.at(blob_name)->data_type();
     SwitchBlobCmp(SwitchCase(dev_type, data_type), blob_name,
-                  bn_in_op2blob_.at(blob_name), dev_type,
-                  bn_in_op2blob_.at(ExpectedBlobName(blob_name)),
-                  expected_dev_type);
+                  bn_in_op2blob_.at(blob_name), lhs_dev_type,
+                  bn_in_op2blob_.at(ExpectedBlobName(blob_name)), rhs_dev_type);
   }
 }
 
@@ -292,8 +355,10 @@ void OpKernelTestCase<device_type>::Run() {
   auto op = ConstructOp(op_conf_);
   auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
   OpContext* op_context = nullptr;
-  op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type,
-                     [&](OpContext* op_ctx) { op_context = op_ctx; });
+  if (NeedInferBlobDescs(op.get())) {
+    op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type,
+                       [&](OpContext* op_ctx) { op_context = op_ctx; });
+  }
   auto BnInOp2Blob = MakeGetterBnInOp2Blob();
   auto Launch = [&](bool is_forward) {
     KernelConf kernel_conf;
@@ -301,7 +366,7 @@ void OpKernelTestCase<device_type>::Run() {
                       &kernel_conf, op_context);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, BnInOp2Blob);
-    SyncStream(&kernel_ctx_);
+    SwitchSyncStream(SwitchCase(KernelCtxDeviceType()), &kernel_ctx_);
   };
   Launch(this);
   if (Global<JobDesc>::Get()->IsTrain() && !is_forward_) {
@@ -329,21 +394,32 @@ OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OPKERNEL_TEST_CASE, DEVICE_TYPE_SEQ);
   OpKernelTestCase<device_type>::InitBlob<OF_PP_PAIR_FIRST(data_type_pair)>( \
       const std::string&, const BlobDesc* blob_desc,                         \
       const std::vector<OF_PP_PAIR_FIRST(data_type_pair)>& val);             \
+  template Blob* OpKernelTestCase<device_type>::RandomInitBlob<              \
+      OF_PP_PAIR_FIRST(data_type_pair)>(const std::string&,                  \
+                                        const BlobDesc* blob_desc);          \
   template void OpKernelTestCase<device_type>::ForwardCheckBlob<             \
       OF_PP_PAIR_FIRST(data_type_pair)>(                                     \
       const std::string&, const BlobDesc* blob_desc,                         \
       const std::vector<OF_PP_PAIR_FIRST(data_type_pair)>& val);             \
+  template void OpKernelTestCase<device_type>::ForwardCheckBlob<             \
+      OF_PP_PAIR_FIRST(data_type_pair)>(const std::string&,                  \
+                                        const BlobDesc* blob_desc,           \
+                                        const std::string&, bool);           \
   template void OpKernelTestCase<device_type>::BackwardCheckBlob<            \
       OF_PP_PAIR_FIRST(data_type_pair)>(                                     \
       const std::string&, const BlobDesc* blob_desc,                         \
-      const std::vector<OF_PP_PAIR_FIRST(data_type_pair)>& val);
+      const std::vector<OF_PP_PAIR_FIRST(data_type_pair)>& val);             \
+  template void OpKernelTestCase<device_type>::BackwardCheckBlob<            \
+      OF_PP_PAIR_FIRST(data_type_pair)>(const std::string&,                  \
+                                        const BlobDesc* blob_desc,           \
+                                        const std::string&, bool);
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_OPKERNEL_TEST_CASE_METHODS,
                                  DEVICE_TYPE_SEQ, ALL_DATA_TYPE_SEQ);
 
 #define INSTANTIATE_CPU_OPKERNEL_TEST_CASE_METHODS(T, data_type_proto)        \
   template void OpKernelTestCase<DeviceType::kCPU>::CheckInitializeResult<T>( \
-      const Blob* blob, const InitializerConf& initializer_conf);             
+      const Blob* blob, const InitializerConf& initializer_conf);
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_OPKERNEL_TEST_CASE_METHODS,
                      ALL_DATA_TYPE_SEQ);
