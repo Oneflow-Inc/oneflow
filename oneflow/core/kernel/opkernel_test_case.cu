@@ -55,19 +55,29 @@ template<>
 template<typename T>
 void OpKernelTestCase<DeviceType::kGPU>::BlobCmp(const std::string& blob_name,
                                                  const Blob* lhs,
-                                                 const Blob* rhs) {
-  Blob* cpu_lhs = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
-      lhs->blob_desc_ptr(), nullptr);
-  Blob* cpu_rhs = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
-      rhs->blob_desc_ptr(), nullptr);
-  CudaCheck(cudaMemcpy(cpu_lhs->mut_dptr(), lhs->dptr(),
-                       lhs->ByteSizeOfDataContentField(),
-                       cudaMemcpyDeviceToHost));
-  CudaCheck(cudaMemcpy(cpu_rhs->mut_dptr(), rhs->dptr(),
-                       rhs->ByteSizeOfDataContentField(),
-                       cudaMemcpyDeviceToHost));
-  OpKernelTestCase<DeviceType::kCPU>::template BlobCmp<T>(blob_name, cpu_lhs,
-                                                          cpu_rhs);
+                                                 DeviceType lhs_device_type,
+                                                 const Blob* rhs,
+                                                 DeviceType rhs_device_type) {
+  const Blob* cpu_lhs = lhs;
+  if (lhs_device_type == DeviceType::kGPU) {
+    Blob* mut_cpu_lhs = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
+        lhs->blob_desc_ptr(), nullptr);
+    CudaCheck(cudaMemcpy(mut_cpu_lhs->mut_dptr(), lhs->dptr(),
+                         lhs->ByteSizeOfDataContentField(),
+                         cudaMemcpyDeviceToHost));
+    cpu_lhs = mut_cpu_lhs;
+  }
+  const Blob* cpu_rhs = rhs;
+  if (rhs_device_type == DeviceType::kGPU) {
+    Blob* mut_cpu_rhs = OpKernelTestCase<DeviceType::kCPU>::CreateBlob(
+        rhs->blob_desc_ptr(), nullptr);
+    CudaCheck(cudaMemcpy(mut_cpu_rhs->mut_dptr(), rhs->dptr(),
+                         rhs->ByteSizeOfDataContentField(),
+                         cudaMemcpyDeviceToHost));
+    cpu_rhs = mut_cpu_rhs;
+  }
+  OpKernelTestCase<DeviceType::kCPU>::template BlobCmp<T>(
+      blob_name, cpu_lhs, DeviceType::kCPU, cpu_rhs, DeviceType::kCPU);
 }
 
 template<>
@@ -88,7 +98,8 @@ void OpKernelTestCase<DeviceType::kGPU>::CheckInitializeResult(
   OpKernelTestCase<DeviceType::kGPU>::CreateBlobWithSpecifiedValPtr(   \
       const BlobDesc* blob_desc, type_cpp* val, Regst* regst);         \
   template void OpKernelTestCase<DeviceType::kGPU>::BlobCmp<type_cpp>( \
-      const std::string& blob_name, const Blob* lhs, const Blob* rhs); \
+      const std::string& blob_name, const Blob* lhs, DeviceType,       \
+      const Blob* rhs, DeviceType);                                    \
   template void                                                        \
   OpKernelTestCase<DeviceType::kGPU>::CheckInitializeResult<type_cpp>( \
       const Blob* blob, const InitializerConf& initializer_conf);

@@ -1,6 +1,41 @@
-#include "oneflow/core/kernel/copy_hd_kernel.h"
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/kernel/kernel_test_common.h"
+#include "oneflow/core/kernel/opkernel_test_case.h"
+
+namespace oneflow {
+
+namespace test {
+
+template<DeviceType device_type, typename T>
+void CopyHdTestCase(OpKernelTestCase<device_type>* test_case,
+                    const std::string& job_type,
+                    const std::string& forward_or_backward,
+                    const std::string& h2d) {
+  test_case->set_is_train(job_type == "train");
+  test_case->set_is_forward(forward_or_backward == "forward");
+  test_case->mut_op_conf()->mutable_copy_hd_conf();
+  CopyHdOpConf* copy_hd_conf = op_conf.mutable_copy_hd_conf();
+  CopyHdOpConf::Type hd_type =
+      (h2d == "h2d" ? CopyHdOpConf::H2D : CopyHdOpConf::D2H);
+  copy_hd_conf->set_type(hd_type);
+  auto SetBlobGpuDeviceType = [&](const std::string& name) {
+    test_case->SetBlobSpecializedDeviceType(name, DeviceType::kGPU);
+    test_case->SetBlobSpecializedDeviceType(GetDiffBn(name), DeviceType::kGPU);
+  };
+  SetBlobGpuDeviceType(hd_type == CopyHdOpConf::H2D ? "out" : "in");
+  BlobDesc* blob_desc =
+      new BlobDesc(Shape({3, 4, 5, 6}), GetDataType<T>::value, false);
+  test_case->template RandomInitBlob<T>("in", blob_desc);
+  test_case->set_initiation_before_backward([test_case]() {
+    Blob* out = test_case->bn_in_op2blob().at("out");
+    test_case->mut_bn_in_op2blob()->emplace(GenDiffBn("out"), out);
+  });
+}
+
+TEST_CPU_ONLY_OPKERNEL(CopyHdTestCase, FLOATING_DATA_TYPE_SEQ, (train)(predict),
+                       (forward)(backward));
+
+}  // namespace test
+
+}  // namespace oneflow
 
 namespace oneflow {
 

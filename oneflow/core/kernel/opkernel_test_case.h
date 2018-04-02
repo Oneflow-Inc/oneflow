@@ -53,6 +53,10 @@ class OpKernelTestCase final {
   void set_initiation_before_backward(std::function<void()> Init) {
     initiation_before_backward_ = Init;
   }
+  void SetBlobSpecializedDeviceType(const std::string& blob_name,
+                                    DeviceType dev_type) {
+    CHECK(bn_in_op2device_type_.emplace(blob_name, dev_type).second);
+  }
 
   //  Getters
   const HashMap<std::string, Blob*>& bn_in_op2blob() const {
@@ -79,7 +83,8 @@ class OpKernelTestCase final {
 
   template<typename T>
   static void BlobCmp(const std::string& blob_name, const Blob* lhs,
-                      const Blob* rhs);
+                      DeviceType lhs_device_type, const Blob* rhs,
+                      DeviceType rhs_device_type);
   template<typename T>
   static Blob* CreateBlobWithRandomVal(const BlobDesc* blob_desc, Regst* regst);
   template<typename T>
@@ -92,6 +97,10 @@ class OpKernelTestCase final {
   static Blob* CreateBlob(const BlobDesc*, Regst* regst);
 
  private:
+  DeviceType GetBlobDeviceType(const std::string& blob_name) const {
+    const auto& it = bn_in_op2device_type_.find(blob_name);
+    return (it == bn_in_op2device_type_.end()) ? device_type : it->second;
+  }
   template<typename T>
   static Blob* CreateBlobWithSpecifiedValPtr(const BlobDesc*, T* val,
                                              Regst* regst);
@@ -111,6 +120,7 @@ class OpKernelTestCase final {
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
   HashMap<std::string, Regst*> bn_in_op2regst_;
+  HashMap<std::string, DeviceType> bn_in_op2device_type_;
   JobConf job_conf_;
   OperatorConf op_conf_;
   std::list<std::string> forward_asserted_blob_names_;

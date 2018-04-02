@@ -2,8 +2,8 @@
 #include "oneflow/core/kernel/kernel.h"
 #include <random>
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 
@@ -123,7 +123,7 @@ template<typename T>
 Blob* OpKernelTestCase<device_type>::InitBlob(const std::string& name,
                                               const BlobDesc* blob_desc,
                                               const std::vector<T>& val) {
-  DeviceType dev_type = device_type;
+  DeviceType dev_type = GetBlobDeviceType(name);
   Blob* blob = OpkernelTestUtil<T>::SwitchCreateBlobWithSpecifiedVal(
       SwitchCase(dev_type), blob_desc, val, bn_in_op2regst_[name]);
   CHECK(bn_in_op2blob_.emplace(name, blob).second);
@@ -137,15 +137,15 @@ void OpKernelTestCase<device_type>::CheckBlob(const std::string& name,
                                               const BlobDesc* blob_desc,
                                               const std::vector<T>& val,
                                               bool need_random_init) {
-  DeviceType dev_type = device_type;
+  DeviceType dev_type = GetBlobDeviceType(name);
   if (need_random_init) {
     Blob* blob = OpkernelTestUtil<T>::SwitchCreateBlobWithRandomVal(
         SwitchCase(dev_type), blob_desc, bn_in_op2regst_[name]);
     CHECK(bn_in_op2blob_.emplace(name, blob).second);
   }
-  Blob* blob = OpkernelTestUtil<T>::SwitchCreateBlobWithSpecifiedVal(
+  Blob* expected_blob = OpkernelTestUtil<T>::SwitchCreateBlobWithSpecifiedVal(
       SwitchCase(dev_type), blob_desc, val, bn_in_op2regst_[name]);
-  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), blob).second);
+  CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), expected_blob).second);
 }
 
 template<DeviceType device_type>
@@ -193,7 +193,7 @@ OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
   return [this](const std::string& bn_in_op) {
     const BlobDesc* blob_desc = &bn_in_op2blob_desc_.at(bn_in_op);
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
-      DeviceType dev_type = device_type;
+      DeviceType dev_type = GetBlobDeviceType(bn_in_op);
       bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
           SwitchCase(dev_type, blob_desc->data_type()), blob_desc,
           bn_in_op2regst_[bn_in_op]);
@@ -252,11 +252,15 @@ void OpKernelTestCase<device_type>::AssertAfterRun() const {
     asserted_blob_names = &backward_asserted_blob_names_;
   }
   for (const auto& blob_name : *asserted_blob_names) {
-    DeviceType dev_type = device_type;
+    CHECK_EQ(GetBlobDeviceType(ExpectedBlobName(blob_name)), DeviceType::kCPU);
+    DeviceType dev_type = GetBlobDeviceType(blob_name);
+    DeviceType expected_dev_type =
+        GetBlobDeviceType(ExpectedBlobName(blob_name));
     DataType data_type = bn_in_op2blob_.at(blob_name)->data_type();
     SwitchBlobCmp(SwitchCase(dev_type, data_type), blob_name,
-                  bn_in_op2blob_.at(blob_name),
-                  bn_in_op2blob_.at(ExpectedBlobName(blob_name)));
+                  bn_in_op2blob_.at(blob_name), dev_type,
+                  bn_in_op2blob_.at(ExpectedBlobName(blob_name)),
+                  expected_dev_type);
   }
 }
 
@@ -264,7 +268,11 @@ template<>
 template<typename T>
 void OpKernelTestCase<DeviceType::kCPU>::BlobCmp(const std::string& blob_name,
                                                  const Blob* lhs,
-                                                 const Blob* rhs) {
+                                                 DeviceType lhs_device_type,
+                                                 const Blob* rhs,
+                                                 DeviceType rhs_device_type) {
+  CHECK_EQ(lhs_device_type, DeviceType::kCPU);
+  CHECK_EQ(rhs_device_type, DeviceType::kCPU);
   ASSERT_EQ(lhs->blob_desc(), rhs->blob_desc()) << blob_name;
   CHECK_EQ(lhs->data_type(), GetDataType<T>::value);
   if (IsFloatingDataType(lhs->data_type())) {
@@ -335,7 +343,8 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_OPKERNEL_TEST_CASE_METHODS,
 
 #define INSTANTIATE_CPU_OPKERNEL_TEST_CASE_METHODS(T, data_type_proto)        \
   template void OpKernelTestCase<DeviceType::kCPU>::CheckInitializeResult<T>( \
-      const Blob* blob, const InitializerConf& initializer_conf);
+      const Blob* blob, const InitializerConf& initializer_conf);             
+
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_OPKERNEL_TEST_CASE_METHODS,
                      ALL_DATA_TYPE_SEQ);
 
