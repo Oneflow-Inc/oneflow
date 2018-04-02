@@ -55,6 +55,10 @@ class Operator {
   const OperatorConf& op_conf() const { return op_conf_; }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
+  bool HasFieldInCustomizedConf(const std::string& field_name) const {
+    return HasFieldInPbMessage(GetCustomizedConf(), field_name);
+  }
+
   template<typename T>
   T GetValFromCustomizedConf(const std::string& field_name) const {
     return GetValFromPbMessage<T>(GetCustomizedConf(), field_name);
@@ -217,6 +221,7 @@ class Operator {
 
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
+std::string GenUnCloneLbn(const std::string& clone_lbn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
