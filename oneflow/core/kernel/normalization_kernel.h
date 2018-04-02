@@ -20,15 +20,27 @@ class NormalizationKernel final : public KernelIf<device_type> {
   void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void CalcMeanAndVariance(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
 
+  void CalcMeanAndVariance(const KernelCtx&,
+                           const std::function<Blob*(const std::string&)>&,
+                           const Blob* in_blob) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
-
   void Normalize(const KernelCtx&,
                  const std::function<Blob*(const std::string&)>&,
-                 const Blob* mean_blob, const Blob* variance_blob) const;
+                 const Blob* mean_blob, const Blob* variance_blob,
+                 const Blob* in_blob, Blob* out_blob) const;
+  void CalcAboutGammaDiff(const KernelCtx&,
+                          const std::function<Blob*(const std::string&)>,
+                          const Blob* out_diff_blob,
+                          bool need_comp_in_diff) const;
+  void CalcAboutBetaDiff(const KernelCtx&,
+                         const std::function<Blob*(const std::string&)>,
+                         const Blob* out_diff_blob,
+                         bool need_comp_in_diff) const;
+  void CalcInDiff(const KernelCtx&,
+                  const std::function<Blob*(const std::string&)>,
+                  const Blob* out_diff_blob, Blob* in_diff_blob) const;
 
   void ForwardDataContent(
       const KernelCtx&,
