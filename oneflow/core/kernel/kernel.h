@@ -74,7 +74,9 @@ class Kernel {
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
   virtual void L2Regularization(
       const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
@@ -114,7 +116,7 @@ class Kernel {
   KernelConf kernel_conf_;
 };
 
-template<DeviceType device_type, typename T = char>
+template<DeviceType device_type>
 class KernelIf : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIf);
@@ -133,10 +135,6 @@ class KernelIf : public Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
-  void L2Regularization(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
@@ -161,6 +159,20 @@ class KernelIf : public Kernel {
   bool UseCudnn() const {
     return device_type == DeviceType::kGPU && op_conf().use_cudnn_on_gpu();
   }
+};
+
+template<DeviceType device_type, typename ModelType>
+class KernelIfWithModel : public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
+  virtual ~KernelIfWithModel() = default;
+
+ protected:
+  KernelIfWithModel() = default;
+
+  void L2Regularization(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 using KernelCreator1 = std::function<Kernel*(const KernelConf&)>;
