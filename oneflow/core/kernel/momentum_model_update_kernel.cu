@@ -10,7 +10,7 @@ __global__ void UpdateModelGpu(const int64_t n, const T beta, const T alpha,
                                const T* model_diff, const T* pre_model,
                                T* momentum, T* model) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    momentum[i] = beta * momentum[i] + alpha * model_diff[i];
+    momentum[i] = beta * momentum[i] - alpha * model_diff[i];
     model[i] = pre_model[i] + momentum[i];
   }
 }

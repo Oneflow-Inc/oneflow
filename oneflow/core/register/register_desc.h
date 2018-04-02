@@ -36,6 +36,7 @@ class RegstDesc final {
   void Lock();
   void CopyBlobDescFrom(const RegstDesc*);
   void CopyBlobDescWithoutAddLbn(const RegstDesc*);
+  void CopyBlobDescWithoutAddLbn(const RegstDesc* src, const RegstDesc* supple);
   BlobDesc* AddLbn(const std::string& lbn);
   const BlobDesc* GetBlobDesc(const std::string& lbn) const;
   BlobDesc* MutBlobDesc(const std::string& lbn);

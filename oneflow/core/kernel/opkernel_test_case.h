@@ -49,10 +49,20 @@ class OpKernelTestCase final {
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
   OperatorConf* mut_op_conf() { return &op_conf_; }
   KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
+  HashMap<std::string, Blob*>* mut_bn_in_op2blob() { return &bn_in_op2blob_; }
+  void set_initiation_before_backward(std::function<void()> Init) {
+    initiation_before_backward_ = Init;
+  }
+
+  //  Getters
+  const HashMap<std::string, Blob*>& bn_in_op2blob() const {
+    return bn_in_op2blob_;
+  }
+
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
   template<typename T>
-  void InitBlob(const std::string&, const BlobDesc* blob_desc,
-                const std::vector<T>& val);
+  Blob* InitBlob(const std::string&, const BlobDesc* blob_desc,
+                 const std::vector<T>& val);
   template<typename T>
   void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
                         const std::vector<T>& val);
@@ -110,6 +120,7 @@ class OpKernelTestCase final {
   ParallelContext parallel_ctx_;
   KernelCtx kernel_ctx_;
   bool is_forward_;
+  std::function<void()> initiation_before_backward_;
 };
 
 #define STRINGIZE_OPKERNEL_TEST_ARGS(...)            \
