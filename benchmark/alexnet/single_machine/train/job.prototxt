@@ -7,26 +7,30 @@ global_fs_conf {
     namenode: "hdfs://192.168.1.11:9000"
   }
 }
-single_piece_size: 10
-data_part_num: 6
+# batch size = single_piece_size * data_part_num * num_of_pieces_in_batch
+single_piece_size: 2
+data_part_num: 120
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
   model_save_snapshots_path: "/zhuyi/snapshots"
-  num_of_batches_in_snapshot: 10
+  num_of_batches_in_snapshot: 100
   staleness: 0
-  total_batch_num: 1000
+  total_batch_num: 30000
   default_initializer_conf {
     random_normal_conf {
       mean: 0.0
       std: 0.01
     }
   }
-  piece_num_of_print_loss: 1
+  piece_num_of_print_loss: 2
   num_of_pieces_in_batch: 1
+# l2 => weight decay
+  l2: 0.0005
   model_update_conf {
-    naive_conf {
+    momentum_conf {
       learning_rate: 0.01
+      beta: 0.9
     }
   }
 }
