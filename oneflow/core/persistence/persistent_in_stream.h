@@ -36,7 +36,6 @@ class PersistentInStream {
   char* buffer_;
   char* cur_buf_begin_;
   char* cur_buf_end_;
-  static const uint64_t buffer_size_;
 };
 
 }  // namespace oneflow

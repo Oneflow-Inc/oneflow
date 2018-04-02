@@ -1,8 +1,7 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
-
-const uint64_t PersistentInStream::buffer_size_ = 128 * 1024 * 1024;
 
 PersistentInStream::~PersistentInStream() { delete[] buffer_; }
 
@@ -40,7 +39,8 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
   fs->NewRandomAccessFile(file_path, &file_);
   file_size_ = fs->GetFileSize(file_path);
   cur_file_pos_ = offset;
-  buffer_ = new char[buffer_size_ + 1];
+  buffer_ =
+      new char[Global<JobDesc>::Get()->one_data_part_buffer_byte_size() + 1];
   cur_buf_begin_ = buffer_;
   cur_buf_end_ = buffer_;
   *cur_buf_end_ = '\0';
@@ -52,7 +52,9 @@ bool PersistentInStream::IsEof() const {
 
 void PersistentInStream::UpdateBuffer() {
   CHECK_EQ(cur_buf_begin_, cur_buf_end_);
-  uint64_t n = std::min(buffer_size_, file_size_ - cur_file_pos_);
+  uint64_t n =
+      std::min(Global<JobDesc>::Get()->one_data_part_buffer_byte_size(),
+               file_size_ - cur_file_pos_);
   if (n == 0) { return; }
   file_->Read(cur_file_pos_, n, buffer_);
   cur_buf_begin_ = buffer_;

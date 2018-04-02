@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/KAGGLE_MNIST_OfRecord/6parts/train"
+    data_dir: "/dataset/mnist_kaggle/6/train/"
     blob {
       name: "img_raw"
       data_type: kFloat
@@ -145,5 +145,13 @@ op {
     prediction: "ip10/out"
     label: "decode/label"
     loss: "loss"
+  }
+}
+
+op {
+  name: "print"
+  print_conf {
+    lbn: "softmax_loss/loss"
+    print_path: "/predict_result"
   }
 }

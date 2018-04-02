@@ -368,6 +368,15 @@ void HadoopFileSystem::DeleteDir(const std::string& dir) {
       << dir;
 }
 
+void HadoopFileSystem::RecursivelyDeleteDir(const std::string& dirname) {
+  hdfsFS fs = nullptr;
+  CHECK(Connect(&fs));
+
+  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(dirname).c_str(), /*recursive=*/1)
+         == 0)
+      << dirname;
+}
+
 uint64_t HadoopFileSystem::GetFileSize(const std::string& fname) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
