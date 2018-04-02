@@ -15,9 +15,18 @@ message ConstantInitializerConf {
   optional float value = 1 [default = 0];
 }
 
+message ConstantIntInitializerConf {
+  optional int32 value = 1 [default = 0];
+}
+
 message RandomUniformInitializerConf {
   optional float min = 1 [default = 0];
   optional float max = 2 [default = 1];
+}
+
+message RandomUniformIntInitializerConf {
+  optional int32 min = 1 [default = 0];
+  optional int32 max = 2 [default = 1];
 }
 
 message RandomNormalInitializerConf {
@@ -42,10 +51,12 @@ message MsraInitializerConf {
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
-    RandomUniformInitializerConf random_uniform_conf = 2;
-    RandomNormalInitializerConf random_normal_conf = 3;
-    XavierInitializerConf xavier_conf = 4;
-    MsraInitializerConf msra_conf = 5;
+    ConstantIntInitializerConf constant_int_conf = 2;
+    RandomUniformInitializerConf random_uniform_conf = 3;
+    RandomUniformIntInitializerConf random_uniform_int_conf = 4;
+    RandomNormalInitializerConf random_normal_conf = 5;
+    XavierInitializerConf xavier_conf = 6;
+    MsraInitializerConf msra_conf = 7;
   }
 }
 
