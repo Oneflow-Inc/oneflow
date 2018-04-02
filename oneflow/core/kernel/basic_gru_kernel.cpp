@@ -36,30 +36,25 @@ void BasicGruKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
-  Blob* gate_input_blob =
-      BnInOp2Blob("gate_input");  // reused by two activation
   Blob* reset_out_blob = BnInOp2Blob("reset_out");
   Blob* update_out_blob = BnInOp2Blob("update_out");
-  Blob* candidate_data_blob = BnInOp2Blob("candidate_data");
   Blob* candidate_out_blob = BnInOp2Blob("candidate_out");
   Blob* tmp_data_blob = BnInOp2Blob("tmp_data");
   Blob* out_blob = BnInOp2Blob("out");
 
   BasicGruKernelUtil<device_type, T>::ComputeGateForward(
-      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_multiplier"),
-      BnInOp2Blob("i2h_r_weight"), BnInOp2Blob("h2h_r_weight"),
-      BnInOp2Blob("bias_r"), gate_input_blob, reset_out_blob);
+      ctx, hidden_blob, BnInOp2Blob("i2h_r_weight"),
+      BnInOp2Blob("h2h_r_weight"), BnInOp2Blob("bias_r"), reset_out_blob,
+      BnInOp2Blob);
 
   BasicGruKernelUtil<device_type, T>::ComputeGateForward(
-      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_multiplier"),
-      BnInOp2Blob("i2h_z_weight"), BnInOp2Blob("h2h_z_weight"),
-      BnInOp2Blob("bias_z"), gate_input_blob, update_out_blob);
+      ctx, hidden_blob, BnInOp2Blob("i2h_z_weight"),
+      BnInOp2Blob("h2h_z_weight"), BnInOp2Blob("bias_z"), update_out_blob,
+      BnInOp2Blob);
 
-  BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
-      ctx, BnInOp2Blob("in"), hidden_blob, BnInOp2Blob("bias_multiplier"),
-      BnInOp2Blob("i2h_weight"), BnInOp2Blob("h2h_weight"), BnInOp2Blob("bias"),
-      candidate_data_blob, candidate_out_blob, reset_out_blob, tmp_data_blob,
-      activation_fw_func_);
+  BasicGruKernelUtil<device_type, T>::ComputeCandidateForward(
+      ctx, hidden_blob, reset_out_blob, tmp_data_blob, candidate_out_blob,
+      activation_fw_func_, BnInOp2Blob);
 
   BasicGruKernelUtil<device_type, T>::ComputeOutForward(
       ctx, hidden_blob, candidate_out_blob, tmp_data_blob, update_out_blob,
@@ -222,34 +217,35 @@ void BasicGruKernel<device_type, T>::InitModelTmpBlobs(
 
 template<DeviceType device_type, typename T>
 void BasicGruKernelUtil<device_type, T>::ComputeGateForward(
-    const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
-    const Blob* bias_multiplier, const Blob* i2h_weight, const Blob* h2h_weight,
-    const Blob* bias, Blob* gate_data, Blob* gate_out) {
-  // gate_data = in * i2h_weight'
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
-                                       static_cast<T>(1), static_cast<T>(0),
-                                       in_data, i2h_weight, gate_data);
-  // gate_data += hidden * h2h_weight'
+    const KernelCtx& ctx, const Blob* hidden, const Blob* i2h_weight,
+    const Blob* h2h_weight, const Blob* bias, Blob* gate_out,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  Blob* gate_input_blob =
+      BnInOp2Blob("gate_input");  // reused by two activation
+  // gate_input = in * i2h_weight'
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+      static_cast<T>(0), BnInOp2Blob("in"), i2h_weight, gate_input_blob);
+  // gate_inout += hidden * h2h_weight'
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(1),
-                                       hidden, h2h_weight, gate_data);
-  // gate_data += bias_multiplier * bias
+                                       hidden, h2h_weight, gate_input_blob);
+  // gate_input += bias_multiplier * bias
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), bias_multiplier, bias, gate_data);
-  // gate_out = sigmoid(gate_data)
+      static_cast<T>(1), BnInOp2Blob("bias_multiplier"), bias, gate_input_blob);
+  // gate_out = sigmoid(gate_input)
   KernelUtil<device_type, T>::Sigmoid(
-      ctx.device_ctx, gate_data->shape().elem_cnt(), gate_data->dptr<T>(),
-      gate_out->mut_dptr<T>());
+      ctx.device_ctx, gate_input_blob->shape().elem_cnt(),
+      gate_input_blob->dptr<T>(), gate_out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
-void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
-    const KernelCtx& ctx, const Blob* in_data, const Blob* hidden,
-    const Blob* bias_multiplier, const Blob* i2h_weight, const Blob* h2h_weight,
-    const Blob* bias, Blob* candidate_data, Blob* candidate_out,
-    Blob* reset_out, Blob* tmp_data,
-    FwActivationFunc<device_type, T> activation_fw_func_) {
+void BasicGruKernelUtil<device_type, T>::ComputeCandidateForward(
+    const KernelCtx& ctx, const Blob* hidden, Blob* reset_out, Blob* tmp_data,
+    Blob* candidate_out, FwActivationFunc<device_type, T> activation_fw_func_,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  Blob* candidate_data_blob = BnInOp2Blob("candidate_data");
   // tmp_data = hidden .*reset_out
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, reset_out->shape().elem_cnt(),
                                   reset_out->dptr<T>(), hidden->dptr<T>(),
@@ -257,19 +253,22 @@ void BasicGruKernelUtil<device_type, T>::ComputeCandidateHiddenForward(
   // candidate_data = tmp_data * h2h_weight'
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(0),
-                                       tmp_data, h2h_weight, candidate_data);
+                                       tmp_data, BnInOp2Blob("h2h_weight"),
+                                       candidate_data_blob);
   // candidate_data += in * i2h_weight'
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
-                                       static_cast<T>(1), static_cast<T>(1),
-                                       in_data, i2h_weight, candidate_data);
+  KernelUtil<device_type, T>::BlobGemm(
+      ctx.device_ctx, CblasNoTrans, CblasTrans, static_cast<T>(1),
+      static_cast<T>(1), BnInOp2Blob("in"), BnInOp2Blob("i2h_weight"),
+      candidate_data_blob);
   // candidate_data += bias_multiplier * bias
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
-      static_cast<T>(1), bias_multiplier, bias, candidate_data);
+      static_cast<T>(1), BnInOp2Blob("bias_multiplier"), BnInOp2Blob(" bias"),
+      candidate_data_blob);
   // candidate_out = activation(candidate_data)
-  (*activation_fw_func_)(ctx.device_ctx, candidate_data->shape().elem_cnt(),
-                         candidate_data->dptr<T>(),
-                         candidate_out->mut_dptr<T>());
+  (*activation_fw_func_)(
+      ctx.device_ctx, candidate_data_blob->shape().elem_cnt(),
+      candidate_data_blob->dptr<T>(), candidate_out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
