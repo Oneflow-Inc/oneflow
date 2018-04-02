@@ -48,6 +48,7 @@ message JobConf {
 
   optional DataType default_data_type = 100 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 101 [default = 100];
+  optional float available_zone_mem_ratio = 102 [default = 0.95];
   oneof JobType {
     TrainConf train_conf = 1000;
     PredictConf predict_conf = 1001;

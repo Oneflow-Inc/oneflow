@@ -134,7 +134,8 @@ std::function<double(int64_t)> MakeGetterIIScale4RegstDescId(
 
 size_t Improver::AvailableMemSize(int64_t machine_id,
                                   int64_t memory_zone_id) const {
-  return amd_.machine_amd(machine_id).zone_size(memory_zone_id) * 0.95;
+  return amd_.machine_amd(machine_id).zone_size(memory_zone_id)
+         * Global<JobDesc>::Get()->available_zone_mem_ratio();
 }
 
 int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {

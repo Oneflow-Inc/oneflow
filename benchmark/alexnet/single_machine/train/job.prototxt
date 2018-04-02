@@ -19,7 +19,7 @@ train_conf {
   default_initializer_conf {
     random_normal_conf {
       mean: 0.0
-      std: 0.1
+      std: 0.01
     }
   }
   piece_num_of_print_loss: 1
