@@ -28,6 +28,9 @@ float JobDesc::available_zone_mem_ratio() const {
   CHECK_LE(ratio, 1.f);
   return ratio;
 }
+uint64_t JobDesc::one_data_part_buffer_byte_size() const {
+  return job_conf_.one_data_part_buffer_mbyte_size() * 1024 * 1024;
+}
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
   CHECK(IsTrain());
