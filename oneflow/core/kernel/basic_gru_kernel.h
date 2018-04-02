@@ -52,32 +52,33 @@ struct BasicGruKernelUtil {
       const Blob* h2h_weight, const Blob* bias, Blob* gate_out,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
   static void ComputeCandidateForward(
-      const KernelCtx& ctx, const Blob* hidden, Blob* reset_out, Blob* tmp_data,
+      const KernelCtx& ctx, const Blob* hidden, const Blob* reset_out,
       Blob* candidate_out, FwActivationFunc<device_type, T> activation_fw_func_,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
-  static void ComputeOutForward(const KernelCtx& ctx, const Blob* hidden,
-                                Blob* candidate_out, Blob* temp_data,
-                                Blob* update_out, Blob* out);
+  static void ComputeOutForward(
+      const KernelCtx& ctx, const Blob* hidden, const Blob* candidate_out,
+      const Blob* update_out, Blob* out,
+      std::function<Blob*(const std::string&)> BnInOp2Blob);
   static void ComputeTmpActivationDataDiff(
-      const KernelCtx& ctx, Blob* out_diff, Blob* hiddden, Blob* update_d_diff,
-      Blob* candidate_d_diff, Blob* tmp_data, Blob* reset_d_diff,
+      const KernelCtx& ctx, const Blob* out_diff, const Blob* hiddden,
+      Blob* update_d_diff, Blob* candidate_d_diff, Blob* reset_d_diff,
       BwActivationFunc<device_type, T> activation_bw_func_,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
-  static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* in_data,
-                                Blob* hidden, Blob* out_diff,
+  static void ComputeWeightDiff(const KernelCtx& ctx, const Blob* out_diff,
+                                const Blob* hidden, const Blob* in_data,
                                 Blob* i2h_weight_diff, Blob* h2h_weight_diff);
   static void ComputeBiasDiff(
-      const KernelCtx& ctx, Blob* reset_d_diff, Blob* update_d_diff,
-      Blob* candidate_d_diff, Blob* bias_r_diff, Blob* bias_z_diff,
+      const KernelCtx& ctx, const Blob* reset_d_diff, const Blob* update_d_diff,
+      const Blob* candidate_d_diff, Blob* bias_r_diff, Blob* bias_z_diff,
       Blob* bias_diff, std::function<Blob*(const std::string&)> BnInOp2Blob);
   static void ComputeInDiff(
-      const KernelCtx& ctx, Blob* reset_d_diff, Blob* update_d_diff,
-      Blob* candidate_d_diff, Blob* in_diff,
+      const KernelCtx& ctx, const Blob* reset_d_diff, const Blob* update_d_diff,
+      const Blob* candidate_d_diff, Blob* in_diff,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
   static void ComputeHiddenDiff(
-      const KernelCtx& ctx, Blob* hidden, Blob* hidden_diff, Blob* tmp_data,
-      Blob* candidate_d_diff, Blob* reset_d_diff, Blob* update_d_diff,
-      Blob* out_diff, std::function<Blob*(const std::string&)> BnInOp2Blob);
+      const KernelCtx& ctx, const Blob* candidate_d_diff,
+      const Blob* reset_d_diff, const Blob* update_d_diff, const Blob* out_diff,
+      Blob* hidden_diff, std::function<Blob*(const std::string&)> BnInOp2Blob);
 };
 
 }  // namespace oneflow
