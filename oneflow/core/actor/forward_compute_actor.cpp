@@ -17,7 +17,8 @@ void ForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     pre_forward_model_regst_ =
         GetCurWriteableRegst(forward_model_regst_desc_id_);
   }
-  if (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1) {
+  if (random_seed_ == -1
+      || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
     if (forward_model_regst_desc_id_ != -1) {
       AsyncInitModel();
       AsyncSendRegstMsgToConsumer([&](Regst* regst) {
