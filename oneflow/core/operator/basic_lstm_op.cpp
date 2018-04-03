@@ -10,14 +10,7 @@ const PbMessage& BasicLstmOp::GetSpecialConf() const {
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("gate_tmp_data");
   EnrollDataTmpBn("candidate_out");
-/* EnrollInputBn("rec_cell_in");
- if (!GetStringFromSpecialConf("init_cell").empty()) {
-   CHECK(!GetBoolFromSpecialConf("has_init_cell_initializer"));
-   EnrollInputBn("c0");
- } else {
-   EnrollModelTmpBn("c0");
- }
- EnrollOutputBn("rec_cell_out");*/
+
 #define OF_INIT_LSTM_GATE_FROM_OP_CONF(out_name, i2h_weight, h2h_weight, \
                                        data_diff, out_diff)              \
   EnrollDataTmpBn(#out_name);                                            \

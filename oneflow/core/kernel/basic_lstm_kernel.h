@@ -25,8 +25,6 @@ class BasicLstmKernel : public RecurrentKernel<device_type, T> {
   bool HasInitHiddenInitializer() const override;
   bool HasInitCellInitializer() const;
   bool NeedExternalC0() const;
-  Blob* GetCellBlob(std::function<Blob*(const std::string&)>) const;
-  Blob* GetCellDiffBlob(std::function<Blob*(const std::string&)>) const;
   void ForwardColNum(const KernelCtx&,
                      std::function<Blob*(const std::string&)>) const override;
   void BackwardColNum(const KernelCtx&,
@@ -48,6 +46,9 @@ class BasicLstmKernel : public RecurrentKernel<device_type, T> {
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
+  Blob* GetCellBlob(std::function<Blob*(const std::string&)>) const;
+  Blob* GetCellDiffBlob(std::function<Blob*(const std::string&)>) const;
+
  private:
   FwActivationFunc<device_type, T> activation_fw_func_;
   BwActivationFunc<device_type, T> activation_bw_func_;
@@ -63,7 +64,7 @@ struct BasicLstmKernelUtil {
                                     Blob* gate_tmp_data);
 
   static void ComputeRecCellOutDiff(
-      const KernelCtx& ctx, Blob* candidate_out, Blob* rec_cell_out_diff,
+      const KernelCtx& ctx, const Blob* candidate_out, Blob* rec_cell_out_diff,
       BwActivationFunc<device_type, T> acticaiton_bw_func_,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 
@@ -73,29 +74,27 @@ struct BasicLstmKernelUtil {
       std::function<Blob*(const std::string&)> BnInOp2Blob,
       BwActivationFunc<device_type, T> acticaiton_bw_func_);
 
-  static void ComputeAllWeightDiff(const KernelCtx& ctx, const Blob* input,
-                                   const Blob* hidden, Blob* f_data_diff,
-                                   Blob* i_data_diff, Blob* c_data_diff,
-                                   Blob* o_data_diff, Blob* f_h2h_diff,
-                                   Blob* f_i2h_diff, Blob* i_h2h_diff,
-                                   Blob* i_i2h_diff, Blob* c_h2h_diff,
-                                   Blob* c_i2h_diff, Blob* o_h2h_diff,
-                                   Blob* o_i2h_diff);
+  static void ComputeAllWeightDiff(
+      const KernelCtx& ctx, const Blob* input, const Blob* hidden,
+      const Blob* f_data_diff, const Blob* i_data_diff, const Blob* c_data_diff,
+      const Blob* o_data_diff, Blob* f_h2h_diff, Blob* f_i2h_diff,
+      Blob* i_h2h_diff, Blob* i_i2h_diff, Blob* c_h2h_diff, Blob* c_i2h_diff,
+      Blob* o_h2h_diff, Blob* o_i2h_diff);
 
   static void ComputeAllBiasDiff(
-      const KernelCtx& ctx, Blob* f_data_diff, Blob* i_data_diff,
-      Blob* c_data_diff, Blob* o_data_diff, Blob* bias_f_diff,
+      const KernelCtx& ctx, const Blob* f_data_diff, const Blob* i_data_diff,
+      const Blob* c_data_diff, const Blob* o_data_diff, Blob* bias_f_diff,
       Blob* bias_i_diff, Blob* bias_c_diff, Blob* bias_o_diff,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 
   static void ComputeInDiff(
-      const KernelCtx& ctx, Blob* in_diff, Blob* f_data_diff, Blob* i_data_diff,
-      Blob* c_data_diff, Blob* o_data_diff,
+      const KernelCtx& ctx, const Blob* f_data_diff, const Blob* i_data_diff,
+      const Blob* c_data_diff, const Blob* o_data_diff, Blob* in_diff,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 
   static void ComputeHiddenDiff(
-      const KernelCtx& ctx, Blob* f_data_diff, Blob* i_data_blob,
-      Blob* c_data_diff, Blob* o_data_diff, Blob* hidden_diff,
+      const KernelCtx& ctx, const Blob* f_data_diff, const Blob* i_data_blob,
+      const Blob* c_data_diff, const Blob* o_data_diff, Blob* hidden_diff,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 };
 
