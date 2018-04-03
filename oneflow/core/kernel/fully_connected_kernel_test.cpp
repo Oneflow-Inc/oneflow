@@ -5,7 +5,7 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void FullyConnectedKernelTestCase(OpKernelTestCase<device_type>* test_case,
+void FullyConnectedKernelTestCase(OpKernelTestCase* test_case,
                                   const std::string& job_type,
                                   const std::string& fw_or_bw,
                                   const std::string& use_bias_or_not) {

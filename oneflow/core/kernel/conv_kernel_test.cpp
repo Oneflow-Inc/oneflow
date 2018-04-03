@@ -5,8 +5,7 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void ConvTestCase(OpKernelTestCase<device_type>* conv_test_case,
-                  const std::string& job_type,
+void ConvTestCase(OpKernelTestCase* conv_test_case, const std::string& job_type,
                   const std::string& forward_or_backward) {
   conv_test_case->InitJobConf([](JobConf* job_conf) {
     job_conf->set_default_data_type(GetDataType<T>::value);
