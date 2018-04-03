@@ -73,9 +73,8 @@ void ConcatTestCase(OpKernelTestCase<device_type> *concat_test_case,
       GenDiffBn("in_2"), blob_desc_212, {7, 8, 15, 16});
 }
 
-TEST_CPU_ONLY_OPKERNEL(ConcatTestCase,
-                       FLOATING_DATA_TYPE_SEQ SIGNED_INT_DATA_TYPE_SEQ,
-                       (train)(predict), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ConcatTestCase, ARITHMETIC_DATA_TYPE_SEQ,
+                          (train)(predict), (forward)(backward));
 
 }  // namespace test
 
