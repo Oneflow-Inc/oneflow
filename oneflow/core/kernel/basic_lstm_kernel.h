@@ -25,10 +25,6 @@ class BasicLstmKernel : public RecurrentKernel<device_type, T> {
   bool HasInitHiddenInitializer() const override;
   bool HasInitCellInitializer() const;
   bool NeedExternalC0() const;
-  void ForwardColNum(const KernelCtx&,
-                     std::function<Blob*(const std::string&)>) const override;
-  void BackwardColNum(const KernelCtx&,
-                      std::function<Blob*(const std::string&)>) const override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
@@ -45,7 +41,12 @@ class BasicLstmKernel : public RecurrentKernel<device_type, T> {
   void InitModelTmpBlobs(
       const KernelCtx& ctx, const ParallelContext* parallel_ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-
+  void VirtualForwardColNum(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void VirtualBackwardColNum(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
   Blob* GetCellBlob(std::function<Blob*(const std::string&)>) const;
   Blob* GetCellDiffBlob(std::function<Blob*(const std::string&)>) const;
 
@@ -64,7 +65,7 @@ struct BasicLstmKernelUtil {
                                     Blob* gate_tmp_data);
 
   static void ComputeRecCellOutDiff(
-      const KernelCtx& ctx, const Blob* candidate_out, Blob* rec_cell_out_diff,
+      const KernelCtx& ctx, const Blob* out_diff, Blob* rec_cell_out_diff,
       BwActivationFunc<device_type, T> acticaiton_bw_func_,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 

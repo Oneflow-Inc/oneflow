@@ -41,6 +41,10 @@ class RecurrentKernel : public KernelIf<device_type> {
       const KernelCtx& ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)>) const {}
+  virtual void VirtualForwardColNum(
+      const KernelCtx&, std::function<Blob*(const std::string&)>) const {};
+  virtual void VirtualBackwardColNum(
+      const KernelCtx&, std::function<Blob*(const std::string&)>) const {};
 
  private:
   bool need_external_h0_;

@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/basic_lstm_op.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -9,8 +8,9 @@ const PbMessage& BasicLstmOp::GetSpecialConf() const {
 
 void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("gate_tmp_data");
+  EnrollDataTmpBn("c_data");
   EnrollDataTmpBn("candidate_out");
-
+  InitCellFromOpConf();
 #define OF_INIT_LSTM_GATE_FROM_OP_CONF(out_name, i2h_weight, h2h_weight, \
                                        data_diff, out_diff)              \
   EnrollDataTmpBn(#out_name);                                            \
@@ -34,8 +34,8 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollModelBn("bias_o");
   EnrollModelTmpBn("bias_multiplier");
 #undef OF_INIT_LSTM_GATE_FROM_OP_CONF
-#undef OF_INIT_LSTM_GATE_BIAS_FROM_OP_CONF
 }
+
 void BasicLstmOp::InitCellFromOpConf() {
   EnrollInputBn("rec_cell_in");
   if (!GetStringFromSpecialConf("init_cell").empty()) {
@@ -104,9 +104,9 @@ void BasicLstmOp::VirtualInferBlobDescs(
 #undef OF_INFER_LSTM_BIAS_BLOBDESC
 }
 
-std::string BasicLstmOp::Virtualibn2lbn(const std::string& input_bn) const {
+std::string BasicLstmOp::VirtualIbn2Lbn(const std::string& input_bn) const {
   if (input_bn == "rec_cell_in") {
-    return Virtualobn2lbn("rec_cell_out");
+    return VirtualObn2Lbn("rec_cell_out");
   } else if (input_bn == "c0") {
     return GetStringFromSpecialConf("init_cell");
   } else {
@@ -115,7 +115,7 @@ std::string BasicLstmOp::Virtualibn2lbn(const std::string& input_bn) const {
   }
 }
 
-std::string BasicLstmOp::Virtualobn2lbn(const std::string& output_bn) const {
+std::string BasicLstmOp::VirtualObn2Lbn(const std::string& output_bn) const {
   if (output_bn == "rec_cell_out") {
     return op_name() + "/rec_cell" + GetStringFromSpecialConf("out");
   } else {

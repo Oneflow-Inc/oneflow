@@ -46,6 +46,7 @@ void RecurrentKernel<device_type, T>::ForwardColNum(
                                                   BnInOp2Blob("in"));
   BnInOp2Blob("rec_out")->CopyColNumFrom<device_type>(ctx.device_ctx,
                                                       BnInOp2Blob("in"));
+  VirtualForwardColNum(ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -62,6 +63,7 @@ void RecurrentKernel<device_type, T>::BackwardColNum(
     BnInOp2Blob("rec_in_diff")
         ->CopyColNumFrom<device_type>(ctx.device_ctx, BnInOp2Blob("out_diff"));
   }
+  VirtualBackwardColNum(ctx, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>

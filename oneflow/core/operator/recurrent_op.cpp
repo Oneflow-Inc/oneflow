@@ -69,8 +69,9 @@ std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
     return GetStringFromSpecialConf("init_hidden");
   } else if (input_bn == "in") {
     return GetStringFromSpecialConf("in");
+  } else {
+    return VirtualIbn2Lbn(input_bn);
   }
-  return Virtualibn2lbn(input_bn);
 }
 
 std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
@@ -78,9 +79,17 @@ std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
     return op_name() + "/" + GetStringFromSpecialConf("out");
   } else if (output_bn == "rec_out") {
     return op_name() + "/rec_" + GetStringFromSpecialConf("out");
+  } else {
+    return VirtualObn2Lbn(output_bn);
   }
+}
 
-  return Virtualobn2lbn(output_bn);
+std::string RecurrentOp::VirtualIbn2Lbn(const std::string& input_bn) const {
+  UNEXPECTED_RUN();
+}
+
+std::string RecurrentOp::VirtualObn2Lbn(const std::string& output_bn) const {
+  UNEXPECTED_RUN();
 }
 
 }  // namespace oneflow

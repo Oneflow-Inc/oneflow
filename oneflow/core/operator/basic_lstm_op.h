@@ -18,8 +18,8 @@ class BasicLstmOp final : public RecurrentOp {
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
 
-  std::string Virtualibn2lbn(const std::string& input_bn) const override;
-  std::string Virtualobn2lbn(const std::string& output_bn) const override;
+  std::string VirtualIbn2Lbn(const std::string& input_bn) const override;
+  std::string VirtualObn2Lbn(const std::string& output_bn) const override;
 
   void InitCellFromOpConf();
 };
