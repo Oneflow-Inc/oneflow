@@ -8,25 +8,26 @@ global_fs_conf {
   }
 }
 single_piece_size: 1 
-data_part_num: 32
-#model_load_snapshot_path: "./vgg16/snapshots1/snapshot_14"
+data_part_num: 30
 max_data_id_length: 0
 train_conf {
-  model_save_snapshots_path: "./vgg16/snapshots"
-  num_of_batches_in_snapshot: 10
+  model_save_snapshots_path: "/zhuyi/snapshots"
+  num_of_batches_in_snapshot: 1000
   staleness: 0
-  total_batch_num: 1000
+  total_batch_num: 50000
   default_initializer_conf {
     random_normal_conf {
       mean: 0.0
-      std: 0.1
+      std: 0.01
     }
   }
   piece_num_of_print_loss: 10
-  num_of_pieces_in_batch: 1
+  num_of_pieces_in_batch: 8
+  l2: 0.0005
   model_update_conf {
-    naive_conf {
+    momentum_conf {
       learning_rate: 0.01
+      beta: 0.9
     }
   }
 }

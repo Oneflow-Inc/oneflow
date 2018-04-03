@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/imagenet/train"
+    data_dir: "/dataset/imagenet_30part/train"
     blob {
       name: "encoded"
       data_type: kFloat
@@ -38,6 +38,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -62,6 +67,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -73,10 +83,10 @@ op {
 }
 op {
   name: "pool1"
-  average_pooling_2d_conf {
+  max_pooling_2d_conf {
     in: "relu1_2/out"
     out: "out"
-    padding: "valid"
+    padding: "same"
     data_format: "channels_last"
     pool_size: 2
     pool_size: 2
@@ -99,6 +109,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -123,6 +138,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -134,10 +154,10 @@ op {
 }
 op {
   name: "pool2"
-  average_pooling_2d_conf {
+  max_pooling_2d_conf {
     in: "relu2_2/out"
     out: "out"
-    padding: "valid"
+    padding: "same"
     data_format: "channels_last"
     pool_size: 2
     pool_size: 2
@@ -160,6 +180,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -184,6 +209,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -208,6 +238,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -219,7 +254,7 @@ op {
 }
 op {
   name: "pool3"
-  average_pooling_2d_conf {
+  max_pooling_2d_conf {
     in: "relu3_3/out"
     out: "out"
     padding: "valid"
@@ -245,6 +280,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -269,6 +309,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -293,6 +338,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -304,7 +354,7 @@ op {
 }
 op {
   name: "pool4"
-  average_pooling_2d_conf {
+  max_pooling_2d_conf {
     in: "relu4_3/out"
     out: "out"
     padding: "valid"
@@ -330,6 +380,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -354,6 +409,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -378,6 +438,11 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 op {
@@ -389,7 +454,7 @@ op {
 }
 op {
   name: "pool5"
-  average_pooling_2d_conf {
+  max_pooling_2d_conf {
     in: "relu5_3/out"
     out: "out"
     padding: "valid"
@@ -400,20 +465,17 @@ op {
     strides: 2
   }
 }
+# bias in fc are setted to 1.0 in some implementations
 op {
   name: "fc6"
   fully_connected_conf {
     in: "pool5/out"
     out: "out"
     units: 4096
-    weight_initializer {
-      constant_conf {
-        value: 0.0
-      }
-    }
+    use_bias: true
     bias_initializer {
       constant_conf {
-        value: 0.0
+        value: 1.0
       }
     }
   }
@@ -440,6 +502,11 @@ op {
     out: "out"
     units: 4096
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 1.0
+      }
+    }
   }
 }
 op {
@@ -464,6 +531,11 @@ op {
     out: "out"
     units: 1000
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 0.0
+      }
+    }
   }
 }
 op {
