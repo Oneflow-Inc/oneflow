@@ -19,8 +19,8 @@ void CopyHdTestCase(OpKernelTestCase* test_case, const std::string& job_type,
 
   BlobDesc* blob_desc =
       new BlobDesc(Shape({3, 4, 5, 6}), GetDataType<T>::value, false, false, 1);
-  test_case->template RandomInitBlob<T>("in", blob_desc);
-  test_case->template ForwardCheckBlob<T>("out", blob_desc, "in", true);
+  test_case->RandomInitBlob<T>("in", blob_desc);
+  test_case->ForwardCheckBlobWithAnother<T>("out", blob_desc, "in", true);
 }
 
 TEST_CPU_ONLY_OPKERNEL(CopyHdTestCase, ALL_DATA_TYPE_SEQ, (train)(predict),
