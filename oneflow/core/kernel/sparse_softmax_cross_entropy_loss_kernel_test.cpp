@@ -25,20 +25,20 @@ struct SoftmaxLossTestUtil final {
         Shape({2, 4}), GetDataType<PredType>::value, false, false, 1);
     BlobDesc* blob_desc2 =
         new BlobDesc(Shape({2}), GetDataType<PredType>::value, false, false, 1);
-    BlobDesc* blob_desc1 =
-        new BlobDesc(Shape({1}), GetDataType<PredType>::value, false, false, 1);
     test_case->InitBlob<PredType>("prediction", blob_desc24,
-                                  {1, 2, 3, 4, 0, 0, 0, 0});
+                                  {1, 2, 3, 4, 1, 1, 1, 1});
     test_case->InitBlob<LabelType>("label", label_blob_desc, {2, 0});
     test_case->RandomInitBlob<PredType>("tmp_1D", blob_desc2);
     test_case->ForwardCheckBlob<PredType>(
         "prob", blob_desc24,
         {0.0320586041, 0.0871443227, 0.2368828356, 0.6439142823, 0.2500000000,
          0.2500000000, 0.2500000000, 0.2500000000});
-    test_case->ForwardCheckBlob<PredType>("loss", blob_desc1, {1.4132f});
+    test_case->ForwardCheckBlob<PredType>(
+        "loss", blob_desc2, {1.440189624642414, 1.3862943611198906});
     test_case->BackwardCheckBlob<PredType>(
-        GenDiffBn("prediction_diff"), blob_desc24,
-        {0.0160, 0.0436, -0.3816, 0.3220, -0.3750, 0.1250, 0.1250, 0.1250});
+        GenDiffBn("prediction"), blob_desc24,
+        {0.0320586078, 0.0871443302, -0.7631171942, 0.6439142824, -0.75, 0.25,
+         0.25, 0.25});
   }
 };
 
