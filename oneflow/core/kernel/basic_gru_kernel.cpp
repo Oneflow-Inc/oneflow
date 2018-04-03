@@ -143,16 +143,16 @@ void BasicGruKernel<device_type, T>::VirtualInitModelBlobsWithRandomSeed(
   OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(h2h_weight, weight);
   if ((OF_PB_POINTER_GET(this->op_conf().basic_gru_conf(), bias_initializer))
       == nullptr) {
-#define OF_GRU_INIT_MODEL_BIAS(modelname, default_value)                   \
+#define OF_GRU_INIT_MODEL_BIAS_WITH_CONSTANT(modelname, default_value)     \
   InitializerConf modelname##_fill_conf;                                   \
   modelname##_fill_conf.mutable_constant_conf()->set_value(default_value); \
   InitializerConf* modelname##_init_conf = &modelname##_fill_conf;         \
   KernelUtil<device_type, T>::InitializeWithProperConf(                    \
       ctx.device_ctx, modelname##_init_conf, 0, BnInOp2Blob(#modelname))
-    OF_GRU_INIT_MODEL_BIAS(bias_r, 1.f);
-    OF_GRU_INIT_MODEL_BIAS(bias_z, 1.f);
-    OF_GRU_INIT_MODEL_BIAS(bias, 0.f);
-#undef OF_GRU_INIT_MODEL_BIAS
+    OF_GRU_INIT_MODEL_BIAS_WITH_CONSTANT(bias_r, 1.f);
+    OF_GRU_INIT_MODEL_BIAS_WITH_CONSTANT(bias_z, 1.f);
+    OF_GRU_INIT_MODEL_BIAS_WITH_CONSTANT(bias, 0.f);
+#undef OF_GRU_INIT_MODEL_BIAS_WITH_CONSTANT
   } else {
     OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_r, bias);
     OF_GRU_INIT_MODEL_BLOB_WITH_RANDOM_SEED(bias_z, bias);
