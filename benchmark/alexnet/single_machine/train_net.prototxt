@@ -38,6 +38,11 @@ op {
     dilation_rate: 1
     dilation_rate: 1
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 
@@ -88,6 +93,11 @@ op {
     dilation_rate: 1
     dilation_rate: 1
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 0.5
+      }
+    }
   }
 }
 
@@ -138,6 +148,11 @@ op {
     dilation_rate: 1
     dilation_rate: 1
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 
@@ -163,6 +178,11 @@ op {
     dilation_rate: 1
     dilation_rate: 1
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 0.5
+      }
+    }
   }
 }
 
@@ -188,6 +208,11 @@ op {
     dilation_rate: 1
     dilation_rate: 1
     use_bias: true
+    bias_initializer {
+      constant_conf {
+        value: 0.5
+      }
+    }
   }
 }
 
@@ -218,6 +243,11 @@ op {
     in: "pool5/out"
     out: "out"
     units: 4096
+    bias_initializer {
+      constant_conf {
+        value: 0.5
+      }
+    }
   }
 }
 
@@ -230,11 +260,25 @@ op {
 }
 
 op {
-  name: "fc2"
-  fully_connected_conf {
+  name: "dropout1"
+  dropout_conf {
     in: "relu_fc1/out"
     out: "out"
+    rate: 0.5
+  }
+}
+
+op {
+  name: "fc2"
+  fully_connected_conf {
+    in: "dropout1/out"
+    out: "out"
     units: 4096
+    bias_initializer {
+      constant_conf {
+        value: 0.5
+      }
+    }
   }
 }
 
@@ -247,11 +291,25 @@ op {
 }
 
 op {
-  name: "fc3"
-  fully_connected_conf {
+  name: "dropout2"
+  dropout_conf {
     in: "relu_fc2/out"
     out: "out"
+    rate: 0.5
+  }
+}
+
+op {
+  name: "fc3"
+  fully_connected_conf {
+    in: "dropout2/out"
+    out: "out"
     units: 1000
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
   }
 }
 
