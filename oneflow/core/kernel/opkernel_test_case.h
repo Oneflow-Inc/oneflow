@@ -96,13 +96,13 @@ class OpKernelTestCase final {
                          const std::vector<T>& val, bool need_random_init);
 
   template<typename T>
-  void ForwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
-                        const std::string& expected_existed_blob_name,
-                        bool need_random_init);
+  void ForwardCheckBlobWithAnother(
+      const std::string&, const BlobDesc* blob_desc,
+      const std::string& expected_existed_blob_name, bool need_random_init);
   template<typename T>
-  void BackwardCheckBlob(const std::string&, const BlobDesc* blob_desc,
-                         const std::string& expected_existed_blob_name,
-                         bool need_random_init);
+  void BackwardCheckBlobWithAnother(
+      const std::string&, const BlobDesc* blob_desc,
+      const std::string& expected_existed_blob_name, bool need_random_init);
 
  private:
   template<typename T>
@@ -110,9 +110,9 @@ class OpKernelTestCase final {
                  const std::vector<T>& val, bool need_random_init);
 
   template<typename T>
-  void CheckBlob(const std::string&, const BlobDesc* blob_desc,
-                 const std::string& expected_existed_blob_name,
-                 bool need_random_init);
+  void CheckBlobWithAnother(const std::string&, const BlobDesc* blob_desc,
+                            const std::string& expected_existed_blob_name,
+                            bool need_random_init);
 
   void UpdateGlobalJobDesc();
 

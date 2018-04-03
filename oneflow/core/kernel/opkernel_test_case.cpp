@@ -195,10 +195,9 @@ void OpKernelTestCase::CheckBlob(const std::string& name,
 #define __LOC__() (__FILE__ ":" OF_PP_STRINGIZE(__LINE__))
 
 template<typename T>
-void OpKernelTestCase::CheckBlob(const std::string& name,
-                                 const BlobDesc* blob_desc,
-                                 const std::string& expected_existed_blob_name,
-                                 bool need_random_init) {
+void OpKernelTestCase::CheckBlobWithAnother(
+    const std::string& name, const BlobDesc* blob_desc,
+    const std::string& expected_existed_blob_name, bool need_random_init) {
   DeviceType dev_type = GetBlobDeviceType(name);
   if (need_random_init) {
     Blob* blob = OpKTSwitchHelper<T>::SwitchCreateBlobWithRandomVal(
@@ -223,11 +222,12 @@ void OpKernelTestCase::ForwardCheckBlob(const std::string& name,
 }
 
 template<typename T>
-void OpKernelTestCase::ForwardCheckBlob(
+void OpKernelTestCase::ForwardCheckBlobWithAnother(
     const std::string& name, const BlobDesc* blob_desc,
     const std::string& expected_exist_blob_name, bool need_random_init) {
   forward_asserted_blob_names_.push_back(name);
-  CheckBlob<T>(name, blob_desc, expected_exist_blob_name, need_random_init);
+  CheckBlobWithAnother<T>(name, blob_desc, expected_exist_blob_name,
+                          need_random_init);
 }
 
 template<typename T>
@@ -247,11 +247,12 @@ void OpKernelTestCase::BackwardCheckBlob(const std::string& name,
 }
 
 template<typename T>
-void OpKernelTestCase::BackwardCheckBlob(
+void OpKernelTestCase::BackwardCheckBlobWithAnother(
     const std::string& name, const BlobDesc* blob_desc,
     const std::string& expected_exist_blob_name, bool need_random_init) {
   backward_asserted_blob_names_.push_back(name);
-  CheckBlob<T>(name, blob_desc, expected_exist_blob_name, need_random_init);
+  CheckBlobWithAnother<T>(name, blob_desc, expected_exist_blob_name,
+                          need_random_init);
 }
 
 template<typename T>
@@ -385,13 +386,13 @@ OpKernelTestCase::MakeGetterBnInOp2BlobDesc() {
   template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
       const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
-  template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
+  template void OpKernelTestCase::ForwardCheckBlobWithAnother<T>(          \
       const std::string&, const BlobDesc* blob_desc, const std::string&,   \
       bool);                                                               \
   template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
       const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
-  template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
+  template void OpKernelTestCase::BackwardCheckBlobWithAnother<T>(         \
       const std::string&, const BlobDesc* blob_desc, const std::string&,   \
       bool);
 
