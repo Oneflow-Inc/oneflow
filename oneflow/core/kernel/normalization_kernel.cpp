@@ -203,7 +203,7 @@ void NormalizationKernel<device_type, T>::CalcAboutBetaDiff(
         ctx.device_ctx, norm_elem_num,
         out_diff_blob->dptr<T>() + i * norm_elem_num,
         beta_diff_blob->mut_dptr<T>() + i, tmp_storage_blob->mut_dptr<T>(),
-        tmp_storage_blob->shape().elem_cnt());
+        tmp_storage_blob->ByteSizeOfDataContentField());
     if (need_comp_in_diff) {
       KernelUtil<device_type, T>::Axpy(
           ctx.device_ctx, norm_elem_num, static_cast<T>(1),
@@ -299,7 +299,7 @@ void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
     KernelUtil<device_type, T>::Sum(
         ctx.device_ctx, norm_elem_num, in_blob->dptr<T>() + i * norm_elem_num,
         mean_blob->mut_dptr<T>() + i, tmp_storage_blob->mut_dptr<T>(),
-        tmp_storage_blob->shape().elem_cnt());
+        tmp_storage_blob->ByteSizeOfDataContentField());
   }
   const T inv_norm_elem_num = static_cast<T>(1.0 / norm_elem_num);
   KernelUtil<device_type, T>::Scal(
@@ -318,7 +318,7 @@ void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
     KernelUtil<device_type, T>::Sum(
         ctx.device_ctx, norm_elem_num, tmp_blob->dptr<T>(),
         variance_blob->mut_dptr<T>() + i, tmp_storage_blob->mut_dptr<T>(),
-        tmp_storage_blob->shape().elem_cnt());
+        tmp_storage_blob->ByteSizeOfDataContentField());
   }
   KernelUtil<device_type, T>::Scal(
       ctx.device_ctx, variance_blob->shape().elem_cnt(), inv_norm_elem_num,
