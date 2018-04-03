@@ -37,6 +37,8 @@ class JobDesc final {
   int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }
   int32_t ParallelPieceSize() const;
   int64_t piece_num_of_experiment_phase() const;
+  float available_zone_mem_ratio() const;
+  uint64_t one_data_part_buffer_byte_size() const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;

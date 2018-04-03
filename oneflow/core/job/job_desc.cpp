@@ -22,6 +22,15 @@ int32_t JobDesc::ParallelPieceSize() const {
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.piece_num_of_experiment_phase();
 }
+float JobDesc::available_zone_mem_ratio() const {
+  float ratio = job_conf_.available_zone_mem_ratio();
+  CHECK_GT(ratio, 0.f);
+  CHECK_LE(ratio, 1.f);
+  return ratio;
+}
+uint64_t JobDesc::one_data_part_buffer_byte_size() const {
+  return job_conf_.one_data_part_buffer_mbyte_size() * 1024 * 1024;
+}
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
   CHECK(IsTrain());

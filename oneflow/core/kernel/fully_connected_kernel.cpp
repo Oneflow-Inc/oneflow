@@ -68,8 +68,8 @@ void FullyConnectedKernel<device_type, T>::InitPureModelTmpBlobs(
   if (!this->op_conf().fully_connected_conf().use_bias()) { return; }
   InitializerConf bias_multiplier_initializer_conf;
   bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_initializer_conf,
-                                         0, BnInOp2Blob("bias_multiplier"));
+  KernelUtil<device_type, T>::InitializeWithConf(
+      ctx, bias_multiplier_initializer_conf, 0, BnInOp2Blob("bias_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
@@ -97,11 +97,11 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* weight_blob = BnInOp2Blob("weight");
   int32_t dim_num = this->op_conf().fully_connected_conf().units();
-  KernelUtil<device_type, T>::InitializeWithModelDir(
+  KernelUtil<device_type, T>::InitializeWithDir(
       ctx, part_id, part_num, model_load_dir, weight_blob, "weight", dim_num,
       weight_blob->shape().Count(1));
   if (this->op_conf().fully_connected_conf().use_bias()) {
-    KernelUtil<device_type, T>::InitializeWithModelDir(
+    KernelUtil<device_type, T>::InitializeWithDir(
         ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
         dim_num, 1);
   }

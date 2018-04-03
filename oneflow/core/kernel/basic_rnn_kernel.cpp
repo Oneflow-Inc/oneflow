@@ -138,8 +138,8 @@ void BasicRnnKernel<device_type, T>::InitPureModelTmpBlobs(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf bias_multiplier_fill_conf;
   bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);
-  KernelUtil<device_type, T>::Initialize(ctx, bias_multiplier_fill_conf, 0,
-                                         BnInOp2Blob("bias_multiplier"));
+  KernelUtil<device_type, T>::InitializeWithConf(
+      ctx, bias_multiplier_fill_conf, 0, BnInOp2Blob("bias_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
@@ -169,14 +169,14 @@ void BasicRnnKernel<device_type, T>::VirtualInitModelBlobsWithDir(
     const std::string& model_load_dir,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* i2h_weight_blob = BnInOp2Blob("i2h_weight");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
+  KernelUtil<device_type, T>::InitializeWithDir(
       ctx, part_id, part_num, model_load_dir, i2h_weight_blob, "i2h_weight",
       i2h_weight_blob->shape().At(0), i2h_weight_blob->shape().Count(1));
   Blob* h2h_weight_blob = BnInOp2Blob("h2h_weight");
-  KernelUtil<device_type, T>::InitializeWithModelDir(
+  KernelUtil<device_type, T>::InitializeWithDir(
       ctx, part_id, part_num, model_load_dir, h2h_weight_blob, "h2h_weight",
       h2h_weight_blob->shape().At(0), h2h_weight_blob->shape().Count(1));
-  KernelUtil<device_type, T>::InitializeWithModelDir(
+  KernelUtil<device_type, T>::InitializeWithDir(
       ctx, part_id, part_num, model_load_dir, BnInOp2Blob("bias"), "bias",
       BnInOp2Blob("bias")->shape().At(0), 1);
 }

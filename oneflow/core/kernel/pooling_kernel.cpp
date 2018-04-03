@@ -230,31 +230,31 @@ void PoolingKernel<DeviceType::kCPU, T>::ForwardNDHWC(const PoolingCtx& ctx,
   const PbRf<int32_t>& strides = ctx.kernel_conf().strides();
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
-  ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in.At(4),
-                                in.elem_cnt() / in.At(4));
-  EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), out.At(4),
-                            out.elem_cnt() / out.At(4));
+  ConstEigenMatrixMap<T> in_mat(in_blob->dptr<T>(), in.At(1),
+                                in.elem_cnt() / in.At(1));
+  EigenMatrixMap<T> out_mat(out_blob->mut_dptr<T>(), out.At(1),
+                            out.elem_cnt() / out.At(1));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
-    FOR_RANGE(int64_t, pd, 0, out.At(1)) {
+    FOR_RANGE(int64_t, pd, 0, out.At(2)) {
       int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
-      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(1));
+      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(2));
       dstart = std::max(dstart, static_cast<int64_t>(0));
-      FOR_RANGE(int64_t, ph, 0, out.At(2)) {
+      FOR_RANGE(int64_t, ph, 0, out.At(3)) {
         int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
-        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(2));
+        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(3));
         hstart = std::max(hstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, pw, 0, out.At(3)) {
+        FOR_RANGE(int64_t, pw, 0, out.At(4)) {
           int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
-          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(3));
+          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(4));
           wstart = std::max(wstart, static_cast<int64_t>(0));
           const int out_col =
-              ((n * out.At(1) + pd) * out.At(2) + ph) * out.At(3) + pw;
+              ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
           out_mat.col(out_col).setConstant(ForwardInitialize());
           FOR_RANGE(int64_t, d, dstart, dend) {
             FOR_RANGE(int64_t, h, hstart, hend) {
               FOR_RANGE(int64_t, w, wstart, wend) {
                 const int in_col =
-                    ((n * in.At(1) + d) * in.At(2) + h) * in.At(3) + w;
+                    ((n * in.At(2) + d) * in.At(3) + h) * in.At(4) + w;
                 NDHWCProcess(in_col, out_col, in_mat, out_mat);
               }
             }
@@ -278,36 +278,36 @@ void PoolingKernel<DeviceType::kCPU, T>::BackwardNDHWC(
   const PbRf<int32_t>& padding_before = ctx.kernel_conf().padding_before();
 
   // caffe2 implementation: need check
-  ConstEigenArrayMap<T> out_mat(out_blob->dptr<T>(), out.At(4),
-                                out.elem_cnt() / out.At(4));
-  ConstEigenArrayMap<T> in_mat(in_blob->dptr<T>(), in.At(4),
-                               in.elem_cnt() / in.At(4));
-  ConstEigenArrayMap<T> out_diff_mat(out_diff_blob->dptr<T>(), out.At(4),
-                                     out.elem_cnt() / out.At(4));
-  EigenArrayMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in.At(4),
-                               in.elem_cnt() / in.At(4));
+  ConstEigenArrayMap<T> out_mat(out_blob->dptr<T>(), out.At(1),
+                                out.elem_cnt() / out.At(1));
+  ConstEigenArrayMap<T> in_mat(in_blob->dptr<T>(), in.At(1),
+                               in.elem_cnt() / in.At(1));
+  ConstEigenArrayMap<T> out_diff_mat(out_diff_blob->dptr<T>(), out.At(1),
+                                     out.elem_cnt() / out.At(1));
+  EigenArrayMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in.At(1),
+                               in.elem_cnt() / in.At(1));
   FOR_RANGE(int64_t, n, 0, in.At(0)) {
-    FOR_RANGE(int64_t, pd, 0, out.At(1)) {
+    FOR_RANGE(int64_t, pd, 0, out.At(2)) {
       int64_t dstart = pd * strides.Get(0) - padding_before.Get(0);
-      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(1));
+      int64_t dend = std::min(dstart + pool_size.Get(0), in.At(2));
       dstart = std::max(dstart, static_cast<int64_t>(0));
-      FOR_RANGE(int64_t, ph, 0, out.At(2)) {
+      FOR_RANGE(int64_t, ph, 0, out.At(3)) {
         int64_t hstart = ph * strides.Get(1) - padding_before.Get(1);
-        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(2));
+        int64_t hend = std::min(hstart + pool_size.Get(1), in.At(3));
         hstart = std::max(hstart, static_cast<int64_t>(0));
-        FOR_RANGE(int64_t, pw, 0, out.At(3)) {
+        FOR_RANGE(int64_t, pw, 0, out.At(4)) {
           int64_t wstart = pw * strides.Get(2) - padding_before.Get(2);
-          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(3));
+          int64_t wend = std::min(wstart + pool_size.Get(2), in.At(4));
           wstart = std::max(wstart, static_cast<int64_t>(0));
           const int64_t pool_index =
-              ((n * out.At(1) + pd) * out.At(2) + ph) * out.At(3) + pw;
+              ((n * out.At(2) + pd) * out.At(3) + ph) * out.At(4) + pw;
           const int64_t size =
               (dend - dstart) * (hend - hstart) * (wend - wstart);
           FOR_RANGE(int64_t, d, dstart, dend) {
             FOR_RANGE(int64_t, h, hstart, hend) {
               FOR_RANGE(int64_t, w, wstart, wend) {
                 const int64_t input_index =
-                    ((n * in.At(1) + d) * in.At(2) + h) * in.At(3) + w;
+                    ((n * in.At(2) + d) * in.At(3) + h) * in.At(4) + w;
                 NDHWCProcessGrad(pool_index, input_index, size, out_mat, in_mat,
                                  out_diff_mat, in_diff_mat);
               }

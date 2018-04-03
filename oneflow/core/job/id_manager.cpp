@@ -3,7 +3,10 @@
 namespace oneflow {
 
 int64_t IDMgr::MachineID4MachineName(const std::string& machine_name) const {
-  return machine_name2machine_id_.at(machine_name);
+  auto it = machine_name2machine_id_.find(machine_name);
+  CHECK(it != machine_name2machine_id_.end())
+      << "Undefined machine name: " << machine_name;
+  return it->second;
 }
 const std::string& IDMgr::MachineName4MachineId(int64_t machine_id) const {
   return machine_id2machine_name_.at(machine_id);
