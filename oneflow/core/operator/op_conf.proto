@@ -260,9 +260,25 @@ message BasicRnnOpConf {
 message BasicLstmOpConf {
 }
 
+<<<<<<< HEAD
 message GatherOpConf {
   required string in = 1;
   required string out = 2;
+=======
+message BasicGruOpConf {
+  required string in = 1;
+  optional string init_hidden = 2;
+  required string out = 3;
+  required int32 hidden_size = 4;
+  optional ActivationType activation = 5 [default = kTanH];
+
+  optional InitializerConf init_hidden_initializer = 6;
+
+  optional InitializerConf bias_initializer = 7;
+  optional InitializerConf weight_initializer = 8;
+
+  optional bool is_init_hidden_trainable = 9 [default = true];
+>>>>>>> 0c43c26937981839becb823e788f31dfa0075351
 }
 
 message ReshapeOpConf {
@@ -298,7 +314,8 @@ message OperatorConf {
     ReshapeOpConf reshape_conf = 122;
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
-    GatherOpConf gather_conf = 125;
+    BasicGruOpConf basic_gru_conf = 125;
+    GatherOpConf gather_conf = 126;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }
