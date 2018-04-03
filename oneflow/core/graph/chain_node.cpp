@@ -1,7 +1,9 @@
 #include "oneflow/core/graph/chain_node.h"
 #include "oneflow/core/graph/recurrent_backward_compute_task_node.h"
+#include "oneflow/core/graph/gather_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/recurrent_forward_compute_task_node.h"
+#include "oneflow/core/graph/gather_forward_compute_task_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 #include "oneflow/core/graph/loss_compute_task_node.h"
@@ -99,6 +101,10 @@ const std::vector<std::shared_ptr<const Operator>>& ChainNode::op_vec() const {
 
 bool ChainNode::HasSoleRecurrentOp() const {
   return op_vec_.size() == 1 && op_vec_.front()->IsRecurrentOp();
+}
+
+bool ChainNode::HasSoleGatherOp() const {
+  return op_vec_.size() == 1 && op_vec_.front()->IsGatherOp();
 }
 
 std::shared_ptr<const ParallelDesc> ChainNode::parallel_desc() const {
@@ -225,6 +231,8 @@ void ForwardChainNode::set_data_output_lbns() {
 CompTaskNode* ForwardChainNode::NewCompTaskNode() const {
   if (HasSoleRecurrentOp()) {
     return new RecurrentForwardCompTaskNode;
+  } else if (HasSoleGatherOp()) {
+    return new GatherForwardCompTaskNode;
   } else {
     return new NormalForwardCompTaskNode;
   }
@@ -278,6 +286,8 @@ void BackwardChainNode::set_data_output_lbns() {
 CompTaskNode* BackwardChainNode::NewCompTaskNode() const {
   if (HasSoleRecurrentOp()) {
     return new RecurrentBackwardCompTaskNode;
+  } else if (HasSoleGatherOp()) {
+    return new GatherBackwardCompTaskNode;
   } else {
     return new NormalBackwardCompTaskNode;
   }

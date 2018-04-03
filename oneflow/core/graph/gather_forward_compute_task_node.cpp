@@ -16,11 +16,15 @@ void GatherForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 void GatherForwardCompTaskNode::BuildExecGphAndRegst() {
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = chain_node()->SoleOp();
   node->BindBnInOpAndRegst(node->op()->SoleIbn(), GetConsumedRegst("in"));
-  node->BindBnInOpAndRegst(node->op()->SoleObn(), GetProducedRegst("out"));
+  node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
   CHECK(node->op()->data_tmp_bns().empty());
+
+  out_regst->AddLbn(node->op()->Lbn4BnInOp(node->op()->SoleObn()));
 
   node->op()->InferBlobDescs(node->GetBlobDesc4BnInOpFunc(), parallel_ctx(),
                              device_type());

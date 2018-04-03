@@ -25,6 +25,12 @@ void GatherOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
   pr_desc->set_policy(ParallelPolicy::kDataParallel);
 }
 
+void GatherOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->set_need_do_col_num(true);
+}
+
 REGISTER_OP(OperatorConf::kGatherConf, GatherOp);
 
 }  // namespace oneflow
