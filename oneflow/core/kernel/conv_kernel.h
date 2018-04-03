@@ -99,6 +99,9 @@ class ConvKernel<DeviceType::kCPU, T> final
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
+  Shape in_shape_;
+  Shape out_shape_;
+  Shape weight_shape_;
 };
 
 template<typename T>
