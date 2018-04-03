@@ -12,6 +12,11 @@ Shape::Shape(const ShapeProto& shape_proto) {
   UpdateElemCnt();
 }
 
+Shape& Shape::operator=(const Shape& shape) {
+  dim_vec_ = shape.dim_vec_;
+  UpdateElemCnt();
+}
+
 bool Shape::operator==(const Shape& rhs) const {
   return dim_vec_ == rhs.dim_vec_;
 }

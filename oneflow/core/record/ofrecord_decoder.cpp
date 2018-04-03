@@ -66,7 +66,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   int32_t i = 0;
   record_blob->ForEachRecord([&](const OFRecord& record) {
     if (record.feature().find(blob_conf.name()) == record.feature().end()) {
-      LOG(FATAL) << "Field " << blob_conf.name() << " not founed in OfRecord";
+      LOG(FATAL) << "Field " << blob_conf.name() << " not found in OfRecord";
     }
     const Feature& feature = record.feature().at(blob_conf.name());
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;

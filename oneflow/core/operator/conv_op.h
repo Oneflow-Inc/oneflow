@@ -51,6 +51,8 @@ class ConvOp : public Operator {
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const override;
+  int64_t GetInDim(const Shape& in_shape, uint8_t dim) const;
+  std::vector<int32_t> Get3DVecInOpConf(const std::string& field_name) const;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(
       std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

@@ -35,6 +35,14 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after);
 
+void Get3DOutputSize(const std::vector<int64_t>& in,
+                     const std::vector<int32_t>& pool_size,
+                     const std::vector<int32_t>& strides,
+                     const std::string& padding_type, std::vector<int64_t>* out,
+                     std::vector<int32_t>* padding_before,
+                     std::vector<int32_t>* padding_after,
+                     std::vector<int32_t>* dalition_rate);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_UTIL_H_

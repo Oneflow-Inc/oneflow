@@ -310,6 +310,7 @@ void ChainGraph::BuildRecordLoadStruct() {
   HashMap<std::string, int32_t> data_info2suffix_length;
   ForEachChainNode<DecodeChainNode>([&](DecodeChainNode* decode_node) {
     std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
+    if (decode_op->HasFieldInCustomizedConf("data_dir") == false) { return; }
     std::string data_dir =
         decode_op->GetValFromCustomizedConf<std::string>("data_dir");
     std::string part_name_prefix =

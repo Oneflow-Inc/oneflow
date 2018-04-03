@@ -29,16 +29,22 @@ using PbMapPair = google::protobuf::MapPair<T1, T2>;
   OF_PP_MAKE_TUPLE_SEQ(float, Float)        \
   OF_PP_MAKE_TUPLE_SEQ(bool, Bool)
 
-#define PROTOBUF_REFLECTION(msg, field_name)                               \
+#define PROTOBUF_GET_FIELDDESC(msg, field_name)                            \
   auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
   auto fd = const_cast<google::protobuf::FieldDescriptor*>(                \
-      d->FindFieldByName(field_name));                                     \
-  CHECK_NOTNULL(fd);                                                       \
+      d->FindFieldByName(field_name));
+
+#define PROTOBUF_REFLECTION(msg, field_name) \
+  PROTOBUF_GET_FIELDDESC(msg, field_name)    \
+  CHECK_NOTNULL(fd);                         \
   auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
 
 // Prototxt <-> File
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
+
+// Does PbMessage have the field_name
+bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
 

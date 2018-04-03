@@ -2,7 +2,10 @@
 #include "oneflow/core/kernel/kernel.h"
 #include <random>
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/switch_func.h"
+
 #include "oneflow/core/device/cpu_device_context.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
@@ -169,10 +172,13 @@ Blob* OpKernelTestCase<device_type>::SwitchCreateBlobWithRandomVal(
 template<DeviceType device_type>
 std::function<Blob*(const std::string&)>
 OpKernelTestCase<device_type>::MakeGetterBnInOp2Blob() {
-  return [this](const std::string& bn_in_op) {
+  return [this](const std::string& bn_in_op) -> Blob* {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
-      bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
-          &bn_in_op2blob_desc_.at(bn_in_op), bn_in_op2regst_[bn_in_op]);
+      const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
+      if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+      const BlobDesc* blob_desc = &it->second;
+      bn_in_op2blob_[bn_in_op] =
+          SwitchCreateBlobWithRandomVal(blob_desc, bn_in_op2regst_[bn_in_op]);
     }
     return bn_in_op2blob_.at(bn_in_op);
   };
@@ -183,6 +189,7 @@ OpKernelTestCase<device_type>::OpKernelTestCase() {
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
+  initiation_before_backward_ = []() {};
 }
 
 template<DeviceType device_type>
@@ -279,12 +286,14 @@ void OpKernelTestCase<device_type>::Run() {
   InitBeforeRun();
   auto op = ConstructOp(op_conf_);
   auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
-  op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type);
+  OpContext* op_context = nullptr;
+  op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, device_type,
+                     [&](OpContext* op_ctx) { op_context = op_ctx; });
   auto BnInOp2Blob = MakeGetterBnInOp2Blob();
   auto Launch = [&](bool is_forward) {
     KernelConf kernel_conf;
     op->GenKernelConf(BnInOp2BlobDesc, is_forward, device_type, &parallel_ctx_,
-                      &kernel_conf, nullptr);
+                      &kernel_conf, op_context);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, BnInOp2Blob);
     SyncStream(&kernel_ctx_);

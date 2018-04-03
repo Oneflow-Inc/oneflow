@@ -63,7 +63,8 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::vector<int32_t>& strides,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int32_t>* padding) {
-  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding, nullptr);
+  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding, nullptr,
+                  nullptr);
 }
 
 void Get3DOutputSize(const std::vector<int64_t>& in,
@@ -72,6 +73,17 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after) {
+  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding_before,
+                  padding_after, nullptr);
+}
+
+void Get3DOutputSize(const std::vector<int64_t>& in,
+                     const std::vector<int32_t>& pool_size,
+                     const std::vector<int32_t>& strides,
+                     const std::string& padding_type, std::vector<int64_t>* out,
+                     std::vector<int32_t>* padding_before,
+                     std::vector<int32_t>* padding_after,
+                     std::vector<int32_t>* dalition_rate) {
   CHECK(out);
   out->clear();
   out->resize(3);
@@ -89,9 +101,15 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
         padding_before ? (&(*padding_before).at(i)) : nullptr;
     int32_t* padding_after_ptr =
         padding_after ? (&(*padding_after).at(i)) : nullptr;
-    GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i),
-                          padding_type, out_ptr, padding_before_ptr,
-                          padding_after_ptr);
+    if (dalition_rate) {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), dalition_rate->at(i),
+                            strides.at(i), padding_type, out_ptr,
+                            padding_before_ptr, padding_after_ptr);
+    } else {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i),
+                            padding_type, out_ptr, padding_before_ptr,
+                            padding_after_ptr);
+    }
   }
 }
 

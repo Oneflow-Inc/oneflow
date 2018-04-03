@@ -12,9 +12,12 @@ message ConvKernelConf {
   required ShapeProto weight = 3;
   repeated int32 pad_small_side = 4;
   repeated int32 pad_large_side = 5;
-  optional int32 cudnn_fwd_algo = 6 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+  repeated int32 dilation_rate = 6;
+  repeated int32 strides = 7;
+  repeated int32 bias_mul = 8;
+  optional int32 cudnn_fwd_algo = 9 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 10 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 11 [default = -1];
 }
 
 message DropoutKernelConf {
@@ -78,7 +81,15 @@ message LocalResponseNormalizationKernelConf {
 }
 
 message NormalizationKernelConf {
-  required float inv_inputs_elem_cnt = 1;
+  required int32 axis = 1;
+  required int64 transpose_rows = 2;
+  required int64 transpose_cols = 3;
+  required bool need_transpose = 4;
+  repeated int32 perm = 5;
+}
+
+message DecodeRandomKernelConf {
+  required uint32 random_seed = 1;
 }
 
 message KernelConf {
@@ -106,6 +117,7 @@ message KernelConf {
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
+    DecodeRandomKernelConf decode_random_conf = 103;
     SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
