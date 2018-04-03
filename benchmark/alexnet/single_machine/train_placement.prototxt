@@ -4,7 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:cpu:6"
+    device_name: "first:cpu:120"
   }
 }
 
@@ -27,13 +27,15 @@ placement_group {
     op_name: "pool5"
     op_name: "fc1"
     op_name: "relu_fc1"
+    op_name: "dropout1"
     op_name: "fc2"
     op_name: "relu_fc2"
+    op_name: "dropout2"
     op_name: "fc3"
     op_name: "softmax_loss"
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:gpu:0-1"
+    device_name: "first:gpu:0-1"
   }
 }
