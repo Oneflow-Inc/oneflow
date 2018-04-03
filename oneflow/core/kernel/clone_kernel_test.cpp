@@ -5,7 +5,7 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void CloneTestCase(OpKernelTestCase<device_type>* clone_test_case,
+void CloneTestCase(OpKernelTestCase* clone_test_case,
                    const std::string& job_type,
                    const std::string& forward_or_backward) {
   const size_t copies = 3;
