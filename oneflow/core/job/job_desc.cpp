@@ -28,8 +28,8 @@ float JobDesc::available_zone_mem_ratio() const {
   CHECK_LE(ratio, 1.f);
   return ratio;
 }
-uint64_t JobDesc::one_data_part_buffer_byte_size() const {
-  return job_conf_.one_data_part_buffer_mbyte_size() * 1024 * 1024;
+uint64_t JobDesc::persistence_buffer_byte_size() const {
+  return job_conf_.persistence_buffer_mbyte_size() * 1024 * 1024;
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
@@ -83,26 +83,25 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
-  int64_t piece_experiment = job_conf_.piece_num_of_experiment_phase();
+  int64_t piece_exp = job_conf_.piece_num_of_experiment_phase();
   if (job_conf_.has_train_conf()) {
     TrainConf* train_conf = job_conf_.mutable_train_conf();
-    piece_experiment = std::max<int64_t>(
-        piece_experiment, train_conf->num_of_batches_in_snapshot()
-                              * train_conf->num_of_pieces_in_batch());
-    piece_experiment = std::max<int64_t>(piece_experiment,
-                                         train_conf->piece_num_of_print_loss());
-    piece_experiment = std::min<int64_t>(
-        piece_experiment,
-        train_conf->total_batch_num() * train_conf->num_of_pieces_in_batch());
-    if (piece_experiment != job_conf_.piece_num_of_experiment_phase()) {
-      LOG(WARNING) << "Set piece_num_of_experiment_phase " << piece_experiment;
-      job_conf_.set_piece_num_of_experiment_phase(piece_experiment);
-    }
-    if (train_conf->has_piece_num_of_print_loss() == false) {
+    if (train_conf->piece_num_of_print_loss() == -1) {
       train_conf->set_piece_num_of_print_loss(
           train_conf->num_of_pieces_in_batch());
     }
+    if (piece_exp == -1) {
+      piece_exp = 3 * train_conf->num_of_pieces_in_batch();
+    }
+    piece_exp = std::max(piece_exp, train_conf->num_of_pieces_in_batch());
+    piece_exp = std::max(piece_exp, train_conf->piece_num_of_print_loss());
+    piece_exp = std::min(piece_exp, train_conf->total_batch_num()
+                                        * train_conf->num_of_pieces_in_batch());
+  } else {
+    if (piece_exp == -1) { piece_exp = 16; }
   }
+  LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
+  job_conf_.set_piece_num_of_experiment_phase(piece_exp);
 #ifndef WITH_CUDA
   CHECK_EQ(resource_.gpu_device_num(), 0);
 #endif
