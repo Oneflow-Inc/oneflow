@@ -49,7 +49,7 @@ message JobConf {
 
   optional int64 piece_num_of_experiment_phase = 101 [default = -1];
   optional float available_zone_mem_ratio = 102 [default = 0.95];
-  optional uint64 one_data_part_buffer_mbyte_size = 103 [default = 128];
+  optional uint64 persistence_buffer_mbyte_size = 103 [default = 64];
 
   oneof JobType {
     TrainConf train_conf = 1000;
