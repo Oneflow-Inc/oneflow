@@ -95,18 +95,15 @@ void NormalMdUpdtCompActor::Act() {
   readable_regst_mgr_.ReturnToProducerAndPopCurReadable(this);
   const JobDesc* job_desc = Global<JobDesc>::Get();
   auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
-  if (next_model_version_id_ == job_desc->TotalBatchNum()) {
+  if (NeedModelSave(next_model_version_id_ - 1)) {
     AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
       return actor_id == related_save_model_actor_id_;
     });
-  } else {
-    if (next_model_version_id_ % job_desc->NumOfBatchesInSnapshot() == 0) {
-      AsyncSendRegstMsgToConsumer(RegstPreProcess);
-    } else {
-      AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
-        return actor_id != related_save_model_actor_id_;
-      });
-    }
+  }
+  if (next_model_version_id_ < job_desc->TotalBatchNum()) {
+    AsyncSendRegstMsgToConsumer(RegstPreProcess, [this](int64_t actor_id) {
+      return actor_id != related_save_model_actor_id_;
+    });
   }
   next_model_version_id_ += 1;
 }

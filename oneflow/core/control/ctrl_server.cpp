@@ -193,4 +193,20 @@ void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
   ENQUEUE_REQUEST(Clear);
 }
 
+void CtrlServer::IncreaseCountHandler(
+    CtrlCall<IncreaseCountRequest, IncreaseCountResponse>* call) {
+  int32_t& count = count_[call->request().key()];
+  count += call->request().val();
+  call->mut_response()->set_val(count);
+  call->SendResponse();
+  ENQUEUE_REQUEST(IncreaseCount);
+}
+
+void CtrlServer::EraseCountHandler(
+    CtrlCall<EraseCountRequest, EraseCountResponse>* call) {
+  CHECK_EQ(count_.erase(call->request().key()), 1);
+  call->SendResponse();
+  ENQUEUE_REQUEST(EraseCount);
+}
+
 }  // namespace oneflow

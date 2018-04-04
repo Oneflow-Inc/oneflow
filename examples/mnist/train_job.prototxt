@@ -22,7 +22,6 @@ train_conf {
       std: 0.1
     }
   }
-  piece_num_of_print_loss: 5
   num_of_pieces_in_batch: 10
   model_update_conf {
     naive_conf {

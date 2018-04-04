@@ -12,6 +12,13 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
+bool NeedModelSave(int64_t model_version_id) {
+  return model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
+         || (model_version_id + 1)
+                    % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+                == 0;
+}
+
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
@@ -46,8 +53,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
-  VirtualActorInit(task_proto);
   InitDeviceCtx(thread_ctx);
+  VirtualActorInit(task_proto);
 }
 
 int64_t Actor::machine_id() const {
