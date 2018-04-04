@@ -80,6 +80,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
+  if (UseActivation()) { EnrollDataTmpBn("activation_buf"); }
 }
 
 template<int32_t NDims>
@@ -113,6 +114,9 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
+  if (UseActivation()) {
+    GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
+  }
 
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
@@ -198,7 +202,7 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   }
 #endif  // WITH_CUDA
 
-  if (HasFieldInPbMessage(GetCustomizedConf(), "activation")) {
+  if (UseActivation()) {
     kernel_conf->mutable_conv_conf()->set_activation(GetActivationType());
   }
 }

@@ -11,6 +11,10 @@ ActivationType Conv3DOp::GetActivationType() const {
   return op_conf().conv_3d_conf().activation();
 }
 
+bool Conv3DOp::UseActivation() const {
+  return op_conf().conv_3d_conf().has_activation();
+}
+
 REGISTER_OP(OperatorConf::kConv3DConf, Conv3DOp);
 
 }  // namespace oneflow
