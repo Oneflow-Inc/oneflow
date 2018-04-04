@@ -4,19 +4,6 @@ namespace oneflow {
 
 namespace test {
 
-TEST(ReluKernel, multi_run) {
-  OpKernelMultiRunTestCase test_case;
-  test_case.set_is_forward(true);
-  test_case.set_default_data_type(DataType::kFloat);
-  *test_case.MutBlobDesc4BnInOp("in") =
-      BlobDesc(Shape({1, 8}), DataType::kFloat, false, false, 1);
-  *test_case.mut_input_blob_names() = {"in"};
-  *test_case.mut_output_blob_names() = {"out"};
-  *test_case.mut_output_diff_blob_names() = {GenDiffBn("out")};
-  *test_case.mut_input_diff_blob_names() = {GenDiffBn("in")};
-  test_case.MultiRunThenCheck();
-}
-
 template<DeviceType device_type, typename T>
 void ReluTestCase(OpKernelTestCase* relu_test_case, const std::string& job_type,
                   const std::string& forward_or_backward) {
@@ -36,10 +23,23 @@ void ReluTestCase(OpKernelTestCase* relu_test_case, const std::string& job_type,
                                                 {-8, 0, 0, 5, 0, 3, 0, 1});
 }
 
-/*
 TEST_CPU_AND_GPU_OPKERNEL(ReluTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward));
-*/
+
+TEST(ReluKernel, multi_run) {
+  OpKernelMultiRunTestCase test_case;
+  test_case.mut_op_conf()->mutable_relu_conf();
+  test_case.set_is_forward(true);
+  test_case.set_default_device_type(DeviceType::kCPU);
+  test_case.set_default_data_type(DataType::kFloat);
+  *test_case.MutBlobDesc4BnInOp("in") =
+      BlobDesc(Shape({1, 8}), DataType::kFloat, false, false, 1);
+  *test_case.MutBlobDesc4BnInOp(GenDiffBn("out")) =
+      *test_case.BlobDesc4BnInOp("in");
+  test_case.SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
+                         {{GenDiffBn("in")}});
+  test_case.MultiRunThenCheck();
+}
 
 }  // namespace test
 

@@ -51,6 +51,7 @@ class OpKernelTestCase {
   void set_default_device_type(DeviceType default_device_type) {
     default_device_type_ = default_device_type;
   }
+  void set_default_data_type(DataType default_data_type);
   OperatorConf* mut_op_conf() { return &op_conf_; }
   KernelCtx* mut_kernel_ctx() { return &kernel_ctx_; }
   HashMap<std::string, Blob*>* mut_bn_in_op2blob() { return &bn_in_op2blob_; }
@@ -67,6 +68,9 @@ class OpKernelTestCase {
 
   //  Getters
   DeviceType default_device_type() const { return default_device_type_; }
+  DataType default_data_type() const {
+    return Global<JobDesc>::Get()->DefaultDataType();
+  }
   const HashMap<std::string, Blob*>& bn_in_op2blob() const {
     return bn_in_op2blob_;
   }
@@ -75,8 +79,9 @@ class OpKernelTestCase {
     return (it == bn_in_op2device_type_.end()) ? default_device_type()
                                                : it->second;
   }
-  const BlobDesc& BlobDesc4BnInOp(const std::string& bn_in_op) {
-    return bn_in_op2blob_desc_[bn_in_op];
+  const BlobDesc* BlobDesc4BnInOp(const std::string& bn_in_op) const {
+    const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
+    return it == bn_in_op2blob_desc_.end() ? nullptr : &it->second;
   }
 
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
@@ -117,7 +122,6 @@ class OpKernelTestCase {
   void RunKernel(Operator* op, OpContext* op_context);
   void AssertAfterRun() const;
   Regst* GetBlobRegst(const std::string& bn_in_op);
-
   bool is_forward() const { return is_forward_; }
 
  private:
@@ -135,40 +139,31 @@ class OpKernelTestCase {
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
 
+  bool is_forward_;
+  DeviceType default_device_type_;
+  std::function<void()> initiation_before_backward_;
+  ParallelContext parallel_ctx_;
+  KernelCtx kernel_ctx_;
+  JobConf job_conf_;
+  OperatorConf op_conf_;
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
   HashMap<std::string, Regst*> bn_in_op2regst_;
   HashMap<std::string, DeviceType> bn_in_op2device_type_;
-  JobConf job_conf_;
-  OperatorConf op_conf_;
   std::list<std::string> forward_asserted_blob_names_;
   std::list<std::string> backward_asserted_blob_names_;
-  ParallelContext parallel_ctx_;
-  KernelCtx kernel_ctx_;
-  bool is_forward_;
-  DeviceType default_device_type_;
-  std::function<void()> initiation_before_backward_;
 };
 
 class OpKernelMultiRunTestCase final : public OpKernelTestCase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelMultiRunTestCase);
-  OpKernelMultiRunTestCase() : default_data_type_(DataType::kInvalidDataType) {}
+  OpKernelMultiRunTestCase() = default;
   ~OpKernelMultiRunTestCase() = default;
 
-  void set_default_data_type(DataType default_data_type) {
-    default_data_type_ = default_data_type;
-  }
-  std::list<std::string>* mut_input_blob_names() { return &input_blob_names_; }
-  std::list<std::string>* mut_output_blob_names() {
-    return &output_blob_names_;
-  }
-  std::list<std::string>* mut_input_diff_blob_names() {
-    return &input_diff_blob_names_;
-  }
-  std::list<std::string>* mut_output_diff_blob_names() {
-    return &output_diff_blob_names_;
-  }
+  void SetBlobNames(const std::list<std::string>& input_bn_in_op,
+                    const std::list<std::string>& output_bn_in_op,
+                    const std::list<std::string>& output_diff_bn_in_op,
+                    const std::list<std::string>& input_diff_bn_in_op);
 
   // usually, you should not call it
   void MultiRunThenCheck();
@@ -185,7 +180,6 @@ class OpKernelMultiRunTestCase final : public OpKernelTestCase {
     return std::string("origin_") + bn_in_op;
   }
 
-  DataType default_data_type_;
   std::list<std::string> input_blob_names_;
   std::list<std::string> output_blob_names_;
   std::list<std::string> input_diff_blob_names_;

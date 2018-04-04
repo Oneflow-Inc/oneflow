@@ -332,16 +332,24 @@ OpKernelTestCase::MakeGetterBnInOp2Blob() {
   };
 }
 
-OpKernelTestCase::OpKernelTestCase() {
+OpKernelTestCase::OpKernelTestCase()
+    : is_forward_(false),
+      default_device_type_(DeviceType::kInvalidDevice),
+      initiation_before_backward_([]() {}) {
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
-  initiation_before_backward_ = []() {};
 }
 
 void OpKernelTestCase::InitJobConf(const std::function<void(JobConf*)>& Init) {
   Init(&job_conf_);
   UpdateGlobalJobDesc();
+}
+
+void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
+  InitJobConf([=](JobConf* job_conf) {
+    job_conf->set_default_data_type(default_data_type);
+  });
 }
 
 void OpKernelTestCase::UpdateGlobalJobDesc() {
@@ -430,22 +438,20 @@ void OpKernelTestCase::Run() {
 }
 
 std::list<std::string> OpKernelMultiRunTestCase::AllInputBlobNames() const {
-  std::list<std::string> all_input_blob_names;
-  std::merge(input_blob_names_.begin(), input_blob_names_.end(),
-             output_diff_blob_names_.begin(), output_diff_blob_names_.end(),
-             all_input_blob_names.begin());
+  std::list<std::string> all_input_blob_names(input_blob_names_);
+  for (const auto& bn : output_diff_blob_names_) {
+    all_input_blob_names.push_back(bn);
+  }
   return all_input_blob_names;
 }
 
 std::list<std::string>
 OpKernelMultiRunTestCase::AllOutputBlobNamesWithValidBlob() const {
-  std::list<std::string> all_output_blob_names;
+  std::list<std::string> all_output_blob_names(output_blob_names_);
   if (Global<JobDesc>::Get()->IsTrain() && !is_forward()) {
-    std::merge(output_blob_names_.begin(), output_blob_names_.end(),
-               input_diff_blob_names_.begin(), input_diff_blob_names_.end(),
-               all_output_blob_names.begin());
-  } else {
-    all_output_blob_names = output_blob_names_;
+    for (const auto& bn : input_diff_blob_names_) {
+      all_output_blob_names.push_back(bn);
+    }
   }
   for (const auto& bn_in_op : all_output_blob_names) {
     CHECK(bn_in_op2blob().find(bn_in_op) != bn_in_op2blob().end());
@@ -453,11 +459,23 @@ OpKernelMultiRunTestCase::AllOutputBlobNamesWithValidBlob() const {
   return all_output_blob_names;
 }
 
+void OpKernelMultiRunTestCase::SetBlobNames(
+    const std::list<std::string>& input_bn_in_op,
+    const std::list<std::string>& output_bn_in_op,
+    const std::list<std::string>& output_diff_bn_in_op,
+    const std::list<std::string>& input_diff_bn_in_op) {
+  input_blob_names_ = input_bn_in_op;
+  output_blob_names_ = output_bn_in_op;
+  output_diff_blob_names_ = output_diff_bn_in_op;
+  input_diff_blob_names_ = input_diff_bn_in_op;
+}
+
 void OpKernelMultiRunTestCase::RandomInitInputOrigin() {
   for (const auto& bn_in_op : AllInputBlobNames()) {
-    const BlobDesc& blob_desc = BlobDesc4BnInOp(bn_in_op);
+    const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
+    CHECK(blob_desc);
     Blob* blob = SwitchCreateBlobWithRandomVal(
-        SwitchCase(DeviceType::kCPU, blob_desc.data_type()), &blob_desc,
+        SwitchCase(DeviceType::kCPU, blob_desc->data_type()), blob_desc,
         GetBlobRegst(bn_in_op));
     const std::string& bn = GetOriginInputBlobName(bn_in_op);
     CHECK(mut_bn_in_op2blob()->emplace(bn, blob).second);
@@ -469,8 +487,8 @@ void OpKernelMultiRunTestCase::InitInputBlobs() {
   for (const auto& bn_in_op : AllInputBlobNames()) {
     const std::string& origin_input_bn = GetOriginInputBlobName(bn_in_op);
     Blob* origin_input_blob = bn_in_op2blob().at(origin_input_bn);
-    const BlobDesc& blob_desc = BlobDesc4BnInOp(bn_in_op);
-    Blob* blob = SwitchCreateBlob(SwitchCase(default_device_type()), &blob_desc,
+    const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
+    Blob* blob = SwitchCreateBlob(SwitchCase(default_device_type()), blob_desc,
                                   GetBlobRegst(bn_in_op));
     SwitchBlobCopy(SwitchCase(default_device_type(), DeviceType::kCPU), blob,
                    origin_input_blob);
@@ -504,7 +522,6 @@ void OpKernelMultiRunTestCase::CheckMultiRunResults(
 }
 
 void OpKernelMultiRunTestCase::MultiRunThenCheck() {
-  InitBeforeRun();
   std::shared_ptr<Operator> op;
   OpContext* op_context = nullptr;
   InferBlobDesc(&op, &op_context);
@@ -513,6 +530,7 @@ void OpKernelMultiRunTestCase::MultiRunThenCheck() {
     std::shared_ptr<Operator> op;
     InferBlobDesc(&op, &op_context);
     InitInputBlobs();
+    SwitchBuildKernelCtx(SwitchCase(default_device_type()), mut_kernel_ctx());
     RunKernel(op.get(), op_context);
     DumpBlobs(dump_prefix);
   };
