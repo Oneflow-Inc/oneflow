@@ -191,7 +191,7 @@ void ForwardCompActor::TrySendMsgToForwardModelSaveActor(int64_t piece_id) {
   bool is_last_piece_in_batch =
       (piece_id + 1) % Global<JobDesc>::Get()->NumOfPiecesInBatch() == 0;
   int64_t batch_id = piece_id / Global<JobDesc>::Get()->NumOfPiecesInBatch();
-  if (is_last_piece_in_batch && NeedSaveForNextModelVersionId(batch_id + 1)) {
+  if (is_last_piece_in_batch && NeedModelSave(batch_id)) {
     SendMsgToForwardModelSaveActor(batch_id);
   }
 }

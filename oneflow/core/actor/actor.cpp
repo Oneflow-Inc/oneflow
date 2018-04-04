@@ -12,9 +12,9 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
-bool NeedSaveForNextModelVersionId(int64_t next_model_version_id) {
-  return next_model_version_id == Global<JobDesc>::Get()->TotalBatchNum()
-         || next_model_version_id
+bool NeedModelSave(int64_t model_version_id) {
+  return model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
+         || (model_version_id + 1)
                     % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
                 == 0;
 }

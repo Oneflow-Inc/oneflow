@@ -19,7 +19,7 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
-bool NeedSaveForNextModelVersionId(int64_t next_model_version_id);
+bool NeedModelSave(int64_t model_version_id);
 
 class Actor {
  public:
