@@ -344,13 +344,13 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
     moving_variance_blob->CopyDataContentFrom(ctx.device_ctx, variance_blob);
     return;
   }
-  const std::string& mean_lbn = this->Lbn4BnInOp("moving_mean");
-  const Blob* pre_moving_mean_blob = lbn2preblob(mean_lbn);
+  const Blob* pre_moving_mean_blob =
+      lbn2preblob(this->Lbn4BnInOp("moving_mean"));
   if (pre_moving_mean_blob != moving_mean_blob) {
     moving_mean_blob->CopyDataContentFrom(ctx.device_ctx, pre_moving_mean_blob);
   }
-  const std::string& variance_lbn = this->Lbn4BnInOp("moving_variance");
-  const Blob* pre_moving_variance_blob = lbn2preblob(variance_lbn);
+  const Blob* pre_moving_variance_blob =
+      lbn2preblob(this->Lbn4BnInOp("moving_variance"));
   if (pre_moving_variance_blob != moving_variance_blob) {
     moving_variance_blob->CopyDataContentFrom(ctx.device_ctx,
                                               pre_moving_variance_blob);
