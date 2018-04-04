@@ -48,8 +48,8 @@ void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
 
 void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
                              const std::string& concat_file) {
-  static const uint64_t buffer_size = 256 * 1024 * 1024;
-  static char* buffer = new char[buffer_size];
+  std::vector<char> buffer(
+      Global<JobDesc>::Get()->persistence_buffer_byte_size());
   std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
   const std::string& op_name = parsed_lbn.first;
   const std::string& bn_in_op = parsed_lbn.second;
@@ -64,9 +64,9 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
       uint64_t part_file_size = GlobalFS()->GetFileSize(part_file_path);
       uint64_t offset = 0;
       while (offset < part_file_size) {
-        uint64_t n = std::min(buffer_size, part_file_size - offset);
-        part_file->Read(offset, n, buffer);
-        out_stream.Write(buffer, n);
+        uint64_t n = std::min(buffer.size(), part_file_size - offset);
+        part_file->Read(offset, n, buffer.data());
+        out_stream.Write(buffer.data(), n);
         offset += n;
       }
       GlobalFS()->DelFile(part_file_path);
