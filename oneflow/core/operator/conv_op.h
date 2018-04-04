@@ -45,6 +45,7 @@ class ConvOp : public Operator {
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
+  virtual ActivationType GetActivationType() const = 0;
 
  private:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;

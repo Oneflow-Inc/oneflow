@@ -69,9 +69,10 @@ message Conv1DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional bool use_bias = 9 [default = true];
-  optional InitializerConf weight_initializer = 10;
-  optional InitializerConf bias_initializer = 11;
+  optional ActivationType activation = 9;
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
 }
 
 message Conv2DOpConf {
@@ -83,9 +84,10 @@ message Conv2DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional bool use_bias = 9 [default = true];
-  optional InitializerConf weight_initializer = 10;
-  optional InitializerConf bias_initializer = 11;
+  optional ActivationType activation = 9;
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
 }
 
 message Conv3DOpConf {
@@ -97,9 +99,10 @@ message Conv3DOpConf {
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional bool use_bias = 9 [default = true];
-  optional InitializerConf weight_initializer = 10;
-  optional InitializerConf bias_initializer = 11;
+  optional ActivationType activation = 9;
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
 }
 
 message FullyConnectedOpConf {

@@ -197,6 +197,10 @@ void ConvOp<NDims>::VirtualGenKernelConf(
         static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
 #endif  // WITH_CUDA
+
+  if (HasFieldInPbMessage(GetCustomizedConf(), "activation")) {
+    kernel_conf->mutable_conv_conf()->set_activation(GetActivationType());
+  }
 }
 
 template<int32_t NDims>

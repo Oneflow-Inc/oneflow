@@ -12,6 +12,7 @@ class Conv2DOp final : public ConvOp<2> {
   ~Conv2DOp() = default;
 
   const PbMessage& GetCustomizedConf() const override;
+  ActivationType GetActivationType() const override;
 };
 
 }  // namespace oneflow
