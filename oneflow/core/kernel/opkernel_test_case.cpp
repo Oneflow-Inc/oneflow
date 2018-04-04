@@ -21,9 +21,7 @@ struct OpKTSwitchHelper final {
   DEFINE_OPKT_UTIL_STATIC_SWITCH_FUNC(Blob*, CreateBlobWithRandomVal);
   DEFINE_OPKT_UTIL_STATIC_SWITCH_FUNC(Blob*, CreateBlobWithSpecifiedVal);
 
-	static constexpr DataType GetDataTypeValue() {
-		return GetDataType<T>::value;
-	}
+  static constexpr DataType GetDataTypeValue() { return GetDataType<T>::value; }
 };
 
 namespace {
@@ -67,15 +65,15 @@ void BlobCmp(const std::string& blob_name, const Blob* lhs,
 }
 
 #define MAKE_OPK_HELPER_SWITCH_ENTRY(func_name, type_cpp) \
-	OpKTSwitchHelper<type_cpp>::func_name
+  OpKTSwitchHelper<type_cpp>::func_name
 DEFINE_STATIC_SWITCH_FUNC(DataType, GetDataTypeValue,
-				MAKE_OPK_HELPER_SWITCH_ENTRY,
-				MAKE_STRINGIZE_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
+                          MAKE_OPK_HELPER_SWITCH_ENTRY,
+                          MAKE_STRINGIZE_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
 
 }  // namespace
 
 DataType DataType4CppTypeString(const std::string& cpp_type_str) {
-	return SwitchGetDataTypeValue(SwitchCase(cpp_type_str));
+  return SwitchGetDataTypeValue(SwitchCase(cpp_type_str));
 }
 
 #if defined(WITH_CUDA)
@@ -451,7 +449,7 @@ void OpKernelTestCase::Run() {
   AssertAfterRun();
 }
 
-std::list<std::string> DiffKernelMultiImplTestCase::AllInputBlobNames() const {
+std::list<std::string> DiffKernelImplTestCase::AllInputBlobNames() const {
   std::list<std::string> all_input_blob_names(input_blob_names_);
   for (const auto& bn : output_diff_blob_names_) {
     all_input_blob_names.push_back(bn);
@@ -459,8 +457,8 @@ std::list<std::string> DiffKernelMultiImplTestCase::AllInputBlobNames() const {
   return all_input_blob_names;
 }
 
-std::list<std::string>
-DiffKernelMultiImplTestCase::AllOutputBlobNamesWithValidBlob() const {
+std::list<std::string> DiffKernelImplTestCase::AllOutputBlobNamesWithValidBlob()
+    const {
   std::list<std::string> all_output_blob_names(output_blob_names_);
   if (Global<JobDesc>::Get()->IsTrain() && !is_forward()) {
     for (const auto& bn : input_diff_blob_names_) {
@@ -473,13 +471,13 @@ DiffKernelMultiImplTestCase::AllOutputBlobNamesWithValidBlob() const {
   return all_output_blob_names;
 }
 
-DiffKernelMultiImplTestCase::DiffKernelMultiImplTestCase(
-    bool is_forward, DataType default_data_type) {
+DiffKernelImplTestCase::DiffKernelImplTestCase(bool is_forward,
+                                               DataType default_data_type) {
   set_is_forward(is_forward);
   set_default_data_type(default_data_type);
 }
 
-void DiffKernelMultiImplTestCase::SetBlobNames(
+void DiffKernelImplTestCase::SetBlobNames(
     const std::list<std::string>& input_bn_in_op,
     const std::list<std::string>& output_bn_in_op,
     const std::list<std::string>& output_diff_bn_in_op,
@@ -490,7 +488,7 @@ void DiffKernelMultiImplTestCase::SetBlobNames(
   input_diff_blob_names_ = input_diff_bn_in_op;
 }
 
-void DiffKernelMultiImplTestCase::SetBlobDesc(
+void DiffKernelImplTestCase::SetInputBlobDesc(
     const std::list<std::string>& bns_in_op, const Shape& shape,
     DataType data_type) {
   BlobDesc blob_desc(shape, data_type, false, false, 1);
@@ -499,7 +497,7 @@ void DiffKernelMultiImplTestCase::SetBlobDesc(
   }
 }
 
-void DiffKernelMultiImplTestCase::RandomInitInputOrigin() {
+void DiffKernelImplTestCase::RandomInitInputOrigin() {
   for (const auto& bn_in_op : AllInputBlobNames()) {
     const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
     CHECK(blob_desc);
@@ -512,7 +510,7 @@ void DiffKernelMultiImplTestCase::RandomInitInputOrigin() {
   }
 }
 
-void DiffKernelMultiImplTestCase::InitInputBlobs() {
+void DiffKernelImplTestCase::InitInputBlobs() {
   for (const auto& bn_in_op : AllInputBlobNames()) {
     const std::string& origin_input_bn = GetOriginInputBlobName(bn_in_op);
     Blob* origin_input_blob = bn_in_op2blob().at(origin_input_bn);
@@ -525,7 +523,7 @@ void DiffKernelMultiImplTestCase::InitInputBlobs() {
   }
 }
 
-void DiffKernelMultiImplTestCase::DumpBlobs(const std::string& prefix) {
+void DiffKernelImplTestCase::DumpBlobs(const std::string& prefix) {
   for (const auto& bn_in_op : AllOutputBlobNamesWithValidBlob()) {
     Blob* blob = bn_in_op2blob().at(bn_in_op);
     mut_bn_in_op2blob()->emplace(prefix + bn_in_op, blob);
@@ -533,7 +531,7 @@ void DiffKernelMultiImplTestCase::DumpBlobs(const std::string& prefix) {
   }
 }
 
-void DiffKernelMultiImplTestCase::CheckMultiRunResults(
+void DiffKernelImplTestCase::CheckMultiRunResults(
     const std::string& base_prefix,
     const std::list<std::string>& other_prefixes) const {
   for (const auto& checkee_prefix : other_prefixes) {
@@ -550,7 +548,7 @@ void DiffKernelMultiImplTestCase::CheckMultiRunResults(
   }
 }
 
-void DiffKernelMultiImplTestCase::CopyBlobDesc4DiffBlob() {
+void DiffKernelImplTestCase::CopyBlobDesc4DiffBlob() {
   auto CopyBlobDesc = [&](const std::list<std::string>& blob_names) {
     for (const auto& bn_in_op : blob_names) {
       *MutBlobDesc4BnInOp(GenDiffBn(bn_in_op)) = *BlobDesc4BnInOp(bn_in_op);
@@ -560,7 +558,7 @@ void DiffKernelMultiImplTestCase::CopyBlobDesc4DiffBlob() {
   CopyBlobDesc(output_blob_names_);
 }
 
-void DiffKernelMultiImplTestCase::MultiRunThenCheck() {
+void DiffKernelImplTestCase::MultiRunThenCheck() {
   std::shared_ptr<Operator> op;
   OpContext* op_context = nullptr;
   InferBlobDesc(&op, &op_context);

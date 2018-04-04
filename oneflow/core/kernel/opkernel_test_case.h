@@ -30,8 +30,12 @@ namespace test {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_OPKERNEL_TEST_ENTRY, (func_name),    \
                                    ((gpu, DeviceType::kGPU)), data_type_seq, \
                                    __VA_ARGS__)
+#define TEST_DIFF_KERNEL_IMPL(func_name, ...)                               \
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_TEST_DIFF_KERNEL_IMPL, (func_name), \
+                                   ##__VA_ARGS__)
 #else
 #define TEST_GPU_OPKERNEL(func_name, data_type_seq, ...)
+#define TEST_DIFF_KERNEL_IMPL(func_name, ...)
 #endif
 
 inline std::string ExpectedBlobName(const std::string& name) {
@@ -157,17 +161,17 @@ class OpKernelTestCase {
 };
 
 // diff results runned by differnt kernel implementation
-class DiffKernelMultiImplTestCase final : public OpKernelTestCase {
+class DiffKernelImplTestCase final : public OpKernelTestCase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DiffKernelMultiImplTestCase);
-  DiffKernelMultiImplTestCase(bool is_forward, DataType default_data_type);
-  ~DiffKernelMultiImplTestCase() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DiffKernelImplTestCase);
+  DiffKernelImplTestCase(bool is_forward, DataType default_data_type);
+  ~DiffKernelImplTestCase() = default;
 
   void SetBlobNames(const std::list<std::string>& input_bn_in_op,
                     const std::list<std::string>& output_bn_in_op,
                     const std::list<std::string>& output_diff_bn_in_op,
                     const std::list<std::string>& input_diff_bn_in_op);
-  void SetBlobDesc(const std::list<std::string>& bns_in_op, const Shape& shape,
+  void SetInputBlobDesc(const std::list<std::string>& bns_in_op, const Shape& shape,
                    DataType data_type);
 
   // usually, you should not call it
@@ -241,6 +245,12 @@ struct OpKernelTestUtil final {
         OF_PP_TUPLE_PUSH_FRONT(STRINGIZE_OPKERNEL_TEST_ARGS(__VA_ARGS__),     \
                                &opkernel_test_case);                          \
     opkernel_test_case.Run();                                                 \
+  }
+
+#define MAKE_TEST_DIFF_KERNEL_IMPL(func_name, ...)                         \
+  TEST(func_name, OF_PP_JOIN(_, __COUNTER__, ##__VA_ARGS__)) {             \
+    auto* test_case = func_name STRINGIZE_OPKERNEL_TEST_ARGS(__VA_ARGS__); \
+    test_case->MultiRunThenCheck();                                        \
   }
 
 }  // namespace oneflow
