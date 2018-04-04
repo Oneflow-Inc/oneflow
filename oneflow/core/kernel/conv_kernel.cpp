@@ -28,17 +28,16 @@ void ConvKernelIf<device_type, T>::ForwardDataContent(
                        BnInOp2Blob);
   if (this->kernel_conf().conv_conf().has_activation()) {
     ActivationType activation = this->kernel_conf().conv_conf().activation();
-    const T* in_dptr = in_blob->dptr<T>();
     T* out_dptr = out_blob->mut_dptr<T>();
-    int64_t elem_cnt = in_blob->shape().elem_cnt();
+    int64_t elem_cnt = out_blob->shape().elem_cnt();
     if (activation == ActivationType::kTanH) {
-      KernelUtil<device_type, T>::TanH(ctx.device_ctx, elem_cnt, in_dptr,
+      KernelUtil<device_type, T>::TanH(ctx.device_ctx, elem_cnt, out_dptr,
                                        out_dptr);
     } else if (activation == ActivationType::kSigmoid) {
-      KernelUtil<device_type, T>::Sigmoid(ctx.device_ctx, elem_cnt, in_dptr,
+      KernelUtil<device_type, T>::Sigmoid(ctx.device_ctx, elem_cnt, out_dptr,
                                           out_dptr);
     } else if (activation == ActivationType::kRelu) {
-      KernelUtil<device_type, T>::Relu(ctx.device_ctx, elem_cnt, in_dptr,
+      KernelUtil<device_type, T>::Relu(ctx.device_ctx, elem_cnt, out_dptr,
                                        out_dptr);
     } else {
       UNIMPLEMENTED();
@@ -50,14 +49,14 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_blob = BnInOp2Blob("out");
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   if (this->kernel_conf().conv_conf().has_activation()) {
     ActivationType activation = this->kernel_conf().conv_conf().activation();
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
+    const Blob* out_blob = BnInOp2Blob("out");
+    const Blob* out_diff_blob = BnInOp2Blob("out_diff");
     Blob* activation_buf_blob = BnInOp2Blob("activation_buf");
-    // use out_dptr to replace in_dptr for activation
-    // testing needed for TanH and Sigmoid
+    int64_t elem_cnt = out_blob->shape().elem_cnt();
+    // use out_dptr to replace in_dptr
+    // tests are needed for TanH and Sigmoid
     if (activation == ActivationType::kTanH) {
       KernelUtil<device_type, T>::TanHBackward(
           ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),
