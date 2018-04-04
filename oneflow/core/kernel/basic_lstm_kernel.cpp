@@ -139,7 +139,7 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       candidate_out_blob->dptr<T>(), static_cast<T>(1),
       rec_cell_out_blob->mut_dptr<T>(), static_cast<T>(1));
 
-  //  candidate_out = activation(rec_cell_out)
+  //  candidate_out = activation(rec_cell_out) reuse candidate memory
   (*activation_fw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
                          rec_cell_out_blob->dptr<T>(),
                          candidate_out_blob->mut_dptr<T>());
@@ -169,6 +169,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
 
   if (in_blob->col_id() == in_blob->max_col_id()) {
     // rec_cell_out_diff = out_diff * o_out * bw(rec_cell_out)
+    // fw(rec_cell_out) = candidate_out
     BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
         ctx, candidate_out_blob, rec_cell_out_diff_blob, activation_bw_func_,
         BnInOp2Blob);
@@ -326,11 +327,7 @@ void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
                          BnInOp2Blob("rec_cell_out")->dptr<T>(),
                          BnInOp2Blob("candidate_out")->dptr<T>(),
                          BnInOp2Blob("rec_out_diff")->dptr<T>(),
-                         BnInOp2Blob("o_out")->mut_dptr<T>());
-  KernelUtil<device_type, T>::Axpy(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(), static_cast<T>(1),
-      BnInOp2Blob("o_out")->dptr<T>(), static_cast<T>(1),
-      rec_cell_out_diff->mut_dptr<T>(), static_cast<T>(1));
+                         rec_cell_out_diff->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>

@@ -70,6 +70,7 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#bias_name) = BlobDesc(Shape({1, hidden_size}));
 
   OF_INFER_LSTM_GATE_BLOBDESC(gate_tmp_data);
+  OF_INFER_LSTM_GATE_BLOBDESC(c_data);
   OF_INFER_LSTM_GATE_BLOBDESC(candidate_out);
 
   OF_INFER_LSTM_GATE_BLOBDESC(f_out);
