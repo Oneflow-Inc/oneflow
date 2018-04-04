@@ -11,6 +11,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
@@ -25,6 +26,7 @@ template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
+size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 #endif
 
 template<DeviceType device_type>
@@ -134,7 +136,6 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
-  // x = 1.0 / sqrt(x + epsilon)
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
@@ -207,7 +208,6 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
-  // x = 1.0 / sqrt(x + epsilon)
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
 
   static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);

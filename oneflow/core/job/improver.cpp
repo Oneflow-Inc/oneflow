@@ -93,8 +93,6 @@ std::function<void(int64_t, size_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, size_t num) {
     RegstDescProto* regst_desc = regst_desc_id2regst_desc.at(regst_desc_id);
     regst_desc->set_register_num(num);
-    LOG(INFO) << "regst_desc_id: " << regst_desc->regst_desc_id()
-              << ", register_num: " << num;
   };
 }
 

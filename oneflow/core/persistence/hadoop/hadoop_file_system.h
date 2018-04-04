@@ -85,6 +85,8 @@ class HadoopFileSystem final : public FileSystem {
 
   void DeleteDir(const std::string& dirname) override;
 
+  void RecursivelyDeleteDir(const std::string& dirname) override;
+
   uint64_t GetFileSize(const std::string& fname) override;
 
   void RenameFile(const std::string& old_name,

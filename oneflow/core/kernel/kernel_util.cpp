@@ -50,11 +50,9 @@ void RngNormal(const int64_t elem_cnt, const T mean, const T std,
 }
 
 template<typename T>
-void ConstantInitializer(const ConstantInitializerConf& initializer_conf,
-                         Blob* blob) {
+void ConstantInitializer(const T& value, Blob* blob) {
   T* dptr = blob->mut_dptr<T>();
   const int64_t elem_cnt = blob->shape().elem_cnt();
-  const T value = static_cast<T>(initializer_conf.value());
   CHECK(elem_cnt);
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = value; }
 }
@@ -71,8 +69,8 @@ void RandomUniformInitializer(
 
 template<typename T>
 void RandomIntUniformInitializer(
-    const RandomUniformInitializerConf& initializer_conf, uint32_t random_seed,
-    Blob* blob) {
+    const RandomUniformIntInitializerConf& initializer_conf,
+    uint32_t random_seed, Blob* blob) {
   CHECK(blob->shape().elem_cnt());
   RngIntUniform<T>(
       blob->shape().elem_cnt(), static_cast<T>(initializer_conf.min()),
@@ -261,7 +259,8 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_conf()) {
-    ConstantInitializer<T>(initializer_conf.constant_conf(), blob);
+    ConstantInitializer<T>(
+        static_cast<T>(initializer_conf.constant_conf().value()), blob);
   } else if (initializer_conf.has_random_uniform_conf()) {
     RandomUniformInitializer<T>(initializer_conf.random_uniform_conf(),
                                 random_seed, blob);
@@ -308,10 +307,11 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
 KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
-  if (initializer_conf.has_constant_conf()) {
-    ConstantInitializer<T>(initializer_conf.constant_conf(), blob);
-  } else if (initializer_conf.has_random_uniform_conf()) {
-    RandomIntUniformInitializer<T>(initializer_conf.random_uniform_conf(),
+  if (initializer_conf.has_constant_int_conf()) {
+    ConstantInitializer<T>(
+        static_cast<T>(initializer_conf.constant_int_conf().value()), blob);
+  } else if (initializer_conf.has_random_uniform_int_conf()) {
+    RandomIntUniformInitializer<T>(initializer_conf.random_uniform_int_conf(),
                                    random_seed, blob);
   } else {
     UNIMPLEMENTED();

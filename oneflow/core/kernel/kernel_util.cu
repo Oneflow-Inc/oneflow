@@ -56,19 +56,33 @@ void Memset<DeviceType::kGPU>(DeviceCtx* ctx, void* dst, const char value,
   CudaCheck(cudaMemsetAsync(dst, value, sz, ctx->cuda_stream()));
 }
 
+#define MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY(func_name, T) \
+  cub::DeviceReduce::func_name<T*, T*>
+DEFINE_STATIC_SWITCH_FUNC(cudaError_t, Sum, MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(FLOATING_DATA_TYPE_SEQ));
+
+size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
+  size_t tmp_storage_size;
+  SwitchSum(SwitchCase(data_type), nullptr, tmp_storage_size, nullptr, nullptr,
+            sum_elem_num);
+  return tmp_storage_size;
+}
+
+#undef MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY
+
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
 
 KU_IF_METHOD Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                  T* temp_storage, size_t temp_storage_bytes) {
-  cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr, n,
-                         ctx->cuda_stream());
+  CudaCheck(cub::DeviceReduce::Max(temp_storage, temp_storage_bytes, x, max_ptr,
+                                   n, ctx->cuda_stream()));
 }
 KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                  T* temp_storage, size_t temp_storage_bytes) {
-  cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n,
-                         ctx->cuda_stream());
+  CudaCheck(cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr,
+                                   n, ctx->cuda_stream()));
 }
 
 #define KU_FLOATING_METHOD             \
