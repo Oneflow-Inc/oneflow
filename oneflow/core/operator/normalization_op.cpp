@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/normalization_op.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -38,8 +39,8 @@ void NormalizationOp::InferBlobDescs(
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const auto& conf = op_conf().normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->data_type(),
-           Global<JobDesc>::Get()->DefaultDataType());
+  const DataType in_data_type = in_blob_desc->data_type();
+  CHECK_EQ(in_data_type, Global<JobDesc>::Get()->DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
   NormalizationOpCtx* op_ctx = NewNormalizationOpCtx(in_blob_desc->shape());
   EnrollOpCtx(op_ctx);
@@ -49,15 +50,15 @@ void NormalizationOp::InferBlobDescs(
     transpose_blob_desc->mut_shape().Set(op_ctx->axis,
                                          in_blob_desc->shape().At(0));
     transpose_blob_desc->mut_shape().Set(0, op_ctx->transpose_cols);
-    transpose_blob_desc->set_data_type(in_blob_desc->data_type());
+    transpose_blob_desc->set_data_type(in_data_type);
     *GetBlobDesc4BnInOp("trans_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("normalized_in") = *transpose_blob_desc;
   } else {
     *GetBlobDesc4BnInOp("normalized_in") = *in_blob_desc;
   }
 
-  BlobDesc blob_desc(Shape({op_ctx->transpose_cols}), in_blob_desc->data_type(),
-                     false, false, 1);
+  BlobDesc blob_desc(Shape({op_ctx->transpose_cols}), in_data_type, false,
+                     false, 1);
   std::list<std::string> blob_names = {"moving_mean", "moving_variance",
                                        "inv_var"};
   std::list<std::string> bns_needless_in_predict = {"new_mean", "new_variance"};
@@ -71,10 +72,17 @@ void NormalizationOp::InferBlobDescs(
   for (const auto& bn_in_op : blob_names) {
     *GetBlobDesc4BnInOp(bn_in_op) = blob_desc;
   }
-  int64_t tmp_storage_size = std::sqrt(op_ctx->transpose_rows);
+  size_t tmp_storage_size = 0;
+  if (device_type == DeviceType::kGPU) {
+    tmp_storage_size =
+        GetTmpSizeForReduceSum(in_data_type, op_ctx->transpose_rows);
+    CHECK_GT(tmp_storage_size, 0);
+  }
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp_storage_for_sum");
-  tmp_blob_desc->set_data_type(in_blob_desc->data_type());
-  tmp_blob_desc->mut_shape() = Shape({tmp_storage_size + 1});
+  tmp_blob_desc->set_data_type(in_data_type);
+  tmp_blob_desc->mut_shape() = Shape(
+      {static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type))
+       + 1});
 }
 
 void NormalizationOp::VirtualGenKernelConf(
