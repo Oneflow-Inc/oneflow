@@ -77,7 +77,6 @@ void NormalizationOp::InferBlobDescs(
     tmp_storage_size =
         GetTmpSizeForReduceSum(in_data_type, op_ctx->transpose_rows);
     CHECK_GT(tmp_storage_size, 0);
-    LOG(INFO) << "tmp_storage_size: " << tmp_storage_size;
   }
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp_storage_for_sum");
   tmp_blob_desc->set_data_type(in_data_type);
