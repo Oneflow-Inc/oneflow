@@ -11,29 +11,42 @@ namespace test {
 
 namespace {
 
-#define MAKE_OPKT_SWITCH_ENTRY_2(func_name, device_type, T) \
-  OpKernelTestUtil<device_type>::template func_name<T>
-
-#define DEFINE_OPKT_STATIC_SWITCH_FUNC(return_type, func_name)                \
+#define DEFINE_OPKT_SWITCHER(return_type, func_name)                          \
   DEFINE_STATIC_SWITCH_FUNC(return_type, func_name, MAKE_OPKT_SWITCH_ENTRY_2, \
                             MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),       \
                             MAKE_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
+#define MAKE_OPKT_SWITCH_ENTRY_2(func_name, device_type, T) \
+  OpKernelTestUtil<device_type>::template func_name<T>
 
-DEFINE_OPKT_STATIC_SWITCH_FUNC(void, BlobCmp);
-DEFINE_OPKT_STATIC_SWITCH_FUNC(Blob*, CreateBlobWithRandomVal);
-DEFINE_OPKT_STATIC_SWITCH_FUNC(void, CheckInitializeResult);
+DEFINE_OPKT_SWITCHER(void, BlobCmp);
+DEFINE_OPKT_SWITCHER(Blob*, CreateBlobWithRandomVal);
+DEFINE_OPKT_SWITCHER(void, CheckInitializeResult);
 
+#define DEFINE_OPKT_DEV_SWITCHER(return_type, func_name)                      \
+  DEFINE_STATIC_SWITCH_FUNC(return_type, func_name, MAKE_OPKT_SWITCH_ENTRY_1, \
+                            MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ))
 #define MAKE_OPKT_SWITCH_ENTRY_1(func_name, device_type) \
   OpKernelTestUtil<device_type>::func_name
-DEFINE_STATIC_SWITCH_FUNC(void, BuildKernelCtx, MAKE_OPKT_SWITCH_ENTRY_1,
-                          MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ))
-DEFINE_STATIC_SWITCH_FUNC(void, SyncStream, MAKE_OPKT_SWITCH_ENTRY_1,
-                          MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ))
+
+DEFINE_OPKT_DEV_SWITCHER(void, BuildKernelCtx);
+DEFINE_OPKT_DEV_SWITCHER(void, SyncStream);
+DEFINE_OPKT_DEV_SWITCHER(Blob*, CreateBlob);
 
 bool NeedInferBlobDescs(Operator* op) {
   static const HashSet<int> no_need_infer_op{OperatorConf::kCopyHdConf};
   return no_need_infer_op.find(op->op_conf().op_type_case())
          == no_need_infer_op.end();
+}
+
+void BlobCmp(const std::string& blob_name, const Blob* lhs,
+             DeviceType lhs_device_type, const Blob* rhs,
+             DeviceType rhs_device_type) {
+  CHECK_EQ(lhs->data_type(), rhs->data_type());
+  DeviceType dev_type = DeviceType::kCPU;
+  if (lhs_device_type == DeviceType::kGPU) { dev_type = DeviceType::kGPU; }
+  if (rhs_device_type == DeviceType::kGPU) { dev_type = DeviceType::kGPU; }
+  SwitchBlobCmp(SwitchCase(dev_type, lhs->data_type()), blob_name, lhs,
+                lhs_device_type, rhs, rhs_device_type);
 }
 
 }  // namespace
@@ -61,6 +74,44 @@ Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc,
   return NewBlob(regst, blob_desc, static_cast<char*>(mem_ptr), nullptr,
                  DeviceType::kCPU);
 }
+
+template<DeviceType src_device_type, DeviceType dst_device_type>
+struct GetCudaMemCpyKind;
+
+template<>
+struct GetCudaMemCpyKind<DeviceType::kCPU, DeviceType::kCPU> final {
+  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToHost;
+};
+
+template<>
+struct GetCudaMemCpyKind<DeviceType::kCPU, DeviceType::kGPU> final {
+  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyHostToDevice;
+};
+
+template<>
+struct GetCudaMemCpyKind<DeviceType::kGPU, DeviceType::kGPU> final {
+  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+};
+
+template<>
+struct GetCudaMemCpyKind<DeviceType::kGPU, DeviceType::kCPU> final {
+  static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToHost;
+};
+
+template<DeviceType dst_device_type, DeviceType src_device_type>
+void BlobCopy(Blob* dst, const Blob* src) {
+  CHECK_EQ(dst->ByteSizeOfDataContentField(),
+           src->ByteSizeOfDataContentField());
+  CudaCheck(cudaMemcpy(
+      dst->mut_dptr(), src->dptr(), dst->ByteSizeOfDataContentField(),
+      GetCudaMemCpyKind<src_device_type, dst_device_type>::val));
+}
+
+#define MAKE_TWO_DEVICE_SWITCH_ENTRY(func_name, dev_type0, dev_type1) \
+  func_name<dev_type0, dev_type1>
+DEFINE_STATIC_SWITCH_FUNC(void, BlobCopy, MAKE_TWO_DEVICE_SWITCH_ENTRY,
+                          MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
+                          MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ));
 
 #endif
 
@@ -326,40 +377,40 @@ void OpKernelTestCase::AssertAfterRun() const {
   for (const auto& blob_name : *asserted_blob_names) {
     DeviceType lhs_dev_type = GetBlobDeviceType(blob_name);
     DeviceType rhs_dev_type = GetBlobDeviceType(ExpectedBlobName(blob_name));
-    DeviceType dev_type = ((lhs_dev_type == DeviceType::kGPU)
-                                   || (rhs_dev_type == DeviceType::kGPU)
-                               ? DeviceType::kGPU
-                               : DeviceType::kCPU);
-
-    CHECK(bn_in_op2blob_.find(blob_name) != bn_in_op2blob_.end())
-        << __LOC__() << ": " << blob_name;
-    CHECK(bn_in_op2blob_.find(ExpectedBlobName(blob_name))
-          != bn_in_op2blob_.end())
-        << __LOC__() << ": " << ExpectedBlobName(blob_name);
-    DataType data_type = bn_in_op2blob_.at(blob_name)->data_type();
-
-    SwitchBlobCmp(SwitchCase(dev_type, data_type), blob_name,
-                  bn_in_op2blob_.at(blob_name), lhs_dev_type,
-                  bn_in_op2blob_.at(ExpectedBlobName(blob_name)), rhs_dev_type);
+    BlobCmp(blob_name, bn_in_op2blob_.at(blob_name), lhs_dev_type,
+            bn_in_op2blob_.at(ExpectedBlobName(blob_name)), rhs_dev_type);
   }
 }
 
-void OpKernelTestCase::Run() {
-  InitBeforeRun();
-  auto op = ConstructOp(op_conf_);
-  auto BnInOp2BlobDesc = MakeGetterBnInOp2BlobDesc();
-  OpContext* op_context = nullptr;
-  if (NeedInferBlobDescs(op.get())) {
-    op->InferBlobDescs(BnInOp2BlobDesc, &parallel_ctx_, default_device_type(),
-                       [&](OpContext* op_ctx) { op_context = op_ctx; });
+Regst* OpKernelTestCase::GetBlobRegst(const std::string& bn_in_op) {
+  const auto& it = bn_in_op2regst_.find(bn_in_op);
+  if (it == bn_in_op2regst_.end()) { return nullptr; }
+  return it->second;
+}
+
+std::function<BlobDesc*(const std::string&)>
+OpKernelTestCase::MakeGetterBnInOp2BlobDesc() {
+  return [this](const std::string& bn) { return MutBlobDesc4BnInOp(bn); };
+}
+
+void OpKernelTestCase::InferBlobDesc(std::shared_ptr<Operator>* op,
+                                     OpContext** op_context) {
+  *op = ConstructOp(op_conf_);
+  if (NeedInferBlobDescs(op->get())) {
+    (*op)->InferBlobDescs(MakeGetterBnInOp2BlobDesc(), &parallel_ctx_,
+                          default_device_type(),
+                          [&](OpContext* op_ctx) { *op_context = op_ctx; });
   }
-  auto BnInOp2Blob = MakeGetterBnInOp2Blob();
+}
+
+void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
   auto Launch = [&](bool is_forward) {
     KernelConf kernel_conf;
-    op->GenKernelConf(BnInOp2BlobDesc, is_forward, default_device_type(),
-                      &parallel_ctx_, &kernel_conf, op_context);
+    op->GenKernelConf(MakeGetterBnInOp2BlobDesc(), is_forward,
+                      default_device_type(), &parallel_ctx_, &kernel_conf,
+                      op_context);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
-    kernel->Launch(kernel_ctx_, BnInOp2Blob);
+    kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);
   };
   Launch(this);
@@ -367,14 +418,111 @@ void OpKernelTestCase::Run() {
     initiation_before_backward_();
     Launch(false);
   }
+}
+
+void OpKernelTestCase::Run() {
+  InitBeforeRun();
+  std::shared_ptr<Operator> op;
+  OpContext* op_context = nullptr;
+  InferBlobDesc(&op, &op_context);
+  RunKernel(op.get(), op_context);
   AssertAfterRun();
 }
 
-std::function<BlobDesc*(const std::string&)>
-OpKernelTestCase::MakeGetterBnInOp2BlobDesc() {
-  return [this](const std::string& bn_in_op) {
-    return &bn_in_op2blob_desc_[bn_in_op];
+std::list<std::string> OpKernelMultiRunTestCase::AllInputBlobNames() const {
+  std::list<std::string> all_input_blob_names;
+  std::merge(input_blob_names_.begin(), input_blob_names_.end(),
+             output_diff_blob_names_.begin(), output_diff_blob_names_.end(),
+             all_input_blob_names.begin());
+  return all_input_blob_names;
+}
+
+std::list<std::string>
+OpKernelMultiRunTestCase::AllOutputBlobNamesWithValidBlob() const {
+  std::list<std::string> all_output_blob_names;
+  if (Global<JobDesc>::Get()->IsTrain() && !is_forward()) {
+    std::merge(output_blob_names_.begin(), output_blob_names_.end(),
+               input_diff_blob_names_.begin(), input_diff_blob_names_.end(),
+               all_output_blob_names.begin());
+  } else {
+    all_output_blob_names = output_blob_names_;
+  }
+  for (const auto& bn_in_op : all_output_blob_names) {
+    CHECK(bn_in_op2blob().find(bn_in_op) != bn_in_op2blob().end());
+  }
+  return all_output_blob_names;
+}
+
+void OpKernelMultiRunTestCase::RandomInitInputOrigin() {
+  for (const auto& bn_in_op : AllInputBlobNames()) {
+    const BlobDesc& blob_desc = BlobDesc4BnInOp(bn_in_op);
+    Blob* blob = SwitchCreateBlobWithRandomVal(
+        SwitchCase(DeviceType::kCPU, blob_desc.data_type()), &blob_desc,
+        GetBlobRegst(bn_in_op));
+    const std::string& bn = GetOriginInputBlobName(bn_in_op);
+    CHECK(mut_bn_in_op2blob()->emplace(bn, blob).second);
+    SetBlobSpecializedDeviceType(bn, DeviceType::kCPU);
+  }
+}
+
+void OpKernelMultiRunTestCase::InitInputBlobs() {
+  for (const auto& bn_in_op : AllInputBlobNames()) {
+    const std::string& origin_input_bn = GetOriginInputBlobName(bn_in_op);
+    Blob* origin_input_blob = bn_in_op2blob().at(origin_input_bn);
+    const BlobDesc& blob_desc = BlobDesc4BnInOp(bn_in_op);
+    Blob* blob = SwitchCreateBlob(SwitchCase(default_device_type()), &blob_desc,
+                                  GetBlobRegst(bn_in_op));
+    SwitchBlobCopy(SwitchCase(default_device_type(), DeviceType::kCPU), blob,
+                   origin_input_blob);
+    mut_bn_in_op2blob()->emplace(bn_in_op, blob);
+  }
+}
+
+void OpKernelMultiRunTestCase::DumpBlobs(const std::string& prefix) {
+  for (const auto& bn_in_op : AllOutputBlobNamesWithValidBlob()) {
+    Blob* blob = bn_in_op2blob().at(bn_in_op);
+    mut_bn_in_op2blob()->emplace(prefix + bn_in_op, blob);
+    SetBlobSpecializedDeviceType(prefix + bn_in_op, default_device_type());
+  }
+}
+
+void OpKernelMultiRunTestCase::CheckMultiRunResults(
+    const std::string& base_prefix,
+    const std::list<std::string>& other_prefixes) const {
+  for (const auto& checkee_prefix : other_prefixes) {
+    for (const auto& bn_in_op : AllOutputBlobNamesWithValidBlob()) {
+      const std::string& base_bn = base_prefix + bn_in_op;
+      Blob* base_blob = bn_in_op2blob().at(base_bn);
+      DeviceType base_blob_device_type = GetBlobDeviceType(base_bn);
+      const std::string& checkee_bn = checkee_prefix + bn_in_op;
+      Blob* checkee_blob = bn_in_op2blob().at(checkee_bn);
+      DeviceType checkee_blob_device_type = GetBlobDeviceType(checkee_bn);
+      BlobCmp(checkee_bn, checkee_blob, checkee_blob_device_type, base_blob,
+              base_blob_device_type);
+    }
+  }
+}
+
+void OpKernelMultiRunTestCase::MultiRunThenCheck() {
+  InitBeforeRun();
+  std::shared_ptr<Operator> op;
+  OpContext* op_context = nullptr;
+  InferBlobDesc(&op, &op_context);
+  RandomInitInputOrigin();
+  auto Run = [&](const std::string& dump_prefix) {
+    std::shared_ptr<Operator> op;
+    InferBlobDesc(&op, &op_context);
+    InitInputBlobs();
+    RunKernel(op.get(), op_context);
+    DumpBlobs(dump_prefix);
   };
+  set_default_device_type(DeviceType::kCPU);
+  Run("cpu_");
+  set_default_device_type(DeviceType::kGPU);
+  Run("gpu_");
+  mut_op_conf()->set_use_cudnn_on_gpu(true);
+  Run("cudnn_");
+  CheckMultiRunResults("cpu_", {"gpu_", "cudnn_"});
 }
 
 #define INSTANTIATE_OPKERNEL_TEST_CASE_METHODS(T, type_proto)              \

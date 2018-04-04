@@ -38,13 +38,11 @@ inline std::string ExpectedBlobName(const std::string& name) {
   return name + "_$expected$";
 }
 
-class OpKernelTestCase final {
+class OpKernelTestCase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
   OpKernelTestCase();
-  ~OpKernelTestCase() = default;
-
-  void Run();
+  virtual ~OpKernelTestCase() = default;
 
   //  Setters
   void InitJobConf(const std::function<void(JobConf*)>& Init);
@@ -63,6 +61,9 @@ class OpKernelTestCase final {
                                     DeviceType dev_type) {
     bn_in_op2device_type_.emplace(blob_name, dev_type);
   }
+  BlobDesc* MutBlobDesc4BnInOp(const std::string& bn_in_op) {
+    return &bn_in_op2blob_desc_[bn_in_op];
+  }
 
   //  Getters
   DeviceType default_device_type() const { return default_device_type_; }
@@ -73,6 +74,9 @@ class OpKernelTestCase final {
     const auto& it = bn_in_op2device_type_.find(blob_name);
     return (it == bn_in_op2device_type_.end()) ? default_device_type()
                                                : it->second;
+  }
+  const BlobDesc& BlobDesc4BnInOp(const std::string& bn_in_op) {
+    return bn_in_op2blob_desc_[bn_in_op];
   }
 
   void EnrollBlobRegst(const std::string& blob_name, Regst*);
@@ -104,6 +108,18 @@ class OpKernelTestCase final {
       const std::string&, const BlobDesc* blob_desc,
       const std::string& expected_existed_blob_name, bool need_random_init);
 
+  // usually, you should not call it
+  void Run();
+
+ protected:
+  void InitBeforeRun();
+  void InferBlobDesc(std::shared_ptr<Operator>* op, OpContext** op_context);
+  void RunKernel(Operator* op, OpContext* op_context);
+  void AssertAfterRun() const;
+  Regst* GetBlobRegst(const std::string& bn_in_op);
+
+  bool is_forward() const { return is_forward_; }
+
  private:
   template<typename T>
   void CheckBlob(const std::string&, const BlobDesc* blob_desc,
@@ -118,8 +134,6 @@ class OpKernelTestCase final {
 
   std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
-  void InitBeforeRun();
-  void AssertAfterRun() const;
 
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
@@ -134,6 +148,48 @@ class OpKernelTestCase final {
   bool is_forward_;
   DeviceType default_device_type_;
   std::function<void()> initiation_before_backward_;
+};
+
+class OpKernelMultiRunTestCase final : public OpKernelTestCase {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OpKernelMultiRunTestCase);
+  OpKernelMultiRunTestCase() : default_data_type_(DataType::kInvalidDataType) {}
+  ~OpKernelMultiRunTestCase() = default;
+
+  void set_default_data_type(DataType default_data_type) {
+    default_data_type_ = default_data_type;
+  }
+  std::list<std::string>* mut_input_blob_names() { return &input_blob_names_; }
+  std::list<std::string>* mut_output_blob_names() {
+    return &output_blob_names_;
+  }
+  std::list<std::string>* mut_input_diff_blob_names() {
+    return &input_diff_blob_names_;
+  }
+  std::list<std::string>* mut_output_diff_blob_names() {
+    return &output_diff_blob_names_;
+  }
+
+  // usually, you should not call it
+  void MultiRunThenCheck();
+
+ private:
+  void RandomInitInputOrigin();
+  void InitInputBlobs();
+  void DumpBlobs(const std::string& prefix);
+  void CheckMultiRunResults(const std::string& base_prefix,
+                            const std::list<std::string>& other_prefixes) const;
+  std::list<std::string> AllInputBlobNames() const;
+  std::list<std::string> AllOutputBlobNamesWithValidBlob() const;
+  static std::string GetOriginInputBlobName(const std::string& bn_in_op) {
+    return std::string("origin_") + bn_in_op;
+  }
+
+  DataType default_data_type_;
+  std::list<std::string> input_blob_names_;
+  std::list<std::string> output_blob_names_;
+  std::list<std::string> input_diff_blob_names_;
+  std::list<std::string> output_diff_blob_names_;
 };
 
 template<DeviceType device_type>
