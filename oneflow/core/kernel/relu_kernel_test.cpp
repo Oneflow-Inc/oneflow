@@ -27,15 +27,9 @@ TEST_CPU_AND_GPU_OPKERNEL(ReluTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward));
 
 TEST(ReluKernel, multi_run) {
-  OpKernelMultiRunTestCase test_case;
+  DiffKernelMultiImplTestCase test_case(true, DataType::kFloat);
   test_case.mut_op_conf()->mutable_relu_conf();
-  test_case.set_is_forward(true);
-  test_case.set_default_device_type(DeviceType::kCPU);
-  test_case.set_default_data_type(DataType::kFloat);
-  *test_case.MutBlobDesc4BnInOp("in") =
-      BlobDesc(Shape({1, 8}), DataType::kFloat, false, false, 1);
-  *test_case.MutBlobDesc4BnInOp(GenDiffBn("out")) =
-      *test_case.BlobDesc4BnInOp("in");
+  test_case.SetBlobDesc({"in"}, Shape({1, 8}), DataType::kFloat);
   test_case.SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                          {{GenDiffBn("in")}});
   test_case.MultiRunThenCheck();

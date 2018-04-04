@@ -38,6 +38,8 @@ inline std::string ExpectedBlobName(const std::string& name) {
   return name + "_$expected$";
 }
 
+DataType DataType4CppTypeString(const std::string& cpp_type_str);
+
 class OpKernelTestCase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpKernelTestCase);
@@ -154,16 +156,19 @@ class OpKernelTestCase {
   std::list<std::string> backward_asserted_blob_names_;
 };
 
-class OpKernelMultiRunTestCase final : public OpKernelTestCase {
+// diff results runned by differnt kernel implementation
+class DiffKernelMultiImplTestCase final : public OpKernelTestCase {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(OpKernelMultiRunTestCase);
-  OpKernelMultiRunTestCase() = default;
-  ~OpKernelMultiRunTestCase() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DiffKernelMultiImplTestCase);
+  DiffKernelMultiImplTestCase(bool is_forward, DataType default_data_type);
+  ~DiffKernelMultiImplTestCase() = default;
 
   void SetBlobNames(const std::list<std::string>& input_bn_in_op,
                     const std::list<std::string>& output_bn_in_op,
                     const std::list<std::string>& output_diff_bn_in_op,
                     const std::list<std::string>& input_diff_bn_in_op);
+  void SetBlobDesc(const std::list<std::string>& bns_in_op, const Shape& shape,
+                   DataType data_type);
 
   // usually, you should not call it
   void MultiRunThenCheck();
@@ -171,6 +176,7 @@ class OpKernelMultiRunTestCase final : public OpKernelTestCase {
  private:
   void RandomInitInputOrigin();
   void InitInputBlobs();
+  void CopyBlobDesc4DiffBlob();
   void DumpBlobs(const std::string& prefix);
   void CheckMultiRunResults(const std::string& base_prefix,
                             const std::list<std::string>& other_prefixes) const;
