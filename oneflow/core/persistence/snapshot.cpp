@@ -34,15 +34,11 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
 
 void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
                            int32_t part_num) {
-  std::string done_dir = JoinPath(root_path_, lbn + "_done");
-  OF_CALL_ONCE(done_dir, GlobalFS()->CreateDir(done_dir));
-  std::string done_file_path = JoinPath(done_dir, std::to_string(part_id));
-  CHECK_EQ(GlobalFS()->FileExists(done_file_path), false);
-  { PersistentOutStream out_stream(GlobalFS(), done_file_path); }
-  if (GlobalFS()->ListDir(done_dir).size() == part_num) {
-    std::string concat_file = JoinPath(root_path_, lbn);
-    OF_CALL_ONCE(concat_file, GlobalFS()->RecursivelyDeleteDir(done_dir);
-                 ConcatLbnFile(lbn, part_num, concat_file));
+  std::string lbn_done_key = JoinPath(root_path_, "part_done", lbn);
+  int32_t lbn_done_cnt = Global<CtrlClient>::Get()->IncreaseCount(lbn_done_key);
+  if (lbn_done_cnt == part_num) {
+    Global<CtrlClient>::Get()->EraseCount(lbn_done_key);
+    ConcatLbnFile(lbn, part_num, JoinPath(root_path_, lbn));
   }
 }
 
@@ -50,9 +46,6 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
                              const std::string& concat_file) {
   std::vector<char> buffer(
       Global<JobDesc>::Get()->persistence_buffer_byte_size());
-  std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
-  const std::string& op_name = parsed_lbn.first;
-  const std::string& bn_in_op = parsed_lbn.second;
   std::string part_dir = JoinPath(root_path_, lbn + "_tmp");
   {
     PersistentOutStream out_stream(GlobalFS(), concat_file);
@@ -73,17 +66,12 @@ void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
     }
   }
   GlobalFS()->DeleteDir(part_dir);
-  std::string done_dir = JoinPath(root_path_, "snapshot_done_tmp");
-  OF_CALL_ONCE(done_dir, GlobalFS()->CreateDir(done_dir));
-  {
-    PersistentOutStream out_stream(
-        GlobalFS(), JoinPath(done_dir, op_name + "_" + bn_in_op));
-  }
-  if (GlobalFS()->ListDir(done_dir).size()
-      == Global<SnapshotMgr>::Get()->total_mbn_num()) {
-    std::string done_file = JoinPath(root_path_, "snapshot_done");
-    OF_CALL_ONCE(done_file, GlobalFS()->RecursivelyDeleteDir(done_dir);
-                 { PersistentOutStream out_stream(GlobalFS(), done_file); });
+  std::string snapshot_done_path = JoinPath(root_path_, "snapshot_done");
+  int32_t snapshot_done_cnt =
+      Global<CtrlClient>::Get()->IncreaseCount(snapshot_done_path);
+  if (snapshot_done_cnt == Global<SnapshotMgr>::Get()->total_mbn_num()) {
+    Global<CtrlClient>::Get()->EraseCount(snapshot_done_path);
+    PersistentOutStream out_stream(GlobalFS(), snapshot_done_path);
   }
 }
 

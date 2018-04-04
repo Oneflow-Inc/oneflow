@@ -44,6 +44,10 @@ class CtrlClient final {
   void PushActEvent(const ActEvent&);
   void Clear();
 
+  int32_t IncreaseCount(const std::string& k, int32_t v);
+  int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
+  void EraseCount(const std::string& k);
+
  private:
   friend class Global<CtrlClient>;
   CtrlClient();
