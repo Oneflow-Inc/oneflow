@@ -24,11 +24,12 @@ class ForwardCompActor final : public CompActor {
 
   void UpdateModelRegstPtr(Regst* regst);
 
+  void AsyncInitModel();
   void AsyncReturnModelRegst();
   void TryAsyncReturnModelRegst();
   void TryAsyncReturnModelTmpRegst();
-  void AsyncInitModel();
-  void TrySendMsgToForwardModelSaveActor(const int64_t piece_id);
+  void TrySendMsgToForwardModelSaveActor(int64_t piece_id);
+  void SendMsgToForwardModelSaveActor(int64_t batch_id);
 
   void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
 

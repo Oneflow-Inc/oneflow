@@ -12,6 +12,13 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
          || (order == ColIdOrder::kDescending && regst->col_id() == 0);
 }
 
+bool NeedSaveForNextModelVersionId(int64_t next_model_version_id) {
+  return next_model_version_id == Global<JobDesc>::Get()->TotalBatchNum()
+         || next_model_version_id
+                    % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+                == 0;
+}
+
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
