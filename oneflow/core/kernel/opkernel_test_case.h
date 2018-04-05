@@ -172,8 +172,8 @@ class DiffKernelImplTestCase final : public OpKernelTestCase {
                     const std::list<std::string>& output_bn_in_op,
                     const std::list<std::string>& output_diff_bn_in_op,
                     const std::list<std::string>& input_diff_bn_in_op);
-  void SetInputBlobDesc(const std::list<std::string>& bns_in_op,
-                        const Shape& shape, DataType data_type);
+  void SetInputBlobDesc(const std::string& bns_in_op, const Shape& shape,
+                        DataType data_type);
 
   // usually, you should not call it
   void MultiRunThenCheck();

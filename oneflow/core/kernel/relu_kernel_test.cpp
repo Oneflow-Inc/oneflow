@@ -34,7 +34,7 @@ DiffKernelImplTestCase* DiffReluKernelImpl(const std::string& job_type,
   test_case->mut_op_conf()->mutable_relu_conf();
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {{GenDiffBn("in")}});
-  test_case->SetInputBlobDesc({"in"}, Shape({1, 8}), DataType::kFloat);
+  test_case->SetInputBlobDesc("in", Shape({1, 8}), DataType::kFloat);
   return test_case;
 }
 TEST_DIFF_KERNEL_IMPL(DiffReluKernelImpl, (train)(predict), (forward)(backward),

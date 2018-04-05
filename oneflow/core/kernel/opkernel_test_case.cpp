@@ -489,13 +489,11 @@ void DiffKernelImplTestCase::SetBlobNames(
   input_diff_blob_names_ = input_diff_bn_in_op;
 }
 
-void DiffKernelImplTestCase::SetInputBlobDesc(
-    const std::list<std::string>& bns_in_op, const Shape& shape,
-    DataType data_type) {
+void DiffKernelImplTestCase::SetInputBlobDesc(const std::string& bn_in_op,
+                                              const Shape& shape,
+                                              DataType data_type) {
   BlobDesc blob_desc(shape, data_type, false, false, 1);
-  for (const auto& bn_in_op : bns_in_op) {
-    *MutBlobDesc4BnInOp(bn_in_op) = blob_desc;
-  }
+  *MutBlobDesc4BnInOp(bn_in_op) = blob_desc;
 }
 
 void DiffKernelImplTestCase::RandomInitInputOrigin() {
