@@ -15,9 +15,11 @@ class CyclicPersistentInStreamWithoutLocalCopy final
   CyclicPersistentInStreamWithoutLocalCopy(fs::FileSystem* fs,
                                            const std::string& file_path);
 
+ private:
+  void UpdateBuffer() override;
   void AddNForCurFilePos(uint64_t n) override;
 
- private:
+  bool is_first_update_buffer_;
 };
 
 }  // namespace oneflow

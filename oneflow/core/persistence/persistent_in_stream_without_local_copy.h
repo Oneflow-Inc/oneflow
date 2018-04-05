@@ -19,13 +19,15 @@ class PersistentInStreamWithoutLocalCopy : public PersistentInStream {
   PersistentInStreamWithoutLocalCopy(fs::FileSystem*,
                                      const std::string& file_path,
                                      uint64_t offset);
+  virtual void UpdateBuffer();
   virtual void AddNForCurFilePos(uint64_t n) = 0;
   uint64_t file_size() const { return file_size_; }
+  std::vector<char>* mut_buffer() { return &buffer_; }
   uint64_t cur_file_pos() const { return cur_file_pos_; }
   void set_cur_file_pos(uint64_t val) { cur_file_pos_ = val; }
+  void set_cur_buf_begin(char* val) { cur_buf_begin_ = val; }
 
  private:
-  void UpdateBuffer();
   bool IsEof() const;
 
   std::unique_ptr<fs::RandomAccessFile> file_;
