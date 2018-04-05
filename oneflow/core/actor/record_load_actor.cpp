@@ -1,5 +1,5 @@
 #include "oneflow/core/actor/record_load_actor.h"
-#include "oneflow/core/persistence/cyclic_persistent_in_stream_without_local_copy.h"
+#include "oneflow/core/persistence/cyclic_persistent_in_stream_with_local_copy.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/record/record.pb.h"
@@ -11,7 +11,7 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
   if (Global<JobDesc>::Get()->IsTrain()) {
-    in_stream_.reset(new CyclicPersistentInStreamWithoutLocalCopy(
+    in_stream_.reset(new CyclicPersistentInStreamWithLocalCopy(
         GlobalFS(), task_proto.data_path()));
   } else {
     in_stream_.reset(

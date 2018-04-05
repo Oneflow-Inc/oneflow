@@ -3,9 +3,9 @@
 
 namespace oneflow {
 
-int32_t PersistentInStreamWithoutLocalCopy::ReadLine(std::string* line) {
+int32_t PersistentInStreamWithoutLocalCopy::ReadLine(std::string* l) {
   if (IsEof()) { return -1; }
-  line->clear();
+  l->clear();
   while (*cur_buf_begin_ != '\n') {
     if (cur_buf_begin_ == cur_buf_end_) {
       UpdateBuffer();
@@ -15,7 +15,7 @@ int32_t PersistentInStreamWithoutLocalCopy::ReadLine(std::string* line) {
         continue;
       }
     }
-    line->push_back(*cur_buf_begin_++);
+    l->push_back(*cur_buf_begin_++);
   }
   ++cur_buf_begin_;
   return 0;

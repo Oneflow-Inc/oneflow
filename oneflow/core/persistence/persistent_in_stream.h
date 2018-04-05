@@ -12,7 +12,7 @@ class PersistentInStream {
 
   // 0: success
   // -1: eof
-  virtual int32_t ReadLine(std::string* line) = 0;
+  virtual int32_t ReadLine(std::string* l) = 0;
   virtual int32_t Read(char* s, size_t n) = 0;
 
  protected:

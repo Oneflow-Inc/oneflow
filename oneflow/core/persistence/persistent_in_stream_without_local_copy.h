@@ -12,7 +12,7 @@ class PersistentInStreamWithoutLocalCopy : public PersistentInStream {
   PersistentInStreamWithoutLocalCopy() = delete;
   virtual ~PersistentInStreamWithoutLocalCopy() = default;
 
-  int32_t ReadLine(std::string* line) override;
+  int32_t ReadLine(std::string* l) override;
   int32_t Read(char* s, size_t n) override;
 
  protected:
