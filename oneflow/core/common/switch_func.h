@@ -47,11 +47,11 @@ auto SwitchCase(Args&&... args)
   MAKE_TYPED_CTRV_SEQ(int32_t, OF_PP_FOR_EACH_TUPLE( \
                                    OF_PP_I_MAKE_REPLICATE_TUPE_SEQ, ndim_seq))
 
-#define MAKE_STRINGIZE_DATA_TYPE_CTRV(data_type_pair) \
-  (OF_PP_PAIR_FIRST(data_type_pair),                  \
+#define MAKE_STRINGIZED_DATA_TYPE_CTRV(data_type_pair) \
+  (OF_PP_PAIR_FIRST(data_type_pair),                   \
    OF_PP_STRINGIZE(OF_PP_PAIR_FIRST(data_type_pair)))
-#define MAKE_STRINGIZE_DATA_TYPE_CTRV_SEQ(data_type_seq) \
-  (std::string, OF_PP_SEQ_MAP(MAKE_STRINGIZE_DATA_TYPE_CTRV, data_type_seq))
+#define MAKE_STRINGIZED_DATA_TYPE_CTRV_SEQ(data_type_seq) \
+  (std::string, OF_PP_SEQ_MAP(MAKE_STRINGIZED_DATA_TYPE_CTRV, data_type_seq))
 
 //  internal preprocessor macros
 

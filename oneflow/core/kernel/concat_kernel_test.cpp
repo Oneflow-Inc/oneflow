@@ -6,9 +6,9 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void ConcatTestCase(OpKernelTestCase* concat_test_case,
-                    const std::string& job_type,
-                    const std::string& forward_or_backward) {
+void ConcatTestCase(OpKernelTestCase *concat_test_case,
+                    const std::string &job_type,
+                    const std::string &forward_or_backward) {
   concat_test_case->set_is_train(job_type == "train");
   concat_test_case->set_is_forward(forward_or_backward == "forward");
   auto concat_conf = concat_test_case->mut_op_conf()->mutable_concat_conf();
