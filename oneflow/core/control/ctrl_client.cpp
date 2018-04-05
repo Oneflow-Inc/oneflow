@@ -119,6 +119,24 @@ void CtrlClient::Clear() {
   done_names_.clear();
 }
 
+int32_t CtrlClient::IncreaseCount(const std::string& k, int32_t v) {
+  grpc::ClientContext client_ctx;
+  IncreaseCountRequest request;
+  request.set_key(k);
+  request.set_val(v);
+  IncreaseCountResponse response;
+  GetResponsibleStub(k)->IncreaseCount(&client_ctx, request, &response);
+  return response.val();
+}
+
+void CtrlClient::EraseCount(const std::string& k) {
+  grpc::ClientContext client_ctx;
+  EraseCountRequest request;
+  request.set_key(k);
+  EraseCountResponse response;
+  GetResponsibleStub(k)->EraseCount(&client_ctx, request, &response);
+}
+
 CtrlClient::CtrlClient() {
   stubs_.reserve(Global<JobDesc>::Get()->TotalMachineNum());
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
