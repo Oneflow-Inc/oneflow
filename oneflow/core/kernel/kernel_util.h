@@ -11,6 +11,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
@@ -25,6 +26,7 @@ template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
+size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 #endif
 
 template<DeviceType device_type>

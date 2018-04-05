@@ -10,8 +10,8 @@ message TrainConf {
   optional int32 staleness = 3 [default = 0]; // -1 means ASP, 0 means BSP, > 0 means SSP
   required int64 total_batch_num = 4;
   optional InitializerConf default_initializer_conf = 5;
-  optional int32 piece_num_of_print_loss = 6;
-  required int32 num_of_pieces_in_batch = 7;
+  optional int64 piece_num_of_print_loss = 6 [default = -1];
+  required int64 num_of_pieces_in_batch = 7;
   optional float l1 = 8 [default = 0];
   optional float l2 = 9 [default = 0];
   required NormalModelUpdateOpUserConf model_update_conf = 10;
@@ -47,9 +47,9 @@ message JobConf {
   optional bool use_cudnn_on_gpu = 10 [default = true];
   optional DataType default_data_type = 11 [default = kFloat]; // kFloat or kDouble
 
-  optional int64 piece_num_of_experiment_phase = 101 [default = 100];
+  optional int64 piece_num_of_experiment_phase = 101 [default = -1];
   optional float available_zone_mem_ratio = 102 [default = 0.95];
-  optional uint64 one_data_part_buffer_mbyte_size = 103 [default = 128];
+  optional uint64 persistence_buffer_mbyte_size = 103 [default = 64];
 
   oneof JobType {
     TrainConf train_conf = 1000;
