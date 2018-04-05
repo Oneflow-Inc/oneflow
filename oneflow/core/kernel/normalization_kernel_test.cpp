@@ -4,6 +4,21 @@ namespace oneflow {
 
 namespace test {
 
+DiffKernelImplTestCase* DiffNormalizationKernelImpl(const std::string& job_type,
+                                           const std::string& fw_or_bw,
+                                           const std::string& cpp_type) {
+  auto* test_case =
+      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
+                                 DataType4CppTypeString(cpp_type));
+  test_case->mut_op_conf()->mutable_normalization_conf();
+  test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
+                          {GenDiffBn("in")});
+  test_case->SetInputBlobDesc("in", Shape({50, 10, 28, 28}), DataType::kFloat);
+  return test_case;
+}
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl, (train)(predict), (forward)(backward),
+                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ));
+
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_single_number(OpKernelTestCase* norm_test_case,
                                          const std::string& job_type,
