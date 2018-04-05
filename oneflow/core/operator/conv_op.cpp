@@ -178,7 +178,7 @@ std::vector<int32_t> ConvOp<NDims>::Get3DVecInOpConf(
 }
 
 template<int32_t NDims>
-int64_t ConvOp<NDims>::GetInDim(const Shape& in_shape, uint8_t dim) const {
+int64_t ConvOp<NDims>::GetInDim(const Shape& shape, uint8_t dim) const {
   int64_t offset = 0;
   std::string data_format =
       GetValFromCustomizedConf<std::string>("data_format");
@@ -193,7 +193,7 @@ int64_t ConvOp<NDims>::GetInDim(const Shape& in_shape, uint8_t dim) const {
   if (index < offset) {
     return 1;
   } else {
-    return in_shape.At(index);
+    return shape.At(index);
   }
 }
 
@@ -203,13 +203,10 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
-  const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
   const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
   std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
-                             GetInDim(in_shape, 1)};
-  std::vector<int32_t> weight = {GetInDim(weight_shape, 0),
-                                 GetInDim(weight_shape, 1),
-                                 GetInDim(weight_shape, 2)};
+                             GetInDim(in_shape, 2)};
+  std::vector<int32_t> weight = this->Get3DVecInOpConf("kernel_size");
   std::vector<int64_t> out;
   std::vector<int32_t> strides = this->Get3DVecInOpConf("strides");
   std::vector<int32_t> dilation_rate = this->Get3DVecInOpConf("dilation_rate");
@@ -218,23 +215,19 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   Get3DOutputSize(in, weight, strides,
                   GetValFromCustomizedConf<std::string>("padding"), &out,
                   &pad_small_side, &pad_large_side, &dilation_rate);
-  std::vector<int64_t> bias_mul = {1, GetInDim(out_shape, 0),
-                                   GetInDim(out_shape, 1),
-                                   GetInDim(out_shape, 2)};
   FOR_RANGE(size_t, i, 0, 3) {
     conv_conf->mutable_strides()->Add(strides.at(i));
     conv_conf->mutable_pad_small_side()->Add(pad_small_side.at(i));
     conv_conf->mutable_pad_large_side()->Add(pad_large_side.at(i));
     conv_conf->mutable_dilation_rate()->Add(dilation_rate.at(i));
-    conv_conf->mutable_bias_mul()->Add(bias_mul.at(i));
   }
-  conv_conf->mutable_bias_mul()->Add(bias_mul.at(3));
   std::string data_format =
       GetValFromCustomizedConf<std::string>("data_format");
+  const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
   if (data_format == "channels_first") {
     Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
         .ToProto(conv_conf->mutable_in());
-    Shape({in_shape.At(0), in_shape.At(1), out.at(0), out.at(1), out.at(2)})
+    Shape({out_shape.At(0), out_shape.At(1), out.at(0), out.at(1), out.at(2)})
         .ToProto(conv_conf->mutable_out());
     Shape({weight_shape.At(0), weight_shape.At(1), weight.at(0), weight.at(1),
            weight.at(2)})
@@ -243,8 +236,8 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2),
            in_shape.At(in_shape.NumAxes() - 1)})
         .ToProto(conv_conf->mutable_in());
-    Shape({in_shape.At(0), out.at(0), out.at(1), out.at(2),
-           in_shape.At(in_shape.NumAxes() - 1)})
+    Shape({out_shape.At(0), out.at(0), out.at(1), out.at(2),
+           out_shape.At(out_shape.NumAxes() - 1)})
         .ToProto(conv_conf->mutable_out());
     Shape({weight_shape.At(0), weight.at(0), weight.at(1), weight.at(2),
            weight_shape.At(weight_shape.NumAxes() - 1)})
