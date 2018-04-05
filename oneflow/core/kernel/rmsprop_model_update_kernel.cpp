@@ -9,15 +9,17 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  const RMSPropModelUpdateConf& conf =
-      this->op_conf().normal_mdupdt_conf().user_conf().rmsprop_conf();
-  float decay_rate = conf.decay_rate();
+  const NormalModelUpdateOpUserConf& conf =
+      this->op_conf().normal_mdupdt_conf().user_conf();
+  float decay_rate = conf.rmsprop_conf().decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
+  float learning_rate = GetDecayedLearningRate(
+      conf.lr_decay(), conf.learning_rate(), next_model_vid - 1);
 
   RMSPropMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), static_cast<T>(1.0f - decay_rate),
-      static_cast<T>(conf.learning_rate()), static_cast<T>(decay_rate),
-      static_cast<T>(conf.epsilon()), pre_model_blob->dptr<T>(),
+      static_cast<T>(learning_rate), static_cast<T>(decay_rate),
+      static_cast<T>(conf.rmsprop_conf().epsilon()), pre_model_blob->dptr<T>(),
       model_blob->mut_dptr<T>(), mean_square_blob->mut_dptr<T>(),
       model_diff_blob->dptr<T>());
 }

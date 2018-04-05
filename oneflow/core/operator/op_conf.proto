@@ -270,21 +270,74 @@ message BoxingOpConf {
 }
 
 message NaiveModelUpdateConf {
-  optional float learning_rate = 1 [default = 0.01];
 }
 
 message MomentumModelUpdateConf {
-  optional float learning_rate = 1 [default = 0.01];
-  optional float beta = 2 [default = 0.9];
+  optional float beta = 1 [default = 0.9];
 }
 
 message RMSPropModelUpdateConf {
-  optional float learning_rate = 1 [default = 0.01];
-  optional float decay_rate = 2 [default = 0.99];
-  optional float epsilon = 3 [default = 1e-8];
+  optional float decay_rate = 1 [default = 0.99];
+  optional float epsilon = 2 [default = 1e-8];
+}
+
+message ExponentialDecayConf {
+  required int32 decay_steps = 1;
+  required float decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message InverseTimeDecayConf {
+  required int32 decay_steps = 1;
+  required float decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message NaturalExpDecayConf {
+  required int32 decay_steps = 1;
+  required float decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message PiecewiseConstantConf {
+  repeated int32 boundaries = 1;
+  repeated float values = 2;
+}
+
+message PolynomialDecayConf {
+  required int32 decay_steps = 1;
+  optional float end_learning_rate = 2 [default = 0.0001];
+  optional float power = 3 [default = 1.0];
+  optional bool cycle = 4 [default = false];
+}
+
+message CosineDecayConf {
+  required int32 decay_steps = 1; 
+  optional float alpha = 2 [default = 0.0];
+}
+
+message LinearCosineDecayConf {
+  required int32 decay_steps = 1; 
+  optional float num_periods = 2 [default = 0.5];
+  optional float alpha = 3 [default = 0.0];
+  optional float beta = 4 [default = 0.001];
+}
+
+message LearningRateDecayConf {
+  oneof type {
+    ExponentialDecayConf exponetial = 2000;
+    InverseTimeDecayConf inverse_time = 2001;
+    NaturalExpDecayConf natural_exp = 2002;
+    PiecewiseConstantConf piecewise_constant = 2003;
+    PolynomialDecayConf polynomial = 2004;
+    CosineDecayConf cosine = 2005;
+    LinearCosineDecayConf linear_cosine = 2006;
+  }
 }
 
 message NormalModelUpdateOpUserConf {
+  optional float learning_rate = 1 [default = 0.01];
+  optional LearningRateDecayConf lr_decay = 2;
   oneof mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;

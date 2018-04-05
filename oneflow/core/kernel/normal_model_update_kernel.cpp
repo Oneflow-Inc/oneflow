@@ -72,6 +72,12 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
 
 }  // namespace
 
+float GetDecayedLearningRate(const LearningRateDecayConf&, const float lr,
+                             const int64_t now_batch_num) {
+  TODO();
+  return lr;
+}
+
 COMMAND(AddKernelCreator(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel));
 
 }  // namespace oneflow

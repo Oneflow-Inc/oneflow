@@ -36,6 +36,9 @@ class NormalMdUpdateKernelUtil final {
                                                T* model_diff_acc);
 };
 
+float GetDecayedLearningRate(const LearningRateDecayConf&, const float lr,
+                             const int64_t now_batch_num);
+
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) \
   Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 

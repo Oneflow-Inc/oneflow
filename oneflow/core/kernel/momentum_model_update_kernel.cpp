@@ -9,10 +9,11 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
-  const MomentumModelUpdateConf& conf =
-      this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf();
-  float learning_rate = conf.learning_rate();
-  float beta = conf.beta();
+  const NormalModelUpdateOpUserConf& conf =
+      this->op_conf().normal_mdupdt_conf().user_conf();
+  float learning_rate = GetDecayedLearningRate(
+      conf.lr_decay(), conf.learning_rate(), next_model_vid - 1);
+  float beta = conf.momentum_conf().beta();
   if (next_model_vid == 1) { beta = 0.0f; }
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(
