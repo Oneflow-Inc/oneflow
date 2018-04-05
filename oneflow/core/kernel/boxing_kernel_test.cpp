@@ -5,11 +5,11 @@ namespace oneflow {
 
 namespace test {
 
+namespace {
+
 Regst* ConstructRegst(OpKernelTestCase* boxing_test_case,
                       DeviceType device_type) {
-  static JobConf job_conf;
-  boxing_test_case->InitJobConf(
-      [](JobConf* job_conf_ptr) { job_conf_ptr = &job_conf; });
+  boxing_test_case->InitJobConf([](JobConf* job_conf_ptr) {});
 
   static int64_t regst_desc_id = 0;
   RegstDescProto regst_desc_proto;
@@ -29,6 +29,8 @@ Regst* ConstructRegst(OpKernelTestCase* boxing_test_case,
   return ret_regst;
 }
 
+}  // anonymous namespace
+
 template<DeviceType device_type, typename T>
 void BoxingConcatSplitTestCase(OpKernelTestCase* boxing_test_case,
                                const std::string& job_type,
@@ -39,18 +41,16 @@ void BoxingConcatSplitTestCase(OpKernelTestCase* boxing_test_case,
   boxing_test_case->set_is_forward(forward_or_backward == "forward");
   BoxingOpConf* boxing_conf =
       boxing_test_case->mut_op_conf()->mutable_boxing_conf();
-  boxing_conf->set_lbn("boxing_lbn");
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
   boxing_conf->mutable_concat_box()->set_axis(1);
-  auto split_conf = boxing_conf->mutable_split_box();
+  BoxSplitConf* split_conf = boxing_conf->mutable_split_box();
   split_conf->set_axis(0);
   split_conf->add_part_num(2);
   split_conf->add_part_num(1);
 
-  auto blob_regst = ConstructRegst(boxing_test_case, device_type);
-
-  auto data_type = GetDataType<T>::value;
+  Regst* blob_regst = ConstructRegst(boxing_test_case, device_type);
+  DataType data_type = GetDataType<T>::value;
   std::vector<Shape> blob_shape_in = {Shape({3, 1, 2, 1}), Shape({3, 2, 2, 1}),
                                       Shape({3, 3, 2, 1}), Shape({3, 4, 2, 1})};
   std::vector<Shape> blob_shape_out = {Shape({2, 10, 2, 1}),
@@ -95,15 +95,13 @@ void BoxingConcatCloneTestCase(OpKernelTestCase* boxing_test_case,
   boxing_test_case->set_is_forward(forward_or_backward == "forward");
   BoxingOpConf* boxing_conf =
       boxing_test_case->mut_op_conf()->mutable_boxing_conf();
-  boxing_conf->set_lbn("boxing_lbn");
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
   boxing_conf->mutable_concat_box()->set_axis(1);
   boxing_conf->mutable_clone_box();
 
-  auto regst = ConstructRegst(boxing_test_case, device_type);
-
-  auto data_type = GetDataType<T>::value;
+  Regst* regst = ConstructRegst(boxing_test_case, device_type);
+  DataType data_type = GetDataType<T>::value;
   std::vector<Shape> shape_in = {Shape({3, 4, 5, 5}), Shape({3, 2, 5, 5}),
                                  Shape({3, 1, 5, 5}), Shape({3, 7, 5, 5})};
   Shape shape_out({3, 14, 5, 5});
@@ -111,12 +109,12 @@ void BoxingConcatCloneTestCase(OpKernelTestCase* boxing_test_case,
     std::string bn = "in_" + std::to_string(i);
     int64_t elem_cnt = shape_in[i].elem_cnt();
     boxing_test_case->EnrollBlobRegst(bn, regst);
-    auto blob_desc = new BlobDesc(shape_in[i], data_type, false, false, 1);
+    BlobDesc* blob_desc = new BlobDesc(shape_in[i], data_type, false, false, 1);
     boxing_test_case->template InitBlob<T>(bn, blob_desc,
                                            std::vector<T>(elem_cnt, i + 1));
   }
 
-  auto blob_desc_out = new BlobDesc(shape_out, data_type, false, false, 1);
+  BlobDesc* blob_desc_out = new BlobDesc(shape_out, data_type, false, false, 1);
   std::vector<T> result;
   std::vector<T> piece;
   std::vector<T> seg_1(4 * 5 * 5, 1);
@@ -155,30 +153,25 @@ void BoxingAddCloneTestCase(OpKernelTestCase* boxing_test_case,
   boxing_test_case->set_is_forward(forward_or_backward == "forward");
   BoxingOpConf* boxing_conf =
       boxing_test_case->mut_op_conf()->mutable_boxing_conf();
-  boxing_conf->set_lbn("boxing_lbn");
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
   boxing_conf->mutable_add_box();
   boxing_conf->mutable_clone_box();
 
-  auto regst = ConstructRegst(boxing_test_case, device_type);
-
-  auto data_type = GetDataType<T>::value;
+  DataType data_type = GetDataType<T>::value;
   Shape blob_shape({3, 4, 5, 5});
-  auto blob_desc = new BlobDesc(blob_shape, data_type, false, false, 1);
-  size_t add = 0;
+  BlobDesc* blob_desc = new BlobDesc(blob_shape, data_type, false, false, 1);
+  size_t sum = 0;
   for (size_t i = 0; i < in_num; ++i) {
     std::string bn = "in_" + std::to_string(i);
-    boxing_test_case->EnrollBlobRegst(bn, regst);
     boxing_test_case->template InitBlob<T>(
         bn, blob_desc, std::vector<T>(blob_shape.elem_cnt(), i + 1));
-    add += i + 1;
+    sum += i + 1;
   }
   for (size_t j = 0; j < out_num; ++j) {
     std::string bn = "out_" + std::to_string(j);
-    boxing_test_case->EnrollBlobRegst(bn, regst);
     boxing_test_case->template ForwardCheckBlob<T>(
-        bn, blob_desc, std::vector<T>(blob_shape.elem_cnt(), add));
+        bn, blob_desc, std::vector<T>(blob_shape.elem_cnt(), sum));
   }
 }
 
@@ -195,36 +188,35 @@ void BoxingAddSplitTestCase(OpKernelTestCase* boxing_test_case,
   boxing_test_case->set_is_forward(forward_or_backward == "forward");
   BoxingOpConf* boxing_conf =
       boxing_test_case->mut_op_conf()->mutable_boxing_conf();
-  boxing_conf->set_lbn("boxing_lbn");
   boxing_conf->set_in_num(in_num);
   boxing_conf->set_out_num(out_num);
   boxing_conf->mutable_add_box();
-  auto split_conf = boxing_conf->mutable_split_box();
+  BoxSplitConf* split_conf = boxing_conf->mutable_split_box();
   split_conf->set_axis(1);
   split_conf->add_part_num(2);
   split_conf->add_part_num(2);
 
-  auto regst = ConstructRegst(boxing_test_case, device_type);
-
-  auto data_type = GetDataType<T>::value;
+  Regst* regst = ConstructRegst(boxing_test_case, device_type);
+  DataType data_type = GetDataType<T>::value;
   Shape shape_in({3, 4, 5, 5});
   std::vector<Shape> shape_out = {Shape({3, 2, 5, 5}), Shape({3, 2, 5, 5})};
-  size_t add = 0;
+  size_t sum = 0;
   for (size_t i = 0; i < in_num; ++i) {
     std::string bn = "in_" + std::to_string(i);
     boxing_test_case->EnrollBlobRegst(bn, regst);
-    auto blob_desc = new BlobDesc(shape_in, data_type, false, false, 1);
+    BlobDesc* blob_desc = new BlobDesc(shape_in, data_type, false, false, 1);
     boxing_test_case->template InitBlob<T>(
         bn, blob_desc, std::vector<T>(shape_in.elem_cnt(), i + 1));
-    add += i + 1;
+    sum += i + 1;
   }
   boxing_test_case->EnrollBlobRegst("middle", regst);
   for (size_t j = 0; j < out_num; ++j) {
     std::string bn = "out_" + std::to_string(j);
     boxing_test_case->EnrollBlobRegst(bn, regst);
-    auto blob_desc = new BlobDesc(shape_out[j], data_type, false, false, 1);
+    BlobDesc* blob_desc =
+        new BlobDesc(shape_out[j], data_type, false, false, 1);
     boxing_test_case->template ForwardCheckBlob<T>(
-        bn, blob_desc, std::vector<T>(shape_out[j].elem_cnt(), add));
+        bn, blob_desc, std::vector<T>(shape_out[j].elem_cnt(), sum));
   }
 }
 
