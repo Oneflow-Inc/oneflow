@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
 #define ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
 
-#include <random>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/job/job_desc.h"
@@ -9,12 +8,7 @@
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/common/data_type.h"
-#include "oneflow/core/common/switch_func.h"
-#include "oneflow/core/device/cuda_device_context.h"
-#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 
