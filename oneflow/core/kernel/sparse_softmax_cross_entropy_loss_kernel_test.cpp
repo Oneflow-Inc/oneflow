@@ -11,7 +11,7 @@ struct SoftmaxLossTestUtil final {
   SoftmaxLossTestUtil<device_type, PredType>::template func_name<T>
   DEFINE_STATIC_SWITCH_FUNC(
       void, Test, SOFTMAX_LOSS_TEST_UTIL_ENTRY,
-      MAKE_STRINGIZE_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
+      MAKE_STRINGIZED_DATA_TYPE_CTRV_SEQ(INT_DATA_TYPE_SEQ));
 
   template<typename LabelType>
   static void Test(OpKernelTestCase* test_case, const std::string& job_type,
