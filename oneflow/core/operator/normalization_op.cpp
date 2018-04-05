@@ -20,8 +20,16 @@ void NormalizationOp::InitFromOpConf() {
   EnrollForwardModelBn("moving_mean");
   EnrollForwardModelBn("moving_variance");
 
-  if (conf.center()) { EnrollModelBn("beta"); }
-  if (conf.scale()) { EnrollModelBn("gamma"); }
+  if (conf.center()) {
+    EnrollModelBn("beta");
+  } else {
+    EnrollDataTmpBn("beta_diff");
+  }
+  if (conf.scale()) {
+    EnrollModelBn("gamma");
+  } else {
+    EnrollDataTmpBn("gamma_diff");
+  }
   EnrollDataTmpBn("normalized_in");
   EnrollDataTmpBn("inv_var");
   EnrollDataTmpBn("tmp_storage_for_sum");
@@ -62,8 +70,16 @@ void NormalizationOp::InferBlobDescs(
   std::list<std::string> blob_names = {"moving_mean", "moving_variance",
                                        "inv_var"};
   std::list<std::string> bns_needless_in_predict = {"new_mean", "new_variance"};
-  if (conf.center()) { blob_names.push_back("beta"); }
-  if (conf.scale()) { blob_names.push_back("gamma"); }
+  if (conf.center()) {
+    blob_names.push_back("beta");
+  } else {
+    blob_names.push_back("beta_diff");
+  }
+  if (conf.scale()) {
+    blob_names.push_back("gamma");
+  } else {
+    blob_names.push_back("gamma_diff");
+  }
   if (Global<JobDesc>::Get()->IsTrain()) {
     for (const std::string& bn : bns_needless_in_predict) {
       blob_names.push_back(bn);

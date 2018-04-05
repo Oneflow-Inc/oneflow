@@ -19,8 +19,8 @@ void AccumulateKernelTestCase(OpKernelTestCase* test_case,
                                  false);
 }
 
-TEST_CPU_ONLY_OPKERNEL(AccumulateKernelTestCase, FLOATING_DATA_TYPE_SEQ,
-                       (train)(predict));
+TEST_CPU_AND_GPU_OPKERNEL(AccumulateKernelTestCase, FLOATING_DATA_TYPE_SEQ,
+                          (train)(predict));
 
 }  // namespace test
 
