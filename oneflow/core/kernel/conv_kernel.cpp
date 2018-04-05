@@ -26,67 +26,23 @@ void ConvKernelIf<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   DoForwardDataContent(ctx.device_ctx, in_blob, weight_blob, out_blob,
                        BnInOp2Blob);
-  if (this->kernel_conf().conv_conf().has_activation()) {
-    ActivationType activation = this->kernel_conf().conv_conf().activation();
-    T* out_dptr = out_blob->mut_dptr<T>();
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
-    if (activation == ActivationType::kTanH) {
-      KernelUtil<device_type, T>::TanH(ctx.device_ctx, elem_cnt, out_dptr,
-                                       out_dptr);
-    }
-#define DEFINE_ONE_ELIF(activation_type)                                  \
-  else if (activation == ActivationType::k##activation_type) {            \
-    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, \
-                                                out_dptr, out_dptr);      \
-  }
-    DEFINE_ONE_ELIF(Sigmoid)
-    DEFINE_ONE_ELIF(Relu)
-#undef DEFINE_ONE_ELIF
-    else {
-      UNIMPLEMENTED();
-    }
-  }
 }
 
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* conv_out_diff = nullptr;
-  if (this->kernel_conf().conv_conf().has_activation()) {
-    ActivationType activation = this->kernel_conf().conv_conf().activation();
-    const Blob* out_blob = BnInOp2Blob("out");
-    const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-    Blob* activation_buf_blob = BnInOp2Blob("activation_buf");
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
-    // use out_dptr to replace in_dptr
-    // tests are needed for TanH and Sigmoid
-    if (activation == ActivationType::kTanH) {
-      KernelUtil<device_type, T>::TanHBackward(
-          ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());
-    }
-#define DEFINE_ONE_ELIF(activation_type)                                    \
-  else if (activation == ActivationType::k##activation_type) {              \
-    KernelUtil<device_type, T>::activation_type##Backward(                  \
-        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
-        out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());      \
+  const Blob* out_diff = BnInOp2Blob("out_diff");
+  ActivationType activation = static_cast<ActivationType>(
+      this->template GetEnumFromCustomizedOpConf("activation"));
+  if (activation != ActivationType::kNoActivation) {
+    out_diff = BnInOp2Blob("activation_buf");
   }
-    DEFINE_ONE_ELIF(Sigmoid)
-    DEFINE_ONE_ELIF(Relu)
-#undef DEFINE_ONE_ELIF
-    else {
-      UNIMPLEMENTED();
-    }
-    conv_out_diff = activation_buf_blob;
-  } else {
-    conv_out_diff = BnInOp2Blob("out_diff");
-  }
-  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"),
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
+    BiasBackward(ctx.device_ctx, out_diff, BnInOp2Blob("bias_diff"),
                  BnInOp2Blob);
   }
-  WeightBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("in"),
+  WeightBackward(ctx.device_ctx, out_diff, BnInOp2Blob("in"),
                  BnInOp2Blob("weight_diff"), BnInOp2Blob("in_diff"),
                  BnInOp2Blob);
 }

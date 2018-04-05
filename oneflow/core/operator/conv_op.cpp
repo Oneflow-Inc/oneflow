@@ -80,8 +80,10 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
-  if (GetValFromCustomizedConf<bool>("has_activation"))
-  { EnrollDataTmpBn("activation_buf"); }
+  if (GetEnumFromCustomizedConf("activation")
+      != ActivationType::kNoActivation) {
+    EnrollDataTmpBn("activation_buf");
+  }
 }
 
 template<int32_t NDims>
@@ -115,7 +117,8 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
-  if (GetValFromCustomizedConf<bool>("has_activation") && Global<JobDesc>::Get()->IsTrain()) {
+  if (GetEnumFromCustomizedConf("activation") != ActivationType::kNoActivation
+      && Global<JobDesc>::Get()->IsTrain()) {
     GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
   }
 
@@ -202,10 +205,6 @@ void ConvOp<NDims>::VirtualGenKernelConf(
         static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
 #endif  // WITH_CUDA
-
-  if (GetValFromCustomizedConf<bool>("has_activation")) {
-    kernel_conf->mutable_conv_conf()->set_activation(GetActivationType());
-  }
 }
 
 template<int32_t NDims>

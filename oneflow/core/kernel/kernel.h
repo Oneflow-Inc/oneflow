@@ -53,6 +53,9 @@ class Kernel {
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardActivateDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
@@ -64,6 +67,9 @@ class Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void BackwardActivateDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(
@@ -162,6 +168,22 @@ class KernelIfWithModel : public KernelIf<device_type> {
   KernelIfWithModel() = default;
 
   void L2Regularization(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
+template<DeviceType device_type, typename T>
+class KernelIfWithActivation : public KernelIfWithModel<device_type, T> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
+  virtual ~KernelIfWithActivation() = default;
+
+ protected:
+  KernelIfWithActivation() = default;
+  void ForwardActivateDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardActivateDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };

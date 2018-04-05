@@ -12,7 +12,8 @@ void FullyConnectedOp::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   }
-  if (GetValFromCustomizedConf<bool>("has_activation")) {
+  if (op_conf().fully_connected_conf().activation()
+      != ActivationType::kNoActivation) {
     EnrollDataTmpBn("activation_buf");
   }
 }
@@ -37,7 +38,9 @@ void FullyConnectedOp::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
-  if (GetValFromCustomizedConf<bool>("has_activation")) {
+  if (op_conf().fully_connected_conf().activation()
+          != ActivationType::kNoActivation
+      && Global<JobDesc>::Get()->IsTrain()) {
     GetBlobDesc4BnInOp("activation_buf")->mut_shape() = out_blob_desc->shape();
   }
 

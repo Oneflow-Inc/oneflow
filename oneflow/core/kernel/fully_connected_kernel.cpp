@@ -33,6 +33,11 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+  ActivationType activation = static_cast<ActivationType>(
+      this->GetEnumFromCustomizedOpConf("activation"));
+  if (activation != ActivationType::kNoActivation) {
+    out_diff_blob = BnInOp2Blob("activation_buf");
+  }
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
 
   const Blob* weight_blob = BnInOp2Blob("weight");
