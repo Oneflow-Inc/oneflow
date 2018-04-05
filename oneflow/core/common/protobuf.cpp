@@ -19,6 +19,11 @@ void PrintProtoToTextFile(const PbMessage& proto,
   CHECK(google::protobuf::TextFormat::Print(proto, &output));
 }
 
+bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
+  PROTOBUF_GET_FIELDDESC(msg, field_name);
+  return fd != nullptr;
+}
+
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(cpp_type, pb_type_name)             \
   template<>                                                              \
   cpp_type GetValFromPbMessage<cpp_type>(const PbMessage& msg,            \

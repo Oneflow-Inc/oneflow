@@ -93,8 +93,6 @@ std::function<void(int64_t, size_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, size_t num) {
     RegstDescProto* regst_desc = regst_desc_id2regst_desc.at(regst_desc_id);
     regst_desc->set_register_num(num);
-    LOG(INFO) << "regst_desc_id: " << regst_desc->regst_desc_id()
-              << ", register_num: " << num;
   };
 }
 
@@ -134,7 +132,8 @@ std::function<double(int64_t)> MakeGetterIIScale4RegstDescId(
 
 size_t Improver::AvailableMemSize(int64_t machine_id,
                                   int64_t memory_zone_id) const {
-  return amd_.machine_amd(machine_id).zone_size(memory_zone_id) * 0.95;
+  return amd_.machine_amd(machine_id).zone_size(memory_zone_id)
+         * Global<JobDesc>::Get()->available_zone_mem_ratio();
 }
 
 int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {

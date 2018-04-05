@@ -68,69 +68,53 @@ bool Kernel::HasModelBns() const {
   return kernel_conf().model_bns().size() > 0;
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::ForwardDataId(
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
             kernel_conf().output_bns(), &Blob::CopyDataIdFrom);
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::ForwardColNum(
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
             kernel_conf().output_bns(), &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::BackwardDataId(
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::BackwardColNum(
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
             kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::L2Regularization(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const std::string& mbn : kernel_conf().model_bns()) {
-    const Blob* model_blob = BnInOp2Blob(mbn);
-    T l2 = static_cast<T>(
-        Global<JobDesc>::Get()->L2()
-        * BnInOp2Blob(kernel_conf().output_diff_bns()[0])->shape().At(0));
-    KernelUtil<device_type, T>::Axpy(
-        ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()), l2,
-        model_blob->dptr<T>(), 1, BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<T>(),
-        1);
-  }
-}
-
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::CopyDataId(
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyDataId(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
   CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyDataIdFrom);
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::CopyColNum(
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyColNum(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns) const {
   CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyColNumFrom);
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::CopyField(
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyField(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* from_blob, const PbRpf<std::string>& to_bns,
     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
@@ -139,8 +123,8 @@ void KernelIf<device_type, T>::CopyField(
   }
 }
 
-template<DeviceType device_type, typename T>
-void KernelIf<device_type, T>::CopyField(
+template<DeviceType device_type>
+void KernelIf<device_type>::CopyField(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
     void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
@@ -154,6 +138,22 @@ void KernelIf<device_type, T>::CopyField(
       Blob* out_blob = BnInOp2Blob(to_bns[i]);
       (out_blob->*Copy)(ctx, in_blob);
     }
+  }
+}
+
+template<DeviceType device_type, typename ModelType>
+void KernelIfWithModel<device_type, ModelType>::L2Regularization(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const std::string& mbn : this->kernel_conf().model_bns()) {
+    const Blob* model_blob = BnInOp2Blob(mbn);
+    ModelType l2 = static_cast<ModelType>(
+        Global<JobDesc>::Get()->L2()
+        * BnInOp2Blob(this->kernel_conf().output_diff_bns()[0])->shape().At(0));
+    KernelUtil<device_type, ModelType>::Axpy(
+        ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()), l2,
+        model_blob->dptr<ModelType>(), 1,
+        BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<ModelType>(), 1);
   }
 }
 
@@ -184,9 +184,10 @@ std::unique_ptr<const Kernel> ConstructKernel(
 }
 
 #define INSTANTIATE_KERNEL_IF(device_type, data_type_pair) \
-  template class KernelIf<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+  template class KernelIfWithModel<device_type,            \
+                                   OF_PP_PAIR_FIRST(data_type_pair)>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ,
-                                 ALL_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
