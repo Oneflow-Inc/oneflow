@@ -164,7 +164,8 @@ class OpKernelTestCase {
 class DiffKernelImplTestCase final : public OpKernelTestCase {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DiffKernelImplTestCase);
-  DiffKernelImplTestCase(bool is_forward, DataType default_data_type);
+  DiffKernelImplTestCase(bool is_train, bool is_forward,
+                         DataType default_data_type);
   ~DiffKernelImplTestCase() = default;
 
   void SetBlobNames(const std::list<std::string>& input_bn_in_op,

@@ -471,8 +471,9 @@ std::list<std::string> DiffKernelImplTestCase::AllOutputBlobNamesWithValidBlob()
   return all_output_blob_names;
 }
 
-DiffKernelImplTestCase::DiffKernelImplTestCase(bool is_forward,
+DiffKernelImplTestCase::DiffKernelImplTestCase(bool is_train, bool is_forward,
                                                DataType default_data_type) {
+  set_is_train(is_train);
   set_is_forward(is_forward);
   set_default_data_type(default_data_type);
 }
