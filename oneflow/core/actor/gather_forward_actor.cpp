@@ -10,8 +10,8 @@ void GatherForwardActor::VirtualActorInit(const TaskProto& task_proto) {
 
 int GatherForwardActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    DecreaseRemainingEordCnt();
     is_in_eord_ = true;
+    DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
       pending_in_regst_.push(msg.regst());
@@ -39,8 +39,8 @@ void GatherForwardActor::Act() {
   if (in_regst->col_id() == in_regst->max_col_id()) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
       regst->set_piece_id(in_regst->piece_id());
-      regst->set_col_id(in_regst->col_id());
-      regst->set_max_col_id(in_regst->max_col_id());
+      regst->set_col_id(0);
+      regst->set_max_col_id(0);
       return true;
     });
   }

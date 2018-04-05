@@ -32,18 +32,10 @@ void GatherKernel<device_type, T>::ForwardDataId(
 }
 
 template<DeviceType device_type, typename T>
-void GatherKernel<device_type, T>::ForwardColNum(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (*static_cast<int32_t*>(ctx.other) == 0) {
-    KernelIf<device_type>::ForwardColNum(ctx, BnInOp2Blob);
-  }
-}
-
-template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
   int32_t col_id = *(static_cast<int32_t*>(ctx.other));
@@ -54,7 +46,7 @@ void GatherKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   for (int64_t i = 0; i < data_num; ++i) {
-    if (out_diff_blob->col_num(i) == col_id) {
+    if (in_blob->col_num(i) == col_id) {
       Memcpy<device_type>(ctx.device_ctx,
                           in_diff_blob->mut_dptr<T>() + i * hid_dim,
                           out_diff_blob->dptr<T>() + i * hid_dim, hid_dim);
@@ -66,7 +58,9 @@ template<DeviceType device_type, typename T>
 void GatherKernel<device_type, T>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  KernelIf<device_type>::BackwardColNum(ctx, BnInOp2Blob);
+  const Blob* in_blob = BnInOp2Blob("in");
+  Blob* in_diff_blob = BnInOp2Blob("in_diff");
+  in_diff_blob->CopyColNumFrom<device_type>(ctx.device_ctx, in_blob);
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kGatherConf, GatherKernel,

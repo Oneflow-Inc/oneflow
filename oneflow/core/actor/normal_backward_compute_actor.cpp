@@ -25,6 +25,7 @@ void NormalBackwardCompActor::HandleTheRestOfRegstMsg(Regst* cur_regst) {
         && rdq.front().empty()) {
       AsyncReturnModelRegstUntilMatchCurOutRegst(cur_regst->model_version_id());
     }
+    CHECK(!rdq.empty());
     rdq.back().push_back(cur_regst);
   }
 }
