@@ -1,11 +1,9 @@
-#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_in_stream_without_local_copy.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-PersistentInStream::~PersistentInStream() { delete[] buffer_; }
-
-int32_t PersistentInStream::ReadLine(std::string* line) {
+int32_t PersistentInStreamWithoutLocalCopy::ReadLine(std::string* line) {
   if (IsEof()) { return -1; }
   line->clear();
   while (*cur_buf_begin_ != '\n') {
@@ -23,7 +21,7 @@ int32_t PersistentInStream::ReadLine(std::string* line) {
   return 0;
 }
 
-int32_t PersistentInStream::Read(char* s, size_t n) {
+int32_t PersistentInStreamWithoutLocalCopy::Read(char* s, size_t n) {
   if (IsEof()) { return -1; }
   while (n--) {
     if (cur_buf_begin_ == cur_buf_end_) { UpdateBuffer(); }
@@ -33,31 +31,28 @@ int32_t PersistentInStream::Read(char* s, size_t n) {
   return 0;
 }
 
-PersistentInStream::PersistentInStream(fs::FileSystem* fs,
-                                       const std::string& file_path,
-                                       uint64_t offset) {
+PersistentInStreamWithoutLocalCopy::PersistentInStreamWithoutLocalCopy(
+    fs::FileSystem* fs, const std::string& file_path, uint64_t offset) {
   fs->NewRandomAccessFile(file_path, &file_);
   file_size_ = fs->GetFileSize(file_path);
   cur_file_pos_ = offset;
-  buffer_ =
-      new char[Global<JobDesc>::Get()->persistence_buffer_byte_size() + 1];
-  cur_buf_begin_ = buffer_;
-  cur_buf_end_ = buffer_;
+  buffer_.resize(Global<JobDesc>::Get()->persistence_buffer_byte_size() + 1);
+  cur_buf_begin_ = buffer_.data();
+  cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
 }
 
-bool PersistentInStream::IsEof() const {
+bool PersistentInStreamWithoutLocalCopy::IsEof() const {
   return cur_buf_begin_ == cur_buf_end_ && cur_file_pos_ == file_size_;
 }
 
-void PersistentInStream::UpdateBuffer() {
+void PersistentInStreamWithoutLocalCopy::UpdateBuffer() {
   CHECK_EQ(cur_buf_begin_, cur_buf_end_);
-  uint64_t n = std::min(Global<JobDesc>::Get()->persistence_buffer_byte_size(),
-                        file_size_ - cur_file_pos_);
+  uint64_t n = std::min(buffer_.size() - 1, file_size_ - cur_file_pos_);
   if (n == 0) { return; }
-  file_->Read(cur_file_pos_, n, buffer_);
-  cur_buf_begin_ = buffer_;
-  cur_buf_end_ = buffer_ + n;
+  file_->Read(cur_file_pos_, n, buffer_.data());
+  cur_buf_begin_ = buffer_.data();
+  cur_buf_end_ = buffer_.data() + n;
   *cur_buf_end_ = '\0';
   AddNForCurFilePos(n);
 }
