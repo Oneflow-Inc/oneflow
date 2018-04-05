@@ -234,7 +234,7 @@ void ConvKernel<DeviceType::kCPU, T>::BiasBackward(
     // channels last:   bias' += out'(T) * bias_mul
     KernelUtil<DeviceType::kCPU, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasNoTrans,
-        out_shape_.At(0),                                // filter
+        weight_shape_.At(0),                             // filter
         1,                                               //  1
         out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  // od * oh * ow
         static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i),
