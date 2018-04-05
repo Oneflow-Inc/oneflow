@@ -411,6 +411,7 @@ message NormalizationOpConf {
   optional float gamma_init = 9 [default = 1.0];
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
+  optional bool use_first_piece_init_moving = 12 [default = false];
 }
 
 message DropoutOpConf {
