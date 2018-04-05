@@ -5,7 +5,7 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void MaxPooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
+void MaxPooling1DTestCase(OpKernelTestCase* pooling_test_case,
                           const std::string& job_type,
                           const std::string& forward_or_backward,
                           const std::string& data_format) {
@@ -57,7 +57,7 @@ TEST_CPU_AND_GPU_OPKERNEL(MaxPooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
                           (channels_first)(channels_last));
 
 template<DeviceType device_type, typename T>
-void MaxPooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
+void MaxPooling2DTestCase(OpKernelTestCase* pooling_test_case,
                           const std::string& job_type,
                           const std::string& forward_or_backward) {
   pooling_test_case->InitJobConf([](JobConf* job_conf) {
@@ -95,7 +95,7 @@ TEST_CPU_AND_GPU_OPKERNEL(MaxPooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
-void MaxPooling3DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
+void MaxPooling3DTestCase(OpKernelTestCase* pooling_test_case,
                           const std::string& job_type,
                           const std::string& forward_or_backward) {
   pooling_test_case->InitJobConf([](JobConf* job_conf) {
@@ -135,7 +135,7 @@ TEST_CPU_AND_GPU_OPKERNEL(MaxPooling3DTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
-void AveragePooling1DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
+void AveragePooling1DTestCase(OpKernelTestCase* pooling_test_case,
                               const std::string& job_type,
                               const std::string& forward_or_backward) {
   pooling_test_case->InitJobConf([](JobConf* job_conf) {
@@ -184,7 +184,7 @@ TEST_CPU_AND_GPU_OPKERNEL(AveragePooling1DTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
-void AveragePooling2DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
+void AveragePooling2DTestCase(OpKernelTestCase* pooling_test_case,
                               const std::string& job_type,
                               const std::string& forward_or_backward) {
   pooling_test_case->InitJobConf([](JobConf* job_conf) {
@@ -248,7 +248,7 @@ TEST_CPU_AND_GPU_OPKERNEL(AveragePooling2DTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward));
 
 template<DeviceType device_type, typename T>
-void AveragePooling3DTestCase(OpKernelTestCase<device_type>* pooling_test_case,
+void AveragePooling3DTestCase(OpKernelTestCase* pooling_test_case,
                               const std::string& job_type,
                               const std::string& forward_or_backward) {
   pooling_test_case->InitJobConf([](JobConf* job_conf) {

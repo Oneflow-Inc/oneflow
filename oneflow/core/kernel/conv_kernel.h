@@ -135,7 +135,7 @@ class ConvKernel<DeviceType::kGPU, T> final
 template<typename T>
 class ColBufWriter {
  public:
-  ColBufWriter()= default;
+  ColBufWriter() = default;
   virtual ~ColBufWriter() = default;
   virtual void DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) = 0;
   virtual void CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) = 0;

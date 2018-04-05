@@ -1,7 +1,7 @@
 machine {
   addr: "192.168.1.11"
   port: 13245
-  name: "192.168.1.11"
+  name: "first"
 }
 
 cpu_device_num: 20

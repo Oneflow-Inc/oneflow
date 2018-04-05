@@ -5,8 +5,9 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void CopyHdTestCase(OpKernelTestCase<device_type>* test_case,
-                    const std::string& job_type, const std::string& h2d) {
+void CopyHdTestCase(OpKernelTestCase* test_case, const std::string& job_type,
+                    const std::string& h2d) {
+  test_case->set_default_device_type(DeviceType::kGPU);
   test_case->set_is_train(job_type == "train");
   test_case->set_is_forward(true);
   CopyHdOpConf* copy_hd_conf = test_case->mut_op_conf()->mutable_copy_hd_conf();
@@ -18,8 +19,8 @@ void CopyHdTestCase(OpKernelTestCase<device_type>* test_case,
 
   BlobDesc* blob_desc =
       new BlobDesc(Shape({3, 4, 5, 6}), GetDataType<T>::value, false, false, 1);
-  test_case->template RandomInitBlob<T>("in", blob_desc);
-  test_case->template ForwardCheckBlob<T>("out", blob_desc, "in", true);
+  test_case->RandomInitBlob<T>("in", blob_desc);
+  test_case->ForwardCheckBlobWithAnother<T>("out", blob_desc, "in", true);
 }
 
 TEST_CPU_ONLY_OPKERNEL(CopyHdTestCase, ALL_DATA_TYPE_SEQ, (train)(predict),

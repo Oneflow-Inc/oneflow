@@ -46,7 +46,7 @@ std::vector<T> Dropout(const std::vector<T>& input,
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void DropoutTestCase(OpKernelTestCase<device_type>* dropout_test_case,
+void DropoutTestCase(OpKernelTestCase* dropout_test_case,
                      const std::string& job_type, const std::string& fw_or_bw) {
   bool is_train = (job_type == "train");
   dropout_test_case->set_is_train(is_train);
