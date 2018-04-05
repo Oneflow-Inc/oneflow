@@ -11,8 +11,10 @@ void PrintBlob(PersistentOutStream& out_stream, const Blob* blob,
                const std::string& blob_name) {
   CHECK_EQ(GetDataType<T>::value, blob->data_type());
   const T* dptr = blob->dptr<T>();
+  out_stream << "\n" << blob_name << " {\n";
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
     if (blob->has_data_id_field()) {
+      out_stream << "data_id: ";
       size_t data_id_size = 0;
       for (; data_id_size != Global<JobDesc>::Get()->SizeOfOneDataId();
            ++data_id_size) {
@@ -20,13 +22,15 @@ void PrintBlob(PersistentOutStream& out_stream, const Blob* blob,
       }
       if (data_id_size == 0) { continue; }
       out_stream.Write(blob->data_id(i), data_id_size);
-      out_stream.Write(",", 1);
+      out_stream.Write("\n", 1);
     }
+    out_stream << "data_content: ";
     for (int64_t j = 0; j < blob->shape().Count(1); ++j) {
       out_stream << std::to_string(*dptr++) << ',';
     }
     out_stream << '\n';
   }
+  out_stream << "}\n\n";
 }
 
 }  // namespace
