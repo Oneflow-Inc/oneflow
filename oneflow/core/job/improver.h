@@ -22,7 +22,7 @@ class Improver final {
  private:
   void MemoryLimitedAllocate(
       const ActGraph& graph, double base_ii,
-      const std::function<void(int64_t, size_t)>& Handler) const;
+      const std::function<void(int64_t, uint64_t)>& Handler) const;
 
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
@@ -36,7 +36,7 @@ class Improver final {
       const std::function<double(int64_t)>& Duration4RegstDescId,
       const std::function<double(int64_t)>& Ratio4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs, double ii) const;
-  size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
+  uint64_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
   int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
   void MakeMemZoneRegstDescs(const Plan& plan,
                              MemZoneRegstDescs* mz2regst_desc) const;
