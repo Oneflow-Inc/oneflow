@@ -33,13 +33,16 @@ void ConvKernelIf<device_type, T>::ForwardDataContent(
     if (activation == ActivationType::kTanH) {
       KernelUtil<device_type, T>::TanH(ctx.device_ctx, elem_cnt, out_dptr,
                                        out_dptr);
-    } else if (activation == ActivationType::kSigmoid) {
-      KernelUtil<device_type, T>::Sigmoid(ctx.device_ctx, elem_cnt, out_dptr,
-                                          out_dptr);
-    } else if (activation == ActivationType::kRelu) {
-      KernelUtil<device_type, T>::Relu(ctx.device_ctx, elem_cnt, out_dptr,
-                                       out_dptr);
-    } else {
+    }
+#define DEFINE_ONE_ELIF(activation_type)                                  \
+  else if (activation == ActivationType::k##activation_type) {            \
+    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, \
+                                                out_dptr, out_dptr);      \
+  }
+    DEFINE_ONE_ELIF(Sigmoid)
+    DEFINE_ONE_ELIF(Relu)
+#undef DEFINE_ONE_ELIF
+    else {
       UNIMPLEMENTED();
     }
   }
@@ -49,6 +52,7 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* conv_out_diff = nullptr;
   if (this->kernel_conf().conv_conf().has_activation()) {
     ActivationType activation = this->kernel_conf().conv_conf().activation();
     const Blob* out_blob = BnInOp2Blob("out");
@@ -61,33 +65,30 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
       KernelUtil<device_type, T>::TanHBackward(
           ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),
           out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());
-    } else if (activation == ActivationType::kSigmoid) {
-      KernelUtil<device_type, T>::SigmoidBackward(
-          ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());
-    } else if (activation == ActivationType::kRelu) {
-      KernelUtil<device_type, T>::ReluBackward(
-          ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());
-    } else {
+    }
+#define DEFINE_ONE_ELIF(activation_type)                                    \
+  else if (activation == ActivationType::k##activation_type) {              \
+    KernelUtil<device_type, T>::activation_type##Backward(                  \
+        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
+        out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());      \
+  }
+    DEFINE_ONE_ELIF(Sigmoid)
+    DEFINE_ONE_ELIF(Relu)
+#undef DEFINE_ONE_ELIF
+    else {
       UNIMPLEMENTED();
     }
-    if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-      BiasBackward(ctx.device_ctx, BnInOp2Blob("activation_buf"),
-                   BnInOp2Blob("bias_diff"), BnInOp2Blob);
-    }
-    WeightBackward(ctx.device_ctx, BnInOp2Blob("activation_buf"),
-                   BnInOp2Blob("in"), BnInOp2Blob("weight_diff"),
-                   BnInOp2Blob("in_diff"), BnInOp2Blob);
+    conv_out_diff = activation_buf_blob;
   } else {
-    if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-      BiasBackward(ctx.device_ctx, BnInOp2Blob("out_diff"),
-                   BnInOp2Blob("bias_diff"), BnInOp2Blob);
-    }
-    WeightBackward(ctx.device_ctx, BnInOp2Blob("out_diff"), BnInOp2Blob("in"),
-                   BnInOp2Blob("weight_diff"), BnInOp2Blob("in_diff"),
-                   BnInOp2Blob);
+    conv_out_diff = BnInOp2Blob("out_diff");
   }
+  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
+    BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"),
+                 BnInOp2Blob);
+  }
+  WeightBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("in"),
+                 BnInOp2Blob("weight_diff"), BnInOp2Blob("in_diff"),
+                 BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>

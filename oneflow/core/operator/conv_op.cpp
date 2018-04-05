@@ -115,7 +115,7 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
-  if (GetValFromCustomizedConf<bool>("has_activation")) {
+  if (GetValFromCustomizedConf<bool>("has_activation") && Global<JobDesc>::Get()->IsTrain()) {
     GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
   }
 
