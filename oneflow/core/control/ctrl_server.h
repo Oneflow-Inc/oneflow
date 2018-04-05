@@ -38,6 +38,8 @@ class CtrlServer final {
   HashMap<std::string, std::string> kv_;
   HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>>
       pending_kv_calls_;
+  // IncreaseCount, EraseCount
+  HashMap<std::string, int32_t> count_;
 };
 
 }  // namespace oneflow
