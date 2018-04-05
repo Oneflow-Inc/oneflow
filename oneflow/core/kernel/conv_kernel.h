@@ -132,23 +132,34 @@ class ConvKernel<DeviceType::kGPU, T> final
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
 };
 
-template<typename T>
+enum ColBufType {
+  kIm2Col = 0;
+  kCol2Im = 1;
+};
+
+enum DataFormat {
+  kChannelFirst = 0;
+  kChannelLast = 1;
+};
+
+template<ColBufType col_buf_type, DataFormat data_format, typename T>
 class ColBufWriter final {
  public:
-  ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
-               int64_t ih_size, int64_t iw_size);
+  ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, 
+               int64_t id_size, int64_t ih_size, int64_t iw_size,
+               int64_t od_size, int64_t oh_size, int64_t ow_size);
   void Im2ColDHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void Im2ColCDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void WriteZero() { *(dst_ptr_++) = 0; }
   void CleanIdSize();
   void CleanIhSize();
   void CleanIwSize();
-  void SkipIdSize() { src_ptr_ += id_size_; }
-  void SkipIhSize() { src_ptr_ += ih_size_; }
-  void SkipIwSize() { src_ptr_ += iw_size_; }
+  void SkipIdSize() { src_ptr_ += od_size_; }
+  void SkipIhSize() { src_ptr_ += oh_size_; }
+  void SkipIwSize() { src_ptr_ += ow_size_; }
   void Col2ImDHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
   void Col2ImCDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
-  void NextCSize() { src_ptr_ += c_size_; }
+  void NextImCSize() { src_ptr_ += c_size_; }
 
  private:
   const T* src_ptr_;
@@ -157,6 +168,9 @@ class ColBufWriter final {
   int64_t id_size_;
   int64_t ih_size_;
   int64_t iw_size_;
+  int64_t od_size_;
+  int64_t oh_size_;
+  int64_t ow_size_;
 };
 
 template<typename T>

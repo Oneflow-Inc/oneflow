@@ -250,15 +250,19 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv2DConf, ConvKernel,
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
-template<typename T>
+template<ColBufType col_buf_type, typename T>
 ColBufWriter<T>::ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size,
-                              int64_t id_size, int64_t ih_size, int64_t iw_size)
+                              int64_t id_size, int64_t ih_size, int64_t iw_size,
+                              int64_t od_size, int64_t oh_size, int64_t ow_size) {
     : src_ptr_(src_ptr),
       dst_ptr_(dst_ptr),
       c_size_(c_size),
       id_size_(id_size),
       ih_size_(ih_size),
-      iw_size_(iw_size) {}
+      iw_size_(iw_size),
+      od_size_(od_size),
+      oh_size_(oh_size),
+      ow_size_(ow_size) {}
 
 template<typename T>
 void ColBufWriter<T>::Im2ColDHWCWrite(int64_t c, int64_t id, int64_t ih,
@@ -274,17 +278,17 @@ void ColBufWriter<T>::Im2ColCDHWWrite(int64_t c, int64_t id, int64_t ih,
 
 template<typename T>
 void ColBufWriter<T>::CleanIdSize() {
-  FOR_RANGE(int64_t, i, 0, id_size_) { WriteZero(); }
+  FOR_RANGE(int64_t, i, 0, od_size_) { WriteZero(); }
 }
 
 template<typename T>
 void ColBufWriter<T>::CleanIhSize() {
-  FOR_RANGE(int64_t, i, 0, ih_size_) { WriteZero(); }
+  FOR_RANGE(int64_t, i, 0, oh_size_) { WriteZero(); }
 }
 
 template<typename T>
 void ColBufWriter<T>::CleanIwSize() {
-  FOR_RANGE(int64_t, i, 0, iw_size_) { WriteZero(); }
+  FOR_RANGE(int64_t, i, 0, ow_size_) { WriteZero(); }
 }
 
 template<typename T>
@@ -388,8 +392,10 @@ void ConvKernelUtil<T>::NCDHWIm2Col(
     T* col_buf_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, true, strides,
                              dilation_rate, padding_before);
-  ColBufWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2),
-                                 in_shape.Count(3), in_shape.Count(4), 1);
+  ColBufWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), 
+                       in_shape.Count(3), in_shape.Count(4), 1,
+                                 out_shape.Count(2),
+                                 out_shape.Count(3), out_shape.Count(4), 1);
   DoNCDWHFunc(weight_shape, col_buf_util, col_buf_writer);
 }
 
@@ -402,7 +408,8 @@ void ConvKernelUtil<T>::NCDHWCol2Im(
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, false, strides,
                              dilation_rate, padding_before);
   ColBufWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2),
-                                 in_shape.Count(3), in_shape.Count(4), 1);
+                       in_shape.Count(3), in_shape.Count(4), 1,
+                                 out_shape.Count(3), out_shape.Count(4), 1);
   DoNCDWHFunc(weight_shape, col_buf_util, col_buf_writer);
 }
 
@@ -413,7 +420,8 @@ void ConvKernelUtil<T>::DoNDWHCFunc(const Shape& weight_shape,
   for (int64_t kd = 0; kd != weight_shape.At(1); ++kd) {
     for (int64_t kh = 0; kh != weight_shape.At(2); ++kh) {
       for (int64_t kw = 0; kw != weight_shape.At(3); ++kw) {
-        for (int64_t c = 0; c != weight_shape.At(4); ++c) {
+        for (int64_t c = 0; c != weight_shape.At(4);
+             ++c, col_buf_writer.NextCSize()) {
           col_buf_util(col_buf_writer, c, kd, kh, kw);
         }
       }
@@ -429,8 +437,10 @@ void ConvKernelUtil<T>::NDHWCIm2Col(
     T* col_buf_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, true, strides,
                              dilation_rate, padding_before);
-  ColBufWriter<T> col_buf_writer(in_dptr, col_buf_ptr, 1, in_shape.Count(2),
-                                 in_shape.Count(3), in_shape.Count(4));
+  ColBufWriter<T> col_buf_writer(in_dptr, col_buf_ptr, out_shape.Count(2),
+                                 in_shape.Count(2), in_shape.Count(3), in_shape.Count(4),
+                                 out_shape.Count(2, 4), out_shape.Count(3, 4),
+                                 1);
   DoNDWHCFunc(weight_shape, col_buf_util, col_buf_writer);
 }
 
@@ -442,8 +452,10 @@ void ConvKernelUtil<T>::NDHWCCol2Im(
     T* in_diff_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, false, strides,
                              dilation_rate, padding_before);
-  ColBufWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, 1, in_shape.Count(2),
-                                 in_shape.Count(3), in_shape.Count(4));
+  ColBufWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2),
+                                 in_shape.Count(2), in_shape.Count(3), in_shape.Count(4),
+                                 out_shape.Count(2, 4), out_shape.Count(3, 4),
+                                 1);
   DoNDWHCFunc(weight_shape, col_buf_util, col_buf_writer);
 }
 
