@@ -1,12 +1,14 @@
 #include "oneflow/core/kernel/print_kernel.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
 namespace {
 
 template<typename T>
-void PrintBlob(PersistentOutStream& out_stream, const Blob* blob, const std::string& blob_name) {
+void PrintBlob(PersistentOutStream& out_stream, const Blob* blob,
+               const std::string& blob_name) {
   CHECK_EQ(GetDataType<T>::value, blob->data_type());
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
@@ -62,7 +64,6 @@ void PrintKernel::Forward(
     out_streams_[i]->Flush();
   }
 }
-
 
 COMMAND(AddKernelCreator(OperatorConf::kPrintConf,
                          []() { return new PrintKernel; }));
