@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
+void PrintBlob(PersistentOutStream& out_stream, const Blob* blob, const std::string& blob_name) {
   CHECK_EQ(GetDataType<T>::value, blob->data_type());
   const T* dptr = blob->dptr<T>();
   for (int64_t i = 0; i < blob->shape().At(0); ++i) {
@@ -25,15 +25,6 @@ void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
     }
     out_stream << '\n';
   }
-}
-
-void PrintBlob(PersistentOutStream& out_stream, const Blob* blob) {
-  static const HashMap<int, void (*)(PersistentOutStream&, const Blob*)>
-      print_funcs = {
-#define PRINT_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, &PrintBlobImpl<type_cpp>},
-          OF_PP_FOR_EACH_TUPLE(PRINT_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
-  print_funcs.at(blob->data_type())(out_stream, blob);
 }
 
 }  // namespace
@@ -56,16 +47,22 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   }
 }
 
+#define MAKE_PRINTBLOB_SWITCH_ENTRY(func_name, T) func_name<T>
+DEFINE_STATIC_SWITCH_FUNC(void, PrintBlob, MAKE_PRINTBLOB_SWITCH_ENTRY,
+                          MAKE_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ));
+#undef MAKE_PRINTBLOB_SWITCH_ENTRY
+
 void PrintKernel::Forward(
     const KernelCtx& kernel_ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   FOR_RANGE(size_t, i, 0, kernel_conf().input_bns().size()) {
     const std::string& ibn = kernel_conf().input_bns(i);
     const Blob* blob = BnInOp2Blob(ibn);
-    PrintBlob(*out_streams_[i], blob);
+    SwitchPrintBlob(SwitchCase(blob->data_type()), *out_streams_[i], blob, ibn);
     out_streams_[i]->Flush();
   }
 }
+
 
 COMMAND(AddKernelCreator(OperatorConf::kPrintConf,
                          []() { return new PrintKernel; }));
