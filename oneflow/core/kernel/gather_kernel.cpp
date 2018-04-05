@@ -16,8 +16,9 @@ void GatherKernel<device_type, T>::ForwardDataContent(
 
   for (int64_t i = 0; i < data_num; ++i) {
     if (in_blob->col_num(i) == col_id) {
-      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>() + i * hid_dim,
-                          in_blob->dptr<T>() + i * hid_dim, hid_dim);
+      KernelUtil<device_type, T>::Copy(
+          ctx.device_ctx, hid_dim, in_blob->dptr<T>() + i * hid_dim, 1,
+          out_blob->mut_dptr<T>() + i * hid_dim, 1);
     }
   }
 }
@@ -47,9 +48,9 @@ void GatherKernel<device_type, T>::BackwardDataContent(
                       in_diff_blob->ByteSizeOfDataContentField());
   for (int64_t i = 0; i < data_num; ++i) {
     if (in_blob->col_num(i) == col_id) {
-      Memcpy<device_type>(ctx.device_ctx,
-                          in_diff_blob->mut_dptr<T>() + i * hid_dim,
-                          out_diff_blob->dptr<T>() + i * hid_dim, hid_dim);
+      KernelUtil<device_type, T>::Copy(
+          ctx.device_ctx, hid_dim, out_diff_blob->dptr<T>() + i * hid_dim, 1,
+          in_diff_blob->mut_dptr<T>() + i * hid_dim, 1);
     }
   }
 }
