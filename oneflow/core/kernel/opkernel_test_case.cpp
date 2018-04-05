@@ -68,7 +68,7 @@ void BlobCmp(const std::string& blob_name, const Blob* lhs,
   OpKTSwitchHelper<type_cpp>::func_name
 DEFINE_STATIC_SWITCH_FUNC(DataType, GetDataTypeValue,
                           MAKE_OPK_HELPER_SWITCH_ENTRY,
-                          MAKE_STRINGIZE_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
+                          MAKE_STRINGIZED_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
 
 }  // namespace
 
