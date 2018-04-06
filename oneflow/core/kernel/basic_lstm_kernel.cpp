@@ -424,18 +424,22 @@ void BasicLstmKernelUtil<device_type, T>::ComputeInDiff(
     const KernelCtx& ctx, const Blob* f_data_diff, const Blob* i_data_diff,
     const Blob* c_data_diff, const Blob* o_data_diff, Blob* in_diff,
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  //  in_diff = f_data_diff * i2h_f_weight_diff
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), f_data_diff, BnInOp2Blob("i2h_f_weight_diff"),
       in_diff);
+  //  in_diff += i_data_diff * i2h_i_data_diff
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), i_data_diff, BnInOp2Blob("i2h_i_weight_diff"),
       in_diff);
+  // in_diff += c_data_diff * i2h_c_data_diff
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), c_data_diff, BnInOp2Blob("i2h_c_weight_diff"),
       in_diff);
+  //  in_diff += o_data_diff * i2h_o_data_diff
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), o_data_diff, BnInOp2Blob("i2h_o_weight_diff"),
@@ -447,15 +451,19 @@ void BasicLstmKernelUtil<device_type, T>::ComputeHiddenDiff(
     const KernelCtx& ctx, const Blob* f_data_diff, const Blob* i_data_diff,
     const Blob* c_data_diff, const Blob* o_data_diff, Blob* hidden_diff,
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  // hidden_diff = f_data_diff * h2h_f_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(0), f_data_diff, BnInOp2Blob("h2h_f_weight"), hidden_diff);
+  // hidden_diff += i_data_diff * h2h_i_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), i_data_diff, BnInOp2Blob("h2h_i_weight"), hidden_diff);
+  // hidden_diff += c_data_diff * h2h_c_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), c_data_diff, BnInOp2Blob("h2h_c_weight"), hidden_diff);
+  // hidden_diff += o_data_diff * h2h_o_weight
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), o_data_diff, BnInOp2Blob("h2h_o_weight"), hidden_diff);
