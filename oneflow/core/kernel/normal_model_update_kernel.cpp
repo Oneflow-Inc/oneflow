@@ -10,9 +10,17 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
+  int64_t next_model_vid = std::get<0>(*tpl);
+  const NormalModelUpdateOpUserConf& conf =
+      this->op_conf().normal_mdupdt_conf().user_conf();
+  double learning_rate = conf.learning_rate();
+  if (conf.has_learning_rate_decay()) {
+    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(),
+                                           learning_rate, next_model_vid - 1);
+  }
   UpdateModel(ctx.device_ctx, std::get<1>(*tpl),
               DiffAveragingAndL1Regularization(ctx.device_ctx, BnInOp2Blob),
-              std::get<0>(*tpl), BnInOp2Blob);
+              next_model_vid, learning_rate, BnInOp2Blob);
 }
 
 template<DeviceType device_type, typename T>

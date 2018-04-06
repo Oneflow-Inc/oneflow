@@ -5,24 +5,19 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
-    int64_t next_model_vid,
+    int64_t next_model_vid, double learning_rate,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
-  const NormalModelUpdateOpUserConf& conf =
-      this->op_conf().normal_mdupdt_conf().user_conf();
-  float decay_rate = conf.rmsprop_conf().decay_rate();
+  const RMSPropModelUpdateConf& conf =
+      this->op_conf().normal_mdupdt_conf().user_conf().rmsprop_conf();
+  float decay_rate = conf.decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
-  double learning_rate = conf.learning_rate();
-  if (conf.has_learning_rate_decay()) {
-    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(),
-                                           learning_rate, next_model_vid - 1);
-  }
 
   RMSPropMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), static_cast<T>(1.0f - decay_rate),
       static_cast<T>(learning_rate), static_cast<T>(decay_rate),
-      static_cast<T>(conf.rmsprop_conf().epsilon()), pre_model_blob->dptr<T>(),
+      static_cast<T>(conf.epsilon()), pre_model_blob->dptr<T>(),
       model_blob->mut_dptr<T>(), mean_square_blob->mut_dptr<T>(),
       model_diff_blob->dptr<T>());
 }
