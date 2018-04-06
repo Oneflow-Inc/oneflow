@@ -13,8 +13,11 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
       this->op_conf().normal_mdupdt_conf().user_conf();
   float decay_rate = conf.rmsprop_conf().decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
-  float learning_rate = GetDecayedLearningRate(
-      conf.lr_decay(), conf.learning_rate(), next_model_vid - 1);
+  float learning_rate = conf.learning_rate();
+  if (conf.has_lr_decay()) {
+    learning_rate = GetDecayedLearningRate(conf.lr_decay(), learning_rate,
+                                           next_model_vid - 1);
+  }
 
   RMSPropMdUpdateKernelUtil<device_type, T>::UpdateModel(
       ctx, model_blob->shape().elem_cnt(), static_cast<T>(1.0f - decay_rate),

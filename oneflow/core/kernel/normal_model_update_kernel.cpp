@@ -70,12 +70,74 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
   }
 }
 
+float ExponetialDecayedLearningRate(const ExponentialDecayConf& conf,
+                                    const float lr,
+                                    const int64_t now_batch_num) {
+  TODO();
+}
+
+float InverseTimeDecayedLearningRate(const InverseTimeDecayConf& conf,
+                                     const float lr,
+                                     const int64_t now_batch_num) {
+  TODO();
+}
+
+float NaturalExpDecayedLearningRate(const NaturalExpDecayConf& conf,
+                                    const float lr,
+                                    const int64_t now_batch_num) {
+  TODO();
+}
+
+float PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf,
+                                    const float lr,
+                                    const int64_t now_batch_num) {
+  TODO();
+}
+
+float PolynomialDecayedLearningRate(const PolynomialDecayConf& conf,
+                                    const float lr,
+                                    const int64_t now_batch_num) {
+  TODO();
+}
+
+float CosineDecayedLearningRate(const CosineDecayConf& conf, const float lr,
+                                const int64_t now_batch_num) {
+  TODO();
+}
+
+float LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf,
+                                      const float lr,
+                                      const int64_t now_batch_num) {
+  TODO();
+}
+
 }  // namespace
 
-float GetDecayedLearningRate(const LearningRateDecayConf&, const float lr,
+float GetDecayedLearningRate(const LearningRateDecayConf& conf, const float lr,
                              const int64_t now_batch_num) {
-  TODO();
-  return lr;
+  if (conf.has_exponetial_conf()) {
+    return ExponetialDecayedLearningRate(conf.exponetial_conf(), lr,
+                                         now_batch_num);
+  } else if (conf.has_inverse_time_conf()) {
+    return InverseTimeDecayedLearningRate(conf.inverse_time_conf(), lr,
+                                          now_batch_num);
+  } else if (conf.has_natural_exp_conf()) {
+    return NaturalExpDecayedLearningRate(conf.natural_exp_conf(), lr,
+                                         now_batch_num);
+  } else if (conf.has_piecewise_constant_conf()) {
+    return PiecewiseConstantLearningRate(conf.piecewise_constant_conf(), lr,
+                                         now_batch_num);
+  } else if (conf.has_polynomial_conf()) {
+    return PolynomialDecayedLearningRate(conf.polynomial_conf(), lr,
+                                         now_batch_num);
+  } else if (conf.has_cosine_conf()) {
+    return CosineDecayedLearningRate(conf.cosine_conf(), lr, now_batch_num);
+  } else if (conf.has_linear_cosine_conf()) {
+    return LinearCosineDecayedLearningRate(conf.linear_cosine_conf(), lr,
+                                           now_batch_num);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel));

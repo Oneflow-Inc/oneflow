@@ -10,8 +10,12 @@ void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* model_blob = BnInOp2Blob("model");
   const NormalModelUpdateOpUserConf& conf =
       this->op_conf().normal_mdupdt_conf().user_conf();
-  float learning_rate = GetDecayedLearningRate(
-      conf.lr_decay(), conf.learning_rate(), next_model_vid - 1);
+
+  float learning_rate = conf.learning_rate();
+  if (conf.has_lr_decay()) {
+    learning_rate = GetDecayedLearningRate(conf.lr_decay(), learning_rate,
+                                           next_model_vid - 1);
+  }
 
   if (pre_model_blob != model_blob) {
     model_blob->CopyDataContentFrom(ctx, pre_model_blob);
