@@ -6,7 +6,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void DiffAveragingL1RegularizationGpu(const int64_t n, T l1,
+__global__ void DiffAveragingL1RegularizationGpu(int64_t n, T l1,
                                                  int32_t batch_size, const T* x,
                                                  T* y) {
   T zero = ZeroVal<T>::value;

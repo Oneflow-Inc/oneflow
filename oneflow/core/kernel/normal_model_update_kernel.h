@@ -31,13 +31,13 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 class NormalMdUpdateKernelUtil final {
  public:
-  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, const int64_t n,
+  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n,
                                                float l1, const T* model,
                                                T* model_diff_acc);
 };
 
-float GetDecayedLearningRate(const LearningRateDecayConf&, const float lr,
-                             const int64_t now_batch_num);
+double GetDecayedLearningRate(const LearningRateDecayConf&, double lr,
+                              int64_t now_batch_num);
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) \
   Kernel* Create##x##MdUpdtKernel(const KernelConf&);

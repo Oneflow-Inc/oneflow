@@ -29,7 +29,7 @@ Blob* NormalMdUpdateKernel<device_type, T>::DiffAveragingAndL1Regularization(
   const Blob* model = BnInOp2Blob("model");
   float l1 = Global<JobDesc>::Get()->L1();
   NormalMdUpdateKernelUtil<device_type, T>::DiffAveragingAndL1Regularization(
-      ctx, model->shape().elem_cnt(), l1, model->dptr<T>(),
+      ctx, model->shape().elem_cnt(), static_cast<T>(l1), model->dptr<T>(),
       in_0->mut_dptr<T>());
   return in_0;
 }
@@ -37,8 +37,8 @@ Blob* NormalMdUpdateKernel<device_type, T>::DiffAveragingAndL1Regularization(
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n,
-                                               float l1, const T* model,
+  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n, T l1,
+                                               const T* model,
                                                T* model_diff_acc) {
     T zero = ZeroVal<T>::value;
     for (int64_t i = 0; i != n; ++i) {
@@ -70,51 +70,93 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
   }
 }
 
-float ExponetialDecayedLearningRate(const ExponentialDecayConf& conf,
-                                    const float lr,
-                                    const int64_t now_batch_num) {
-  TODO();
+double ExponetialDecayedLearningRate(const ExponentialDecayConf& conf,
+                                     double lr, int64_t now_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  double p = static_cast<double>(now_batch_num)
+             / static_cast<double>(conf.decay_steps());
+  if (conf.staircase()) { p = std::floor(p); }
+  return lr * std::pow(conf.decay_rate(), p);
 }
 
-float InverseTimeDecayedLearningRate(const InverseTimeDecayConf& conf,
-                                     const float lr,
-                                     const int64_t now_batch_num) {
-  TODO();
+double InverseTimeDecayedLearningRate(const InverseTimeDecayConf& conf,
+                                      double lr, int64_t now_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  double p = static_cast<double>(now_batch_num)
+             / static_cast<double>(conf.decay_steps());
+  if (conf.staircase()) { p = std::floor(p); }
+  return lr / (1.0 + conf.decay_rate() * p);
 }
 
-float NaturalExpDecayedLearningRate(const NaturalExpDecayConf& conf,
-                                    const float lr,
-                                    const int64_t now_batch_num) {
-  TODO();
+double NaturalExpDecayedLearningRate(const NaturalExpDecayConf& conf, double lr,
+                                     int64_t now_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  double p = static_cast<double>(now_batch_num)
+             / static_cast<double>(conf.decay_steps());
+  if (conf.staircase()) { p = std::floor(p); }
+  return lr * std::exp(-conf.decay_rate() * p);
 }
 
-float PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf,
-                                    const float lr,
-                                    const int64_t now_batch_num) {
-  TODO();
+double PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf,
+                                     double lr, int64_t now_batch_num) {
+  const PbRf<int64_t>& boundaries = conf.boundaries();
+  const PbRf<double>& values = conf.values();
+  CHECK_EQ(boundaries.size() + 1, values.size());
+  size_t i = 0;
+  for (; i < boundaries.size(); ++i) {
+    if (now_batch_num <= boundaries[i]) { break; }
+  }
+  return values[i];
 }
 
-float PolynomialDecayedLearningRate(const PolynomialDecayConf& conf,
-                                    const float lr,
-                                    const int64_t now_batch_num) {
-  TODO();
+double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
+                                     int64_t now_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  double global_step = static_cast<double>(now_batch_num);
+  double decay_steps = static_cast<double>(conf.decay_steps());
+  if (conf.cycle()) {
+    if (now_batch_num == 0) { global_step = 1.0; }
+    decay_steps = decay_steps * std::ceil(global_step / decay_steps);
+  } else {
+    global_step = std::min(global_step, decay_steps);
+  }
+  return (lr - conf.end_learning_rate())
+             * std::pow(1.0 - (global_step / decay_steps), conf.power())
+         + conf.end_learning_rate();
 }
 
-float CosineDecayedLearningRate(const CosineDecayConf& conf, const float lr,
-                                const int64_t now_batch_num) {
-  TODO();
+double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr,
+                                 int64_t now_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  const double PI = std::atan(1.0) * 4.0;
+  double global_step = static_cast<double>(now_batch_num);
+  double decay_steps = static_cast<double>(conf.decay_steps());
+  global_step = std::min(global_step, decay_steps);
+  double cosine_decay = 0.5 * (1.0 + std::cos(PI * global_step / decay_steps));
+  double decayed = (1.0 - conf.alpha()) * cosine_decay + conf.alpha();
+  return lr * decayed;
 }
 
-float LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf,
-                                      const float lr,
-                                      const int64_t now_batch_num) {
-  TODO();
+double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf,
+                                       double lr, int64_t now_batch_num) {
+  CHECK_GT(conf.decay_steps(), 0);
+  const double PI = std::atan(1.0) * 4.0;
+  double global_step = static_cast<double>(now_batch_num);
+  double decay_steps = static_cast<double>(conf.decay_steps());
+  global_step = std::min(global_step, decay_steps);
+  double linear_decay = (decay_steps - global_step) / decay_steps;
+  double cosine_decay =
+      0.5
+      * (1.0
+         + std::cos(PI * 2.0 * conf.num_periods() * global_step / decay_steps));
+  double decayed = (conf.alpha() + linear_decay) * cosine_decay + conf.beta();
+  return lr * decayed;
 }
 
 }  // namespace
 
-float GetDecayedLearningRate(const LearningRateDecayConf& conf, const float lr,
-                             const int64_t now_batch_num) {
+double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr,
+                              int64_t now_batch_num) {
   if (conf.has_exponetial_conf()) {
     return ExponetialDecayedLearningRate(conf.exponetial_conf(), lr,
                                          now_batch_num);
