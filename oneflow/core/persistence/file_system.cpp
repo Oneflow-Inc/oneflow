@@ -15,6 +15,11 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   CreateDir(dirname);
 }
 
+void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname)) { return; }
+  RecursivelyCreateDir(dirname);
+}
+
 bool FileSystem::IsDirEmpty(const std::string& dirname) {
   return ListDir(dirname).empty();
 }
