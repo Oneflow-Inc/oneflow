@@ -45,14 +45,6 @@ void ForEachStreamCalcTimePerAct(const std::list<ActEvent>& act_events,
   }
 }
 
-double CalcBaseII(const std::list<ActEvent>& act_events) {
-  double initiation_interval = 0;
-  ForEachStreamCalcTimePerAct(act_events, [&](double ii) {
-    initiation_interval = std::max(initiation_interval, ii);
-  });
-  return initiation_interval;
-}
-
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<ActEvent>* act_events) {
   NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
@@ -206,15 +198,15 @@ double Improver::CalcMaxRegstDescDuration(
 double Improver::BinarySearchII(
     const std::function<double(int64_t)>& Duration4RegstDescId,
     const std::function<double(int64_t)>& IIScale4RegstDescId,
-    const MemZoneRegstDescs& mz_regst_descs, double base_ii) const {
+    const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration =
       CalcMaxRegstDescDuration(Duration4RegstDescId, mz_regst_descs);
   CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
                               IIScale4RegstDescId, max_duration));
   const double ii_search_threshold = 1;
   double r = max_duration;
-  double l = base_ii;
-  double mid = base_ii;
+  double l = 1.0;
+  double mid = 1.0;
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
     if (IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
@@ -228,14 +220,14 @@ double Improver::BinarySearchII(
 }
 
 void Improver::MemoryLimitedAllocate(
-    const ActGraph& graph, double base_ii,
+    const ActGraph& graph,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
   auto Duration4RegstDescId = MakeGetterDuration4RegstDescId(graph);
   auto IIScale4RegstDescId = MakeGetterIIScale4RegstDescId(graph);
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
-  double ii = BinarySearchII(Duration4RegstDescId, IIScale4RegstDescId,
-                             mz_regst_descs, base_ii);
+  double ii =
+      BinarySearchII(Duration4RegstDescId, IIScale4RegstDescId, mz_regst_descs);
   for (const auto& task_proto : graph.plan().task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t regst_num = CalcRegstNum(pair.second, Duration4RegstDescId, ii,
@@ -249,10 +241,9 @@ Plan Improver::Improve(const Plan& naive_plan,
                        const std::string& act_event_filepath) {
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
-  double base_ii = CalcBaseII(*act_events);
   ActGraph act_graph(naive_plan, std::move(act_events));
   Plan plan(naive_plan);
-  MemoryLimitedAllocate(act_graph, base_ii, MakeSetterSetPlanRegstNum(&plan));
+  MemoryLimitedAllocate(act_graph, MakeSetterSetPlanRegstNum(&plan));
   return plan;
 }
 
