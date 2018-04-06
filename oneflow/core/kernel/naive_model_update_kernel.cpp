@@ -12,9 +12,9 @@ void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
       this->op_conf().normal_mdupdt_conf().user_conf();
 
   double learning_rate = conf.learning_rate();
-  if (conf.has_lr_decay()) {
-    learning_rate = GetDecayedLearningRate(conf.lr_decay(), learning_rate,
-                                           next_model_vid - 1);
+  if (conf.has_learning_rate_decay()) {
+    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(),
+                                           learning_rate, next_model_vid - 1);
   }
 
   if (pre_model_blob != model_blob) {

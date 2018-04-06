@@ -12,9 +12,9 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
   const NormalModelUpdateOpUserConf& conf =
       this->op_conf().normal_mdupdt_conf().user_conf();
   double learning_rate = conf.learning_rate();
-  if (conf.has_lr_decay()) {
-    learning_rate = GetDecayedLearningRate(conf.lr_decay(), learning_rate,
-                                           next_model_vid - 1);
+  if (conf.has_learning_rate_decay()) {
+    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(),
+                                           learning_rate, next_model_vid - 1);
   }
   float beta = conf.momentum_conf().beta();
   if (next_model_vid == 1) { beta = 0.0f; }

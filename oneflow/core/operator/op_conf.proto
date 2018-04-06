@@ -337,7 +337,7 @@ message LearningRateDecayConf {
 
 message NormalModelUpdateOpUserConf {
   optional double learning_rate = 1 [default = 0.01];
-  optional LearningRateDecayConf lr_decay = 2;
+  optional LearningRateDecayConf learning_rate_decay = 2;
   oneof mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;

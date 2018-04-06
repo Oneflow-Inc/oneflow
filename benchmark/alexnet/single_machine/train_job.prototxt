@@ -32,7 +32,7 @@ train_conf {
     momentum_conf {
       beta: 0.9
     }
-    lr_decay {
+    learning_rate_decay {
       exponetial_conf {
         decay_rate: 0.1;
         decay_batches: 10000;
