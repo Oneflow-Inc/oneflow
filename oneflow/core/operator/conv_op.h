@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_CONV_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
@@ -51,8 +52,6 @@ class ConvOp : public Operator {
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const override;
-  int64_t GetInDim(const Shape& in_shape, uint8_t dim) const;
-  std::vector<int32_t> Get3DVecInOpConf(const std::string& field_name) const;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(
       std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

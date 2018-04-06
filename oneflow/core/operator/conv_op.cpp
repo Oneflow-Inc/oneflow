@@ -1,7 +1,6 @@
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/operator/operator_util.h"
 
 namespace oneflow {
 
@@ -95,7 +94,8 @@ void ConvOp<NDims>::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(),
            Global<JobDesc>::Get()->DefaultDataType());
 
-  // out
+// out
+#include "oneflow/core/operator/operator_util.h"
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
   if (parallel_ctx->policy() == kModelParallel) {
@@ -163,53 +163,24 @@ void ConvOp<NDims>::InferBlobDescs(
 }
 
 template<int32_t NDims>
-std::vector<int32_t> ConvOp<NDims>::Get3DVecInOpConf(
-    const std::string& field_name) const {
-  std::vector<int32_t> vec;
-  FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int32_t>(dim) - (3 - NDims);
-    if (index < 0) {
-      vec.push_back(1);
-    } else {
-      vec.push_back(GetPbRfFromCustomizedConf<int32_t>(field_name).Get(index));
-    }
-  }
-  return vec;
-}
-
-template<int32_t NDims>
-int64_t ConvOp<NDims>::GetInDim(const Shape& shape, uint8_t dim) const {
-  int64_t offset = 0;
-  std::string data_format =
-      GetValFromCustomizedConf<std::string>("data_format");
-  if (data_format == "channels_last") {
-    offset = 1;
-  } else if (data_format == "channels_first") {
-    offset = 2;
-  } else {
-    UNIMPLEMENTED();
-  }
-  int64_t index = offset + static_cast<int64_t>(dim) - (3 - NDims);
-  if (index < offset) {
-    return 1;
-  } else {
-    return shape.At(index);
-  }
-}
-
-template<int32_t NDims>
 void ConvOp<NDims>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
-  std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
-                             GetInDim(in_shape, 2)};
-  std::vector<int32_t> weight = this->Get3DVecInOpConf("kernel_size");
+  std::string data_format =
+      GetValFromCustomizedConf<std::string>("data_format");
+  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, NDims),
+                             GetInDim(in_shape, data_format, 1, NDims),
+                             GetInDim(in_shape, data_format, 2, NDims)};
   std::vector<int64_t> out;
-  std::vector<int32_t> strides = this->Get3DVecInOpConf("strides");
-  std::vector<int32_t> dilation_rate = this->Get3DVecInOpConf("dilation_rate");
+  std::vector<int32_t> weight = Get3DVecInOpConf(
+      this->GetPbRfFromCustomizedConf<int32_t>("kernel_size"), NDims);
+  std::vector<int32_t> strides = Get3DVecInOpConf(
+      this->GetPbRfFromCustomizedConf<int32_t>("strides"), NDims);
+  std::vector<int32_t> dilation_rate = Get3DVecInOpConf(
+      this->GetPbRfFromCustomizedConf<int32_t>("dilation_rate"), NDims);
   std::vector<int32_t> pad_small_side;
   std::vector<int32_t> pad_large_side;
   Get3DOutputSize(in, weight, strides,
@@ -222,8 +193,6 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     conv_conf->mutable_dilation_rate()->Add(dilation_rate.at(i));
   }
   conv_conf->set_dim(NDims);
-  std::string data_format =
-      GetValFromCustomizedConf<std::string>("data_format");
   const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
   if (data_format == "channels_first") {
     Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
