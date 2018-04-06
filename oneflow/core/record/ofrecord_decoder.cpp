@@ -25,7 +25,7 @@ int32_t OFRecordDecoder<encode_case, T>::ReadColNum(
   int32_t max_col_num = 0;
   record_blob->ForEachRecord([&](const OFRecord& record) {
     const Feature& feature = record.feature().at(name);
-    int32_t col_num = GetColNumOfFeature(feature, out_blob->shape().Count(1));
+    int32_t col_num = GetColNumOfFeature(feature, out_blob->shape().Count(2));
     max_col_num = std::max(max_col_num, col_num);
     out_blob->set_col_num(i++, col_num);
   });
