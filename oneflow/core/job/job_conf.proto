@@ -48,8 +48,10 @@ message JobConf {
   optional DataType default_data_type = 11 [default = kFloat]; // kFloat or kDouble
 
   optional int64 piece_num_of_experiment_phase = 101 [default = -1];
-  optional float available_zone_mem_ratio = 102 [default = 0.95];
   optional uint64 persistence_buffer_mbyte_size = 103 [default = 64];
+  optional uint64 reserved_host_mem_mbyte_size = 150 [default = 500];
+  optional uint64 reserved_device_mem_mbyte_size = 151 [default = 500];
+  optional bool save_downloaded_file_to_local_fs = 152 [default = true];
 
   oneof JobType {
     TrainConf train_conf = 1000;
