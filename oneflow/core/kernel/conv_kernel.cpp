@@ -451,6 +451,12 @@ void ConvKernelUtil<T>::NDHWCCol2Im(
   DoNDWHCFunc(weight_shape, col_buf_util, col_buf_writer);
 }
 
+#define INSTANTIATE_CONV_KERNEL_IF(device_type, data_type_pair) \
+  template class ConvKernelIf<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL_IF, DEVICE_TYPE_SEQ,
+                                 FLOATING_DATA_TYPE_SEQ);
+
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
   template class ConvKernel<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL, FLOATING_DATA_TYPE_SEQ)
