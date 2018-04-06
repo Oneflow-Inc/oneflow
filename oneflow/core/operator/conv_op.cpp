@@ -80,8 +80,9 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
-  if (GetEnumFromCustomizedConf("activation")
-      != ActivationType::kNoActivation) {
+  if (static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
+          != ActivationType::kNoActivation
+      && Global<JobDesc>::Get()->IsTrain()) {
     EnrollDataTmpBn("activation_buf");
   }
 }
@@ -117,7 +118,8 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
-  if (GetEnumFromCustomizedConf("activation") != ActivationType::kNoActivation
+  if (static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
+          != ActivationType::kNoActivation
       && Global<JobDesc>::Get()->IsTrain()) {
     GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
   }

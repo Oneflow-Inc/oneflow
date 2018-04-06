@@ -112,6 +112,12 @@ void FullyConnectedKernel<device_type, T>::InitModelBlobsWithDir(
   }
 }
 
+template<DeviceType device_type, typename T>
+const PbMessage& FullyConnectedKernel<device_type, T>::GetCustomizedOpConf()
+    const {
+  return this->op_conf().fully_connected_conf();
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kFullyConnectedConf,
                            FullyConnectedKernel, FLOATING_DATA_TYPE_SEQ);
 

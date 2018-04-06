@@ -29,7 +29,7 @@ void FullyConnectedOp::InferBlobDescs(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->data_type(),
            Global<JobDesc>::Get()->DefaultDataType());
-  int32_t units = GetValFromCustomizedConf<int32_t>("units");
+  int32_t units = op_conf().fully_connected_conf().units();
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(units, parallel_ctx->parallel_num());
     units = splitter.At(parallel_ctx->parallel_id()).size();
@@ -41,14 +41,15 @@ void FullyConnectedOp::InferBlobDescs(
   if (op_conf().fully_connected_conf().activation()
           != ActivationType::kNoActivation
       && Global<JobDesc>::Get()->IsTrain()) {
-    GetBlobDesc4BnInOp("activation_buf")->mut_shape() = out_blob_desc->shape();
+    GetBlobDesc4BnInOp("activation_buf")->mut_shape() =
+        Shape({in_blob_desc->shape().At(0), units});
   }
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_shape() =
       Shape({units, in_blob_desc->shape().Count(1)});
 
-  if (GetValFromCustomizedConf<bool>("use_bias")) {
+  if (op_conf().fully_connected_conf().use_bias()) {
     // bias
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
 

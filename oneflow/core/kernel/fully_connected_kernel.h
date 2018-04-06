@@ -30,6 +30,7 @@ class FullyConnectedKernel final
       DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 }  // namespace oneflow
