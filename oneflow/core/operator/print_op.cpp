@@ -4,7 +4,7 @@ namespace oneflow {
 
 void PrintOp::InitFromOpConf() {
   CHECK(op_conf().has_print_conf());
-  EnrollRepeatedInputBn("lbn", false);
+  EnrollRepeatedInputBn("in", false);
 }
 
 const PbMessage& PrintOp::GetCustomizedConf() const {

@@ -19,4 +19,15 @@ int32_t ReadRecord(PersistentInStream* in_stream,
   return records->size();
 }
 
+template<>
+void WriteOneRecord(PersistentOutStream* out_stream, const OFRecord& record) {
+  int64_t record_size = -1;
+  record_size = record.ByteSizeLong();
+  CHECK_GT(record_size, 0);
+  out_stream->Write(reinterpret_cast<char*>(&record_size), sizeof(int64_t));
+  std::unique_ptr<char[]> buffer(new char[record_size]);
+  record.SerializeToArray(buffer.get(), record_size);
+  out_stream->Write(buffer.get(), record_size);
+}
+
 }  // namespace oneflow
