@@ -35,7 +35,7 @@ train_conf {
     lr_decay {
       exponetial_conf {
         decay_rate: 0.1;
-        decay_steps: 10000;
+        decay_batches: 10000;
         staircase: true;
       }
     }
