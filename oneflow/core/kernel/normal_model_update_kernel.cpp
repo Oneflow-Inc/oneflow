@@ -72,27 +72,27 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
 
 double ExponetialDecayedLearningRate(const ExponentialDecayConf& conf,
                                      double lr, int64_t now_batch_num) {
-  CHECK_GT(conf.decay_steps(), 0);
+  CHECK_GT(conf.decay_batches(), 0);
   double p = static_cast<double>(now_batch_num)
-             / static_cast<double>(conf.decay_steps());
+             / static_cast<double>(conf.decay_batches());
   if (conf.staircase()) { p = std::floor(p); }
   return lr * std::pow(conf.decay_rate(), p);
 }
 
 double InverseTimeDecayedLearningRate(const InverseTimeDecayConf& conf,
                                       double lr, int64_t now_batch_num) {
-  CHECK_GT(conf.decay_steps(), 0);
+  CHECK_GT(conf.decay_batches(), 0);
   double p = static_cast<double>(now_batch_num)
-             / static_cast<double>(conf.decay_steps());
+             / static_cast<double>(conf.decay_batches());
   if (conf.staircase()) { p = std::floor(p); }
   return lr / (1.0 + conf.decay_rate() * p);
 }
 
 double NaturalExpDecayedLearningRate(const NaturalExpDecayConf& conf, double lr,
                                      int64_t now_batch_num) {
-  CHECK_GT(conf.decay_steps(), 0);
+  CHECK_GT(conf.decay_batches(), 0);
   double p = static_cast<double>(now_batch_num)
-             / static_cast<double>(conf.decay_steps());
+             / static_cast<double>(conf.decay_batches());
   if (conf.staircase()) { p = std::floor(p); }
   return lr * std::exp(-conf.decay_rate() * p);
 }
@@ -111,44 +111,44 @@ double PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf,
 
 double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
                                      int64_t now_batch_num) {
-  CHECK_GT(conf.decay_steps(), 0);
-  double global_step = static_cast<double>(now_batch_num);
-  double decay_steps = static_cast<double>(conf.decay_steps());
+  CHECK_GT(conf.decay_batches(), 0);
+  double now_batch = static_cast<double>(now_batch_num);
+  double decay_batches = static_cast<double>(conf.decay_batches());
   if (conf.cycle()) {
-    if (now_batch_num == 0) { global_step = 1.0; }
-    decay_steps = decay_steps * std::ceil(global_step / decay_steps);
+    if (now_batch_num == 0) { now_batch = 1.0; }
+    decay_batches = decay_batches * std::ceil(now_batch / decay_batches);
   } else {
-    global_step = std::min(global_step, decay_steps);
+    now_batch = std::min(now_batch, decay_batches);
   }
   return (lr - conf.end_learning_rate())
-             * std::pow(1.0 - (global_step / decay_steps), conf.power())
+             * std::pow(1.0 - (now_batch / decay_batches), conf.power())
          + conf.end_learning_rate();
 }
 
 double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr,
                                  int64_t now_batch_num) {
-  CHECK_GT(conf.decay_steps(), 0);
+  CHECK_GT(conf.decay_batches(), 0);
   const double PI = std::atan(1.0) * 4.0;
-  double global_step = static_cast<double>(now_batch_num);
-  double decay_steps = static_cast<double>(conf.decay_steps());
-  global_step = std::min(global_step, decay_steps);
-  double cosine_decay = 0.5 * (1.0 + std::cos(PI * global_step / decay_steps));
+  double now_batch = static_cast<double>(now_batch_num);
+  double decay_batches = static_cast<double>(conf.decay_batches());
+  now_batch = std::min(now_batch, decay_batches);
+  double cosine_decay = 0.5 * (1.0 + std::cos(PI * now_batch / decay_batches));
   double decayed = (1.0 - conf.alpha()) * cosine_decay + conf.alpha();
   return lr * decayed;
 }
 
 double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf,
                                        double lr, int64_t now_batch_num) {
-  CHECK_GT(conf.decay_steps(), 0);
+  CHECK_GT(conf.decay_batches(), 0);
   const double PI = std::atan(1.0) * 4.0;
-  double global_step = static_cast<double>(now_batch_num);
-  double decay_steps = static_cast<double>(conf.decay_steps());
-  global_step = std::min(global_step, decay_steps);
-  double linear_decay = (decay_steps - global_step) / decay_steps;
+  double now_batch = static_cast<double>(now_batch_num);
+  double decay_batches = static_cast<double>(conf.decay_batches());
+  now_batch = std::min(now_batch, decay_batches);
+  double linear_decay = (decay_batches - now_batch) / decay_batches;
   double cosine_decay =
       0.5
       * (1.0
-         + std::cos(PI * 2.0 * conf.num_periods() * global_step / decay_steps));
+         + std::cos(PI * 2.0 * conf.num_periods() * now_batch / decay_batches));
   double decayed = (conf.alpha() + linear_decay) * cosine_decay + conf.beta();
   return lr * decayed;
 }
