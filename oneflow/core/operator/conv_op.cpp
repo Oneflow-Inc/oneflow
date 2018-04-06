@@ -221,6 +221,7 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     conv_conf->mutable_pad_large_side()->Add(pad_large_side.at(i));
     conv_conf->mutable_dilation_rate()->Add(dilation_rate.at(i));
   }
+  conv_conf->set_dim(NDims);
   std::string data_format =
       GetValFromCustomizedConf<std::string>("data_format");
   const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();

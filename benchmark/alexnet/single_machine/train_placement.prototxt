@@ -36,6 +36,6 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "192.168.1.11:cpu:6"
+    device_name: "first:cpu:6"
   }
 }
