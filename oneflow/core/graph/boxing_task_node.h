@@ -25,11 +25,12 @@ class BoxingTaskNode : public TaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
-#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                  \
-  void BldBoxingOpConfWith##x(                                                \
-      const std::string& lbn, const std::vector<EdgeInfo>& sorted_in_edges,   \
-      int64_t in_parallel_num, const std::vector<EdgeInfo>& sorted_out_edges, \
-      int64_t out_parallel_num, BoxingOpConf*)
+#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                 \
+  void BldBoxingOpConfWith##x(const std::string& lbn,                        \
+                              const std::vector<EdgeInfo>& sorted_in_edges,  \
+                              const ChainNode* in_chain,                     \
+                              const std::vector<EdgeInfo>& sorted_out_edges, \
+                              const ChainNode* out_chain, BoxingOpConf*)
 
 #define DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(x) \
   virtual DECLARE_BLD_BOXING_OP_CONF_METHOD(x) = 0
