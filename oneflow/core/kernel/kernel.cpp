@@ -183,11 +183,15 @@ std::unique_ptr<const Kernel> ConstructKernel(
   return std::unique_ptr<const Kernel>(rptr);
 }
 
-#define INSTANTIATE_KERNEL_IF(device_type, data_type_pair) \
-  template class KernelIfWithModel<device_type,            \
+#define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
+
+#define INSTANTIATE_KERNEL_IF_WITH_MODEL(device_type, data_type_pair) \
+  template class KernelIfWithModel<device_type,                       \
                                    OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_WITH_MODEL,
+                                 DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

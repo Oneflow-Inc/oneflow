@@ -34,6 +34,10 @@ uint64_t JobDesc::reserved_device_mem_byte_size() const {
   return job_conf_.reserved_device_mem_mbyte_size() * 1024 * 1024;
 }
 
+bool JobDesc::save_downloaded_file_to_local_fs() const {
+  return job_conf_.save_downloaded_file_to_local_fs();
+}
+
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().model_save_snapshots_path();
