@@ -7,6 +7,7 @@ namespace oneflow {
 
 CyclicPersistentInStreamWithLocalCopy::CyclicPersistentInStreamWithLocalCopy(
     fs::FileSystem* fs, const std::string& file_path) {
+  LOG(INFO) << "New CyclicPersistentInStreamWithLocalCopy " << file_path;
   in_stream_.reset(new NormalPersistentInStream(fs, file_path));
   local_copy_path_ = JoinPath(LogDir(), "global_fs_buffer", file_path);
   out_stream_.reset(new PersistentOutStream(LocalFS(), local_copy_path_));
