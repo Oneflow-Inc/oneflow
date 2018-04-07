@@ -74,6 +74,9 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
 
   // Getters
   const Plan& plan() const { return *plan_; }
+  const TaskProto& GetTaskProto(int64_t actor_id) const {
+    return *task_id2task_proto_.at(actor_id);
+  }
   const std::list<const ActNode*>& Nodes4Depth(int64_t depth) const {
     return depth2nodes_.at(depth);
   }
@@ -93,6 +96,7 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   void InitNodes();
   void InitEdges();
   void InitDepth();
+  void InitTaskId2TaskProto();
   void ForEachDepthRangeRegstUids(
       const std::function<void(const Range& range,
                                const std::list<std::string>& regst_uids)>&
@@ -106,6 +110,7 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
 
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
+  HashMap<int64_t, const TaskProto*> task_id2task_proto_;
   HashMap<std::string, ActNode*> regst_uid2producer_node_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_nodes_;
   HashMap<int64_t, std::list<const ActNode*>> depth2nodes_;

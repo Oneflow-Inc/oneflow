@@ -126,6 +126,15 @@ MakeGetterPathDurations4RegstDescId(const ActGraph& graph) {
   };
 }
 
+double IIScale4Actor(const ActGraph& graph, int64_t consumer_actor_id,
+                     double default_ii_scale) {
+  if (graph.GetTaskProto(consumer_actor_id).task_type() == TaskType::kMdSave) {
+    return Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+           * Global<JobDesc>::Get()->NumOfPiecesInBatch();
+  }
+  return default_ii_scale;
+}
+
 std::function<const HashMap<int64_t, double>&(int64_t)>
 MakeGetterPathIIScales4RegstDescId(const ActGraph& graph) {
   std::shared_ptr<HashMap<int64_t, HashMap<int64_t, double>>>
@@ -133,9 +142,9 @@ MakeGetterPathIIScales4RegstDescId(const ActGraph& graph) {
       new HashMap<int64_t, HashMap<int64_t, double>>());
   graph.ForEachRegstDescConsumerPathIIScale([&](int64_t regst_desc_id,
                                                 int64_t consumer_actor_id,
-                                                double scale) {
+                                                double ii_scale) {
     (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] =
-        scale;
+        IIScale4Actor(graph, consumer_actor_id, ii_scale);
   });
   std::shared_ptr<const HashMap<int64_t, double>> empty(
       new HashMap<int64_t, double>());
