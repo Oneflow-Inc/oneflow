@@ -28,9 +28,16 @@ train_conf {
 # l2 => weight decay
   l2: 0.0005
   model_update_conf {
+    learning_rate: 0.01
     momentum_conf {
-      learning_rate: 0.01
       beta: 0.9
+    }
+    learning_rate_decay {
+      exponetial_conf {
+        decay_rate: 0.1;
+        decay_batches: 10000;
+        staircase: true;
+      }
     }
   }
 }
