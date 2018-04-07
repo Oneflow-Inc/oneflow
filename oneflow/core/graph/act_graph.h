@@ -66,10 +66,10 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_events);
   ~ActGraph() = default;
 
-  void ForEachRegstDescMeanDuration(
-      const std::function<void(int64_t, double)>& Handler) const;
-  void ForEachRegstDescIIScale(
-      const std::function<void(int64_t, double)>& Handler) const;
+  void ForEachRegstDescConsumerPathMeanDuration(
+      const std::function<void(int64_t, int64_t, double)>& Handler) const;
+  void ForEachRegstDescConsumerPathIIScale(
+      const std::function<void(int64_t, int64_t, double)>& Handler) const;
   void ToDotFiles(const std::string& dir) const;
 
   // Getters
@@ -87,8 +87,9 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   }
 
  private:
-  void ForEachRegstUidDuration(
-      const std::function<void(const std::string&, double)>& Handler) const;
+  void ForEachRegstUidConsumerPathDuration(
+      const std::function<void(const std::string&, int64_t, double)>& Handler)
+      const;
   void InitNodes();
   void InitEdges();
   void InitDepth();
