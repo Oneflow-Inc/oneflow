@@ -1,5 +1,6 @@
 #include "oneflow/core/persistence/persistent_in_stream_without_local_copy.h"
 #include "oneflow/core/job/job_desc.h"
+#include <cstring>
 
 namespace oneflow {
 
@@ -23,10 +24,15 @@ int32_t PersistentInStreamWithoutLocalCopy::ReadLine(std::string* l) {
 
 int32_t PersistentInStreamWithoutLocalCopy::Read(char* s, size_t n) {
   if (IsEof()) { return -1; }
-  while (n--) {
+  while (n) {
     if (cur_buf_begin_ == cur_buf_end_) { UpdateBuffer(); }
-    CHECK_NE(cur_buf_begin_, cur_buf_end_);
-    *s++ = *cur_buf_begin_++;
+    CHECK_LT(cur_buf_begin_, cur_buf_end_);
+    int64_t copy_size =
+        std::min(cur_buf_end_ - cur_buf_begin_, static_cast<int64_t>(n));
+    std::memcpy(s, cur_buf_begin_, static_cast<size_t>(copy_size));
+    s += copy_size;
+    cur_buf_begin_ += copy_size;
+    n -= copy_size;
   }
   return 0;
 }
