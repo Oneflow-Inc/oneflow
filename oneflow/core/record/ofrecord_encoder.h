@@ -5,16 +5,21 @@
 
 namespace oneflow {
 
-using EncodeCase = BlobConf::EncodeCase;
+using EncodeCase = PrintOpConf::EncodeCase;
 
 class OFRecordEncoderIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OFRecordEncoderIf);
   virtual ~OFRecordEncoderIf() = default;
 
-  virtual void EncodeOneFieldToOneRecord(DeviceCtx*, int64_t record_id, const Blob*, const std::string& field_name, OFRecord&) const = 0;
-  static void EncodeDataIdToOneRecord(DeviceCtx* ctx, const char* data_id_str, OFRecord& record) const {
-    record.feature().at("data_id").bytes_list().add_value(data_id_str);
+  virtual void EncodeOneFieldToOneRecord(DeviceCtx*, int64_t record_id,
+                                         const Blob*,
+                                         const std::string& field_name,
+                                         OFRecord&) const = 0;
+  static void EncodeDataIdToOneRecord(DeviceCtx* ctx, const char* data_id_str,
+                                      OFRecord& record) {
+    record.mutable_feature()->at("data_id").mutable_bytes_list()->add_value(
+        data_id_str);
   }
 
  protected:
@@ -29,12 +34,15 @@ class OFRecordEncoder : public OFRecordEncoderIf {
   OF_DISALLOW_COPY_AND_MOVE(OFRecordEncoder);
   virtual ~OFRecordEncoder() = default;
 
-  void EncodeOneFieldToOneRecord(DeviceCtx*, int64_t record_id, const Blob*, const std::string& field_name, OFRecord&) const override;
+  void EncodeOneFieldToOneRecord(DeviceCtx*, int64_t record_id, const Blob*,
+                                 const std::string& field_name,
+                                 OFRecord&) const override;
 
  protected:
   OFRecordEncoder() = default;
-  virtual void EncodeOneCol(DeviceCtx*, const T* in_dptr, Feature&, const std::string& field_name,
-                          int64_t one_col_elem_num) const = 0;
+  virtual void EncodeOneCol(DeviceCtx*, const T* in_dptr, Feature&,
+                            const std::string& field_name,
+                            int64_t one_col_elem_num) const = 0;
 };
 
 template<EncodeCase encode_case, typename T>
@@ -45,22 +53,6 @@ class OFRecordEncoderImpl;
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 
 OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase, DataType);
-
-/*
-template<typename T, typename U>
-typename std::enable_if<std::is_same<T, U>::value>::type CopyElem(
-    const T* in_dptr, U* out_dptr, int64_t elem_num) {
-  Memcpy<DeviceType::kCPU>(nullptr, out_dptr, in_dptr, elem_num * sizeof(T));
-}
-
-template<typename T, typename U>
-typename std::enable_if<!std::is_same<T, U>::value>::type CopyElem(
-    const T* in_dptr, U* out_dptr, int64_t elem_num) {
-  FOR_RANGE(int64_t, i, 0, elem_num) {
-    *(out_dptr++) = static_cast<U>(*(in_dptr++));
-  }
-}
-*/
 
 }  // namespace oneflow
 
