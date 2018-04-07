@@ -464,12 +464,19 @@ void ActGraph::InitDepth() {
   });
 }
 
+void ActGraph::InitTaskId2TaskProto() {
+  for (const auto& task_proto : plan_->task()) {
+    task_id2task_proto_.emplace(task_proto.task_id(), &task_proto);
+  }
+}
+
 ActGraph::ActGraph(const Plan& plan,
                    std::unique_ptr<std::list<ActEvent>>&& act_events)
     : plan_(&plan), act_events_(std::move(act_events)) {
   InitNodes();
   InitEdges();
   InitDepth();
+  InitTaskId2TaskProto();
 }
 
 void ActGraph::ForEachDepthRangeRegstUids(
