@@ -43,8 +43,7 @@ void FullyConnectedOp::InferBlobDescs(
   out_blob_desc->mut_shape() = Shape({in_blob_desc->shape().At(0), units});
   if (conf.activation() != ActivationType::kNoActivation
       && Global<JobDesc>::Get()->IsTrain()) {
-    GetBlobDesc4BnInOp("activation_buf")->mut_shape() =
-        Shape({in_blob_desc->shape().At(0), units});
+    (*GetBlobDesc4BnInOp("activation_buf")) = *out_blob_desc;
   }
 
   // weight

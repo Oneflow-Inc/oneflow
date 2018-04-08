@@ -168,21 +168,19 @@ void KernelIfWithActivation<device_type, T>::ForwardActivateDataContent(
       this->template GetEnumFromCustomizedOpConf("activation"));
   if (activation != ActivationType::kNoActivation) {
     T* out_dptr = out_blob->mut_dptr<T>();
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
-    if (activation == ActivationType::kTanH) {
-      KernelUtil<device_type, T>::TanH(ctx.device_ctx, elem_cnt, out_dptr,
-                                       out_dptr);
-    }
-#define DEFINE_ONE_ELIF(activation_type)                                  \
-  else if (activation == ActivationType::k##activation_type) {            \
+    int64_t elem_cnt = out_blob->shape().Count(0);
+    switch (activation) {
+#define DEFINE_ONE_CASE(activation_type)                   \
+  case ActivationType::k##activation_type:                 \
     KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, \
-                                                out_dptr, out_dptr);      \
-  }
-    DEFINE_ONE_ELIF(Sigmoid)
-    DEFINE_ONE_ELIF(Relu)
-#undef DEFINE_ONE_ELIF
-    else {
-      UNIMPLEMENTED();
+                                                out_dptr,  \
+                                                out_dptr); \
+    break;
+      DEFINE_ONE_CASE(TanH)
+      DEFINE_ONE_CASE(Sigmoid)
+      DEFINE_ONE_CASE(Relu)
+#undef DEFINE_ONE_CASE
+      default: UNIMPLEMENTED();
     }
   }
 }
@@ -197,23 +195,19 @@ void KernelIfWithActivation<device_type, T>::BackwardActivateDataContent(
     const Blob* out_blob = BnInOp2Blob("out");
     const Blob* out_diff_blob = BnInOp2Blob("out_diff");
     Blob* activation_buf_blob = BnInOp2Blob("activation_buf");
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
-    if (activation == ActivationType::kTanH) {
-      KernelUtil<device_type, T>::TanHBackward(
-          ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),
-          out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());
-    }
-#define DEFINE_ONE_ELIF(activation_type)                                    \
-  else if (activation == ActivationType::k##activation_type) {              \
+    int64_t elem_cnt = out_blob->shape().Count(0);
+    switch (activation) {
+#define DEFINE_ONE_CASE(activation_type)                                    \
+  case ActivationType::k##activation_type:                                  \
     KernelUtil<device_type, T>::activation_type##Backward(                  \
         ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
         out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());      \
-  }
-    DEFINE_ONE_ELIF(Sigmoid)
-    DEFINE_ONE_ELIF(Relu)
-#undef DEFINE_ONE_ELIF
-    else {
-      UNIMPLEMENTED();
+    break;
+      DEFINE_ONE_CASE(TanH)
+      DEFINE_ONE_CASE(Sigmoid)
+      DEFINE_ONE_CASE(Relu)
+#undef DEFINE_ONE_CASE
+      default: UNIMPLEMENTED();
     }
   }
 }
