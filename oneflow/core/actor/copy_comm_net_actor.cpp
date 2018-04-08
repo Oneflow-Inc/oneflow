@@ -31,18 +31,18 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   void* read_id_;
 };
 
-void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
-  is_in_eord_ = false;
+void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
   comm_net_device_ctx_ =
       new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
+  mut_device_ctx().reset(comm_net_device_ctx_);
+}
+
+void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
+  is_in_eord_ = false;
   next_piece_id_ = 0;
   in_regst_desc_id_ = RegstDescId4Name("copy_in");
   OF_SET_MSG_HANDLER(&CopyCommNetActor::HandlerNormal);
-}
-
-void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
-  mut_device_ctx().reset(comm_net_device_ctx_);
 }
 
 int CopyCommNetActor::HandlerNormal(const ActorMsg& msg) {

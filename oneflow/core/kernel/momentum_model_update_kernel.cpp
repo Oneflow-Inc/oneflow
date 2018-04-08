@@ -5,14 +5,12 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
-    int64_t next_model_vid,
+    int64_t next_model_vid, double learning_rate,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
-  const MomentumModelUpdateConf& conf =
-      this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf();
-  float learning_rate = conf.learning_rate();
-  float beta = conf.beta();
+  float beta =
+      this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf().beta();
   if (next_model_vid == 1) { beta = 0.0f; }
 
   MomentumMdUpdateKernelUtil<device_type, T>::UpdateModel(

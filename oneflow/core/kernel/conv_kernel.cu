@@ -10,20 +10,21 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
 
-  this->in_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::value, in_shape,
-                          this->GetStringFromCustomizedOpConf("data_format")));
-  this->out_desc_.reset(
-      new CudnnTensorDesc(GetDataType<T>::value, out_shape,
-                          this->GetStringFromCustomizedOpConf("data_format")));
-  this->filter_desc_.reset(
-      new CudnnFilterDesc(GetDataType<T>::value, weight_shape,
-                          this->GetStringFromCustomizedOpConf("data_format")));
+  this->in_desc_.reset(new CudnnTensorDesc(
+      GetDataType<T>::value, in_shape,
+      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
+  this->out_desc_.reset(new CudnnTensorDesc(
+      GetDataType<T>::value, out_shape,
+      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
+  this->filter_desc_.reset(new CudnnFilterDesc(
+      GetDataType<T>::value, weight_shape,
+      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
   this->conv_desc_.reset(new CudnnConvDesc(GetDataType<T>::value, in_shape,
                                            this->GetCustomizedOpConf()));
 
-  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
-    int32_t filters = this->GetInt32FromCustomizedOpConf("filters");
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
+    int32_t filters =
+        this->template GetValFromCustomizedOpConf<int32_t>("filters");
     std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
     std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
     bias_dim[1] = filters;
@@ -56,7 +57,7 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
       cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
       out_blob->mut_dptr<T>()));
 
-  if (this->GetBoolFromCustomizedOpConf("use_bias")) {
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     const Blob* bias = BnInOp2Blob("bias");
     CudaCheck(cudnnAddTensor(device_ctx->cudnn_handle(), OnePtr<T>::value,
                              this->bias_desc_->Get(), bias->dptr<T>(),
