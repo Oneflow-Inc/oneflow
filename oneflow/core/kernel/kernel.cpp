@@ -170,11 +170,10 @@ void KernelIfWithActivation<device_type, T>::ForwardActivateDataContent(
     T* out_dptr = out_blob->mut_dptr<T>();
     int64_t elem_cnt = out_blob->shape().Count(0);
     switch (activation) {
-#define DEFINE_ONE_CASE(activation_type)                   \
-  case ActivationType::k##activation_type:                 \
+#define DEFINE_ONE_CASE(activation_type)                                  \
+  case ActivationType::k##activation_type:                                \
     KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, \
-                                                out_dptr,  \
-                                                out_dptr); \
+                                                out_dptr, out_dptr);      \
     break;
       DEFINE_ONE_CASE(TanH)
       DEFINE_ONE_CASE(Sigmoid)
