@@ -50,10 +50,13 @@ void PrintKernel::Forward(
     }
     FOR_RANGE(int32_t, blob_id, 0, total_blob_num) {
       const Blob* cur_blob = GetBlob(blob_id);
+      const PrintRecordConf& cur_print_conf = conf.in(blob_id);
+      std::string field_name = cur_print_conf.lbn();
+      if (cur_print_conf.has_name()) { field_name = cur_print_conf.name(); }
       GetOFRecordEncoder(conf.encode_case().encode_case(),
                          cur_blob->data_type())
           ->EncodeOneFieldToOneRecord(ctx.device_ctx, record_id, cur_blob,
-                                      conf.in(blob_id).name(), record);
+                                      field_name, record);
     }
     WriteOneRecord(out_stream_.get(), record);
   }
