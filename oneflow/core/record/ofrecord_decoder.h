@@ -51,10 +51,6 @@ class OFRecordDecoder : public OFRecordDecoderIf {
 template<EncodeCase encode_case, typename T>
 class OFRecordDecoderImpl;
 
-#define ENCODE_CASE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
-
 OFRecordDecoderIf* GetOFRecordDecoder(EncodeCase, DataType);
 
 template<typename T, typename U>

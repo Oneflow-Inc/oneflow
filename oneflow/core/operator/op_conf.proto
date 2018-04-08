@@ -312,6 +312,7 @@ message PrintOpConf {
   repeated PrintRecordConf in = 1;
   required string print_dir = 2;
   optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
   oneof encode {
     EncodeRaw raw = 101;
     EncodeJpeg jpeg = 102;

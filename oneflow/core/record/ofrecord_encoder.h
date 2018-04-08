@@ -48,10 +48,6 @@ class OFRecordEncoder : public OFRecordEncoderIf {
 template<EncodeCase encode_case, typename T>
 class OFRecordEncoderImpl;
 
-#define ENCODE_CASE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
-
 OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase, DataType);
 
 }  // namespace oneflow

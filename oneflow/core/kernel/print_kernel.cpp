@@ -5,11 +5,15 @@
 namespace oneflow {
 
 void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  const std::string& root_path = op_conf().print_conf().print_dir();
+  const auto& conf = this->op_conf().print_conf();
+  const std::string& root_path = conf.print_dir();
   OF_CALL_ONCE(root_path, GlobalFS()->RecursivelyCreateDir(root_path));
-  std::string file_path =
-      JoinPath(root_path, this->op_conf().print_conf().part_name_prefix()
-                              + std::to_string(parallel_ctx->parallel_id()));
+  int32_t part_name_suffix_length = conf.part_name_suffix_length();
+  std::string num = std::to_string(parallel_ctx->parallel_id());
+  int32_t zero_count =
+      std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
+  std::string file_path = JoinPath(
+      root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);
   out_stream_.reset(new PersistentOutStream(GlobalFS(), file_path));
 }
 
@@ -35,13 +39,15 @@ void PrintKernel::Forward(
   OFRecord record;
   FOR_RANGE(int64_t, record_id, 0, max_record_num) {
     record.clear_feature();
-    const char* data_id_str = first_blob->data_id(record_id);
-    FOR_RANGE(int32_t, blob_id, 1, kernel_conf().input_bns().size()) {
-      CHECK_EQ(strcmp(data_id_str, GetBlob(blob_id)->data_id(record_id)), 0);
+    if (has_data_id_field) {
+      const char* data_id_str = first_blob->data_id(record_id);
+      FOR_RANGE(int32_t, blob_id, 1, kernel_conf().input_bns().size()) {
+        CHECK_STREQ(data_id_str, GetBlob(blob_id)->data_id(record_id));
+      }
+      if (*data_id_str == '\0') { break; }
+      OFRecordEncoderIf::EncodeDataIdToOneRecord(ctx.device_ctx, data_id_str,
+                                                 record);
     }
-    if (std::string(data_id_str) == "") { break; }
-    OFRecordEncoderIf::EncodeDataIdToOneRecord(ctx.device_ctx, data_id_str,
-                                               record);
     FOR_RANGE(int32_t, blob_id, 0, total_blob_num) {
       const Blob* cur_blob = GetBlob(blob_id);
       GetOFRecordEncoder(conf.encode_case(), cur_blob->data_type())
