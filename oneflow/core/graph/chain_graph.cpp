@@ -293,8 +293,7 @@ void ChainGraph::BuildBwStruct() {
   TopoForEachNode([&](ChainNode* chain_node) {
     auto fw_chain_node = dynamic_cast<ForwardChainNode*>(chain_node);
     if (fw_chain_node == nullptr) { return; }
-    if (fw_chain_node->HasOpWithModelOrModelTmpBlob()
-        || fw_chain_node->SoleOp()->IsGatherOp()) {
+    if (fw_chain_node->HasOpWithModelOrModelTmpBlob()) {
       CHECK(fw_nodes_that_need_bw.insert(fw_chain_node).second);
       return;
     }
