@@ -303,6 +303,7 @@ message AccumulateOpConf {
 message ModelSaveOpConf {
 }
 
+
 message PrintRecordConf {
   required string lbn = 1;
   required string name = 2;
@@ -313,10 +314,7 @@ message PrintOpConf {
   required string print_dir = 2;
   optional string part_name_prefix = 3 [default = "part-"];
   optional int32 part_name_suffix_length = 4 [default = -1];
-  oneof encode {
-    EncodeRaw raw = 101;
-    EncodeJpeg jpeg = 102;
-  }
+  required AllEncodeCase encode_case= 5;
 }
 
 message LossPrintOpConf {
@@ -377,6 +375,13 @@ message LocalResponseNormalizationOpConf {
   optional double beta = 6 [default = 0.5];
 }
 
+message AllEncodeCase {
+  oneof encode {
+    EncodeRaw raw = 1;
+    EncodeJpeg jpeg = 2;
+  }
+}
+
 message EncodeRaw {
 }
 
@@ -389,10 +394,7 @@ message BlobConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
-  oneof encode {
-    EncodeRaw raw = 101;
-    EncodeJpeg jpeg = 102;
-  }
+  required AllEncodeCase encode_case= 5;
 }
 
 message DecodeOFRecordOpConf {

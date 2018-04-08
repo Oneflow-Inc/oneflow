@@ -50,7 +50,8 @@ void PrintKernel::Forward(
     }
     FOR_RANGE(int32_t, blob_id, 0, total_blob_num) {
       const Blob* cur_blob = GetBlob(blob_id);
-      GetOFRecordEncoder(conf.encode_case(), cur_blob->data_type())
+      GetOFRecordEncoder(conf.encode_case().encode_case(),
+                         cur_blob->data_type())
           ->EncodeOneFieldToOneRecord(ctx.device_ctx, record_id, cur_blob,
                                       conf.in(blob_id).name(), record);
     }

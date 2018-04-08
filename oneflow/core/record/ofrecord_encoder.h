@@ -2,10 +2,9 @@
 #define ONEFLOW_CORE_RECORD_OFRECORD_ENCODER_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/record/ofrecord_decoder.h"
 
 namespace oneflow {
-
-using EncodeCase = PrintOpConf::EncodeCase;
 
 class OFRecordEncoderIf {
  public:

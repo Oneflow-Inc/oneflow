@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-using EncodeCase = BlobConf::EncodeCase;
+using EncodeCase = AllEncodeCase::EncodeCase;
 
 class OFRecordDecoderIf {
  public:
