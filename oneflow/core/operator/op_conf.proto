@@ -260,6 +260,11 @@ message BasicRnnOpConf {
 message BasicLstmOpConf {
 }
 
+message GatherOpConf {
+  required string in = 1;
+  required string out = 2;
+}
+
 message BasicGruOpConf {
   required string in = 1;
   optional string init_hidden = 2;
@@ -309,6 +314,7 @@ message OperatorConf {
     SigmoidOpConf sigmoid_conf = 123;
     TanHOpConf tanh_conf = 124;
     BasicGruOpConf basic_gru_conf = 125;
+    GatherOpConf gather_conf = 126;
     AveragePooling2DOpConf average_pooling_2d_conf = 200;
     MaxPooling2DOpConf max_pooling_2d_conf = 201;
   }

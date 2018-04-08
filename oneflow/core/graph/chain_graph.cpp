@@ -198,6 +198,7 @@ void DataMergeChains(std::list<Chain>* chain_list,
     if (cur_logi_node->op()->IsDataLoaderOp()) { continue; }
     if (cur_logi_node->op()->IsPrintOp()) { continue; }
     if (cur_logi_node->op()->IsRecurrentOp()) { continue; }
+    if (cur_logi_node->op()->IsGatherOp()) { continue; }
     if (cur_logi_node->shared_model_nodes()) { continue; }
     data_parallel_node.push_back(cur_logi_node);
   }

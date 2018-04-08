@@ -47,6 +47,7 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   const std::vector<std::shared_ptr<const Operator>>& op_vec() const;
   std::vector<std::shared_ptr<const Operator>>& mut_op_vec() { return op_vec_; }
   bool HasSoleRecurrentOp() const;
+  bool HasSoleGatherOp() const;
 
   // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const;
