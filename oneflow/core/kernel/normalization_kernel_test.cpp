@@ -4,19 +4,118 @@ namespace oneflow {
 
 namespace test {
 
-DiffKernelImplTestCase* DiffNormalizationKernelImpl(const std::string& job_type,
-                                           const std::string& fw_or_bw,
-                                           const std::string& cpp_type) {
+DiffKernelImplTestCase* DiffNormalizationKernelImpl(
+    const std::string& job_type, const std::string& fw_or_bw,
+    const std::string& cpp_type) {
   auto* test_case =
       new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
                                  DataType4CppTypeString(cpp_type));
-  test_case->mut_op_conf()->mutable_normalization_conf();
+  auto* conf = test_case->mut_op_conf()->mutable_normalization_conf();
+  conf->set_scale(true);
+  conf->set_center(true);
+  conf->set_axis(1);
+  conf->set_use_first_piece_init_moving(true);
+  Shape shape({100, 10, 128, 128});
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {GenDiffBn("in")});
-  test_case->SetInputBlobDesc("in", Shape({50, 10, 28, 28}), DataType::kFloat);
+  test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
+  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+                              DataType4CppTypeString(cpp_type));
   return test_case;
 }
-TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl, (train)(predict), (forward)(backward),
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl, (train)(predict),
+                      (forward)(backward),
+                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ));
+
+DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_gamma(
+    const std::string& job_type, const std::string& fw_or_bw,
+    const std::string& cpp_type) {
+  auto* test_case =
+      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
+                                 DataType4CppTypeString(cpp_type));
+  auto* conf = test_case->mut_op_conf()->mutable_normalization_conf();
+  conf->set_scale(false);
+  conf->set_center(true);
+  conf->set_axis(1);
+  conf->set_use_first_piece_init_moving(false);
+  Shape shape({200, 20, 48, 48});
+  test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
+                          {GenDiffBn("in")});
+  test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
+  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+                              DataType4CppTypeString(cpp_type));
+  return test_case;
+}
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl_without_gamma,
+                      (train)(predict), (forward)(backward),
+                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ));
+
+DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_beta(
+    const std::string& job_type, const std::string& fw_or_bw,
+    const std::string& cpp_type) {
+  auto* test_case =
+      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
+                                 DataType4CppTypeString(cpp_type));
+  auto* conf = test_case->mut_op_conf()->mutable_normalization_conf();
+  conf->set_scale(true);
+  conf->set_center(false);
+  conf->set_axis(1);
+  conf->set_use_first_piece_init_moving(false);
+  Shape shape({80, 5, 512, 512});
+  test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
+                          {GenDiffBn("in")});
+  test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
+  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+                              DataType4CppTypeString(cpp_type));
+  return test_case;
+}
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl_without_beta,
+                      (train)(predict), (forward)(backward),
+                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ));
+
+DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_gamma_and_beta(
+    const std::string& job_type, const std::string& fw_or_bw,
+    const std::string& cpp_type) {
+  auto* test_case =
+      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
+                                 DataType4CppTypeString(cpp_type));
+  auto* conf = test_case->mut_op_conf()->mutable_normalization_conf();
+  conf->set_scale(false);
+  conf->set_center(false);
+  conf->set_axis(1);
+  conf->set_use_first_piece_init_moving(true);
+  Shape shape({80, 5, 512, 512});
+  test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
+                          {GenDiffBn("in")});
+  test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
+  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+                              DataType4CppTypeString(cpp_type));
+  return test_case;
+}
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl_without_gamma_and_beta,
+                      (train)(predict), (forward)(backward),
+                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ));
+
+DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_transpose(
+    const std::string& job_type, const std::string& fw_or_bw,
+    const std::string& cpp_type) {
+  auto* test_case =
+      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
+                                 DataType4CppTypeString(cpp_type));
+  auto* conf = test_case->mut_op_conf()->mutable_normalization_conf();
+  conf->set_scale(true);
+  conf->set_center(true);
+  conf->set_axis(0);
+  Shape shape({20, 500, 512, 512});
+  test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
+                          {GenDiffBn("in")});
+  test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
+  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+                              DataType4CppTypeString(cpp_type));
+  return test_case;
+}
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl_without_transpose,
+                      (train)(predict), (forward)(backward),
                       OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ));
 
 template<DeviceType device_type, typename T>
