@@ -1,18 +1,18 @@
 machine {
-  addr: "192.168.1.11"
-  port: 7098
+  addr: "192.168.1.14"
+  port: 7099
   name: "first"
 }
 
 machine {
-  addr: "192.168.1.12"
-  port: 7098
+  addr: "192.168.1.15"
+  port: 7099
   name: "second"
 }
 
 machine {
-  addr: "192.168.1.13"
-  port: 7098
+  addr: "192.168.1.16"
+  port: 7099
   name: "third"
 }
 

@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
   using namespace oneflow;
   google::InitGoogleLogging(argv[0]);
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LocalFS()->CreateDirIfNotExist(LogDir());
+  LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
   JobDescProto job_desc;
   if (FLAGS_job_desc_filepath != "") {

@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
 #define ONEFLOW_CORE_KERNEL_OPKERNEL_TEST_CASE_H_
 
+#include <random>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/job/job_desc.h"
@@ -8,7 +9,12 @@
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/placement.pb.h"
+#include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/device/cuda_device_context.h"
+#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 
@@ -129,6 +135,7 @@ class OpKernelTestCase {
   void AssertAfterRun() const;
   Regst* GetBlobRegst(const std::string& bn_in_op);
   bool is_forward() const { return is_forward_; }
+  std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
 
  private:
   template<typename T>
@@ -142,7 +149,6 @@ class OpKernelTestCase {
 
   void UpdateGlobalJobDesc();
 
-  std::function<Blob*(const std::string&)> MakeGetterBnInOp2Blob();
   std::function<BlobDesc*(const std::string&)> MakeGetterBnInOp2BlobDesc();
 
   bool is_forward_;
@@ -175,6 +181,13 @@ class DiffKernelImplTestCase final : public OpKernelTestCase {
   void SetInputBlobDesc(const std::string& bns_in_op, const Shape& shape,
                         DataType data_type);
 
+  void set_initiate_kernel_ctx(
+      const std::function<
+          void(const std::function<Blob*(const std::string&)>&)>&
+          initate_kernel_ctx) {
+    initiate_kernel_ctx_ = initate_kernel_ctx;
+  }
+
   // usually, you should not call it
   void MultiRunThenCheck();
 
@@ -195,6 +208,8 @@ class DiffKernelImplTestCase final : public OpKernelTestCase {
   std::list<std::string> output_blob_names_;
   std::list<std::string> input_diff_blob_names_;
   std::list<std::string> output_diff_blob_names_;
+  std::function<void(const std::function<Blob*(const std::string&)>&)>
+      initiate_kernel_ctx_;
 };
 
 template<DeviceType device_type>

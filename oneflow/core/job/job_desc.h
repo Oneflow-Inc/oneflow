@@ -41,6 +41,7 @@ class JobDesc final {
   uint64_t persistence_buffer_byte_size() const;
   uint64_t reserved_host_mem_byte_size() const;
   uint64_t reserved_device_mem_byte_size() const;
+  bool save_downloaded_file_to_local_fs() const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
