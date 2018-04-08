@@ -86,8 +86,6 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndClone) {
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, DataConcatAndModelSplit) {
   conf->mutable_concat_box()->set_axis(0);
   BoxSplitConf* split_conf = conf->mutable_split_box();
-  LOG(INFO) << out_chain->GetModelSplitAxis() << " "
-            << out_chain->GetMaxModelSplitNum();
   split_conf->set_axis(out_chain->GetModelSplitAxis());
   BalancedSplitter bs(out_chain->GetMaxModelSplitNum(),
                       out_chain->parallel_desc()->parallel_num());
@@ -115,8 +113,6 @@ DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndDataSplit) {
 }
 DEFINE_BLD_BOXING_OP_CONF_METHOD(BoxingTaskNode, AddAndModelSplit) {
   conf->mutable_add_box();
-  LOG(INFO) << out_chain->GetModelSplitAxis() << " "
-            << out_chain->GetMaxModelSplitNum();
   BoxSplitConf* split_conf = conf->mutable_split_box();
   split_conf->set_axis(out_chain->GetModelSplitAxis());
   BalancedSplitter bs(out_chain->GetMaxModelSplitNum(),

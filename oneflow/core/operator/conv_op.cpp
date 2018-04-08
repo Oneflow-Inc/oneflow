@@ -80,7 +80,9 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
-  if (UseActivation()) { EnrollDataTmpBn("activation_buf"); }
+  if (GetActivationType() != ActivationType::kNone) {
+    EnrollDataTmpBn("activation_buf");
+  }
 }
 
 template<int32_t NDims>
@@ -114,7 +116,8 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
-  if (UseActivation() && Global<JobDesc>::Get()->IsTrain()) {
+  if (GetActivationType() != ActivationType::kNone
+      && Global<JobDesc>::Get()->IsTrain()) {
     GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
   }
 
@@ -202,8 +205,9 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   }
 #endif  // WITH_CUDA
 
-  if (UseActivation()) {
-    kernel_conf->mutable_conv_conf()->set_activation(GetActivationType());
+  ActivationType activation = GetActivationType();
+  if (activation != ActivationType::kNone) {
+    kernel_conf->mutable_conv_conf()->set_activation(activation);
   }
 }
 
@@ -229,6 +233,11 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
 template<int32_t NDims>
 int32_t ConvOp<NDims>::MaxModelSplitNum() const {
   return GetValFromCustomizedConf<int32_t>("filters");
+}
+
+template<int32_t NDims>
+ActivationType ConvOp<NDims>::GetActivationType() const {
+  return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
 }
 
 #ifdef WITH_CUDA
