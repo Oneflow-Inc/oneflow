@@ -174,10 +174,11 @@ class DiffKernelImplTestCase final : public OpKernelTestCase {
                          DataType default_data_type);
   ~DiffKernelImplTestCase() = default;
 
-  void SetBlobNames(const std::list<std::string>& input_bn_in_op,
-                    const std::list<std::string>& output_bn_in_op,
-                    const std::list<std::string>& output_diff_bn_in_op,
-                    const std::list<std::string>& input_diff_bn_in_op);
+  void SetBlobNames(
+      const std::list<std::string>& input_or_weight_bn_in_op,
+      const std::list<std::string>& output_bn_in_op,
+      const std::list<std::string>& output_diff_bn_in_op,
+      const std::list<std::string>& input_or_weight_diff_bn_in_op);
   void SetInputBlobDesc(const std::string& bns_in_op, const Shape& shape,
                         DataType data_type);
 
@@ -247,6 +248,10 @@ struct OpKernelTestUtil final {
 #define STRINGIZE_OPKERNEL_TEST_ARGS_4(a0, a1, a2, a3) (#a0, #a1, #a2, #a3)
 #define STRINGIZE_OPKERNEL_TEST_ARGS_5(a0, a1, a2, a3, a4) \
   (#a0, #a1, #a2, #a3, #a4)
+#define STRINGIZE_OPKERNEL_TEST_ARGS_6(a0, a1, a2, a3, a4, a5) \
+  (#a0, #a1, #a2, #a3, #a4, #a5)
+#define STRINGIZE_OPKERNEL_TEST_ARGS_7(a0, a1, a2, a3, a4, a5, a6) \
+  (#a0, #a1, #a2, #a3, #a4, #a5, #a6)
 
 #define MAKE_OPKERNEL_TEST_ENTRY(func_name, device_type_pair, data_type_pair, \
                                  ...)                                         \

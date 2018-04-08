@@ -585,6 +585,7 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   auto Run = [&](const std::string& dump_prefix) {
     std::shared_ptr<Operator> op;
     InferBlobDesc(&op, &op_context);
+    CopyBlobDesc4DiffBlob();
     InitInputBlobs();
     SwitchBuildKernelCtx(SwitchCase(default_device_type()), mut_kernel_ctx());
     initiate_kernel_ctx_(MakeGetterBnInOp2Blob());
@@ -608,10 +609,16 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
       const std::string&, const BlobDesc* blob_desc);                      \
   template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
       const std::string&, const BlobDesc* blob_desc,                       \
+      const std::vector<T>& val, bool);                                    \
+  template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
+      const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
   template void OpKernelTestCase::ForwardCheckBlobWithAnother<T>(          \
       const std::string&, const BlobDesc* blob_desc, const std::string&,   \
       bool);                                                               \
+  template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
+      const std::string&, const BlobDesc* blob_desc,                       \
+      const std::vector<T>& val, bool);                                    \
   template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
       const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \

@@ -169,6 +169,9 @@ void NormalizationKernel<device_type, T>::CalcAboutGammaDiff(
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* gamma_diff_blob = BnInOp2Blob("gamma_diff");
   Blob* inv_var_blob = BnInOp2Blob("inv_var");
+  CHECK(normalized_blob) << "normalized_blob";
+  CHECK(gamma_diff_blob);
+  CHECK(inv_var_blob);
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
     KernelUtil<device_type, T>::Dot(
         ctx.device_ctx, norm_elem_num,
