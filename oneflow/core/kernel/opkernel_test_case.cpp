@@ -451,7 +451,7 @@ void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
     kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);
   };
-  Launch(this);
+  Launch(true);
   if (Global<JobDesc>::Get()->IsTrain() && !is_forward_) {
     initiation_before_backward_();
     Launch(false);
@@ -494,6 +494,7 @@ DiffKernelImplTestCase::DiffKernelImplTestCase(bool is_train, bool is_forward,
   set_is_train(is_train);
   set_is_forward(is_forward);
   set_default_data_type(default_data_type);
+  initiate_kernel_ctx_ = [](const std::function<Blob*(const std::string&)>&) {};
 }
 
 void DiffKernelImplTestCase::SetBlobNames(
@@ -586,6 +587,7 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
     InferBlobDesc(&op, &op_context);
     InitInputBlobs();
     SwitchBuildKernelCtx(SwitchCase(default_device_type()), mut_kernel_ctx());
+    initiate_kernel_ctx_(MakeGetterBnInOp2Blob());
     RunKernel(op.get(), op_context);
     DumpBlobs(dump_prefix);
   };
