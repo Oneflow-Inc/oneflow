@@ -131,7 +131,8 @@ void ConvOp<NDims>::InferBlobDescs(
       for (size_t i = 0; i != NDims; ++i) {
         bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
       }
-      GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape(bias_mul_shape);
+      GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+          Shape(bias_mul_shape);
     }
   }
 
