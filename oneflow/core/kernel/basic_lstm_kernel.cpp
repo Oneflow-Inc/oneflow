@@ -92,39 +92,26 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   Blob* o_out_blob = BnInOp2Blob("o_out");
   //  f_out = sigmoid(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
-      ctx, gate_tmp_data_blob, BnInOp2Blob("i2h_f_weight"), hidden_blob,
+      ctx, BnInOp2Blob("i2h_f_weight"), hidden_blob,
       BnInOp2Blob("h2h_f_weight"), BnInOp2Blob("in"),
-      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_f"));
-  KernelUtil<device_type, T>::Sigmoid(
-      ctx.device_ctx, out_blob->shape().elem_cnt(),
-      gate_tmp_data_blob->dptr<T>(), f_out_blob->mut_dptr<T>());
-
+      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_f"), gate_tmp_data_blob,
+      f_out_blob, false, activation_fw_func_);
   //  i_out = sigmoid(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
-      ctx, gate_tmp_data_blob, BnInOp2Blob("i2h_i_weight"), hidden_blob,
+      ctx, BnInOp2Blob("i2h_i_weight"), hidden_blob,
       BnInOp2Blob("h2h_i_weight"), BnInOp2Blob("in"),
-      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_i"));
-  KernelUtil<device_type, T>::Sigmoid(
-      ctx.device_ctx, out_blob->shape().elem_cnt(),
-      gate_tmp_data_blob->dptr<T>(), i_out_blob->mut_dptr<T>());
-
+      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_i"), gate_tmp_data_blob,
+      i_out_blob, false, activation_fw_func_);
   // c_out = activation(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
-      ctx, gate_tmp_data_blob, BnInOp2Blob("i2h_c_weight"), hidden_blob,
+      ctx, BnInOp2Blob("i2h_c_weight"), hidden_blob,
       BnInOp2Blob("h2h_c_weight"), BnInOp2Blob("in"),
-      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_c"));
-  (*activation_fw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                         c_data_blob->dptr<T>(), c_out_blob->mut_dptr<T>());
-
-  //  o_out = sigmoid(W[x, h] + bias)
+      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_c"), c_data_blob,
+   //  o_out = sigmoid(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
-      ctx, gate_tmp_data_blob, BnInOp2Blob("i2h_o_weight"), hidden_blob,
+      ctx, BnInOp2Blob("i2h_o_weight"), hidden_blob,
       BnInOp2Blob("h2h_o_weight"), BnInOp2Blob("in"),
-      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_o"));
-  KernelUtil<device_type, T>::Sigmoid(
-      ctx.device_ctx, out_blob->shape().elem_cnt(),
-      gate_tmp_data_blob->dptr<T>(), o_out_blob->mut_dptr<T>());
-
+      BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_o"), gate_tmp_data_blob,
   // rec_cell_out = f_out .* rec_cell_in
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, out_blob->shape().elem_cnt(), f_out_blob->dptr<T>(),
@@ -302,7 +289,8 @@ template<DeviceType device_type, typename T>
 void BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
     const KernelCtx& ctx, const Blob* i2h_weight, const Blob* hidden,
     const Blob* h2h_weight, const Blob* input, const Blob* bias,
-    const Blob* bias_mul, Blob* gate_tmp_data) {
+    const Blob* bias_mul, Blob* gate_tmp_data, Blob* gate_out, bool extra_act,
+    FwActivationFunc<device_type, T> activation_fw_func_) {
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(0),
                                        input, i2h_weight, gate_tmp_data);
@@ -312,6 +300,14 @@ void BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), bias_mul, bias, gate_tmp_data);
+  if (extra_act) {
+    KernelUtil<device_type, T>::Sigmoid(
+        ctx.device_ctx, gate_out->shape().elem_cnt(), gate_tmp_data->dptr<T>(),
+        gate_out->mut_dptr<T>());
+  } else {
+    (*activation_fw_func_)(ctx.device_ctx, gate_out->shape().elem_cnt(),
+                           gate_tmp_data->dptr<T>(), gate_out->mut_dptr<T>());
+  }
 }
 
 template<DeviceType device_type, typename T>
