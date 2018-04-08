@@ -30,7 +30,8 @@ class RegstActSubGraph final : public Graph<const ActNode, const ActEdge> {
                    const std::list<const ActNode*>& fake_sources_super_set);
   ~RegstActSubGraph() = default;
 
-  double CalcLongestPathDuration() const;
+  void ForEachConsumerPathDuration(
+      const std::function<void(int64_t, double)>& Handler) const;
 
   // Getters
   const std::string& regst_uid() const { return regst_uid_; }
@@ -125,7 +126,9 @@ void RegstActSubGraph::ForEachOutNode(
   }
 }
 
-double RegstActSubGraph::CalcLongestPathDuration() const {
+void RegstActSubGraph::ForEachConsumerPathDuration(
+    const std::function<void(int64_t consumer_actor_id, double duration)>&
+        Handler) const {
   auto Duration4Node = [&](const ActNode* node) {
     if (fake_sources_.find(node) != fake_sources_.end()) {
       return std::numeric_limits<double>::min();
@@ -141,11 +144,9 @@ double RegstActSubGraph::CalcLongestPathDuration() const {
     });
     node2longest_path_duration[node] = duration + Duration4Node(node);
   });
-  double duration = 0;
   for (const ActNode* node : partial_consumer_nodes_) {
-    duration = std::max(duration, node2longest_path_duration.at(node));
+    Handler(node->actor_id(), node2longest_path_duration.at(node));
   }
-  return duration;
 }
 
 class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
@@ -335,31 +336,47 @@ void ActNode::ForEachProducedRegstDescId(
   }
 }
 
-void ActGraph::ForEachRegstDescIIScale(
-    const std::function<void(int64_t, double)>& Handler) const {
-  HashMap<int64_t, size_t> regst_desc_id2used_cnt;
-  size_t max_used_cnt = 0;
+void ActGraph::ForEachRegstDescConsumerPathIIScale(
+    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+  std::map<std::pair<int64_t, int64_t>, uint64_t>
+      regst_desc_id_consumed2used_cnt;
+  std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
+  uint64_t max_cnt = 0;
   for (const auto& pair : regst_uid2consumer_nodes_) {
     int64_t regst_desc_id = RegstDescId4RegstUid(pair.first);
-    int64_t used_cnt = ++regst_desc_id2used_cnt[regst_desc_id];
-    if (max_used_cnt < used_cnt) { max_used_cnt = used_cnt; }
+    int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_desc_id];
+    if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
+    for (const ActNode* act_node : pair.second) {
+      std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_desc_id,
+                                                         act_node->actor_id());
+      int64_t used_cnt =
+          ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
+      if (max_cnt < used_cnt) { max_cnt = used_cnt; }
+    }
   }
-  for (const auto& pair : regst_desc_id2used_cnt) {
-    Handler(pair.first, max_used_cnt / static_cast<double>(pair.second));
+  for (const auto& pair : regst_desc_id_consumed2used_cnt) {
+    uint64_t produced_cnt = regst_desc_id2produced_cnt.at(pair.first.first);
+    Handler(pair.first.first, pair.first.second,
+            1.0 * max_cnt / std::min(produced_cnt, pair.second));
   }
 }
 
-void ActGraph::ForEachRegstDescMeanDuration(
-    const std::function<void(int64_t, double)>& Handler) const {
-  HashMap<int64_t, double> regst_desc_id2duration;
-  HashMap<int64_t, int> regst_desc_id2cnt;
-  ForEachRegstUidDuration([&](const std::string& regst_uid, double duration) {
+void ActGraph::ForEachRegstDescConsumerPathMeanDuration(
+    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+  std::map<std::pair<int64_t, int64_t>, double> regst_desc_id_consumed2duration;
+  std::map<std::pair<int64_t, int64_t>, int> regst_desc_id_consumed2cnt;
+  ForEachRegstUidConsumerPathDuration([&](const std::string& regst_uid,
+                                          int64_t consumer_actor_id,
+                                          double duration) {
     int64_t regst_desc_id = RegstDescId4RegstUid(regst_uid);
-    regst_desc_id2duration[regst_desc_id] += duration;
-    ++regst_desc_id2cnt[regst_desc_id];
+    std::pair<int64_t, int64_t> regst_desc_id_consumed(regst_desc_id,
+                                                       consumer_actor_id);
+    regst_desc_id_consumed2duration[regst_desc_id_consumed] += duration;
+    ++regst_desc_id_consumed2cnt[regst_desc_id_consumed];
   });
-  for (const auto& pair : regst_desc_id2duration) {
-    Handler(pair.first, pair.second / regst_desc_id2cnt.at(pair.first));
+  for (const auto& pair : regst_desc_id_consumed2duration) {
+    Handler(pair.first.first, pair.first.second,
+            pair.second / regst_desc_id_consumed2cnt.at(pair.first));
   }
 }
 
@@ -379,19 +396,16 @@ void ActGraph::ForEachDepthRangeSubActGraph(
       });
 }
 
-void ActGraph::ForEachRegstUidDuration(
-    const std::function<void(const std::string& regst_uid, double duration)>&
-        Handler) const {
-  HashMap<std::string, double> regst_uid2duration;
+void ActGraph::ForEachRegstUidConsumerPathDuration(
+    const std::function<void(const std::string&, int64_t, double)>& Handler)
+    const {
   ForEachRegstActSubGraph([&](const RegstActSubGraph& regst_csm_graph) {
     const std::string regst_uid = regst_csm_graph.regst_uid();
-    double duration = regst_csm_graph.CalcLongestPathDuration();
-    regst_uid2duration[regst_uid] =
-        std::max(regst_uid2duration[regst_uid], duration);
+    regst_csm_graph.ForEachConsumerPathDuration(
+        [&](int64_t consumer_actor_id, double duration) {
+          Handler(regst_uid, consumer_actor_id, duration);
+        });
   });
-  for (const auto& pair : regst_uid2duration) {
-    Handler(pair.first, pair.second);
-  }
 }
 
 void ActGraph::InitNodes() {
@@ -450,12 +464,19 @@ void ActGraph::InitDepth() {
   });
 }
 
+void ActGraph::InitTaskId2TaskProto() {
+  for (const auto& task_proto : plan_->task()) {
+    task_id2task_proto_.emplace(task_proto.task_id(), &task_proto);
+  }
+}
+
 ActGraph::ActGraph(const Plan& plan,
                    std::unique_ptr<std::list<ActEvent>>&& act_events)
     : plan_(&plan), act_events_(std::move(act_events)) {
   InitNodes();
   InitEdges();
   InitDepth();
+  InitTaskId2TaskProto();
 }
 
 void ActGraph::ForEachDepthRangeRegstUids(
