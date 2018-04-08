@@ -31,6 +31,19 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* out_blob = BnInOp2Blob("out");
+
+  T min_val = *(out_blob->dptr<T>());
+  T max_val = 0;
+  const T* dptr = out_blob->dptr<T>();
+  FOR_RANGE(int64_t, i, 0, out_blob->shape().Count(0)) {
+    if (min_val > *dptr) { min_val = *dptr; }
+    if (max_val < *dptr) { max_val = *dptr; }
+    dptr++;
+  }
+  LOG(INFO) << "fc bp out min value: " << min_val;
+  LOG(INFO) << "fc bp out max value: " << max_val;
+
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   ActivationType activation = static_cast<ActivationType>(

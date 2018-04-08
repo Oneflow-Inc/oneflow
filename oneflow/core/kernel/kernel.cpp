@@ -51,7 +51,6 @@ void Kernel::Forward(
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
   ForwardActivateDataContent(ctx, BnInOp2Blob);
-  if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
 }
 
 void Kernel::Backward(
