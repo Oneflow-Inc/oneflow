@@ -97,8 +97,8 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
 
   const LocalResponseNormalizationOpConf& lrn_conf =
       this->op_conf().local_response_normalization_conf();
-  FOR_RANGE(int32_t, i, 0, in_diff_mat.cols()) {
-    FOR_RANGE(int32_t, j, 0, in_diff_mat.rows()) {
+  FOR_RANGE(int32_t, i, 0, in_diff_mat.rows()) {
+    FOR_RANGE(int32_t, j, 0, in_diff_mat.cols()) {
       int32_t depth_begin = std::max(0, j - lrn_conf.depth_radius());
       int32_t depth_end = std::min(static_cast<int32_t>(in_shape.At(3)),
                                    j + lrn_conf.depth_radius() + 1);
