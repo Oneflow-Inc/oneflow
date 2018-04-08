@@ -124,14 +124,15 @@ void ConvOp<NDims>::InferBlobDescs(
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    // bias and bias_multipler
+    // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
     if (!UseCudnn(device_type)) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) {
         bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
       }
-      GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape(bias_mul_shape);
+      GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+          Shape(bias_mul_shape);
     }
   }
 

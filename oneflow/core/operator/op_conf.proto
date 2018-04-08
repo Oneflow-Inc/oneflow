@@ -325,7 +325,7 @@ message LinearCosineDecayConf {
 
 message LearningRateDecayConf {
   oneof type {
-    ExponentialDecayConf exponetial_conf = 2000;
+    ExponentialDecayConf exponential_conf = 2000;
     InverseTimeDecayConf inverse_time_conf = 2001;
     NaturalExpDecayConf natural_exp_conf = 2002;
     PiecewiseConstantConf piecewise_constant_conf = 2003;
