@@ -28,13 +28,13 @@ TEST_CPU_AND_GPU_OPKERNEL(ReluTestCase, FLOATING_DATA_TYPE_SEQ,
 DiffKernelImplTestCase* DiffReluKernelImpl(const std::string& job_type,
                                            const std::string& fw_or_bw,
                                            const std::string& cpp_type) {
-  auto* test_case =
-      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
-                                 DataType4CppTypeString(cpp_type));
+  DataType data_type = DataType4CppTypeString(cpp_type);
+  auto* test_case = new DiffKernelImplTestCase(
+      job_type == "train", fw_or_bw == "forward", data_type);
   test_case->mut_op_conf()->mutable_relu_conf();
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {{GenDiffBn("in")}});
-  test_case->SetInputBlobDesc("in", Shape({1, 8}), DataType::kFloat);
+  test_case->SetInputBlobDesc("in", Shape({1, 8}), data_type);
   return test_case;
 }
 TEST_DIFF_KERNEL_IMPL(DiffReluKernelImpl, (train)(predict), (forward)(backward),
