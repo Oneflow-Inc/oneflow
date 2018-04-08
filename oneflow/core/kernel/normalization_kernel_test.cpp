@@ -15,6 +15,21 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl(
   conf->set_center(true);
   conf->set_axis(1);
   conf->set_use_first_piece_init_moving(true);
+  test_case->set_initiate_kernel_ctx(
+      [=](const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+        std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*
+            other_val =
+                new std::tuple<int64_t,
+                               std::function<const Blob*(const std::string&)>>(
+                    0, [&](const std::string& lbn) -> const Blob* {
+                      if (lbn.find("mean") != std::string::npos) {
+                        return BnInOp2Blob("moving_mean");
+                      } else {
+                        return BnInOp2Blob("moving_variance");
+                      }
+                    });
+        test_case->mut_kernel_ctx()->other = other_val;
+      });
   Shape shape({100, 10, 128, 128});
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {GenDiffBn("in")});
@@ -38,6 +53,21 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_gamma(
   conf->set_center(true);
   conf->set_axis(1);
   conf->set_use_first_piece_init_moving(false);
+  test_case->set_initiate_kernel_ctx(
+      [=](const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+        std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*
+            other_val =
+                new std::tuple<int64_t,
+                               std::function<const Blob*(const std::string&)>>(
+                    0, [&](const std::string& lbn) -> const Blob* {
+                      if (lbn.find("mean") != std::string::npos) {
+                        return BnInOp2Blob("moving_mean");
+                      } else {
+                        return BnInOp2Blob("moving_variance");
+                      }
+                    });
+        test_case->mut_kernel_ctx()->other = other_val;
+      });
   Shape shape({200, 20, 48, 48});
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {GenDiffBn("in")});
@@ -61,6 +91,21 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_beta(
   conf->set_center(false);
   conf->set_axis(1);
   conf->set_use_first_piece_init_moving(false);
+  test_case->set_initiate_kernel_ctx(
+      [=](const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+        std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*
+            other_val =
+                new std::tuple<int64_t,
+                               std::function<const Blob*(const std::string&)>>(
+                    0, [&](const std::string& lbn) -> const Blob* {
+                      if (lbn.find("mean") != std::string::npos) {
+                        return BnInOp2Blob("moving_mean");
+                      } else {
+                        return BnInOp2Blob("moving_variance");
+                      }
+                    });
+        test_case->mut_kernel_ctx()->other = other_val;
+      });
   Shape shape({80, 5, 512, 512});
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {GenDiffBn("in")});
@@ -84,6 +129,21 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_gamma_and_beta(
   conf->set_center(false);
   conf->set_axis(1);
   conf->set_use_first_piece_init_moving(true);
+  test_case->set_initiate_kernel_ctx(
+      [=](const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+        std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*
+            other_val =
+                new std::tuple<int64_t,
+                               std::function<const Blob*(const std::string&)>>(
+                    0, [&](const std::string& lbn) -> const Blob* {
+                      if (lbn.find("mean") != std::string::npos) {
+                        return BnInOp2Blob("moving_mean");
+                      } else {
+                        return BnInOp2Blob("moving_variance");
+                      }
+                    });
+        test_case->mut_kernel_ctx()->other = other_val;
+      });
   Shape shape({80, 5, 512, 512});
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {GenDiffBn("in")});
@@ -106,6 +166,21 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl_without_transpose(
   conf->set_scale(true);
   conf->set_center(true);
   conf->set_axis(0);
+  test_case->set_initiate_kernel_ctx(
+      [=](const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+        std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*
+            other_val =
+                new std::tuple<int64_t,
+                               std::function<const Blob*(const std::string&)>>(
+                    0, [&](const std::string& lbn) -> const Blob* {
+                      if (lbn.find("mean") != std::string::npos) {
+                        return BnInOp2Blob("moving_mean");
+                      } else {
+                        return BnInOp2Blob("moving_variance");
+                      }
+                    });
+        test_case->mut_kernel_ctx()->other = other_val;
+      });
   Shape shape({20, 500, 512, 512});
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {GenDiffBn("in")});
