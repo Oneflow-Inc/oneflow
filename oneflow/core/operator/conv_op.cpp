@@ -94,8 +94,7 @@ void ConvOp<NDims>::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(),
            Global<JobDesc>::Get()->DefaultDataType());
 
-// out
-#include "oneflow/core/operator/operator_util.h"
+  // out
   int64_t data_num = in_blob_desc->shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
   if (parallel_ctx->policy() == kModelParallel) {
