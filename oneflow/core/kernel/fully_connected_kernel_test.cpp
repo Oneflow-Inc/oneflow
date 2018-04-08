@@ -46,42 +46,31 @@ void FullyConnectedKernelTestCase(OpKernelTestCase* test_case,
     if (use_activation) {
       test_case->template InitBlob<T>("out", blob_desc23,
                                       {2, 0, 11, 62, 56, 131});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("weight"), blob_desc34,
-          {-30, 32, -34, -76, 10, -12, 14, 16, 22, -24, 26, 52});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("in"), blob_desc2122, {-22, -17, 2, 9, -26, -21, 24, 19});
-      test_case->template BackwardCheckBlob<T>(GenDiffBn("bias"), blob_desc13,
-                                               {-12, 2, 8});
     } else {
       test_case->template ForwardCheckBlob<T>("out", blob_desc23,
                                               {2, -18, 11, 62, 56, 131});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("weight"), blob_desc34,
-          {-30, 32, -34, -76, 8, -8, 8, 24, 22, -24, 26, 52});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("in"), blob_desc2122, {-18, -15, 16, 9, -26, -21, 24, 19});
-      test_case->template BackwardCheckBlob<T>(GenDiffBn("bias"), blob_desc13,
-                                               {-12, 4, 8});
     }
   } else {
     if (use_activation) {
       test_case->template InitBlob<T>("out", blob_desc23,
                                       {0, 0, 6, 60, 53, 126});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("weight"), blob_desc34,
-          {-30, 32, -34, -76, 10, -12, 14, 16, 22, -24, 26, 52});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("in"), blob_desc2122, {-22, -17, 2, 9, -26, -21, 24, 19});
     } else {
       test_case->template ForwardCheckBlob<T>("out", blob_desc23,
                                               {0, -21, 6, 60, 53, 126});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("weight"), blob_desc34,
-          {-30, 32, -34, -76, 8, -8, 8, 24, 22, -24, 26, 52});
-      test_case->template BackwardCheckBlob<T>(
-          GenDiffBn("in"), blob_desc2122, {-18, -15, 16, 9, -26, -21, 24, 19});
     }
+  }
+  if (use_activation) {
+    test_case->template BackwardCheckBlob<T>(
+        GenDiffBn("weight"), blob_desc34,
+        {-30, 32, -34, -76, 10, -12, 14, 16, 22, -24, 26, 52});
+    test_case->template BackwardCheckBlob<T>(
+        GenDiffBn("in"), blob_desc2122, {-22, -17, 2, 9, -26, -21, 24, 19});
+  } else {
+    test_case->template BackwardCheckBlob<T>(
+        GenDiffBn("weight"), blob_desc34,
+        {-30, 32, -34, -76, 8, -8, 8, 24, 22, -24, 26, 52});
+    test_case->template BackwardCheckBlob<T>(
+        GenDiffBn("in"), blob_desc2122, {-18, -15, 16, 9, -26, -21, 24, 19});
   }
 }
 

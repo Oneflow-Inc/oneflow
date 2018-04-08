@@ -121,7 +121,7 @@ void ConvOp<NDims>::InferBlobDescs(
   if (static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
           != ActivationType::kNoActivation
       && Global<JobDesc>::Get()->IsTrain()) {
-    GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
+    *(GetBlobDesc4BnInOp("activation_buf")) = *out_blob_desc;
   }
 
   // weight
