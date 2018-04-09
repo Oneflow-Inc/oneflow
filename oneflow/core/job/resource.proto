@@ -15,7 +15,7 @@ enum DeviceType {
 
 message Resource {
   repeated Machine machine = 1;
-  required int32 gpu_device_num = 2;
+  optional int32 gpu_device_num = 2 [default = 0];
   optional int32 cpu_device_num = 3 [default = 0];
   optional int32 comm_net_worker_num = 4 [default = 4];
   optional int32 persistence_worker_num = 5 [default = 64];
