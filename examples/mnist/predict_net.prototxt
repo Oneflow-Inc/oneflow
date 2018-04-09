@@ -152,6 +152,6 @@ op {
   name: "print"
   print_conf {
     lbn: "softmax_loss/loss"
-    print_path: "/predict_result"
+    print_path: "/tmp/predict_result"
   }
 }
