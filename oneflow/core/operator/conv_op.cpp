@@ -162,10 +162,9 @@ void ConvOp<NDims>::InferBlobDescs(
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::VirtualGenKernelConf(
+void ConvOp<NDims>::GenKernelConfWithoutCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
+    ConvKernelConf* conv_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
   const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
   std::string data_format =
@@ -214,7 +213,27 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   } else {
     UNIMPLEMENTED();
   }
+}
 
+template<int32_t NDims>
+void ConvOp<NDims>::GenKernelConfWithCudnn(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    KernelConf* kernel_conf, ConvKernelConf* conv_conf) const {
+  GetBlobDesc4BnInOp("in")->shape().ToProto(conv_conf->mutable_in());
+  GetBlobDesc4BnInOp("out")->shape().ToProto(conv_conf->mutable_out());
+  GetBlobDesc4BnInOp("weight")->shape().ToProto(conv_conf->mutable_weight());
+
+  std::vector<int32_t> pad_small_side;
+  std::vector<int32_t> pad_large_side;
+  GetOutAndPad(GetBlobDesc4BnInOp("in")->shape(), GetCustomizedConf(), nullptr,
+               &pad_small_side, &pad_large_side);
+
+  for (size_t i = 0; i < NDims; ++i) {
+    AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_small_side",
+                                       pad_small_side[i]);
+    AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side",
+                                       pad_large_side[i]);
+  }
 #ifdef WITH_CUDA
   if (kernel_conf->device_type() == DeviceType::kGPU) {
     CudnnConvAlgoCtx conv_ctx;
@@ -230,6 +249,18 @@ void ConvOp<NDims>::VirtualGenKernelConf(
         static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
 #endif  // WITH_CUDA
+}
+
+template<int32_t NDims>
+void ConvOp<NDims>::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
+  if (!UseCudnn(kernel_conf->device_type())) {
+    GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
+  } else {
+    GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf);
+  }
 }
 
 template<int32_t NDims>
