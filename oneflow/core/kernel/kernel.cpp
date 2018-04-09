@@ -50,37 +50,13 @@ void Kernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
-  // ForwardActivateDataContent(ctx, BnInOp2Blob);
-
-  if (this->op_conf().has_fully_connected_conf()) {
-    Blob* out_blob = BnInOp2Blob("out");
-    const float* out_dptr = out_blob->dptr<float>();
-    float min_val = out_dptr[0];
-    float max_val = out_dptr[0];
-    FOR_RANGE(int64_t, i, 0, out_blob->shape().elem_cnt()) {
-      if (min_val > out_dptr[i]) { min_val = out_dptr[i]; }
-      if (max_val < out_dptr[i]) { max_val = out_dptr[i]; }
-    }
-    LOG(INFO) << "forward" << min_val << " " << max_val;
-  }
+  ForwardActivateDataContent(ctx, BnInOp2Blob);
 }
 
 void Kernel::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->op_conf().has_fully_connected_conf()) {
-    Blob* out_blob = BnInOp2Blob("out");
-    const float* out_dptr = out_blob->dptr<float>();
-    float min_val = out_dptr[0];
-    float max_val = out_dptr[0];
-    FOR_RANGE(int64_t, i, 0, out_blob->shape().elem_cnt()) {
-      if (min_val > out_dptr[i]) { min_val = out_dptr[i]; }
-      if (max_val < out_dptr[i]) { max_val = out_dptr[i]; }
-    }
-    LOG(INFO) << "backward" << min_val << " " << max_val;
-  }
-
-  // BackwardActivateDataContent(ctx, BnInOp2Blob);
+  BackwardActivateDataContent(ctx, BnInOp2Blob);
   BackwardDataContent(ctx, BnInOp2Blob);
   if (HasModelBns() && Global<JobDesc>::Get()->L2() > 0.0f) {
     L2Regularization(ctx, BnInOp2Blob);
