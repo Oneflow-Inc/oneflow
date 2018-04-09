@@ -31,12 +31,10 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ActivationType activation = static_cast<ActivationType>(
-      this->GetEnumFromCustomizedOpConf("activation"));
-
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  if (activation != ActivationType::kNone) {
+
+  if (this->GetActivationType() != ActivationType::kNone) {
     out_diff_blob = BnInOp2Blob("activation_buf");
   }
   Blob* in_diff_blob = BnInOp2Blob("in_diff");

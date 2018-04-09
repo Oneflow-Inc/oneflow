@@ -32,24 +32,15 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_diff = BnInOp2Blob("out_diff");
-  ActivationType activation = static_cast<ActivationType>(
-      this->template GetEnumFromCustomizedOpConf("activation"));
-  if (activation != ActivationType::kNone) {
-    const Blob* out_blob = BnInOp2Blob("out");
-    const T* dptr = out_blob->dptr<T>();
-    T min_val = dptr[0];
-    FOR_RANGE(int64_t, i, 0, out_blob->shape().elem_cnt()) {
-      if (min_val > dptr[i]) { min_val = dptr[i]; }
-    }
-    CHECK_GE(min_val, 0);
-    out_diff = BnInOp2Blob("activation_buf");
+  const Blob* conv_out_diff = BnInOp2Blob("out_diff");
+  if (this->GetActivationType() != ActivationType::kNone) {
+    conv_out_diff = BnInOp2Blob("activation_buf");
   }
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
-    BiasBackward(ctx.device_ctx, out_diff, BnInOp2Blob("bias_diff"),
+    BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"),
                  BnInOp2Blob);
   }
-  WeightBackward(ctx.device_ctx, out_diff, BnInOp2Blob("in"),
+  WeightBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("in"),
                  BnInOp2Blob("weight_diff"), BnInOp2Blob("in_diff"),
                  BnInOp2Blob);
 }

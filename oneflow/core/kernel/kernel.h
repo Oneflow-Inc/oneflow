@@ -180,6 +180,8 @@ class KernelIfWithActivation : public KernelIfWithModel<device_type, T> {
 
  protected:
   KernelIfWithActivation() = default;
+
+  ActivationType GetActivationType() const;
   void ForwardActivateDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
