@@ -30,7 +30,7 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 
 template<typename T>
 __global__ void ReluForwardGpu(const int64_t n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? y[i] : 0; }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
 }
 
 template<typename T>
