@@ -36,6 +36,7 @@ class Improver final {
           Ratio4RegstDescId,
       double ii) const;
   double BinarySearchII(
+      double base_ii,
       const std::function<const HashMap<int64_t, double>&(int64_t)>&
           Duration4RegstDescId,
       const std::function<const HashMap<int64_t, double>&(int64_t)>&
