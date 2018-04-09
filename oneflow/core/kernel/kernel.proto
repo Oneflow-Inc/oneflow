@@ -15,6 +15,7 @@ message ConvKernelConf {
   optional int32 cudnn_fwd_algo = 6 [default = -1];
   optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
   optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+  optional ActivationType activation = 9;
 }
 
 message DropoutKernelConf {
