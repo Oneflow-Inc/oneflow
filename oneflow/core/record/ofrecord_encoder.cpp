@@ -3,19 +3,6 @@
 
 namespace oneflow {
 
-template<EncodeCase encode_case, typename T>
-void OFRecordEncoder<encode_case, T>::EncodeOneFieldToOneRecord(
-    DeviceCtx* ctx, int64_t record_id, const Blob* blob,
-    const std::string& field_name, OFRecord& record) const {
-  if (record.feature().find(field_name) != record.feature().end()) {
-    LOG(FATAL) << "Field " << field_name << " found repeatedly in OfRecord";
-  }
-  int64_t one_col_elem_num = blob->shape().Count(1);
-  Feature& feature = record.mutable_feature()->at(field_name);
-  const T* in_dptr = blob->dptr<T>() + record_id * one_col_elem_num;
-  EncodeOneCol(ctx, in_dptr, feature, field_name, one_col_elem_num);
-}
-
 OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase encode_case,
                                       DataType data_type) {
   static const HashMap<std::string, OFRecordEncoderIf*> obj = {

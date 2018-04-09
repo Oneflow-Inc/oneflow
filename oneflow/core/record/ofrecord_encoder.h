@@ -11,37 +11,17 @@ class OFRecordEncoderIf {
   OF_DISALLOW_COPY_AND_MOVE(OFRecordEncoderIf);
   virtual ~OFRecordEncoderIf() = default;
 
-  virtual void EncodeOneFieldToOneRecord(DeviceCtx*, int64_t record_id,
-                                         const Blob*,
-                                         const std::string& field_name,
-                                         OFRecord&) const = 0;
-  static void EncodeDataIdToOneRecord(DeviceCtx* ctx, const char* data_id_str,
-                                      OFRecord& record) {
+  static void EncodeOneDataId(DeviceCtx* ctx, const char* data_id_str,
+                              OFRecord& record) {
     record.mutable_feature()->at("data_id").mutable_bytes_list()->add_value(
         data_id_str);
   }
+  virtual void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset,
+                            Feature&, const std::string& field_name,
+                            int64_t one_col_elem_num) const = 0;
 
  protected:
   OFRecordEncoderIf() = default;
-
- private:
-};
-
-template<EncodeCase encode_case, typename T>
-class OFRecordEncoder : public OFRecordEncoderIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(OFRecordEncoder);
-  virtual ~OFRecordEncoder() = default;
-
-  void EncodeOneFieldToOneRecord(DeviceCtx*, int64_t record_id, const Blob*,
-                                 const std::string& field_name,
-                                 OFRecord&) const override;
-
- protected:
-  OFRecordEncoder() = default;
-  virtual void EncodeOneCol(DeviceCtx*, const T* in_dptr, Feature&,
-                            const std::string& field_name,
-                            int64_t one_col_elem_num) const = 0;
 };
 
 template<EncodeCase encode_case, typename T>
