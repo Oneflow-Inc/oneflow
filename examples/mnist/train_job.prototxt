@@ -24,8 +24,8 @@ train_conf {
   }
   num_of_pieces_in_batch: 10
   model_update_conf {
+    learning_rate: 0.01
     naive_conf {
-      learning_rate: 0.01
     }
   }
 }

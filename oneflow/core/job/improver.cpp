@@ -18,12 +18,23 @@ double CalcII(double regst_desc_duration, uint64_t regst_num, double ii_scale) {
 
 uint64_t CalcRegstNum(
     const RegstDescProto& regst_desc,
-    const std::function<double(int64_t)>& Duration4RegstDescId, double ii,
-    const std::function<double(int64_t)>& IIScale4RegstDescId) {
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathDurations4RegstDescId,
+    double ii,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathIIScales4RegstDescId) {
   int64_t regst_desc_id = regst_desc.regst_desc_id();
-  double duration = Duration4RegstDescId(regst_desc_id);
-  double ratio = IIScale4RegstDescId(regst_desc_id);
-  uint64_t regst_num = ceil(CalcRegstNum(duration, ii, ratio));
+  const auto& consumer_actor_id2duration =
+      PathDurations4RegstDescId(regst_desc_id);
+  const auto& consumer_actor_id2ii_scale =
+      PathIIScales4RegstDescId(regst_desc_id);
+  uint64_t regst_num = 0;
+  for (const auto& pair : consumer_actor_id2duration) {
+    double duration = pair.second;
+    double ii_scale = consumer_actor_id2ii_scale.at(pair.first);
+    uint64_t cur_path_regst_num = ceil(CalcRegstNum(duration, ii, ii_scale));
+    regst_num = std::max(regst_num, cur_path_regst_num);
+  }
   regst_num =
       std::max(regst_num, static_cast<uint64_t>(regst_desc.min_register_num()));
   regst_num =
@@ -45,14 +56,6 @@ void ForEachStreamCalcTimePerAct(const std::list<ActEvent>& act_events,
   }
 }
 
-double CalcBaseII(const std::list<ActEvent>& act_events) {
-  double initiation_interval = 0;
-  ForEachStreamCalcTimePerAct(act_events, [&](double ii) {
-    initiation_interval = std::max(initiation_interval, ii);
-  });
-  return initiation_interval;
-}
-
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<ActEvent>* act_events) {
   NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
@@ -68,12 +71,15 @@ void ParseActEvents(const std::string& act_event_filepath,
 
 uint64_t CalcMemoryConsumed(
     const std::list<const RegstDescProto*>& regst_descs,
-    const std::function<double(int64_t)>& Duration4RegstDescId,
-    const std::function<double(int64_t)>& IIScale4RegstDescId, double ii) {
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathDurations4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathIIScales4RegstDescId,
+    double ii) {
   uint64_t mem_consuming = 0;
   for (const RegstDescProto* regst_desc : regst_descs) {
-    uint64_t regst_num = CalcRegstNum(*regst_desc, Duration4RegstDescId, ii,
-                                      IIScale4RegstDescId);
+    uint64_t regst_num = CalcRegstNum(*regst_desc, PathDurations4RegstDescId,
+                                      ii, PathIIScales4RegstDescId);
     RtRegstDesc runtime_regst_desc(*regst_desc);
     mem_consuming +=
         regst_num * runtime_regst_desc.packed_blob_desc()->TotalByteSize();
@@ -96,32 +102,57 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
   };
 }
 
-std::function<double(int64_t)> MakeGetterDuration4RegstDescId(
-    const ActGraph& graph) {
-  HashMap<int64_t, double> regst_desc_id2duration;
-  graph.ForEachRegstDescMeanDuration([&](int64_t regst_desc_id, double time) {
-    regst_desc_id2duration.insert({regst_desc_id, time});
+std::function<const HashMap<int64_t, double>&(int64_t)>
+MakeGetterPathDurations4RegstDescId(const ActGraph& graph) {
+  std::shared_ptr<HashMap<int64_t, HashMap<int64_t, double>>>
+  regst_desc_id2consumer_id2duration(
+      new HashMap<int64_t, HashMap<int64_t, double>>());
+  graph.ForEachRegstDescConsumerPathMeanDuration([&](int64_t regst_desc_id,
+                                                     int64_t consumer_actor_id,
+                                                     double time) {
+    (*regst_desc_id2consumer_id2duration)[regst_desc_id][consumer_actor_id] =
+        time;
   });
-  return [regst_desc_id2duration](int64_t regst_desc_id) {
-    const auto& it = regst_desc_id2duration.find(regst_desc_id);
-    if (it == regst_desc_id2duration.end()) {
-      return 0.0;
+  std::shared_ptr<const HashMap<int64_t, double>> empty(
+      new HashMap<int64_t, double>());
+  return [regst_desc_id2consumer_id2duration,
+          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
+    const auto& it = regst_desc_id2consumer_id2duration->find(regst_desc_id);
+    if (it == regst_desc_id2consumer_id2duration->end()) {
+      return *empty;
     } else {
       return it->second;
     }
   };
 }
 
-std::function<double(int64_t)> MakeGetterIIScale4RegstDescId(
-    const ActGraph& graph) {
-  HashMap<int64_t, double> regst_desc_id2ii_ratio;
-  graph.ForEachRegstDescIIScale([&](int64_t regst_desc_id, double ratio) {
-    regst_desc_id2ii_ratio.insert({regst_desc_id, ratio});
+double IIScale4Actor(const ActGraph& graph, int64_t consumer_actor_id,
+                     double default_ii_scale) {
+  if (graph.GetTaskProto(consumer_actor_id).task_type() == TaskType::kMdSave) {
+    return Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+           * Global<JobDesc>::Get()->NumOfPiecesInBatch();
+  }
+  return default_ii_scale;
+}
+
+std::function<const HashMap<int64_t, double>&(int64_t)>
+MakeGetterPathIIScales4RegstDescId(const ActGraph& graph) {
+  std::shared_ptr<HashMap<int64_t, HashMap<int64_t, double>>>
+  regst_desc_id2consumer_id2ii_scale(
+      new HashMap<int64_t, HashMap<int64_t, double>>());
+  graph.ForEachRegstDescConsumerPathIIScale([&](int64_t regst_desc_id,
+                                                int64_t consumer_actor_id,
+                                                double ii_scale) {
+    (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] =
+        IIScale4Actor(graph, consumer_actor_id, ii_scale);
   });
-  return [regst_desc_id2ii_ratio](int64_t regst_desc_id) {
-    const auto& it = regst_desc_id2ii_ratio.find(regst_desc_id);
-    if (it == regst_desc_id2ii_ratio.end()) {
-      return static_cast<double>(std::numeric_limits<int64_t>::max());
+  std::shared_ptr<const HashMap<int64_t, double>> empty(
+      new HashMap<int64_t, double>());
+  return [regst_desc_id2consumer_id2ii_scale,
+          empty](int64_t regst_desc_id) -> const HashMap<int64_t, double>& {
+    const auto& it = regst_desc_id2consumer_id2ii_scale->find(regst_desc_id);
+    if (it == regst_desc_id2consumer_id2ii_scale->end()) {
+      return *empty;
     } else {
       return it->second;
     }
@@ -172,14 +203,16 @@ void Improver::MakeMemZoneRegstDescs(const Plan& plan,
 
 bool Improver::IsAnyZoneOutOfMemory(
     const MemZoneRegstDescs& mz_regst_descs,
-    const std::function<double(int64_t)>& Duration4RegstDescId,
-    const std::function<double(int64_t)>& IIScale4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathDurations4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathIIScales4RegstDescId,
     double ii) const {
   FOR_RANGE(int64_t, machine_id, 0, mz_regst_descs.size()) {
     FOR_RANGE(int64_t, mem_zone_id, 0, mz_regst_descs[machine_id].size()) {
       const auto& regst_descs = mz_regst_descs[machine_id][mem_zone_id];
-      if (CalcMemoryConsumed(regst_descs, Duration4RegstDescId,
-                             IIScale4RegstDescId, ii)
+      if (CalcMemoryConsumed(regst_descs, PathDurations4RegstDescId,
+                             PathIIScales4RegstDescId, ii)
           >= AvailableMemSize(machine_id, mem_zone_id)) {
         return true;
       }
@@ -189,14 +222,17 @@ bool Improver::IsAnyZoneOutOfMemory(
 }
 
 double Improver::CalcMaxRegstDescDuration(
-    const std::function<double(int64_t)>& Duration4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathDurations4RegstDescId,
     const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration = 0;
   for (const auto& zone_regst_descs : mz_regst_descs) {
     for (const auto& regst_descs : zone_regst_descs) {
       for (const RegstDescProto* regst_desc : regst_descs) {
-        double duration = Duration4RegstDescId(regst_desc->regst_desc_id());
-        max_duration = std::max(max_duration, duration);
+        for (const auto& pair :
+             PathDurations4RegstDescId(regst_desc->regst_desc_id())) {
+          max_duration = std::max(max_duration, pair.second);
+        }
       }
     }
   }
@@ -204,21 +240,23 @@ double Improver::CalcMaxRegstDescDuration(
 }
 
 double Improver::BinarySearchII(
-    const std::function<double(int64_t)>& Duration4RegstDescId,
-    const std::function<double(int64_t)>& IIScale4RegstDescId,
-    const MemZoneRegstDescs& mz_regst_descs, double base_ii) const {
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathDurations4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>&
+        PathIIScales4RegstDescId,
+    const MemZoneRegstDescs& mz_regst_descs) const {
   double max_duration =
-      CalcMaxRegstDescDuration(Duration4RegstDescId, mz_regst_descs);
-  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
-                              IIScale4RegstDescId, max_duration));
+      CalcMaxRegstDescDuration(PathDurations4RegstDescId, mz_regst_descs);
+  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId,
+                              PathIIScales4RegstDescId, max_duration));
   const double ii_search_threshold = 1;
   double r = max_duration;
-  double l = base_ii;
-  double mid = base_ii;
+  double l = 1.0;
+  double mid = 1.0;
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
-    if (IsAnyZoneOutOfMemory(mz_regst_descs, Duration4RegstDescId,
-                             IIScale4RegstDescId, mid)) {
+    if (IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId,
+                             PathIIScales4RegstDescId, mid)) {
       l = mid;
     } else {
       r = mid;
@@ -228,18 +266,18 @@ double Improver::BinarySearchII(
 }
 
 void Improver::MemoryLimitedAllocate(
-    const ActGraph& graph, double base_ii,
+    const ActGraph& graph,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
-  auto Duration4RegstDescId = MakeGetterDuration4RegstDescId(graph);
-  auto IIScale4RegstDescId = MakeGetterIIScale4RegstDescId(graph);
+  auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(graph);
+  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(graph);
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
-  double ii = BinarySearchII(Duration4RegstDescId, IIScale4RegstDescId,
-                             mz_regst_descs, base_ii);
+  double ii = BinarySearchII(PathDurations4RegstDescId,
+                             PathIIScales4RegstDescId, mz_regst_descs);
   for (const auto& task_proto : graph.plan().task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      uint64_t regst_num = CalcRegstNum(pair.second, Duration4RegstDescId, ii,
-                                        IIScale4RegstDescId);
+      uint64_t regst_num = CalcRegstNum(pair.second, PathDurations4RegstDescId,
+                                        ii, PathIIScales4RegstDescId);
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }
@@ -249,10 +287,9 @@ Plan Improver::Improve(const Plan& naive_plan,
                        const std::string& act_event_filepath) {
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
-  double base_ii = CalcBaseII(*act_events);
   ActGraph act_graph(naive_plan, std::move(act_events));
   Plan plan(naive_plan);
-  MemoryLimitedAllocate(act_graph, base_ii, MakeSetterSetPlanRegstNum(&plan));
+  MemoryLimitedAllocate(act_graph, MakeSetterSetPlanRegstNum(&plan));
   return plan;
 }
 
