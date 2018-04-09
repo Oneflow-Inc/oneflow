@@ -22,9 +22,9 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::string& lbn,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    int64_t in_parallel_num,
+    const ChainNode* in_chain,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t out_parallel_num, BoxingOpConf*);
+    const ChainNode* out_chain, BoxingOpConf*);
 
 #define CHAIN_TYPE_SEQ               \
   OF_PP_MAKE_TUPLE_SEQ(Forward)      \
@@ -69,6 +69,8 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   void GenSortedCompTaskNodes(
       std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
       CompTaskNodeHandler) const;
+  int32_t GetModelSplitAxis() const;
+  int32_t GetMaxModelSplitNum() const;
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
