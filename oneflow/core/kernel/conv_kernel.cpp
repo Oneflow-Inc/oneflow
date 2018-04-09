@@ -35,7 +35,7 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
   const Blob* out_diff = BnInOp2Blob("out_diff");
   ActivationType activation = static_cast<ActivationType>(
       this->template GetEnumFromCustomizedOpConf("activation"));
-  if (activation != ActivationType::kNoActivation) {
+  if (activation != ActivationType::kNone) {
     out_diff = BnInOp2Blob("activation_buf");
   }
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
