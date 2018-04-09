@@ -81,7 +81,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
   if (static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
-          != ActivationType::kNone) {
+      != ActivationType::kNone) {
     EnrollDataTmpBn("activation_buf");
   }
 }

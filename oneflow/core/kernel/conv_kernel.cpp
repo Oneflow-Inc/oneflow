@@ -36,6 +36,13 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
   ActivationType activation = static_cast<ActivationType>(
       this->template GetEnumFromCustomizedOpConf("activation"));
   if (activation != ActivationType::kNone) {
+    const Blob* out_blob = BnInOp2Blob("out");
+    const T* dptr = out_blob->dptr<T>();
+    T min_val = dptr[0];
+    FOR_RANGE(int64_t, i, 0, out_blob->shape().elem_cnt()) {
+      if (min_val > dptr[i]) { min_val = dptr[i]; }
+    }
+    CHECK_GE(min_val, 0);
     out_diff = BnInOp2Blob("activation_buf");
   }
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
