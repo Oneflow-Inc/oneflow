@@ -1,6 +1,6 @@
 machine {
   addr: "192.168.1.11"
-  port: 13245
+  port: 6789
   name: "first"
 }
 
