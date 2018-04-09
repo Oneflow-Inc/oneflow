@@ -15,7 +15,7 @@ void GatherKernel<device_type, T>::ForwardDataContent(
   CHECK_EQ(hid_dim, out_blob->shape().Count(1));
 
   for (int64_t i = 0; i < data_num; ++i) {
-    if (in_blob->col_num(i) == col_id) {
+    if (in_blob->col_num(i) - 1 == col_id) {
       KernelUtil<device_type, T>::Copy(
           ctx.device_ctx, hid_dim, in_blob->dptr<T>() + i * hid_dim, 1,
           out_blob->mut_dptr<T>() + i * hid_dim, 1);
@@ -47,7 +47,7 @@ void GatherKernel<device_type, T>::BackwardDataContent(
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
   for (int64_t i = 0; i < data_num; ++i) {
-    if (in_blob->col_num(i) == col_id) {
+    if (in_blob->col_num(i) - 1 == col_id) {
       KernelUtil<device_type, T>::Copy(
           ctx.device_ctx, hid_dim, out_diff_blob->dptr<T>() + i * hid_dim, 1,
           in_diff_blob->mut_dptr<T>() + i * hid_dim, 1);
