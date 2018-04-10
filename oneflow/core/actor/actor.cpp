@@ -20,7 +20,8 @@ bool NeedModelSave(int64_t model_version_id) {
 }
 
 Actor::~Actor() {
-  if (act_id_ >= 0) {
+  if (Global<RuntimeCtx>::Get()->is_experiment_phase() == false
+      && act_id_ >= 0) {
     double avg_act_interval = act_interval_acc_ / (act_id_ + 1);
     Global<CtrlClient>::Get()->PushAvgActInterval(actor_id_, avg_act_interval);
   }
