@@ -99,6 +99,9 @@ class ConvKernel<DeviceType::kCPU, T> final
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
+  Shape in_shape_;
+  Shape out_shape_;
+  Shape weight_shape_;
 };
 
 template<typename T>
@@ -130,22 +133,31 @@ class ConvKernel<DeviceType::kGPU, T> final
 };
 
 template<typename T>
-class ColBufWriter final {
+class ColBufWriter {
  public:
-  ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
-               int64_t ih_size, int64_t iw_size);
-  void Im2ColDHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
-  void Im2ColCDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
-  void WriteZero() { *(dst_ptr_++) = 0; }
-  void CleanIdSize();
-  void CleanIhSize();
-  void CleanIwSize();
-  void SkipIdSize() { src_ptr_ += id_size_; }
-  void SkipIhSize() { src_ptr_ += ih_size_; }
-  void SkipIwSize() { src_ptr_ += iw_size_; }
-  void Col2ImDHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
-  void Col2ImCDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw);
-  void NextCSize() { src_ptr_ += c_size_; }
+  ColBufWriter() = default;
+  virtual ~ColBufWriter() = default;
+  virtual void DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) = 0;
+  virtual void CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) = 0;
+  virtual void InvalidDFunc() = 0;
+  virtual void InvalidHFunc() = 0;
+  virtual void InvalidWFunc() = 0;
+  virtual void NextImCSize() = 0;
+};
+
+template<typename T>
+class Im2ColWriter final : public ColBufWriter<T> {
+ public:
+  Im2ColWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
+               int64_t ih_size, int64_t iw_size, int64_t od_size,
+               int64_t oh_size, int64_t ow_size);
+  ~Im2ColWriter() = default;
+  void DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) override;
+  void CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) override;
+  void InvalidDFunc() override;
+  void InvalidHFunc() override;
+  void InvalidWFunc() override;
+  void NextImCSize() override;
 
  private:
   const T* src_ptr_;
@@ -154,10 +166,36 @@ class ColBufWriter final {
   int64_t id_size_;
   int64_t ih_size_;
   int64_t iw_size_;
+  int64_t od_size_;
+  int64_t oh_size_;
+  int64_t ow_size_;
 };
 
 template<typename T>
-using DHWInvalidFunc = void (ColBufWriter<T>::*)();
+class Col2ImWriter final : public ColBufWriter<T> {
+ public:
+  Col2ImWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size,
+               int64_t ih_size, int64_t iw_size, int64_t od_size,
+               int64_t oh_size, int64_t ow_size);
+  ~Col2ImWriter() = default;
+  void DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) override;
+  void CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) override;
+  void InvalidDFunc() override;
+  void InvalidHFunc() override;
+  void InvalidWFunc() override;
+  void NextImCSize() override;
+
+ private:
+  const T* src_ptr_;
+  T* dst_ptr_;
+  int64_t c_size_;
+  int64_t id_size_;
+  int64_t ih_size_;
+  int64_t iw_size_;
+  int64_t od_size_;
+  int64_t oh_size_;
+  int64_t ow_size_;
+};
 
 template<typename T>
 using DHWValidFunc = void (ColBufWriter<T>::*)(int64_t c, int64_t kd,
@@ -167,9 +205,9 @@ template<typename T>
 class ColBufUtil final {
  public:
   ColBufUtil(const Shape& in_shape, const Shape& out_shape, int32_t dhw_offset,
-             bool is_im2col, const int32_t* strides,
-             const int32_t* dilation_rate, const int32_t* padding_before);
-  void operator()(ColBufWriter<T>& col_buf_writer, int64_t c, int64_t kd,
+             const int32_t* strides, const int32_t* dilation_rate,
+             const int32_t* padding_before);
+  void operator()(ColBufWriter<T>* col_buf_writer, int64_t c, int64_t kd,
                   int64_t kh, int64_t kw);
 
  private:
@@ -182,9 +220,6 @@ class ColBufUtil final {
   const int32_t* strides_;
   const int32_t* dilation_rate_;
   const int32_t* padding_before_;
-  DHWInvalidFunc<T> d_invalid_func_;
-  DHWInvalidFunc<T> h_invalid_func_;
-  DHWInvalidFunc<T> w_invalid_func_;
   DHWValidFunc<T> dhw_valid_func_;
 };
 
@@ -217,10 +252,10 @@ struct ConvKernelUtil final {
 
  private:
   static void DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
-                          ColBufWriter<T>& col_buf_writer);
+                          ColBufWriter<T>* col_buf_writer);
 
   static void DoNDWHCFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
-                          ColBufWriter<T>& col_buf_writer);
+                          ColBufWriter<T>* col_buf_writer);
 };
 
 }  // namespace oneflow

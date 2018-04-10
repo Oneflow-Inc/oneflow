@@ -61,7 +61,7 @@ void PrintKernel::Forward(
           ->EncodeOneCol(ctx.device_ctx, cur_blob, record_id * one_col_elem_num,
                          feature, field_name, one_col_elem_num);
     }
-    WriteOneRecord(out_stream_.get(), record);
+    *out_stream_ << record;
   }
   out_stream_->Flush();
 }
