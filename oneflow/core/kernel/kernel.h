@@ -53,7 +53,7 @@ class Kernel {
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void ForwardActivateDataContent(
+  virtual void ForwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
@@ -69,7 +69,7 @@ class Kernel {
   virtual void BackwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void BackwardActivateDataContent(
+  virtual void BackwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(
@@ -184,10 +184,10 @@ class KernelIfWithActivation : public KernelIfWithModel<device_type, T> {
   ActivationType GetActivationType() const;
   const Blob* GetOutDiffBlob(
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  void ForwardActivateDataContent(
+  void ForwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardActivateDataContent(
+  void BackwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };

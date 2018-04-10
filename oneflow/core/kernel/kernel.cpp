@@ -50,14 +50,14 @@ void Kernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
-  ForwardActivateDataContent(ctx, BnInOp2Blob);
+  ForwardActivate(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
 }
 
 void Kernel::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BackwardActivateDataContent(ctx, BnInOp2Blob);
+  BackwardActivate(ctx, BnInOp2Blob);
   BackwardDataContent(ctx, BnInOp2Blob);
   if (HasModelBns() && Global<JobDesc>::Get()->L2() > 0.0f) {
     L2Regularization(ctx, BnInOp2Blob);
@@ -177,7 +177,7 @@ const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
 }
 
 template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::ForwardActivateDataContent(
+void KernelIfWithActivation<device_type, T>::ForwardActivate(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* out_blob = BnInOp2Blob("out");
@@ -202,7 +202,7 @@ void KernelIfWithActivation<device_type, T>::ForwardActivateDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::BackwardActivateDataContent(
+void KernelIfWithActivation<device_type, T>::BackwardActivate(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ActivationType activation = GetActivationType();
