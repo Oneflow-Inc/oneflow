@@ -159,7 +159,7 @@ class KernelIf : public Kernel {
 };
 
 template<DeviceType device_type, typename ModelType>
-class KernelIfWithModel : public KernelIf<device_type> {
+class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
@@ -173,7 +173,7 @@ class KernelIfWithModel : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-class KernelIfWithActivation : public KernelIfWithModel<device_type, T> {
+class KernelIfWithActivation : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
   virtual ~KernelIfWithActivation() = default;
