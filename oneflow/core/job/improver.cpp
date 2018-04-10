@@ -159,7 +159,6 @@ double IIScale4Actor(TaskType task_type, double default_ii_scale) {
 void ProfilerPushAvgActTime(const ActGraph& act_graph) {
   for (const auto& pair : act_graph.actor_id2total_act_time()) {
     double act_time = pair.second / act_graph.actor_id2act_cnt().at(pair.first);
-    act_time /= 1000000;
     Global<Profiler>::Get()->PushAvgActTime(pair.first, act_time);
   }
 }
