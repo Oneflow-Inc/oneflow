@@ -156,7 +156,7 @@ double IIScale4Actor(TaskType task_type, double default_ii_scale) {
   return default_ii_scale;
 }
 
-void ProfilerPushAvgActTime(const ActGraph& act_graph) {
+void PushAvgActTimeToProfiler(const ActGraph& act_graph) {
   for (const auto& pair : act_graph.actor_id2total_act_time()) {
     double act_time = pair.second / act_graph.actor_id2act_cnt().at(pair.first);
     Global<Profiler>::Get()->PushAvgActTime(pair.first, act_time);
@@ -318,7 +318,7 @@ Plan Improver::Improve(const Plan& naive_plan,
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
-  ProfilerPushAvgActTime(act_graph);
+  PushAvgActTimeToProfiler(act_graph);
   Plan plan(naive_plan);
   MemoryLimitedAllocate(act_graph, MakeSetterSetPlanRegstNum(&plan));
   return plan;
