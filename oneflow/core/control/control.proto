@@ -96,3 +96,11 @@ message EraseCountRequest {
 
 message EraseCountResponse {
 }
+
+message PushAvgActIntervalRequest {
+  required int64 actor_id = 1;
+  required double avg_act_interval = 2;
+}
+
+message PushAvgActIntervalResponse {
+}

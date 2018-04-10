@@ -41,9 +41,10 @@ struct SparseCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
                       const int64_t num_of_classes, const PredType* prediction,
                       const LabelType* labels, PredType* loss) {
     for (int64_t i = 0; i < instance_num; ++i) {
-      PredType prob =
-          prediction[i * num_of_classes + static_cast<int64_t>(labels[i])];
-      loss[i] = -SAFE_LOG(prob);
+      int64_t label = static_cast<int64_t>(labels[i]);
+      CHECK_GE(label, 0);
+      CHECK_LT(label, num_of_classes);
+      loss[i] = -SAFE_LOG(prediction[i * num_of_classes + label]);
     }
   }
 
@@ -84,6 +85,13 @@ Kernel* CreateSparseCrossEntropyLossKernel(const KernelConf& kernel_conf) {
 }
 
 }  // namespace
+
+#define MAKE_ENTRY(data_type_pair, label_type_pair)       \
+  template struct SparseCrossEntropyLossKernelUtil<       \
+      DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), \
+      OF_PP_PAIR_FIRST(label_type_pair)>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ)
 
 COMMAND(AddKernelCreator(OperatorConf::kSparseCrossEntropyLossConf,
                          CreateSparseCrossEntropyLossKernel));

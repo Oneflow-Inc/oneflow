@@ -33,7 +33,7 @@ train_conf {
       beta: 0.9
     }
     learning_rate_decay {
-      exponetial_conf {
+      exponential_conf {
         decay_rate: 0.1;
         decay_batches: 10000;
         staircase: true;

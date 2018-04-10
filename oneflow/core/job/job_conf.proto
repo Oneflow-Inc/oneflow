@@ -38,7 +38,7 @@ message JobConf {
   required string dlnet_filepath = 1;
   required string resource_filepath = 2;
   required string placement_filepath = 3;
-  required GlobalFSConf global_fs_conf = 4;
+  required GlobalFSConf globalfs_conf = 4;
   required int32 single_piece_size = 5;
   required int32 data_part_num = 6;
   optional string model_load_snapshot_path = 7 [default = ""];
