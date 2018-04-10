@@ -206,10 +206,6 @@ void ConvOp<NDims>::GenKernelConfWithoutCudnn(
     conv_conf->mutable_pad_large_side()->Add(pad_large_side.at(i));
     conv_conf->mutable_dilation_rate()->Add(dilation_rate.at(i));
   }
-<<<<<<< HEAD
-=======
-  conv_conf->set_dim(NDims);
->>>>>>> 64653ada80ab8299cb3672b85f328c2858235e28
   const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
   if (data_format == "channels_first") {
     Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
@@ -278,10 +274,7 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   if (activation != ActivationType::kNone) {
     kernel_conf->mutable_conv_conf()->set_activation(activation);
   }
-<<<<<<< HEAD
   conv_conf->set_dim(NDims);
-=======
->>>>>>> 64653ada80ab8299cb3672b85f328c2858235e28
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   if (!UseCudnn(kernel_conf->device_type())) {
     GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
