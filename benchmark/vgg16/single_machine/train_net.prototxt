@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/imagenet_30part/train"
+    data_dir: "/dataset/imagenet/30/train"
     blob {
       name: "encoded"
       data_type: kFloat
@@ -10,7 +10,9 @@ op {
         dim: 224
         dim: 3
       }
-      jpeg {
+      encode_case {
+        jpeg {
+        }
       }
     }
     blob {
@@ -18,7 +20,9 @@ op {
       data_type: kInt32
       shape {
       }
-      raw {
+      encode_case {
+        raw {
+        }
       }
     }
   }
@@ -38,6 +42,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.059
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -46,16 +57,9 @@ op {
   }
 }
 op {
-  name: "relu1_1"
-  relu_conf {
-    in: "conv1_1/out"
-    out: "out"
-  }
-}
-op {
   name: "conv1_2"
   conv_2d_conf {
-    in: "relu1_1/out"
+    in: "conv1_1/out"
     out: "out"
     filters: 64
     use_bias: true
@@ -67,6 +71,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.059
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -75,16 +86,9 @@ op {
   }
 }
 op {
-  name: "relu1_2"
-  relu_conf {
-    in: "conv1_2/out"
-    out: "out"
-  }
-}
-op {
   name: "pool1"
   max_pooling_2d_conf {
-    in: "relu1_2/out"
+    in: "conv1_2/out"
     out: "out"
     padding: "same"
     data_format: "channels_last"
@@ -109,6 +113,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.042
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -117,16 +128,9 @@ op {
   }
 }
 op {
-  name: "relu2_1"
-  relu_conf {
-    in: "conv2_1/out"
-    out: "out"
-  }
-}
-op {
   name: "conv2_2"
   conv_2d_conf {
-    in: "relu2_1/out"
+    in: "conv2_1/out"
     out: "out"
     filters: 128
     use_bias: true
@@ -138,6 +142,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.042
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -146,16 +157,9 @@ op {
   }
 }
 op {
-  name: "relu2_2"
-  relu_conf {
-    in: "conv2_2/out"
-    out: "out"
-  }
-}
-op {
   name: "pool2"
   max_pooling_2d_conf {
-    in: "relu2_2/out"
+    in: "conv2_2/out"
     out: "out"
     padding: "same"
     data_format: "channels_last"
@@ -180,24 +184,24 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.029
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
       }
     }
-  }
-}
-op {
-  name: "relu3_1"
-  relu_conf {
-    in: "conv3_1/out"
-    out: "out"
   }
 }
 op {
   name: "conv3_2"
   conv_2d_conf {
-    in: "relu3_1/out"
+    in: "conv3_1/out"
     out: "out"
     filters: 256
     use_bias: true
@@ -209,24 +213,24 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.029
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
       }
     }
-  }
-}
-op {
-  name: "relu3_2"
-  relu_conf {
-    in: "conv3_2/out"
-    out: "out"
   }
 }
 op {
   name: "conv3_3"
   conv_2d_conf {
-    in: "relu3_2/out"
+    in: "conv3_2/out"
     out: "out"
     filters: 256
     use_bias: true
@@ -238,6 +242,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.029
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -246,16 +257,9 @@ op {
   }
 }
 op {
-  name: "relu3_3"
-  relu_conf {
-    in: "conv3_3/out"
-    out: "out"
-  }
-}
-op {
   name: "pool3"
   max_pooling_2d_conf {
-    in: "relu3_3/out"
+    in: "conv3_3/out"
     out: "out"
     padding: "valid"
     data_format: "channels_last"
@@ -280,24 +284,24 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.021
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
       }
     }
-  }
-}
-op {
-  name: "relu4_1"
-  relu_conf {
-    in: "conv4_1/out"
-    out: "out"
   }
 }
 op {
   name: "conv4_2"
   conv_2d_conf {
-    in: "relu4_1/out"
+    in: "conv4_1/out"
     out: "out"
     filters: 512
     use_bias: true
@@ -309,24 +313,24 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.021
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
       }
     }
-  }
-}
-op {
-  name: "relu4_2"
-  relu_conf {
-    in: "conv4_2/out"
-    out: "out"
   }
 }
 op {
   name: "conv4_3"
   conv_2d_conf {
-    in: "relu4_2/out"
+    in: "conv4_2/out"
     out: "out"
     filters: 512
     use_bias: true
@@ -338,6 +342,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.021
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -346,16 +357,9 @@ op {
   }
 }
 op {
-  name: "relu4_3"
-  relu_conf {
-    in: "conv4_3/out"
-    out: "out"
-  }
-}
-op {
   name: "pool4"
   max_pooling_2d_conf {
-    in: "relu4_3/out"
+    in: "conv4_3/out"
     out: "out"
     padding: "valid"
     data_format: "channels_last"
@@ -380,24 +384,24 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.021
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
       }
     }
-  }
-}
-op {
-  name: "relu5_1"
-  relu_conf {
-    in: "conv5_1/out"
-    out: "out"
   }
 }
 op {
   name: "conv5_2"
   conv_2d_conf {
-    in: "relu5_1/out"
+    in: "conv5_1/out"
     out: "out"
     filters: 512
     use_bias: true
@@ -409,24 +413,24 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.021
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
       }
     }
-  }
-}
-op {
-  name: "relu5_2"
-  relu_conf {
-    in: "conv5_2/out"
-    out: "out"
   }
 }
 op {
   name: "conv5_3"
   conv_2d_conf {
-    in: "relu5_2/out"
+    in: "conv5_2/out"
     out: "out"
     filters: 512
     use_bias: true
@@ -438,6 +442,13 @@ op {
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.021
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0
@@ -446,16 +457,9 @@ op {
   }
 }
 op {
-  name: "relu5_3"
-  relu_conf {
-    in: "conv5_3/out"
-    out: "out"
-  }
-}
-op {
   name: "pool5"
   max_pooling_2d_conf {
-    in: "relu5_3/out"
+    in: "conv5_3/out"
     out: "out"
     padding: "valid"
     data_format: "channels_last"
@@ -473,9 +477,15 @@ op {
     out: "out"
     units: 4096
     use_bias: true
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.01
+      }
+    }
     bias_initializer {
       constant_conf {
-        value: 1.0
+        value: 0.0
       }
     }
   }
@@ -487,24 +497,30 @@ op {
     out: "out"
   }
 }
-op {
-  name: "drop6"
-  dropout_conf {
-    in: "relu6/out"
-    out: "out"
-    rate: 0.5
-  }
-}
+#op {
+#  name: "drop6"
+#  dropout_conf {
+#    in: "relu6/out"
+#    out: "out"
+#    rate: 0.5
+#  }
+#}
 op {
   name: "fc7"
   fully_connected_conf {
-    in: "drop6/out"
+    in: "relu6/out"
     out: "out"
     units: 4096
     use_bias: true
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.01
+      }
+    }
     bias_initializer {
       constant_conf {
-        value: 1.0
+        value: 0.0
       }
     }
   }
@@ -516,21 +532,27 @@ op {
     out: "out"
   }
 }
-op {
-  name: "drop7"
-  dropout_conf {
-    in: "relu7/out"
-    out: "out"
-    rate: 0.5
-  }
-}
+#op {
+#  name: "drop7"
+#  dropout_conf {
+#    in: "relu7/out"
+#    out: "out"
+#    rate: 0.5
+#  }
+#}
 op {
   name: "fc8"
   fully_connected_conf {
-    in: "drop7/out"
+    in: "relu7/out"
     out: "out"
     units: 1000
     use_bias: true
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.001
+      }
+    }
     bias_initializer {
       constant_conf {
         value: 0.0
