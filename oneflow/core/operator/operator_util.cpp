@@ -12,6 +12,39 @@ const size_t DhwOffset(const std::string& data_format) {
   }
 }
 
+std::vector<int32_t> Get3DVecInOpConf(const PbRf<int32_t>& field_vals,
+                                      int32_t NDims) {
+  std::vector<int32_t> vec;
+  FOR_RANGE(uint8_t, dim, 0, 3) {
+    int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
+    if (index < 0) {
+      vec.push_back(1);
+    } else {
+      vec.push_back(field_vals.Get(index));
+    }
+  }
+  return vec;
+}
+
+int64_t GetInDim(const Shape& shape, const std::string& data_format,
+                 int32_t dim, int32_t NDims) {
+  int64_t offset = 0;
+  if (data_format == "channels_last") {
+    offset = 1;
+  } else if (data_format == "channels_first") {
+    offset = 2;
+  } else {
+    UNIMPLEMENTED();
+  }
+  int64_t index =
+      offset + static_cast<int64_t>(dim) - static_cast<int64_t>(3 - NDims);
+  if (index < offset) {
+    return 1;
+  } else {
+    return shape.At(index);
+  }
+}
+
 void GetWindowedOutputSize(int64_t input_size, int32_t filter_size,
                            int32_t dilation_rate, int32_t stride,
                            const std::string& padding_type,
@@ -63,7 +96,8 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::vector<int32_t>& strides,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int32_t>* padding) {
-  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding, nullptr);
+  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding, nullptr,
+                  nullptr);
 }
 
 void Get3DOutputSize(const std::vector<int64_t>& in,
@@ -72,6 +106,17 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after) {
+  Get3DOutputSize(in, pool_size, strides, padding_type, out, padding_before,
+                  padding_after, nullptr);
+}
+
+void Get3DOutputSize(const std::vector<int64_t>& in,
+                     const std::vector<int32_t>& pool_size,
+                     const std::vector<int32_t>& strides,
+                     const std::string& padding_type, std::vector<int64_t>* out,
+                     std::vector<int32_t>* padding_before,
+                     std::vector<int32_t>* padding_after,
+                     std::vector<int32_t>* dilation_rate) {
   CHECK(out);
   out->clear();
   out->resize(3);
@@ -89,9 +134,15 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
         padding_before ? (&(*padding_before).at(i)) : nullptr;
     int32_t* padding_after_ptr =
         padding_after ? (&(*padding_after).at(i)) : nullptr;
-    GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i),
-                          padding_type, out_ptr, padding_before_ptr,
-                          padding_after_ptr);
+    if (dilation_rate) {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), dilation_rate->at(i),
+                            strides.at(i), padding_type, out_ptr,
+                            padding_before_ptr, padding_after_ptr);
+    } else {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), strides.at(i),
+                            padding_type, out_ptr, padding_before_ptr,
+                            padding_after_ptr);
+    }
   }
 }
 
