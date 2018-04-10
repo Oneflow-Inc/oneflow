@@ -68,4 +68,14 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg,
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_ADD_VAL_IN_PBRF, PROTOBUF_BASIC_DATA_TYPE_SEQ)
 
+PersistentOutStream& operator<<(PersistentOutStream& out_stream,
+                                const PbMessage& msg) {
+  std::string msg_bin;
+  msg.SerializeToString(&msg_bin);
+  int64_t msg_size = msg_bin.size();
+  CHECK_GT(msg_size, 0);
+  out_stream << msg_size << msg_bin;
+  return out_stream;
+}
+
 }  // namespace oneflow

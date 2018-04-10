@@ -9,6 +9,7 @@
 #include <google/protobuf/message.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
 
@@ -140,6 +141,10 @@ const T* GetMsgPtrFromPbMessage(const PbMessage& msg,
     return nullptr;
   }
 }
+
+// Persistent
+
+PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 
 }  // namespace oneflow
 

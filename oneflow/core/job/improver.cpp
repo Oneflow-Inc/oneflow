@@ -45,9 +45,9 @@ uint64_t CalcRegstNum(
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<ActEvent>* act_events) {
   NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
-  size_t act_event_size;
+  int64_t act_event_size;
   while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size),
-                         sizeof(size_t))) {
+                         sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);
     CHECK(!in_stream.Read(buffer.data(), act_event_size));
     act_events->emplace_back();
