@@ -79,9 +79,6 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
-  if (GetActivationType() != ActivationType::kNone) {
-    EnrollDataTmpBn("activation_buf");
-  }
 }
 
 template<int32_t NDims>

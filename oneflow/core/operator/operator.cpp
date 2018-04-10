@@ -21,6 +21,13 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
     op_conf_.set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
+  if (HasFieldInCustomizedConf("activation")) {
+    ActivationType activation =
+        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+    if (activation != ActivationType::kNone) {
+      EnrollDataTmpBn("activation_buf");
+    }
+  }
   InitFromOpConf();
 }
 

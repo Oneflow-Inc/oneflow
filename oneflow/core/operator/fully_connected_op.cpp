@@ -14,9 +14,6 @@ void FullyConnectedOp::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   }
-  if (op_conf().fully_connected_conf().activation() != ActivationType::kNone) {
-    EnrollDataTmpBn("activation_buf");
-  }
 }
 
 bool FullyConnectedOp::NeedOutWhenBackward() const {
