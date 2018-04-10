@@ -28,17 +28,6 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
-template<typename T>
-__global__ void ReluForwardGpu(const int64_t n, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
-}
-
-template<typename T>
-__global__ void ReluBackwardGpu(const int64_t n, const T* dy, const T* y,
-                                T* dx) {
-  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
-}
-
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -203,13 +192,11 @@ KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
   BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
 }
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-  ReluForwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                      ctx->cuda_stream()>>>(n, x, y);
+  FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
 }
 KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                                 const T* y, const T* dy, T* dx) {
-  ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                       ctx->cuda_stream()>>>(n, dy, y, dx);
+  BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
 }
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,

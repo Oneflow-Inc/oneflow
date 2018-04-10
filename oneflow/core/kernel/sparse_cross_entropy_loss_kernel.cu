@@ -15,9 +15,10 @@ __global__ void SparseCrossEntropyLossForwardGpu(const int64_t instance_num,
                                                  const LabelType* labels,
                                                  PredType* loss) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
-    PredType prob =
-        prediction[i * num_of_classes + static_cast<int64_t>(labels[i])];
-    loss[i] = -SAFE_LOG(prob);
+    int64_t label = static_cast<int64_t>(labels[i]);
+    assert(label >= 0);
+    assert(label < num_of_classes);
+    loss[i] = -SAFE_LOG(prediction[i * num_of_classes + label]);
   }
 }
 

@@ -37,8 +37,7 @@ class ConvOp : public Operator {
   virtual ~ConvOp() = default;
 
   void InitFromOpConf() override;
-
-  bool NeedOutWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext*, DeviceType) const override;
