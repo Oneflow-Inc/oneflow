@@ -73,6 +73,23 @@ const std::string& Operator::SoleDtbn() const {
   return *(data_tmp_bns_.begin());
 }
 
+void Operator::InferBlobDescsIf(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type, EnrollOpCtx);
+  if (HasFieldInCustomizedConf("activation")) {
+    ActivationType activation =
+        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+    if (activation != ActivationType::kNone
+        && Global<JobDesc>::Get()->IsTrain()) {
+      BlobDesc* buf_blob_desc = GetBlobDesc4BnInOp("activation_buf");
+      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+      *buf_blob_desc = *out_blob_desc;
+    }
+  }
+}
+
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type,
