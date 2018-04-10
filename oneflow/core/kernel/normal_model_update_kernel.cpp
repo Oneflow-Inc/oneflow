@@ -78,8 +78,8 @@ Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
   }
 }
 
-double ExponetialDecayedLearningRate(const ExponentialDecayConf& conf,
-                                     double lr, int64_t now_batch_num) {
+double ExponentialDecayedLearningRate(const ExponentialDecayConf& conf,
+                                      double lr, int64_t now_batch_num) {
   CHECK_GT(conf.decay_batches(), 0);
   double p = static_cast<double>(now_batch_num)
              / static_cast<double>(conf.decay_batches());
@@ -165,9 +165,9 @@ double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf,
 
 double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr,
                               int64_t now_batch_num) {
-  if (conf.has_exponetial_conf()) {
-    return ExponetialDecayedLearningRate(conf.exponetial_conf(), lr,
-                                         now_batch_num);
+  if (conf.has_exponential_conf()) {
+    return ExponentialDecayedLearningRate(conf.exponential_conf(), lr,
+                                          now_batch_num);
   } else if (conf.has_inverse_time_conf()) {
     return InverseTimeDecayedLearningRate(conf.inverse_time_conf(), lr,
                                           now_batch_num);

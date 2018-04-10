@@ -1,5 +1,6 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
+#include "oneflow/core/job/profiler.h"
 
 namespace oneflow {
 
@@ -207,6 +208,14 @@ void CtrlServer::EraseCountHandler(
   CHECK_EQ(count_.erase(call->request().key()), 1);
   call->SendResponse();
   ENQUEUE_REQUEST(EraseCount);
+}
+
+void CtrlServer::PushAvgActIntervalHandler(
+    CtrlCall<PushAvgActIntervalRequest, PushAvgActIntervalResponse>* call) {
+  Global<Profiler>::Get()->PushAvgActInterval(
+      call->request().actor_id(), call->request().avg_act_interval());
+  call->SendResponse();
+  ENQUEUE_REQUEST(PushAvgActInterval);
 }
 
 }  // namespace oneflow

@@ -80,6 +80,18 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
+  if (GetActivationType() != ActivationType::kNone) {
+    EnrollDataTmpBn("activation_buf");
+  }
+}
+
+template<int32_t NDims>
+bool ConvOp<NDims>::NeedOutWhenBackward() const {
+  if (GetActivationType() != ActivationType::kNone) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 template<int32_t NDims>
@@ -113,6 +125,10 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
+  if (GetActivationType() != ActivationType::kNone
+      && Global<JobDesc>::Get()->IsTrain()) {
+    GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
+  }
 
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
@@ -124,7 +140,7 @@ void ConvOp<NDims>::InferBlobDescs(
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    // bias and bias_multipler
+    // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
     if (!UseCudnn(device_type)) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
@@ -198,6 +214,11 @@ void ConvOp<NDims>::VirtualGenKernelConf(
         static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
 #endif  // WITH_CUDA
+
+  ActivationType activation = GetActivationType();
+  if (activation != ActivationType::kNone) {
+    kernel_conf->mutable_conv_conf()->set_activation(activation);
+  }
 }
 
 template<int32_t NDims>
@@ -222,6 +243,11 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
 template<int32_t NDims>
 int32_t ConvOp<NDims>::MaxModelSplitNum() const {
   return GetValFromCustomizedConf<int32_t>("filters");
+}
+
+template<int32_t NDims>
+ActivationType ConvOp<NDims>::GetActivationType() const {
+  return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
 }
 
 #ifdef WITH_CUDA
