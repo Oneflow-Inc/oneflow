@@ -274,8 +274,8 @@ void ConvOp<NDims>::VirtualGenKernelConf(
   if (activation != ActivationType::kNone) {
     kernel_conf->mutable_conv_conf()->set_activation(activation);
   }
-  conv_conf->set_dim(NDims);
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
+  conv_conf->set_dim(NDims);
   if (!UseCudnn(kernel_conf->device_type())) {
     GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
   } else {
