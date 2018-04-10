@@ -160,6 +160,23 @@ void KernelIfWithModel<device_type, ModelType>::L2Regularization(
 }
 
 template<DeviceType device_type, typename T>
+ActivationType KernelIfWithActivation<device_type, T>::GetActivationType()
+    const {
+  return static_cast<ActivationType>(
+      this->GetEnumFromCustomizedOpConf("activation"));
+}
+
+template<DeviceType device_type, typename T>
+const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->GetActivationType() != ActivationType::kNone) {
+    return BnInOp2Blob("activation_buf");
+  } else {
+    return BnInOp2Blob("out_diff");
+  }
+}
+
+template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::ForwardActivateDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -209,13 +226,6 @@ void KernelIfWithActivation<device_type, T>::BackwardActivateDataContent(
       default: UNIMPLEMENTED();
     }
   }
-}
-
-template<DeviceType device_type, typename T>
-ActivationType KernelIfWithActivation<device_type, T>::GetActivationType()
-    const {
-  return static_cast<ActivationType>(
-      this->GetEnumFromCustomizedOpConf("activation"));
 }
 
 namespace {

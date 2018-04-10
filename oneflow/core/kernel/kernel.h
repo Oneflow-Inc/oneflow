@@ -182,6 +182,8 @@ class KernelIfWithActivation : public KernelIfWithModel<device_type, T> {
   KernelIfWithActivation() = default;
 
   ActivationType GetActivationType() const;
+  const Blob* GetOutDiffBlob(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void ForwardActivateDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
