@@ -19,11 +19,12 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
+bool NeedModelSave(int64_t model_version_id);
 
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor() = default;
+  virtual ~Actor();
 
   void Init(const TaskProto&, const ThreadCtx&);
 
@@ -122,6 +123,10 @@ class Actor {
   int64_t writeable_produced_regst_desc_num_;
   int64_t total_reading_cnt_;
   int64_t remaining_eord_cnt_;
+
+  // Profile
+  double last_act_start_time_;
+  double act_interval_acc_;
 };
 
 void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);

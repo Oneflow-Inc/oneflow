@@ -18,9 +18,8 @@ void Kernel::InitModelAndModelTmp(
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
   }
   if (model_load_dir == "") {
-    int64_t random_seed = *static_cast<int64_t*>(ctx.other);
-    std::mt19937 random_seed_gen(random_seed);
-    InitModelBlobsWithRandomSeed(ctx.device_ctx, &random_seed_gen, BnInOp2Blob);
+    std::mt19937* random_seed_gen = static_cast<std::mt19937*>(ctx.other);
+    InitModelBlobsWithRandomSeed(ctx.device_ctx, random_seed_gen, BnInOp2Blob);
   } else {
     int32_t part_id = -1;
     int32_t part_num = -1;
@@ -183,11 +182,15 @@ std::unique_ptr<const Kernel> ConstructKernel(
   return std::unique_ptr<const Kernel>(rptr);
 }
 
-#define INSTANTIATE_KERNEL_IF(device_type, data_type_pair) \
-  template class KernelIfWithModel<device_type,            \
+#define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;
+
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
+
+#define INSTANTIATE_KERNEL_IF_WITH_MODEL(device_type, data_type_pair) \
+  template class KernelIfWithModel<device_type,                       \
                                    OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_WITH_MODEL,
+                                 DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -10,7 +10,9 @@ op {
         dim: 28
         dim: 28
       }
-      raw {
+      encode_case {
+        raw {
+        }
       }
     }
     blob {
@@ -18,7 +20,9 @@ op {
       data_type: kInt32
       shape {
       }
-      raw {
+      encode_case {
+        raw {
+        }
       }
     }
   }

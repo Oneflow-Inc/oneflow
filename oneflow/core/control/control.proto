@@ -81,3 +81,26 @@ message ClearRequest {
 message ClearResponse {
 }
 
+message IncreaseCountRequest {
+  required string key = 1;
+  required int32 val = 2;
+}
+
+message IncreaseCountResponse {
+  required int32 val = 1;
+}
+
+message EraseCountRequest {
+  required string key = 1;
+}
+
+message EraseCountResponse {
+}
+
+message PushAvgActIntervalRequest {
+  required int64 actor_id = 1;
+  required double avg_act_interval = 2;
+}
+
+message PushAvgActIntervalResponse {
+}

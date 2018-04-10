@@ -115,15 +115,12 @@ class FileSystem {
 
   // Creates the specified directory.
   virtual void CreateDir(const std::string& dirname) = 0;
-
   void CreateDirIfNotExist(const std::string& dirname);
-
-  bool IsDirEmpty(const std::string& dirname);
-
-  // Creates the specified directory and all the necessary
-  // subdirectories.
   virtual void RecursivelyCreateDir(const std::string& dirname);
+  void RecursivelyCreateDirIfNotExist(const std::string& dirname);
 
+  // Empty
+  bool IsDirEmpty(const std::string& dirname);
   void MakeEmptyDir(const std::string& dirname);
 
   // Deletes the specified directory.
