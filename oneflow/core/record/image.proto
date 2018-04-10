@@ -10,15 +10,20 @@ message ImageResize {
   required ImageSize size = 1;
 }
 
+message ImageMirror {
+}
+
 message ImageCrop {
-  required int32 x = 1;
-  required int32 y = 2;
-  required ImageSize size = 3;
+  optional bool random_xy = 1 [default = true];
+  optional int32 x = 2;
+  optional int32 y = 3;
+  required ImageSize size = 4;
 }
 
 message ImagePreprocess {
   oneof preprocess {
     ImageResize resize = 1;
     ImageCrop crop = 2;
+    ImageMirror mirror = 3;
   }
 }

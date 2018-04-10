@@ -13,7 +13,8 @@ class OFRecordDecoderImpl<EncodeCase::kJpeg, T> final
   int32_t GetColNumOfFeature(const Feature&,
                              int64_t one_col_elem_num) const override;
   void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf&, int32_t col_id,
-                  T* out_dptr, int64_t one_col_elem_num) const override;
+                  T* out_dptr, int64_t one_col_elem_num,
+                  std::mt19937* random) const override;
 };
 
 }  // namespace oneflow

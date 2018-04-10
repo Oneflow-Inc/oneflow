@@ -14,7 +14,7 @@ class OFRecordDecoderIf {
 
   virtual int32_t DecodeOneCol(DeviceCtx*, RecordBlob<OFRecord>*,
                                const BlobConf&, int32_t cur_col_id,
-                               Blob* out_blob) const = 0;
+                               Blob* out_blob, std::mt19937* random) const = 0;
 
  protected:
   OFRecordDecoderIf() = default;
@@ -29,15 +29,16 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   virtual ~OFRecordDecoder() = default;
 
   int32_t DecodeOneCol(DeviceCtx*, RecordBlob<OFRecord>*, const BlobConf&,
-                       int32_t cur_col_id, Blob* out_blob) const override;
+                       int32_t cur_col_id, Blob* out_blob,
+                       std::mt19937* random) const override;
 
  protected:
   OFRecordDecoder() = default;
   virtual int32_t GetColNumOfFeature(const Feature&,
                                      int64_t one_col_elem_num) const = 0;
   virtual void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf&,
-                          int32_t col_id, T* out_dptr,
-                          int64_t one_col_elem_num) const = 0;
+                          int32_t col_id, T* out_dptr, int64_t one_col_elem_num,
+                          std::mt19937* random) const = 0;
 
  private:
   // return: max_col_num
@@ -45,7 +46,8 @@ class OFRecordDecoder : public OFRecordDecoderIf {
                      Blob* out_blob) const;
   void ReadDataId(DeviceCtx*, RecordBlob<OFRecord>*, Blob* out_blob) const;
   void ReadDataContent(DeviceCtx*, RecordBlob<OFRecord>*, const BlobConf&,
-                       int32_t col_id, Blob* out_blob) const;
+                       int32_t col_id, Blob* out_blob,
+                       std::mt19937* random) const;
 };
 
 template<EncodeCase encode_case, typename T>

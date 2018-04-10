@@ -15,7 +15,8 @@ class ImagePreprocessIf {
   virtual ~ImagePreprocessIf() = default;
 
   virtual void DoPreprocess(cv::Mat* image,
-                            const ImagePreprocess& preprocess_conf) const = 0;
+                            const ImagePreprocess& preprocess_conf,
+                            std::mt19937* random) const = 0;
 
  protected:
   ImagePreprocessIf() = default;
@@ -31,8 +32,8 @@ class ImagePreprocessImpl<PreprocessCase::kResize> final
     : public ImagePreprocessIf {
  public:
  private:
-  void DoPreprocess(cv::Mat* image,
-                    const ImagePreprocess& preprocess_conf) const override;
+  void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
+                    std::mt19937* random) const override;
 };
 
 template<>
@@ -40,12 +41,22 @@ class ImagePreprocessImpl<PreprocessCase::kCrop> final
     : public ImagePreprocessIf {
  public:
  private:
-  void DoPreprocess(cv::Mat* image,
-                    const ImagePreprocess& preprocess_conf) const override;
+  void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
+                    std::mt19937* random) const override;
+};
+
+template<>
+class ImagePreprocessImpl<PreprocessCase::kMirror> final
+    : public ImagePreprocessIf {
+ public:
+ private:
+  void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
+                    std::mt19937* random) const override;
 };
 
 #define PREPROCESS_CASE_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kResize) \
+  OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kMirror) \
   OF_PP_MAKE_TUPLE_SEQ(PreprocessCase::kCrop)
 
 ImagePreprocessIf* GetImagePreprocess(PreprocessCase);
