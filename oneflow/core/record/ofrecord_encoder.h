@@ -13,8 +13,9 @@ class OFRecordEncoderIf {
 
   static void EncodeOneDataId(DeviceCtx* ctx, const char* data_id_str,
                               OFRecord& record) {
-    record.mutable_feature()->at("data_id").mutable_bytes_list()->add_value(
-        data_id_str);
+    Feature tmp_feature;
+    tmp_feature.mutable_bytes_list()->add_value(data_id_str);
+    CHECK(record.mutable_feature()->insert({"data_id", tmp_feature}).second);
   }
   virtual void EncodeOneCol(DeviceCtx*, const Blob* in_blob, int64_t in_offset,
                             Feature&, const std::string& field_name,
