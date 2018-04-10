@@ -116,7 +116,7 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after,
-                     std::vector<int32_t>* dalition_rate) {
+                     std::vector<int32_t>* dilation_rate) {
   CHECK(out);
   out->clear();
   out->resize(3);
@@ -134,8 +134,8 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
         padding_before ? (&(*padding_before).at(i)) : nullptr;
     int32_t* padding_after_ptr =
         padding_after ? (&(*padding_after).at(i)) : nullptr;
-    if (dalition_rate) {
-      GetWindowedOutputSize(in.at(i), pool_size.at(i), dalition_rate->at(i),
+    if (dilation_rate) {
+      GetWindowedOutputSize(in.at(i), pool_size.at(i), dilation_rate->at(i),
                             strides.at(i), padding_type, out_ptr,
                             padding_before_ptr, padding_after_ptr);
     } else {

@@ -49,7 +49,7 @@ void Get3DOutputSize(const std::vector<int64_t>& in,
                      const std::string& padding_type, std::vector<int64_t>* out,
                      std::vector<int32_t>* padding_before,
                      std::vector<int32_t>* padding_after,
-                     std::vector<int32_t>* dalition_rate);
+                     std::vector<int32_t>* dilation_rate);
 
 }  // namespace oneflow
 
