@@ -29,8 +29,6 @@ class PoolingOp : public Operator {
       KernelConf* kernel_conf) const override;
 
  private:
-  std::vector<int32_t> Get3DVecInOpConf(const std::string& field_name) const;
-  int64_t GetInDim(const Shape& in_shape, uint8_t dim) const;
   void CheckPoolSizeAndStrides() const;
   Shape GetOutShape(int64_t in_n, int64_t in_c,
                     const std::vector<int64_t>& out) const;
