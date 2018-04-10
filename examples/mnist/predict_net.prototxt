@@ -157,11 +157,11 @@ op {
   print_conf {
     in {
       lbn: "softmax_loss/loss"
-    }
-    print_dir: "/tmp/predict_result"
-    encode_case {
-      raw {
+      encode_case {
+        raw {
+        }
       }
     }
+    print_dir: "/tmp/predict_result"
   }
 }

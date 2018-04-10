@@ -52,11 +52,11 @@ void PrintKernel::Forward(
       const PrintRecordConf& cur_print_conf = conf.in(blob_id);
       std::string field_name = cur_print_conf.lbn();
       if (cur_print_conf.has_name()) { field_name = cur_print_conf.name(); }
-      CHECK(record.feature().find(field_name) != record.feature().end())
+      CHECK(record.feature().find(field_name) == record.feature().end())
           << "Field " << field_name << " found repeatedly in OfRecord";
       int64_t one_col_elem_num = cur_blob->shape().Count(1);
-      Feature& feature = record.mutable_feature()->at(field_name);
-      GetOFRecordEncoder(conf.encode_case().encode_case(),
+      Feature& feature = (*(record.mutable_feature()))[field_name];
+      GetOFRecordEncoder(cur_print_conf.encode_case().encode_case(),
                          cur_blob->data_type())
           ->EncodeOneCol(ctx.device_ctx, cur_blob, record_id * one_col_elem_num,
                          feature, field_name, one_col_elem_num);
