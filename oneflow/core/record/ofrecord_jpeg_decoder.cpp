@@ -18,10 +18,11 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
   cv::_InputArray image_data(src_data.data(), src_data.size());
   cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
   CHECK(image.isContinuous());
-  FOR_RANGE(size_t, i, 0, blob_conf.jpeg().preprocess_size()) {
-    ImagePreprocessIf* preprocess =
-        GetImagePreprocess(blob_conf.jpeg().preprocess(i).preprocess_case());
-    preprocess->DoPreprocess(&image, blob_conf.jpeg().preprocess(i));
+  FOR_RANGE(size_t, i, 0, blob_conf.encode_case().jpeg().preprocess_size()) {
+    ImagePreprocessIf* preprocess = GetImagePreprocess(
+        blob_conf.encode_case().jpeg().preprocess(i).preprocess_case());
+    preprocess->DoPreprocess(&image,
+                             blob_conf.encode_case().jpeg().preprocess(i));
   }
   CHECK_EQ(blob_conf.shape().dim_size(), 3);
   FOR_RANGE(size_t, i, 0, image.dims) {
