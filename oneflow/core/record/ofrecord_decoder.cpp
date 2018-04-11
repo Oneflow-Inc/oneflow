@@ -9,10 +9,7 @@ namespace {
 template<typename T>
 void DoSubtractPreprocess(const SubtractPreprocessConf& conf, T* dptr,
                           int64_t n) {
-  FOR_RANGE(size_t, i, 0, n) {
-    (*dptr) -= conf.value();
-    ++dptr;
-  }
+  FOR_RANGE(size_t, i, 0, n) { (*(dptr++)) -= conf.value(); }
 }
 
 template<typename T>
@@ -21,36 +18,32 @@ void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
   if (conf.data_format() == "channels_last") {
     int64_t channel_dim = shape.NumAxes() - 1;
     CHECK_EQ(shape.At(channel_dim), conf.mean_value_size());
-    FOR_RANGE(size_t, i, 0, shape.Count(1, channel_dim)) {
-      FOR_RANGE(size_t, j, 0, shape.At(channel_dim)) {
-        (*dptr) -= conf.mean_value(j);
-        ++dptr;
+    std::vector<float> std_value(conf.mean_value_size(), 1.0);
+    if (conf.std_value_size() > 0) {
+      CHECK_EQ(conf.mean_value_size(), conf.std_value_size());
+      FOR_RANGE(size_t, i, 0, conf.std_value_size()) {
+        std_value[i] = conf.std_value(i);
       }
     }
-    if (conf.std_value_size() > 0) {
-      CHECK_EQ(shape.At(channel_dim), conf.std_value_size());
-      FOR_RANGE(size_t, i, 0, shape.Count(1, channel_dim)) {
-        FOR_RANGE(size_t, j, 0, shape.At(channel_dim)) {
-          (*dptr) /= conf.std_value(j);
-          ++dptr;
-        }
+    FOR_RANGE(size_t, i, 0, shape.Count(1, channel_dim)) {
+      FOR_RANGE(size_t, j, 0, shape.At(channel_dim)) {
+        (*dptr) = ((*dptr) - conf.mean_value(j)) / std_value[j];
+        ++dptr;
       }
     }
   } else if (conf.data_format() == "channels_first") {
     CHECK_EQ(shape.At(1), conf.mean_value_size());
-    FOR_RANGE(size_t, i, 0, shape.At(1)) {
-      FOR_RANGE(size_t, j, 0, shape.Count(2)) {
-        (*dptr) -= conf.mean_value(i);
-        ++dptr;
+    std::vector<float> std_value(conf.mean_value_size(), 1.0);
+    if (conf.std_value_size() > 0) {
+      CHECK_EQ(conf.mean_value_size(), conf.std_value_size());
+      FOR_RANGE(size_t, i, 0, conf.std_value_size()) {
+        std_value[i] = conf.std_value(i);
       }
     }
-    if (conf.std_value_size() > 0) {
-      CHECK_EQ(shape.At(1), conf.std_value_size());
-      FOR_RANGE(size_t, i, 0, shape.At(1)) {
-        FOR_RANGE(size_t, j, 0, shape.Count(2)) {
-          (*dptr) /= conf.std_value(i);
-          ++dptr;
-        }
+    FOR_RANGE(size_t, i, 0, shape.At(1)) {
+      FOR_RANGE(size_t, j, 0, shape.Count(2)) {
+        (*dptr) = ((*dptr) - conf.mean_value(i)) / std_value[i];
+        ++dptr;
       }
     }
   } else if (conf.data_format() == "no_channel") {
@@ -67,10 +60,7 @@ void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
 
 template<typename T>
 void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
-  FOR_RANGE(size_t, i, 0, n) {
-    (*dptr) *= conf.value();
-    ++dptr;
-  }
+  FOR_RANGE(size_t, i, 0, n) { (*(dptr++)) *= conf.value(); }
 }
 
 template<typename T>
