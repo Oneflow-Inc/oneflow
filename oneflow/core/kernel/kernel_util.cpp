@@ -379,6 +379,4 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
   template struct KernelUtil<DeviceType::kCPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
-template struct KernelUtil<DeviceType::kCPU, char>;
-
 }  //  namespace oneflow

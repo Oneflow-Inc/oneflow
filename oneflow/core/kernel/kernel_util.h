@@ -173,16 +173,6 @@ struct KernelUtil<DeviceType::kCPU, T,
                                  uint32_t random_seed, Blob* blob);
 };
 
-template<>
-struct KernelUtil<DeviceType::kCPU, char> {
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                        const int64_t* x_shape, const int64_t* y_shape,
-                        const int32_t* permutation, const int64_t elem_cnt,
-                        const char* x, char* y) {
-    UNIMPLEMENTED();
-  }
-};
-
 template<typename T, typename Derived>
 struct GpuKernelUtilIf {
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
@@ -255,16 +245,6 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy) {
     TODO();
-  }
-};
-
-template<>
-struct KernelUtil<DeviceType::kGPU, char> {
-  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                        const int64_t* x_shape, const int64_t* y_shape,
-                        const int32_t* permutation, const int64_t elem_cnt,
-                        const char* x, char* y) {
-    UNIMPLEMENTED();
   }
 };
 

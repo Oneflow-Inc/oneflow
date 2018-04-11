@@ -34,14 +34,6 @@ class BlobImpl final : public Blob {
   }
   ~BlobImpl() = default;
 
-  void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                 const PbRf<int32_t>& permutation) const override {
-    KernelUtil<device_type, T>::Transpose(
-        ctx, this->shape().NumAxes(), this->shape().dim_vec().data(),
-        out_blob->shape().dim_vec().data(), permutation.data(),
-        this->shape().elem_cnt(), this->dptr<T>(), out_blob->mut_dptr<T>());
-  }
-
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
     Memcpy<device_type>(device_ctx, mut_dptr(), rhs->dptr(),

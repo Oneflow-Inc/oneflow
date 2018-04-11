@@ -16,11 +16,13 @@ void TransposeTestCase_2d(OpKernelTestCase* transpose_test_case,
 
   BlobDesc* blob_desc =
       new BlobDesc(Shape({1, 2, 3}), GetDataType<T>::value, false, false, 1);
+  BlobDesc* trans_blob_desc =
+      new BlobDesc(Shape({1, 3, 2}), GetDataType<T>::value, false, false, 1);
   transpose_test_case->template InitBlob<T>("in", blob_desc,
                                             {1, 2, 3, 4, 5, 6});
-  transpose_test_case->template InitBlob<T>(GenDiffBn("out"), blob_desc,
+  transpose_test_case->template InitBlob<T>(GenDiffBn("out"), trans_blob_desc,
                                             {-8, 7, -6, 5, -4, 3});
-  transpose_test_case->template ForwardCheckBlob<T>("out", blob_desc,
+  transpose_test_case->template ForwardCheckBlob<T>("out", trans_blob_desc,
                                                     {1, 4, 2, 5, 3, 6});
   transpose_test_case->template BackwardCheckBlob<T>(GenDiffBn("in"), blob_desc,
                                                      {-8, -6, -4, 7, 5, 3});
@@ -35,6 +37,7 @@ DiffKernelImplTestCase* DiffTransposeKernelImpl_cfirst_to_clast(
       new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
                                  DataType4CppTypeString(cpp_type));
   Shape shape({100, 3, 128, 128});
+  Shape trans_shape({100, 128, 128, 3});
   auto* conf = test_case->mut_op_conf()->mutable_transpose_conf();
   conf->add_perm(2);
   conf->add_perm(3);
@@ -43,7 +46,7 @@ DiffKernelImplTestCase* DiffTransposeKernelImpl_cfirst_to_clast(
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {{GenDiffBn("in")}});
   test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
-  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+  test_case->SetInputBlobDesc(GenDiffBn("out"), trans_shape,
                               DataType4CppTypeString(cpp_type));
   return test_case;
 }
@@ -58,6 +61,7 @@ DiffKernelImplTestCase* DiffTransposeKernelImpl_clast_to_cfirst(
       new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
                                  DataType4CppTypeString(cpp_type));
   Shape shape({100, 108, 128, 3});
+  Shape trans_shape({100, 128, 128, 3});
   auto* conf = test_case->mut_op_conf()->mutable_transpose_conf();
   conf->add_perm(3);
   conf->add_perm(1);
@@ -66,7 +70,7 @@ DiffKernelImplTestCase* DiffTransposeKernelImpl_clast_to_cfirst(
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")},
                           {{GenDiffBn("in")}});
   test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
-  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+  test_case->SetInputBlobDesc(GenDiffBn("out"), trans_shape,
                               DataType4CppTypeString(cpp_type));
   return test_case;
 }

@@ -44,6 +44,14 @@ cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
 
 constexpr int kCompileTimeCUDAMaxTransposeDims = 8;
 
+struct Int32Array {
+  int32_t val[kCompileTimeCUDAMaxTransposeDims];
+};
+
+struct Int64Array {
+  int64_t val[kCompileTimeCUDAMaxTransposeDims];
+};
+
 __device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
                               const int32_t* permutation, int64_t* x_strides) {
   int64_t buff[kCompileTimeCUDAMaxTransposeDims];
@@ -76,14 +84,24 @@ __device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
 }
 
 template<typename T>
-__global__ void TransposeGpu(const int32_t num_axis, const int64_t* x_shape,
-                             const int64_t* y_shape, const int32_t* permutation,
+__global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
+                             const Int64Array y_shape,
+                             const Int32Array permutation,
                              const int64_t elem_cnt, const T* x, T* y) {
   __shared__ int64_t x_strides[kCompileTimeCUDAMaxTransposeDims];
+  __shared__ int64_t x_dims_shared[kCompileTimeCUDAMaxTransposeDims];
   __shared__ int64_t y_dims_shared[kCompileTimeCUDAMaxTransposeDims];
+  __shared__ int32_t perm_shared[kCompileTimeCUDAMaxTransposeDims];
   const int32_t tid = threadIdx.x;
-  if (tid == 0) { ComputeOffset(num_axis, x_shape, permutation, x_strides); }
-  if (tid < num_axis) { y_dims_shared[tid] = y_shape[tid]; }
+  if (tid < num_axis) {
+    x_dims_shared[tid] = x_shape.val[tid];
+    y_dims_shared[tid] = y_shape.val[tid];
+    perm_shared[tid] = permutation.val[tid];
+  }
+  __syncthreads();
+  if (tid == 0) {
+    ComputeOffset(num_axis, x_dims_shared, perm_shared, x_strides);
+  }
   __syncthreads();
   CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
     const int64_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides, y_idx);
@@ -142,9 +160,16 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
                        const int32_t* permutation, const int64_t elem_cnt,
                        const T* x, T* y) {
   CHECK_LE(num_axis, kCompileTimeCUDAMaxTransposeDims);
+  Int64Array x_shape_struct, y_shape_struct;
+  Int32Array perm_struct;
+  FOR_RANGE(int32_t, i, 0, num_axis) {
+    x_shape_struct.val[i] = x_shape[i];
+    y_shape_struct.val[i] = y_shape[i];
+    perm_struct.val[i] = permutation[i];
+  }
   TransposeGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                    ctx->cuda_stream()>>>(num_axis, x_shape, y_shape,
-                                          permutation, elem_cnt, x, y);
+                    ctx->cuda_stream()>>>(
+      num_axis, x_shape_struct, y_shape_struct, perm_struct, elem_cnt, x, y);
 }
 
 #define KU_FLOATING_METHOD             \
@@ -309,8 +334,6 @@ KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                   KernelUtil<DeviceType::kGPU, type_cpp>>; \
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
-
-template struct KernelUtil<DeviceType::kGPU, char>;
 
 template<>
 __device__ float gpu_atomic_add(float* address, const float val) {
