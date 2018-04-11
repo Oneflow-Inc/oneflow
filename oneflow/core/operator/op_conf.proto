@@ -66,7 +66,7 @@ message Conv1DOpConf {
   required string out = 2;
   required int32 filters = 3;
   optional string padding = 4 [default = "valid"];
-  optional string data_format = 5 [default = "channels_last"];
+  required string data_format = 5;
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -81,7 +81,7 @@ message Conv2DOpConf {
   required string out = 2;
   required int32 filters = 3;
   optional string padding = 4 [default = "valid"];
-  optional string data_format = 5 [default = "channels_last"];
+  required string data_format = 5;
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -96,7 +96,7 @@ message Conv3DOpConf {
   required string out = 2;
   required int32 filters = 3;
   optional string padding = 4 [default = "valid"];
-  optional string data_format = 5 [default = "channels_last"];
+  required string data_format = 5;
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
@@ -120,7 +120,7 @@ message AveragePooling1DOpConf {
   required string out = 2;
 
   optional string padding = 3 [default = "valid"];
-  optional string data_format = 4 [default = "channels_last"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -130,7 +130,7 @@ message MaxPooling1DOpConf {
   required string out = 2;
 
   optional string padding = 3 [default = "valid"];
-  optional string data_format = 4 [default = "channels_last"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -140,7 +140,7 @@ message AveragePooling2DOpConf {
   required string out = 2;
 
   optional string padding = 3 [default = "valid"];
-  optional string data_format = 4 [default = "channels_last"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -150,7 +150,7 @@ message MaxPooling2DOpConf {
   required string out = 2;
 
   optional string padding = 3 [default = "valid"];
-  optional string data_format = 4 [default = "channels_last"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -160,7 +160,7 @@ message AveragePooling3DOpConf {
   required string out = 2;
 
   optional string padding = 3 [default = "valid"];
-  optional string data_format = 4 [default = "channels_last"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -170,7 +170,7 @@ message MaxPooling3DOpConf {
   required string out = 2;
 
   optional string padding = 3 [default = "valid"];
-  optional string data_format = 4 [default = "channels_last"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -364,6 +364,7 @@ message ModelSaveOpConf {
 message PrintRecordConf {
   required string lbn = 1;
   optional string name = 2;
+  required EncodeConf encode_case = 3;
 }
 
 message PrintOpConf {
@@ -371,7 +372,6 @@ message PrintOpConf {
   required string print_dir = 2;
   optional string part_name_prefix = 3 [default = "part-"];
   optional int32 part_name_suffix_length = 4 [default = -1];
-  required EncodeConf encode_case = 5;
 }
 
 message LossPrintOpConf {
@@ -446,12 +446,35 @@ message EncodeJpeg {
   repeated ImagePreprocess preprocess = 1;
 }
 
+message SubtractPreprocessConf {
+  required float value = 1;
+}
+
+message NormByChannelPreprocessConf {
+  repeated float mean_value = 1;
+  repeated float std_value = 2;
+  required string data_format = 3;
+}
+
+message ScalePreprocessConf {
+  required float value = 1;
+}
+
+message PreprocessConf {
+  oneof type {
+    SubtractPreprocessConf subtract_conf = 1;
+    NormByChannelPreprocessConf norm_by_channel_conf = 2;
+    ScalePreprocessConf scale_conf = 3;
+  }
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
   required EncodeConf encode_case = 5;
+  repeated PreprocessConf preprocess = 6;
 }
 
 message DecodeOFRecordOpConf {

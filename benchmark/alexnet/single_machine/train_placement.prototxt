@@ -4,7 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "first:cpu:120"
+    device_name: "first:cpu:30"
   }
 }
 

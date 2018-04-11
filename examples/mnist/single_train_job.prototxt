@@ -21,7 +21,7 @@ train_conf {
       std: 0.1
     }
   }
-  num_of_pieces_in_batch: 10
+  num_of_pieces_in_batch: 100
   model_update_conf {
     learning_rate: 0.01
     naive_conf {

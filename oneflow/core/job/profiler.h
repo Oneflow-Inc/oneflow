@@ -14,14 +14,26 @@ class Profiler final {
   void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
   void PushAvgActTime(int64_t actor_id, double avg_act_time);
 
-  void PrintProfileResult();
+  void Profile();
 
  private:
-  struct ActorProfileInfo {
-    ActorProfileInfo() : avg_act_interval(-1.0), avg_act_time(-1.0) {}
+  class ActorProfileInfo {
+   public:
+    ActorProfileInfo() : avg_act_interval_(-1.0), avg_act_time_(-1.0) {}
 
-    double avg_act_interval;
-    double avg_act_time;
+    double avg_act_interval() const { return avg_act_interval_; }
+    double avg_act_time() const { return avg_act_time_; }
+
+    double CalcBottleNeckScore() const {
+      return avg_act_time_ / avg_act_interval_;
+    }
+
+    void set_avg_act_interval(double val) { avg_act_interval_ = val; }
+    void set_avg_act_time(double val) { avg_act_time_ = val; }
+
+   private:
+    double avg_act_interval_;
+    double avg_act_time_;
   };
 
   HashMap<int64_t, ActorProfileInfo> actor_id2profile_info_;
