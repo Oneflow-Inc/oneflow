@@ -199,28 +199,45 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
   BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
 }
 
+#define BEFORE_CPU_INITIALIZE                                       \
+  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                 \
+  char* host_raw_dptr = nullptr;                                    \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
+  std::unique_ptr<Blob> host_blob;                                  \
+  host_blob.reset(                                                  \
+      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+
+#define AFTER_CPU_INITIALIZE                                         \
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(), \
+                           blob->ByteSizeOfDataContentField(),       \
+                           cudaMemcpyHostToDevice);                  \
+  cudaStreamSynchronize(ctx->cuda_stream());                         \
+  CudaCheck(cudaFreeHost(host_raw_dptr));
+
+KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob) {
+  // create temporary host blob store initializer result
+  BEFORE_CPU_INITIALIZE;
+  // synchronous initialize the host blob
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
+      nullptr, initializer_conf, random_seed, host_blob.get());
+  AFTER_CPU_INITIALIZE;
+  // asynchronous copy to device
+}
+
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob,
                                       const std::string data_format) {
   // create temporary host blob store initializer result
-  BlobDesc blob_desc = BlobDesc(blob->blob_desc());
-  char* host_raw_dptr = nullptr;
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-  std::unique_ptr<Blob> host_blob;
-  host_blob.reset(
-      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+  BEFORE_CPU_INITIALIZE;
   // synchronous initialize the host blob
   KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
       nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
   // asynchronous copy to device
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),
-                           blob->ByteSizeOfDataContentField(),
-                           cudaMemcpyHostToDevice);
-  cudaStreamSynchronize(ctx->cuda_stream());
-  CudaCheck(cudaFreeHost(host_raw_dptr));
+  AFTER_CPU_INITIALIZE;
 }
-
 KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                      int32_t part_num,
                                      const std::string& model_dir, Blob* blob,

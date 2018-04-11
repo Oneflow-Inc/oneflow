@@ -6,15 +6,14 @@ namespace {
 
 void RandomFillBlob(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                     uint32_t random_seed, Blob* blob) {
-  static const HashMap<
-      int, void (*)(DeviceCtx * ctx, const InitializerConf& initializer_conf,
-                    uint32_t random_seed, Blob* blob, const std::string)>
+  static const HashMap<int, void (*)(DeviceCtx * ctx,
+                                     const InitializerConf& initializer_conf,
+                                     uint32_t random_seed, Blob* blob)>
       fill_funcs = {
 #define RANDOM_FILL_ENTRY(type_cpp, type_proto) \
   {type_proto, &KernelUtil<DeviceType::kCPU, type_cpp>::InitializeWithConf},
           OF_PP_FOR_EACH_TUPLE(RANDOM_FILL_ENTRY, ARITHMETIC_DATA_TYPE_SEQ)};
-  fill_funcs.at(blob->data_type())(ctx, initializer_conf, random_seed, blob,
-                                   "");
+  fill_funcs.at(blob->data_type())(ctx, initializer_conf, random_seed, blob);
 }
 
 }  // namespace

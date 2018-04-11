@@ -270,8 +270,7 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string data_format) {
+                                      uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_conf()) {
     ConstantInitializer<T>(
         static_cast<T>(initializer_conf.constant_conf().value()), blob);
@@ -281,7 +280,15 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else if (initializer_conf.has_random_normal_conf()) {
     RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
                                random_seed, blob);
-  } else if (initializer_conf.has_xavier_conf()) {
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string data_format) {
+  if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
                          data_format);
   } else if (initializer_conf.has_msra_conf()) {
@@ -322,8 +329,7 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
 }
 KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string data_format) {
+                                      uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_int_conf()) {
     ConstantInitializer<T>(
         static_cast<T>(initializer_conf.constant_int_conf().value()), blob);

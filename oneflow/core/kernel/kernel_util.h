@@ -150,8 +150,11 @@ struct KernelUtil<DeviceType::kCPU, T,
 
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob,
-                                 const std::string data_format = "");
+                                 const std::string data_format);
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                 int32_t part_num, const std::string& model_dir,
                                 Blob* blob, const std::string& bn_in_op,
@@ -167,8 +170,7 @@ struct KernelUtil<DeviceType::kCPU, T,
                    const int incx, T* y, const int incy);
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob,
-                                 const std::string data_format = "");
+                                 uint32_t random_seed, Blob* blob);
 };
 
 template<typename T, typename Derived>
@@ -224,8 +226,11 @@ struct KernelUtil<DeviceType::kGPU, T,
 
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob,
-                                 const std::string data_format = "");
+                                 const std::string data_format);
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                 int32_t part_num, const std::string& model_dir,
                                 Blob* blob, const std::string& bn_in_op,
