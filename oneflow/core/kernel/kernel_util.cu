@@ -28,6 +28,12 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
   CUDA_1D_KERNEL_LOOP(i, n) { z[i] = x[i] * y[i]; }
 }
 
+template<typename T>
+__global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx,
+                        T* y, const int incy) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
+}
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -240,6 +246,15 @@ KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                            cudaMemcpyHostToDevice);
   cudaStreamSynchronize(ctx->cuda_stream());
   CudaCheck(cudaFreeHost(host_raw_dptr));
+}
+
+template<typename T>
+void KernelUtil<DeviceType::kGPU, T,
+                typename std::enable_if<IsIntegral<T>::value>::type>::
+    Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
+         T* y, const int incy) {
+  AxpyGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+               ctx->cuda_stream()>>>(n, alpha, x, incx, y, incy);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                      \
