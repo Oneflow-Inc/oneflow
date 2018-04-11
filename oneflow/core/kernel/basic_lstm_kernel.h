@@ -61,7 +61,7 @@ struct BasicLstmKernelUtil {
   static void ComputeForwardGateOut(
       const KernelCtx& ctx, const Blob* i2h_weight, const Blob* hidden,
       const Blob* h2h_weight, const Blob* input, const Blob* bias_mul,
-      const Blob* bias, Blob* gate_tmp_data, Blob* gate_out, bool extra_act,
+      const Blob* bias, Blob* gate_tmp_data, Blob* gate_out,
       FwActivationFunc<device_type, T> activation_func_);
 
   static void ComputeRecCellOutDiff(

@@ -7,9 +7,6 @@ const PbMessage& BasicLstmOp::GetSpecialConf() const {
 }
 
 void BasicLstmOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("gate_tmp_data");
-  EnrollDataTmpBn("c_data");
-  EnrollDataTmpBn("candidate_out");
   InitCellFromOpConf();
 #define OF_INIT_LSTM_GATE_FROM_OP_CONF(out_name, i2h_weight, h2h_weight, \
                                        data_diff, out_diff)              \
@@ -18,15 +15,23 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn(#out_diff);                                            \
   EnrollModelBn(#i2h_weight);                                            \
   EnrollModelBn(#h2h_weight);
-
+  // for f,i.o gate
   OF_INIT_LSTM_GATE_FROM_OP_CONF(f_out, i2h_f_weight, h2h_f_weight, f_data_diff,
                                  f_out_diff);
   OF_INIT_LSTM_GATE_FROM_OP_CONF(i_out, i2h_i_weight, h2h_i_weight, i_data_diff,
                                  i_out_diff);
-  OF_INIT_LSTM_GATE_FROM_OP_CONF(c_out, i2h_c_weight, h2h_c_weight, c_data_diff,
-                                 c_out_diff);
   OF_INIT_LSTM_GATE_FROM_OP_CONF(o_out, i2h_o_weight, h2h_o_weight, o_data_diff,
                                  o_out_diff);
+  // for c_gate
+  EnrollDataTmpBn("c_data");
+  OF_INIT_LSTM_GATE_FROM_OP_CONF(c_out, i2h_c_weight, h2h_c_weight, c_data_diff,
+                                 c_out_diff);
+
+  // candidate_data = rec_cell_out
+  EnrollDataTmpBn("candidate_data");
+  // candidate_out = tanh(rec_cell_out)
+  EnrollDataTmpBn("candidate_out");
+
   if (GetBoolFromSpecialConf("use_forget_bias")) { EnrollModelBn("bias_f"); }
   EnrollModelBn("bias_f");
   EnrollModelBn("bias_i");
@@ -70,8 +75,10 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#bias_name) = BlobDesc(Shape({1, hidden_size}));
 
   OF_INFER_LSTM_GATE_BLOBDESC(gate_tmp_data);
-  OF_INFER_LSTM_GATE_BLOBDESC(c_data);
   OF_INFER_LSTM_GATE_BLOBDESC(candidate_out);
+
+  OF_INFER_LSTM_GATE_BLOBDESC(candidate_data);
+  OF_INFER_LSTM_GATE_BLOBDESC(c_data);
 
   OF_INFER_LSTM_GATE_BLOBDESC(f_out);
   OF_INFER_LSTM_GATE_BLOBDESC(f_data_diff);

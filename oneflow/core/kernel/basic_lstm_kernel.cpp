@@ -80,11 +80,12 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
+  const Blob* cell_blob = this->GetCellBlob(BnInOp2Blob);
   Blob* gate_tmp_data_blob = BnInOp2Blob("gate_tmp_data");
   Blob* c_data_blob = BnInOp2Blob("c_data");
+  Blob* candidate_data_blob = BnInOp2Blob("candidate_data");
   Blob* candidate_out_blob = BnInOp2Blob("candidate_out");
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* rec_cell_in_blob = BnInOp2Blob("rec_cell_in");
   Blob* rec_cell_out_blob = BnInOp2Blob("rec_cell_out");
   Blob* f_out_blob = BnInOp2Blob("f_out");
   Blob* i_out_blob = BnInOp2Blob("i_out");
@@ -95,27 +96,29 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       ctx, BnInOp2Blob("i2h_f_weight"), hidden_blob,
       BnInOp2Blob("h2h_f_weight"), BnInOp2Blob("in"),
       BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_f"), gate_tmp_data_blob,
-      f_out_blob, false, activation_fw_func_);
+      f_out_blob, &KernelUtil<device_type, T>::Sigmoid);
   //  i_out = sigmoid(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, BnInOp2Blob("i2h_i_weight"), hidden_blob,
       BnInOp2Blob("h2h_i_weight"), BnInOp2Blob("in"),
       BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_i"), gate_tmp_data_blob,
-      i_out_blob, false, activation_fw_func_);
+      i_out_blob, &KernelUtil<device_type, T>::Sigmoid);
   // c_out = activation(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, BnInOp2Blob("i2h_c_weight"), hidden_blob,
       BnInOp2Blob("h2h_c_weight"), BnInOp2Blob("in"),
       BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_c"), c_data_blob,
-   //  o_out = sigmoid(W[x, h] + bias)
+      c_out_blob, activation_fw_func_);
+  //  o_out = sigmoid(W[x, h] + bias)
   BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
       ctx, BnInOp2Blob("i2h_o_weight"), hidden_blob,
       BnInOp2Blob("h2h_o_weight"), BnInOp2Blob("in"),
       BnInOp2Blob("bias_multiplier"), BnInOp2Blob("bias_o"), gate_tmp_data_blob,
+      o_out_blob, &KernelUtil<device_type, T>::Sigmoid);
   // rec_cell_out = f_out .* rec_cell_in
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, out_blob->shape().elem_cnt(), f_out_blob->dptr<T>(),
-      rec_cell_in_blob->dptr<T>(), rec_cell_out_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_blob->shape().elem_cnt(),
+                                  f_out_blob->dptr<T>(), cell_blob->dptr<T>(),
+                                  rec_cell_out_blob->mut_dptr<T>());
   // candidate_out = i_out .* c_out
   KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_blob->shape().elem_cnt(),
                                   i_out_blob->dptr<T>(), c_out_blob->dptr<T>(),
@@ -126,11 +129,14 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
       candidate_out_blob->dptr<T>(), static_cast<T>(1),
       rec_cell_out_blob->mut_dptr<T>(), static_cast<T>(1));
 
-  //  candidate_out = activation(rec_cell_out) reuse candidate memory
+  //  candidate_data = rec_cell_out (for BW)
+  candidate_data_blob->CopyDataContentFrom<device_type>(ctx.device_ctx,
+                                                        rec_cell_out_blob);
+  //  candidate_out = activation(candidate_data) reuse candidate_out memory
   (*activation_fw_func_)(ctx.device_ctx, out_blob->shape().elem_cnt(),
-                         rec_cell_out_blob->dptr<T>(),
+                         candidate_data_blob->dptr<T>(),
                          candidate_out_blob->mut_dptr<T>());
-  //  out = o_out * candidate_out
+  //  out = o_out. * candidate_out
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, out_blob->shape().elem_cnt(), o_out_blob->dptr<T>(),
       candidate_out_blob->dptr<T>(), out_blob->mut_dptr<T>());
@@ -155,8 +161,8 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
   Blob* candidate_out_blob = BnInOp2Blob("candidate_out");
 
   if (in_blob->col_id() == in_blob->max_col_id()) {
-    // rec_cell_out_diff = out_diff * o_out * bw(rec_cell_out)
-    // fw(rec_cell_out) = candidate_out
+    // rec_cell_out_diff = out_diff .* o_out .* bw(candidate_data)
+    // fw(candidate_data) = candidate_out
     BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
         ctx, candidate_out_blob, rec_cell_out_diff_blob, activation_bw_func_,
         BnInOp2Blob);
@@ -289,7 +295,7 @@ template<DeviceType device_type, typename T>
 void BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
     const KernelCtx& ctx, const Blob* i2h_weight, const Blob* hidden,
     const Blob* h2h_weight, const Blob* input, const Blob* bias,
-    const Blob* bias_mul, Blob* gate_tmp_data, Blob* gate_out, bool extra_act,
+    const Blob* bias_mul, Blob* gate_tmp_data, Blob* gate_out,
     FwActivationFunc<device_type, T> activation_fw_func_) {
   KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasTrans,
                                        static_cast<T>(1), static_cast<T>(0),
@@ -300,14 +306,8 @@ void BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
   KernelUtil<device_type, T>::BlobGemm(
       ctx.device_ctx, CblasNoTrans, CblasNoTrans, static_cast<T>(1),
       static_cast<T>(1), bias_mul, bias, gate_tmp_data);
-  if (extra_act) {
-    KernelUtil<device_type, T>::Sigmoid(
-        ctx.device_ctx, gate_out->shape().elem_cnt(), gate_tmp_data->dptr<T>(),
-        gate_out->mut_dptr<T>());
-  } else {
-    (*activation_fw_func_)(ctx.device_ctx, gate_out->shape().elem_cnt(),
-                           gate_tmp_data->dptr<T>(), gate_out->mut_dptr<T>());
-  }
+  (*activation_fw_func_)(ctx.device_ctx, gate_out->shape().elem_cnt(),
+                         gate_tmp_data->dptr<T>(), gate_out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
@@ -315,14 +315,16 @@ void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
     const KernelCtx& ctx, const Blob* out_diff, Blob* rec_cell_out_diff,
     BwActivationFunc<device_type, T> activation_bw_func_,
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  // gate_tmp_data  = out_diff .* o_out
   KernelUtil<device_type, T>::Mul(
       ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
       out_diff->dptr<T>(), BnInOp2Blob("o_out")->dptr<T>(),
-      BnInOp2Blob("rec_out_diff")->mut_dptr<T>());
+      BnInOp2Blob("gate_tmp_data")->mut_dptr<T>());
+  //
   (*activation_bw_func_)(ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
-                         BnInOp2Blob("rec_cell_out")->dptr<T>(),
+                         BnInOp2Blob("candidate_data")->dptr<T>(),
                          BnInOp2Blob("candidate_out")->dptr<T>(),
-                         BnInOp2Blob("rec_out_diff")->dptr<T>(),
+                         BnInOp2Blob("gate_tmp_data")->dptr<T>(),
                          rec_cell_out_diff->mut_dptr<T>());
 }
 
