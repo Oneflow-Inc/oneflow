@@ -4,6 +4,95 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+void DoNaiveNormPreprocess(const NaiveNormPreprocessConf& conf, T* dptr,
+                           int64_t n) {
+  FOR_RANGE(size_t, i, 0, n) {
+    (*dptr) = ((*dptr) / 127.5) - 1;
+    ++dptr;
+  }
+}
+
+template<typename T>
+void DoSubtractPreprocess(const SubtractPreprocessConf& conf, T* dptr,
+                          int64_t n) {
+  FOR_RANGE(size_t, i, 0, n) {
+    (*dptr) -= conf.value();
+    ++dptr;
+  }
+}
+
+template<typename T>
+void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
+                               const Shape& shape) {
+  if (conf.data_format() == "channels_last") {
+    int64_t channel_dim = shape.NumAxes() - 1;
+    CHECK_EQ(shape.At(channel_dim), conf.mean_value_size());
+    FOR_RANGE(size_t, i, 0, shape.Count(1, channel_dim)) {
+      FOR_RANGE(size_t, j, 0, shape.At(channel_dim)) {
+        (*dptr) -= conf.mean_value(j);
+        ++dptr;
+      }
+    }
+    if (conf.std_value_size() > 0) {
+      CHECK_EQ(shape.At(channel_dim), conf.std_value_size());
+      FOR_RANGE(size_t, i, 0, shape.Count(1, channel_dim)) {
+        FOR_RANGE(size_t, j, 0, shape.At(channel_dim)) {
+          (*dptr) /= conf.std_value(j);
+          ++dptr;
+        }
+      }
+    }
+  } else if (conf.data_format() == "channels_first") {
+    CHECK_EQ(shape.At(1), conf.mean_value_size());
+    FOR_RANGE(size_t, i, 0, shape.At(1)) {
+      FOR_RANGE(size_t, j, 0, shape.Count(2)) {
+        (*dptr) -= conf.mean_value(i);
+        ++dptr;
+      }
+    }
+    if (conf.std_value_size() > 0) {
+      CHECK_EQ(shape.At(1), conf.std_value_size());
+      FOR_RANGE(size_t, i, 0, shape.At(1)) {
+        FOR_RANGE(size_t, j, 0, shape.Count(2)) {
+          (*dptr) /= conf.std_value(i);
+          ++dptr;
+        }
+      }
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
+void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
+  FOR_RANGE(size_t, i, 0, n) {
+    (*dptr) *= conf.value();
+    ++dptr;
+  }
+}
+
+template<typename T>
+void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
+  int64_t n = shape.Count(1);
+  if (conf.has_naive_norm_conf()) {
+    DoNaiveNormPreprocess<T>(conf.naive_norm_conf(), dptr, n);
+  } else if (conf.has_subtract_conf()) {
+    DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);
+  } else if (conf.has_norm_by_channel_conf()) {
+    DoNormByChannelPreprocess<T>(conf.norm_by_channel_conf(), dptr, shape);
+  } else if (conf.has_scale_conf()) {
+    DoScalePreprocess<T>(conf.scale_conf(), dptr, n);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob,
@@ -72,6 +161,9 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
     if (col_id < out_blob->col_num(i)) {
       ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num);
+      FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
+        DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+      }
     } else {
       Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
     }

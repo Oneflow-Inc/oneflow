@@ -446,12 +446,39 @@ message EncodeJpeg {
   repeated ImagePreprocess preprocess = 1;
 }
 
+message NaiveNormPreprocessConf {
+}
+
+message SubtractPreprocessConf {
+  required float value = 1;
+}
+
+message NormByChannelPreprocessConf {
+  repeated float mean_value = 1;
+  repeated float std_value = 2;
+  optional string data_format = 3 [default = "channels_last"];
+}
+
+message ScalePreprocessConf {
+  required float value = 1;
+}
+
+message PreprocessConf {
+  oneof type {
+    NaiveNormPreprocessConf naive_norm_conf = 1;
+    SubtractPreprocessConf subtract_conf = 2;
+    NormByChannelPreprocessConf norm_by_channel_conf = 3;
+    ScalePreprocessConf scale_conf = 4;
+  }
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
   required EncodeConf encode_case = 5;
+  repeated PreprocessConf preprocess = 6;
 }
 
 message DecodeOFRecordOpConf {
