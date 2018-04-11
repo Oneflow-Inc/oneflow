@@ -229,7 +229,7 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob,
-                                      const std::string data_format) {
+                                      const std::string& data_format) {
   // create temporary host blob store initializer result
   BEFORE_CPU_INITIALIZE;
   // synchronous initialize the host blob

@@ -287,7 +287,7 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob,
-                                      const std::string data_format) {
+                                      const std::string& data_format) {
   if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
                          data_format);
