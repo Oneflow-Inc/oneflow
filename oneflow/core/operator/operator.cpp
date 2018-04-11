@@ -84,7 +84,7 @@ void Operator::InferBlobDescsIf(
     if (activation != ActivationType::kNone
         && Global<JobDesc>::Get()->IsTrain()) {
       BlobDesc* buf_blob_desc = GetBlobDesc4BnInOp("activation_buf");
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
+      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
       *buf_blob_desc = *out_blob_desc;
     }
   }

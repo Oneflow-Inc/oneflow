@@ -172,7 +172,9 @@ const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
   if (this->GetActivationType() != ActivationType::kNone) {
     return BnInOp2Blob("activation_buf");
   } else {
-    return BnInOp2Blob("out_diff");
+    const PbRpf<std::string> odbns = this->kernel_conf().output_diff_bns();
+    CHECK_EQ(odbns.size(), 1);
+    return BnInOp2Blob(odbns[0]);
   }
 }
 
@@ -180,7 +182,9 @@ template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::ForwardActivate(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = BnInOp2Blob("out");
+  const PbRpf<std::string> obns = this->kernel_conf().output_bns();
+  CHECK_EQ(obns.size(), 1);
+  Blob* out_blob = BnInOp2Blob(obns[0]);
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     T* out_dptr = out_blob->mut_dptr<T>();
@@ -207,8 +211,13 @@ void KernelIfWithActivation<device_type, T>::BackwardActivate(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
-    const Blob* out_blob = BnInOp2Blob("out");
-    const Blob* out_diff_blob = BnInOp2Blob("out_diff");
+    const PbRpf<std::string> obns = this->kernel_conf().output_bns();
+    const PbRpf<std::string> odbns = this->kernel_conf().output_diff_bns();
+    CHECK_EQ(obns.size(), 1);
+    CHECK_EQ(odbns.size(), 1);
+
+    const Blob* out_blob = BnInOp2Blob(obns[0]);
+    const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
     Blob* activation_buf_blob = BnInOp2Blob("activation_buf");
     int64_t elem_cnt = out_blob->shape().elem_cnt();
 
