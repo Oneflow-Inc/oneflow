@@ -14,9 +14,9 @@ class ImagePreprocessIf {
   OF_DISALLOW_COPY_AND_MOVE(ImagePreprocessIf);
   virtual ~ImagePreprocessIf() = default;
 
-  virtual void DoPreprocess(cv::Mat* image,
-                            const ImagePreprocess& preprocess_conf,
-                            std::mt19937* random) const = 0;
+  virtual void DoPreprocess(
+      cv::Mat* image, const ImagePreprocess& preprocess_conf,
+      std::function<int32_t(void)> NextRandomInt) const = 0;
 
  protected:
   ImagePreprocessIf() = default;
@@ -33,7 +33,7 @@ class ImagePreprocessImpl<PreprocessCase::kResize> final
  public:
  private:
   void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
-                    std::mt19937* random) const override;
+                    std::function<int32_t(void)> NextRandomInt) const override;
 };
 
 template<>
@@ -42,7 +42,7 @@ class ImagePreprocessImpl<PreprocessCase::kCrop> final
  public:
  private:
   void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
-                    std::mt19937* random) const override;
+                    std::function<int32_t(void)> NextRandomInt) const override;
 };
 
 template<>
@@ -51,7 +51,7 @@ class ImagePreprocessImpl<PreprocessCase::kMirror> final
  public:
  private:
   void DoPreprocess(cv::Mat* image, const ImagePreprocess& preprocess_conf,
-                    std::mt19937* random) const override;
+                    std::function<int32_t(void)> NextRandomInt) const override;
 };
 
 #define PREPROCESS_CASE_SEQ                     \

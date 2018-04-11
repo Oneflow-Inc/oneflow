@@ -13,7 +13,7 @@ template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
     DeviceCtx* ctx, const Feature& feature, const BlobConf& blob_conf,
     int32_t col_id, T* out_dptr, int64_t one_col_elem_num,
-    std::mt19937* random) const {
+    std::function<int32_t(void)> NextRandomInt) const {
   CHECK(feature.has_bytes_list());
   const std::string& src_data = feature.bytes_list().value(col_id);
   cv::_InputArray image_data(src_data.data(), src_data.size());
@@ -22,7 +22,7 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
     ImagePreprocessIf* preprocess = GetImagePreprocess(
         blob_conf.encode_case().jpeg().preprocess(i).preprocess_case());
     preprocess->DoPreprocess(
-        &image, blob_conf.encode_case().jpeg().preprocess(i), random);
+        &image, blob_conf.encode_case().jpeg().preprocess(i), NextRandomInt);
   }
   CHECK_EQ(blob_conf.shape().dim_size(), 3);
   CHECK_EQ(blob_conf.shape().dim(0), image.rows);

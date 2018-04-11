@@ -4,8 +4,13 @@
 namespace oneflow {
 
 void DecodeOFRecordKernel::VirtualKernelInit(const ParallelContext*) {
-  random_.reset(
+  random_seed_gen_.reset(
       new std::mt19937(kernel_conf().decode_ofrecord_conf().random_seed()));
+  distribution_.reset(new std::uniform_int_distribution<int32_t>());
+}
+
+int32_t DecodeOFRecordKernel::NextRandomInt() const {
+  return (*distribution_)(*random_seed_gen_);
 }
 
 void DecodeOFRecordKernel::Forward(
@@ -22,9 +27,9 @@ void DecodeOFRecordKernel::Forward(
     const BlobConf& blob_conf = decode_conf.blob(i);
     OFRecordDecoderIf* decoder = GetOFRecordDecoder(
         blob_conf.encode_case().encode_case(), blob_conf.data_type());
-    int32_t max_col_id =
-        decoder->DecodeOneCol(ctx.device_ctx, record_blob, blob_conf,
-                              status->cur_col_id_, out_blob, random_.get());
+    int32_t max_col_id = decoder->DecodeOneCol(
+        ctx.device_ctx, record_blob, blob_conf, status->cur_col_id_, out_blob,
+        std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
 
     if (status->max_col_id_ == -1) {
       status->max_col_id_ = max_col_id;

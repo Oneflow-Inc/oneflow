@@ -1,13 +1,9 @@
 syntax = "proto2";
 package oneflow;
 
-message ImageSize {
+message ImageResize {
   required int32 width = 1;
   required int32 height = 2;
-}
-
-message ImageResize {
-  required ImageSize size = 1;
 }
 
 message ImageMirror {
@@ -17,7 +13,8 @@ message ImageCrop {
   optional bool random_xy = 1 [default = true];
   optional int32 x = 2;
   optional int32 y = 3;
-  required ImageSize size = 4;
+  required int32 width = 4;
+  required int32 height = 5;
 }
 
 message ImagePreprocess {

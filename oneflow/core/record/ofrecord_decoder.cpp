@@ -8,13 +8,13 @@ template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob,
     const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
-    std::mt19937* random) const {
+    std::function<int32_t(void)> NextRandomInt) const {
   int32_t max_col_id = 0;
   if (out_blob->has_col_num_field()) {
     max_col_id = ReadColNum(ctx, record_blob, blob_conf.name(), out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) { ReadDataId(ctx, record_blob, out_blob); }
-  ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, random);
+  ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
   return max_col_id;
 }
 
@@ -63,7 +63,7 @@ template<EncodeCase encode_case, typename T>
 void OFRecordDecoder<encode_case, T>::ReadDataContent(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob,
     const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
-    std::mt19937* random) const {
+    std::function<int32_t(void)> NextRandomInt) const {
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t i = 0;
   record_blob->ForEachRecord([&](const OFRecord& record) {
@@ -74,7 +74,7 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
     if (col_id < out_blob->col_num(i)) {
       ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
-                 random);
+                 NextRandomInt);
     } else {
       Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
     }

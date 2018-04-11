@@ -4,29 +4,29 @@ namespace oneflow {
 
 void ImagePreprocessImpl<PreprocessCase::kResize>::DoPreprocess(
     cv::Mat* image, const ImagePreprocess& preprocess_conf,
-    std::mt19937* random) const {
+    std::function<int32_t(void)> NextRandomInt) const {
   CHECK(preprocess_conf.has_resize());
-  const ImageSize& size = preprocess_conf.resize().size();
+  const ImageResize& conf = preprocess_conf.resize();
   cv::Mat dst;
-  cv::resize(*image, dst, cv::Size(size.width(), size.height()), 0, 0,
+  cv::resize(*image, dst, cv::Size(conf.width(), conf.height()), 0, 0,
              cv::INTER_LINEAR);
   *image = dst;
 }
 
 void ImagePreprocessImpl<PreprocessCase::kCrop>::DoPreprocess(
     cv::Mat* image, const ImagePreprocess& preprocess_conf,
-    std::mt19937* random) const {
+    std::function<int32_t(void)> NextRandomInt) const {
   CHECK(preprocess_conf.has_crop());
   const ImageCrop& crop = preprocess_conf.crop();
   int32_t x = crop.x();
   int32_t y = crop.y();
-  int32_t width = crop.size().width();
-  int32_t height = crop.size().height();
+  int32_t width = crop.width();
+  int32_t height = crop.height();
   CHECK_LE(width, image->cols);
   CHECK_LE(height, image->rows);
   if (crop.random_xy()) {
-    x = (*random)() % (image->cols - width);
-    y = (*random)() % (image->rows - height);
+    x = NextRandomInt() % (image->cols - width);
+    y = NextRandomInt() % (image->rows - height);
   } else {
     CHECK_LE(x, image->cols - width);
     CHECK_LE(y, image->rows - height);
@@ -36,9 +36,9 @@ void ImagePreprocessImpl<PreprocessCase::kCrop>::DoPreprocess(
 
 void ImagePreprocessImpl<PreprocessCase::kMirror>::DoPreprocess(
     cv::Mat* image, const ImagePreprocess& preprocess_conf,
-    std::mt19937* random) const {
+    std::function<int32_t(void)> NextRandomInt) const {
   CHECK(preprocess_conf.has_mirror());
-  if ((*random)() % 2 == 0) {
+  if (NextRandomInt() % 2 == 0) {
     // %50 mirror probability
     return;
   }
