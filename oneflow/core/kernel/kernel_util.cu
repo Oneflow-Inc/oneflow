@@ -31,7 +31,7 @@ __global__ void MulGpu(const int64_t n, const T* x, const T* y, T* z) {
 template<typename T>
 __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx,
                         T* y, const int incy) {
-  CUDA_1D_KERNEL_LOOP(i, n) { y[i * incx] += alpha * x[i * incx]; }
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
 }
 
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
