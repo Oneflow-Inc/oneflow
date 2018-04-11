@@ -36,14 +36,10 @@ class BlobImpl final : public Blob {
 
   void Transpose(DeviceCtx* ctx, Blob* out_blob,
                  const PbRf<int32_t>& permutation) const override {
-    CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
-    CHECK_EQ(NDIMS, permutation.size());
-    CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
-             out_blob->blob_desc_ptr()->shape().elem_cnt());
-    auto out_blob_impl =
-        reinterpret_cast<const BlobImpl<T, NDIMS, device_type>*>(out_blob);
-    BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
-        ctx, out_blob_impl->tensor_.get(), const_tensor_.get(), permutation);
+    KernelUtil<device_type, T>::Transpose(
+        ctx, this->shape().NumAxes(), this->shape().dim_vec().data(),
+        out_blob->shape().dim_vec().data(), permutation.data(),
+        this->shape().elem_cnt(), this->dptr<T>(), out_blob->mut_dptr<T>());
   }
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {

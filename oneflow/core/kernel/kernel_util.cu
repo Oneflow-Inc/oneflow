@@ -310,6 +310,8 @@ KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
   template struct KernelUtil<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
 
+template struct KernelUtil<DeviceType::kGPU, char>;
+
 template<>
 __device__ float gpu_atomic_add(float* address, const float val) {
   return atomicAdd(address, val);
