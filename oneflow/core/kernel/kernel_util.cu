@@ -48,19 +48,19 @@ cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   return cublas_trans;
 }
 
-constexpr int kCompileTimeCUDAMaxTransposeDims = 8;
+const int32_t kMaxDim = OF_PP_SEQ_SIZE(DIM_SEQ);
 
 struct Int32Array {
-  int32_t val[kCompileTimeCUDAMaxTransposeDims];
+  int32_t val[kMaxDim];
 };
 
 struct Int64Array {
-  int64_t val[kCompileTimeCUDAMaxTransposeDims];
+  int64_t val[kMaxDim];
 };
 
 __device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
                               const int32_t* permutation, int64_t* x_strides) {
-  int64_t buff[kCompileTimeCUDAMaxTransposeDims];
+  int64_t buff[kMaxDim];
   int64_t cur_stride = 1;
   for (int32_t i = num_axis - 1; i >= 0; --i) {
     buff[i] = cur_stride;
@@ -94,10 +94,10 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
                              const Int64Array y_shape,
                              const Int32Array permutation,
                              const int64_t elem_cnt, const T* x, T* y) {
-  __shared__ int64_t x_strides[kCompileTimeCUDAMaxTransposeDims];
-  __shared__ int64_t x_dims_shared[kCompileTimeCUDAMaxTransposeDims];
-  __shared__ int64_t y_dims_shared[kCompileTimeCUDAMaxTransposeDims];
-  __shared__ int32_t perm_shared[kCompileTimeCUDAMaxTransposeDims];
+  __shared__ int64_t x_strides[kMaxDim];
+  __shared__ int64_t x_dims_shared[kMaxDim];
+  __shared__ int64_t y_dims_shared[kMaxDim];
+  __shared__ int32_t perm_shared[kMaxDim];
   const int32_t tid = threadIdx.x;
   if (tid < num_axis) {
     x_dims_shared[tid] = x_shape.val[tid];
@@ -162,15 +162,16 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                                    n, ctx->cuda_stream()));
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                       const int64_t* x_shape, const int64_t* y_shape,
-                       const int32_t* permutation, const int64_t elem_cnt,
+                       const Shape& x_shape, const Shape& y_shape,
+                       const PbRf<int32_t>& permutation, const int64_t elem_cnt,
                        const T* x, T* y) {
-  CHECK_LE(num_axis, kCompileTimeCUDAMaxTransposeDims);
-  Int64Array x_shape_struct, y_shape_struct;
+  CHECK_LE(num_axis, kMaxDim);
+  Int64Array x_shape_struct;
+  Int64Array y_shape_struct;
   Int32Array perm_struct;
   FOR_RANGE(int32_t, i, 0, num_axis) {
-    x_shape_struct.val[i] = x_shape[i];
-    y_shape_struct.val[i] = y_shape[i];
+    x_shape_struct.val[i] = x_shape.At(i);
+    y_shape_struct.val[i] = y_shape.At(i);
     perm_struct.val[i] = permutation[i];
   }
   TransposeGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,

@@ -61,7 +61,7 @@ DiffKernelImplTestCase* DiffTransposeKernelImpl_clast_to_cfirst(
       new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
                                  DataType4CppTypeString(cpp_type));
   Shape shape({100, 108, 128, 3});
-  Shape trans_shape({100, 128, 128, 3});
+  Shape trans_shape({100, 3, 108, 128});
   auto* conf = test_case->mut_op_conf()->mutable_transpose_conf();
   conf->add_perm(3);
   conf->add_perm(1);

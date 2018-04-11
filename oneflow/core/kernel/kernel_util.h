@@ -108,9 +108,9 @@ struct CpuKernelUtilIf {
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                        const int64_t* x_shape, const int64_t* y_shape,
-                        const int32_t* permutation, const int64_t elem_cnt,
-                        const T* x, T* y);
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
 // CPU, Floating
@@ -185,9 +185,9 @@ struct GpuKernelUtilIf {
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
-                        const int64_t* x_shape, const int64_t* y_shape,
-                        const int32_t* permutation, const int64_t elem_cnt,
-                        const T* x, T* y);
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
 // GPU, Floating
