@@ -316,12 +316,13 @@ void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
     BwActivationFunc<device_type, T> activation_bw_func_,
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
   // gate_tmp_data  = out_diff .* o_out
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
-      out_diff->dptr<T>(), BnInOp2Blob("o_out")->dptr<T>(),
-      BnInOp2Blob("gate_tmp_data")->mut_dptr<T>());
-  //
-  (*activation_bw_func_)(ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+  KernelUtil<device_type, T>::Mul(ctx.device_ctx, out_diff->shape().elem_cnt(),
+                                  out_diff->dptr<T>(),
+                                  BnInOp2Blob("o_out")->dptr<T>(),
+                                  BnInOp2Blob("gate_tmp_data")->mut_dptr<T>());
+  //  rec_cell_out_diff = gate_tmp_data .* bw(candidate_data)
+  //  candidate_out = fw(candidate_data)
+  (*activation_bw_func_)(ctx.device_ctx, out_diff->shape().elem_cnt(),
                          BnInOp2Blob("candidate_data")->dptr<T>(),
                          BnInOp2Blob("candidate_out")->dptr<T>(),
                          BnInOp2Blob("gate_tmp_data")->dptr<T>(),
@@ -336,41 +337,41 @@ void BasicLstmKernelUtil<device_type, T>::ComputeActivationDataDiff(
     BwActivationFunc<device_type, T> activation_bw_func_) {
   // f_data_diff = sigmoidbw( rec_cell_out_diff * c_cell_in)
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, f_data_diff->shape().elem_cnt(),
       rec_cell_out_diff->dptr<T>(), BnInOp2Blob("rec_cell_in")->dptr<T>(),
       BnInOp2Blob("f_out_diff")->mut_dptr<T>());
   KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, f_data_diff->shape().elem_cnt(),
       BnInOp2Blob("gate_tmp_data")->dptr<T>(), BnInOp2Blob("f_out")->dptr<T>(),
       BnInOp2Blob("f_out_diff")->dptr<T>(), f_data_diff->mut_dptr<T>());
 
   // i_data_diff = sigmoidbw( rec_cell_out_diff * c_out)
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, i_data_diff->shape().elem_cnt(),
       rec_cell_out_diff->dptr<T>(), BnInOp2Blob("c_out")->dptr<T>(),
       BnInOp2Blob("i_out_diff")->mut_dptr<T>());
   KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, i_data_diff->shape().elem_cnt(),
       BnInOp2Blob("gate_tmp_data")->dptr<T>(), BnInOp2Blob("i_out")->dptr<T>(),
       BnInOp2Blob("i_out_diff")->dptr<T>(), i_data_diff->mut_dptr<T>());
 
   // c_data_diff = activation_bw_func_(rec_cell_out_diff * i_out)
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, c_data_diff->shape().elem_cnt(),
       rec_cell_out_diff->dptr<T>(), BnInOp2Blob("i_out")->dptr<T>(),
       BnInOp2Blob("c_out_diff")->mut_dptr<T>());
   (*activation_bw_func_)(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, c_data_diff->shape().elem_cnt(),
       BnInOp2Blob("gate_tmp_data")->dptr<T>(), BnInOp2Blob("c_out")->dptr<T>(),
       BnInOp2Blob("c_out_diff")->dptr<T>(), c_data_diff->mut_dptr<T>());
 
   // o_data_diff = sigmoid_bw(rec_out_diff * tanh(rec_cell_out))
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, o_data_diff->shape().elem_cnt(),
       rec_cell_out_diff->dptr<T>(), BnInOp2Blob("candidate_out")->dptr<T>(),
       BnInOp2Blob("o_out_diff")->mut_dptr<T>());
   KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, BnInOp2Blob("out")->shape().elem_cnt(),
+      ctx.device_ctx, o_data_diff->shape().elem_cnt(),
       BnInOp2Blob("gate_tmp_data")->dptr<T>(), BnInOp2Blob("o_out")->dptr<T>(),
       BnInOp2Blob("o_out_diff")->dptr<T>(), o_data_diff->mut_dptr<T>());
 }

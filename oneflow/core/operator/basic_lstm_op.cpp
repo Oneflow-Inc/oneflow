@@ -26,7 +26,7 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("c_data");
   OF_INIT_LSTM_GATE_FROM_OP_CONF(c_out, i2h_c_weight, h2h_c_weight, c_data_diff,
                                  c_out_diff);
-
+  EnrollDataTmpBn("gate_tmp_data");
   // candidate_data = rec_cell_out
   EnrollDataTmpBn("candidate_data");
   // candidate_out = tanh(rec_cell_out)
@@ -75,8 +75,8 @@ void BasicLstmOp::VirtualInferBlobDescs(
   *GetBlobDesc4BnInOp(#bias_name) = BlobDesc(Shape({1, hidden_size}));
 
   OF_INFER_LSTM_GATE_BLOBDESC(gate_tmp_data);
-  OF_INFER_LSTM_GATE_BLOBDESC(candidate_out);
 
+  OF_INFER_LSTM_GATE_BLOBDESC(candidate_out);
   OF_INFER_LSTM_GATE_BLOBDESC(candidate_data);
   OF_INFER_LSTM_GATE_BLOBDESC(c_data);
 
