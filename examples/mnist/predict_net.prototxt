@@ -10,7 +10,9 @@ op {
         dim: 28
         dim: 28
       }
-      raw {
+      encode_case {
+        raw {
+        }
       }
     }
     blob {
@@ -18,7 +20,9 @@ op {
       data_type: kInt32
       shape {
       }
-      raw {
+      encode_case {
+        raw {
+        }
       }
     }
   }
@@ -151,7 +155,13 @@ op {
 op {
   name: "print"
   print_conf {
-    lbn: "softmax_loss/loss"
-    print_path: "/predict_result"
+    in {
+      lbn: "softmax_loss/loss"
+      encode_case {
+        raw {
+        }
+      }
+    }
+    print_dir: "/tmp/predict_result"
   }
 }

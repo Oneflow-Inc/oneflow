@@ -149,7 +149,8 @@ void ForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
 void ForwardCompActor::AsyncInitModel() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
-    kernel_ctx.other = &random_seed_;
+    std::mt19937 random_seed_gen(random_seed_);
+    kernel_ctx.other = &random_seed_gen;
     exec_kernel.kernel->InitModelAndModelTmp(
         kernel_ctx, parallel_ctx(),
         Global<SnapshotMgr>::Get()->GetReadableSnapshot(),

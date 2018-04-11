@@ -19,6 +19,14 @@ bool NeedModelSave(int64_t model_version_id) {
                 == 0;
 }
 
+Actor::~Actor() {
+  if (Global<RuntimeCtx>::Get()->is_experiment_phase() == false
+      && act_id_ >= 0) {
+    double avg_act_interval = act_interval_acc_ / (act_id_ + 1);
+    Global<CtrlClient>::Get()->PushAvgActInterval(actor_id_, avg_act_interval);
+  }
+}
+
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
@@ -53,6 +61,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
+  last_act_start_time_ = -1.0;
+  act_interval_acc_ = 0.0;
   InitDeviceCtx(thread_ctx);
   VirtualActorInit(task_proto);
 }
@@ -134,6 +144,12 @@ void Actor::ActUntilFail() {
       device_ctx_->AddCallBack(
           [act_event]() { act_event->set_start_time(GetCurTime()); });
     }
+    double cur_time = GetCurTime();
+    if (last_act_start_time_ > 0.0) {
+      double interval = cur_time - last_act_start_time_;
+      act_interval_acc_ += interval;
+    }
+    last_act_start_time_ = cur_time;
     Act();
     if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
       device_ctx_->AddCallBack([act_event]() {

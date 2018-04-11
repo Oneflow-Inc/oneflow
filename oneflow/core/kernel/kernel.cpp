@@ -18,9 +18,8 @@ void Kernel::InitModelAndModelTmp(
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
   }
   if (model_load_dir == "") {
-    int64_t random_seed = *static_cast<int64_t*>(ctx.other);
-    std::mt19937 random_seed_gen(random_seed);
-    InitModelBlobsWithRandomSeed(ctx.device_ctx, &random_seed_gen, BnInOp2Blob);
+    std::mt19937* random_seed_gen = static_cast<std::mt19937*>(ctx.other);
+    InitModelBlobsWithRandomSeed(ctx.device_ctx, random_seed_gen, BnInOp2Blob);
   } else {
     int32_t part_id = -1;
     int32_t part_num = -1;

@@ -10,11 +10,15 @@ message ConvKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
   required ShapeProto weight = 3;
-  repeated int32 pad_small_side = 4;
-  repeated int32 pad_large_side = 5;
-  optional int32 cudnn_fwd_algo = 6 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+  required int32 dim = 4;
+  repeated int32 pad_small_side = 5;
+  repeated int32 pad_large_side = 6;
+  repeated int32 dilation_rate = 7;
+  repeated int32 strides = 8;
+  optional ActivationType activation = 9;
+  optional int32 cudnn_fwd_algo = 10 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 11 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 12 [default = -1];
 }
 
 message DropoutKernelConf {
