@@ -7,15 +7,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void DoNaiveNormPreprocess(const NaiveNormPreprocessConf& conf, T* dptr,
-                           int64_t n) {
-  FOR_RANGE(size_t, i, 0, n) {
-    (*dptr) = ((*dptr) / 127.5) - 1;
-    ++dptr;
-  }
-}
-
-template<typename T>
 void DoSubtractPreprocess(const SubtractPreprocessConf& conf, T* dptr,
                           int64_t n) {
   FOR_RANGE(size_t, i, 0, n) {
@@ -62,6 +53,13 @@ void DoNormByChannelPreprocess(const NormByChannelPreprocessConf& conf, T* dptr,
         }
       }
     }
+  } else if (conf.data_format() == "no_channel") {
+    CHECK_EQ(conf.mean_value_size(), 1);
+    CHECK_EQ(conf.std_value_size(), 1);
+    FOR_RANGE(size_t, i, 0, shape.Count(1)) {
+      (*dptr) = ((*dptr) - conf.mean_value(0)) / conf.std_value(0);
+      ++dptr;
+    }
   } else {
     UNIMPLEMENTED();
   }
@@ -78,9 +76,7 @@ void DoScalePreprocess(const ScalePreprocessConf& conf, T* dptr, int64_t n) {
 template<typename T>
 void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
   int64_t n = shape.Count(1);
-  if (conf.has_naive_norm_conf()) {
-    DoNaiveNormPreprocess<T>(conf.naive_norm_conf(), dptr, n);
-  } else if (conf.has_subtract_conf()) {
+  if (conf.has_subtract_conf()) {
     DoSubtractPreprocess<T>(conf.subtract_conf(), dptr, n);
   } else if (conf.has_norm_by_channel_conf()) {
     DoNormByChannelPreprocess<T>(conf.norm_by_channel_conf(), dptr, shape);
