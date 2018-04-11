@@ -201,7 +201,8 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob) {
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string data_format) {
   // create temporary host blob store initializer result
   BlobDesc blob_desc = BlobDesc(blob->blob_desc());
   char* host_raw_dptr = nullptr;
@@ -211,7 +212,7 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
       NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
   // synchronous initialize the host blob
   KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
-      nullptr, initializer_conf, random_seed, host_blob.get());
+      nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
   // asynchronous copy to device
   Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),
                            blob->ByteSizeOfDataContentField(),
