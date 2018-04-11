@@ -364,6 +364,7 @@ message ModelSaveOpConf {
 message PrintRecordConf {
   required string lbn = 1;
   optional string name = 2;
+  required EncodeConf encode_case = 3;
 }
 
 message PrintOpConf {
@@ -371,7 +372,6 @@ message PrintOpConf {
   required string print_dir = 2;
   optional string part_name_prefix = 3 [default = "part-"];
   optional int32 part_name_suffix_length = 4 [default = -1];
-  required EncodeConf encode_case = 5;
 }
 
 message LossPrintOpConf {
