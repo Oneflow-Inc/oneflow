@@ -86,13 +86,12 @@ void InitChains(std::list<Chain>* chain_list,
   });
 }
 
-void ModelMergeChains(std::list<Chain>* chain_list,
-                      Logical2ChainItMap* logical2chain_it) {
+void ElemWiseMergeChains(std::list<Chain>* chain_list,
+                         Logical2ChainItMap* logical2chain_it) {
   for (auto& pair : *logical2chain_it) {
     // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
     if (cur_node->op()->IsElemWiseOp() == false) { continue; }
-    if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
     const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
     if (!pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get())) {
       continue;
@@ -242,7 +241,7 @@ void ChainGraph::BuildFwStruct(
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
   InitChains(&chain_list, &logical2chain_it);
-  ModelMergeChains(&chain_list, &logical2chain_it);
+  ElemWiseMergeChains(&chain_list, &logical2chain_it);
   DataMergeChains(&chain_list, &logical2chain_it);
   // Init chain_nodes
   auto HashChainIt = [](const ChainIt& chain_it) {
