@@ -22,6 +22,11 @@ class DecodeOFRecordKernel final : public KernelIf<DeviceType::kCPU> {
   void Forward(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void VirtualKernelInit(const ParallelContext*) override;
+  int32_t NextRandomInt() const;
+
+  std::unique_ptr<std::mt19937> random_seed_gen_;
+  std::unique_ptr<std::uniform_int_distribution<int32_t>> distribution_;
 };
 
 }  // namespace oneflow
