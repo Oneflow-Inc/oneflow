@@ -598,9 +598,6 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
       const std::string&, const BlobDesc* blob_desc);                      \
   template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
       const std::string&, const BlobDesc* blob_desc,                       \
-      const std::vector<T>& val, bool);                                    \
-  template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
-      const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
   template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
       const std::string&, const BlobDesc* blob_desc,                       \
@@ -608,9 +605,6 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   template void OpKernelTestCase::ForwardCheckBlobWithAnother<T>(          \
       const std::string&, const BlobDesc* blob_desc, const std::string&,   \
       bool);                                                               \
-  template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
-      const std::string&, const BlobDesc* blob_desc,                       \
-      const std::vector<T>& val, bool);                                    \
   template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
       const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
