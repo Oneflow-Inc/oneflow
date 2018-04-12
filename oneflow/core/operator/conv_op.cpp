@@ -79,14 +79,13 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
-  if (GetActivationType() != ActivationType::kNone) {
-    EnrollDataTmpBn("activation_buf");
-  }
 }
 
 template<int32_t NDims>
 bool ConvOp<NDims>::NeedOutWhenBackward() const {
-  if (GetActivationType() != ActivationType::kNone) {
+  ActivationType activation =
+      static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+  if (activation != ActivationType::kNone) {
     return true;
   } else {
     return false;
@@ -124,10 +123,6 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
-  if (GetActivationType() != ActivationType::kNone
-      && Global<JobDesc>::Get()->IsTrain()) {
-    GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
-  }
 
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
@@ -270,10 +265,6 @@ template<int32_t NDims>
 void ConvOp<NDims>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  ActivationType activation = GetActivationType();
-  if (activation != ActivationType::kNone) {
-    kernel_conf->mutable_conv_conf()->set_activation(activation);
-  }
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   conv_conf->set_dim(NDims);
   if (!UseCudnn(kernel_conf->device_type())) {
@@ -305,11 +296,6 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
 template<int32_t NDims>
 int32_t ConvOp<NDims>::MaxModelSplitNum() const {
   return GetValFromCustomizedConf<int32_t>("filters");
-}
-
-template<int32_t NDims>
-ActivationType ConvOp<NDims>::GetActivationType() const {
-  return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
 }
 
 #ifdef WITH_CUDA

@@ -110,9 +110,10 @@ message FullyConnectedOpConf {
   required string in = 1;
   required string out = 2;
   required int32 units = 3;
-  optional bool use_bias = 4 [default = true];
-  optional InitializerConf weight_initializer = 5;
-  optional InitializerConf bias_initializer = 6;
+  optional ActivationType activation = 4 [default = kNone];
+  optional bool use_bias = 5 [default = true];
+  optional InitializerConf weight_initializer = 6;
+  optional InitializerConf bias_initializer = 7;
 }
 
 message AveragePooling1DOpConf {

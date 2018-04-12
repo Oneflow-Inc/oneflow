@@ -15,10 +15,9 @@ message ConvKernelConf {
   repeated int32 pad_large_side = 6;
   repeated int32 dilation_rate = 7;
   repeated int32 strides = 8;
-  optional ActivationType activation = 9;
-  optional int32 cudnn_fwd_algo = 10 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 11 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 12 [default = -1];
+  optional int32 cudnn_fwd_algo = 9 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 10 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 11 [default = -1];
 }
 
 message DropoutKernelConf {
