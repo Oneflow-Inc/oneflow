@@ -311,7 +311,6 @@ std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
   CHECK_NE(pos, std::string::npos);
   return {lbn.substr(0, pos), lbn.substr(pos + 1)};
 }
-bool IsCloneLbn(const std::string& lbn) { return lbn.substr(0, 6) == "clone_"; }
 
 static HashMap<int, std::function<Operator*(const OperatorConf&)>>&
 OpTypeCase2Creator() {

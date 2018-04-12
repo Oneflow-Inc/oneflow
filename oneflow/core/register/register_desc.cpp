@@ -54,11 +54,12 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
 void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbn2blob_desc_) {
-    std::string lbn = pair.first;
-    if (IsCloneLbn(pair.first)) { lbn = GenUnCloneLbn(lbn); }
-    auto rhs_it = rhs->lbn2blob_desc_.find(lbn);
-    CHECK(rhs_it != rhs->lbn2blob_desc_.end());
-    *(pair.second) = *(rhs_it->second);
+    auto rhs_it = rhs->lbn2blob_desc_.find(pair.first);
+    if (rhs_it == rhs->lbn2blob_desc_.end()) {
+      *(pair.second) = *(rhs->lbn2blob_desc_.at(GenUnCloneLbn(pair.first)));
+    } else {
+      *(pair.second) = *(rhs_it->second);
+    }
   }
 }
 
@@ -66,14 +67,25 @@ void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* src,
                                           const RegstDesc* supple) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbn2blob_desc_) {
-    std::string lbn = pair.first;
-    if (IsCloneLbn(pair.first)) { lbn = GenUnCloneLbn(lbn); }
-    auto src_it = src->lbn2blob_desc_.find(lbn);
-    if (src_it == src->lbn2blob_desc_.end()) {
-      CHECK(supple->lbn2blob_desc_.find(lbn) != supple->lbn2blob_desc_.end());
-      *(pair.second) = *(supple->lbn2blob_desc_.at(lbn));
-    } else {
+    auto src_it = src->lbn2blob_desc_.find(pair.first);
+    auto supple_it = supple->lbn2blob_desc_.find(pair.first);
+    if (src_it != src->lbn2blob_desc_.end()) {
       *(pair.second) = *(src_it->second);
+      continue;
+    }
+    if (supple_it != supple->lbn2blob_desc_.end()) {
+      *(pair.second) = *(supple_it->second);
+      continue;
+    }
+    const std::string unclone_lbn = GenUnCloneLbn(pair.first);
+    src_it = src->lbn2blob_desc_.find(unclone_lbn);
+    supple_it = supple->lbn2blob_desc_.find(unclone_lbn);
+    if (src_it != src->lbn2blob_desc_.end()) {
+      *(pair.second) = *(src_it->second);
+    } else if (supple_it != supple->lbn2blob_desc_.end()) {
+      *(pair.second) = *(supple_it->second);
+    } else {
+      UNIMPLEMENTED();
     }
   }
 }
