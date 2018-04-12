@@ -75,13 +75,14 @@ void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
 template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob,
-    const BlobConf& blob_conf, int32_t col_id, Blob* out_blob) const {
+    const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
+    std::function<int32_t(void)> NextRandomInt) const {
   int32_t max_col_id = 0;
   if (out_blob->has_col_num_field()) {
     max_col_id = ReadColNum(ctx, record_blob, blob_conf.name(), out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) { ReadDataId(ctx, record_blob, out_blob); }
-  ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob);
+  ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
   return max_col_id;
 }
 
@@ -129,7 +130,8 @@ void OFRecordDecoder<encode_case, T>::ReadDataId(
 template<EncodeCase encode_case, typename T>
 void OFRecordDecoder<encode_case, T>::ReadDataContent(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob,
-    const BlobConf& blob_conf, int32_t col_id, Blob* out_blob) const {
+    const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
+    std::function<int32_t(void)> NextRandomInt) const {
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t i = 0;
   record_blob->ForEachRecord([&](const OFRecord& record) {
@@ -139,7 +141,8 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     const Feature& feature = record.feature().at(blob_conf.name());
     T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
     if (col_id < out_blob->col_num(i)) {
-      ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num);
+      ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
+                 NextRandomInt);
       FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
         DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
       }
