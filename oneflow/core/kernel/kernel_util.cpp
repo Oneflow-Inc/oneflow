@@ -295,7 +295,7 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob,
                        data_format);
   } else {
-    UNIMPLEMENTED();
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob);
   }
 }
 KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
