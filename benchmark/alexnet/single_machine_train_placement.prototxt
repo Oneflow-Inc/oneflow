@@ -36,6 +36,6 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "first:gpu:0-1"
+    device_name: "first:gpu:0"
   }
 }
