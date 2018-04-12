@@ -1,10 +1,10 @@
 machine {
-  addr: "192.168.1.11"
+  addr: "127.0.0.1"
   port: 6789
   name: "first"
 }
 
-cpu_device_num: 20
+cpu_device_num: 24
 gpu_device_num: 2
-persistence_worker_num: 6
+persistence_worker_num: 36
 comm_net_worker_num: 4
