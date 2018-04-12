@@ -34,18 +34,6 @@ class BlobImpl final : public Blob {
   }
   ~BlobImpl() = default;
 
-  void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                 const PbRf<int32_t>& permutation) const override {
-    CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
-    CHECK_EQ(NDIMS, permutation.size());
-    CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
-             out_blob->blob_desc_ptr()->shape().elem_cnt());
-    auto out_blob_impl =
-        reinterpret_cast<const BlobImpl<T, NDIMS, device_type>*>(out_blob);
-    BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
-        ctx, out_blob_impl->tensor_.get(), const_tensor_.get(), permutation);
-  }
-
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
     Memcpy<device_type>(device_ctx, mut_dptr(), rhs->dptr(),

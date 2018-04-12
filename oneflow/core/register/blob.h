@@ -42,9 +42,6 @@ class Blob : public BlobIf {
   const void* memory_ptr() const { return mem_ptr_; }
   void* mut_memory_ptr() { return mem_ptr_; }
 
-  virtual void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                         const PbRf<int32_t>& permutation) const = 0;
-
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>();
