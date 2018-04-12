@@ -12,7 +12,7 @@ data_part_num: 30
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
-  model_save_snapshots_path: "/snapshot"
+  model_save_snapshots_path: "/tmp/snapshot"
   num_of_batches_in_snapshot: 100
   staleness: 0
   total_batch_num: 30000
