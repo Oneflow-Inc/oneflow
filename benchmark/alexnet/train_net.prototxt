@@ -231,6 +231,7 @@ op {
     in: "pool5/out"
     out: "out"
     units: 4096
+    activation: kRelu
     bias_initializer {
       constant_conf {
         value: 0.5
@@ -240,17 +241,9 @@ op {
 }
 
 op {
-  name: "relu_fc1"
-  relu_conf {
-    in: "fc1/out"
-    out: "out"
-  }
-}
-
-op {
   name: "dropout1"
   dropout_conf {
-    in: "relu_fc1/out"
+    in: "fc1/out"
     out: "out"
     rate: 0.5
   }
@@ -262,6 +255,7 @@ op {
     in: "dropout1/out"
     out: "out"
     units: 4096
+    activation: kRelu
     bias_initializer {
       constant_conf {
         value: 0.5
@@ -271,17 +265,9 @@ op {
 }
 
 op {
-  name: "relu_fc2"
-  relu_conf {
-    in: "fc2/out"
-    out: "out"
-  }
-}
-
-op {
   name: "dropout2"
   dropout_conf {
-    in: "relu_fc2/out"
+    in: "fc2/out"
     out: "out"
     rate: 0.5
   }
