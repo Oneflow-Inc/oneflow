@@ -101,26 +101,7 @@ void LogicalGraph::FillNodeWithParallelDesc(
     }
   }
   ForEachNode([&](LogicalNode* cur_node) {
-    if (cur_node->op()->IsElemWiseOp()) {
-      LogicalNode* tmp_node = cur_node;
-      LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-      while (pred_node->parallel_desc()->device_type()
-                 == cur_node->parallel_desc()->device_type()
-             && pred_node->op()->IsElemWiseOp()) {
-        tmp_node = pred_node;
-        pred_node = pred_node->SoleInEdge()->src_node();
-      }
-      if (pred_node->parallel_desc()->device_type()
-          != cur_node->parallel_desc()->device_type()) {
-        pred_node = tmp_node;
-      }
-      if (cur_node->parallel_desc()->Equal(pred_node->parallel_desc().get())
-          == false) {
-        LOG(WARNING) << "Parallel Conf of " << cur_node->op()->op_name()
-                     << " is not equal to " << pred_node->op()->op_name();
-      }
-      cur_node->mut_parallel_desc() = pred_node->parallel_desc();
-    } else if (cur_node->shared_model_nodes()) {
+    if (cur_node->shared_model_nodes()) {
       for (LogicalNode* shared_node : *(cur_node->shared_model_nodes())) {
         if (shared_node->parallel_desc() == nullptr) { continue; }
         if (cur_node->parallel_desc()) {
