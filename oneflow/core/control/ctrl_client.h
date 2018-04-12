@@ -23,8 +23,8 @@ class CtrlClient final {
   void PushKV(const std::string& k, const std::string& v);
   void PushKV(const std::string& k, const PbMessage& msg);
   template<typename T>
-  void PushKVT(const std::string& k, T v) {
-    static_assert(std::is_arithmetic<T>::value, "");
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(
+      const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
 
@@ -34,8 +34,8 @@ class CtrlClient final {
   void PullKV(const std::string& k, std::string* v);
   void PullKV(const std::string& k, PbMessage* msg);
   template<typename T>
-  void PullKVT(const std::string& k, T* v) {
-    static_assert(std::is_arithmetic<T>::value, "");
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(
+      const std::string& k, T* v) {
     std::string v_str;
     PullKV(k, &v_str);
     *v = oneflow_cast<T>(v_str);
@@ -47,6 +47,8 @@ class CtrlClient final {
   int32_t IncreaseCount(const std::string& k, int32_t v);
   int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
   void EraseCount(const std::string& k);
+
+  void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
 
  private:
   friend class Global<CtrlClient>;

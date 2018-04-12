@@ -41,7 +41,8 @@ void NormalBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
         || edge->dst_node()->op()->NeedOutWhenBackward()
-        || edge->src_node()->op()->IsCloneOp()) {
+        || edge->src_node()->op()->IsCloneOp()
+        || edge->dst_node()->op()->IsCloneOp()) {
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
                                            activation_diff_regst);
       edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(),

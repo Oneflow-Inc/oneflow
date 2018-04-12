@@ -3,6 +3,7 @@
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/profiler.h"
 
 namespace oneflow {
 
@@ -42,26 +43,12 @@ uint64_t CalcRegstNum(
   return regst_num;
 }
 
-void ForEachStreamCalcTimePerAct(const std::list<ActEvent>& act_events,
-                                 const std::function<void(double)>& Handler) {
-  HashMap<int64_t, double> stream_id2time;
-  HashMap<int64_t, std::unordered_set<int64_t>> stream_id2act_ids;
-  for (const ActEvent& act_event : act_events) {
-    auto stream_id = act_event.work_stream_id();
-    stream_id2time[stream_id] += Duration4ActEvent(act_event);
-    stream_id2act_ids[stream_id].insert(act_event.act_id());
-  }
-  for (const auto& pair : stream_id2time) {
-    Handler(pair.second / stream_id2act_ids.at(pair.first).size());
-  }
-}
-
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<ActEvent>* act_events) {
   NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
-  size_t act_event_size;
+  int64_t act_event_size;
   while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size),
-                         sizeof(size_t))) {
+                         sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);
     CHECK(!in_stream.Read(buffer.data(), act_event_size));
     act_events->emplace_back();
@@ -126,13 +113,54 @@ MakeGetterPathDurations4RegstDescId(const ActGraph& graph) {
   };
 }
 
-double IIScale4Actor(const ActGraph& graph, int64_t consumer_actor_id,
-                     double default_ii_scale) {
-  if (graph.GetTaskProto(consumer_actor_id).task_type() == TaskType::kMdSave) {
-    return Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
-           * Global<JobDesc>::Get()->NumOfPiecesInBatch();
+uint64_t NumOfPiecesInSnapshot() {
+  return Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
+         * Global<JobDesc>::Get()->NumOfPiecesInBatch();
+}
+
+double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
+                                           double act_frequency) {
+  if (task_type == TaskType::kMdSave) {
+    double formal_run_frequency = 1.0 / NumOfPiecesInSnapshot();
+    return (duration / act_frequency) * formal_run_frequency;
   }
+  return duration;
+}
+
+double CalcBaseII(const ActGraph& act_graph) {
+  int64_t max_act_cnt = 0;
+  for (const auto& pair : act_graph.actor_id2act_cnt()) {
+    if (max_act_cnt < pair.second) { max_act_cnt = pair.second; }
+  }
+  HashMap<int64_t, double> actor_id2act_frequency;
+  for (const auto& pair : act_graph.actor_id2act_cnt()) {
+    actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
+  }
+  HashMap<int64_t, double> stream_id2total_calc_time;
+  act_graph.ForEachNode([&](const ActNode* act_node) {
+    int64_t stream_id = act_node->act_event().work_stream_id();
+    int64_t actor_id = act_node->actor_id();
+    TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
+    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
+        task_type, act_node->Duration(), actor_id2act_frequency.at(actor_id));
+  });
+  double base_ii = 0;
+  for (const auto& pair : stream_id2total_calc_time) {
+    base_ii = std::max(base_ii, pair.second / max_act_cnt);
+  }
+  return base_ii;
+}
+
+double IIScale4Actor(TaskType task_type, double default_ii_scale) {
+  if (task_type == TaskType::kMdSave) { return NumOfPiecesInSnapshot(); }
   return default_ii_scale;
+}
+
+void PushAvgActTimeToProfiler(const ActGraph& act_graph) {
+  for (const auto& pair : act_graph.actor_id2total_act_time()) {
+    double act_time = pair.second / act_graph.actor_id2act_cnt().at(pair.first);
+    Global<Profiler>::Get()->PushAvgActTime(pair.first, act_time);
+  }
 }
 
 std::function<const HashMap<int64_t, double>&(int64_t)>
@@ -143,8 +171,9 @@ MakeGetterPathIIScales4RegstDescId(const ActGraph& graph) {
   graph.ForEachRegstDescConsumerPathIIScale([&](int64_t regst_desc_id,
                                                 int64_t consumer_actor_id,
                                                 double ii_scale) {
+    TaskType task_type = graph.GetTaskProto(consumer_actor_id).task_type();
     (*regst_desc_id2consumer_id2ii_scale)[regst_desc_id][consumer_actor_id] =
-        IIScale4Actor(graph, consumer_actor_id, ii_scale);
+        IIScale4Actor(task_type, ii_scale);
   });
   std::shared_ptr<const HashMap<int64_t, double>> empty(
       new HashMap<int64_t, double>());
@@ -240,6 +269,7 @@ double Improver::CalcMaxRegstDescDuration(
 }
 
 double Improver::BinarySearchII(
+    double base_ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>&
         PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>&
@@ -251,8 +281,8 @@ double Improver::BinarySearchII(
                               PathIIScales4RegstDescId, max_duration));
   const double ii_search_threshold = 1;
   double r = max_duration;
-  double l = 1.0;
-  double mid = 1.0;
+  double l = base_ii;
+  double mid = base_ii;
   while ((r - l) > ii_search_threshold) {
     mid = (l + r) / 2;
     if (IsAnyZoneOutOfMemory(mz_regst_descs, PathDurations4RegstDescId,
@@ -272,7 +302,7 @@ void Improver::MemoryLimitedAllocate(
   auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(graph);
   MemZoneRegstDescs mz_regst_descs;
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
-  double ii = BinarySearchII(PathDurations4RegstDescId,
+  double ii = BinarySearchII(CalcBaseII(graph), PathDurations4RegstDescId,
                              PathIIScales4RegstDescId, mz_regst_descs);
   for (const auto& task_proto : graph.plan().task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
@@ -288,6 +318,7 @@ Plan Improver::Improve(const Plan& naive_plan,
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
+  PushAvgActTimeToProfiler(act_graph);
   Plan plan(naive_plan);
   MemoryLimitedAllocate(act_graph, MakeSetterSetPlanRegstNum(&plan));
   return plan;

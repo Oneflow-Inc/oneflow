@@ -13,6 +13,7 @@ class Shape final {
   explicit Shape(const std::vector<int64_t>& dim_vec);
   explicit Shape(const ShapeProto& shape_proto);
   ~Shape() = default;
+  Shape& operator=(const Shape& shape);
 
   bool operator==(const Shape& rhs) const;
   std::string DebugStr() const;

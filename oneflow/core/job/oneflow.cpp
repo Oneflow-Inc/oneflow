@@ -5,6 +5,7 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
@@ -77,6 +78,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
   Global<IDMgr>::New();
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
@@ -111,9 +113,11 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
+  Global<Profiler>::Get()->Profile();
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
   Global<JobDesc>::Delete();

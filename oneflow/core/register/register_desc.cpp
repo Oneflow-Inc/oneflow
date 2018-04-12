@@ -68,10 +68,24 @@ void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* src,
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbn2blob_desc_) {
     auto src_it = src->lbn2blob_desc_.find(pair.first);
-    if (src_it == src->lbn2blob_desc_.end()) {
-      *(pair.second) = *(supple->lbn2blob_desc_.at(pair.first));
-    } else {
+    auto supple_it = supple->lbn2blob_desc_.find(pair.first);
+    if (src_it != src->lbn2blob_desc_.end()) {
       *(pair.second) = *(src_it->second);
+      continue;
+    }
+    if (supple_it != supple->lbn2blob_desc_.end()) {
+      *(pair.second) = *(supple_it->second);
+      continue;
+    }
+    const std::string unclone_lbn = GenUnCloneLbn(pair.first);
+    src_it = src->lbn2blob_desc_.find(unclone_lbn);
+    supple_it = supple->lbn2blob_desc_.find(unclone_lbn);
+    if (src_it != src->lbn2blob_desc_.end()) {
+      *(pair.second) = *(src_it->second);
+    } else if (supple_it != supple->lbn2blob_desc_.end()) {
+      *(pair.second) = *(supple_it->second);
+    } else {
+      UNIMPLEMENTED();
     }
   }
 }

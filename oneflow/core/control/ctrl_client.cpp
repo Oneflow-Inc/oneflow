@@ -8,11 +8,31 @@ namespace {
 const int32_t max_retry_num = 60;
 const int64_t sleep_seconds = 10;
 
-}  // namespace
-
 OF_DEFINE_ENUM_TO_OSTREAM_FUNC(grpc::StatusCode);
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
+
+#define DEFINE_CLIENT_CALL(method)                                 \
+  class method##ClientCall final {                                 \
+   public:                                                         \
+    OF_DISALLOW_COPY_AND_MOVE(method##ClientCall);                 \
+    method##ClientCall() = default;                                \
+    ~method##ClientCall() = default;                               \
+    method##Request* mut_request() { return &request_; }           \
+    const method##Response& response() const { return response_; } \
+    void operator()(CtrlService::Stub* stub) {                     \
+      grpc::ClientContext client_ctx;                              \
+      GRPC_CHECK(stub->method(&client_ctx, request_, &response_)); \
+    }                                                              \
+                                                                   \
+   private:                                                        \
+    method##Request request_;                                      \
+    method##Response response_;                                    \
+  };
+
+OF_PP_FOR_EACH_TUPLE(DEFINE_CLIENT_CALL, CTRL_METHOD_SEQ);
+
+}  // namespace
 
 CtrlClient::~CtrlClient() {
   {
@@ -28,12 +48,10 @@ void CtrlClient::Barrier(const std::string& barrier_name) {
 }
 
 void CtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
-  grpc::ClientContext client_ctx;
-  BarrierRequest request;
-  request.set_name(barrier_name);
-  request.set_num(barrier_num);
-  BarrierResponse response;
-  GRPC_CHECK(GetMasterStub()->Barrier(&client_ctx, request, &response));
+  BarrierClientCall call;
+  call.mut_request()->set_name(barrier_name);
+  call.mut_request()->set_num(barrier_num);
+  call(GetMasterStub());
 }
 
 TryLockResult CtrlClient::TryLock(const std::string& name) {
@@ -43,45 +61,34 @@ TryLockResult CtrlClient::TryLock(const std::string& name) {
       return TryLockResult::kDone;
     }
   }
-  grpc::ClientContext client_ctx;
-  TryLockRequest request;
-  request.set_name(name);
-  TryLockResponse response;
-  GRPC_CHECK(
-      GetResponsibleStub(name)->TryLock(&client_ctx, request, &response));
-  if (response.result() == TryLockResult::kDone) {
+  TryLockClientCall call;
+  call.mut_request()->set_name(name);
+  call(GetResponsibleStub(name));
+  if (call.response().result() == TryLockResult::kDone) {
     std::unique_lock<std::mutex> lck(done_names_mtx_);
     done_names_.insert(name);
   }
-  return response.result();
+  return call.response().result();
 }
 
 void CtrlClient::NotifyDone(const std::string& name) {
-  grpc::ClientContext client_ctx;
-  NotifyDoneRequest request;
-  request.set_name(name);
-  NotifyDoneResponse response;
-  GRPC_CHECK(
-      GetResponsibleStub(name)->NotifyDone(&client_ctx, request, &response));
+  NotifyDoneClientCall call;
+  call.mut_request()->set_name(name);
+  call(GetResponsibleStub(name));
 }
 
 void CtrlClient::WaitUntilDone(const std::string& name) {
-  grpc::ClientContext client_ctx;
-  WaitUntilDoneRequest request;
-  request.set_name(name);
-  WaitUntilDoneResponse response;
-  GRPC_CHECK(
-      GetResponsibleStub(name)->WaitUntilDone(&client_ctx, request, &response));
+  WaitUntilDoneClientCall call;
+  call.mut_request()->set_name(name);
+  call(GetResponsibleStub(name));
 }
 
 void CtrlClient::PushKV(const std::string& k,
                         std::function<void(std::string*)> VSetter) {
-  grpc::ClientContext client_ctx;
-  PushKVRequest request;
-  request.set_key(k);
-  VSetter(request.mutable_val());
-  PushKVResponse response;
-  GRPC_CHECK(GetResponsibleStub(k)->PushKV(&client_ctx, request, &response));
+  PushKVClientCall call;
+  call.mut_request()->set_key(k);
+  VSetter(call.mut_request()->mutable_val());
+  call(GetResponsibleStub(k));
 }
 
 void CtrlClient::PushKV(const std::string& k, const std::string& v) {
@@ -93,21 +100,17 @@ void CtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
 }
 
 void CtrlClient::ClearKV(const std::string& k) {
-  grpc::ClientContext client_ctx;
-  ClearKVRequest request;
-  request.set_key(k);
-  ClearKVResponse response;
-  GRPC_CHECK(GetResponsibleStub(k)->ClearKV(&client_ctx, request, &response));
+  ClearKVClientCall call;
+  call.mut_request()->set_key(k);
+  call(GetResponsibleStub(k));
 }
 
 void CtrlClient::PullKV(const std::string& k,
                         std::function<void(const std::string&)> VGetter) {
-  grpc::ClientContext client_ctx;
-  PullKVRequest request;
-  request.set_key(k);
-  PullKVResponse response;
-  GRPC_CHECK(GetResponsibleStub(k)->PullKV(&client_ctx, request, &response));
-  VGetter(response.val());
+  PullKVClientCall call;
+  call.mut_request()->set_key(k);
+  call(GetResponsibleStub(k));
+  VGetter(call.response().val());
 }
 
 void CtrlClient::PullKV(const std::string& k, std::string* v) {
@@ -119,40 +122,37 @@ void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
 }
 
 void CtrlClient::PushActEvent(const ActEvent& act_event) {
-  grpc::ClientContext client_ctx;
-  PushActEventRequest request;
-  *(request.mutable_act_event()) = act_event;
-  PushActEventResponse response;
-  GRPC_CHECK(GetMasterStub()->PushActEvent(&client_ctx, request, &response));
+  PushActEventClientCall call;
+  *(call.mut_request()->mutable_act_event()) = act_event;
+  call(GetMasterStub());
 }
 
 void CtrlClient::Clear() {
-  grpc::ClientContext client_ctx;
-  ClearRequest request;
-  ClearResponse response;
-  GRPC_CHECK(GetThisStub()->Clear(&client_ctx, request, &response));
+  ClearClientCall call;
+  call(GetThisStub());
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.clear();
 }
 
 int32_t CtrlClient::IncreaseCount(const std::string& k, int32_t v) {
-  grpc::ClientContext client_ctx;
-  IncreaseCountRequest request;
-  request.set_key(k);
-  request.set_val(v);
-  IncreaseCountResponse response;
-  GRPC_CHECK(
-      GetResponsibleStub(k)->IncreaseCount(&client_ctx, request, &response));
-  return response.val();
+  IncreaseCountClientCall call;
+  call.mut_request()->set_key(k);
+  call.mut_request()->set_val(v);
+  call(GetResponsibleStub(k));
+  return call.response().val();
 }
 
 void CtrlClient::EraseCount(const std::string& k) {
-  grpc::ClientContext client_ctx;
-  EraseCountRequest request;
-  request.set_key(k);
-  EraseCountResponse response;
-  GRPC_CHECK(
-      GetResponsibleStub(k)->EraseCount(&client_ctx, request, &response));
+  EraseCountClientCall call;
+  call.mut_request()->set_key(k);
+  call(GetResponsibleStub(k));
+}
+
+void CtrlClient::PushAvgActInterval(int64_t actor_id, double avg_act_interval) {
+  PushAvgActIntervalClientCall call;
+  call.mut_request()->set_actor_id(actor_id);
+  call.mut_request()->set_avg_act_interval(avg_act_interval);
+  call(GetMasterStub());
 }
 
 CtrlClient::CtrlClient() {

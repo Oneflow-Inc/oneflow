@@ -79,6 +79,7 @@ void BackwardCompActor::AsyncReturnModelRegstUntilMatchCurOutRegst() {
 
 void BackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(
     int64_t piece_id) {
+  if (model_regst_desc_id_ == -1) { return; }
   std::queue<Regst*>& model_rq = readable_regsts_.at(model_regst_desc_id_);
   while (model_rq.empty() == false) {
     int64_t model_id = model_rq.front()->model_version_id();

@@ -25,14 +25,29 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     int32_t filters =
         this->template GetValFromCustomizedOpConf<int32_t>("filters");
-    std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
-    std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
-    bias_dim[1] = filters;
-    stride_of_bias_tensor[0] = filters;
 
-    this->bias_desc_.reset(
-        new CudnnTensorDesc(GetDataType<T>::value, this->OpKernelDim() + 2,
-                            bias_dim.data(), stride_of_bias_tensor.data()));
+    if (this->OpKernelDim() == 2) {
+      if (this->template GetValFromCustomizedOpConf<std::string>("data_format")
+          == "channels_first") {
+        this->bias_desc_.reset(new CudnnTensorDesc(
+            CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, filters, 1, 1));
+      } else if (this->template GetValFromCustomizedOpConf<std::string>(
+                     "data_format")
+                 == "channels_last") {
+        this->bias_desc_.reset(new CudnnTensorDesc(
+            CUDNN_TENSOR_NHWC, GetDataType<T>::value, 1, filters, 1, 1));
+      } else {
+        UNIMPLEMENTED();
+      }
+    } else {
+      std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
+      std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
+      bias_dim[1] = filters;
+      stride_of_bias_tensor[0] = filters;
+      this->bias_desc_.reset(
+          new CudnnTensorDesc(GetDataType<T>::value, this->OpKernelDim() + 2,
+                              bias_dim.data(), stride_of_bias_tensor.data()));
+    }
   }
 }
 

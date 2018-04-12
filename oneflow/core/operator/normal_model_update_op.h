@@ -11,6 +11,7 @@ class NormalModelUpdtOp : public Operator {
   virtual ~NormalModelUpdtOp() = default;
 
   virtual void InitFromOpConf();
+  const PbMessage& GetCustomizedConf() const override;
 
  protected:
   NormalModelUpdtOp() = default;
