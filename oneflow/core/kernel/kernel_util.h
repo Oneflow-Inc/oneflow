@@ -40,6 +40,7 @@ void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
+// CPU, GPU, Integral, Floating
 template<DeviceType device_type, typename T, typename Derived>
 struct KernelUtilIf {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
@@ -95,6 +96,7 @@ struct KernelUtilIf {
 template<DeviceType device_type, typename T, typename U = void>
 struct KernelUtil;
 
+// CPU, Integral, Floating
 template<typename T, typename Derived>
 struct CpuKernelUtilIf {
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
@@ -105,8 +107,13 @@ struct CpuKernelUtilIf {
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
+// CPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T,
                   typename std::enable_if<IsFloating<T>::value>::type>
@@ -157,6 +164,7 @@ struct KernelUtil<DeviceType::kCPU, T,
                                 int32_t dim_num, int64_t num_in_each_dim);
 };
 
+// CPU, Integral
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T,
                   typename std::enable_if<IsIntegral<T>::value>::type>
@@ -169,14 +177,20 @@ struct KernelUtil<DeviceType::kCPU, T,
                                  uint32_t random_seed, Blob* blob);
 };
 
+// GPU, Integral, Floating
 template<typename T, typename Derived>
 struct GpuKernelUtilIf {
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
+// GPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T,
                   typename std::enable_if<IsFloating<T>::value>::type>
@@ -229,15 +243,14 @@ struct KernelUtil<DeviceType::kGPU, T,
                                 int32_t dim_num, int64_t num_in_each_dim);
 };
 
+// GPU, Integral
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T,
                   typename std::enable_if<IsIntegral<T>::value>::type>
     : public KernelUtilIf<DeviceType::kGPU, T, KernelUtil<DeviceType::kGPU, T>>,
       public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
-                   const int incx, T* y, const int incy) {
-    TODO();
-  }
+                   const int incx, T* y, const int incy);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);

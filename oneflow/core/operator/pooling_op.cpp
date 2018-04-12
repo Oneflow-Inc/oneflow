@@ -34,10 +34,15 @@ void PoolingOp::InferBlobDescs(
   CHECK_EQ(in_blob_desc->data_type(),
            Global<JobDesc>::Get()->DefaultDataType());
   // out
-  std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
-                             GetInDim(in_shape, 2)};
-  std::vector<int32_t> pool_size = Get3DVecInOpConf("pool_size");
-  std::vector<int32_t> strides = Get3DVecInOpConf("strides");
+  std::string data_format =
+      GetValFromCustomizedConf<std::string>("data_format");
+  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
+                             GetInDim(in_shape, data_format, 1, GetDim()),
+                             GetInDim(in_shape, data_format, 2, GetDim())};
+  std::vector<int32_t> pool_size = Get3DVecInOpConf(
+      GetPbRfFromCustomizedConf<int32_t>("pool_size"), GetDim());
+  std::vector<int32_t> strides =
+      Get3DVecInOpConf(GetPbRfFromCustomizedConf<int32_t>("strides"), GetDim());
   std::vector<int64_t> out;
   Get3DOutputSize(in, pool_size, strides,
                   GetValFromCustomizedConf<std::string>("padding"), &out,
@@ -45,8 +50,6 @@ void PoolingOp::InferBlobDescs(
 
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  std::string data_format =
-      GetValFromCustomizedConf<std::string>("data_format");
   int64_t in_c = 0;
   if (data_format == "channels_first") {
     in_c = in_shape.At(1);
@@ -66,39 +69,6 @@ void PoolingOp::CheckPoolSizeAndStrides() const {
   const PbRf<int32_t>& strides = GetPbRfFromCustomizedConf<int32_t>("strides");
   CHECK_EQ(strides.size(), GetDim());
   for (int32_t stride_dim : strides) { CHECK_GT(stride_dim, 0); }
-}
-
-std::vector<int32_t> PoolingOp::Get3DVecInOpConf(
-    const std::string& field_name) const {
-  std::vector<int32_t> vec;
-  FOR_RANGE(uint8_t, dim, 0, 3) {
-    int64_t index = static_cast<int32_t>(dim) - (3 - GetDim());
-    if (index < 0) {
-      vec.push_back(1);
-    } else {
-      vec.push_back(GetPbRfFromCustomizedConf<int32_t>(field_name).Get(index));
-    }
-  }
-  return vec;
-}
-
-int64_t PoolingOp::GetInDim(const Shape& in_shape, uint8_t dim) const {
-  int64_t offset = 0;
-  std::string data_format =
-      GetValFromCustomizedConf<std::string>("data_format");
-  if (data_format == "channels_last") {
-    offset = 1;
-  } else if (data_format == "channels_first") {
-    offset = 2;
-  } else {
-    UNIMPLEMENTED();
-  }
-  int64_t index = offset + static_cast<int64_t>(dim) - (3 - GetDim());
-  if (index < offset) {
-    return 1;
-  } else {
-    return in_shape.At(index);
-  }
 }
 
 Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c,
@@ -130,10 +100,15 @@ void PoolingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
-  std::vector<int64_t> in = {GetInDim(in_shape, 0), GetInDim(in_shape, 1),
-                             GetInDim(in_shape, 2)};
-  std::vector<int32_t> pool_size = Get3DVecInOpConf("pool_size");
-  std::vector<int32_t> strides = Get3DVecInOpConf("strides");
+  std::string data_format =
+      GetValFromCustomizedConf<std::string>("data_format");
+  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
+                             GetInDim(in_shape, data_format, 1, GetDim()),
+                             GetInDim(in_shape, data_format, 2, GetDim())};
+  std::vector<int32_t> pool_size = Get3DVecInOpConf(
+      GetPbRfFromCustomizedConf<int32_t>("pool_size"), GetDim());
+  std::vector<int32_t> strides =
+      Get3DVecInOpConf(GetPbRfFromCustomizedConf<int32_t>("strides"), GetDim());
   std::vector<int64_t> out;
   std::vector<int32_t> padding_before;
   std::vector<int32_t> padding_after;
@@ -149,8 +124,6 @@ void PoolingOp::VirtualGenKernelConf(
     pooling_conf->mutable_padding_before()->Add(padding_before.at(i));
     pooling_conf->mutable_padding_after()->Add(padding_after.at(i));
   }
-  std::string data_format =
-      GetValFromCustomizedConf<std::string>("data_format");
   if (data_format == "channels_first") {
     Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
         .ToProto(pooling_conf->mutable_in());

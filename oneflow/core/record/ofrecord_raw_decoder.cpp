@@ -39,7 +39,8 @@ int32_t OFRecordDecoderImpl<EncodeCase::kRaw, T>::GetColNumOfFeature(
 template<typename T>
 void OFRecordDecoderImpl<EncodeCase::kRaw, T>::ReadOneCol(
     DeviceCtx* ctx, const Feature& feature, const BlobConf& blob_conf,
-    int32_t col_id, T* out_dptr, int64_t one_col_elem_num) const {
+    int32_t col_id, T* out_dptr, int64_t one_col_elem_num,
+    std::function<int32_t(void)> NextRandomInt) const {
   if (feature.has_bytes_list()) {
     CHECK_EQ(feature.bytes_list().value_size(), 1);
     auto in_dptr =

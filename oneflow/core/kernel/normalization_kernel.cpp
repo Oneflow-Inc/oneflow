@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/normalization_kernel.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/kernel/transpose_kernel.h"
 
 namespace oneflow {
 
@@ -96,7 +97,8 @@ void NormalizationKernel<device_type, T>::ForwardDataContent(
   Blob* trans_in_blob = BnInOp2Blob("trans_in");
   Blob* trans_out_blob = BnInOp2Blob("trans_out");
   if (conf.need_transpose()) {
-    in_blob->Transpose(ctx.device_ctx, trans_in_blob, conf.perm());
+    Transpose<device_type, T>(ctx.device_ctx, in_blob, trans_in_blob,
+                              conf.perm());
     comp_in_blob = trans_in_blob;
     comp_out_blob = trans_out_blob;
   } else {
@@ -115,7 +117,8 @@ void NormalizationKernel<device_type, T>::ForwardDataContent(
   Normalize(ctx, BnInOp2Blob, mean_blob, variance_blob, comp_in_blob,
             comp_out_blob);
   if (conf.need_transpose()) {
-    trans_out_blob->Transpose(ctx.device_ctx, out_blob, conf.perm());
+    Transpose<device_type, T>(ctx.device_ctx, trans_out_blob, out_blob,
+                              conf.perm());
   }
 }
 
@@ -135,8 +138,8 @@ void NormalizationKernel<device_type, T>::BackwardDataContent(
   bool need_transpose = normalization_kernel_conf.need_transpose();
   bool need_comp_in_diff = (in_diff_blob != nullptr);
   if (need_transpose) {
-    out_diff_blob->Transpose(ctx.device_ctx, trans_out_blob,
-                             normalization_kernel_conf.perm());
+    Transpose<device_type, T>(ctx.device_ctx, out_diff_blob, trans_out_blob,
+                              normalization_kernel_conf.perm());
     comp_in_diff_blob = trans_in_blob;
     comp_out_diff_blob = trans_out_blob;
   } else {
@@ -152,8 +155,8 @@ void NormalizationKernel<device_type, T>::BackwardDataContent(
   if (need_comp_in_diff) {
     CalcInDiff(ctx, BnInOp2Blob, comp_out_diff_blob, comp_in_diff_blob);
     if (need_transpose)
-      trans_in_blob->Transpose(ctx.device_ctx, in_diff_blob,
-                               normalization_kernel_conf.perm());
+      Transpose<device_type, T>(ctx.device_ctx, trans_in_blob, in_diff_blob,
+                                normalization_kernel_conf.perm());
   }
 }
 

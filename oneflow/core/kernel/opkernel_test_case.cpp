@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/opkernel_test_case.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
 
 namespace oneflow {
 
@@ -129,25 +130,12 @@ void OpKernelTestUtil<DeviceType::kCPU>::BuildKernelCtx(KernelCtx* ctx) {
 
 template<>
 void OpKernelTestUtil<DeviceType::kGPU>::BuildKernelCtx(KernelCtx* ctx) {
-  cudaStream_t* cuda_stream = new cudaStream_t;
-  cublasHandle_t* cublas_pmh_handle = new cublasHandle_t;
-  cublasHandle_t* cublas_pmd_handle = new cublasHandle_t;
-  cudnnHandle_t* cudnn_handle = new cudnnHandle_t;
-  CudaCheck(cudaStreamCreate(cuda_stream));
-  CudaCheck(cublasCreate(cublas_pmh_handle));
-  CudaCheck(cublasCreate(cublas_pmd_handle));
-  CudaCheck(cublasSetStream(*cublas_pmh_handle, *cuda_stream));
-  CudaCheck(cublasSetStream(*cublas_pmd_handle, *cuda_stream));
-  CudaCheck(
-      cublasSetPointerMode(*cublas_pmd_handle, CUBLAS_POINTER_MODE_DEVICE));
-  CudaCheck(cudnnCreate(cudnn_handle));
-  CudaCheck(cudnnSetStream(*cudnn_handle, *cuda_stream));
-  Eigen::CudaStreamDevice* eigen_cuda_stream =
-      new Eigen::CudaStreamDevice(cuda_stream);
-  Eigen::GpuDevice* eigen_gpu_device = new Eigen::GpuDevice(eigen_cuda_stream);
-  ctx->device_ctx =
-      new CudaDeviceCtx(-1, cuda_stream, cublas_pmh_handle, cublas_pmd_handle,
-                        cudnn_handle, eigen_gpu_device);
+  if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(); }
+  CudaStreamHandle* cuda_handle = Global<CudaStreamHandle>::Get();
+  ctx->device_ctx = new CudaDeviceCtx(
+      -1, cuda_handle->cuda_stream(), cuda_handle->cublas_pmh_handle(),
+      cuda_handle->cublas_pmd_handle(), cuda_handle->cudnn_handle(),
+      cuda_handle->eigen_gpu_device());
 }
 
 template<>
@@ -569,7 +557,8 @@ void DiffKernelImplTestCase::CheckMultiRunResults(
 void DiffKernelImplTestCase::CopyBlobDesc4DiffBlob() {
   auto CopyBlobDesc = [&](const std::list<std::string>& blob_names) {
     for (const auto& bn_in_op : blob_names) {
-      *MutBlobDesc4BnInOp(GenDiffBn(bn_in_op)) = *BlobDesc4BnInOp(bn_in_op);
+      const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
+      if (blob_desc) { *MutBlobDesc4BnInOp(GenDiffBn(bn_in_op)) = *blob_desc; }
     }
   };
   CopyBlobDesc(input_blob_names_);
@@ -609,12 +598,18 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
       const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
+  template void OpKernelTestCase::ForwardCheckBlob<T>(                     \
+      const std::string&, const BlobDesc* blob_desc,                       \
+      const std::vector<T>& val, bool need_random_init);                   \
   template void OpKernelTestCase::ForwardCheckBlobWithAnother<T>(          \
       const std::string&, const BlobDesc* blob_desc, const std::string&,   \
       bool);                                                               \
   template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
       const std::string&, const BlobDesc* blob_desc,                       \
       const std::vector<T>& val);                                          \
+  template void OpKernelTestCase::BackwardCheckBlob<T>(                    \
+      const std::string&, const BlobDesc* blob_desc,                       \
+      const std::vector<T>& val, bool need_random_init);                   \
   template void OpKernelTestCase::BackwardCheckBlobWithAnother<T>(         \
       const std::string&, const BlobDesc* blob_desc, const std::string&,   \
       bool);

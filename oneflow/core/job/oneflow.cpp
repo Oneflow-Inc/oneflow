@@ -113,6 +113,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
+  Global<Profiler>::Get()->Profile();
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();

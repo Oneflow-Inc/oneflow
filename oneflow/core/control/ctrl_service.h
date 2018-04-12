@@ -37,7 +37,7 @@ enum class CtrlMethod {
 #undef MAKE_ENTRY
 };
 
-const int32_t kCtrlMethodNum = OF_PP_INTERNAL_SEQ_SIZE(CTRL_METHOD_SEQ);
+const int32_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
 
 class CtrlService final {
  public:

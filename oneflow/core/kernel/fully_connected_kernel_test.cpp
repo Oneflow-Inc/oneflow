@@ -8,7 +8,8 @@ template<DeviceType device_type, typename T>
 void FullyConnectedKernelTestCase(OpKernelTestCase* test_case,
                                   const std::string& job_type,
                                   const std::string& fw_or_bw,
-                                  const std::string& use_bias_or_not) {
+                                  const std::string& use_bias_or_not,
+                                  const std::string& use_activation_or_not) {
   test_case->set_is_train(job_type == "train");
   test_case->set_is_forward(fw_or_bw == "forward");
   test_case->InitJobConf([](JobConf* job_conf) {
@@ -20,6 +21,8 @@ void FullyConnectedKernelTestCase(OpKernelTestCase* test_case,
   fc_conf->set_units(3);
   bool use_bias = (use_bias_or_not == "use_bias");
   fc_conf->set_use_bias(use_bias);
+  bool use_activation = (use_activation_or_not == "use_activation");
+  if (use_activation) { fc_conf->set_activation(ActivationType::kRelu); }
 
   BlobDesc* blob_desc2122 =
       new BlobDesc(Shape({2, 1, 2, 2}), GetDataType<T>::value, false, false, 1);
@@ -32,41 +35,57 @@ void FullyConnectedKernelTestCase(OpKernelTestCase* test_case,
   BlobDesc* blob_desc21 =
       new BlobDesc(Shape({2, 1}), GetDataType<T>::value, false, false, 1);
   test_case->template InitBlob<T>("in", blob_desc2122,
-                                  {1, 2, 3, 4, 5, 6, 7, 8});
+                                  {-1, 2, -3, 4, 5, -6, 7, 8});
   test_case->template InitBlob<T>("weight", blob_desc34,
                                   {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8});
-  test_case->set_initiation_before_backward([test_case]() {
-    Blob* out = test_case->bn_in_op2blob().at("out");
-    test_case->mut_bn_in_op2blob()->emplace(GenDiffBn("out"), out);
-  });
+  test_case->template InitBlob<T>("out_diff", blob_desc23,
+                                  {-5, 2, 3, -7, 2, 5});
   if (use_bias) {
     test_case->template InitBlob<T>("bias", blob_desc13, {2, 3, 5});
     test_case->template InitBlob<T>("bias_multiplier", blob_desc21, {1, 1});
-    test_case->template ForwardCheckBlob<T>("out", blob_desc23,
-                                            {42, 28, 67, 110, 68, 143});
-    test_case->template BackwardCheckBlob<T>(GenDiffBn("bias"), blob_desc13,
-                                             {152, 96, 210});
-    test_case->template BackwardCheckBlob<T>(
-        GenDiffBn("weight"), blob_desc34,
-        {592, 744, 896, 1048, 368, 464, 560, 656, 782, 992, 1202, 1412});
-    test_case->template BackwardCheckBlob<T>(
-        GenDiffBn("in"), blob_desc2122,
-        {333, 263, 1009, 662, 829, 651, 2313, 1474});
+    if (use_activation) {
+      test_case->template ForwardCheckBlob<T>("out", blob_desc23,
+                                              {2, 0, 11, 62, 56, 131});
+      test_case->template BackwardCheckBlob<T>(GenDiffBn("bias"), blob_desc13,
+                                               {-12, 2, 8});
+      test_case->template BackwardCheckBlob<T>(
+          GenDiffBn("weight"), blob_desc34,
+          {-30, 32, -34, -76, 10, -12, 14, 16, 22, -24, 26, 52});
+      test_case->template BackwardCheckBlob<T>(
+          GenDiffBn("in"), blob_desc2122, {-22, -17, 2, 9, -26, -21, 24, 19});
+    } else {
+      test_case->template ForwardCheckBlob<T>("out", blob_desc23,
+                                              {2, -18, 11, 62, 56, 131});
+      test_case->template BackwardCheckBlob<T>(GenDiffBn("bias"), blob_desc13,
+                                               {-12, 4, 8});
+    }
   } else {
-    test_case->template ForwardCheckBlob<T>("out", blob_desc23,
-                                            {40, 25, 62, 108, 65, 138});
+    if (use_activation) {
+      test_case->template ForwardCheckBlob<T>("out", blob_desc23,
+                                              {0, 0, 6, 60, 53, 126});
+      test_case->template BackwardCheckBlob<T>(
+          GenDiffBn("weight"), blob_desc34,
+          {-35, 42, -49, -56, 10, -12, 14, 16, 22, -24, 26, 52});
+      test_case->template BackwardCheckBlob<T>(
+          GenDiffBn("in"), blob_desc2122, {3, 3, 27, 24, -26, -21, 24, 19});
+    } else {
+      test_case->template ForwardCheckBlob<T>("out", blob_desc23,
+                                              {0, -21, 6, 60, 53, 126});
+    }
+  }
+  if (!use_activation) {
     test_case->template BackwardCheckBlob<T>(
         GenDiffBn("weight"), blob_desc34,
-        {580, 728, 876, 1024, 350, 440, 530, 620, 752, 952, 1152, 1352});
+        {-30, 32, -34, -76, 8, -8, 8, 24, 22, -24, 26, 52});
     test_case->template BackwardCheckBlob<T>(
-        GenDiffBn("in"), blob_desc2122,
-        {312, 247, 933, 616, 808, 635, 2237, 1428});
+        GenDiffBn("in"), blob_desc2122, {-18, -15, 16, 9, -26, -21, 24, 19});
   }
 }
 
 TEST_CPU_AND_GPU_OPKERNEL(FullyConnectedKernelTestCase, FLOATING_DATA_TYPE_SEQ,
                           (train)(predict), (forward)(backward),
-                          (use_bias)(use_no_bias));
+                          (use_bias)(use_no_bias),
+                          (use_activation)(use_no_activation));
 
 }  // namespace test
 

@@ -1,5 +1,6 @@
 /build
 /third_party/
-/examples/mnist/oneflow
+/examples/**/oneflow
+/benchmark/**/oneflow
 *plan*
 core.*
