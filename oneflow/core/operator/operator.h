@@ -225,6 +225,7 @@ std::string GenUnCloneLbn(const std::string& clone_lbn);
 std::string GetOpNameFromLbn(const std::string& lbn);
 std::string GetBnInOpFromLbn(const std::string& lbn);
 std::pair<std::string, std::string> ParseLbn(const std::string& lbn);
+bool IsCloneLbn(const std::string& bn);
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
                   std::function<Operator*(const OperatorConf&)> creator);

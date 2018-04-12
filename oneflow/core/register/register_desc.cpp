@@ -54,12 +54,11 @@ void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
 void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbn2blob_desc_) {
-    auto rhs_it = rhs->lbn2blob_desc_.find(pair.first);
-    if (rhs_it == rhs->lbn2blob_desc_.end()) {
-      *(pair.second) = *(rhs->lbn2blob_desc_.at(GenUnCloneLbn(pair.first)));
-    } else {
-      *(pair.second) = *(rhs_it->second);
-    }
+    std::string lbn = pair.first;
+    if (IsCloneLbn(pair.first)) { lbn = GenUnCloneLbn(lbn); }
+    auto rhs_it = rhs->lbn2blob_desc_.find(lbn);
+    CHECK(rhs_it != rhs->lbn2blob_desc_.end());
+    *(pair.second) = *(rhs_it->second);
   }
 }
 
@@ -67,9 +66,12 @@ void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* src,
                                           const RegstDesc* supple) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbn2blob_desc_) {
-    auto src_it = src->lbn2blob_desc_.find(pair.first);
+    std::string lbn = pair.first;
+    if (IsCloneLbn(pair.first)) { lbn = GenUnCloneLbn(lbn); }
+    auto src_it = src->lbn2blob_desc_.find(lbn);
     if (src_it == src->lbn2blob_desc_.end()) {
-      *(pair.second) = *(supple->lbn2blob_desc_.at(pair.first));
+      CHECK(supple->lbn2blob_desc_.find(lbn) != supple->lbn2blob_desc_.end());
+      *(pair.second) = *(supple->lbn2blob_desc_.at(lbn));
     } else {
       *(pair.second) = *(src_it->second);
     }
