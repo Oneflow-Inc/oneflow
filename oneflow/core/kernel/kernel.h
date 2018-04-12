@@ -53,6 +53,9 @@ class Kernel {
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardActivate(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
@@ -64,6 +67,9 @@ class Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void BackwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(
@@ -153,7 +159,7 @@ class KernelIf : public Kernel {
 };
 
 template<DeviceType device_type, typename ModelType>
-class KernelIfWithModel : public KernelIf<device_type> {
+class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
@@ -162,6 +168,26 @@ class KernelIfWithModel : public KernelIf<device_type> {
   KernelIfWithModel() = default;
 
   void L2Regularization(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
+template<DeviceType device_type, typename T>
+class KernelIfWithActivation : virtual public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
+  virtual ~KernelIfWithActivation() = default;
+
+ protected:
+  KernelIfWithActivation() = default;
+
+  ActivationType GetActivationType() const;
+  const Blob* GetOutDiffBlob(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void ForwardActivate(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };

@@ -24,8 +24,8 @@ void ExecNode::ToProto(bool is_forward, DeviceType device_type,
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx,
                               DeviceType device_type) {
-  op_->InferBlobDescs(GetBlobDesc4BnInOpFunc(), parallel_ctx, device_type,
-                      [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
+  op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx, device_type,
+                        [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
 }
 
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()

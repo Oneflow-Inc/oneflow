@@ -88,10 +88,20 @@ void RandomNormalInitializer(
 }
 
 template<typename T>
-T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
+T GenInitialFan(VarianceNorm variance_norm, Blob* blob,
+                const std::string& data_format) {
+  int64_t channel_axis = 0;
+  if (data_format == "channels_first") {
+    channel_axis = 1;
+  } else if (data_format == "channels_last") {
+    channel_axis = blob->shape().NumAxes() - 1;
+  } else {
+    UNIMPLEMENTED();
+  }
   T fan = ZeroVal<T>::value;
   T fan_in = static_cast<T>(blob->shape().Count(1));
-  T fan_out = static_cast<T>(blob->shape().Count(0) / blob->shape().At(1));
+  T fan_out =
+      static_cast<T>(blob->shape().Count(0) / blob->shape().At(channel_axis));
   if (variance_norm == VarianceNorm::kAverage) {
     fan = (fan_in + fan_out) / static_cast<T>(2);
   } else if (variance_norm == VarianceNorm::kFanIn) {
@@ -106,25 +116,51 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
 
 template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf,
-                       uint32_t random_seed, Blob* blob) {
+                       uint32_t random_seed, Blob* blob,
+                       const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm =
       static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T scale =
-      std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob));
+  T scale = std::sqrt(static_cast<T>(3)
+                      / GenInitialFan<T>(variance_norm, blob, data_format));
   RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale),
                 static_cast<T>(scale), random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
 void MsraInitializer(const MsraInitializerConf& initializer_conf,
-                     uint32_t random_seed, Blob* blob) {
+                     uint32_t random_seed, Blob* blob,
+                     const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm =
       static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
+  T std = std::sqrt(static_cast<T>(2)
+                    / GenInitialFan<T>(variance_norm, blob, data_format));
   RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std),
                random_seed, blob->mut_dptr<T>());
+}
+
+void ComputeOffset(const int32_t num_axes, const int64_t* shape,
+                   const int32_t* permutation, std::vector<int64_t>& offset) {
+  offset.resize(num_axes);
+  std::vector<int64_t> buff(num_axes);
+  int64_t cur_offset = 1;
+  for (int32_t i = num_axes - 1; i >= 0; --i) {
+    buff[i] = cur_offset;
+    cur_offset *= shape[i];
+  }
+  for (int32_t i = 0; i < num_axes; ++i) { offset[permutation[i]] = buff[i]; }
+}
+
+void IncreaseIndex(const int64_t* shape, std::vector<int64_t>& index) {
+  for (int32_t i = index.size() - 1; i >= 0; --i) {
+    ++index[i];
+    if (index[i] >= shape[i]) {
+      index[i] -= shape[i];
+    } else {
+      break;
+    }
+  }
 }
 
 }  // namespace
@@ -169,6 +205,39 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr) {
 KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                  T* temp_storage, size_t temp_storage_bytes) {
   Sum(ctx, n, x, sum_ptr);
+}
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                       const Shape& x_shape, const Shape& y_shape,
+                       const PbRf<int32_t>& permutation, const int64_t elem_cnt,
+                       const T* x, T* y) {
+  int64_t block_size = 1;
+  int32_t shared_idxs_num = 0;
+  for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
+    block_size *= y_shape.At(i);
+    ++shared_idxs_num;
+  }
+  if (num_axis < 2 || shared_idxs_num == num_axis) {
+    memcpy(y, x, elem_cnt * sizeof(T));
+    return;
+  }
+  int32_t trans_axis = num_axis - shared_idxs_num;
+  std::vector<int64_t> x_to_y_offset;
+  ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(),
+                x_to_y_offset);
+  std::vector<int64_t> x_index_digits(trans_axis, 0);
+  int64_t num_blocks = elem_cnt / block_size;
+  FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
+    int64_t y_idx =
+        std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
+                           x_index_digits.cbegin(), 0);
+    if (block_size == 1) {
+      y[y_idx] = x[x_idx];
+    } else {
+      memcpy(y + block_size * y_idx, x + block_size * x_idx,
+             block_size * sizeof(T));
+    }
+    IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+  }
 }
 
 #define KU_FLOATING_METHOD             \
@@ -267,12 +336,22 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else if (initializer_conf.has_random_normal_conf()) {
     RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
                                random_seed, blob);
-  } else if (initializer_conf.has_xavier_conf()) {
-    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob);
-  } else if (initializer_conf.has_msra_conf()) {
-    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
   } else {
     UNIMPLEMENTED();
+  }
+}
+KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
+  if (initializer_conf.has_xavier_conf()) {
+    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
+                         data_format);
+  } else if (initializer_conf.has_msra_conf()) {
+    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob,
+                       data_format);
+  } else {
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob);
   }
 }
 KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
