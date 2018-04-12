@@ -557,7 +557,8 @@ void DiffKernelImplTestCase::CheckMultiRunResults(
 void DiffKernelImplTestCase::CopyBlobDesc4DiffBlob() {
   auto CopyBlobDesc = [&](const std::list<std::string>& blob_names) {
     for (const auto& bn_in_op : blob_names) {
-      *MutBlobDesc4BnInOp(GenDiffBn(bn_in_op)) = *BlobDesc4BnInOp(bn_in_op);
+      const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
+      if (blob_desc) { *MutBlobDesc4BnInOp(GenDiffBn(bn_in_op)) = *blob_desc; }
     }
   };
   CopyBlobDesc(input_blob_names_);
