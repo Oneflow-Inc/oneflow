@@ -30,7 +30,7 @@ std::string FileSystem::TranslateName(const std::string& name) const {
 
 void FileSystem::MakeEmptyDir(const std::string& dirname) {
   if (IsDirectory(dirname)) { RecursivelyDeleteDir(dirname); }
-  CreateDir(dirname);
+  RecursivelyCreateDir(dirname);
 }
 
 void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
