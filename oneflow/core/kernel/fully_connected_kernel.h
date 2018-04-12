@@ -6,7 +6,9 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class FullyConnectedKernel final : public KernelIfWithModel<device_type, T> {
+class FullyConnectedKernel final
+    : public KernelIfWithActivation<device_type, T>,
+      public KernelIfWithModel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(FullyConnectedKernel);
   FullyConnectedKernel() = default;
@@ -29,6 +31,7 @@ class FullyConnectedKernel final : public KernelIfWithModel<device_type, T> {
       DeviceCtx*, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 }  // namespace oneflow

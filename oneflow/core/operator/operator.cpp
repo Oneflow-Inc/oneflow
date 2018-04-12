@@ -21,6 +21,13 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (op_conf_.has_use_cudnn_on_gpu() == false) {
     op_conf_.set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
+  if (HasFieldInCustomizedConf("activation")) {
+    ActivationType activation =
+        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+    if (activation != ActivationType::kNone) {
+      EnrollDataTmpBn("activation_buf");
+    }
+  }
   InitFromOpConf();
 }
 
@@ -64,6 +71,23 @@ const std::string& Operator::SoleOdbn() const {
 const std::string& Operator::SoleDtbn() const {
   CHECK_EQ(data_tmp_bns_.size(), 1);
   return *(data_tmp_bns_.begin());
+}
+
+void Operator::InferBlobDescsIf(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, DeviceType device_type,
+    std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type, EnrollOpCtx);
+  if (HasFieldInCustomizedConf("activation")) {
+    ActivationType activation =
+        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+    if (activation != ActivationType::kNone
+        && Global<JobDesc>::Get()->IsTrain()) {
+      BlobDesc* buf_blob_desc = GetBlobDesc4BnInOp("activation_buf");
+      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
+      *buf_blob_desc = *out_blob_desc;
+    }
+  }
 }
 
 void Operator::InferBlobDescs(

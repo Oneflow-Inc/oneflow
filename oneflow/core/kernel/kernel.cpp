@@ -49,12 +49,14 @@ void Kernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
+  ForwardActivate(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
 }
 
 void Kernel::Backward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BackwardActivate(ctx, BnInOp2Blob);
   BackwardDataContent(ctx, BnInOp2Blob);
   if (HasModelBns() && Global<JobDesc>::Get()->L2() > 0.0f) {
     L2Regularization(ctx, BnInOp2Blob);
@@ -156,6 +158,84 @@ void KernelIfWithModel<device_type, ModelType>::L2Regularization(
   }
 }
 
+template<DeviceType device_type, typename T>
+ActivationType KernelIfWithActivation<device_type, T>::GetActivationType()
+    const {
+  return static_cast<ActivationType>(
+      this->GetEnumFromCustomizedOpConf("activation"));
+}
+
+template<DeviceType device_type, typename T>
+const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->GetActivationType() != ActivationType::kNone) {
+    return BnInOp2Blob("activation_buf");
+  } else {
+    const PbRpf<std::string> odbns = this->kernel_conf().output_diff_bns();
+    CHECK_EQ(odbns.size(), 1);
+    return BnInOp2Blob(odbns[0]);
+  }
+}
+
+template<DeviceType device_type, typename T>
+void KernelIfWithActivation<device_type, T>::ForwardActivate(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const PbRpf<std::string> obns = this->kernel_conf().output_bns();
+  CHECK_EQ(obns.size(), 1);
+  Blob* out_blob = BnInOp2Blob(obns[0]);
+  ActivationType activation = GetActivationType();
+  if (activation != ActivationType::kNone) {
+    T* out_dptr = out_blob->mut_dptr<T>();
+    int64_t elem_cnt = out_blob->shape().elem_cnt();
+
+    switch (activation) {
+#define DEFINE_ONE_CASE(activation_type)                                  \
+  case ActivationType::k##activation_type:                                \
+    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, \
+                                                out_dptr, out_dptr);      \
+    break;
+      DEFINE_ONE_CASE(TanH)
+      DEFINE_ONE_CASE(Sigmoid)
+      DEFINE_ONE_CASE(Relu)
+#undef DEFINE_ONE_CASE
+      default: UNIMPLEMENTED();
+    }
+  }
+}
+
+template<DeviceType device_type, typename T>
+void KernelIfWithActivation<device_type, T>::BackwardActivate(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ActivationType activation = GetActivationType();
+  if (activation != ActivationType::kNone) {
+    const PbRpf<std::string> obns = this->kernel_conf().output_bns();
+    const PbRpf<std::string> odbns = this->kernel_conf().output_diff_bns();
+    CHECK_EQ(obns.size(), 1);
+    CHECK_EQ(odbns.size(), 1);
+
+    const Blob* out_blob = BnInOp2Blob(obns[0]);
+    const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
+    Blob* activation_buf_blob = BnInOp2Blob("activation_buf");
+    int64_t elem_cnt = out_blob->shape().elem_cnt();
+
+    switch (activation) {
+#define DEFINE_ONE_CASE(activation_type)                                    \
+  case ActivationType::k##activation_type:                                  \
+    KernelUtil<device_type, T>::activation_type##Backward(                  \
+        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
+        out_diff_blob->dptr<T>(), activation_buf_blob->mut_dptr<T>());      \
+    break;
+      DEFINE_ONE_CASE(TanH)
+      DEFINE_ONE_CASE(Sigmoid)
+      DEFINE_ONE_CASE(Relu)
+#undef DEFINE_ONE_CASE
+      default: UNIMPLEMENTED();
+    }
+  }
+}
+
 namespace {
 
 HashMap<int, KernelCreator1>& GetCreatorsMap() {
@@ -186,11 +266,13 @@ std::unique_ptr<const Kernel> ConstructKernel(
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
-#define INSTANTIATE_KERNEL_IF_WITH_MODEL(device_type, data_type_pair) \
+#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair)   \
   template class KernelIfWithModel<device_type,                       \
-                                   OF_PP_PAIR_FIRST(data_type_pair)>;
+                                   OF_PP_PAIR_FIRST(data_type_pair)>; \
+  template class KernelIfWithActivation<device_type,                  \
+                                        OF_PP_PAIR_FIRST(data_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_WITH_MODEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS,
                                  DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
