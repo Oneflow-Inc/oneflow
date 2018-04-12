@@ -574,7 +574,6 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   auto Run = [&](const std::string& dump_prefix) {
     std::shared_ptr<Operator> op;
     InferBlobDesc(&op, &op_context);
-    CopyBlobDesc4DiffBlob();
     InitInputBlobs();
     SwitchBuildKernelCtx(SwitchCase(default_device_type()), mut_kernel_ctx());
     initiate_kernel_ctx_(MakeGetterBnInOp2Blob());
