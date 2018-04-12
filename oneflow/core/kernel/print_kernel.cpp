@@ -1,70 +1,69 @@
 #include "oneflow/core/kernel/print_kernel.h"
 #include "oneflow/core/job/runtime_context.h"
+#include "oneflow/core/record/ofrecord_encoder.h"
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-void PrintBlobImpl(PersistentOutStream& out_stream, const Blob* blob) {
-  CHECK_EQ(GetDataType<T>::value, blob->data_type());
-  const T* dptr = blob->dptr<T>();
-  for (int64_t i = 0; i < blob->shape().At(0); ++i) {
-    if (blob->has_data_id_field()) {
-      size_t data_id_size = 0;
-      for (; data_id_size != Global<JobDesc>::Get()->SizeOfOneDataId();
-           ++data_id_size) {
-        if (*(blob->data_id(i) + data_id_size) == '\0') { break; }
-      }
-      if (data_id_size == 0) { continue; }
-      out_stream.Write(blob->data_id(i), data_id_size);
-      out_stream.Write(",", 1);
-    }
-    for (int64_t j = 0; j < blob->shape().Count(1); ++j) {
-      out_stream << std::to_string(*dptr++) << ',';
-    }
-    out_stream << '\n';
-  }
-}
-
-void PrintBlob(PersistentOutStream& out_stream, const Blob* blob) {
-  static const HashMap<int, void (*)(PersistentOutStream&, const Blob*)>
-      print_funcs = {
-#define PRINT_KERNEL_ENTRY(type_cpp, type_proto) \
-  {type_proto, &PrintBlobImpl<type_cpp>},
-          OF_PP_FOR_EACH_TUPLE(PRINT_KERNEL_ENTRY, ALL_DATA_TYPE_SEQ)};
-  print_funcs.at(blob->data_type())(out_stream, blob);
-}
-
-}  // namespace
-
 void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  const std::string& root_path = op_conf().print_conf().print_path();
-  OF_CALL_ONCE(root_path, GlobalFS()->MakeEmptyDir(root_path));
-  FOR_RANGE(size_t, i, 0, op_conf().print_conf().lbn().size()) {
-    const std::string& lbn = op_conf().print_conf().lbn(i);
-    std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
-    const std::string& op_name = parsed_lbn.first;
-    const std::string& bn_in_op = parsed_lbn.second;
-    std::string op_dir = JoinPath(root_path, op_name);
-    OF_CALL_ONCE(op_dir, GlobalFS()->CreateDir(op_dir));
-    std::string bn_in_op_dir = JoinPath(op_dir, bn_in_op);
-    OF_CALL_ONCE(bn_in_op_dir, GlobalFS()->CreateDir(bn_in_op_dir));
-    std::string file_path = JoinPath(
-        bn_in_op_dir, "part-" + std::to_string(parallel_ctx->parallel_id()));
-    out_streams_.emplace_back(new PersistentOutStream(GlobalFS(), file_path));
-  }
+  const auto& conf = op_conf().print_conf();
+  const std::string& root_path = conf.print_dir();
+  OF_CALL_ONCE(root_path, GlobalFS()->RecursivelyCreateDir(root_path));
+  int32_t part_name_suffix_length = conf.part_name_suffix_length();
+  std::string num = std::to_string(parallel_ctx->parallel_id());
+  int32_t zero_count =
+      std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
+  std::string file_path = JoinPath(
+      root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);
+  out_stream_.reset(new PersistentOutStream(GlobalFS(), file_path));
 }
 
 void PrintKernel::Forward(
-    const KernelCtx& kernel_ctx,
+    const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FOR_RANGE(size_t, i, 0, kernel_conf().input_bns().size()) {
-    const std::string& ibn = kernel_conf().input_bns(i);
-    const Blob* blob = BnInOp2Blob(ibn);
-    PrintBlob(*out_streams_[i], blob);
-    out_streams_[i]->Flush();
+  auto GetBlob = [&](int64_t blob_id) -> Blob* {
+    return BnInOp2Blob(this->kernel_conf().input_bns(blob_id));
+  };
+  const auto& conf = op_conf().print_conf();
+  int32_t total_blob_num = kernel_conf().input_bns().size();
+  const Blob* first_blob = GetBlob(0);
+  int64_t max_record_num = first_blob->shape().At(0);
+  bool has_data_id_field = first_blob->has_data_id_field();
+  bool has_col_num_field = first_blob->has_col_num_field();
+  if (has_col_num_field) { TODO(); }
+  FOR_RANGE(int32_t, blob_id, 1, total_blob_num) {
+    const Blob* cur_blob = GetBlob(blob_id);
+    CHECK_EQ(cur_blob->shape().At(0), max_record_num);
+    CHECK_EQ(cur_blob->has_data_id_field(), has_data_id_field);
+    CHECK_EQ(cur_blob->has_col_num_field(), has_col_num_field);
   }
+  OFRecord record;
+  FOR_RANGE(int64_t, record_id, 0, max_record_num) {
+    record.clear_feature();
+    if (has_data_id_field) {
+      const char* data_id_str = first_blob->data_id(record_id);
+      FOR_RANGE(int32_t, blob_id, 1, kernel_conf().input_bns().size()) {
+        CHECK_STREQ(data_id_str, GetBlob(blob_id)->data_id(record_id));
+      }
+      if (*data_id_str == '\0') { break; }
+      OFRecordEncoderIf::EncodeOneDataId(ctx.device_ctx, data_id_str, record);
+    }
+    FOR_RANGE(int32_t, blob_id, 0, total_blob_num) {
+      const Blob* cur_blob = GetBlob(blob_id);
+      const PrintRecordConf& cur_print_conf = conf.in(blob_id);
+      std::string field_name = cur_print_conf.lbn();
+      if (cur_print_conf.has_name()) { field_name = cur_print_conf.name(); }
+      CHECK(record.feature().find(field_name) == record.feature().end())
+          << "Field " << field_name << " found repeatedly in OfRecord";
+      int64_t one_col_elem_num = cur_blob->shape().Count(1);
+      Feature& feature = (*(record.mutable_feature()))[field_name];
+      GetOFRecordEncoder(cur_print_conf.encode_case().encode_case(),
+                         cur_blob->data_type())
+          ->EncodeOneCol(ctx.device_ctx, cur_blob, record_id * one_col_elem_num,
+                         feature, field_name, one_col_elem_num);
+    }
+    *out_stream_ << record;
+  }
+  out_stream_->Flush();
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kPrintConf,

@@ -1,10 +1,9 @@
 dlnet_filepath: "./train_net.prototxt"
-resource_filepath: "./resource.prototxt"
-placement_filepath: "./train_placement.prototxt"
+resource_filepath: "./single_resource.prototxt"
+placement_filepath: "./single_train_placement.prototxt"
 use_rdma: false
-global_fs_conf {
-  hdfs_conf {
-    namenode: "hdfs://192.168.1.11:9000"
+globalfs_conf {
+  localfs_conf {
   }
 }
 single_piece_size: 100
@@ -12,7 +11,7 @@ data_part_num: 6
 model_load_snapshot_path: ""
 max_data_id_length: 8
 train_conf {
-  model_save_snapshots_path: "/snapshot"
+  model_save_snapshots_path: "/tmp/snapshot"
   num_of_batches_in_snapshot: 10
   staleness: 0
   total_batch_num: 100
@@ -22,7 +21,7 @@ train_conf {
       std: 0.1
     }
   }
-  num_of_pieces_in_batch: 10
+  num_of_pieces_in_batch: 100
   model_update_conf {
     learning_rate: 0.01
     naive_conf {

@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_CONV_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
 
 namespace oneflow {
@@ -37,20 +38,26 @@ class ConvOp : public Operator {
   virtual ~ConvOp() = default;
 
   void InitFromOpConf() override;
-
-  bool NeedOutWhenBackward() const override { return false; }
+  bool NeedOutWhenBackward() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext*, DeviceType) const override;
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
+  ActivationType GetActivationType() const;
 
  private:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   void VirtualGenKernelConf(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const override;
+  void GenKernelConfWithoutCudnn(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      ConvKernelConf* conv_conf) const;
+  void GenKernelConfWithCudnn(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      KernelConf* kernel_conf, ConvKernelConf* conv_conf) const;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(
       std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

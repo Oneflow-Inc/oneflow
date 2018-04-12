@@ -161,6 +161,22 @@ void ChainNode::GenSortedCompTaskNodes(
   }
 }
 
+int32_t ChainNode::GetModelSplitAxis() const {
+  if (parallel_desc_->policy() == ParallelPolicy::kDataParallel) { return -1; }
+  for (auto& op : op_vec_) {
+    if (op->ModelSplitAxis() != -1) { return op->ModelSplitAxis(); }
+  }
+  return -1;
+}
+
+int32_t ChainNode::GetMaxModelSplitNum() const {
+  if (parallel_desc_->policy() == ParallelPolicy::kDataParallel) { return -1; }
+  for (auto& op : op_vec_) {
+    if (op->MaxModelSplitNum() != -1) { return op->MaxModelSplitNum(); }
+  }
+  return -1;
+}
+
 #define DEFINE_VIRTUAL_METHOD(x)                                              \
   const char* x##ChainNode::TypeName() const { return #x "ChainNode"; }       \
   BldSubTskGphMthd x##ChainNode::GetMthdForBldSubTskGphTo(                    \

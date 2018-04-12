@@ -2,14 +2,14 @@ dlnet_filepath: "./train_net.prototxt"
 resource_filepath: "./resource.prototxt"
 placement_filepath: "./train_placement.prototxt"
 use_rdma: false
-global_fs_conf {
+globalfs_conf {
   hdfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
   }
 }
 # batch size = single_piece_size * data_part_num * num_of_pieces_in_batch
-single_piece_size: 2
-data_part_num: 120
+single_piece_size: 8
+data_part_num: 30
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
@@ -33,7 +33,7 @@ train_conf {
       beta: 0.9
     }
     learning_rate_decay {
-      exponetial_conf {
+      exponential_conf {
         decay_rate: 0.1;
         decay_batches: 10000;
         staircase: true;

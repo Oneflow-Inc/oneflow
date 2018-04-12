@@ -1,7 +1,6 @@
 #include "oneflow/core/operator/conv_op.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
-#include "oneflow/core/operator/operator_util.h"
 
 namespace oneflow {
 
@@ -80,6 +79,18 @@ void ConvOp<NDims>::InitFromOpConf() {
   }
   EnrollDataTmpBn("cudnn_buf");
   EnrollDataTmpBn("col_buf");
+  if (GetActivationType() != ActivationType::kNone) {
+    EnrollDataTmpBn("activation_buf");
+  }
+}
+
+template<int32_t NDims>
+bool ConvOp<NDims>::NeedOutWhenBackward() const {
+  if (GetActivationType() != ActivationType::kNone) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 template<int32_t NDims>
@@ -113,6 +124,10 @@ void ConvOp<NDims>::InferBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   out_blob_desc->mut_shape() = Shape(out_shape);
+  if (GetActivationType() != ActivationType::kNone
+      && Global<JobDesc>::Get()->IsTrain()) {
+    GetBlobDesc4BnInOp("activation_buf")->mut_shape() = Shape(out_shape);
+  }
 
   // weight
   std::vector<int64_t> weight_shape(in_blob_desc->shape().dim_vec());
@@ -124,14 +139,15 @@ void ConvOp<NDims>::InferBlobDescs(
   GetBlobDesc4BnInOp("weight")->mut_shape() = Shape(weight_shape);
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
-    // bias and bias_multipler
+    // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
     if (!UseCudnn(device_type)) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) {
         bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
       }
-      GetBlobDesc4BnInOp("bias_multipler")->mut_shape() = Shape(bias_mul_shape);
+      GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() =
+          Shape(bias_mul_shape);
     }
   }
 
@@ -162,10 +178,62 @@ void ConvOp<NDims>::InferBlobDescs(
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::VirtualGenKernelConf(
+void ConvOp<NDims>::GenKernelConfWithoutCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
+    ConvKernelConf* conv_conf) const {
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
+  const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
+  std::string data_format =
+      GetValFromCustomizedConf<std::string>("data_format");
+  std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, NDims),
+                             GetInDim(in_shape, data_format, 1, NDims),
+                             GetInDim(in_shape, data_format, 2, NDims)};
+  std::vector<int64_t> out;
+  std::vector<int32_t> weight = Get3DVecInOpConf(
+      this->GetPbRfFromCustomizedConf<int32_t>("kernel_size"), NDims);
+  std::vector<int32_t> strides = Get3DVecInOpConf(
+      this->GetPbRfFromCustomizedConf<int32_t>("strides"), NDims);
+  std::vector<int32_t> dilation_rate = Get3DVecInOpConf(
+      this->GetPbRfFromCustomizedConf<int32_t>("dilation_rate"), NDims);
+  std::vector<int32_t> pad_small_side;
+  std::vector<int32_t> pad_large_side;
+  Get3DOutputSize(in, weight, strides,
+                  GetValFromCustomizedConf<std::string>("padding"), &out,
+                  &pad_small_side, &pad_large_side, &dilation_rate);
+  FOR_RANGE(size_t, i, 0, 3) {
+    conv_conf->mutable_strides()->Add(strides.at(i));
+    conv_conf->mutable_pad_small_side()->Add(pad_small_side.at(i));
+    conv_conf->mutable_pad_large_side()->Add(pad_large_side.at(i));
+    conv_conf->mutable_dilation_rate()->Add(dilation_rate.at(i));
+  }
+  const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
+  if (data_format == "channels_first") {
+    Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
+        .ToProto(conv_conf->mutable_in());
+    Shape({out_shape.At(0), out_shape.At(1), out.at(0), out.at(1), out.at(2)})
+        .ToProto(conv_conf->mutable_out());
+    Shape({weight_shape.At(0), weight_shape.At(1), weight.at(0), weight.at(1),
+           weight.at(2)})
+        .ToProto(conv_conf->mutable_weight());
+  } else if (data_format == "channels_last") {
+    Shape({in_shape.At(0), in.at(0), in.at(1), in.at(2),
+           in_shape.At(in_shape.NumAxes() - 1)})
+        .ToProto(conv_conf->mutable_in());
+    Shape({out_shape.At(0), out.at(0), out.at(1), out.at(2),
+           out_shape.At(out_shape.NumAxes() - 1)})
+        .ToProto(conv_conf->mutable_out());
+    Shape({weight_shape.At(0), weight.at(0), weight.at(1), weight.at(2),
+           weight_shape.At(weight_shape.NumAxes() - 1)})
+        .ToProto(conv_conf->mutable_weight());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<int32_t NDims>
+void ConvOp<NDims>::GenKernelConfWithCudnn(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    KernelConf* kernel_conf, ConvKernelConf* conv_conf) const {
   GetBlobDesc4BnInOp("in")->shape().ToProto(conv_conf->mutable_in());
   GetBlobDesc4BnInOp("out")->shape().ToProto(conv_conf->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(conv_conf->mutable_weight());
@@ -181,7 +249,6 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     AddValToPbRfInCustomizedKernelConf(kernel_conf, "pad_large_side",
                                        pad_large_side[i]);
   }
-
 #ifdef WITH_CUDA
   if (kernel_conf->device_type() == DeviceType::kGPU) {
     CudnnConvAlgoCtx conv_ctx;
@@ -197,6 +264,23 @@ void ConvOp<NDims>::VirtualGenKernelConf(
         static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
   }
 #endif  // WITH_CUDA
+}
+
+template<int32_t NDims>
+void ConvOp<NDims>::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  ActivationType activation = GetActivationType();
+  if (activation != ActivationType::kNone) {
+    kernel_conf->mutable_conv_conf()->set_activation(activation);
+  }
+  ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
+  conv_conf->set_dim(NDims);
+  if (!UseCudnn(kernel_conf->device_type())) {
+    GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
+  } else {
+    GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf);
+  }
 }
 
 template<int32_t NDims>
@@ -221,6 +305,11 @@ int32_t ConvOp<NDims>::ModelSplitAxis() const {
 template<int32_t NDims>
 int32_t ConvOp<NDims>::MaxModelSplitNum() const {
   return GetValFromCustomizedConf<int32_t>("filters");
+}
+
+template<int32_t NDims>
+ActivationType ConvOp<NDims>::GetActivationType() const {
+  return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
 }
 
 #ifdef WITH_CUDA
