@@ -9,11 +9,9 @@ void LocalResponseNormalizationKernel<DeviceType::kGPU, T>::VirtualKernelInit(
       GetValFromPbMessage<const PbMessage&>(
           this->kernel_conf().local_response_normalization_conf(), "batch"),
       "dim");
-  std::vector<int> dims(shape.begin(), shape.end());
-  std::vector<int> strides{dims[1] * dims[2] * dims[3], 1, dims[2] * dims[3],
-                           dims[3]};
-  batch_desc_.reset(new CudnnTensorDesc(GetDataType<T>::value, 4, dims.data(),
-                                        strides.data()));
+  batch_desc_.reset(new CudnnTensorDesc(
+      CUDNN_TENSOR_NCHW, GetDataType<T>::value, shape.Get(0), shape.Get(1),
+      shape.Get(2), shape.Get(3)));
   const LocalResponseNormalizationOpConf& op_conf =
       this->op_conf().local_response_normalization_conf();
   normalize_desc_.reset(new CudnnLRNDesc(
