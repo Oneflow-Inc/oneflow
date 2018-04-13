@@ -147,6 +147,23 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 
 #undef MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY
 
+// create temporary host blob store initializer result
+#define BEFORE_CPU_INITIALIZE()                                     \
+  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                 \
+  char* host_raw_dptr = nullptr;                                    \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
+  std::unique_ptr<Blob> host_blob;                                  \
+  host_blob.reset(                                                  \
+      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+
+// asynchronous copy to device
+#define AFTER_CPU_INITIALIZE()                                       \
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(), \
+                           blob->ByteSizeOfDataContentField(),       \
+                           cudaMemcpyHostToDevice);                  \
+  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));              \
+  CudaCheck(cudaFreeHost(host_raw_dptr));
+
 #define KU_IF_METHOD                     \
   template<typename T, typename Derived> \
   void GpuKernelUtilIf<T, Derived>::
@@ -177,6 +194,36 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
   TransposeGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                     ctx->cuda_stream()>>>(
       num_axis, x_shape_struct, y_shape_struct, perm_struct, elem_cnt, x, y);
+}
+
+KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                const InitializerConf& initializer_conf,
+                                uint32_t random_seed, Blob* blob) {
+  BEFORE_CPU_INITIALIZE();
+  // synchronous initialize the host blob
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
+      nullptr, initializer_conf, random_seed, host_blob.get());
+  AFTER_CPU_INITIALIZE();
+}
+KU_IF_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                const InitializerConf& initializer_conf,
+                                uint32_t random_seed, Blob* blob,
+                                const std::string& data_format) {
+  BEFORE_CPU_INITIALIZE();
+  // synchronous initialize the host blob
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
+      nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
+  AFTER_CPU_INITIALIZE();
+}
+KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                               int32_t part_num, const std::string& model_dir,
+                               Blob* blob, const std::string& bn_in_op,
+                               int32_t dim_num, int64_t num_in_each_dim) {
+  BEFORE_CPU_INITIALIZE();
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithDir(
+      ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
+      num_in_each_dim);
+  AFTER_CPU_INITIALIZE();
 }
 
 #define KU_FLOATING_METHOD             \
@@ -293,54 +340,6 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
   BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
 }
 
-// create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                 \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(                                                  \
-      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
-
-// asynchronous copy to device
-#define AFTER_CPU_INITIALIZE()                                       \
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(), \
-                           blob->ByteSizeOfDataContentField(),       \
-                           cudaMemcpyHostToDevice);                  \
-  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));              \
-  CudaCheck(cudaFreeHost(host_raw_dptr));
-
-KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
-                                      const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
-      nullptr, initializer_conf, random_seed, host_blob.get());
-  AFTER_CPU_INITIALIZE();
-}
-KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
-                                      const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string& data_format) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
-      nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
-  AFTER_CPU_INITIALIZE();
-}
-KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim) {
-  BEFORE_CPU_INITIALIZE();
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithDir(
-      ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
-      num_in_each_dim);
-  AFTER_CPU_INITIALIZE();
-}
-
 #define KU_INTEGRAL_METHOD             \
   template<typename T>                 \
   void KernelUtil<DeviceType::kGPU, T, \
@@ -350,25 +349,6 @@ KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                         const int incx, T* y, const int incy) {
   AxpyGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                ctx->cuda_stream()>>>(n, alpha, x, incx, y, incy);
-}
-KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
-                                      const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
-      nullptr, initializer_conf, random_seed, host_blob.get());
-  AFTER_CPU_INITIALIZE();
-}
-KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
-                                      const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string& data_format) {
-  BEFORE_CPU_INITIALIZE();
-  // synchronous initialize the host blob
-  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
-      nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
-  AFTER_CPU_INITIALIZE();
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                      \
