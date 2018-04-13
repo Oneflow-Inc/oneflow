@@ -128,7 +128,10 @@ class BackwardChainNode;
 
 class ForwardChainNode final : public ChainNode {
  public:
-  CHAIN_NODE_BOILERPLATE(ForwardChainNode);
+  OF_DISALLOW_COPY_AND_MOVE(ForwardChainNode);
+  ForwardChainNode() : bw_node_(nullptr) {}
+  ~ForwardChainNode() = default;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
@@ -153,7 +156,10 @@ class ForwardChainNode final : public ChainNode {
 
 class BackwardChainNode final : public ChainNode {
  public:
-  CHAIN_NODE_BOILERPLATE(BackwardChainNode);
+  OF_DISALLOW_COPY_AND_MOVE(BackwardChainNode);
+  BackwardChainNode() : fw_node_(nullptr) {}
+  ~BackwardChainNode() = default;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }
