@@ -34,6 +34,37 @@ __global__ void AxpyGpu(const int n, const T alpha, const T* x, const int incx,
   CUDA_1D_KERNEL_LOOP(i, n) { y[i * incy] += alpha * x[i * incx]; }
 }
 
+template<typename T>
+__global__ void SigmoidForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = 1.0 / (1.0 + std::exp(-x[i])); }
+}
+
+template<typename T>
+__global__ void SigmoidBackwardGpu(const int n, const T* y, const T* dy,
+                                   T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * y[i] * (1.0 - y[i]); }
+}
+
+template<typename T>
+__global__ void TanHForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = std::tanh(x[i]); }
+}
+
+template<typename T>
+__global__ void TanHBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = dy[i] * (1.0 - y[i] * y[i]); }
+}
+
+template<typename T>
+__global__ void ReluForwardGpu(const int n, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > 0 ? x[i] : 0; }
+}
+
+template<typename T>
+__global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = y[i] > 0 ? dy[i] : 0; }
+}
+
 cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   cublasOperation_t cublas_trans;
   if (trans == CBLAS_TRANSPOSE::CblasNoTrans) {
@@ -246,51 +277,37 @@ KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x,
                 ctx->cuda_stream()>>>(n, x, epsilon);
 }
 
-#define CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)               \
-  CudnnTensorDesc x_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, n, 1, 1, \
-                         1);                                                \
-  CudnnTensorDesc y_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, n, 1, 1, \
-                         1);                                                \
-  CudnnActivationDesc act_desc(mode, CUDNN_PROPAGATE_NAN, 0.0);
-
-#define FORWARD_COMPUTE_ACTIVATION(mode)                                \
-  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                \
-  CudaCheck(cudnnActivationForward(ctx->cudnn_handle(), act_desc.Get(), \
-                                   OnePtr<T>::value, x_desc.Get(), x,   \
-                                   ZeroPtr<T>::value, y_desc.Get(), y));
-
-#define CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode)               \
-  CREATE_FORWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                     \
-  CudnnTensorDesc dx_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, n, 1, 1, \
-                          1);                                                \
-  CudnnTensorDesc dy_desc(CUDNN_TENSOR_NCHW, GetDataType<T>::value, n, 1, 1, 1);
-
-#define BACKWARD_COMPUTE_ACTIVATION(mode)                                \
-  CREATE_BACKWARD_TENSOR_AND_ACTIVATION_DESCRIPTOR(mode);                \
-  CudaCheck(cudnnActivationBackward(ctx->cudnn_handle(), act_desc.Get(), \
-                                    OnePtr<T>::value, y_desc.Get(), y,   \
-                                    dy_desc.Get(), dy, x_desc.Get(), x,  \
-                                    ZeroPtr<T>::value, dx_desc.Get(), dx));
-
-KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y){
-    FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID)} KU_FLOATING_METHOD
-    SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                    const T* dy, T* dx) {
-  BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_SIGMOID);
+KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
+  SigmoidForwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                         ctx->cuda_stream()>>>(n, x, y);
 }
+
+KU_FLOATING_METHOD SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
+                                   const T* y, const T* dy, T* dx) {
+  SigmoidBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                          ctx->cuda_stream()>>>(n, y, dy, dx);
+}
+
 KU_FLOATING_METHOD TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-  FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
+  TanHForwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                      ctx->cuda_stream()>>>(n, x, y);
 }
+
 KU_FLOATING_METHOD TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                                 const T* y, const T* dy, T* dx) {
-  BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_TANH);
+  TanHBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                       ctx->cuda_stream()>>>(n, y, dy, dx);
 }
+
 KU_FLOATING_METHOD Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y) {
-  FORWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
+  ReluForwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                      ctx->cuda_stream()>>>(n, x, y);
 }
+
 KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                                 const T* y, const T* dy, T* dx) {
-  BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
+  ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                       ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
 // create temporary host blob store initializer result
