@@ -88,12 +88,8 @@ struct KernelUtilIf {
     if (initializer_conf == nullptr) {
       initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
-    if (data_format == "") {
-      Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
-    } else {
-      Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
-                                  data_format);
-    }
+    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
+                                data_format);
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const PbMessage* initializer_conf,
@@ -198,6 +194,10 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
 };
 
 // GPU, Integral, Floating
@@ -278,6 +278,13 @@ struct KernelUtil<DeviceType::kGPU, T,
       public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
                    const int incx, T* y, const int incy);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);

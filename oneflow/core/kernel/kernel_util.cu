@@ -319,7 +319,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
       nullptr, initializer_conf, random_seed, host_blob.get());
   AFTER_CPU_INITIALIZE();
 }
-
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob,
@@ -342,13 +341,34 @@ KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
   AFTER_CPU_INITIALIZE();
 }
 
-template<typename T>
-void KernelUtil<DeviceType::kGPU, T,
-                typename std::enable_if<IsIntegral<T>::value>::type>::
-    Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx,
-         T* y, const int incy) {
+#define KU_INTEGRAL_METHOD             \
+  template<typename T>                 \
+  void KernelUtil<DeviceType::kGPU, T, \
+                  typename std::enable_if<IsIntegral<T>::value>::type>::
+
+KU_INTEGRAL_METHOD Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
+                        const int incx, T* y, const int incy) {
   AxpyGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                ctx->cuda_stream()>>>(n, alpha, x, incx, y, incy);
+}
+KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob) {
+  BEFORE_CPU_INITIALIZE();
+  // synchronous initialize the host blob
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
+      nullptr, initializer_conf, random_seed, host_blob.get());
+  AFTER_CPU_INITIALIZE();
+}
+KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
+  BEFORE_CPU_INITIALIZE();
+  // synchronous initialize the host blob
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
+      nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
+  AFTER_CPU_INITIALIZE();
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                      \

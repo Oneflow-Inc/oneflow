@@ -344,6 +344,10 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob,
                                       const std::string& data_format) {
+  if (data_format.size() == 0) {
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob);
+    return;
+  }
   if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
                          data_format);
@@ -395,6 +399,12 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else {
     UNIMPLEMENTED();
   }
+}
+KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
+  InitializeWithConf(ctx, initializer_conf, random_seed, blob);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                      \
