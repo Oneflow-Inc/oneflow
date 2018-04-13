@@ -79,17 +79,32 @@ struct KernelUtilIf {
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
+    InitializeWithProperConf(ctx, initializer_conf, random_seed, blob, "");
+  }
+  static void InitializeWithProperConf(DeviceCtx* ctx,
+                                       const InitializerConf* initializer_conf,
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format) {
     if (initializer_conf == nullptr) {
       initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
-    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
+    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
+                                data_format);
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const PbMessage* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
     InitializeWithProperConf(
         ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
-        blob);
+        blob, "");
+  }
+  static void InitializeWithProperConf(DeviceCtx* ctx,
+                                       const PbMessage* initializer_conf,
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format) {
+    InitializeWithProperConf(
+        ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
+        blob, data_format);
   }
 };
 
@@ -111,6 +126,10 @@ struct CpuKernelUtilIf {
                         const Shape& x_shape, const Shape& y_shape,
                         const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                                int32_t part_num, const std::string& model_dir,
+                                Blob* blob, const std::string& bn_in_op,
+                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
 // CPU, Floating
@@ -162,10 +181,6 @@ struct KernelUtil<DeviceType::kCPU, T,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob,
                                  const std::string& data_format);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                int32_t part_num, const std::string& model_dir,
-                                Blob* blob, const std::string& bn_in_op,
-                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
 // CPU, Integral
@@ -179,6 +194,10 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
 };
 
 // GPU, Integral, Floating
@@ -192,6 +211,17 @@ struct GpuKernelUtilIf {
                         const Shape& x_shape, const Shape& y_shape,
                         const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                                int32_t part_num, const std::string& model_dir,
+                                Blob* blob, const std::string& bn_in_op,
+                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
 // GPU, Floating
@@ -237,18 +267,6 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx);
-
-  static void InitializeWithConf(DeviceCtx* ctx,
-                                 const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob);
-  static void InitializeWithConf(DeviceCtx* ctx,
-                                 const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob,
-                                 const std::string& data_format);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                int32_t part_num, const std::string& model_dir,
-                                Blob* blob, const std::string& bn_in_op,
-                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
 // GPU, Integral

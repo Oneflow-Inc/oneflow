@@ -239,6 +239,20 @@ KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
     IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
   }
 }
+KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                               int32_t part_num, const std::string& model_dir,
+                               Blob* blob, const std::string& bn_in_op,
+                               int32_t dim_num, int64_t num_in_each_dim) {
+  int64_t blob_size = blob->ByteSizeOfDataContentField();
+  int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
+  std::string file_path = JoinPath(model_dir, bn_in_op);
+  uint64_t file_size = GlobalFS()->GetFileSize(file_path);
+  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
+  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
+  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
+  NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
+  in_stream.Read(blob->mut_dptr<char>(), blob_size);
+}
 
 #define KU_FLOATING_METHOD             \
   template<typename T>                 \
@@ -344,6 +358,10 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob,
                                       const std::string& data_format) {
+  if (data_format.size() == 0) {
+    InitializeWithConf(ctx, initializer_conf, random_seed, blob);
+    return;
+  }
   if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
                          data_format);
@@ -353,21 +371,6 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else {
     InitializeWithConf(ctx, initializer_conf, random_seed, blob);
   }
-}
-KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim) {
-  int64_t blob_size = blob->ByteSizeOfDataContentField();
-  int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
-  std::string file_path = JoinPath(model_dir, bn_in_op);
-  uint64_t file_size = GlobalFS()->GetFileSize(file_path);
-  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
-  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
-  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
-  in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 
 #define KU_INTEGRAL_METHOD             \
@@ -395,6 +398,12 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else {
     UNIMPLEMENTED();
   }
+}
+KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
+  InitializeWithConf(ctx, initializer_conf, random_seed, blob);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                      \
