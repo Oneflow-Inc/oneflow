@@ -85,11 +85,29 @@ struct KernelUtilIf {
     Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
+                                       const InitializerConf* initializer_conf,
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format) {
+    if (initializer_conf == nullptr) {
+      initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
+    }
+    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
+                                data_format);
+  }
+  static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const PbMessage* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
     InitializeWithProperConf(
         ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
         blob);
+  }
+  static void InitializeWithProperConf(DeviceCtx* ctx,
+                                       const PbMessage* initializer_conf,
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format) {
+    InitializeWithProperConf(
+        ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
+        blob, data_format);
   }
 };
 
