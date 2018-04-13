@@ -70,8 +70,9 @@ struct BasicLstmKernelUtil {
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 
   static void ComputeActivationDataDiff(
-      const KernelCtx& ctx, const Blob* rec_cell_out_diff, Blob* f_data_diff,
-      Blob* i_data_diff, Blob* c_data_diff, Blob* o_data_diff,
+      const KernelCtx& ctx, const Blob* rec_cell_out_diff,
+      const Blob* cell_blob, Blob* f_data_diff, Blob* i_data_diff,
+      Blob* c_data_diff, Blob* o_data_diff,
       std::function<Blob*(const std::string&)> BnInOp2Blob,
       BwActivationFunc<device_type, T> activaiton_bw_func_);
 
@@ -97,6 +98,10 @@ struct BasicLstmKernelUtil {
       const KernelCtx& ctx, const Blob* f_data_diff, const Blob* i_data_blob,
       const Blob* c_data_diff, const Blob* o_data_diff, Blob* hidden_diff,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
+
+  static void ComputeCellDiff(const KernelCtx& ctx,
+                              const Blob* rec_cell_out_diff, const Blob* f_out,
+                              Blob* cell_diff);
 };
 
 }  //  namespace oneflow
