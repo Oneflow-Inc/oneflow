@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/opkernel_test_case.h"
-#include "oneflow/core/register/register_manager.h"
 
 namespace oneflow {
 
