@@ -29,19 +29,31 @@ op {
 }
 
 op {
+  name: "transpose"
+  transpose_conf {
+    in: "decode/encoded"
+    out: "out"
+    perm: 3
+    perm: 1
+    perm: 2
+  }
+}
+
+op {
   name: "conv1"
   conv_2d_conf {
-    in: "decode/encoded"
+    in: "transpose/out"
     out: "out"
     filters: 96
     padding: "SAME"
-    data_format: "channels_last"
+    data_format: "channels_first"
     kernel_size: 11
     kernel_size: 11
     strides: 4
     strides: 4
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
     use_bias: true
     bias_initializer {
       constant_conf {
@@ -52,17 +64,9 @@ op {
 }
 
 op {
-  name: "relu1"
-  relu_conf {
-    in: "conv1/out"
-    out: "out"
-  }
-}
-
-op {
   name: "lrn1"
   local_response_normalization_conf {
-    in: "relu1/out"
+    in: "conv1/out"
     out: "out"
     depth_radius: 2
     bias: 2
@@ -77,7 +81,7 @@ op {
     in: "lrn1/out"
     out: "out"
     padding: "VALID"
-    data_format: "channels_last"
+    data_format: "channels_first"
     pool_size: 3
     pool_size: 3
     strides: 2
@@ -92,13 +96,14 @@ op {
     out: "out"
     filters: 192
     padding: "SAME"
-    data_format: "channels_last"
+    data_format: "channels_first"
     kernel_size: 5
     kernel_size: 5
     strides: 1
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
     use_bias: true
     bias_initializer {
       constant_conf {
@@ -109,17 +114,9 @@ op {
 }
 
 op {
-  name: "relu2"
-  relu_conf {
-    in: "conv2/out"
-    out: "out"
-  }
-}
-
-op {
   name: "lrn2"
   local_response_normalization_conf {
-    in: "relu2/out"
+    in: "conv2/out"
     out: "out"
     depth_radius: 2
     bias: 2
@@ -134,7 +131,7 @@ op {
     in: "lrn2/out"
     out: "out"
     padding: "VALID"
-    data_format: "channels_last"
+    data_format: "channels_first"
     pool_size: 3
     pool_size: 3
     strides: 2
@@ -149,13 +146,14 @@ op {
     out: "out"
     filters: 384
     padding: "SAME"
-    data_format: "channels_last"
+    data_format: "channels_first"
     kernel_size: 3
     kernel_size: 3
     strides: 1
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
     use_bias: true
     bias_initializer {
       constant_conf {
@@ -166,58 +164,44 @@ op {
 }
 
 op {
-  name: "relu3"
-  relu_conf {
-    in: "conv3/out"
-    out: "out"
-  }
-}
-
-op {
   name: "conv4"
   conv_2d_conf {
-    in: "relu3/out"
+    in: "conv3/out"
     out: "out"
     filters: 256
     padding: "SAME"
-    data_format: "channels_last"
+    data_format: "channels_first"
     kernel_size: 3
     kernel_size: 3
     strides: 1
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
     use_bias: true
     bias_initializer {
       constant_conf {
         value: 0.5
       }
     }
-  }
-}
-
-op {
-  name: "relu4"
-  relu_conf {
-    in: "conv4/out"
-    out: "out"
   }
 }
 
 op {
   name: "conv5"
   conv_2d_conf {
-    in: "relu4/out"
+    in: "conv4/out"
     out: "out"
     filters: 256
     padding: "SAME"
-    data_format: "channels_last"
+    data_format: "channels_first"
     kernel_size: 3
     kernel_size: 3
     strides: 1
     strides: 1
     dilation_rate: 1
     dilation_rate: 1
+    activation: kRelu
     use_bias: true
     bias_initializer {
       constant_conf {
@@ -228,20 +212,12 @@ op {
 }
 
 op {
-  name: "relu5"
-  relu_conf {
-    in: "conv5/out"
-    out: "out"
-  }
-}
-
-op {
   name: "pool5"
   max_pooling_2d_conf {
-    in: "relu5/out"
+    in: "conv5/out"
     out: "out"
     padding: "VALID"
-    data_format: "channels_last"
+    data_format: "channels_first"
     pool_size: 3
     pool_size: 3
     strides: 2
@@ -255,6 +231,7 @@ op {
     in: "pool5/out"
     out: "out"
     units: 4096
+    activation: kRelu
     bias_initializer {
       constant_conf {
         value: 0.5
@@ -264,17 +241,9 @@ op {
 }
 
 op {
-  name: "relu_fc1"
-  relu_conf {
-    in: "fc1/out"
-    out: "out"
-  }
-}
-
-op {
   name: "dropout1"
   dropout_conf {
-    in: "relu_fc1/out"
+    in: "fc1/out"
     out: "out"
     rate: 0.5
   }
@@ -286,6 +255,7 @@ op {
     in: "dropout1/out"
     out: "out"
     units: 4096
+    activation: kRelu
     bias_initializer {
       constant_conf {
         value: 0.5
@@ -295,17 +265,9 @@ op {
 }
 
 op {
-  name: "relu_fc2"
-  relu_conf {
-    in: "fc2/out"
-    out: "out"
-  }
-}
-
-op {
   name: "dropout2"
   dropout_conf {
-    in: "relu_fc2/out"
+    in: "fc2/out"
     out: "out"
     rate: 0.5
   }

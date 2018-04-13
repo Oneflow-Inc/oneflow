@@ -10,26 +10,29 @@ placement_group {
 
 placement_group {
   op_set {
+    op_name: "transpose"
+  }
+  parallel_conf {
+    policy: kDataParallel
+    device_name: "first:cpu:2"
+  }
+}
+
+placement_group {
+  op_set {
     op_name: "conv1"
-    op_name: "relu1"
     op_name: "lrn1"
     op_name: "pool1"
     op_name: "conv2"
-    op_name: "relu2"
     op_name: "lrn2"
     op_name: "pool2"
     op_name: "conv3"
-    op_name: "relu3"
     op_name: "conv4"
-    op_name: "relu4"
     op_name: "conv5"
-    op_name: "relu5"
     op_name: "pool5"
     op_name: "fc1"
-    op_name: "relu_fc1"
     op_name: "dropout1"
     op_name: "fc2"
-    op_name: "relu_fc2"
     op_name: "dropout2"
     op_name: "fc3"
     op_name: "softmax_loss"
