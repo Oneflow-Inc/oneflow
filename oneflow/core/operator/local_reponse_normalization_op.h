@@ -12,8 +12,6 @@ class LocalResponseNormalizationOp final : public Operator {
   ~LocalResponseNormalizationOp() = default;
 
   void InitFromOpConf() override;
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
-  bool NeedOutWhenBackward() const override { return false; }
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
