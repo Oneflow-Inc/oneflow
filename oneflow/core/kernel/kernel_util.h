@@ -79,10 +79,7 @@ struct KernelUtilIf {
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const InitializerConf* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
-    if (initializer_conf == nullptr) {
-      initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
-    }
-    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
+    InitializeWithProperConf(ctx, initializer_conf, random_seed, blob, "");
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const InitializerConf* initializer_conf,
@@ -91,15 +88,19 @@ struct KernelUtilIf {
     if (initializer_conf == nullptr) {
       initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
-    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
-                                data_format);
+    if (data_format == "") {
+      Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
+    } else {
+      Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
+                                  data_format);
+    }
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const PbMessage* initializer_conf,
                                        uint32_t random_seed, Blob* blob) {
     InitializeWithProperConf(
         ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
-        blob);
+        blob, "");
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const PbMessage* initializer_conf,
