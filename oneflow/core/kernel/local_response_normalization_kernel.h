@@ -41,6 +41,18 @@ class LocalResponseNormalizationKernel<DeviceType::kCPU, T> final
   void BackwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
+  void NCHWForward(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void NHWCForward(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void NCHWBackward(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
+  void NHWCBackward(
+      const KernelCtx&,
+      std::function<Blob*(const std::string&)>) const override;
 };
 
 template<typename T>

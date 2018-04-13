@@ -30,6 +30,7 @@ void LocalResponseNormalizationOp::InferBlobDescs(
         Shape({in_blob_desc->shape().At(3) + 2 * conf.depth_radius()});
     GetBlobDesc4BnInOp("normalize_coef")->mut_shape() = in_blob_desc->shape();
   } else if (device_type == DeviceType::kGPU) {
+    CHECK_STREQ(conf().data_format(), "channels_first");
     // cudnn requirements
     CHECK_GE(conf.bias(), 1e-5);
     CHECK_GE(conf.beta(), 0.01);

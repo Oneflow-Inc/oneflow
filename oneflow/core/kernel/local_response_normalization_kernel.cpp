@@ -18,6 +18,34 @@ template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto& conf = kernel_conf().op_conf().local_response_normalization_conf();
+  if(conf.data_format() == "channels_first") {
+    NCHWForward(ctx, BnInOp2Blob);
+  } else if (conf.data_format() == "channels_last") {
+    NHWCForward(ctx, BnInOp2Blob);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  auto& conf = kernel_conf().op_conf().local_response_normalization_conf();
+  if(conf.data_format() == "channels_first") {
+    NCHWBackward(ctx, BnInOp2Blob);
+  } else if (conf.data_format() == "channels_last") {
+    NHWCBackward(ctx, BnInOp2Blob);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
+void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Shape& in_shape = in_blob->shape();
   Blob* out_blob = BnInOp2Blob("out");
