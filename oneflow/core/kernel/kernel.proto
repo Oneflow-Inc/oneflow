@@ -15,10 +15,9 @@ message ConvKernelConf {
   repeated int32 pad_large_side = 6;
   repeated int32 dilation_rate = 7;
   repeated int32 strides = 8;
-  optional ActivationType activation = 9;
-  optional int32 cudnn_fwd_algo = 10 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 11 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 12 [default = -1];
+  optional int32 cudnn_fwd_algo = 9 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 10 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 11 [default = -1];
 }
 
 message DropoutKernelConf {
@@ -93,6 +92,10 @@ message DecodeRandomKernelConf {
   required uint32 random_seed = 1;
 }
 
+message DecodeOFRecordKernelConf {
+  required uint32 random_seed = 1;
+}
+
 message KernelConf {
   required OperatorConf op_conf = 1;
   map<string, string> bn_in_op2lbn = 2;
@@ -119,6 +122,7 @@ message KernelConf {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
     DecodeRandomKernelConf decode_random_conf = 103;
+    DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
     SoftmaxKernelConf softmax_conf = 116;
     TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;

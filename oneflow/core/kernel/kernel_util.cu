@@ -48,6 +48,77 @@ cublasOperation_t CblasTrans2CublasTrans(CBLAS_TRANSPOSE trans) {
   return cublas_trans;
 }
 
+const int32_t kMaxDim = OF_PP_SEQ_SIZE(DIM_SEQ);
+
+struct Int32Array {
+  int32_t val[kMaxDim];
+};
+
+struct Int64Array {
+  int64_t val[kMaxDim];
+};
+
+__device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
+                              const int32_t* permutation, int64_t* x_strides) {
+  int64_t buff[kMaxDim];
+  int64_t cur_stride = 1;
+  for (int32_t i = num_axis - 1; i >= 0; --i) {
+    buff[i] = cur_stride;
+#if __CUDA_ARCH__ >= 350
+    cur_stride *= __ldg(x_dims + i);
+#else
+    cur_stride *= x_dims[i];
+#endif
+  }
+  for (int32_t i = 0; i < num_axis; ++i) {
+#if __CUDA_ARCH__ >= 350
+    x_strides[i] = buff[__ldg(permutation + i)];
+#else
+    x_strides[i] = buff[permutation[i]];
+#endif
+  }
+}
+
+__device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
+                             const int64_t* x_strides, int64_t y_idx) {
+  int64_t x_idx = 0;
+  for (int32_t i = num_axis - 1; i >= 0 && y_idx > 0; --i) {
+    x_idx += (y_idx % y_shape[i]) * x_strides[i];
+    y_idx /= y_shape[i];
+  }
+  return x_idx;
+}
+
+template<typename T>
+__global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
+                             const Int64Array y_shape,
+                             const Int32Array permutation,
+                             const int64_t elem_cnt, const T* x, T* y) {
+  __shared__ int64_t x_strides[kMaxDim];
+  __shared__ int64_t x_dims_shared[kMaxDim];
+  __shared__ int64_t y_dims_shared[kMaxDim];
+  __shared__ int32_t perm_shared[kMaxDim];
+  const int32_t tid = threadIdx.x;
+  if (tid < num_axis) {
+    x_dims_shared[tid] = x_shape.val[tid];
+    y_dims_shared[tid] = y_shape.val[tid];
+    perm_shared[tid] = permutation.val[tid];
+  }
+  __syncthreads();
+  if (tid == 0) {
+    ComputeOffset(num_axis, x_dims_shared, perm_shared, x_strides);
+  }
+  __syncthreads();
+  CUDA_1D_KERNEL_LOOP(y_idx, elem_cnt) {
+    const int64_t x_idx = GetXIndex(num_axis, y_dims_shared, x_strides, y_idx);
+#if __CUDA_ARCH__ >= 350
+    y[y_idx] = __ldg(x + x_idx);
+#else
+    y[y_idx] = x[x_idx];
+#endif
+  }
+}
+
 }  // namespace
 
 template<>
@@ -89,6 +160,23 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                  T* temp_storage, size_t temp_storage_bytes) {
   CudaCheck(cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr,
                                    n, ctx->cuda_stream()));
+}
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                       const Shape& x_shape, const Shape& y_shape,
+                       const PbRf<int32_t>& permutation, const int64_t elem_cnt,
+                       const T* x, T* y) {
+  CHECK_LE(num_axis, kMaxDim);
+  Int64Array x_shape_struct;
+  Int64Array y_shape_struct;
+  Int32Array perm_struct;
+  FOR_RANGE(int32_t, i, 0, num_axis) {
+    x_shape_struct.val[i] = x_shape.At(i);
+    y_shape_struct.val[i] = y_shape.At(i);
+    perm_struct.val[i] = permutation[i];
+  }
+  TransposeGpu<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                    ctx->cuda_stream()>>>(
+      num_axis, x_shape_struct, y_shape_struct, perm_struct, elem_cnt, x, y);
 }
 
 #define KU_FLOATING_METHOD             \
@@ -205,47 +293,53 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
   BACKWARD_COMPUTE_ACTIVATION(CUDNN_ACTIVATION_RELU);
 }
 
+// create temporary host blob store initializer result
+#define BEFORE_CPU_INITIALIZE()                                     \
+  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                 \
+  char* host_raw_dptr = nullptr;                                    \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
+  std::unique_ptr<Blob> host_blob;                                  \
+  host_blob.reset(                                                  \
+      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+
+// asynchronous copy to device
+#define AFTER_CPU_INITIALIZE()                                       \
+  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(), \
+                           blob->ByteSizeOfDataContentField(),       \
+                           cudaMemcpyHostToDevice);                  \
+  CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));              \
+  CudaCheck(cudaFreeHost(host_raw_dptr));
+
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
-  // create temporary host blob store initializer result
-  BlobDesc blob_desc = BlobDesc(blob->blob_desc());
-  char* host_raw_dptr = nullptr;
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-  std::unique_ptr<Blob> host_blob;
-  host_blob.reset(
-      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+  BEFORE_CPU_INITIALIZE();
   // synchronous initialize the host blob
   KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
       nullptr, initializer_conf, random_seed, host_blob.get());
-  // asynchronous copy to device
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),
-                           blob->ByteSizeOfDataContentField(),
-                           cudaMemcpyHostToDevice);
-  cudaStreamSynchronize(ctx->cuda_stream());
-  CudaCheck(cudaFreeHost(host_raw_dptr));
+  AFTER_CPU_INITIALIZE();
 }
 
+KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
+  BEFORE_CPU_INITIALIZE();
+  // synchronous initialize the host blob
+  KernelUtil<DeviceType::kCPU, T>::InitializeWithConf(
+      nullptr, initializer_conf, random_seed, host_blob.get(), data_format);
+  AFTER_CPU_INITIALIZE();
+}
 KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                      int32_t part_num,
                                      const std::string& model_dir, Blob* blob,
                                      const std::string& bn_in_op,
                                      int32_t dim_num, int64_t num_in_each_dim) {
-  BlobDesc blob_desc = BlobDesc(blob->blob_desc());
-  char* host_raw_dptr = nullptr;
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));
-  std::unique_ptr<Blob> host_blob;
-  host_blob.reset(
-      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+  BEFORE_CPU_INITIALIZE();
   KernelUtil<DeviceType::kCPU, T>::InitializeWithDir(
       ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
       num_in_each_dim);
-
-  Memcpy<DeviceType::kGPU>(ctx, blob->mut_dptr(), host_blob->dptr(),
-                           blob->ByteSizeOfDataContentField(),
-                           cudaMemcpyHostToDevice);
-  cudaStreamSynchronize(ctx->cuda_stream());
-  CudaCheck(cudaFreeHost(host_raw_dptr));
+  AFTER_CPU_INITIALIZE();
 }
 
 template<typename T>

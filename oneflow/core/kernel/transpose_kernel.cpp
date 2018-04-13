@@ -6,8 +6,9 @@ template<DeviceType device_type, typename T>
 void TransposeKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("in")->Transpose(ctx.device_ctx, BnInOp2Blob("out"),
-                               this->kernel_conf().transpose_conf().perm());
+  Transpose<device_type, T>(ctx.device_ctx, BnInOp2Blob("in"),
+                            BnInOp2Blob("out"),
+                            this->kernel_conf().transpose_conf().perm());
 }
 
 template<DeviceType device_type, typename T>
@@ -16,9 +17,9 @@ void TransposeKernel<device_type, T>::BackwardDataContent(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* in_diff = BnInOp2Blob("in_diff");
   if (in_diff) {
-    BnInOp2Blob("out_diff")
-        ->Transpose(ctx.device_ctx, BnInOp2Blob("in_diff"),
-                    this->kernel_conf().transpose_conf().invert_perm());
+    Transpose<device_type, T>(
+        ctx.device_ctx, BnInOp2Blob("out_diff"), in_diff,
+        this->kernel_conf().transpose_conf().invert_perm());
   }
 }
 

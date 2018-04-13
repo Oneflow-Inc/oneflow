@@ -12,6 +12,10 @@ void NormalModelUpdtOp::InitFromOpConf() {
   MdUpdtVirtualInitFromOpConf();
 }
 
+const PbMessage& NormalModelUpdtOp::GetCustomizedConf() const {
+  return op_conf().normal_mdupdt_conf();
+}
+
 REGISTER_OP_CREATOR(OperatorConf::kNormalMdupdtConf,
                     [](const OperatorConf& op_conf) -> Operator* {
                       const NormalModelUpdateOpUserConf& user_conf =

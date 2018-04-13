@@ -108,6 +108,10 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
+  void InferBlobDescsIf(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext*, DeviceType,
+      std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext*, DeviceType,

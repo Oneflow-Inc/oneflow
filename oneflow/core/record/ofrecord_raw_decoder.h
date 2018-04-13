@@ -13,8 +13,8 @@ class OFRecordDecoderImpl<EncodeCase::kRaw, T> final
   int32_t GetColNumOfFeature(const Feature&,
                              int64_t one_col_elem_num) const override;
   void ReadOneCol(DeviceCtx*, const Feature&, const BlobConf& blob_conf,
-                  int32_t col_id, T* out_dptr,
-                  int64_t one_col_elem_num) const override;
+                  int32_t col_id, T* out_dptr, int64_t one_col_elem_num,
+                  std::function<int32_t(void)> NextRandomInt) const override;
 };
 
 }  // namespace oneflow

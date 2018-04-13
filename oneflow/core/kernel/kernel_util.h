@@ -107,6 +107,10 @@ struct CpuKernelUtilIf {
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
 // CPU, Floating
@@ -154,6 +158,10 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                 int32_t part_num, const std::string& model_dir,
                                 Blob* blob, const std::string& bn_in_op,
@@ -180,6 +188,10 @@ struct GpuKernelUtilIf {
                   T* temp_storage, size_t temp_storage_bytes);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
 };
 
 // GPU, Floating
@@ -229,6 +241,10 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
   static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
                                 int32_t part_num, const std::string& model_dir,
                                 Blob* blob, const std::string& bn_in_op,

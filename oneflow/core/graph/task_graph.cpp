@@ -47,8 +47,18 @@ TaskGraph::TaskGraph(std::unique_ptr<const ChainGraph>&& chain_gph) {
 
 static bool IsDataParallelOneToOneBoxing(const ChainNode* src_chain,
                                          const ChainNode* dst_chain) {
-  if (src_chain->out_edges().size() > 1) { return false; }
-  if (dst_chain->in_edges().size() > 1) { return false; }
+  // TODO: it's ugly
+  if (typeid(*src_chain) != typeid(*dst_chain)) { return false; }
+  int32_t src_same_type_cnt = 0;
+  src_chain->ForEachNodeOnOutEdge([&](const ChainNode* chain) {
+    if (typeid(*src_chain) == typeid(*chain)) { src_same_type_cnt += 1; }
+  });
+  int32_t dst_same_type_cnt = 0;
+  dst_chain->ForEachNodeOnInEdge([&](const ChainNode* chain) {
+    if (typeid(*dst_chain) == typeid(*chain)) { dst_same_type_cnt += 1; }
+  });
+  if (src_same_type_cnt > 1) { return false; }
+  if (dst_same_type_cnt > 1) { return false; }
   std::shared_ptr<const ParallelDesc> src_desc = src_chain->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_desc = dst_chain->parallel_desc();
   if (src_desc->policy() != kDataParallel) { return false; }
