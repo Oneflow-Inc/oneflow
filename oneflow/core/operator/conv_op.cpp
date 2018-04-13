@@ -6,6 +6,8 @@ namespace oneflow {
 
 namespace {
 
+static const size_t kConvCudnnWorkspaceLimitBytes = 64 * 1024 * 1024;
+
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf,
                   std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side,
@@ -164,9 +166,9 @@ void ConvOp<NDims>::InferBlobDescs(
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
 
-    int64_t cudnn_buf_size = static_cast<int64_t>(std::max(
-        {conv_ctx.fwd_algo_perf.memory, conv_ctx.bwd_filter_algo_perf.memory,
-         conv_ctx.bwd_data_algo_perf.memory}));
+    int64_t cudnn_buf_size = static_cast<int64_t>(
+        std::max({conv_ctx.fwd_ws_size, conv_ctx.bwd_filter_ws_size,
+                  conv_ctx.bwd_data_ws_size}));
     GetBlobDesc4BnInOp("cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
   }
 #endif  // WITH_CUDA
@@ -248,15 +250,13 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
   if (kernel_conf->device_type() == DeviceType::kGPU) {
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
-    SetValInCustomizedKernelConf(
-        kernel_conf, "cudnn_fwd_algo",
-        static_cast<int32_t>(conv_ctx.fwd_algo_perf.algo));
+    SetValInCustomizedKernelConf(kernel_conf, "cudnn_fwd_algo",
+                                 static_cast<int32_t>(conv_ctx.fwd_algo));
     SetValInCustomizedKernelConf(
         kernel_conf, "cudnn_bwd_filter_algo",
-        static_cast<int32_t>(conv_ctx.bwd_filter_algo_perf.algo));
-    SetValInCustomizedKernelConf(
-        kernel_conf, "cudnn_bwd_data_algo",
-        static_cast<int32_t>(conv_ctx.bwd_data_algo_perf.algo));
+        static_cast<int32_t>(conv_ctx.bwd_filter_algo));
+    SetValInCustomizedKernelConf(kernel_conf, "cudnn_bwd_data_algo",
+                                 static_cast<int32_t>(conv_ctx.bwd_data_algo));
   }
 #endif  // WITH_CUDA
 }
@@ -321,19 +321,33 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(),
                           GetCustomizedConf());
 
-  int returned_algo_count = -1;
-  CudaCheck(cudnnGetConvolutionForwardAlgorithm_v7(
+  CudaCheck(cudnnGetConvolutionForwardAlgorithm(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
-      conv_desc.Get(), out_desc.Get(), 1, &returned_algo_count,
-      &conv_ctx->fwd_algo_perf));
-  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm_v7(
+      conv_desc.Get(), out_desc.Get(),
+      CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
+      kConvCudnnWorkspaceLimitBytes, &conv_ctx->fwd_algo));
+  CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
       *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(),
-      conv_desc.Get(), filter_desc.Get(), 1, &returned_algo_count,
-      &conv_ctx->bwd_filter_algo_perf));
-  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm_v7(
+      conv_desc.Get(), filter_desc.Get(),
+      CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
+      kConvCudnnWorkspaceLimitBytes, &conv_ctx->bwd_filter_algo));
+  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(),
-      conv_desc.Get(), in_desc.Get(), 1, &returned_algo_count,
-      &conv_ctx->bwd_data_algo_perf));
+      conv_desc.Get(), in_desc.Get(),
+      CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
+      kConvCudnnWorkspaceLimitBytes, &conv_ctx->bwd_data_algo));
+  CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
+      *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(),
+      conv_desc.Get(), out_desc.Get(), conv_ctx->fwd_algo,
+      &conv_ctx->fwd_ws_size));
+  CudaCheck(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+      *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(),
+      conv_desc.Get(), filter_desc.Get(), conv_ctx->bwd_filter_algo,
+      &conv_ctx->bwd_filter_ws_size));
+  CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
+      *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(),
+      conv_desc.Get(), in_desc.Get(), conv_ctx->bwd_data_algo,
+      &conv_ctx->bwd_data_ws_size));
 }
 #endif  // WITH_CUDA
 

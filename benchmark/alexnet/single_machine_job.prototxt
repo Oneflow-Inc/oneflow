@@ -1,6 +1,6 @@
 dlnet_filepath: "./train_net.prototxt"
-resource_filepath: "./resource.prototxt"
-placement_filepath: "./train_placement.prototxt"
+resource_filepath: "./single_machine_resource.prototxt"
+placement_filepath: "./single_machine_train_placement.prototxt"
 use_rdma: false
 globalfs_conf {
   localfs_conf {
@@ -13,7 +13,7 @@ model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
   model_save_snapshots_path: "/tmp/snapshot"
-  num_of_batches_in_snapshot: 100
+  num_of_batches_in_snapshot: 3000
   staleness: 0
   total_batch_num: 30000
   default_initializer_conf {
@@ -31,9 +31,9 @@ train_conf {
     }
     learning_rate_decay {
       exponential_conf {
-        decay_rate: 0.1;
-        decay_batches: 10000;
-        staircase: true;
+        decay_rate: 0.1
+        decay_batches: 10000
+        staircase: true
       }
     }
   }

@@ -9,9 +9,12 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 struct CudnnConvAlgoCtx final {
-  cudnnConvolutionFwdAlgoPerf_t fwd_algo_perf;
-  cudnnConvolutionBwdFilterAlgoPerf_t bwd_filter_algo_perf;
-  cudnnConvolutionBwdDataAlgoPerf_t bwd_data_algo_perf;
+  cudnnConvolutionFwdAlgo_t fwd_algo;
+  cudnnConvolutionBwdFilterAlgo_t bwd_filter_algo;
+  cudnnConvolutionBwdDataAlgo_t bwd_data_algo;
+  size_t fwd_ws_size;
+  size_t bwd_filter_ws_size;
+  size_t bwd_data_ws_size;
 };
 
 class CudnnConvDesc final {
