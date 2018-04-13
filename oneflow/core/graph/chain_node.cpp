@@ -440,7 +440,11 @@ std::vector<std::string> LossPrintChainNode::FindLbnsFromLossAcc(
 BldSubTskGphMthd NormalMdUpdtChainNode::GetMthdForBldSubTskGphFromMdDiffAcc(
     const ChainNode*) const {
   if (parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    return &TaskGraph::BldSubTskGphByBoxing;
+    if (parallel_desc()->parallel_num() == 1) {
+      return &TaskGraph::BldSubTskGphByOneToOne;
+    } else {
+      return &TaskGraph::BldSubTskGphByBoxing;
+    }
   } else if (parallel_desc()->policy() == ParallelPolicy::kModelParallel) {
     return &TaskGraph::BldSubTskGphByOneToOne;
   } else {
