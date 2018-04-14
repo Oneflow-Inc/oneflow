@@ -144,13 +144,14 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   BnInOp2Blob("rec_out")->CopyDataContentFrom<device_type>(ctx.device_ctx,
                                                            out_blob);
 }
+
 template<DeviceType device_type, typename T>
 void BasicLstmKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* hidden_blob = this->GetHiddenBlob(BnInOp2Blob);
-  const Blob* cell_blob = this->GetCellDiffBlob(BnInOp2Blob);
+  const Blob* cell_blob = this->GetCellBlob(BnInOp2Blob);
   Blob* hidden_diff_blob = this->GetHiddenDiffBlob(BnInOp2Blob);
   Blob* cell_diff_blob = this->GetCellDiffBlob(BnInOp2Blob);
 
@@ -158,21 +159,16 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
   Blob* i_data_diff_blob = BnInOp2Blob("i_data_diff");
   Blob* c_data_diff_blob = BnInOp2Blob("c_data_diff");
   Blob* o_data_diff_blob = BnInOp2Blob("o_data_diff");
+  Blob* rec_cell_out_tmp_diff_blob = BnInOp2Blob("rec_cell_out_tmp_diff");
 
-  Blob* rec_cell_out_diff_blob = BnInOp2Blob("rec_cell_out_diff");
-  Blob* candidate_out_blob = BnInOp2Blob("candidate_out");
-
-  if (in_blob->col_id() == in_blob->max_col_id()) {
-    // rec_cell_out_diff = out_diff .* o_out .* bw(candidate_data)
-    // fw(candidate_data) = candidate_out
-    BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
-        ctx, candidate_out_blob, rec_cell_out_diff_blob, activation_bw_func_,
-        BnInOp2Blob);
-  }
+  // rec_cell_out_tmp_diff
+  BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutTmpDiff(
+      ctx, BnInOp2Blob("out_diff"), rec_cell_out_tmp_diff_blob,
+      activation_bw_func_, BnInOp2Blob);
 
   // activation_data_diff
   BasicLstmKernelUtil<device_type, T>::ComputeActivationDataDiff(
-      ctx, rec_cell_out_diff_blob, cell_blob, f_data_diff_blob,
+      ctx, rec_cell_out_tmp_diff_blob, cell_blob, f_data_diff_blob,
       i_data_diff_blob, c_data_diff_blob, o_data_diff_blob, BnInOp2Blob,
       activation_bw_func_);
 
@@ -208,7 +204,7 @@ void BasicLstmKernel<device_type, T>::BackwardDataContent(
   // cell diff
   if (BnInOp2Blob("in")->col_id() != 0 || this->NeedExternalC0()) {
     BasicLstmKernelUtil<device_type, T>::ComputeCellDiff(
-        ctx, rec_cell_out_diff_blob, BnInOp2Blob("f_out"), cell_diff_blob);
+        ctx, rec_cell_out_tmp_diff_blob, BnInOp2Blob("f_out"), cell_diff_blob);
   }
 }
 
@@ -320,8 +316,8 @@ void BasicLstmKernelUtil<device_type, T>::ComputeForwardGateOut(
 }
 
 template<DeviceType device_type, typename T>
-void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
-    const KernelCtx& ctx, const Blob* out_diff, Blob* rec_cell_out_diff,
+void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutTmpDiff(
+    const KernelCtx& ctx, const Blob* out_diff, Blob* rec_cell_out_tmp_diff,
     BwActivationFunc<device_type, T> activation_bw_func_,
     std::function<Blob*(const std::string&)> BnInOp2Blob) {
   // gate_tmp_data  = out_diff .* o_out
@@ -329,13 +325,45 @@ void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
                                   out_diff->dptr<T>(),
                                   BnInOp2Blob("o_out")->dptr<T>(),
                                   BnInOp2Blob("gate_tmp_data")->mut_dptr<T>());
-  //  rec_cell_out_diff =  bw(candidate_data)
-  //  mind that candidate_out is the actication result of candidate_data
+  //  rec_cell_out_tmp_diff =  ActivtionBw(gate_tmp_data)
+  //  mind that candidate_out is the activation result of candidate_data
   (*activation_bw_func_)(ctx.device_ctx, out_diff->shape().elem_cnt(),
                          BnInOp2Blob("candidate_data")->dptr<T>(),
                          BnInOp2Blob("candidate_out")->dptr<T>(),
                          BnInOp2Blob("gate_tmp_data")->dptr<T>(),
-                         rec_cell_out_diff->mut_dptr<T>());
+                         rec_cell_out_tmp_diff->mut_dptr<T>());
+}
+
+template<DeviceType device_type, typename T>
+void BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutDiff(
+    const KernelCtx& ctx, const Blob* out_diff, const Blob* rec_out_diff,
+    Blob* rec_cell_out_tmp_diff,
+    BwActivationFunc<device_type, T> activation_bw_func_,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) {
+  if (BnInOp2Blob("in")->col_id() == BnInOp2Blob("in")->max_col_id()) {
+    BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutTmpDiff(
+        ctx, out_diff, rec_cell_out_tmp_diff, activation_bw_func_, BnInOp2Blob);
+  } else {
+    // plus_tmp_diff =  out_diff
+    BnInOp2Blob("plus_tmp_diff")
+        ->CopyDataContentFrom<device_type>(ctx.device_ctx, out_diff);
+    // plus_tmp_diff += rec_out_diff
+    KernelUtil<device_type, T>::Axpy(
+        ctx.device_ctx, out_diff->shape().elem_cnt(), static_cast<T>(1),
+        BnInOp2Blob("rec_out_diff")->dptr<T>(), 1,
+        BnInOp2Blob("plus_tmp_diff_blob"), 1);
+    // bw_tmp_diff = ActivationBw(plus_tmp_diff .* o_out)
+    BasicLstmKernelUtil<device_type, T>::ComputeRecCellOutTmpDiff(
+        ctx, BnInOp2Blob("plus_tmp_diff"), BnInOp2Blob("bw_tmp_diff"),
+        activation_bw_func_, BnInOp2Blob);
+    // rec_cell_out_tmp_diff = bw_tmp_diff + rec_cell_out_diff
+    rec_cell_out_tmp_diff->CopyDataContentFrom<device_type>(
+        ctx.device_ctx, BnInOp2Blob("rec_cell_out_diff"));
+    KernelUtil<device_type, T>::Mul(
+        ctx.device_ctx, out_diff->shape().elem_cnt(), static_cast<T>(1),
+        BnInOp2Blob("bw_tmp_diff")->dptr<T>(), 1,
+        rec_cell_out_tmp_diff->dptr<T>(), 1);
+  }
 }
 
 template<DeviceType device_type, typename T>

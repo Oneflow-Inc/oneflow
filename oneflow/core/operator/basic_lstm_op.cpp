@@ -31,6 +31,10 @@ void BasicLstmOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("candidate_data");
   // candidate_out = tanh(rec_cell_out)
   EnrollDataTmpBn("candidate_out");
+  // plus_tmp_diff bw_tmp_diff for compute rec_cell_out_diff
+  EnrollDataTmpBn("plus_tmp_diff");
+  EnrollDataTmpBn("bw_tmp_diff");
+  EnrollDataTmpBn("rec_cell_out_tmp_diff");
 
   if (GetBoolFromSpecialConf("use_forget_bias")) { EnrollModelBn("bias_f"); }
   EnrollModelBn("bias_f");
@@ -79,6 +83,9 @@ void BasicLstmOp::VirtualInferBlobDescs(
   OF_INFER_LSTM_GATE_BLOBDESC(candidate_out);
   OF_INFER_LSTM_GATE_BLOBDESC(candidate_data);
   OF_INFER_LSTM_GATE_BLOBDESC(c_data);
+  OF_INFER_LSTM_GATE_BLOBDESC(plus_tmp_diff);
+  OF_INFER_LSTM_GATE_BLOBDESC(bw_tmp_diff);
+  OF_INFER_LSTM_GATE_BLOBDESC(rec_cell_out_tmp_diff);
 
   OF_INFER_LSTM_GATE_BLOBDESC(f_out);
   OF_INFER_LSTM_GATE_BLOBDESC(f_data_diff);
