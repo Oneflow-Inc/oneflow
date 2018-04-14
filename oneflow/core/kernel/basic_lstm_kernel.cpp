@@ -126,8 +126,8 @@ void BasicLstmKernel<device_type, T>::ForwardDataContent(
   // rec_cell_out = candidate_out + rec_cell_out
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, out_blob->shape().elem_cnt(), static_cast<T>(1),
-      candidate_out_blob->dptr<T>(), static_cast<T>(1),
-      rec_cell_out_blob->mut_dptr<T>(), static_cast<T>(1));
+      candidate_out_blob->dptr<T>(), 1
+      rec_cell_out_blob->mut_dptr<T>(), 1);
 
   //  candidate_data = rec_cell_out (for BW)
   candidate_data_blob->CopyDataContentFrom<device_type>(ctx.device_ctx,
