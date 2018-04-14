@@ -341,7 +341,6 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
-  std::string empty_data_format = "";
   InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
 }
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
