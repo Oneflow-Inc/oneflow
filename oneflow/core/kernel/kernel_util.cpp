@@ -90,18 +90,18 @@ void RandomNormalInitializer(
 template<typename T>
 T GenInitialFan(VarianceNorm variance_norm, Blob* blob,
                 const std::string& data_format) {
-  int64_t channel_axis = 0;
-  if (data_format == "channels_first") {
-    channel_axis = 1;
-  } else if (data_format == "channels_last") {
-    channel_axis = blob->shape().NumAxes() - 1;
-  } else {
-    UNIMPLEMENTED();
-  }
   T fan = ZeroVal<T>::value;
   T fan_in = static_cast<T>(blob->shape().Count(1));
-  T fan_out =
-      static_cast<T>(blob->shape().Count(0) / blob->shape().At(channel_axis));
+  T fan_out = static_cast<T>(blob->shape().At(0));
+  if (data_format == "channels_first") {
+    fan_out *= static_cast<T>(blob->shape().Count(2));
+  } else if (data_format == "channels_last") {
+    fan_out *=
+        static_cast<T>(blob->shape().Count(1, blob->shape().NumAxes() - 1));
+  } else {
+    CHECK_EQ(blob->shape().NumAxes(), 2);
+    CHECK_EQ(data_format, "");
+  }
   if (variance_norm == VarianceNorm::kAverage) {
     fan = (fan_in + fan_out) / static_cast<T>(2);
   } else if (variance_norm == VarianceNorm::kFanIn) {
@@ -341,6 +341,12 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
+  InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
+}
+KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
   if (initializer_conf.has_constant_conf()) {
     ConstantInitializer<T>(
         static_cast<T>(initializer_conf.constant_conf().value()), blob);
@@ -350,26 +356,14 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else if (initializer_conf.has_random_normal_conf()) {
     RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
                                random_seed, blob);
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
-                                      const InitializerConf& initializer_conf,
-                                      uint32_t random_seed, Blob* blob,
-                                      const std::string& data_format) {
-  if (data_format.size() == 0) {
-    InitializeWithConf(ctx, initializer_conf, random_seed, blob);
-    return;
-  }
-  if (initializer_conf.has_xavier_conf()) {
+  } else if (initializer_conf.has_xavier_conf()) {
     XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
                          data_format);
   } else if (initializer_conf.has_msra_conf()) {
     MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob,
                        data_format);
   } else {
-    InitializeWithConf(ctx, initializer_conf, random_seed, blob);
+    UNIMPLEMENTED();
   }
 }
 
