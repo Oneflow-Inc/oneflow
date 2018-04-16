@@ -52,8 +52,7 @@ void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::InitializeWithConf(
         ctx, bias_multiplier_initializer_conf, 0,
-        BnInOp2Blob("bias_multiplier"),
-        this->template GetValFromCustomizedOpConf<std::string>("data_format"));
+        BnInOp2Blob("bias_multiplier"));
   }
 }
 
@@ -64,8 +63,8 @@ void ConvKernelIf<device_type, T>::InitModelBlobsWithRandomSeed(
   KernelUtil<device_type, T>::InitializeWithProperConf(
       ctx,
       GetMsgPtrFromPbMessage(this->GetCustomizedOpConf(), "weight_initializer"),
-      (*random_seed_gen)(), BnInOp2Blob("weight"));
-
+      (*random_seed_gen)(), BnInOp2Blob("weight"),
+      this->template GetValFromCustomizedOpConf<std::string>("data_format"));
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     KernelUtil<device_type, T>::InitializeWithProperConf(
         ctx,
