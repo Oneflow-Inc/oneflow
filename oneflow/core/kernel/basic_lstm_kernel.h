@@ -64,12 +64,12 @@ struct BasicLstmKernelUtil {
       const Blob* bias, Blob* gate_tmp_data, Blob* gate_out,
       FwActivationFunc<device_type, T> activation_func_);
 
-  static void ComputeRecCellOutTmpDiff(
+  static void ComputeBasicRecCellOutDiff(
       const KernelCtx& ctx, const Blob* out_diff, Blob* rec_cell_out_tmp_diff,
       BwActivationFunc<device_type, T> acticaiton_bw_func_,
       std::function<Blob*(const std::string&)> BnInOp2Blob);
 
-  static void ComputeRecCellOutDiff(
+  static void ComputeRecCellOutTmpDiff(
       const KernelCtx& ctx, const Blob* out_diff, const Blob* rec_out_diff,
       Blob* rec_cell_out_tmp_diff,
       BwActivationFunc<device_type, T> activation_bw_func_,
