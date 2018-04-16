@@ -26,10 +26,19 @@ void LocalResponseNormalizationOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
 
   if (device_type == DeviceType::kCPU) {
-    GetBlobDesc4BnInOp("padded_square")->mut_shape() =
-        Shape({in_blob_desc->shape().At(3) + 2 * conf.depth_radius()});
+    if (conf.data_format() == "channels_last") {
+      GetBlobDesc4BnInOp("padded_square")->mut_shape() =
+          Shape({in_blob_desc->shape().At(3) + 2 * conf.depth_radius()});
+    } else if (conf.data_format() == "channels_first") {
+      GetBlobDesc4BnInOp("padded_square")->mut_shape() =
+          Shape({1, in_blob_desc->shape().At(1) + 2 * conf.depth_radius(),
+                 in_blob_desc->shape().At(2), in_blob_desc->shape().At(3)});
+    } else {
+      UNIMPLEMENTED();
+    }
     GetBlobDesc4BnInOp("normalize_coef")->mut_shape() = in_blob_desc->shape();
   } else if (device_type == DeviceType::kGPU) {
+    CHECK_STREQ(conf.data_format().c_str(), "channels_first");
     // cudnn requirements
     CHECK_GE(conf.bias(), 1e-5);
     CHECK_GE(conf.beta(), 0.01);
