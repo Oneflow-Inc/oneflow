@@ -148,9 +148,13 @@ struct KernelUtil<DeviceType::kCPU, T,
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
+                  T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Powx(DeviceCtx* ctx, const int64_t n, const T* x,
+                   const float power, T* y);
 
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
