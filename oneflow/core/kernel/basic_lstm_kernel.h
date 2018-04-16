@@ -82,6 +82,13 @@ struct BasicLstmKernelUtil {
       std::function<Blob*(const std::string&)> BnInOp2Blob,
       BwActivationFunc<device_type, T> activaiton_bw_func_);
 
+  static void ComputeInnerDataDiff(
+      const KernelCtx& ctx, const Blob* rec_cell_out_diff, const Blob* mul_ele,
+      const Blob* gate_out, const Blob* gate_data, Blob* gate_out_diff,
+      Blob* gate_data_diff,
+      std::function<Blob*(const std::string&)> BnInOp2Blob,
+      BwActivationFunc<device_type, T> activaiton_bw_func_);
+
   static void ComputeAllWeightDiff(
       const KernelCtx& ctx, const Blob* input, const Blob* hidden,
       const Blob* f_data_diff, const Blob* i_data_diff, const Blob* c_data_diff,

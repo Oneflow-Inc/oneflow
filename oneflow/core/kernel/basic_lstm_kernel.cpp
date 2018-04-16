@@ -376,45 +376,46 @@ void BasicLstmKernelUtil<device_type, T>::ComputeActivationDataDiff(
   // in f_data_diff, i_data_diff, o_data_diff
 
   // f_data_diff = SigmoidBw( rec_cell_out_diff * rec_cell_in)
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, f_data_diff->shape().elem_cnt(),
-      rec_cell_out_diff->dptr<T>(), cell_blob->dptr<T>(),
-      BnInOp2Blob("f_out_diff")->mut_dptr<T>());
-  KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, f_data_diff->shape().elem_cnt(),
-      BnInOp2Blob("f_out")->dptr<T>(), BnInOp2Blob("f_out")->dptr<T>(),
-      BnInOp2Blob("f_out_diff")->dptr<T>(), f_data_diff->mut_dptr<T>());
+  BasicLstmKernelUtil<device_type, T>::ComputeInnerDataDiff(
+      ctx, rec_cell_out_diff, cell_blob, BnInOp2Blob("f_out"),
+      BnInOp2Blob("f_out"), BnInOp2Blob("f_out_diff"), f_data_diff, BnInOp2Blob,
+      &KernelUtil<device_type, T>::SigmoidBackward);
 
   // i_data_diff = SigmoidBw( rec_cell_out_diff * c_out)
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, i_data_diff->shape().elem_cnt(),
-      rec_cell_out_diff->dptr<T>(), BnInOp2Blob("c_out")->dptr<T>(),
-      BnInOp2Blob("i_out_diff")->mut_dptr<T>());
-  KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, i_data_diff->shape().elem_cnt(),
-      BnInOp2Blob("i_out")->dptr<T>(), BnInOp2Blob("i_out")->dptr<T>(),
-      BnInOp2Blob("i_out_diff")->dptr<T>(), i_data_diff->mut_dptr<T>());
+  BasicLstmKernelUtil<device_type, T>::ComputeInnerDataDiff(
+      ctx, rec_cell_out_diff, BnInOp2Blob("c_out"), BnInOp2Blob("i_out"),
+      BnInOp2Blob("i_out"), BnInOp2Blob("i_out_diff"), i_data_diff, BnInOp2Blob,
+      &KernelUtil<device_type, T>::SigmoidBackward);
 
   // c_data_diff = activation_bw_func_(rec_cell_out_diff * i_out)
-  KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, c_data_diff->shape().elem_cnt(),
-      rec_cell_out_diff->dptr<T>(), BnInOp2Blob("i_out")->dptr<T>(),
-      BnInOp2Blob("c_out_diff")->mut_dptr<T>());
-  (*activation_bw_func_)(
-      ctx.device_ctx, c_data_diff->shape().elem_cnt(),
-      BnInOp2Blob("c_data")->dptr<T>(), BnInOp2Blob("c_out")->dptr<T>(),
-      BnInOp2Blob("c_out_diff")->dptr<T>(), c_data_diff->mut_dptr<T>());
+  BasicLstmKernelUtil<device_type, T>::ComputeInnerDataDiff(
+      ctx, rec_cell_out_diff, BnInOp2Blob("i_out"), BnInOp2Blob("c_out"),
+      BnInOp2Blob("c_data"), BnInOp2Blob("c_out_diff"), c_data_diff,
+      BnInOp2Blob, activation_bw_func_);
 
   // o_data_diff = Sigmoid_Bw(out_diff * candidate_out)
-  // candidate_out is the activation result of candidate_data
+  BasicLstmKernelUtil<device_type, T>::ComputeInnerDataDiff(
+      ctx, rec_cell_out_diff, BnInOp2Blob("candidate_out"),
+      BnInOp2Blob("o_out"), BnInOp2Blob("o_out"), BnInOp2Blob("o_out_diff"),
+      o_data_diff, BnInOp2Blob, &KernelUtil<device_type, T>::SigmoidBackward);
+}
+
+template<DeviceType device_type, typename T>
+void BasicLstmKernelUtil<device_type, T>::ComputeInnerDataDiff(
+    const KernelCtx& ctx, const Blob* rec_cell_out_diff, const Blob* mul_ele,
+    const Blob* gate_out, const Blob* gate_data, Blob* gate_out_diff,
+    Blob* gate_data_diff, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    BwActivationFunc<device_type, T> activation_bw_func_) {
+  // gate_out_diff = rec_cell_out_diff .* mul_ele
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, o_data_diff->shape().elem_cnt(),
-      BnInOp2Blob("o_out")->dptr<T>(), BnInOp2Blob("candidate_out")->dptr<T>(),
-      BnInOp2Blob("o_out_diff")->mut_dptr<T>());
-  KernelUtil<device_type, T>::SigmoidBackward(
-      ctx.device_ctx, o_data_diff->shape().elem_cnt(),
-      BnInOp2Blob("o_out")->dptr<T>(), BnInOp2Blob("o_out")->dptr<T>(),
-      BnInOp2Blob("o_out_diff")->dptr<T>(), o_data_diff->mut_dptr<T>());
+      ctx.device_ctx, gate_data_diff->shape().elem_cnt(),
+      rec_cell_out_diff->dptr<T>(), mul_ele->dptr<T>(),
+      gate_out_diff->mut_dptr<T>());
+  // gate_data_diff = ActivationBw(gate_out_diff)
+  (*activation_bw_func_)(ctx.device_ctx, gate_data_diff->shape().elem_cnt(),
+                         gate_data->dptr<T>(), gate_out->dptr<T>(),
+                         gate_out_diff->dptr<T>(),
+                         gate_data_diff->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T>
