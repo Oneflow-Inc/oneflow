@@ -1,6 +1,6 @@
 #include "oneflow/core/graph/record_load_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
-#include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
@@ -15,7 +15,7 @@ void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   DecodeCompTaskNode* decode_node =
       static_cast<DecodeCompTaskNode*>((*out_edges().begin())->dst_node());
   std::shared_ptr<const Operator> decode_op =
-      decode_node->chain_node()->SoleOp();
+      decode_node->logical_node()->SoleOp();
   if (decode_op->op_conf().has_decode_ofrecord_conf()) {
     task_proto->set_record_type(RecordTypeProto::kOFRecord);
   } else {

@@ -20,10 +20,10 @@ void DecodeOFRecordKernel::Forward(
   auto status = static_cast<DecodeStatus*>(ctx.other);
   auto record_blob = status->in_regst_->GetRecordBlob<OFRecord>();
   const DecodeOFRecordOpConf& decode_conf = op_conf().decode_ofrecord_conf();
-  CHECK_EQ(kernel_conf().output_bns_size(), decode_conf.blob_size());
+  CHECK_EQ(op_attribute().output_bns_size(), decode_conf.blob_size());
   status->max_col_id_ = -1;
-  FOR_RANGE(int32_t, i, 0, kernel_conf().output_bns_size()) {
-    Blob* out_blob = BnInOp2Blob(kernel_conf().output_bns(i));
+  FOR_RANGE(int32_t, i, 0, op_attribute().output_bns_size()) {
+    Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(i));
     const BlobConf& blob_conf = decode_conf.blob(i);
     OFRecordDecoderIf* decoder = GetOFRecordDecoder(
         blob_conf.encode_case().encode_case(), blob_conf.data_type());

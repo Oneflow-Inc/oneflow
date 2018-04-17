@@ -30,7 +30,7 @@ void DecodeOFRecordOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
-    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().at(i));
+    BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
     dim_vec[0] = Global<JobDesc>::Get()->SinglePieceSize();
@@ -46,13 +46,15 @@ void DecodeOFRecordOp::InferBlobDescs(
   }
 }
 
-std::string DecodeOFRecordOp::obn2lbn(const std::string& output_bn) const {
-  CHECK(output_bn.substr(0, 4) == "out_");
-  return op_name() + "/"
-         + op_conf()
-               .decode_ofrecord_conf()
-               .blob(oneflow_cast<int32_t>(output_bn.substr(4)))
-               .name();
+LogicalBlobId DecodeOFRecordOp::obn2lbi(const std::string& output_bn) const {
+  CHECK_STREQ(output_bn.substr(0, 4).c_str(), "out_");
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(op_conf()
+                        .decode_ofrecord_conf()
+                        .blob(oneflow_cast<int32_t>(output_bn.substr(4)))
+                        .name());
+  return ret;
 }
 
 REGISTER_OP(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordOp);

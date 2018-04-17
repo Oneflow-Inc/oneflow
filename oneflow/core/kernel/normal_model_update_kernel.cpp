@@ -27,9 +27,10 @@ template<DeviceType device_type, typename T>
 Blob* NormalMdUpdateKernel<device_type, T>::DiffAveragingAndL1Regularization(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* in_0 = BnInOp2Blob(this->kernel_conf().input_bns(0));
-  FOR_RANGE(size_t, i, 1, this->kernel_conf().input_bns().size()) {
-    Blob* in_i = BnInOp2Blob(this->kernel_conf().input_bns(i));
+  const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
+  Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
+  FOR_RANGE(size_t, i, 1, op_attribute.input_bns().size()) {
+    Blob* in_i = BnInOp2Blob(op_attribute.input_bns(i));
     KernelUtil<device_type, T>::Axpy(ctx, in_0->shape().elem_cnt(), 1.0,
                                      in_i->dptr<T>(), 1, in_0->mut_dptr<T>(),
                                      1);
@@ -66,7 +67,7 @@ namespace {
 
 Kernel* CreateMdUpdtKernel(const KernelConf& kernel_conf) {
   const NormalModelUpdateOpUserConf& user_conf =
-      kernel_conf.op_conf().normal_mdupdt_conf().user_conf();
+      kernel_conf.op_attribute().op_conf().normal_mdupdt_conf().user_conf();
   if (user_conf.has_naive_conf()) {
     return CreateNaiveMdUpdtKernel(kernel_conf);
   } else if (user_conf.has_momentum_conf()) {

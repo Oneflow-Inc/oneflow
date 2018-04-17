@@ -324,7 +324,8 @@ std::string ActNode::VisualStr() const {
   std::string name = std::to_string(act_id()) + "\\n";
   name += std::to_string(task_proto_->task_id()) + "\\n";
   for (const auto& exec_node : task_proto_->exec_sequence().exec_node()) {
-    name = name + exec_node.kernel_conf().op_conf().name() + "\\n";
+    name =
+        name + exec_node.kernel_conf().op_attribute().op_conf().name() + "\\n";
   }
   return name;
 }

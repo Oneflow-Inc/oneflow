@@ -15,11 +15,11 @@ class CopyHdOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
+    return GenPackedLbi();
   }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
+    return GenPackedLbi();
   }
 };
 

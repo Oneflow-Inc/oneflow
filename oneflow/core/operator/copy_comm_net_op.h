@@ -15,8 +15,8 @@ class CopyCommNetOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override;
-  std::string obn2lbn(const std::string& output_bn) const override;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

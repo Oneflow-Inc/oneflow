@@ -26,7 +26,7 @@ class NormalizationOp final : public Operator {
 
   void InferBlobDescs(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*, DeviceType,
+      const ParallelContext*,
       std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:

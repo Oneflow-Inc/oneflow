@@ -3,23 +3,11 @@
 namespace oneflow {
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},
-    {kNormalForward, "2"},
-    {kRecurrentForward, "2"},
-    {kNormalBackward, "3"},
-    {kRecurrentBackward, "3"},
-    {kRecordLoad, "1"},
-    {kDecode, "1"},
-    {kLoss, "4"},
-    {kLossAcc, "5"},
-    {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"},
-    {kMdSave, "1"},
-    {kMdDiffAcc, "7"},
-    {kCopyHd, "8"},
-    {kCopyCommNet, "9"},
-    {kBoxing, "10"},
-    {kPrint, "1"},
+    {kInvalid, "0"},     {kNormalForward, "2"}, {kNormalBackward, "3"},
+    {kRecordLoad, "1"},  {kDecode, "1"},        {kLoss, "4"},
+    {kLossAcc, "5"},     {kLossPrint, "1"},     {kNormalMdUpdt, "6"},
+    {kMdSave, "1"},      {kMdDiffAcc, "7"},     {kCopyHd, "8"},
+    {kCopyCommNet, "9"}, {kBoxing, "10"},       {kPrint, "1"},
 };
 
 bool IsForwardTaskType(TaskType tt) {
@@ -41,6 +29,18 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   } else {
     return produced_regsts_it->second;
   }
+}
+
+const std::vector<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(
+    const std::string& name) {
+  return consumed_regsts_.at(name);
+}
+
+std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(
+    const std::string& name) {
+  const std::vector<std::weak_ptr<RegstDesc>>& vec = consumed_regsts_.at(name);
+  CHECK_EQ(vec.size(), 1);
+  return vec.front().lock();
 }
 
 DeviceType TaskNode::device_type() const {
@@ -65,29 +65,17 @@ void TaskNode::Build() {
   FixRegisterNumRange();
 }
 
-void TaskNode::FixRegisterNumRange() {
-  for (auto& pair : produced_regsts_) {
-    pair.second->set_min_register_num(pair.second->MaxColNum());
-  }
-}
-
 void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_,
       [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->NumOfLbn() == 0;
+        return it->second->NumOfLbi() == 0;
       });
 }
 
 void TaskNode::InferMemCaseOfProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->InferMemCase(); }
-}
-
-void TaskNode::UpdateTaskId() {
-  CHECK_NE(machine_id_, -1);
-  CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
 }
 
 std::string TaskNode::VisualStr() const {
@@ -99,12 +87,8 @@ std::string TaskNode::VisualStr() const {
 }
 
 bool TaskNode::IsMeaningLess() {
-  EraseIf<std::string, std::weak_ptr<RegstDesc>>(
-      &consumed_regsts_,
-      [](HashMap<std::string, std::weak_ptr<RegstDesc>>::iterator it) {
-        return !it->second.lock();
-      });
-  return produced_regsts_.empty() && consumed_regsts_.empty();
+  TODO();
+  return false;
 }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
@@ -113,21 +97,19 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false,
-                           device_type(), parallel_ctx(),
-                           task_proto->mutable_exec_sequence());
+                           parallel_ctx(), task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
-  for (auto& pair : consumed_regsts_) {
-    std::shared_ptr<RegstDesc> regst = pair.second.lock();
-    if (!regst) { continue; }
-    int64_t regst_desc_id = regst->regst_desc_id();
-    CHECK(consumed_regst_proto->insert({pair.first, regst_desc_id}).second);
-  }
+  TODO();
+}
+
+void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge,
+                                         const std::string& name) {
+  edge->AddRegst(name, GetProducedRegst(name));
 }
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
@@ -148,40 +130,33 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
 void TaskNode::ConsumeRegst(const std::string& name,
                             std::shared_ptr<RegstDesc> regst) {
   regst->AddConsumer(this);
-  CHECK(consumed_regsts_.emplace(name, regst).second);
+  consumed_regsts_[name].push_back(regst);
 }
 
 bool TaskNode::IsAllConsumedRegstLocked() {
-  for (auto& pair : consumed_regsts_) {
-    if (pair.second.lock()->IsLocked() == false) { return false; }
-  }
+  TODO();
   return true;
 }
 
-std::shared_ptr<RegstDesc> TaskNode::GetConsumedRegst(const std::string& name) {
-  auto it = consumed_regsts_.find(name);
-  if (it != consumed_regsts_.end()) { return it->second.lock(); }
-  return nullptr;
-}
-
-const HashMap<std::string, std::weak_ptr<RegstDesc>>&
-TaskNode::consumed_regsts() {
-  return consumed_regsts_;
-}
-
 bool TaskNode::TryLockConsumedRegst(const std::string& name) {
-  auto regst = GetConsumedRegst(name);
-  if (regst) {
-    if (regst->IsLocked()) { return false; }
-    regst->Lock();
-    return true;
-  } else {
-    return false;
-  }
+  TODO();
+  return false;
 }
 
 void TaskNode::LockRegsts() {
   for (auto& pair : produced_regsts_) { pair.second->Lock(); }
+}
+
+void TaskNode::FixRegisterNumRange() {
+  for (auto& pair : produced_regsts_) {
+    pair.second->set_min_register_num(pair.second->MaxColNum());
+  }
+}
+
+void TaskNode::UpdateTaskId() {
+  CHECK_NE(machine_id_, -1);
+  CHECK_NE(thrd_id_, -1);
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(

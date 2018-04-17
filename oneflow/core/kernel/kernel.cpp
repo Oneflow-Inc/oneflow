@@ -13,7 +13,7 @@ void Kernel::InitModelAndModelTmp(
     const Snapshot* snapshot,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitPureModelTmpBlobs(ctx.device_ctx, BnInOp2Blob);
-  std::string model_load_dir = kernel_conf().op_conf().model_load_dir();
+  std::string model_load_dir = op_conf().model_load_dir();
   if (model_load_dir == "" && snapshot) {
     model_load_dir = snapshot->GetDirFromOpName(op_conf().name());
   }
@@ -40,8 +40,8 @@ void Kernel::Launch(
   }
 }
 
-const std::string& Kernel::Lbn4BnInOp(const std::string& bn_in_op) const {
-  return kernel_conf_.bn_in_op2lbn().at(bn_in_op);
+const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
+  return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
 
 void Kernel::Forward(
@@ -66,23 +66,23 @@ void Kernel::Backward(
 }
 
 bool Kernel::HasModelBns() const {
-  return kernel_conf().model_bns().size() > 0;
+  return op_attribute().model_bns().size() > 0;
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-            kernel_conf().output_bns(), &Blob::CopyDataIdFrom);
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+            op_attribute().output_bns(), &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
-            kernel_conf().output_bns(), &Blob::CopyColNumFrom);
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+            op_attribute().output_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
@@ -96,8 +96,8 @@ template<DeviceType device_type>
 void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
-            kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
+            op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
@@ -146,11 +146,13 @@ template<DeviceType device_type, typename ModelType>
 void KernelIfWithModel<device_type, ModelType>::L2Regularization(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const std::string& mbn : this->kernel_conf().model_bns()) {
+  for (const std::string& mbn : this->op_attribute().model_bns()) {
     const Blob* model_blob = BnInOp2Blob(mbn);
     ModelType l2 = static_cast<ModelType>(
         Global<JobDesc>::Get()->L2()
-        * BnInOp2Blob(this->kernel_conf().output_diff_bns()[0])->shape().At(0));
+        * BnInOp2Blob(this->op_attribute().output_diff_bns()[0])
+              ->shape()
+              .At(0));
     KernelUtil<device_type, ModelType>::Axpy(
         ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()), l2,
         model_blob->dptr<ModelType>(), 1,
@@ -171,7 +173,7 @@ const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
   if (this->GetActivationType() != ActivationType::kNone) {
     return BnInOp2Blob("activation_buf");
   } else {
-    const PbRpf<std::string> odbns = this->kernel_conf().output_diff_bns();
+    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(odbns.size(), 1);
     return BnInOp2Blob(odbns[0]);
   }
@@ -181,7 +183,7 @@ template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::ForwardActivate(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PbRpf<std::string> obns = this->kernel_conf().output_bns();
+  const PbRpf<std::string> obns = this->op_attribute().output_bns();
   CHECK_EQ(obns.size(), 1);
   Blob* out_blob = BnInOp2Blob(obns[0]);
   ActivationType activation = GetActivationType();
@@ -210,8 +212,8 @@ void KernelIfWithActivation<device_type, T>::BackwardActivate(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
-    const PbRpf<std::string> obns = this->kernel_conf().output_bns();
-    const PbRpf<std::string> odbns = this->kernel_conf().output_diff_bns();
+    const PbRpf<std::string> obns = this->op_attribute().output_bns();
+    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(obns.size(), 1);
     CHECK_EQ(odbns.size(), 1);
 
@@ -254,7 +256,8 @@ void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator2 creator) {
 
 std::unique_ptr<const Kernel> ConstructKernel(
     const ParallelContext* parallel_ctx, const KernelConf& conf) {
-  OperatorConf::OpTypeCase opcase = conf.op_conf().op_type_case();
+  OperatorConf::OpTypeCase opcase =
+      conf.op_attribute().op_conf().op_type_case();
   auto it = GetCreatorsMap().find(opcase);
   CHECK(it != GetCreatorsMap().end()) << opcase;
   Kernel* rptr = it->second(conf);

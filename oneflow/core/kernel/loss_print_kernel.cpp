@@ -13,7 +13,7 @@ void LossPrintKernel<T>::Forward(
   if (reduction_acc_blob != nullptr) {
     reduction_coefficient = reduction_acc_blob->dptr<T>()[0];
   } else {
-    auto conf = kernel_conf().op_conf().loss_print_conf();
+    auto conf = op_conf().loss_print_conf();
     reduction_coefficient = GetReductionCoefficient(
         conf.weight_scalar(), conf.reduction_type(),
         Global<JobDesc>::Get()->ParallelPieceSize()

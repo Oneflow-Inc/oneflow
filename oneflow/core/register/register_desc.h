@@ -31,17 +31,17 @@ class RegstDesc final {
   int32_t max_register_num() const { return max_register_num_; }
   void set_max_register_num(int32_t val);
 
-  // lbn2blob_desc_
+  // lbi2blob_desc_
   bool IsLocked() const { return is_locked_; }
   void Lock();
   void CopyBlobDescFrom(const RegstDesc*);
-  void CopyBlobDescWithoutAddLbn(const RegstDesc*);
-  void CopyBlobDescWithoutAddLbn(const RegstDesc* src, const RegstDesc* supple);
-  BlobDesc* AddLbn(const std::string& lbn);
-  const BlobDesc* GetBlobDesc(const std::string& lbn) const;
-  BlobDesc* MutBlobDesc(const std::string& lbn);
-  void ForEachLbn(std::function<void(const std::string&)> func) const;
-  size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
+  void CopyBlobDescWithoutAddLbi(const RegstDesc*);
+  void CopyBlobDescWithoutAddLbi(const RegstDesc* src, const RegstDesc* supple);
+  BlobDesc* AddLbi(const LogicalBlobId&);
+  const BlobDesc* GetBlobDesc(const LogicalBlobId& lbi) const;
+  BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
+  void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
+  size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
 
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
@@ -57,7 +57,7 @@ class RegstDesc final {
   int32_t min_register_num_;
   int32_t max_register_num_;
 
-  HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
   std::unique_ptr<BlobDesc> packed_blob_desc_;
   bool is_locked_;
 

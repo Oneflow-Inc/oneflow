@@ -97,7 +97,7 @@ bool ConvOp<NDims>::NeedOutWhenBackward() const {
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type) const {
+    const ParallelContext* parallel_ctx) const {
   const std::string& data_format =
       GetValFromCustomizedConf<std::string>("data_format");
 
@@ -138,7 +138,7 @@ void ConvOp<NDims>::InferBlobDescs(
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
-    if (!UseCudnn(device_type)) {
+    if (!UseCudnn()) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) {
         bias_mul_shape[i + 1] = out_shape[dhw_offset + i];
@@ -148,7 +148,7 @@ void ConvOp<NDims>::InferBlobDescs(
     }
   }
 
-  if (!UseCudnn(device_type)) {
+  if (!UseCudnn()) {
     // col_buf
     std::vector<int64_t> col_buf_shape(2 * NDims + 1);
     for (size_t i = 0; i != NDims + 1; ++i) {
@@ -161,7 +161,7 @@ void ConvOp<NDims>::InferBlobDescs(
   }
 
 #ifdef WITH_CUDA
-  if (device_type == DeviceType::kGPU) {
+  if (device_type() == DeviceType::kGPU) {
     // cudnn_buf
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
@@ -247,7 +247,7 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
                                        pad_large_side[i]);
   }
 #ifdef WITH_CUDA
-  if (kernel_conf->device_type() == DeviceType::kGPU) {
+  if (device_type() == DeviceType::kGPU) {
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
     SetValInCustomizedKernelConf(kernel_conf, "cudnn_fwd_algo",
@@ -267,7 +267,7 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   conv_conf->set_dim(NDims);
-  if (!UseCudnn(kernel_conf->device_type())) {
+  if (!UseCudnn()) {
     GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
   } else {
     GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf);

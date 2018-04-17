@@ -15,16 +15,13 @@ std::string Snapshot::GetDirFromOpName(const std::string& op_name) const {
 }
 
 std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
-    const std::string& lbn, int32_t part_id) {
-  // parse lbn
-  std::pair<std::string, std::string> parsed_lbn = ParseLbn(lbn);
-  const std::string& op_name = parsed_lbn.first;
-  const std::string& bn_in_op = parsed_lbn.second;
+    const LogicalBlobId& lbi, int32_t part_id) {
   // op_name_dir
-  std::string op_name_dir = JoinPath(root_path_, op_name);
+  std::string op_name_dir = JoinPath(root_path_, lbi.op_name());
   OF_CALL_ONCE(op_name_dir, GlobalFS()->CreateDir(op_name_dir));
   // bn_in_op_tmp_dir
-  std::string bn_in_op_tmp_dir = JoinPath(op_name_dir, bn_in_op + "_tmp");
+  std::string bn_in_op_tmp_dir =
+      JoinPath(op_name_dir, lbi.blob_name() + "_tmp");
   OF_CALL_ONCE(bn_in_op_tmp_dir, GlobalFS()->CreateDir(bn_in_op_tmp_dir));
   // part_file
   std::string part_file =
@@ -32,21 +29,24 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(
   return of_make_unique<PersistentOutStream>(GlobalFS(), part_file);
 }
 
-void Snapshot::OnePartDone(const std::string& lbn, int32_t part_id,
+void Snapshot::OnePartDone(const LogicalBlobId& lbi, int32_t part_id,
                            int32_t part_num) {
-  std::string lbn_done_key = JoinPath(root_path_, "part_done", lbn);
+  std::string lbn_done_key =
+      JoinPath(root_path_, "part_done", lbi.op_name(), lbi.blob_name());
   int32_t lbn_done_cnt = Global<CtrlClient>::Get()->IncreaseCount(lbn_done_key);
   if (lbn_done_cnt == part_num) {
     Global<CtrlClient>::Get()->EraseCount(lbn_done_key);
-    ConcatLbnFile(lbn, part_num, JoinPath(root_path_, lbn));
+    ConcatLbnFile(lbi, part_num,
+                  JoinPath(root_path_, lbi.op_name(), lbi.blob_name()));
   }
 }
 
-void Snapshot::ConcatLbnFile(const std::string& lbn, int32_t part_num,
+void Snapshot::ConcatLbnFile(const LogicalBlobId& lbi, int32_t part_num,
                              const std::string& concat_file) {
   std::vector<char> buffer(
       Global<JobDesc>::Get()->persistence_buffer_byte_size());
-  std::string part_dir = JoinPath(root_path_, lbn + "_tmp");
+  std::string part_dir =
+      JoinPath(root_path_, lbi.op_name(), lbi.blob_name(), "_tmp");
   {
     PersistentOutStream out_stream(GlobalFS(), concat_file);
     for (int32_t i = 0; i < part_num; ++i) {

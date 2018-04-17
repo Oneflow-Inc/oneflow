@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_DECODE_RANDOM_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -13,6 +14,8 @@ class DecodeRandomOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+  LogicalNode* NewProperLogicalNode() override { return new DecodeLogicalNode; }
+
   bool IsDecodeOp() const override { return true; }
 
   void InferBlobDescs(

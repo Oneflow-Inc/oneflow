@@ -17,11 +17,11 @@ class RMSPropModelUpdateOp final : public NormalModelUpdtOp {
 
  private:
   void MdUpdtVirtualInitFromOpConf() override;
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
+    return GenPackedLbi();
   }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
+    return GenPackedLbi();
   }
 };
 

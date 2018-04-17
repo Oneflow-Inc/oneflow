@@ -43,7 +43,7 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
 
 void NormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
+    const ParallelContext* parallel_ctx,
     std::function<void(OpContext*)> EnrollOpCtx) const {
   const auto& conf = op_conf().normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -89,7 +89,7 @@ void NormalizationOp::InferBlobDescs(
     *GetBlobDesc4BnInOp(bn_in_op) = blob_desc;
   }
   size_t tmp_storage_size = 0;
-  if (device_type == DeviceType::kGPU) {
+  if (device_type() == DeviceType::kGPU) {
     tmp_storage_size =
         GetTmpSizeForReduceSum(in_data_type, op_ctx->transpose_rows);
     CHECK_GT(tmp_storage_size, 0);

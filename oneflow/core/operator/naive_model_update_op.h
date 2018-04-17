@@ -16,11 +16,11 @@ class NaiveModelUpdateOp final : public NormalModelUpdtOp {
       const ParallelContext* parallel_ctx) const override {}
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
+    return GenPackedLbi();
   }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
+    return GenPackedLbi();
   }
 };
 

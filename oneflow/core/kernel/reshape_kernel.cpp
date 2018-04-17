@@ -32,7 +32,7 @@ Kernel* CreateReshapeKernel(const KernelConf& kernel_conf) {
 #define RESHAPE_KERNEL_ENTRY(device_type) \
   {device_type, []() { return new ReshapeKernel<device_type>; }},
       OF_PP_FOR_EACH_TUPLE(RESHAPE_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(kernel_conf.device_type())();
+  return creators.at(kernel_conf.op_attribute().device_type())();
 }
 
 }  // namespace

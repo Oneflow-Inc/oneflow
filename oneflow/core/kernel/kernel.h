@@ -28,13 +28,16 @@ class Kernel {
   void Launch(const KernelCtx& ctx,
               std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
+  const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
 
  protected:
   Kernel() = default;
   virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
-  const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
+  const OpAttribute& op_attribute() const {
+    return kernel_conf().op_attribute();
+  }
+  const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
 
   virtual void InitPureModelTmpBlobs(
       DeviceCtx* ctx,
@@ -214,8 +217,8 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
                                          (kernel_class), DEVICE_TYPE_SEQ,     \
                                          data_type_seq)};                     \
-    return creators.at(                                                       \
-        GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();    \
+    return creators.at(GetHashKey(kernel_conf.op_attribute().device_type(),   \
+                                  kernel_conf.data_type()))();                \
   }                                                                           \
                                                                               \
   COMMAND(AddKernelCreator(op_type_case, OF_PP_CAT(CreateKernel, __LINE__))); \

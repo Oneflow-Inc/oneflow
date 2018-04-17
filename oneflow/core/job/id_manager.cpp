@@ -8,8 +8,12 @@ int64_t IDMgr::MachineID4MachineName(const std::string& machine_name) const {
       << "Undefined machine name: " << machine_name;
   return it->second;
 }
-const std::string& IDMgr::MachineName4MachineId(int64_t machine_id) const {
-  return machine_id2machine_name_.at(machine_id);
+
+int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
+  int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
+  CHECK_LT(thread_id2num_of_tasks_[machine_thrd_id],
+           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
+  return machine_thrd_id | (thread_id2num_of_tasks_[machine_thrd_id]++);
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
@@ -20,29 +24,13 @@ DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
   }
 }
 
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
-  int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);
-  CHECK_LT(thread_id2num_of_tasks_[machine_thrd_id],
-           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
-  return machine_thrd_id | (thread_id2num_of_tasks_[machine_thrd_id]++);
-}
-
-int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ + dev_phy_id;
-}
-
-int64_t IDMgr::GetPersistenceThrdId(int64_t offset) const {
-  return gpu_device_num_ + cpu_device_num_ + offset;
-}
-
-int64_t IDMgr::CommNetThrdId() const {
-  return gpu_device_num_ + cpu_device_num_
-         + Global<JobDesc>::Get()->PersistenceWorkerNum();
-}
-
 int64_t IDMgr::GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const {
   CHECK_LT(thrd_id, gpu_device_num_);
   return thrd_id;
+}
+
+int64_t IDMgr::GetMemZoneIdFromThrdId(int64_t thrd_id) const {
+  return std::min(thrd_id, gpu_device_num_);
 }
 
 DeviceType IDMgr::GetDeviceTypeFromActorId(int64_t actor_id) const {

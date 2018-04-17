@@ -1,5 +1,5 @@
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
-#include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
 namespace oneflow {
 
@@ -28,7 +28,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       out_edge->AddRegst("model_tmp", model_tmp_regst);
       if (IsForwardTaskType(dst_node->GetTaskType())
           && !found_related_init_model_task) {
-        auto fw_node = static_cast<ForwardCompTaskNode*>(dst_node);
+        auto fw_node = static_cast<NormalForwardCompTaskNode*>(dst_node);
         fw_node->set_random_seed(random_seed_);
         found_related_init_model_task = true;
       }
@@ -50,36 +50,22 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
          && GetProducedRegst("model_tmp")->IsLocked();
 }
 
-static std::shared_ptr<const Operator> ConstructModelUpdateOp(int32_t in_num) {
-  OperatorConf op_conf;
-  op_conf.set_name("md_update_" + NewUniqueId());
-  NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
-  const JobDesc* job_desc = Global<JobDesc>::Get();
-  if (job_desc->IsTrain()) {
-    *(mdupdt_conf->mutable_user_conf()) =
-        job_desc->job_conf().train_conf().model_update_conf();
-  }
-  mdupdt_conf->set_in_num(in_num);
-  return ConstructOp(op_conf);
-}
-
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (Global<JobDesc>::Get()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructModelUpdateOp(consumed_regsts().size());
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
-    node->BindBnInOpAndRegst(node->op()->input_bns().at(ibn_idx++),
-                             pair.second.lock());
+    node->BindBnInOpAndRegst(node->op()->input_bns().Get(ibn_idx++),
+                             pair.second.front().lock());
   }
   node->BindBnInOpAndRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   auto data_tmp_regst = GetProducedRegst("data_tmp");
   for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-    const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
-    data_tmp_regst->AddLbn(lbn);
+    const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(dtbn);
+    data_tmp_regst->AddLbi(lbi);
     node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
   }
-  node->InferBlobDescs(nullptr, device_type());
+  node->InferBlobDescs(nullptr);
 }
 
 void NormalMdUpdtCompTaskNode::LockRegsts() {

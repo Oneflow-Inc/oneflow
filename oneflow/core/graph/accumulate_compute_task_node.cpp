@@ -1,4 +1,4 @@
-#include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/loss_accumulate_compute_task_node.h"
 
 namespace oneflow {
@@ -13,10 +13,10 @@ void AccCompTaskNode::ConsumeAllRegsts() {
 }
 
 void AccCompTaskNode::BuildExecGphAndRegst() {
-  std::shared_ptr<RegstDesc> one_regst = GetConsumedRegst("one");
+  std::shared_ptr<RegstDesc> one_regst = GetSoleConsumedRegst("one");
   std::shared_ptr<RegstDesc> acc_regst = GetProducedRegst("acc");
   acc_regst->CopyBlobDescFrom(one_regst.get());
-  std::shared_ptr<const Operator> op = chain_node()->SoleOp();
+  std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
   exec_node->BindBnInOpAndRegst(op->SoleIbn(), one_regst);
