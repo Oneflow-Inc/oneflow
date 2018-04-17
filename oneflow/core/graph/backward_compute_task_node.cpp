@@ -1,11 +1,11 @@
 #include "oneflow/core/graph/backward_compute_task_node.h"
-#include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
 void BackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
-    if (SuccChainNodeOnEdge(edge) == chain_node()) {
+    if (GetOneSuccLogicalNodeOnEdge(edge) == logical_node()) {
       VirtualProduceRegstOnRecurrentEdge(edge);
       continue;
     }
@@ -56,7 +56,7 @@ void BackwardCompTaskNode::LinkFwExecNode() {
   mut_exec_gph().ForEachNode([&](ExecNode* bw_exec) {
     auto fw_exec_it = op_name2fw_exec.find(bw_exec->op()->op_name());
     if (fw_exec_it == op_name2fw_exec.end()) {
-      CHECK(bw_exec->op()->IsCloneOp());
+      // CHECK(bw_exec->op()->IsCloneOp());
     } else {
       bw_exec->set_fw_node(fw_exec_it->second);
     }
@@ -64,9 +64,10 @@ void BackwardCompTaskNode::LinkFwExecNode() {
 }
 
 void BackwardCompTaskNode::BindModelDiffRegst() {
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetConsumedRegst("data_tmp");
-  std::shared_ptr<RegstDesc> model_tmp_regst = GetConsumedRegst("model_tmp");
-  std::shared_ptr<RegstDesc> model_regst = GetConsumedRegst("model");
+  std::shared_ptr<RegstDesc> data_tmp_regst = GetSoleConsumedRegst("data_tmp");
+  std::shared_ptr<RegstDesc> model_tmp_regst =
+      GetSoleConsumedRegst("model_tmp");
+  std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
@@ -86,13 +87,13 @@ void BackwardCompTaskNode::BindModelDiffRegst() {
 
 void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff")) {
-    std::shared_ptr<RegstDesc> in_regst = GetConsumedRegst("in");
-    in_diff_regst->CopyBlobDescWithoutAddLbn(in_regst.get());
+    std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+    in_diff_regst->CopyBlobDescWithoutAddLbi(in_regst.get());
   }
 
   std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
   if (md_diff_regst) {
-    md_diff_regst->CopyBlobDescFrom(GetConsumedRegst("model").get());
+    md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get());
   }
 
   VirtualInferBlobDescInActivationDiff();

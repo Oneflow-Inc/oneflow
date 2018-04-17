@@ -25,8 +25,8 @@ class BoxingOp final : public Operator {
       KernelConf* kernel_conf) const override;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override;
-  std::string obn2lbn(const std::string& output_bn) const override;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   void InferDataTmpBlobDesc(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       std::vector<int64_t>* data_temp_shape_vec) const;

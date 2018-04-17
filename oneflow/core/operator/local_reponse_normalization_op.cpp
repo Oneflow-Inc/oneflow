@@ -16,7 +16,7 @@ const PbMessage& LocalResponseNormalizationOp::GetCustomizedConf() const {
 
 void LocalResponseNormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type) const {
+    const ParallelContext* parallel_ctx) const {
   const LocalResponseNormalizationOpConf conf =
       op_conf().local_response_normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -25,11 +25,11 @@ void LocalResponseNormalizationOp::InferBlobDescs(
            Global<JobDesc>::Get()->DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
 
-  if (device_type == DeviceType::kCPU) {
+  if (device_type() == DeviceType::kCPU) {
     GetBlobDesc4BnInOp("padded_square")->mut_shape() =
         Shape({in_blob_desc->shape().At(3) + 2 * conf.depth_radius()});
     GetBlobDesc4BnInOp("normalize_coef")->mut_shape() = in_blob_desc->shape();
-  } else if (device_type == DeviceType::kGPU) {
+  } else if (device_type() == DeviceType::kGPU) {
     // cudnn requirements
     CHECK_GE(conf.bias(), 1e-5);
     CHECK_GE(conf.beta(), 0.01);

@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -6,7 +7,7 @@ namespace {
 
 DataType GetDataTypeFromBnInOpVec(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const std::vector<std::string>& bn_in_ops) {
+    const PbRpf<std::string>& bn_in_ops) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
     if (blob_desc) { return blob_desc->data_type(); }
@@ -17,9 +18,10 @@ DataType GetDataTypeFromBnInOpVec(
 }  // namespace
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
-  op_conf_ = op_conf;
-  if (op_conf_.has_use_cudnn_on_gpu() == false) {
-    op_conf_.set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
+  OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
+  *this_op_conf = op_conf;
+  if (this_op_conf->has_use_cudnn_on_gpu() == false) {
+    this_op_conf->set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
   if (HasFieldInCustomizedConf("activation")) {
     ActivationType activation =
@@ -31,53 +33,53 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   InitFromOpConf();
 }
 
-const std::string& Operator::Lbn4BnInOp(const std::string& bn_in_op) const {
-  return bn_in_op2lbn_.at(bn_in_op);
+LogicalNode* Operator::NewProperLogicalNode() {
+  return new NormalForwardLogicalNode;
 }
 
-int8_t Operator::TryModifyLbn4BnInOp(const std::string& bn_in_op,
-                                     const std::string& lbn) {
-  auto it = bn_in_op2lbn_.find(bn_in_op);
-  if (it == bn_in_op2lbn_.end()) { return -1; }
-  it->second = lbn;
-  return 0;
+const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
+  return op_attribute_.bn_in_op2lbi().at(bn_in_op);
 }
 
-void Operator::ModifyLbn4BnInOp(const std::string& bn_in_op,
-                                const std::string& lbn) {
-  CHECK_EQ(TryModifyLbn4BnInOp(bn_in_op, lbn), 0);
+LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
+  auto it = op_attribute_.mutable_bn_in_op2lbi()->find(bn_in_op);
+  if (it == op_attribute_.mutable_bn_in_op2lbi()->end()) {
+    return nullptr;
+  } else {
+    return &(it->second);
+  }
 }
 
-bool Operator::UseCudnn(DeviceType device_type) const {
-  return device_type == DeviceType::kGPU && op_conf_.use_cudnn_on_gpu();
+bool Operator::UseCudnn() const {
+  return device_type() == DeviceType::kGPU && op_conf().use_cudnn_on_gpu();
 }
 
 const std::string& Operator::SoleIbn() const {
-  CHECK_EQ(input_bns_.size(), 1);
-  return *(input_bns_.begin());
+  CHECK_EQ(input_bns().size(), 1);
+  return input_bns().Get(0);
 }
 const std::string& Operator::SoleIdbn() const {
-  CHECK_EQ(input_diff_bns_.size(), 1);
-  return *(input_diff_bns_.begin());
+  CHECK_EQ(input_diff_bns().size(), 1);
+  return input_diff_bns().Get(0);
 }
 const std::string& Operator::SoleObn() const {
-  CHECK_EQ(output_bns_.size(), 1);
-  return *(output_bns_.begin());
+  CHECK_EQ(output_bns().size(), 1);
+  return output_bns().Get(0);
 }
 const std::string& Operator::SoleOdbn() const {
-  CHECK_EQ(output_diff_bns_.size(), 1);
-  return *(output_diff_bns_.begin());
+  CHECK_EQ(output_diff_bns().size(), 1);
+  return output_diff_bns().Get(0);
 }
 const std::string& Operator::SoleDtbn() const {
-  CHECK_EQ(data_tmp_bns_.size(), 1);
-  return *(data_tmp_bns_.begin());
+  CHECK_EQ(data_tmp_bns().size(), 1);
+  return data_tmp_bns().Get(0);
 }
 
 void Operator::InferBlobDescsIf(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
+    const ParallelContext* parallel_ctx,
     std::function<void(OpContext*)> EnrollOpCtx) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type, EnrollOpCtx);
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   if (HasFieldInCustomizedConf("activation")) {
     ActivationType activation =
         static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
@@ -92,16 +94,11 @@ void Operator::InferBlobDescsIf(
 
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
+    const ParallelContext* parallel_ctx,
     std::function<void(OpContext*)> EnrollOpCtx) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, device_type);
-}
-
-void Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
+
 void Operator::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
@@ -115,8 +112,8 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
-  if (model_bns_.empty()) {
-    CHECK(model_tmp_bns_.empty());
+  if (model_bns().empty()) {
+    CHECK(model_tmp_bns().empty());
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
@@ -129,22 +126,19 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   VirtualFixParallelDesc(pr_desc);
 }
 
-void Operator::FixLbnWhenShareModel(const std::string& shared_op_name) {
-  for (const std::string& model_bn : model_bns_) {
-    std::string model_lbn = shared_op_name + "/" + model_bn;
-    bn_in_op2lbn_.at(model_bn) = model_lbn;
-    bn_in_op2lbn_.at(GenDiffBn(model_bn)) = model_lbn;
+void Operator::FixLbiWhenShareModel(const std::string& shared_op_name) {
+  for (const std::string& model_bn : model_bns()) {
+    mut_bn_in_op2lbi()->at(model_bn).set_op_name(shared_op_name);
+    mut_bn_in_op2lbi()->at(GenDiffBn(model_bn)).set_op_name(shared_op_name);
   }
-  for (const std::string& model_tmp_bn : model_tmp_bns_) {
-    std::string model_tmp_lbn = shared_op_name + "/" + model_tmp_bn;
-    bn_in_op2lbn_.at(model_tmp_bn) = model_tmp_lbn;
+  for (const std::string& model_tmp_bn : model_tmp_bns()) {
+    mut_bn_in_op2lbi()->at(model_tmp_bn).set_op_name(shared_op_name);
   }
 }
 
 static bool HasBlobDescWithField(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const std::vector<std::string>& bn_in_ops,
-    bool (BlobDesc::*has_field)() const) {
+    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*has_field)() const) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
     if (blob_desc && (blob_desc->*has_field)()) { return true; }
@@ -154,29 +148,17 @@ static bool HasBlobDescWithField(
 
 void Operator::GenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, DeviceType device_type,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    const OpContext* op_ctx) const {
-  *(kernel_conf->mutable_op_conf()) = op_conf_;
-  *(kernel_conf->mutable_bn_in_op2lbn()) = HashMap2PbMap(bn_in_op2lbn_);
-  *(kernel_conf->mutable_data_tmp_bns()) = StdVec2PbRpf(data_tmp_bns_);
-  *(kernel_conf->mutable_input_bns()) = StdVec2PbRpf(input_bns_);
-  *(kernel_conf->mutable_input_diff_bns()) = StdVec2PbRpf(input_diff_bns_);
-  *(kernel_conf->mutable_output_bns()) = StdVec2PbRpf(output_bns_);
-  *(kernel_conf->mutable_output_diff_bns()) = StdVec2PbRpf(output_diff_bns_);
-  *(kernel_conf->mutable_model_bns()) = StdVec2PbRpf(model_bns_);
-  *(kernel_conf->mutable_model_diff_bns()) = StdVec2PbRpf(model_diff_bns_);
-  *(kernel_conf->mutable_model_tmp_bns()) = StdVec2PbRpf(model_tmp_bns_);
-  *(kernel_conf->mutable_forward_model_bns()) =
-      StdVec2PbRpf(forward_model_bns_);
+    bool is_forward, const ParallelContext* parallel_ctx,
+    KernelConf* kernel_conf, const OpContext* op_ctx) const {
+  *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   kernel_conf->set_need_do_data_id(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns_,
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
                            &BlobDesc::has_data_id_field)) {
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
-  const std::vector<std::string>* bns = &output_bns_;
-  if (IsLossOp()) { bns = &input_bns_; }
+  const PbRpf<std::string>* bns = &output_bns();
+  if (IsLossOp()) { bns = &input_bns(); }
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
                            &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
@@ -184,15 +166,14 @@ void Operator::GenKernelConf(
 
   kernel_conf->set_is_forward(is_forward);
   DataType data_type =
-      GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns_);
+      GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
   if (data_type == DataType::kInvalidDataType) {
-    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns_);
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns());
   }
-  if (IsCloneOp()) {
-    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns_);
+  if (data_type == DataType::kInvalidDataType) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
   }
   kernel_conf->set_data_type(data_type);
-  kernel_conf->set_device_type(device_type);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 
@@ -203,45 +184,59 @@ void Operator::VirtualGenKernelConf(
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
-std::string Operator::ibn2lbn(const std::string& input_bn) const {
+LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
   const google::protobuf::Descriptor* desc =
       GetCustomizedConf().GetDescriptor();
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
+  std::string name;
   if (fd) {
-    return GetValFromCustomizedConf<std::string>(input_bn);
+    name = GetValFromCustomizedConf<std::string>(input_bn);
   } else {
     size_t underline_pos = input_bn.rfind('_');
     CHECK_NE(underline_pos, std::string::npos);
     std::string ibn_prefix = input_bn.substr(0, underline_pos);
     int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
-    return GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+    name = GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
   }
+  return GenLogicalBlobId(name);
 }
-std::string Operator::obn2lbn(const std::string& output_bn) const {
-  return op_name() + "/" + GetValFromCustomizedConf<std::string>(output_bn);
+LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
+  return ret;
 }
-std::string Operator::mtbn2lbn(const std::string& model_tmp_bn) const {
-  return op_name() + "/" + model_tmp_bn;
+LogicalBlobId Operator::mtbn2lbi(const std::string& model_tmp_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(model_tmp_bn);
+  return ret;
 }
-std::string Operator::mbn2lbn(const std::string& model_bn) const {
-  return op_name() + "/" + model_bn;
+LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(model_bn);
+  return ret;
 }
-std::string Operator::fwmbn2lbn(const std::string& forward_model_bn) const {
-  return op_name() + "/" + forward_model_bn;
+LogicalBlobId Operator::fwmbn2lbi(const std::string& forward_model_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(forward_model_bn);
+  return ret;
 }
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
-  data_tmp_bns_.push_back(dtbn);
-  CHECK(bn_in_op2lbn_.emplace(dtbn, dtbn2lbn(dtbn)).second);
+  *(mut_data_tmp_bns()->Add()) = dtbn;
+  CHECK(mut_bn_in_op2lbi()->insert({dtbn, dtbn2lbi(dtbn)}).second);
 }
 void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
-  std::string lbn = ibn2lbn(ibn);
-  input_bns_.push_back(ibn);
-  CHECK(bn_in_op2lbn_.emplace(ibn, lbn).second);
+  LogicalBlobId lbi = ibn2lbi(ibn);
+  *(mut_input_bns()->Add()) = ibn;
+  CHECK(mut_bn_in_op2lbi()->insert({ibn, lbi}).second);
   if (has_diff) {
     std::string idbn = GenDiffBn(ibn);
-    input_diff_bns_.push_back(idbn);
-    CHECK(bn_in_op2lbn_.emplace(idbn, lbn).second);
+    *(mut_input_diff_bns()->Add()) = idbn;
+    CHECK(mut_bn_in_op2lbi()->insert({idbn, lbi}).second);
   }
 }
 
@@ -270,35 +265,35 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
 }
 
 void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
-  std::string lbn = obn2lbn(obn);
-  output_bns_.push_back(obn);
-  CHECK(bn_in_op2lbn_.emplace(obn, lbn).second);
+  LogicalBlobId lbi = obn2lbi(obn);
+  *(mut_output_bns()->Add()) = obn;
+  CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
   if (has_diff) {
     std::string odbn = GenDiffBn(obn);
-    output_diff_bns_.push_back(odbn);
-    CHECK(bn_in_op2lbn_.emplace(odbn, lbn).second);
+    *(mut_output_diff_bns()->Add()) = odbn;
+    CHECK(mut_bn_in_op2lbi()->insert({odbn, lbi}).second);
   }
 }
 void Operator::EnrollModelBn(const std::string& mbn) {
-  if (op_conf_.trainable() == false) {
+  if (op_conf().trainable() == false) {
     EnrollModelTmpBn(mbn);
     return;
   }
-  std::string lbn = mbn2lbn(mbn);
-  model_bns_.push_back(mbn);
-  CHECK(bn_in_op2lbn_.emplace(mbn, lbn).second);
+  LogicalBlobId lbi = mbn2lbi(mbn);
+  *(mut_model_bns()->Add()) = mbn;
+  CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
   std::string mdbn = GenDiffBn(mbn);
-  model_diff_bns_.push_back(mdbn);
-  CHECK(bn_in_op2lbn_.emplace(mdbn, lbn).second);
+  *(mut_model_diff_bns()->Add()) = mdbn;
+  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
 }
 void Operator::EnrollModelTmpBn(const std::string& mtbn) {
-  model_tmp_bns_.push_back(mtbn);
-  CHECK(bn_in_op2lbn_.emplace(mtbn, mtbn2lbn(mtbn)).second);
+  *(mut_model_tmp_bns()->Add()) = mtbn;
+  CHECK(mut_bn_in_op2lbi()->insert({mtbn, mtbn2lbi(mtbn)}).second);
 }
 void Operator::EnrollForwardModelBn(const std::string& fwmbn) {
-  std::string lbn = fwmbn2lbn(fwmbn);
-  forward_model_bns_.push_back(fwmbn);
-  CHECK(bn_in_op2lbn_.emplace(fwmbn, lbn).second);
+  LogicalBlobId lbi = fwmbn2lbi(fwmbn);
+  *(mut_forward_model_bns()->Add()) = fwmbn;
+  CHECK(mut_bn_in_op2lbi()->insert({fwmbn, lbi}).second);
 }
 
 void Operator::StrFieldTolower(const std::string& field_name) {
@@ -308,32 +303,17 @@ void Operator::StrFieldTolower(const std::string& field_name) {
   SetValInCustomizedConf(field_name, field_val);
 }
 
-std::string Operator::dtbn2lbn(const std::string& data_tmp_bn) const {
-  return op_name() + "/" + data_tmp_bn;
+LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
+  LogicalBlobId lbi;
+  lbi.set_op_name(op_name());
+  lbi.set_blob_name(data_tmp_bn);
+  return lbi;
 }
 
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }
 std::string GenUnDiffBn(const std::string& diff_bn) {
   CHECK_STREQ(diff_bn.substr(diff_bn.size() - 5).c_str(), "_diff");
   return diff_bn.substr(0, diff_bn.size() - 5);
-}
-std::string GenUnCloneLbn(const std::string& clone_lbn) {
-  CHECK_STREQ(clone_lbn.substr(0, 6).c_str(), "clone_");
-  int32_t before_num = clone_lbn.size() - 1;
-  while (std::isdigit(clone_lbn.at(before_num))) { --before_num; }
-  CHECK_STREQ(clone_lbn.substr(before_num - 4, 5).c_str(), "/out_");
-  return clone_lbn.substr(6, before_num - 10);
-}
-std::string GetOpNameFromLbn(const std::string& lbn) {
-  return ParseLbn(lbn).first;
-}
-std::string GetBnInOpFromLbn(const std::string& lbn) {
-  return ParseLbn(lbn).second;
-}
-std::pair<std::string, std::string> ParseLbn(const std::string& lbn) {
-  size_t pos = lbn.find('/');
-  CHECK_NE(pos, std::string::npos);
-  return {lbn.substr(0, pos), lbn.substr(pos + 1)};
 }
 
 static HashMap<int, std::function<Operator*(const OperatorConf&)>>&

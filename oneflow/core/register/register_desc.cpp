@@ -5,6 +5,16 @@
 
 namespace oneflow {
 
+namespace {
+
+LogicalBlobId GenUnCloneLbi(const LogicalBlobId& lbi) {
+  LogicalBlobId ret(lbi);
+  ret.set_clone_id(-1);
+  return ret;
+}
+
+}  // namespace
+
 RegstDesc::RegstDesc() {
   regst_desc_id_ = Global<IDMgr>::Get()->NewRegstDescId();
   producer_ = nullptr;
@@ -29,11 +39,11 @@ void RegstDesc::set_max_register_num(int32_t val) {
 void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
-  auto it = lbn2blob_desc_.begin();
+  auto it = lbi2blob_desc_.begin();
   packed_blob_desc_.reset(new BlobDesc);
   *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
     const BlobDesc* ret = nullptr;
-    if (it != lbn2blob_desc_.end()) {
+    if (it != lbi2blob_desc_.end()) {
       ret = it->second.get();
       ++it;
     }
@@ -43,46 +53,46 @@ void RegstDesc::Lock() {
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
-  CHECK(lbn2blob_desc_.empty());
-  for (const auto& pair : rhs->lbn2blob_desc_) {
-    const std::string& lbn = pair.first;
-    AddLbn(lbn);
+  CHECK(lbi2blob_desc_.empty());
+  for (const auto& pair : rhs->lbi2blob_desc_) {
+    const LogicalBlobId& lbi = pair.first;
+    AddLbi(lbi);
   }
-  CopyBlobDescWithoutAddLbn(rhs);
+  CopyBlobDescWithoutAddLbi(rhs);
 }
 
-void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
+void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
-  for (const auto& pair : lbn2blob_desc_) {
-    auto rhs_it = rhs->lbn2blob_desc_.find(pair.first);
-    if (rhs_it == rhs->lbn2blob_desc_.end()) {
-      *(pair.second) = *(rhs->lbn2blob_desc_.at(GenUnCloneLbn(pair.first)));
+  for (const auto& pair : lbi2blob_desc_) {
+    auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
+    if (rhs_it == rhs->lbi2blob_desc_.end()) {
+      *(pair.second) = *(rhs->lbi2blob_desc_.at(GenUnCloneLbi(pair.first)));
     } else {
       *(pair.second) = *(rhs_it->second);
     }
   }
 }
 
-void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* src,
+void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* src,
                                           const RegstDesc* supple) {
   CHECK_EQ(is_locked_, false);
-  for (const auto& pair : lbn2blob_desc_) {
-    auto src_it = src->lbn2blob_desc_.find(pair.first);
-    auto supple_it = supple->lbn2blob_desc_.find(pair.first);
-    if (src_it != src->lbn2blob_desc_.end()) {
+  for (const auto& pair : lbi2blob_desc_) {
+    auto src_it = src->lbi2blob_desc_.find(pair.first);
+    auto supple_it = supple->lbi2blob_desc_.find(pair.first);
+    if (src_it != src->lbi2blob_desc_.end()) {
       *(pair.second) = *(src_it->second);
       continue;
     }
-    if (supple_it != supple->lbn2blob_desc_.end()) {
+    if (supple_it != supple->lbi2blob_desc_.end()) {
       *(pair.second) = *(supple_it->second);
       continue;
     }
-    const std::string unclone_lbn = GenUnCloneLbn(pair.first);
-    src_it = src->lbn2blob_desc_.find(unclone_lbn);
-    supple_it = supple->lbn2blob_desc_.find(unclone_lbn);
-    if (src_it != src->lbn2blob_desc_.end()) {
+    const LogicalBlobId unclone_lbi = GenUnCloneLbi(pair.first);
+    src_it = src->lbi2blob_desc_.find(unclone_lbi);
+    supple_it = supple->lbi2blob_desc_.find(unclone_lbi);
+    if (src_it != src->lbi2blob_desc_.end()) {
       *(pair.second) = *(src_it->second);
-    } else if (supple_it != supple->lbn2blob_desc_.end()) {
+    } else if (supple_it != supple->lbi2blob_desc_.end()) {
       *(pair.second) = *(supple_it->second);
     } else {
       UNIMPLEMENTED();
@@ -90,30 +100,31 @@ void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* src,
   }
 }
 
-BlobDesc* RegstDesc::AddLbn(const std::string& lbn) {
+BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK_EQ(is_locked_, false);
-  CHECK(lbn2blob_desc_.find(lbn) == lbn2blob_desc_.end()) << lbn;
+  CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
   BlobDesc* blob_desc = new BlobDesc;
-  lbn2blob_desc_[lbn].reset(blob_desc);
+  lbi2blob_desc_[lbi].reset(blob_desc);
   return blob_desc;
 }
 
-const BlobDesc* RegstDesc::GetBlobDesc(const std::string& lbn) const {
-  return const_cast<RegstDesc*>(this)->MutBlobDesc(lbn);
+const BlobDesc* RegstDesc::GetBlobDesc(const LogicalBlobId& lbi) const {
+  return const_cast<RegstDesc*>(this)->MutBlobDesc(lbi);
 }
 
-BlobDesc* RegstDesc::MutBlobDesc(const std::string& lbn) {
-  if (lbn == kPackedBlobName) { return packed_blob_desc_.get(); }
-  auto it = lbn2blob_desc_.find(lbn);
-  if (it != lbn2blob_desc_.end()) {
+BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
+  if (lbi.is_packed_id()) { return packed_blob_desc_.get(); }
+  auto it = lbi2blob_desc_.find(lbi);
+  if (it != lbi2blob_desc_.end()) {
     return it->second.get();
   } else {
     return nullptr;
   }
 }
 
-void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {
-  for (const auto& p : lbn2blob_desc_) { func(p.first); }
+void RegstDesc::ForEachLbi(
+    std::function<void(const LogicalBlobId&)> func) const {
+  for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
 
 static void SetHostPinnedMemoryAccordingToConsumers(
@@ -153,9 +164,9 @@ void RegstDesc::InferMemCase() {
 }
 
 void RegstDesc::EraseZeroSizeBlob() {
-  EraseIf<std::string, std::unique_ptr<BlobDesc>>(
-      &lbn2blob_desc_,
-      [](HashMap<std::string, std::unique_ptr<BlobDesc>>::iterator it) {
+  EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
+      &lbi2blob_desc_,
+      [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
         return it->second->ByteSizeOfDataContentField() == 0;
       });
 }
@@ -166,10 +177,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   for (const TaskNode* consumer : consumers_) {
     ret->add_consumer_task_id(consumer->task_id());
   }
-  for (const auto& pair : lbn2blob_desc_) {
-    PbMapPair<std::string, BlobDescProto> pb_pair(pair.first);
-    pair.second->ToProto(&(pb_pair.second));
-    CHECK(ret->mutable_lbn2blob_desc()->insert(pb_pair).second);
+  for (const auto& pair : lbi2blob_desc_) {
+    LbiBlobDescPair* pb_pair = ret->mutable_lbi2blob_desc()->Add();
+    *(pb_pair->mutable_lbi()) = pair.first;
+    pair.second->ToProto(pb_pair->mutable_blob_desc());
   }
   packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc());
   ret->set_min_register_num(min_register_num_);
@@ -179,10 +190,10 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
-  if (rhs->lbn2blob_desc_.size() != lbn2blob_desc_.size()) { return false; }
-  for (const auto& pair : rhs->lbn2blob_desc_) {
-    auto iter = lbn2blob_desc_.find(pair.first);
-    if (iter == lbn2blob_desc_.end()) { return false; }
+  if (rhs->lbi2blob_desc_.size() != lbi2blob_desc_.size()) { return false; }
+  for (const auto& pair : rhs->lbi2blob_desc_) {
+    auto iter = lbi2blob_desc_.find(pair.first);
+    if (iter == lbi2blob_desc_.end()) { return false; }
     if (!(*(pair.second.get()) == *(iter->second.get()))) { return false; }
   }
   return true;

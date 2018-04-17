@@ -39,7 +39,7 @@ void DecodeRandomKernel::Forward(
     status->max_col_id_ = GenNextRandomSeed() % conf.max_sequence_size();
   }
   RandomFillBlob(ctx.device_ctx, conf.distribution(), GenNextRandomSeed(),
-                 BnInOp2Blob(kernel_conf().output_bns(0)));
+                 BnInOp2Blob(op_attribute().output_bns(0)));
 }
 
 COMMAND(AddKernelCreator(OperatorConf::kDecodeRandomConf,

@@ -104,11 +104,11 @@ void ForwardCompActor::Act() {
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   int64_t piece_id = in_regst->piece_id();
-  std::tuple<int64_t, std::function<const Blob*(const std::string&)>> other_val(
-      piece_id, [=](const std::string& lbn) -> const Blob* {
-        CHECK_NOTNULL(pre_forward_model_regst_);
-        return pre_forward_model_regst_->GetBlobByLbn(lbn);
-      });
+  std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>>
+  other_val(piece_id, [=](const LogicalBlobId& lbi) -> const Blob* {
+    CHECK_NOTNULL(pre_forward_model_regst_);
+    return pre_forward_model_regst_->GetBlobByLbi(lbi);
+  });
   kernel_ctx.other = &other_val;
   if (forward_model_regst_desc_id_ != -1) {
     pre_forward_model_regst_ =
@@ -155,15 +155,15 @@ void ForwardCompActor::AsyncInitModel() {
         kernel_ctx, parallel_ctx(),
         Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
-          const std::string& lbn = exec_kernel.kernel->Lbn4BnInOp(bn_in_op);
+          const LogicalBlobId& lbi = exec_kernel.kernel->BnInOp2Lbi(bn_in_op);
           Blob* blob = nullptr;
-          if (model_regst_) { blob = model_regst_->GetBlobByLbn(lbn); }
+          if (model_regst_) { blob = model_regst_->GetBlobByLbi(lbi); }
           if (blob == nullptr && model_tmp_regst_) {
-            blob = model_tmp_regst_->GetBlobByLbn(lbn);
+            blob = model_tmp_regst_->GetBlobByLbi(lbi);
           }
           if (blob == nullptr && forward_model_regst_desc_id_ != -1) {
             blob = GetCurWriteableRegst(forward_model_regst_desc_id_)
-                       ->GetBlobByLbn(lbn);
+                       ->GetBlobByLbi(lbi);
           }
           return blob;
         });

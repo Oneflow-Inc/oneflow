@@ -21,8 +21,9 @@ class ModelSaveKernel final : public KernelIf<DeviceType::kCPU> {
   int32_t part_num_;
 };
 
-using LbnBlobHandler = std::function<void(const std::string& lbn, const Blob*)>;
-using MdSaveOther = std::tuple<Snapshot*, std::function<void(LbnBlobHandler)>>;
+using LbiBlobHandler =
+    std::function<void(const LogicalBlobId& lbi, const Blob*)>;
+using MdSaveOther = std::tuple<Snapshot*, std::function<void(LbiBlobHandler)>>;
 
 }  // namespace oneflow
 

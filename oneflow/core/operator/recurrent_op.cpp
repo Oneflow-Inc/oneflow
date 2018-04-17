@@ -62,28 +62,30 @@ void RecurrentOp::InferBlobDescs(
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
+LogicalBlobId RecurrentOp::ibn2lbi(const std::string& input_bn) const {
   if (input_bn == "rec_in") {
-    return obn2lbn("rec_out");
+    return obn2lbi("rec_out");
   } else if (input_bn == "h0") {
-    return GetValFromCustomizedConf<std::string>("init_hidden");
+    return GenLogicalBlobId(
+        GetValFromCustomizedConf<std::string>("init_hidden"));
   } else if (input_bn == "in") {
-    return GetValFromCustomizedConf<std::string>("in");
+    return GenLogicalBlobId(GetValFromCustomizedConf<std::string>("in"));
   } else {
     UNIMPLEMENTED();
-    return "";
   }
 }
 
-std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
+LogicalBlobId RecurrentOp::obn2lbi(const std::string& output_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
   if (output_bn == "out") {
-    return op_name() + "/" + GetValFromCustomizedConf<std::string>("out");
+    ret.set_blob_name(GetValFromCustomizedConf<std::string>("out"));
   } else if (output_bn == "rec_out") {
-    return op_name() + "/rec_" + GetValFromCustomizedConf<std::string>("out");
+    ret.set_blob_name("/rec_" + GetValFromCustomizedConf<std::string>("out"));
   } else {
     UNIMPLEMENTED();
-    return "";
   }
+  return LogicalBlobId();
 }
 
 }  // namespace oneflow

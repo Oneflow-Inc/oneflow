@@ -121,7 +121,10 @@ void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ForEachEdge(
     std::function<void(EdgeType*)> EdgeHandler) const {
-  for (auto& x : edges_) { EdgeHandler(x.get()); }
+  for (auto& x : edges_) {
+    if (x->src_node() == nullptr && x->dst_node() == nullptr) { continue; }
+    EdgeHandler(x.get());
+  }
 }
 
 template<typename NodeType, typename EdgeType>

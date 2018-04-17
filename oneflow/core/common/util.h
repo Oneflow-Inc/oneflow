@@ -23,6 +23,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include "oneflow/core/operator/op_conf.pb.h"
+
 DECLARE_string(log_dir);
 
 namespace oneflow {
@@ -203,6 +205,21 @@ void Erase(T& container,
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
+inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
+  return lhs.SerializeAsString() < rhs.SerializeAsString();
+}
+
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::LogicalBlobId> {
+  size_t operator()(const oneflow::LogicalBlobId& lbi) const {
+    return std::hash<std::string>()(lbi.SerializeAsString());
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

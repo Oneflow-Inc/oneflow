@@ -6,8 +6,8 @@ template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
-  for (const std::string& obn : this->kernel_conf().output_bns()) {
+  const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
+  for (const std::string& obn : this->op_attribute().output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_memory_ptr(),
                         in_blob->memory_ptr(), in_blob->TotalByteSize());
@@ -24,9 +24,9 @@ template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PbRpf<std::string>& odbns = this->kernel_conf().output_diff_bns();
+  const PbRpf<std::string>& odbns = this->op_attribute().output_diff_bns();
   if (odbns.size() == 0) return;
-  Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
+  Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
   const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
   Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(),
                       out_diff_blob_0->dptr(),

@@ -20,6 +20,8 @@ template<typename T>
 using PbRpf = google::protobuf::RepeatedPtrField<T>;
 template<typename T1, typename T2>
 using PbMapPair = google::protobuf::MapPair<T1, T2>;
+template<typename K, typename V>
+using PbMap = google::protobuf::Map<K, V>;
 
 #define PROTOBUF_BASIC_DATA_TYPE_SEQ        \
   OF_PP_MAKE_TUPLE_SEQ(std::string, String) \

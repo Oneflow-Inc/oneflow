@@ -25,8 +25,8 @@ template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
-  Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
+  const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
+  Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
   Blob* tmp_blob = BnInOp2Blob("softmax_num");
   auto conf = this->kernel_conf().softmax_conf();
   const int64_t n = conf.transpose_rows();
@@ -52,10 +52,10 @@ template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* out_blob = BnInOp2Blob(this->kernel_conf().output_bns(0));
+  const Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
   const Blob* out_diff_blob =
-      BnInOp2Blob(this->kernel_conf().output_diff_bns(0));
-  Blob* in_diff_blob = BnInOp2Blob(this->kernel_conf().input_diff_bns(0));
+      BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+  Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
   Blob* tmp_blob = BnInOp2Blob("softmax_num");
   auto conf = this->kernel_conf().softmax_conf();
   const int64_t n = conf.transpose_rows();

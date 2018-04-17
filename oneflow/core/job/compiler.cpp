@@ -43,16 +43,14 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
 }  // namespace
 
 Plan Compiler::Compile() {
-  Global<LogicalGraph>::New();
   Plan plan = DoCompile();
-  Global<LogicalGraph>::Delete();
   return plan;
 }
 
 Plan Compiler::DoCompile() {
-  auto chain_gph =
-      of_make_unique<ChainGraph>(Global<JobDesc>::Get()->IsTrain());
-  auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
+  auto logical_gph =
+      of_make_unique<LogicalGraph>(Global<JobDesc>::Get()->IsTrain());
+  auto task_gph = of_make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));

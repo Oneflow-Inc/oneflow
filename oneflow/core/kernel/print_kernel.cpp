@@ -21,10 +21,10 @@ void PrintKernel::Forward(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto GetBlob = [&](int64_t blob_id) -> Blob* {
-    return BnInOp2Blob(this->kernel_conf().input_bns(blob_id));
+    return BnInOp2Blob(this->op_attribute().input_bns(blob_id));
   };
   const auto& conf = op_conf().print_conf();
-  int32_t total_blob_num = kernel_conf().input_bns().size();
+  int32_t total_blob_num = op_attribute().input_bns().size();
   const Blob* first_blob = GetBlob(0);
   int64_t max_record_num = first_blob->shape().At(0);
   bool has_data_id_field = first_blob->has_data_id_field();
@@ -41,7 +41,7 @@ void PrintKernel::Forward(
     record.clear_feature();
     if (has_data_id_field) {
       const char* data_id_str = first_blob->data_id(record_id);
-      FOR_RANGE(int32_t, blob_id, 1, kernel_conf().input_bns().size()) {
+      FOR_RANGE(int32_t, blob_id, 1, op_attribute().input_bns().size()) {
         CHECK_STREQ(data_id_str, GetBlob(blob_id)->data_id(record_id));
       }
       if (*data_id_str == '\0') { break; }

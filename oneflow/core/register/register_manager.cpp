@@ -14,23 +14,23 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
-    std::vector<std::string> lbns;
-    for (const auto& pair : regst_desc_proto.lbn2blob_desc()) {
-      lbns.push_back(pair.first);
+    std::vector<LogicalBlobId> lbis;
+    for (const LbiBlobDescPair& pair : regst_desc_proto.lbi2blob_desc()) {
+      lbis.push_back(pair.lbi());
     }
-    if (lbns.size() > 0) {
-      std::sort(lbns.begin(), lbns.end());
+    if (lbis.size() > 0) {
+      std::sort(lbis.begin(), lbis.end());
       std::tuple<char*, const void*, std::function<void()>> allocation_result =
           Global<MemoryAllocator>::Get()->Allocate(
               regst_desc_proto.mem_case(),
               runtime_regst_desc->packed_blob_desc()->TotalByteSize());
       char* cur_pointer = std::get<0>(allocation_result);
-      for (const std::string& lbn : lbns) {
-        const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
+      for (const LogicalBlobId& lbi : lbis) {
+        const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbi(lbi);
         std::unique_ptr<Blob> blob_ptr;
         blob_ptr.reset(
             NewBlob(regst, blob_desc, cur_pointer, nullptr, device_type));
-        CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
+        CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_pointer += blob_desc->TotalByteSize();
       }
       regst->packed_blob_.reset(

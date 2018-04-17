@@ -73,7 +73,7 @@ Kernel* CreateSparseSoftmaxCrossEntropyLossKernel(
           SPARSE_SOFTMAX_CROSS_ENTROPY_LOSS_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
           FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)};
   return creators.at(
-      GetHashKey(kernel_conf.device_type(),
+      GetHashKey(kernel_conf.op_attribute().device_type(),
                  kernel_conf.sparse_softmax_cross_entropy_loss_conf()
                      .loss_conf()
                      .prediction_type(),

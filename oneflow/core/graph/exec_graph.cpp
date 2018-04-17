@@ -7,11 +7,10 @@ void ExecNode::BindBnInOpAndRegst(const std::string& bn_in_op,
   CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
 }
 
-void ExecNode::ToProto(bool is_forward, DeviceType device_type,
-                       const ParallelContext* parallel_ctx,
+void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, device_type,
-                     parallel_ctx, ret->mutable_kernel_conf(),
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx,
+                     ret->mutable_kernel_conf(),
                      fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
@@ -22,9 +21,8 @@ void ExecNode::ToProto(bool is_forward, DeviceType device_type,
   }
 }
 
-void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx,
-                              DeviceType device_type) {
-  op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx, device_type,
+void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
+  op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
                         [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
 }
 
@@ -35,16 +33,15 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
     if (it == bn_in_op2regst_.end()) { return nullptr; }
     std::shared_ptr<RegstDesc> regst = it->second.lock();
     if (!regst) { return nullptr; }
-    const std::string& lbn = this->op()->Lbn4BnInOp(bn_in_op);
-    return regst->MutBlobDesc(lbn);
+    return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
   };
 }
 
-void ExecGraph::ToExecSequence(bool is_forward, DeviceType device_type,
+void ExecGraph::ToExecSequence(bool is_forward,
                                const ParallelContext* parallel_ctx,
                                ExecSequence* ret) const {
   TopoForEachNode([&](ExecNode* node) {
-    node->ToProto(is_forward, device_type, parallel_ctx, ret->add_exec_node());
+    node->ToProto(is_forward, parallel_ctx, ret->add_exec_node());
   });
 }
 

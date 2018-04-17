@@ -14,13 +14,13 @@ void ModelSaveKernel::Forward(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto tpl = static_cast<MdSaveOther*>(kernel_ctx.other);
   Snapshot* snapshot = std::get<0>(*tpl);
-  std::get<1> (*tpl)([&](const std::string& lbn, const Blob* blob) {
+  std::get<1> (*tpl)([&](const LogicalBlobId& lbi, const Blob* blob) {
     {
       std::unique_ptr<PersistentOutStream> out_stream =
-          snapshot->GetOutStream(lbn, part_id_);
+          snapshot->GetOutStream(lbi, part_id_);
       out_stream->Write(blob->dptr<char>(), blob->ByteSizeOfDataContentField());
     }
-    snapshot->OnePartDone(lbn, part_id_, part_num_);
+    snapshot->OnePartDone(lbi, part_id_, part_num_);
   });
 }
 

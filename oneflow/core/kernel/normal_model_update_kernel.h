@@ -48,8 +48,8 @@ double GetDecayedLearningRate(const LearningRateDecayConf&, double lr,
         OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,            \
                                          (x##MdUpdateKernel), DEVICE_TYPE_SEQ, \
                                          FLOATING_DATA_TYPE_SEQ)};             \
-    return creators.at(                                                        \
-        GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();     \
+    return creators.at(GetHashKey(kernel_conf.op_attribute().device_type(),    \
+                                  kernel_conf.data_type()))();                 \
   }
 
 }  // namespace oneflow

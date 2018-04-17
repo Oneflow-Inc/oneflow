@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ChainNode;
+class LogicalNode;
 
 class CompTaskNode : public TaskNode {
  public:
@@ -22,18 +22,16 @@ class CompTaskNode : public TaskNode {
   }
   ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
 
-  // chain_node_
-  const ChainNode* chain_node() const { return chain_node_; }
-  void set_chain_node(const ChainNode* val) { chain_node_ = val; }
-  const ChainNode* SuccChainNodeOnEdge(TaskEdge* edge);
-  const ChainNode* PredChainNodeOnEdge(TaskEdge* edge);
+  // logical_node_
+  const LogicalNode* logical_node() const { return logical_node_; }
+  void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
+  const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);
+  const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
 
  private:
   ParallelContext parallel_ctx_;
-  const ChainNode* chain_node_;
+  const LogicalNode* logical_node_;
 };
-
-void SortByParallelId(std::vector<CompTaskNode*>* node_vec);
 
 }  // namespace oneflow
 
