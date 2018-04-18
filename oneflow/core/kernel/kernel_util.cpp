@@ -88,10 +88,20 @@ void RandomNormalInitializer(
 }
 
 template<typename T>
-T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
+T GenInitialFan(VarianceNorm variance_norm, Blob* blob,
+                const std::string& data_format) {
   T fan = ZeroVal<T>::value;
   T fan_in = static_cast<T>(blob->shape().Count(1));
-  T fan_out = static_cast<T>(blob->shape().Count(0) / blob->shape().At(1));
+  T fan_out = static_cast<T>(blob->shape().At(0));
+  if (data_format == "channels_first") {
+    fan_out *= static_cast<T>(blob->shape().Count(2));
+  } else if (data_format == "channels_last") {
+    fan_out *=
+        static_cast<T>(blob->shape().Count(1, blob->shape().NumAxes() - 1));
+  } else {
+    CHECK_EQ(blob->shape().NumAxes(), 2);
+    CHECK_EQ(data_format, "");
+  }
   if (variance_norm == VarianceNorm::kAverage) {
     fan = (fan_in + fan_out) / static_cast<T>(2);
   } else if (variance_norm == VarianceNorm::kFanIn) {
@@ -106,25 +116,51 @@ T GenInitialFan(VarianceNorm variance_norm, Blob* blob) {
 
 template<typename T>
 void XavierInitializer(const XavierInitializerConf& initializer_conf,
-                       uint32_t random_seed, Blob* blob) {
+                       uint32_t random_seed, Blob* blob,
+                       const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm =
       static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T scale =
-      std::sqrt(static_cast<T>(3) / GenInitialFan<T>(variance_norm, blob));
+  T scale = std::sqrt(static_cast<T>(3)
+                      / GenInitialFan<T>(variance_norm, blob, data_format));
   RngUniform<T>(blob->shape().elem_cnt(), static_cast<T>(-scale),
                 static_cast<T>(scale), random_seed, blob->mut_dptr<T>());
 }
 
 template<typename T>
 void MsraInitializer(const MsraInitializerConf& initializer_conf,
-                     uint32_t random_seed, Blob* blob) {
+                     uint32_t random_seed, Blob* blob,
+                     const std::string& data_format) {
   CHECK(blob->shape().elem_cnt());
   VarianceNorm variance_norm =
       static_cast<VarianceNorm>(initializer_conf.variance_norm());
-  T std = std::sqrt(static_cast<T>(2) / GenInitialFan<T>(variance_norm, blob));
+  T std = std::sqrt(static_cast<T>(2)
+                    / GenInitialFan<T>(variance_norm, blob, data_format));
   RngNormal<T>(blob->shape().elem_cnt(), ZeroVal<T>::value, static_cast<T>(std),
                random_seed, blob->mut_dptr<T>());
+}
+
+void ComputeOffset(const int32_t num_axes, const int64_t* shape,
+                   const int32_t* permutation, std::vector<int64_t>& offset) {
+  offset.resize(num_axes);
+  std::vector<int64_t> buff(num_axes);
+  int64_t cur_offset = 1;
+  for (int32_t i = num_axes - 1; i >= 0; --i) {
+    buff[i] = cur_offset;
+    cur_offset *= shape[i];
+  }
+  for (int32_t i = 0; i < num_axes; ++i) { offset[permutation[i]] = buff[i]; }
+}
+
+void IncreaseIndex(const int64_t* shape, std::vector<int64_t>& index) {
+  for (int32_t i = index.size() - 1; i >= 0; --i) {
+    ++index[i];
+    if (index[i] >= shape[i]) {
+      index[i] -= shape[i];
+    } else {
+      break;
+    }
+  }
 }
 
 }  // namespace
@@ -169,6 +205,53 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr) {
 KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                  T* temp_storage, size_t temp_storage_bytes) {
   Sum(ctx, n, x, sum_ptr);
+}
+KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                       const Shape& x_shape, const Shape& y_shape,
+                       const PbRf<int32_t>& permutation, const int64_t elem_cnt,
+                       const T* x, T* y) {
+  int64_t block_size = 1;
+  int32_t shared_idxs_num = 0;
+  for (int32_t i = num_axis - 1; i >= 0 && permutation[i] == i; --i) {
+    block_size *= y_shape.At(i);
+    ++shared_idxs_num;
+  }
+  if (num_axis < 2 || shared_idxs_num == num_axis) {
+    memcpy(y, x, elem_cnt * sizeof(T));
+    return;
+  }
+  int32_t trans_axis = num_axis - shared_idxs_num;
+  std::vector<int64_t> x_to_y_offset;
+  ComputeOffset(trans_axis, y_shape.dim_vec().data(), permutation.data(),
+                x_to_y_offset);
+  std::vector<int64_t> x_index_digits(trans_axis, 0);
+  int64_t num_blocks = elem_cnt / block_size;
+  FOR_RANGE(int64_t, x_idx, 0, num_blocks) {
+    int64_t y_idx =
+        std::inner_product(x_to_y_offset.cbegin(), x_to_y_offset.cend(),
+                           x_index_digits.cbegin(), 0);
+    if (block_size == 1) {
+      y[y_idx] = x[x_idx];
+    } else {
+      memcpy(y + block_size * y_idx, x + block_size * x_idx,
+             block_size * sizeof(T));
+    }
+    IncreaseIndex(x_shape.dim_vec().data(), x_index_digits);
+  }
+}
+KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                               int32_t part_num, const std::string& model_dir,
+                               Blob* blob, const std::string& bn_in_op,
+                               int32_t dim_num, int64_t num_in_each_dim) {
+  int64_t blob_size = blob->ByteSizeOfDataContentField();
+  int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
+  std::string file_path = JoinPath(model_dir, bn_in_op);
+  uint64_t file_size = GlobalFS()->GetFileSize(file_path);
+  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
+  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
+  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
+  NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
+  in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 
 #define KU_FLOATING_METHOD             \
@@ -219,6 +302,10 @@ KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
   for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha); }
 }
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
+                       T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[i]; }
+}
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                        T* z) {
   for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
@@ -226,6 +313,10 @@ KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x,
                          const float epsilon) {
   for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+}
+KU_FLOATING_METHOD Powx(DeviceCtx* ctx, const int64_t n, const T* x,
+                        const float power, T* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = std::pow(x[i], power); }
 }
 
 KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
@@ -258,6 +349,12 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
                                       const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
+  InitializeWithConf(ctx, initializer_conf, random_seed, blob, "");
+}
+KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
   if (initializer_conf.has_constant_conf()) {
     ConstantInitializer<T>(
         static_cast<T>(initializer_conf.constant_conf().value()), blob);
@@ -268,27 +365,14 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx,
     RandomNormalInitializer<T>(initializer_conf.random_normal_conf(),
                                random_seed, blob);
   } else if (initializer_conf.has_xavier_conf()) {
-    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob);
+    XavierInitializer<T>(initializer_conf.xavier_conf(), random_seed, blob,
+                         data_format);
   } else if (initializer_conf.has_msra_conf()) {
-    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob);
+    MsraInitializer<T>(initializer_conf.msra_conf(), random_seed, blob,
+                       data_format);
   } else {
     UNIMPLEMENTED();
   }
-}
-KU_FLOATING_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim) {
-  int64_t blob_size = blob->ByteSizeOfDataContentField();
-  int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
-  std::string file_path = JoinPath(model_dir, bn_in_op);
-  uint64_t file_size = GlobalFS()->GetFileSize(file_path);
-  CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
-  BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
-  int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  NormalPersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
-  in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 
 #define KU_INTEGRAL_METHOD             \
@@ -316,6 +400,12 @@ KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
   } else {
     UNIMPLEMENTED();
   }
+}
+KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx,
+                                      const InitializerConf& initializer_conf,
+                                      uint32_t random_seed, Blob* blob,
+                                      const std::string& data_format) {
+  InitializeWithConf(ctx, initializer_conf, random_seed, blob);
 }
 
 #define INSTANTIATE_KERNEL_UTIL(type_cpp, type_proto)                      \

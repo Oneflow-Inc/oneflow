@@ -53,6 +53,9 @@ class Kernel {
   virtual void ForwardDataContent(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardActivate(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
@@ -64,6 +67,9 @@ class Kernel {
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void BackwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(
@@ -81,35 +87,26 @@ class Kernel {
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(cpp_type, pb_type_name, conf_type) \
-  cpp_type Get##pb_type_name##FromCustomized##conf_type(                       \
-      const std::string& field_name) const {                                   \
-    const PbMessage& customized_conf = GetCustomized##conf_type();             \
-    return GetValFromPbMessage<cpp_type>(customized_conf, field_name);         \
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                      \
+  template<typename T>                                                      \
+  T GetValFromCustomized##conf_type(const std::string& field_name) const {  \
+    const PbMessage& customized_conf = GetCustomized##conf_type();          \
+    return GetValFromPbMessage<T>(customized_conf, field_name);             \
+  }                                                                         \
+  template<typename T>                                                      \
+  const PbRf<T>& GetPbRfFromCustomized##conf_type(                          \
+      const std::string& field_name) const {                                \
+    return GetPbRfFromPbMessage<T>(GetCustomized##conf_type(), field_name); \
+  }                                                                         \
+  int32_t GetEnumFromCustomized##conf_type(const std::string& field_name)   \
+      const {                                                               \
+    return GetEnumFromPbMessage(GetCustomized##conf_type(), field_name);    \
   }
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE(cpp_type, pb_type_name) \
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(cpp_type, pb_type_name, OpConf);   \
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(cpp_type, pb_type_name, KernelConf);
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(OpConf);
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(KernelConf);
 
-  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE,
-                       PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
-                           const PbMessage&, Message));
-
-#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
-
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedOpConf(
-      const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedOpConf(), field_name);
-  }
-
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedKernelConf(
-      const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedKernelConf(), field_name);
-  }
 
  private:
   bool HasModelBns() const;
@@ -162,7 +159,7 @@ class KernelIf : public Kernel {
 };
 
 template<DeviceType device_type, typename ModelType>
-class KernelIfWithModel : public KernelIf<device_type> {
+class KernelIfWithModel : virtual public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
   virtual ~KernelIfWithModel() = default;
@@ -171,6 +168,26 @@ class KernelIfWithModel : public KernelIf<device_type> {
   KernelIfWithModel() = default;
 
   void L2Regularization(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+};
+
+template<DeviceType device_type, typename T>
+class KernelIfWithActivation : virtual public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
+  virtual ~KernelIfWithActivation() = default;
+
+ protected:
+  KernelIfWithActivation() = default;
+
+  ActivationType GetActivationType() const;
+  const Blob* GetOutDiffBlob(
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void ForwardActivate(
+      const KernelCtx& ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardActivate(
       const KernelCtx& ctx,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };

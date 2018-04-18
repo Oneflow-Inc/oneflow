@@ -16,6 +16,14 @@ void FullyConnectedOp::InitFromOpConf() {
   }
 }
 
+bool FullyConnectedOp::NeedOutWhenBackward() const {
+  if (op_conf().fully_connected_conf().activation() != ActivationType::kNone) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 const PbMessage& FullyConnectedOp::GetCustomizedConf() const {
   return op_conf().fully_connected_conf();
 }
@@ -42,7 +50,7 @@ void FullyConnectedOp::InferBlobDescs(
   GetBlobDesc4BnInOp("weight")->mut_shape() =
       Shape({units, in_blob_desc->shape().Count(1)});
 
-  if (op_conf().fully_connected_conf().use_bias()) {
+  if (conf.use_bias()) {
     // bias
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({1, units});
 

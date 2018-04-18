@@ -5,8 +5,7 @@ namespace oneflow {
 namespace test {
 
 template<DeviceType device_type, typename T>
-void TanhTestCase(OpKernelTestCase<device_type>* tanh_test_case,
-                  const std::string& job_type,
+void TanhTestCase(OpKernelTestCase* tanh_test_case, const std::string& job_type,
                   const std::string& forward_or_backward) {
   tanh_test_case->set_is_train(job_type == "train");
   tanh_test_case->set_is_forward(forward_or_backward == "forward");

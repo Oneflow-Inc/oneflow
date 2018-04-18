@@ -15,6 +15,11 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   CreateDir(dirname);
 }
 
+void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname)) { return; }
+  RecursivelyCreateDir(dirname);
+}
+
 bool FileSystem::IsDirEmpty(const std::string& dirname) {
   return ListDir(dirname).empty();
 }
@@ -25,7 +30,7 @@ std::string FileSystem::TranslateName(const std::string& name) const {
 
 void FileSystem::MakeEmptyDir(const std::string& dirname) {
   if (IsDirectory(dirname)) { RecursivelyDeleteDir(dirname); }
-  CreateDir(dirname);
+  RecursivelyCreateDir(dirname);
 }
 
 void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
@@ -92,7 +97,7 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 struct GlobalFSConstructor {
   GlobalFSConstructor() {
     const GlobalFSConf& gfs_conf =
-        Global<JobDesc>::Get()->job_conf().global_fs_conf();
+        Global<JobDesc>::Get()->job_conf().globalfs_conf();
     if (gfs_conf.has_localfs_conf()) {
       CHECK_EQ(Global<JobDesc>::Get()->resource().machine().size(), 1);
       gfs = LocalFS();

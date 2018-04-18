@@ -10,7 +10,7 @@ namespace oneflow {
 class CtrlClient final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlClient);
-  ~CtrlClient() = default;
+  ~CtrlClient();
 
   void Barrier(const std::string& barrier_name);
   void Barrier(const std::string& barrier_name, int32_t barrier_num);
@@ -23,8 +23,8 @@ class CtrlClient final {
   void PushKV(const std::string& k, const std::string& v);
   void PushKV(const std::string& k, const PbMessage& msg);
   template<typename T>
-  void PushKVT(const std::string& k, T v) {
-    static_assert(std::is_arithmetic<T>::value, "");
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(
+      const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
 
@@ -34,8 +34,8 @@ class CtrlClient final {
   void PullKV(const std::string& k, std::string* v);
   void PullKV(const std::string& k, PbMessage* msg);
   template<typename T>
-  void PullKVT(const std::string& k, T* v) {
-    static_assert(std::is_arithmetic<T>::value, "");
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(
+      const std::string& k, T* v) {
     std::string v_str;
     PullKV(k, &v_str);
     *v = oneflow_cast<T>(v_str);
@@ -43,6 +43,12 @@ class CtrlClient final {
 
   void PushActEvent(const ActEvent&);
   void Clear();
+
+  int32_t IncreaseCount(const std::string& k, int32_t v);
+  int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
+  void EraseCount(const std::string& k);
+
+  void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
 
  private:
   friend class Global<CtrlClient>;
@@ -55,6 +61,10 @@ class CtrlClient final {
   std::vector<std::unique_ptr<CtrlService::Stub>> stubs_;
   std::mutex done_names_mtx_;
   HashSet<std::string> done_names_;
+
+  bool need_heartbeat_thread_stop_;
+  std::mutex need_heartbeat_thread_stop_mtx_;
+  std::thread heartbeat_thread_;
 };
 
 #define FILE_LINE_STR __FILE__ ":" OF_PP_STRINGIZE(__LINE__)

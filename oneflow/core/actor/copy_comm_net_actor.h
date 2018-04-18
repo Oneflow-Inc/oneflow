@@ -20,8 +20,8 @@ class CopyCommNetActor final : public Actor {
     int64_t act_id;
   };
 
-  void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx&) override;
+  void VirtualActorInit(const TaskProto&) override;
 
   int HandlerNormal(const ActorMsg&) override;
 

@@ -11,10 +11,7 @@ class NormalModelUpdtOp : public Operator {
   virtual ~NormalModelUpdtOp() = default;
 
   virtual void InitFromOpConf();
-
-  virtual void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) {}
+  const PbMessage& GetCustomizedConf() const override;
 
  protected:
   NormalModelUpdtOp() = default;

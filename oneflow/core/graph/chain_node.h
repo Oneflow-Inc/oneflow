@@ -22,9 +22,9 @@ using BldSubTskGphMthd = void (TaskGraph::*)(
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const std::string& lbn,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    int64_t in_parallel_num,
+    const ChainNode* in_chain,
     const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
-    int64_t out_parallel_num, BoxingOpConf*);
+    const ChainNode* out_chain, BoxingOpConf*);
 
 #define CHAIN_TYPE_SEQ               \
   OF_PP_MAKE_TUPLE_SEQ(Forward)      \
@@ -69,6 +69,8 @@ class ChainNode : public Node<ChainNode, ChainEdge> {
   void GenSortedCompTaskNodes(
       std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
       CompTaskNodeHandler) const;
+  int32_t GetModelSplitAxis() const;
+  int32_t GetMaxModelSplitNum() const;
 
   // To
   virtual BldSubTskGphMthd GetMthdForBldSubTskGphTo(const ChainNode*) const = 0;
@@ -126,7 +128,10 @@ class BackwardChainNode;
 
 class ForwardChainNode final : public ChainNode {
  public:
-  CHAIN_NODE_BOILERPLATE(ForwardChainNode);
+  OF_DISALLOW_COPY_AND_MOVE(ForwardChainNode);
+  ForwardChainNode() : bw_node_(nullptr) {}
+  ~ForwardChainNode() = default;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
   BackwardChainNode* bw_node() const { return bw_node_; }
   void set_bw_node(BackwardChainNode* val) { bw_node_ = val; }
@@ -151,7 +156,10 @@ class ForwardChainNode final : public ChainNode {
 
 class BackwardChainNode final : public ChainNode {
  public:
-  CHAIN_NODE_BOILERPLATE(BackwardChainNode);
+  OF_DISALLOW_COPY_AND_MOVE(BackwardChainNode);
+  BackwardChainNode() : fw_node_(nullptr) {}
+  ~BackwardChainNode() = default;
+  OVERRIDE_PURE_VIRTUAL_METHOD();
 
   ForwardChainNode* fw_node() const { return fw_node_; }
   void set_fw_node(ForwardChainNode* val) { fw_node_ = val; }

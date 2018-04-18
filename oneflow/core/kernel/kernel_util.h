@@ -11,6 +11,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
@@ -25,6 +26,7 @@ template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
+size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 #endif
 
 template<DeviceType device_type>
@@ -38,6 +40,7 @@ void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
+// CPU, GPU, Integral, Floating
 template<DeviceType device_type, typename T, typename Derived>
 struct KernelUtilIf {
   static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
@@ -75,24 +78,28 @@ struct KernelUtilIf {
 
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const InitializerConf* initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format = "") {
     if (initializer_conf == nullptr) {
       initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
     }
-    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob);
+    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob,
+                                data_format);
   }
   static void InitializeWithProperConf(DeviceCtx* ctx,
                                        const PbMessage* initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format = "") {
     InitializeWithProperConf(
         ctx, static_cast<const InitializerConf*>(initializer_conf), random_seed,
-        blob);
+        blob, data_format);
   }
 };
 
 template<DeviceType device_type, typename T, typename U = void>
 struct KernelUtil;
 
+// CPU, Integral, Floating
 template<typename T, typename Derived>
 struct CpuKernelUtilIf {
   static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x,
@@ -103,8 +110,17 @@ struct CpuKernelUtilIf {
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                                int32_t part_num, const std::string& model_dir,
+                                Blob* blob, const std::string& bn_in_op,
+                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
+// CPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T,
                   typename std::enable_if<IsFloating<T>::value>::type>
@@ -132,9 +148,13 @@ struct KernelUtil<DeviceType::kCPU, T,
 
   static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
+                  T* z);
   static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
                   T* z);
   static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Powx(DeviceCtx* ctx, const int64_t n, const T* x,
+                   const float power, T* y);
 
   static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
   static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
@@ -149,12 +169,13 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                int32_t part_num, const std::string& model_dir,
-                                Blob* blob, const std::string& bn_in_op,
-                                int32_t dim_num, int64_t num_in_each_dim);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
 };
 
+// CPU, Integral
 template<typename T>
 struct KernelUtil<DeviceType::kCPU, T,
                   typename std::enable_if<IsIntegral<T>::value>::type>
@@ -165,16 +186,37 @@ struct KernelUtil<DeviceType::kCPU, T,
   static void InitializeWithConf(DeviceCtx* ctx,
                                  const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
 };
 
+// GPU, Integral, Floating
 template<typename T, typename Derived>
 struct GpuKernelUtilIf {
   static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
                   T* temp_storage, size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis,
+                        const Shape& x_shape, const Shape& y_shape,
+                        const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx,
+                                 const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob,
+                                 const std::string& data_format);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
+                                int32_t part_num, const std::string& model_dir,
+                                Blob* blob, const std::string& bn_in_op,
+                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
+// GPU, Floating
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T,
                   typename std::enable_if<IsFloating<T>::value>::type>
@@ -217,25 +259,16 @@ struct KernelUtil<DeviceType::kGPU, T,
   static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
                            const T* y, const T* dy, T* dx);
-
-  static void InitializeWithConf(DeviceCtx* ctx,
-                                 const InitializerConf& initializer_conf,
-                                 uint32_t random_seed, Blob* blob);
-  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
-                                int32_t part_num, const std::string& model_dir,
-                                Blob* blob, const std::string& bn_in_op,
-                                int32_t dim_num, int64_t num_in_each_dim);
 };
 
+// GPU, Integral
 template<typename T>
 struct KernelUtil<DeviceType::kGPU, T,
                   typename std::enable_if<IsIntegral<T>::value>::type>
     : public KernelUtilIf<DeviceType::kGPU, T, KernelUtil<DeviceType::kGPU, T>>,
       public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
-                   const int incx, T* y, const int incy) {
-    TODO();
-  }
+                   const int incx, T* y, const int incy);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
