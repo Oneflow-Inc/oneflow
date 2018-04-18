@@ -86,32 +86,33 @@ void InitChains(std::list<Chain>* chain_list,
   });
 }
 
-void ModelMergeChains(std::list<Chain>* chain_list,
-                      Logical2ChainItMap* logical2chain_it) {
+void ElemWiseMergeChains(std::list<Chain>* chain_list,
+                         Logical2ChainItMap* logical2chain_it) {
   for (auto& pair : *logical2chain_it) {
-    // Get cur_node, pred_node
     const LogicalNode* cur_node = pair.first;
-    if (cur_node->op()->IsElemWiseOp() == false) { continue; }
+    if (cur_node->op()->IsRecurrentOp()) { continue; }
+    if (cur_node->shared_model_nodes()) { continue; }
     if (cur_node->parallel_desc()->policy() != kModelParallel) { continue; }
-    const LogicalNode* pred_node = cur_node->SoleInEdge()->src_node();
-    if (!pred_node->parallel_desc()->Equal(cur_node->parallel_desc().get())) {
-      continue;
+    std::vector<const LogicalNode*> elemwise_nodes;
+    const LogicalNode* tmp_node = cur_node->SoleOutEdge()->dst_node();
+    while (tmp_node->op()->IsElemWiseOp() == true) {
+      elemwise_nodes.push_back(tmp_node);
+      tmp_node = tmp_node->SoleOutEdge()->dst_node();
     }
-    if (pred_node->op()->IsRecurrentOp()) { continue; }
-    if (pred_node->shared_model_nodes()) { continue; }
-    // Get chain
-    ChainIt pred_chain = logical2chain_it->at(pred_node);
-    ChainIt cur_chain = pair.second;
-    // Merge
-    pred_chain->nodes.insert(pred_chain->nodes.end(), cur_chain->nodes.begin(),
-                             cur_chain->nodes.end());
-    pred_chain->ancestors_and_this.insert(cur_chain->nodes.begin(),
-                                          cur_chain->nodes.end());
-    for (const LogicalNode* node : cur_chain->nodes) {
-      pred_chain->descendants.erase(node);
-      logical2chain_it->at(node) = pred_chain;
+    if (elemwise_nodes.empty()) { continue; }
+    ChainIt cur_chain = logical2chain_it->at(cur_node);
+    for (const LogicalNode* node : elemwise_nodes) {
+      ChainIt chain = logical2chain_it->at(node);
+      cur_chain->nodes.insert(cur_chain->nodes.end(), chain->nodes.begin(),
+                              chain->nodes.end());
+      cur_chain->ancestors_and_this.insert(chain->nodes.begin(),
+                                           chain->nodes.end());
+      for (const LogicalNode* node : chain->nodes) {
+        cur_chain->descendants.erase(node);
+        logical2chain_it->at(node) = cur_chain;
+      }
+      chain_list->erase(chain);
     }
-    chain_list->erase(cur_chain);
   }
 }
 
@@ -242,7 +243,7 @@ void ChainGraph::BuildFwStruct(
   std::list<Chain> chain_list;
   Logical2ChainItMap logical2chain_it;
   InitChains(&chain_list, &logical2chain_it);
-  ModelMergeChains(&chain_list, &logical2chain_it);
+  ElemWiseMergeChains(&chain_list, &logical2chain_it);
   DataMergeChains(&chain_list, &logical2chain_it);
   // Init chain_nodes
   auto HashChainIt = [](const ChainIt& chain_it) {
