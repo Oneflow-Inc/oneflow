@@ -204,12 +204,17 @@ void NormalizationKernel<device_type, T>::CalcAboutBetaDiff(
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* beta_diff_blob = BnInOp2Blob("beta_diff");
   Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage_for_sum");
+  T* tmp_dptr = nullptr;
+  size_t tmp_byte_size = 0;
+  if (tmp_storage_blob != nullptr) {
+    tmp_dptr = tmp_storage_blob->mut_dptr<T>();
+    tmp_byte_size = tmp_storage_blob->ByteSizeOfDataContentField();
+  }
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
     KernelUtil<device_type, T>::Sum(
         ctx.device_ctx, norm_elem_num,
         out_diff_blob->dptr<T>() + i * norm_elem_num,
-        beta_diff_blob->mut_dptr<T>() + i, tmp_storage_blob->mut_dptr<T>(),
-        tmp_storage_blob->ByteSizeOfDataContentField());
+        beta_diff_blob->mut_dptr<T>() + i, tmp_dptr, tmp_byte_size);
     if (need_comp_in_diff) {
       KernelUtil<device_type, T>::Axpy(
           ctx.device_ctx, norm_elem_num, static_cast<T>(1),
@@ -301,11 +306,16 @@ void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
   Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage_for_sum");
   const int32_t norm_part_num = conf.transpose_cols();
   const int64_t norm_elem_num = conf.transpose_rows();
+  T* tmp_dptr = nullptr;
+  size_t tmp_byte_size = 0;
+  if (tmp_storage_blob != nullptr) {
+    tmp_dptr = tmp_storage_blob->mut_dptr<T>();
+    tmp_byte_size = tmp_storage_blob->ByteSizeOfDataContentField();
+  }
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
     KernelUtil<device_type, T>::Sum(
         ctx.device_ctx, norm_elem_num, in_blob->dptr<T>() + i * norm_elem_num,
-        mean_blob->mut_dptr<T>() + i, tmp_storage_blob->mut_dptr<T>(),
-        tmp_storage_blob->ByteSizeOfDataContentField());
+        mean_blob->mut_dptr<T>() + i, tmp_dptr, tmp_byte_size);
   }
   const T inv_norm_elem_num = static_cast<T>(1.0 / norm_elem_num);
   KernelUtil<device_type, T>::Scal(
@@ -323,8 +333,7 @@ void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
                                     tmp_blob->mut_dptr<T>());
     KernelUtil<device_type, T>::Sum(
         ctx.device_ctx, norm_elem_num, tmp_blob->dptr<T>(),
-        variance_blob->mut_dptr<T>() + i, tmp_storage_blob->mut_dptr<T>(),
-        tmp_storage_blob->ByteSizeOfDataContentField());
+        variance_blob->mut_dptr<T>() + i, tmp_dptr, tmp_byte_size);
   }
   KernelUtil<device_type, T>::Scal(
       ctx.device_ctx, variance_blob->shape().elem_cnt(), inv_norm_elem_num,
