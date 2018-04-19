@@ -169,6 +169,7 @@ void ConvOp<NDims>::InferBlobDescs(
     int64_t cudnn_buf_size = static_cast<int64_t>(
         std::max({conv_ctx.fwd_ws_size, conv_ctx.bwd_filter_ws_size,
                   conv_ctx.bwd_data_ws_size}));
+    GetBlobDesc4BnInOp("cudnn_buf")->set_data_type(DataType::kChar);
     GetBlobDesc4BnInOp("cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
   }
 #endif  // WITH_CUDA
