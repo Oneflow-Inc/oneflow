@@ -41,7 +41,7 @@ namespace oneflow {
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
-#define TODO() LOG(FATAL) << "TODO";
+#define TODO() LOG(FATAL) << "TODO"
 
 template<typename T>
 class Global final {
