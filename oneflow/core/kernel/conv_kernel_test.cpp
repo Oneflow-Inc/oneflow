@@ -68,8 +68,8 @@ void ConvTestCase1DChannelsFirst(OpKernelTestCase* conv_test_case,
                                                 {12, 12, 12});
 }
 
-TEST_CPU_ONLY_OPKERNEL(ConvTestCase1DChannelsFirst, FLOATING_DATA_TYPE_SEQ,
-                       (train), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ConvTestCase1DChannelsFirst, FLOATING_DATA_TYPE_SEQ,
+                          (train), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase1DChannelsLast(OpKernelTestCase* conv_test_case,
@@ -217,6 +217,8 @@ void ConvTestCase2DChannelsLast(OpKernelTestCase* conv_test_case,
 
 TEST_CPU_ONLY_OPKERNEL(ConvTestCase2DChannelsLast, FLOATING_DATA_TYPE_SEQ,
                        (train), (forward)(backward));
+TEST_GPU_ONLY_OPKERNEL(ConvTestCase2DChannelsLast, ((float, DataType::kFloat)),
+                       (train), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase2DChannelsFirst(OpKernelTestCase* conv_test_case,
@@ -296,6 +298,8 @@ void ConvTestCase2DChannelsFirst(OpKernelTestCase* conv_test_case,
 }
 
 TEST_CPU_ONLY_OPKERNEL(ConvTestCase2DChannelsFirst, FLOATING_DATA_TYPE_SEQ,
+                       (train), (forward)(backward));
+TEST_GPU_ONLY_OPKERNEL(ConvTestCase2DChannelsFirst, FLOATING_DATA_TYPE_SEQ,
                        (train), (forward)(backward));
 
 template<DeviceType device_type, typename T>
@@ -421,8 +425,8 @@ void ConvTestCase3DChannelsFirst(OpKernelTestCase* conv_test_case,
                                                 {128, 128, 128});
 }
 
-TEST_CPU_ONLY_OPKERNEL(ConvTestCase3DChannelsFirst, FLOATING_DATA_TYPE_SEQ,
-                       (train), (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ConvTestCase3DChannelsFirst, FLOATING_DATA_TYPE_SEQ,
+                          (train), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase3DChannelsLast(OpKernelTestCase* conv_test_case,

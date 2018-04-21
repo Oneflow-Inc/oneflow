@@ -30,12 +30,19 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, filters, 1, 1));
       } else if (data_format == "channels_last") {
+        if (GetDataType<T>::value == DataType::kDouble) {
+          LOG(FATAL)
+              << "CUDNN 2d support channels last only if data type is float";
+        }
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NHWC, GetDataType<T>::value, 1, filters, 1, 1));
       } else {
         UNIMPLEMENTED();
       }
     } else {
+      if (data_format == "channels_last") {
+        LOG(FATAL) << "CUDNN Nd API only support channels first";
+      }
       std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
       std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
       bias_dim[1] = filters;
