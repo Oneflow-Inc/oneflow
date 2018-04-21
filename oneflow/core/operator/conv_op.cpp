@@ -58,6 +58,10 @@ CudnnConvDesc::CudnnConvDesc(const DataType& data_type,
         val_, pad_large_side[0], pad_large_side[1], strides.Get(0),
         strides.Get(1), dilation_rate.Get(0), dilation_rate.Get(1),
         CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
+  } else if (opkernel_dim == 1) {
+    CudaCheck(cudnnSetConvolution2dDescriptor(
+        val_, pad_large_side[0], 0, strides.Get(0), 1, dilation_rate.Get(0), 1,
+        CUDNN_CROSS_CORRELATION, GetCudnnDataType(data_type)));
   } else {
     CudaCheck(cudnnSetConvolutionNdDescriptor(
         val_, opkernel_dim, pad_large_side.data(), strides.data(),

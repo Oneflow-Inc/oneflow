@@ -40,7 +40,19 @@ CudnnTensorDesc::CudnnTensorDesc(DataType data_type, const Shape& shape,
     UNIMPLEMENTED();
   }
 
-  if (shape.NumAxes() == 4) {
+  if (shape.NumAxes() == 3) {
+    int data_num = static_cast<int>(shape.At(0));
+    int channels = data_format == "channels_first"
+                       ? static_cast<int>(shape.At(1))
+                       : static_cast<int>(shape.At(2));
+    int kernel_h = data_format == "channels_first"
+                       ? static_cast<int>(shape.At(2))
+                       : static_cast<int>(shape.At(1));
+    int kernel_w = 1;
+    CudaCheck(cudnnSetTensor4dDescriptor(val_, cudnn_data_format,
+                                         GetCudnnDataType(data_type), data_num,
+                                         channels, kernel_h, kernel_w));
+  } else if (shape.NumAxes() == 4) {
     int data_num = static_cast<int>(shape.At(0));
     int channels = data_format == "channels_first"
                        ? static_cast<int>(shape.At(1))
@@ -83,7 +95,18 @@ CudnnFilterDesc::CudnnFilterDesc(DataType data_type, const Shape& shape,
     UNIMPLEMENTED();
   }
 
-  if (shape.NumAxes() == 4) {
+  if (shape.NumAxes() == 3) {
+    int filters = static_cast<int>(shape.At(0));
+    int c = data_format == "channels_first" ? static_cast<int>(shape.At(1))
+                                            : static_cast<int>(shape.At(2));
+    int kernel_h = data_format == "channels_first"
+                       ? static_cast<int>(shape.At(2))
+                       : static_cast<int>(shape.At(1));
+    int kernel_w = 1;
+    CudaCheck(cudnnSetFilter4dDescriptor(val_, GetCudnnDataType(data_type),
+                                         cudnn_data_format, filters, c,
+                                         kernel_h, kernel_w));
+  } else if (shape.NumAxes() == 4) {
     int filters = static_cast<int>(shape.At(0));
     int kernel_h = data_format == "channels_first"
                        ? static_cast<int>(shape.At(2))
