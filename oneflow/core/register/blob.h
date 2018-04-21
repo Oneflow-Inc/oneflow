@@ -66,7 +66,9 @@ class Blob : public BlobIf {
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
+  size_t HeaderByteSize() const { return blob_desc_->HeaderByteSize(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
+  bool IsContinues() const { return is_continues_; }
 
   virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
   virtual void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
@@ -80,10 +82,10 @@ class Blob : public BlobIf {
   bool IsColValid() const;
 
  protected:
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-       const void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr, char* body_mem_ptr)
+      : Blob(regst, blob_desc, head_mem_ptr, body_mem_ptr, nullptr) {}
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr, char* body_mem_ptr,
+      const void* comm_net_token);
 
  private:
   template<typename T>
@@ -102,9 +104,10 @@ class Blob : public BlobIf {
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
+  bool is_continues_;
 };
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr, char* body_mem_ptr,
               const void* comm_net_token, DeviceType device_type);
 
 class RecordBlobIf : public BlobIf {

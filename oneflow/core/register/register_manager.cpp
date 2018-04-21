@@ -37,7 +37,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
           NewBlob(regst, runtime_regst_desc->packed_blob_desc(),
                   std::get<0>(allocation_result),
                   std::get<1>(allocation_result), device_type));
-      regst->deleter_ = std::get<2>(allocation_result);
+      regst->deleters_.push_back(std::get<2>(allocation_result));
     } else {
       switch (record_type) {
         case kOFRecord:

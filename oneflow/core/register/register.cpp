@@ -16,6 +16,12 @@ Regst::Regst() {
   regst_desc_ = nullptr;
 }
 
+Regst::~Regst() {
+  for(std::function<void()> deleter : deleters_) {
+    deleter();
+  }
+}
+
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {
   auto it = lbn2blob_.find(lbn);
   if (it != lbn2blob_.end()) {

@@ -53,6 +53,10 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
                  CUDA_POINTER_ALIGNMENT);
 }
 
+size_t BlobDesc::HeaderByteSize() const {
+  return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
+}
+
 size_t BlobDesc::TotalByteSize() const {
   return ByteSizeOfDataIdField() + ByteSizeOfColNumField()
          + ByteSizeOfDataContentField();
