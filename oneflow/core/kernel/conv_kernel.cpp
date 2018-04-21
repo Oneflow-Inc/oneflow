@@ -254,7 +254,7 @@ ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConv3DConf, ConvKernel,
                            FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
-Im2ColWriter<T>::Im2ColWriter(const T* src_ptr, T* dst_ptr, int64_t c_size,
+ColBufWriter<T>::ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size,
                               int64_t id_size, int64_t ih_size, int64_t iw_size,
                               int64_t od_size, int64_t oh_size, int64_t ow_size)
     : src_ptr_(src_ptr),
@@ -268,77 +268,81 @@ Im2ColWriter<T>::Im2ColWriter(const T* src_ptr, T* dst_ptr, int64_t c_size,
       ow_size_(ow_size) {}
 
 template<typename T>
+Im2ColWriter<T>::Im2ColWriter(const T* src_ptr, T* dst_ptr, int64_t c_size,
+                              int64_t id_size, int64_t ih_size, int64_t iw_size,
+                              int64_t od_size, int64_t oh_size, int64_t ow_size)
+    : ColBufWriter<T>::ColBufWriter(src_ptr, dst_ptr, c_size, id_size, ih_size,
+                                    iw_size, od_size, oh_size, ow_size) {}
+
+template<typename T>
 void Im2ColWriter<T>::DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) {
-  *(dst_ptr_++) = src_ptr_[id * id_size_ + ih * ih_size_ + iw * iw_size_ + c];
+  *(this->dst_ptr_++) = this->src_ptr_[id * this->id_size_ + ih * this->ih_size_
+                                       + iw * this->iw_size_ + c];
 }
 
 template<typename T>
 void Im2ColWriter<T>::CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) {
-  *(dst_ptr_++) = src_ptr_[id * id_size_ + ih * ih_size_ + iw];
+  *(this->dst_ptr_++) =
+      this->src_ptr_[id * this->id_size_ + ih * this->ih_size_ + iw];
 }
 
 template<typename T>
 void Im2ColWriter<T>::InvalidDFunc() {
-  FOR_RANGE(int64_t, i, 0, od_size_) { *(dst_ptr_++) = 0; }
+  FOR_RANGE(int64_t, i, 0, this->od_size_) { *(this->dst_ptr_++) = 0; }
 }
 
 template<typename T>
 void Im2ColWriter<T>::InvalidHFunc() {
-  FOR_RANGE(int64_t, i, 0, oh_size_) { *(dst_ptr_++) = 0; }
+  FOR_RANGE(int64_t, i, 0, this->oh_size_) { *(this->dst_ptr_++) = 0; }
 }
 
 template<typename T>
 void Im2ColWriter<T>::InvalidWFunc() {
-  FOR_RANGE(int64_t, i, 0, ow_size_) { *(dst_ptr_++) = 0; }
+  FOR_RANGE(int64_t, i, 0, this->ow_size_) { *(this->dst_ptr_++) = 0; }
 }
 
 template<typename T>
 void Im2ColWriter<T>::NextImCSize() {
-  src_ptr_ += c_size_;
+  this->src_ptr_ += this->c_size_;
 }
 
 template<typename T>
 Col2ImWriter<T>::Col2ImWriter(const T* src_ptr, T* dst_ptr, int64_t c_size,
                               int64_t id_size, int64_t ih_size, int64_t iw_size,
                               int64_t od_size, int64_t oh_size, int64_t ow_size)
-    : src_ptr_(src_ptr),
-      dst_ptr_(dst_ptr),
-      c_size_(c_size),
-      id_size_(id_size),
-      ih_size_(ih_size),
-      iw_size_(iw_size),
-      od_size_(od_size),
-      oh_size_(oh_size),
-      ow_size_(ow_size) {}
+    : ColBufWriter<T>::ColBufWriter(src_ptr, dst_ptr, c_size, id_size, ih_size,
+                                    iw_size, od_size, oh_size, ow_size) {}
 
 template<typename T>
 void Col2ImWriter<T>::DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) {
-  dst_ptr_[id * id_size_ + ih * ih_size_ + iw * iw_size_ + c] += *(src_ptr_++);
+  this->dst_ptr_[id * this->id_size_ + ih * this->ih_size_ + iw * this->iw_size_
+                 + c] += *(this->src_ptr_++);
 }
 
 template<typename T>
 void Col2ImWriter<T>::CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) {
-  dst_ptr_[id * id_size_ + ih * ih_size_ + iw] += *(src_ptr_++);
+  this->dst_ptr_[id * this->id_size_ + ih * this->ih_size_ + iw] +=
+      *(this->src_ptr_++);
 }
 
 template<typename T>
 void Col2ImWriter<T>::InvalidDFunc() {
-  src_ptr_ += od_size_;
+  this->src_ptr_ += this->od_size_;
 }
 
 template<typename T>
 void Col2ImWriter<T>::InvalidHFunc() {
-  src_ptr_ += oh_size_;
+  this->src_ptr_ += this->oh_size_;
 }
 
 template<typename T>
 void Col2ImWriter<T>::InvalidWFunc() {
-  src_ptr_ += ow_size_;
+  this->src_ptr_ += this->ow_size_;
 }
 
 template<typename T>
 void Col2ImWriter<T>::NextImCSize() {
-  dst_ptr_ += c_size_;
+  this->dst_ptr_ += this->c_size_;
 }
 
 template<typename T>

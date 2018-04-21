@@ -10,15 +10,14 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
 
-  this->in_desc_.reset(new CudnnTensorDesc(
-      GetDataType<T>::value, in_shape,
-      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
-  this->out_desc_.reset(new CudnnTensorDesc(
-      GetDataType<T>::value, out_shape,
-      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
-  this->filter_desc_.reset(new CudnnFilterDesc(
-      GetDataType<T>::value, weight_shape,
-      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
+  const std::string& data_format =
+      this->template GetValFromCustomizedOpConf<std::string>("data_format");
+  this->in_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
+  this->out_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
+  this->filter_desc_.reset(
+      new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
   this->conv_desc_.reset(new CudnnConvDesc(GetDataType<T>::value, in_shape,
                                            this->GetCustomizedOpConf()));
 
@@ -27,13 +26,10 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
         this->template GetValFromCustomizedOpConf<int32_t>("filters");
 
     if (this->OpKernelDim() == 2) {
-      if (this->template GetValFromCustomizedOpConf<std::string>("data_format")
-          == "channels_first") {
+      if (data_format == "channels_first") {
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, filters, 1, 1));
-      } else if (this->template GetValFromCustomizedOpConf<std::string>(
-                     "data_format")
-                 == "channels_last") {
+      } else if (data_format == "channels_last") {
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NHWC, GetDataType<T>::value, 1, filters, 1, 1));
       } else {
