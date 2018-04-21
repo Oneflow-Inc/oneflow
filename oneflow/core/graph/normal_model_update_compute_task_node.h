@@ -20,6 +20,7 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
   void set_random_seed(uint32_t val) { random_seed_ = val; }
   TaskType GetTaskType() const override { return TaskType::kNormalMdUpdt; }
   void ToProto(TaskProto*) override;
+  void FixRegisterNumRange() override {}
 
  private:
   uint32_t random_seed_;
