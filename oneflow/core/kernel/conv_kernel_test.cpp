@@ -137,6 +137,8 @@ void ConvTestCase1DChannelsLast(OpKernelTestCase* conv_test_case,
 
 TEST_CPU_ONLY_OPKERNEL(ConvTestCase1DChannelsLast, FLOATING_DATA_TYPE_SEQ,
                        (train), (forward)(backward));
+TEST_GPU_ONLY_OPKERNEL(ConvTestCase1DChannelsLast, ((float, DataType::kFloat)),
+                       (train), (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase2DChannelsLast(OpKernelTestCase* conv_test_case,

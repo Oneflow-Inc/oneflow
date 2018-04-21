@@ -25,14 +25,14 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     int32_t filters =
         this->template GetValFromCustomizedOpConf<int32_t>("filters");
 
-    if (this->OpKernelDim() == 2) {
+    if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
       if (data_format == "channels_first") {
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, filters, 1, 1));
       } else if (data_format == "channels_last") {
         if (GetDataType<T>::value == DataType::kDouble) {
-          LOG(FATAL)
-              << "CUDNN 2d support channels last only if data type is float";
+          LOG(FATAL) << "CUDNN 1d & 2d support channels last only if data type "
+                        "is float";
         }
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NHWC, GetDataType<T>::value, 1, filters, 1, 1));
