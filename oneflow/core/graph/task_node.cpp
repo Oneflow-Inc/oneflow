@@ -67,7 +67,8 @@ void TaskNode::Build() {
 
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
-    pair.second->set_min_register_num(pair.second->MaxColNum());
+    pair.second->set_min_register_num(
+        std::max(pair.second->min_register_num(), pair.second->MaxColNum()));
   }
 }
 

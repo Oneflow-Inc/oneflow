@@ -64,12 +64,6 @@ class RegstDesc final {
   MemoryCase mem_case_;
 };
 
-inline void UpdtMinRegisterNumByMaxSequenceSize(RegstDesc* regst_desc) {
-  if (regst_desc->min_register_num() < regst_desc->MaxColNum()) {
-    regst_desc->set_min_register_num(regst_desc->MaxColNum());
-  }
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_REGISTER_DESC_H_
