@@ -18,14 +18,12 @@ void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
 }
 
 void RegstDesc::UpdtMinRegstNumIfNeed(int32_t val) {
-  if (val > min_register_num_ && val <= max_register_num_) {
-    min_register_num_ = val;
-  }
+  CHECK_LE(val, max_register_num_);
+  min_register_num_ = std::max(min_register_num_, val);
 }
 void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
-  if (val >= min_register_num_ && val < max_register_num_) {
-    max_register_num_ = val;
-  }
+  CHECK_GE(val, min_register_num_);
+  max_register_num_ = std::min(max_register_num_, val);
 }
 
 void RegstDesc::Lock() {
