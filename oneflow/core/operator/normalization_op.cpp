@@ -115,20 +115,18 @@ void NormalizationOp::InferBlobDescs(
   if (tmp_elem_cnt > 1) { tmp_blob_desc->mut_shape() = Shape({tmp_elem_cnt}); }
   int64_t num_before_axis_dim =
       in_blob_desc->shape().CountBeforeAxis(conf.axis());
+  int64_t num_axis_dim = in_blob_desc->shape().At(conf.axis());
   int64_t num_after_axis_dim =
       in_blob_desc->shape().CountAfterAxis(conf.axis());
-  if (num_after_axis_dim > 1) {
-    int64_t num_axis_dim = in_blob_desc->shape().At(conf.axis());
-    BlobDesc* before_by_axis_blob_desc =
-        GetBlobDesc4BnInOp("before_by_axis_matrix");
-    before_by_axis_blob_desc->mut_shape() =
-        Shape({num_before_axis_dim, num_axis_dim});
-    before_by_axis_blob_desc->set_data_type(in_data_type);
-    BlobDesc* after_axis_sum_multiplier =
-        GetBlobDesc4BnInOp("after_axis_sum_multiplier");
-    after_axis_sum_multiplier->mut_shape() = Shape({num_after_axis_dim});
-    after_axis_sum_multiplier->set_data_type(in_data_type);
-  }
+  BlobDesc* before_by_axis_blob_desc =
+      GetBlobDesc4BnInOp("before_by_axis_matrix");
+  before_by_axis_blob_desc->mut_shape() =
+      Shape({num_before_axis_dim, num_axis_dim});
+  before_by_axis_blob_desc->set_data_type(in_data_type);
+  BlobDesc* after_axis_sum_multiplier =
+      GetBlobDesc4BnInOp("after_axis_sum_multiplier");
+  after_axis_sum_multiplier->mut_shape() = Shape({num_after_axis_dim});
+  after_axis_sum_multiplier->set_data_type(in_data_type);
   BlobDesc* before_axis_sum_multiplier =
       GetBlobDesc4BnInOp("before_axis_sum_multiplier");
   before_axis_sum_multiplier->mut_shape() = Shape({num_before_axis_dim});

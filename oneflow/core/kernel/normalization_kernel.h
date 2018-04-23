@@ -37,7 +37,6 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
                           bool need_comp_in_diff) const;
   void CalcAboutBetaDiff(const KernelCtx&,
                          const std::function<Blob*(const std::string&)>,
-                         const Blob* out_diff_blob,
                          bool need_comp_in_diff) const;
   void CalcInDiff(const KernelCtx&,
                   const std::function<Blob*(const std::string&)>,
@@ -46,9 +45,8 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
                  const std::function<Blob*(const std::string&)>&,
                  const Blob* mean_blob, const Blob* variance_blob,
                  const Blob* in_blob, Blob* out_blob) const;
-  void CalcMeanAndVariance(const KernelCtx&,
-                           const std::function<Blob*(const std::string&)>&,
-                           const Blob* in_blob) const;
+  void CalcMeanAndVariance(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
   const PbMessage& GetCustomizedOpConf() const override;

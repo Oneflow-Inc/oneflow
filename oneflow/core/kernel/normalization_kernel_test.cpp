@@ -59,10 +59,10 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl(const std::string& job_type,
                               DataType4CppTypeString(cpp_type));
   return test_case;
 }
-// TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl, (train)(predict),
-//                      (forward)(backward),
-//                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ),
-//                      (scale)(no_scale), (center)(no_center), (0)(1));
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl, (train)(predict),
+                      (forward)(backward),
+                      OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ),
+                      (scale)(no_scale), (center)(no_center), (0)(1));
 
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_single_number(OpKernelTestCase* norm_test_case,
@@ -242,11 +242,10 @@ void NormalizationTestCase_first_piece(OpKernelTestCase* norm_test_case,
   }
 }
 
-/*
 TEST_CPU_AND_GPU_OPKERNEL(NormalizationTestCase_first_piece,
                           FLOATING_DATA_TYPE_SEQ, (train)(predict),
                           (forward)(backward));
-*/
+
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_second_piece_train_different_preblob(
     OpKernelTestCase* norm_test_case, const std::string& job_type,
@@ -328,11 +327,10 @@ void NormalizationTestCase_second_piece_train_different_preblob(
   }
 }
 
-/*
 TEST_CPU_AND_GPU_OPKERNEL(
     NormalizationTestCase_second_piece_train_different_preblob,
     FLOATING_DATA_TYPE_SEQ, (train), (forward)(backward));
-*/
+
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_second_piece_without_gamma(
     OpKernelTestCase* norm_test_case, const std::string& job_type,
@@ -409,11 +407,11 @@ void NormalizationTestCase_second_piece_without_gamma(
                                                   one_blob_desc, {5.655440});
   }
 }
-/*
+
 TEST_CPU_AND_GPU_OPKERNEL(NormalizationTestCase_second_piece_without_gamma,
                           FLOATING_DATA_TYPE_SEQ, (train)(predict),
                           (forward)(backward));
-*/
+
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_second_piece_without_beta(
     OpKernelTestCase* norm_test_case, const std::string& job_type,
@@ -490,11 +488,11 @@ void NormalizationTestCase_second_piece_without_beta(
                                                   one_blob_desc, {5.655440});
   }
 }
-/*
+
 TEST_CPU_AND_GPU_OPKERNEL(NormalizationTestCase_second_piece_without_beta,
                           FLOATING_DATA_TYPE_SEQ, (train)(predict),
                           (forward)(backward));
-*/
+
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_second_piece_without_beta_and_gamma(
     OpKernelTestCase* norm_test_case, const std::string& job_type,
@@ -571,11 +569,11 @@ void NormalizationTestCase_second_piece_without_beta_and_gamma(
                                                   one_blob_desc, {5.655440});
   }
 }
-/*
+
 TEST_CPU_AND_GPU_OPKERNEL(
     NormalizationTestCase_second_piece_without_beta_and_gamma,
     FLOATING_DATA_TYPE_SEQ, (train)(predict), (forward)(backward));
-*/
+
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_second_piece_transpose(
     OpKernelTestCase* norm_test_case, const std::string& job_type,
@@ -672,11 +670,11 @@ void NormalizationTestCase_second_piece_transpose(
         GenDiffBn("gamma"), one_blob_desc, {5.655440, -57.284965});
   }
 }
-/*
+
 TEST_CPU_AND_GPU_OPKERNEL(NormalizationTestCase_second_piece_transpose,
                           FLOATING_DATA_TYPE_SEQ, (train)(predict),
                           (forward)(backward));
-*/
+
 }  // namespace test
 
 }  // namespace oneflow

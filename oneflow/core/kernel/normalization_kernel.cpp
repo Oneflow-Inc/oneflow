@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/normalization_kernel.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/kernel/transpose_kernel.h"
+#include "oneflow/core/operator/normalization_op.h"
 
 namespace oneflow {
 
@@ -35,6 +36,49 @@ size_t GetTmpForSumByteSize(Blob* tmp_storage_blob) {
   } else {
     return 0;
   }
+}
+
+template<DeviceType device_type, typename T>
+void ComputeAxisSum(const KernelCtx& ctx,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+                    const Blob* x_blob, Blob* y_blob, int64_t axis,
+                    const T alpha) {
+  int num_before_axis_dim = x_blob->shape().CountBeforeAxis(axis);
+  int num_axis_dim = x_blob->shape().At(axis);
+  int num_after_axis_dim = x_blob->shape().CountAfterAxis(axis);
+  CHECK_EQ(y_blob->shape().elem_cnt(), num_axis_dim);
+  Blob* before_by_axis_blob = BnInOp2Blob("before_by_axis_matrix");
+  const Blob* after_axis_sum_multiplier =
+      BnInOp2Blob("after_axis_sum_multiplier");
+  KernelUtil<device_type, T>::Gemv(
+      ctx.device_ctx, CblasTrans, num_before_axis_dim * num_axis_dim,
+      num_after_axis_dim, alpha, x_blob->dptr<T>(), num_after_axis_dim,
+      after_axis_sum_multiplier->dptr<T>(), 1, 0.0,
+      before_by_axis_blob->mut_dptr<T>(), 1);
+  const Blob* before_axis_sum_multiplier =
+      BnInOp2Blob("before_axis_sum_multiplier");
+  KernelUtil<device_type, T>::Gemv(
+      ctx.device_ctx, CblasNoTrans, num_before_axis_dim, num_axis_dim, 1.0,
+      before_by_axis_blob->dptr<T>(), num_axis_dim,
+      before_axis_sum_multiplier->dptr<T>(), 1, 0.0, y_blob->mut_dptr<T>(), 1);
+}
+
+template<DeviceType device_type, typename T>
+void ComputeAxisSum(const KernelCtx& ctx,
+                    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+                    const Blob* x_blob, Blob* y_blob, int64_t axis) {
+  return ComputeAxisSum<device_type, T>(ctx, BnInOp2Blob, x_blob, y_blob, axis,
+                                        1.f);
+}
+
+template<DeviceType device_type, typename T>
+void ComputeAxisMean(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+    const Blob* x_blob, Blob* y_blob, int64_t axis) {
+  const T alpha = 1.f / (x_blob->shape().elem_cnt() / x_blob->shape().At(axis));
+  return ComputeAxisSum<device_type, T>(ctx, BnInOp2Blob, x_blob, y_blob, axis,
+                                        alpha);
 }
 
 }  // namespace
@@ -103,14 +147,11 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& conf = this->kernel_conf().normalization_conf();
   InitializerConf sum_multiplier_initializer_conf;
   sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  if (BnInOp2Blob("in")->shape().CountAfterAxis(conf.axis()) > 1) {
-    KernelUtil<device_type, T>::InitializeWithConf(
-        ctx, sum_multiplier_initializer_conf, 0,
-        BnInOp2Blob("after_axis_sum_multiplier"));
-  }
+  KernelUtil<device_type, T>::InitializeWithConf(
+      ctx, sum_multiplier_initializer_conf, 0,
+      BnInOp2Blob("after_axis_sum_multiplier"));
   KernelUtil<device_type, T>::InitializeWithConf(
       ctx, sum_multiplier_initializer_conf, 0,
       BnInOp2Blob("before_axis_sum_multiplier"));
@@ -139,7 +180,7 @@ void NormalizationKernel<device_type, T>::ForwardDataContent(
     comp_out_blob = out_blob;
   }
   if (Global<JobDesc>::Get()->IsTrain()) {
-    CalcMeanAndVariance(ctx, BnInOp2Blob, comp_in_blob);
+    CalcMeanAndVariance(ctx, BnInOp2Blob);
     UpdateMovingMeanAndMovingVariance(ctx, BnInOp2Blob);
     mean_blob = BnInOp2Blob("new_mean");
     variance_blob = BnInOp2Blob("new_variance");
@@ -183,7 +224,7 @@ void NormalizationKernel<device_type, T>::BackwardDataContent(
     CalcAboutGammaDiff(ctx, BnInOp2Blob, comp_out_diff_blob, need_comp_in_diff);
   }
   if (need_comp_in_diff || normalization_op_conf.center()) {
-    CalcAboutBetaDiff(ctx, BnInOp2Blob, comp_out_diff_blob, need_comp_in_diff);
+    CalcAboutBetaDiff(ctx, BnInOp2Blob, need_comp_in_diff);
   }
   if (need_comp_in_diff) {
     CalcInDiff(ctx, BnInOp2Blob, comp_out_diff_blob, comp_in_diff_blob);
@@ -229,21 +270,16 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::CalcAboutBetaDiff(
     const KernelCtx& ctx,
     const std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const Blob* out_diff_blob, bool need_comp_in_diff) const {
-  const auto& normalization_kernel_conf =
-      this->kernel_conf().normalization_conf();
-  const int32_t norm_part_num = normalization_kernel_conf.transpose_cols();
-  const int64_t norm_elem_num = normalization_kernel_conf.transpose_rows();
+    bool need_comp_in_diff) const {
+  const auto& conf = this->kernel_conf().normalization_conf();
+  const auto& op_conf = this->kernel_conf().op_conf().normalization_conf();
+  const int32_t norm_part_num = conf.transpose_cols();
+  const int64_t norm_elem_num = conf.transpose_rows();
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* beta_diff_blob = BnInOp2Blob("beta_diff");
-  Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage_for_sum");
+  ComputeAxisSum<device_type, T>(ctx, BnInOp2Blob, BnInOp2Blob("out_diff"),
+                                 beta_diff_blob, op_conf.axis());
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
-    KernelUtil<device_type, T>::Sum(
-        ctx.device_ctx, norm_elem_num,
-        out_diff_blob->dptr<T>() + i * norm_elem_num,
-        beta_diff_blob->mut_dptr<T>() + i,
-        GetTmpForSumDptr<T>(tmp_storage_blob, beta_diff_blob->mut_dptr<T>()),
-        GetTmpForSumByteSize(tmp_storage_blob));
     if (need_comp_in_diff) {
       KernelUtil<device_type, T>::Axpy(
           ctx.device_ctx, norm_elem_num, static_cast<T>(1),
@@ -328,65 +364,26 @@ void NormalizationKernel<device_type, T>::Normalize(
 template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
     const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-    const Blob* in_blob) const {
-  const auto& conf = this->kernel_conf().normalization_conf();
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const auto& op_conf = this->kernel_conf().op_conf().normalization_conf();
+  const Blob* in_blob = BnInOp2Blob("in");
   Blob* mean_blob = BnInOp2Blob("new_mean");
-  Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage_for_sum");
-  const int32_t norm_part_num = conf.transpose_cols();
-  const int64_t norm_elem_num = conf.transpose_rows();
-  T* tmp_dptr = GetTmpForSumDptr<T>(tmp_storage_blob, mean_blob->mut_dptr<T>());
-  size_t tmp_byte_size = GetTmpForSumByteSize(tmp_storage_blob);
-  FOR_RANGE(int32_t, i, 0, norm_part_num) {
-    KernelUtil<device_type, T>::Sum(
-        ctx.device_ctx, norm_elem_num, in_blob->dptr<T>() + i * norm_elem_num,
-        mean_blob->mut_dptr<T>() + i, tmp_dptr, tmp_byte_size);
-  }
-  const T inv_norm_elem_num = static_cast<T>(1.0 / norm_elem_num);
-  KernelUtil<device_type, T>::Scal(
-      ctx.device_ctx, mean_blob->shape().elem_cnt(), inv_norm_elem_num,
-      mean_blob->mut_dptr<T>(), 1);
-  // compute mean
-  Blob* raw_in_blob = BnInOp2Blob("in");
-  const Shape& in_shape = raw_in_blob->shape();
-  int num_before_axis_dim = in_shape.CountBeforeAxis(conf.axis());
-  int num_axis_dim = in_shape.At(conf.axis());
-  int num_after_axis_dim = in_shape.CountAfterAxis(conf.axis());
-  Blob* before_by_axis_blob = BnInOp2Blob("before_by_axis_matrix");
-  if (num_after_axis_dim > 1) {
-    Blob* after_axis_sum_multiplier = BnInOp2Blob("after_axis_sum_multiplier");
-    KernelUtil<device_type, T>::Gemv(
-        ctx.device_ctx, CblasNoTrans, num_before_axis_dim * num_axis_dim,
-        num_after_axis_dim, 1.0 / (num_before_axis_dim * num_after_axis_dim),
-        raw_in_blob->dptr<T>(), num_after_axis_dim,
-        after_axis_sum_multiplier->dptr<T>(), 1, 0.0,
-        before_by_axis_blob->mut_dptr<T>(), 1);
-  } else {
-    before_by_axis_blob = raw_in_blob;
-  }
-  Blob* before_axis_sum_multiplier = BnInOp2Blob("before_axis_sum_multiplier");
-  KernelUtil<device_type, T>::Gemv(ctx.device_ctx, CblasTrans,
-                                   num_before_axis_dim, num_axis_dim, 1.0,
-                                   before_by_axis_blob->dptr<T>(), num_axis_dim,
-                                   before_axis_sum_multiplier->dptr<T>(), 1,
-                                   0.0, mean_blob->mut_dptr<T>(), 1);
+  ComputeAxisMean<device_type, T>(ctx, BnInOp2Blob, in_blob, mean_blob,
+                                  op_conf.axis());
   //  It's safe to use `out' as tmp blob
   Blob* tmp_blob = BnInOp2Blob("out");
   Blob* variance_blob = BnInOp2Blob("new_variance");
-  FOR_RANGE(int32_t, i, 0, norm_part_num) {
-    ScalarSub<device_type, T>(
-        ctx.device_ctx, norm_elem_num, in_blob->dptr<T>() + i * norm_elem_num,
-        mean_blob->dptr<T>() + i, tmp_blob->mut_dptr<T>());
-    KernelUtil<device_type, T>::Mul(ctx.device_ctx, norm_elem_num,
-                                    tmp_blob->dptr<T>(), tmp_blob->dptr<T>(),
-                                    tmp_blob->mut_dptr<T>());
-    KernelUtil<device_type, T>::Sum(
-        ctx.device_ctx, norm_elem_num, tmp_blob->dptr<T>(),
-        variance_blob->mut_dptr<T>() + i, tmp_dptr, tmp_byte_size);
-  }
-  KernelUtil<device_type, T>::Scal(
-      ctx.device_ctx, variance_blob->shape().elem_cnt(), inv_norm_elem_num,
-      variance_blob->mut_dptr<T>(), 1);
+  KernelUtil<device_type, T>::Mul(ctx.device_ctx, in_blob->shape().elem_cnt(),
+                                  in_blob->dptr<T>(), in_blob->dptr<T>(),
+                                  tmp_blob->mut_dptr<T>());
+  ComputeAxisMean<device_type, T>(ctx, BnInOp2Blob, tmp_blob, variance_blob,
+                                  op_conf.axis());
+  KernelUtil<device_type, T>::Mul(ctx.device_ctx, mean_blob->shape().elem_cnt(),
+                                  mean_blob->dptr<T>(), mean_blob->dptr<T>(),
+                                  tmp_blob->mut_dptr<T>());
+  KernelUtil<device_type, T>::Axpy(
+      ctx.device_ctx, variance_blob->shape().elem_cnt(), -1.f,
+      tmp_blob->dptr<T>(), 1, variance_blob->mut_dptr<T>(), 1);
 }
 
 template<DeviceType device_type, typename T>
