@@ -2,8 +2,26 @@
 #define ONEFLOW_CORE_KERNEL_NORMALIZATION_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/persistence/snapshot_manager.h"
 
 namespace oneflow {
+
+class NormalizationCtx final {
+ public:
+  NormalizationCtx(const KernelConf&, DataType);
+  ~NormalizationCtx() = default;
+
+#ifdef WITH_CUDA
+  const cudnnBatchNormMode_t& cudnn_batch_norm_mode() const;
+  const cudnnTensorDescriptor_t& cudnn_in_tensor_desc() const;
+  const cudnnTensorDescriptor_t& cudnn_param_tensor_desc() const;
+
+ private:
+  cudnnBatchNormMode_t mode_;
+  std::unique_ptr<CudnnTensorDesc> in_desc_;
+  std::unique_ptr<CudnnTensorDesc> param_desc_;
+#endif  // WITH_CUDA
+};
 
 template<DeviceType device_type, typename T>
 class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
@@ -12,7 +30,21 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
   NormalizationKernel() = default;
   ~NormalizationKernel() = default;
 
+  void InitMovingMeanAndMovingVariance(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      bool use_new) const;
+
  private:
+#ifdef WITH_CUDA
+  std::unique_ptr<NormalizationCtx> normalization_ctx_;
+  void VirtualKernelInit(const ParallelContext*) override {
+    if (this->kernel_conf().normalization_conf().use_cudnn()) {
+      normalization_ctx_.reset(
+          new NormalizationCtx(this->kernel_conf(), GetDataType<T>::value));
+    }
+  }
+#endif  // WITH_CUDA
   void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -47,6 +79,32 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
                            const Blob* in_blob) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
+};
+
+template<DeviceType device_type, typename T>
+struct NormalizationKernelUtil {
+  static void NormalizationCudnnForward(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
+      const NormalizationCtx&, const NormalizationKernel<device_type, T>*);
+  static void NormalizationCudnnBackward(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
+      const NormalizationCtx&, const NormalizationKernel<device_type, T>*);
+};
+
+template<typename T>
+struct NormalizationKernelUtil<DeviceType::kCPU, T> {
+  static void NormalizationCudnnForward(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
+      const NormalizationCtx&,
+      const NormalizationKernel<DeviceType::kCPU, T>*) {
+    UNIMPLEMENTED();
+  }
+  static void NormalizationCudnnBackward(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
+      const NormalizationCtx&,
+      const NormalizationKernel<DeviceType::kCPU, T>*) {
+    UNIMPLEMENTED();
+  }
 };
 
 }  // namespace oneflow

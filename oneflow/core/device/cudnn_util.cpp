@@ -13,6 +13,9 @@ cudnnDataType_t GetCudnnDataType(DataType val) {
   UNIMPLEMENTED();
 }
 
+CudnnTensorDesc::CudnnTensorDesc() {
+  CudaCheck(cudnnCreateTensorDescriptor(&val_));
+}
 CudnnTensorDesc::~CudnnTensorDesc() {
   CudaCheck(cudnnDestroyTensorDescriptor(val_));
 }
