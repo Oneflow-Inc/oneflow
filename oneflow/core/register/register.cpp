@@ -17,9 +17,7 @@ Regst::Regst() {
 }
 
 Regst::~Regst() {
-  for(std::function<void()> deleter : deleters_) {
-    deleter();
-  }
+  for (std::function<void()> deleter : deleters_) { deleter(); }
 }
 
 Blob* Regst::GetBlobByLbn(const std::string& lbn) {

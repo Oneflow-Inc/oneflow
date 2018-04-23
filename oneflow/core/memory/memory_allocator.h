@@ -1,3 +1,4 @@
+#ifndef ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_ALLOCATOR_H_
 
 #include "oneflow/core/common/util.h"

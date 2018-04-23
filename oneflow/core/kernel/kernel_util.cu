@@ -179,13 +179,13 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 #undef MAKE_CUB_DEVICE_REDUCE_SWITCH_ENTRY
 
 // create temporary host blob store initializer result
-#define BEFORE_CPU_INITIALIZE()                                     \
-  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                 \
-  char* host_raw_dptr = nullptr;                                    \
-  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
-  std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(                                                  \
-      NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+#define BEFORE_CPU_INITIALIZE()                                        \
+  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                    \
+  char* host_raw_dptr = nullptr;                                       \
+  CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize()));    \
+  std::unique_ptr<Blob> host_blob;                                     \
+  host_blob.reset(NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, \
+                          nullptr, DeviceType::kGPU));
 
 // asynchronous copy to device
 #define AFTER_CPU_INITIALIZE()                                       \

@@ -7,25 +7,31 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-           const void* comm_net_token) {
-  mem_ptr_ = mem_ptr;
-  if (blob_desc->has_data_id_field()) {
-    data_id_ptr_ = mem_ptr;
+Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr,
+           char* body_mem_ptr, const void* comm_net_token)
+    : regst_(regst),
+      blob_desc_(blob_desc),
+      comm_net_token_(comm_net_token),
+      head_mem_ptr_(head_mem_ptr),
+      data_id_ptr_(nullptr),
+      col_num_ptr_(nullptr) {
+  CHECK_NOTNULL(head_mem_ptr);
+  CHECK_NE(head_mem_ptr, body_mem_ptr);
+  if (body_mem_ptr == nullptr) {
+    dptr_ = head_mem_ptr + blob_desc->HeaderByteSize();
+    is_continues_ = true;
   } else {
-    data_id_ptr_ = nullptr;
+    dptr_ = body_mem_ptr;
+    is_continues_ = false;
+  }
+
+  if (blob_desc->has_data_id_field()) {
+    data_id_ptr_ = reinterpret_cast<char*>(head_mem_ptr);
   }
   if (blob_desc->has_col_num_field()) {
     col_num_ptr_ = reinterpret_cast<int32_t*>(
-        mem_ptr + blob_desc->ByteSizeOfDataIdField());
-  } else {
-    col_num_ptr_ = nullptr;
+        head_mem_ptr + blob_desc->ByteSizeOfDataIdField());
   }
-  dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField()
-          + blob_desc->ByteSizeOfColNumField();
-  blob_desc_ = blob_desc;
-  comm_net_token_ = comm_net_token;
-  regst_ = regst;
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -70,25 +76,27 @@ bool Blob::IsColValid() const { return col_id() <= max_col_id(); }
 
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)           \
   {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type), \
-   [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,         \
-      const void* comm_net_token) {                                   \
+   [](Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr,    \
+      char* body_mem_ptr, const void* comm_net_token) {               \
      return new BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims,     \
-                         device_type>(regst, blob_desc, mem_ptr,      \
-                                      comm_net_token);                \
+                         device_type>(regst, blob_desc, head_mem_ptr, \
+                                      body_mem_ptr, comm_net_token);  \
    }},
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              const void* comm_net_token, DeviceType device_type) {
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr,
+              char* body_mem_ptr, const void* comm_net_token,
+              DeviceType device_type) {
   static const HashMap<
-      std::string,
-      std::function<Blob*(Regst * regst, const BlobDesc* blob_desc,
-                          char* mem_ptr, const void* comm_net_token)>>
+      std::string, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc,
+                                       char* head_mem_ptr, char* body_mem_ptr,
+                                       const void* comm_net_token)>>
       creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
           MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ, DIM_SEQ, DEVICE_TYPE_SEQ)};
   std::string key = GetHashKey(
       blob_desc->data_type(),
       static_cast<int32_t>(blob_desc->shape().NumAxes()), device_type);
-  return creators.at(key)(regst, blob_desc, mem_ptr, comm_net_token);
+  return creators.at(key)(regst, blob_desc, head_mem_ptr, body_mem_ptr,
+                          comm_net_token);
 }
 
 }  // namespace oneflow

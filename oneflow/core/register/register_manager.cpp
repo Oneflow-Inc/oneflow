@@ -20,31 +20,65 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     if (lbns.size() > 0) {
       std::sort(lbns.begin(), lbns.end());
-      std::tuple<char*, const void*, std::function<void()>> allocation_result =
-          Global<MemoryAllocator>::Get()->Allocate(
-              regst_desc_proto.mem_case(),
-              runtime_regst_desc->packed_blob_desc()->TotalByteSize());
-      char* cur_pointer = std::get<0>(allocation_result);
-      for (const std::string& lbn : lbns) {
-        const BlobDesc* blob_desc = runtime_regst_desc->GetBlobDescFromLbn(lbn);
-        std::unique_ptr<Blob> blob_ptr;
-        blob_ptr.reset(
-            NewBlob(regst, blob_desc, cur_pointer, nullptr, device_type));
-        CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
-        cur_pointer += blob_desc->TotalByteSize();
+      const BlobDesc* packed_blob_desc = runtime_regst_desc->packed_blob_desc();
+      if (packed_blob_desc->HeaderByteSize() > 0
+          && regst_desc_proto.mem_case().has_device_cuda_mem()) {
+        MemoryCase head_mem_case;
+        head_mem_case.mutable_host_pageable_mem();
+        std::tuple<char*, const void*, std::function<void()>>
+            head_allocation_result = Global<MemoryAllocator>::Get()->Allocate(
+                head_mem_case, packed_blob_desc->HeaderByteSize());
+        std::tuple<char*, const void*, std::function<void()>>
+            body_allocation_result = Global<MemoryAllocator>::Get()->Allocate(
+                regst_desc_proto.mem_case(),
+                packed_blob_desc->ByteSizeOfDataContentField());
+        char* head_cur_mem_ptr = std::get<0>(head_allocation_result);
+        char* body_cur_mem_ptr = std::get<0>(body_allocation_result);
+        for (const std::string& lbn : lbns) {
+          const BlobDesc* blob_desc =
+              runtime_regst_desc->GetBlobDescFromLbn(lbn);
+          std::unique_ptr<Blob> blob_ptr;
+          blob_ptr.reset(NewBlob(regst, blob_desc, head_cur_mem_ptr,
+                                 body_cur_mem_ptr, nullptr, device_type));
+          CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
+          head_cur_mem_ptr += blob_desc->HeaderByteSize();
+          body_cur_mem_ptr += blob_desc->ByteSizeOfDataContentField();
+        }
+        regst->packed_blob_.reset(
+            NewBlob(regst, runtime_regst_desc->packed_blob_desc(),
+                    std::get<0>(head_allocation_result),
+                    std::get<0>(body_allocation_result), nullptr, device_type));
+        regst->deleters_.push_back(std::get<2>(head_allocation_result));
+        regst->deleters_.push_back(std::get<2>(body_allocation_result));
+
+      } else {
+        std::tuple<char*, const void*, std::function<void()>>
+            allocation_result = Global<MemoryAllocator>::Get()->Allocate(
+                regst_desc_proto.mem_case(),
+                runtime_regst_desc->packed_blob_desc()->TotalByteSize());
+        char* cur_pointer = std::get<0>(allocation_result);
+        for (const std::string& lbn : lbns) {
+          const BlobDesc* blob_desc =
+              runtime_regst_desc->GetBlobDescFromLbn(lbn);
+          std::unique_ptr<Blob> blob_ptr;
+          blob_ptr.reset(NewBlob(regst, blob_desc, cur_pointer, nullptr,
+                                 nullptr, device_type));
+          CHECK(regst->lbn2blob_.emplace(lbn, std::move(blob_ptr)).second);
+          cur_pointer += blob_desc->TotalByteSize();
+        }
+        regst->packed_blob_.reset(
+            NewBlob(regst, runtime_regst_desc->packed_blob_desc(),
+                    std::get<0>(allocation_result), nullptr,
+                    std::get<1>(allocation_result), device_type));
+        regst->deleters_.push_back(std::get<2>(allocation_result));
       }
-      regst->packed_blob_.reset(
-          NewBlob(regst, runtime_regst_desc->packed_blob_desc(),
-                  std::get<0>(allocation_result),
-                  std::get<1>(allocation_result), device_type));
-      regst->deleters_.push_back(std::get<2>(allocation_result));
     } else {
       switch (record_type) {
         case kOFRecord:
           regst->packed_blob_.reset(new RecordBlob<OFRecord>);
           break;
       }
-      regst->deleter_ = []() {};
+      regst->deleters_.push_back([]() {});
     }
     OneRegstDone(regst);
   }

@@ -3,18 +3,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void CloneKernel<device_type, T>::Forward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* in_blob = BnInOp2Blob(this->kernel_conf().input_bns(0));
-  for (const std::string& obn : this->kernel_conf().output_bns()) {
-    Blob* out_blob = BnInOp2Blob(obn);
-    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_memory_ptr(),
-                        in_blob->memory_ptr(), in_blob->TotalByteSize());
-  }
-}
-
-template<DeviceType device_type, typename T>
 struct CloneKernelUtil {
   // b += a
   static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b);

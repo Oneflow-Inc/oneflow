@@ -70,6 +70,14 @@ bool Kernel::HasModelBns() const {
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::ForwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().input_bns(),
+            kernel_conf().output_bns(), &Blob::CopyDataContentFrom);
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -98,6 +106,14 @@ void KernelIf<device_type>::BackwardColNum(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
             kernel_conf().input_diff_bns(), &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::BackwardDataContent(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyField(ctx.device_ctx, BnInOp2Blob, kernel_conf().output_diff_bns(),
+            kernel_conf().input_diff_bns(), &Blob::CopyDataContentFrom);
 }
 
 template<DeviceType device_type>
