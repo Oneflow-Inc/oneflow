@@ -395,6 +395,12 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
       variance_blob->dptr<T>(), 1, moving_variance_blob->mut_dptr<T>(), 1);
 }
 
+template<DeviceType device_type, typename T>
+const PbMessage& NormalizationKernel<device_type, T>::GetCustomizedOpConf()
+    const {
+  return this->op_conf().normalization_conf();
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNormalizationConf,
                            NormalizationKernel, FLOATING_DATA_TYPE_SEQ);
 
