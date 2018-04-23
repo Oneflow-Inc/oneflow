@@ -48,6 +48,7 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
                            const Blob* in_blob) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
+  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 }  // namespace oneflow
