@@ -13,7 +13,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
     min_model_regst = 2;
     max_model_regst = kMaxRegisterNum;
   } else {
-    min_model_regst = 1;
+    min_model_regst = std::min(Global<JobDesc>::Get()->Staleness() + 1, 2);
     max_model_regst = Global<JobDesc>::Get()->Staleness() + 1;
   }
   auto model_regst = ProduceRegst("model", min_model_regst, max_model_regst);
