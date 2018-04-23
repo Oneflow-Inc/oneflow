@@ -39,6 +39,46 @@ size_t GetTmpForSumByteSize(Blob* tmp_storage_blob) {
 
 }  // namespace
 
+NormalizationCtx::NormalizationCtx(const KernelConf& kernel_conf,
+                                   DataType type) {
+#ifdef WITH_CUDA
+  const NormalizationKernelConf& conf = kernel_conf.normalization_conf();
+  mode_ = static_cast<cudnnBatchNormMode_t>(conf.cudnn_bn_mode());
+  std::vector<int64_t> in_shape(conf.in().dim().begin(), conf.in().dim().end());
+  CHECK(4 <= in_shape.size() && in_shape.size() <= 5) << in_shape.size();
+  int32_t axis = kernel_conf.op_conf().normalization_conf().axis();
+  param_desc_.reset(new CudnnTensorDesc());
+  int N = in_shape[0];
+  int C = in_shape[axis];
+  int H = in_shape[axis == 1 ? 2 : 1];
+  int W = in_shape[axis == 1 ? 3 : 2];
+  int D = in_shape.size() > 4 ? in_shape[axis == 1 ? 4 : 3] : 1;
+  std::vector<int> dims = {N, C, H, W, D};
+  std::vector<int> strides;
+  if (axis == 1) {
+    strides = {C * H * W * D, H * W * D, W * D, D, 1};
+  } else {
+    strides = {H * W * D * C, 1, W * D * C, D * C, C};
+  }
+  in_desc_.reset(
+      new CudnnTensorDesc(type, in_shape.size(), dims.data(), strides.data()));
+  CudaCheck(cudnnDeriveBNTensorDescriptor(param_desc_->Get(), in_desc_->Get(),
+                                          mode_));
+#endif  // WITH_CUDA
+}
+#ifdef WITH_CUDA
+const cudnnBatchNormMode_t& NormalizationCtx::cudnn_batch_norm_mode() const {
+  return mode_;
+}
+const cudnnTensorDescriptor_t& NormalizationCtx::cudnn_in_tensor_desc() const {
+  return in_desc_->Get();
+}
+const cudnnTensorDescriptor_t& NormalizationCtx::cudnn_param_tensor_desc()
+    const {
+  return param_desc_->Get();
+}
+#endif  // WITH_CUDA
+
 template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
@@ -104,6 +144,12 @@ void NormalizationKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto& conf = this->kernel_conf().normalization_conf();
+#ifdef WITH_CUDA
+  if (conf.use_cudnn()) {
+    NormalizationCudnnForward(ctx, BnInOp2Blob);
+    return;
+  }
+#endif
   const Blob* mean_blob = nullptr;
   const Blob* variance_blob = nullptr;
   const Blob* comp_in_blob = nullptr;
@@ -142,9 +188,15 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto& normalization_op_conf = this->op_conf().normalization_conf();
   const auto& normalization_kernel_conf =
       this->kernel_conf().normalization_conf();
+#ifdef WITH_CUDA
+  if (normalization_kernel_conf.use_cudnn()) {
+    NormalizationCudnnBackward(ctx, BnInOp2Blob);
+    return;
+  }
+#endif
+  const auto& normalization_op_conf = this->op_conf().normalization_conf();
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   const Blob* comp_out_diff_blob = nullptr;
   Blob* comp_in_diff_blob = nullptr;
@@ -352,33 +404,12 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
     const KernelCtx& ctx,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  InitMovingMeanAndMovingVariance(ctx, BnInOp2Blob, true);
   const auto& conf = this->op_conf().normalization_conf();
-  auto tpl = reinterpret_cast<
-      std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*>(
-      ctx.other);
-  int64_t piece_id = std::get<0>(*tpl);
-  std::function<const Blob*(const std::string&)> lbn2preblob =
-      std::get<1>(*tpl);
   const Blob* mean_blob = BnInOp2Blob("new_mean");
   const Blob* variance_blob = BnInOp2Blob("new_variance");
   Blob* moving_mean_blob = BnInOp2Blob("moving_mean");
   Blob* moving_variance_blob = BnInOp2Blob("moving_variance");
-  if (conf.use_first_piece_init_moving() && piece_id == 0) {
-    moving_mean_blob->CopyDataContentFrom(ctx.device_ctx, mean_blob);
-    moving_variance_blob->CopyDataContentFrom(ctx.device_ctx, variance_blob);
-    return;
-  }
-  const Blob* pre_moving_mean_blob =
-      lbn2preblob(this->Lbn4BnInOp("moving_mean"));
-  if (pre_moving_mean_blob != moving_mean_blob) {
-    moving_mean_blob->CopyDataContentFrom(ctx.device_ctx, pre_moving_mean_blob);
-  }
-  const Blob* pre_moving_variance_blob =
-      lbn2preblob(this->Lbn4BnInOp("moving_variance"));
-  if (pre_moving_variance_blob != moving_variance_blob) {
-    moving_variance_blob->CopyDataContentFrom(ctx.device_ctx,
-                                              pre_moving_variance_blob);
-  }
   const T momentum = conf.momentum();
   const T one_minus_momentum = 1 - momentum;
   KernelUtil<device_type, T>::Scal(
@@ -393,6 +424,54 @@ void NormalizationKernel<device_type, T>::UpdateMovingMeanAndMovingVariance(
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, variance_blob->shape().elem_cnt(), one_minus_momentum,
       variance_blob->dptr<T>(), 1, moving_variance_blob->mut_dptr<T>(), 1);
+}
+
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::InitMovingMeanAndMovingVariance(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+    bool use_new) const {
+  const auto& conf = this->op_conf().normalization_conf();
+  auto tpl = reinterpret_cast<
+      std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*>(
+      ctx.other);
+  int64_t piece_id = std::get<0>(*tpl);
+  std::function<const Blob*(const std::string&)> lbn2preblob =
+      std::get<1>(*tpl);
+  Blob* moving_mean_blob = BnInOp2Blob("moving_mean");
+  Blob* moving_variance_blob = BnInOp2Blob("moving_variance");
+  if (this->op_conf().model_load_dir() == ""
+      && (Global<SnapshotMgr>::Get() == nullptr
+          || Global<SnapshotMgr>::Get()->GetReadableSnapshot() == nullptr)
+      && piece_id == 0) {
+    if (use_new) {
+      if (conf.use_first_piece_init_moving()) {
+        const Blob* mean_blob = BnInOp2Blob("new_mean");
+        const Blob* variance_blob = BnInOp2Blob("new_variance");
+        moving_mean_blob->CopyDataContentFrom(ctx.device_ctx, mean_blob);
+        moving_variance_blob->CopyDataContentFrom(ctx.device_ctx,
+                                                  variance_blob);
+        return;
+      }
+    } else {
+      Memset<device_type>(ctx.device_ctx, moving_mean_blob->mut_dptr<T>(), 0,
+                          moving_mean_blob->ByteSizeOfDataContentField());
+      Memset<device_type>(ctx.device_ctx, moving_variance_blob->mut_dptr<T>(),
+                          0, moving_mean_blob->ByteSizeOfDataContentField());
+      return;
+    }
+  }
+  const Blob* pre_moving_mean_blob =
+      lbn2preblob(this->Lbn4BnInOp("moving_mean"));
+  if (pre_moving_mean_blob != moving_mean_blob) {
+    moving_mean_blob->CopyDataContentFrom(ctx.device_ctx, pre_moving_mean_blob);
+  }
+  const Blob* pre_moving_variance_blob =
+      lbn2preblob(this->Lbn4BnInOp("moving_variance"));
+  if (pre_moving_variance_blob != moving_variance_blob) {
+    moving_variance_blob->CopyDataContentFrom(ctx.device_ctx,
+                                              pre_moving_variance_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
