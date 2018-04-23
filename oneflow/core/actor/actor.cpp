@@ -43,9 +43,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.emplace(pair.first, regst_desc_id).second);
   }
-  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
-  }
+  TODO();
+  // for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+  //   CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
+  // }
   msg_handler_ = nullptr;
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
