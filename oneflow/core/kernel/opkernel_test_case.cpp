@@ -337,6 +337,7 @@ OpKernelTestCase::MakeGetterBnInOp2Blob() {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
       const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
       if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+      if (it->second.shape().dim_vec().empty()) { return nullptr; }
       DeviceType dev_type = GetBlobDeviceType(bn_in_op);
       const BlobDesc* blob_desc = &it->second;
       bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(

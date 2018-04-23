@@ -427,10 +427,11 @@ message MaximumOpConf {
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
-  optional int32 depth_radius = 3 [default = 5];
-  optional double bias = 4 [default = 1];
-  optional double alpha = 5 [default = 1];
-  optional double beta = 6 [default = 0.5];
+  required string data_format = 3; 
+  optional int32 depth_radius = 4 [default = 5];
+  optional double bias = 5 [default = 1];
+  optional double alpha = 6 [default = 1];
+  optional double beta = 7 [default = 0.5];
 }
 
 message EncodeConf {
@@ -506,6 +507,7 @@ message NormalizationOpConf {
   optional float mean_init = 10 [default = 0.0];
   optional float variance_init = 11 [default = 1.0];
   optional bool use_first_piece_init_moving = 12 [default = false];
+  optional ActivationType activation = 13 [default = kNone];
 }
 
 message DropoutOpConf {

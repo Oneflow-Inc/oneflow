@@ -1,0 +1,490 @@
+op {
+  name: "decode"
+  decode_ofrecord_conf {
+    data_dir: "/dataset/imagenet/30/train"
+    blob {
+      name: "encoded"
+      data_type: kFloat
+      shape {
+        dim: 224
+        dim: 224
+        dim: 3
+      }
+      encode_case {
+        jpeg {
+        }
+      }
+    }
+    blob {
+      name: "class/label"
+      data_type: kInt32
+      shape {
+      }
+      encode_case {
+        raw {
+        }
+      }
+    }
+  }
+}
+op {
+  name: "transpose"
+  transpose_conf {
+    in: "decode/encoded"
+    out: "out"
+    perm: 3
+    perm: 1
+    perm: 2
+  }
+}
+op {
+  name: "conv1_1"
+  conv_2d_conf {
+    in: "transpose/out"
+    out: "out"
+    filters: 64
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv1_2"
+  conv_2d_conf {
+    in: "conv1_1/out"
+    out: "out"
+    filters: 64
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "pool1"
+  max_pooling_2d_conf {
+    in: "conv1_2/out"
+    out: "out"
+    padding: "same"
+    data_format: "channels_first"
+    pool_size: 2
+    pool_size: 2
+    strides: 2
+    strides: 2
+  }
+}
+op {
+  name: "conv2_1"
+  conv_2d_conf {
+    in: "pool1/out"
+    out: "out"
+    filters: 128
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv2_2"
+  conv_2d_conf {
+    in: "conv2_1/out"
+    out: "out"
+    filters: 128
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "pool2"
+  max_pooling_2d_conf {
+    in: "conv2_2/out"
+    out: "out"
+    padding: "same"
+    data_format: "channels_first"
+    pool_size: 2
+    pool_size: 2
+    strides: 2
+    strides: 2
+  }
+}
+op {
+  name: "conv3_1"
+  conv_2d_conf {
+    in: "pool2/out"
+    out: "out"
+    filters: 256
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv3_2"
+  conv_2d_conf {
+    in: "conv3_1/out"
+    out: "out"
+    filters: 256
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv3_3"
+  conv_2d_conf {
+    in: "conv3_2/out"
+    out: "out"
+    filters: 256
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "pool3"
+  max_pooling_2d_conf {
+    in: "conv3_3/out"
+    out: "out"
+    padding: "valid"
+    data_format: "channels_first"
+    pool_size: 2
+    pool_size: 2
+    strides: 2
+    strides: 2
+  }
+}
+op {
+  name: "conv4_1"
+  conv_2d_conf {
+    in: "pool3/out"
+    out: "out"
+    filters: 512
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv4_2"
+  conv_2d_conf {
+    in: "conv4_1/out"
+    out: "out"
+    filters: 512
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv4_3"
+  conv_2d_conf {
+    in: "conv4_2/out"
+    out: "out"
+    filters: 512
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "pool4"
+  max_pooling_2d_conf {
+    in: "conv4_3/out"
+    out: "out"
+    padding: "valid"
+    data_format: "channels_first"
+    pool_size: 2
+    pool_size: 2
+    strides: 2
+    strides: 2
+  }
+}
+op {
+  name: "conv5_1"
+  conv_2d_conf {
+    in: "pool4/out"
+    out: "out"
+    filters: 512
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv5_2"
+  conv_2d_conf {
+    in: "conv5_1/out"
+    out: "out"
+    filters: 512
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "conv5_3"
+  conv_2d_conf {
+    in: "conv5_2/out"
+    out: "out"
+    filters: 512
+    use_bias: true
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kRelu
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "pool5"
+  max_pooling_2d_conf {
+    in: "conv5_3/out"
+    out: "out"
+    padding: "valid"
+    data_format: "channels_first"
+    pool_size: 2
+    pool_size: 2
+    strides: 2
+    strides: 2
+  }
+}
+# bias in fc are setted to 1.0 in some implementations
+op {
+  name: "fc6"
+  fully_connected_conf {
+    in: "pool5/out"
+    out: "out"
+    units: 4096
+    use_bias: true
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.01
+      }
+    }
+    bias_initializer {
+      constant_conf {
+        value: 0.0
+      }
+    }
+  }
+}
+op {
+  name: "drop6"
+  dropout_conf {
+    in: "fc6/out"
+    out: "out"
+    rate: 0.5
+  }
+}
+op {
+  name: "fc7"
+  fully_connected_conf {
+    in: "drop6/out"
+    out: "out"
+    units: 4096
+    use_bias: true
+    activation: kRelu
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.01
+      }
+    }
+    bias_initializer {
+      constant_conf {
+        value: 0.0
+      }
+    }
+  }
+}
+op {
+  name: "drop7"
+  dropout_conf {
+    in: "fc7/out"
+    out: "out"
+    rate: 0.5
+  }
+}
+op {
+  name: "fc8"
+  fully_connected_conf {
+    in: "drop7/out"
+    out: "out"
+    units: 1000
+    use_bias: true
+    weight_initializer {
+      random_normal_conf {
+        mean: 0.0
+        std: 0.001
+      }
+    }
+    bias_initializer {
+      constant_conf {
+        value: 0.0
+      }
+    }
+  }
+}
+op {
+  name: "softmax_loss"
+  sparse_softmax_cross_entropy_loss_conf {
+    prediction: "fc8/out"
+    label: "decode/class/label"
+    loss: "loss"
+  }
+}

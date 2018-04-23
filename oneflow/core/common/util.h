@@ -41,7 +41,7 @@ namespace oneflow {
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
-#define TODO() LOG(FATAL) << "TODO";
+#define TODO() LOG(FATAL) << "TODO"
 
 template<typename T>
 class Global final {
@@ -173,6 +173,12 @@ void CloseStdoutAndStderr();
 inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
+
+inline size_t RoundUp(size_t n, size_t align) {
+  return (n + align - 1) / align * align;
+}
+
+#define CUDA_POINTER_ALIGNMENT (256UL)
 
 size_t GetAvailableCpuMemSize();
 

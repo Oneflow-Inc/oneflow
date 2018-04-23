@@ -41,6 +41,16 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
   return op_conf().normalization_conf();
 }
 
+bool NormalizationOp::NeedOutWhenBackward() const {
+  ActivationType activation =
+      static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+  if (activation != ActivationType::kNone) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void NormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, DeviceType device_type,
@@ -96,9 +106,10 @@ void NormalizationOp::InferBlobDescs(
   }
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp_storage_for_sum");
   tmp_blob_desc->set_data_type(in_data_type);
-  tmp_blob_desc->mut_shape() = Shape(
-      {static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type))
-       + 1});
+  int64_t tmp_elem_cnt =
+      static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type))
+      + 1;
+  if (tmp_elem_cnt > 1) { tmp_blob_desc->mut_shape() = Shape({tmp_elem_cnt}); }
 }
 
 void NormalizationOp::VirtualGenKernelConf(
