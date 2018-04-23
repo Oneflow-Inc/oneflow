@@ -82,8 +82,6 @@ class Blob : public BlobIf {
   bool IsColValid() const;
 
  protected:
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr, char* body_mem_ptr)
-      : Blob(regst, blob_desc, head_mem_ptr, body_mem_ptr, nullptr) {}
   Blob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr, char* body_mem_ptr,
       const void* comm_net_token);
 
