@@ -19,8 +19,7 @@ LogicalGraph::LogicalGraph(bool is_train) {
 }
 
 template<typename LogicalNodeType>
-void LogicalGraph::ForEachLogicalNode(
-    std::function<void(LogicalNodeType*)> func) {
+void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func) {
   std::vector<LogicalNodeType*> valid_nodes;
   ForEachNode([&](LogicalNode* logical_node) {
     auto valid_node = dynamic_cast<LogicalNodeType*>(logical_node);
@@ -36,8 +35,8 @@ void LogicalGraph::BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   AddB121Clone(*edge2ibn);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
-    total_mbn_num_ += node->SoleOp()->model_bns().size()
-                      + node->SoleOp()->forward_model_bns().size();
+    total_mbn_num_ +=
+        node->SoleOp()->model_bns().size() + node->SoleOp()->forward_model_bns().size();
   });
 }
 
@@ -78,8 +77,7 @@ void LogicalGraph::NaiveBuildFwStruct(
     for (LogicalNode* cur_node : *shared_model_nodes) {
       cur_node->mut_shared_model_nodes() = shared_model_nodes;
     }
-    const std::string& shared_op_name =
-        shared_model_nodes->front()->SoleOp()->op_name();
+    const std::string& shared_op_name = shared_model_nodes->front()->SoleOp()->op_name();
     FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
       shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
     }
@@ -104,8 +102,7 @@ void LogicalGraph::FillNodeWithParallelDesc(
       for (LogicalNode* shared_node : *(cur_node->shared_model_nodes())) {
         if (shared_node->parallel_desc() == nullptr) { continue; }
         if (cur_node->parallel_desc()) {
-          CHECK(cur_node->parallel_desc()->Equal(
-              shared_node->parallel_desc().get()));
+          CHECK(cur_node->parallel_desc()->Equal(shared_node->parallel_desc().get()));
         } else {
           cur_node->mut_parallel_desc() = shared_node->parallel_desc();
         }
@@ -118,23 +115,18 @@ void LogicalGraph::FillNodeWithParallelDesc(
   });
 }
 
-void LogicalGraph::AddB121Clone(
-    const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+void LogicalGraph::AddB121Clone(const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   std::vector<B121CloneInfo> clone_infos;
   CollectB121CloneInfos(&clone_infos);
-  for (const B121CloneInfo& clone_info : clone_infos) {
-    AddOneB121CloneNode(clone_info, edge2ibn);
-  }
+  for (const B121CloneInfo& clone_info : clone_infos) { AddOneB121CloneNode(clone_info, edge2ibn); }
 }
 
-void LogicalGraph::CollectB121CloneInfos(
-    std::vector<B121CloneInfo>* clone_infos) {
+void LogicalGraph::CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos) {
   ForEachNode([&](LogicalNode* cur_node) {
     HashMap<LogicalBlobId, B121CloneInfo> lbi2clone_info;
     for (LogicalEdge* edge : cur_node->out_edges()) {
       B121CloneInfo& clone_info = lbi2clone_info[edge->SoleLbi()];
-      BldSubTskGphMthd mthd =
-          GetMthdForBldSubTskGph(cur_node, edge->dst_node());
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(cur_node, edge->dst_node());
       if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
         clone_info.edges_boxing.push_back(edge);
       } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
@@ -153,9 +145,8 @@ void LogicalGraph::CollectB121CloneInfos(
   });
 }
 
-void LogicalGraph::AddOneB121CloneNode(
-    const B121CloneInfo& clone_info,
-    const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info,
+                                       const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   // lbi_boxing, lbi_121
   LogicalBlobId lbi_boxing = clone_info.lbi;
   lbi_boxing.set_b121_id(0);
@@ -184,10 +175,9 @@ void LogicalGraph::AddOneB121CloneNode(
   ReConnectToFwClone(clone_node, lbi_121, clone_info.edges_121, edge2ibn);
 }
 
-void LogicalGraph::ReConnectToFwClone(
-    LogicalNode* clone_node, const LogicalBlobId& lbi,
-    const std::vector<LogicalEdge*>& edges,
-    const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+void LogicalGraph::ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
+                                      const std::vector<LogicalEdge*>& edges,
+                                      const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   for (LogicalEdge* edge : edges) {
     LogicalNode* dst_node = edge->dst_node();
     const std::string& ibn = edge2ibn.at(edge);
@@ -204,8 +194,7 @@ void LogicalGraph::BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   AddBackwardClone(*edge2ibn);
 }
 
-void LogicalGraph::NaiveBuildBwStruct(
-    HashMap<LogicalEdge*, std::string>* edge2ibn) {
+void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashSet<LogicalNode*> nodes_need_bw;
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
@@ -222,8 +211,7 @@ void LogicalGraph::NaiveBuildBwStruct(
     }
   });
   for (LogicalNode* fw_node : nodes_need_bw) {
-    BackwardLogicalNode* bw_node =
-        static_cast<ForwardLogicalNode*>(fw_node)->NewBackwardNode();
+    BackwardLogicalNode* bw_node = static_cast<ForwardLogicalNode*>(fw_node)->NewBackwardNode();
     if (bw_node) { AddAllocatedNode(bw_node); }
   }
   std::list<LogicalEdge*> fw_edges;
@@ -246,15 +234,12 @@ void LogicalGraph::NaiveBuildBwStruct(
       }
     } else {
       BackwardLogicalNode* bw_dst_node = fw_dst_node->bw_node();
-      if (bw_dst_node) {
-        Connect<LogicalNode>(bw_dst_node, NewBwEdge(), bw_src_node);
-      }
+      if (bw_dst_node) { Connect<LogicalNode>(bw_dst_node, NewBwEdge(), bw_src_node); }
     }
   }
 }
 
-void LogicalGraph::AddBackwardClone(
-    const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+void LogicalGraph::AddBackwardClone(const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   std::vector<BackwardCloneInfo> clone_infos;
   ForEachLogicalNode<BackwardLogicalNode>([&](BackwardLogicalNode* bw_node) {
     HashMap<LogicalBlobId, BackwardCloneInfo> lbi2clone_info;
@@ -274,9 +259,8 @@ void LogicalGraph::AddBackwardClone(
   }
 }
 
-void LogicalGraph::AddOneBackwardClone(
-    const BackwardCloneInfo& clone_info,
-    const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info,
+                                       const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   OperatorConf clone_op_conf;
   clone_op_conf.set_name("bw_clone_" + NewUniqueId());
   clone_op_conf.mutable_clone_conf()->set_out_num(clone_info.edges.size());
@@ -285,8 +269,7 @@ void LogicalGraph::AddOneBackwardClone(
   FOR_RANGE(size_t, i, 0, clone_info.edges.size()) {
     LogicalBlobId lbi_clone_i = clone_info.lbi;
     lbi_clone_i.set_clone_id(i);
-    *(clone_op->MutBnInOp2Lbi(clone_op->output_diff_bns().Get(i))) =
-        lbi_clone_i;
+    *(clone_op->MutBnInOp2Lbi(clone_op->output_diff_bns().Get(i))) = lbi_clone_i;
   }
   LogicalNode* clone_node = NewNode<NormalBackwardLogicalNode>();
   clone_node->mut_op_vec() = {clone_op};
@@ -295,12 +278,10 @@ void LogicalGraph::AddOneBackwardClone(
   clone_in_diff_edge->mut_lbis() = {clone_info.lbi};
   Connect(clone_node, clone_in_diff_edge, clone_info.succ_node);
   FOR_RANGE(size_t, i, 0, clone_op->output_diff_bns().size()) {
-    const LogicalBlobId& lbi_clone_i =
-        clone_op->BnInOp2Lbi(clone_op->output_diff_bns().Get(i));
+    const LogicalBlobId& lbi_clone_i = clone_op->BnInOp2Lbi(clone_op->output_diff_bns().Get(i));
     LogicalEdge* edge = clone_info.edges.at(i);
     LogicalNode* src_node = edge->src_node();
-    *(src_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2ibn.at(edge)))) =
-        lbi_clone_i;
+    *(src_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2ibn.at(edge)))) = lbi_clone_i;
     DisConnect(edge);
     Connect(src_node, edge, clone_node);
   }
@@ -361,22 +342,18 @@ void LogicalGraph::BuildLossPrintStruct() {
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
 
     if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
-      *(loss_print_conf->mutable_reduction_lbi()) =
-          loss_op->BnInOp2Lbi("reduction_coefficient");
+      *(loss_print_conf->mutable_reduction_lbi()) = loss_op->BnInOp2Lbi("reduction_coefficient");
     }
-    loss_print_conf->set_weight_scalar(
-        loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
-    loss_print_conf->set_reduction_type(static_cast<LossReductionType>(
-        loss_op->GetEnumFromCustomizedConf("reduction")));
+    loss_print_conf->set_weight_scalar(loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
+    loss_print_conf->set_reduction_type(
+        static_cast<LossReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
     std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
-    loss_print_pr_conf.add_device_name(
-        Global<IDMgr>::Get()->MachineName4MachineId(0) + ":cpu:1");
+    loss_print_pr_conf.add_device_name(Global<IDMgr>::Get()->MachineName4MachineId(0) + ":cpu:1");
     LossPrintLogicalNode* loss_print_logical = NewNode<LossPrintLogicalNode>();
     loss_print_logical->mut_op_vec() = {loss_print_op};
-    loss_print_logical->mut_parallel_desc().reset(
-        new ParallelDesc(loss_print_pr_conf));
+    loss_print_logical->mut_parallel_desc().reset(new ParallelDesc(loss_print_pr_conf));
     Connect<LogicalNode>(loss_acc_logical, NewEdge(), loss_print_logical);
   });
 }
@@ -391,17 +368,14 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       // MdUpdt MdSave
       NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
       if (fw_logical->shared_model_nodes() == nullptr) {
-        md_updt_logical =
-            BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_logical);
+        md_updt_logical = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_logical);
       } else {
         auto first_shared2mdupdt_it =
             first_shared2mdupdt.find(fw_logical->shared_model_nodes()->front());
         if (first_shared2mdupdt_it == first_shared2mdupdt.end()) {
-          md_updt_logical =
-              BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_logical);
+          md_updt_logical = BuildNormalMdUpdtAndMdSaveStruct(is_train, fw_logical);
           CHECK(first_shared2mdupdt
-                    .emplace(fw_logical->shared_model_nodes()->front(),
-                             md_updt_logical)
+                    .emplace(fw_logical->shared_model_nodes()->front(), md_updt_logical)
                     .second);
         } else {
           md_updt_logical = first_shared2mdupdt_it->second;
@@ -418,8 +392,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
         auto md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
         md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
-        auto md_diff_acc_pr_desc =
-            new ParallelDesc(*(fw_logical->parallel_desc()));
+        auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
         md_diff_acc_pr_desc->set_policy(kInvalidParallel);
         md_diff_acc_logical->mut_parallel_desc().reset(md_diff_acc_pr_desc);
         Connect<LogicalNode>(bw_logical, NewEdge(), md_diff_acc_logical);
@@ -427,25 +400,22 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       }
     }
   });
-  ForEachLogicalNode<NormalMdUpdtLogicalNode>(
-      [&](NormalMdUpdtLogicalNode* node) {
-        if (node->in_edges().size() < 1) { return; }
-        OperatorConf op_conf;
-        op_conf.set_name("md_update_" + NewUniqueId());
-        NormalModelUpdateOpConf* mdupdt_conf =
-            op_conf.mutable_normal_mdupdt_conf();
-        const JobDesc* job_desc = Global<JobDesc>::Get();
-        if (is_train) {
-          *(mdupdt_conf->mutable_user_conf()) =
-              job_desc->job_conf().train_conf().model_update_conf();
-        }
-        mdupdt_conf->set_in_num(node->in_edges().size());
-        node->mut_op_vec() = {ConstructOp(op_conf)};
-      });
+  ForEachLogicalNode<NormalMdUpdtLogicalNode>([&](NormalMdUpdtLogicalNode* node) {
+    if (node->in_edges().size() < 1) { return; }
+    OperatorConf op_conf;
+    op_conf.set_name("md_update_" + NewUniqueId());
+    NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
+    const JobDesc* job_desc = Global<JobDesc>::Get();
+    if (is_train) {
+      *(mdupdt_conf->mutable_user_conf()) = job_desc->job_conf().train_conf().model_update_conf();
+    }
+    mdupdt_conf->set_in_num(node->in_edges().size());
+    node->mut_op_vec() = {ConstructOp(op_conf)};
+  });
 }
 
-MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(
-    const ForwardLogicalNode* fw_logical, LogicalNode* need_save_logical) {
+MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
+                                                   LogicalNode* need_save_logical) {
   OperatorConf md_save_op_conf;
   md_save_op_conf.set_name("md_save_" + NewUniqueId());
   md_save_op_conf.mutable_model_save_conf();
@@ -476,16 +446,14 @@ void LogicalGraph::BuildRecordLoadStruct() {
   ForEachLogicalNode<DecodeLogicalNode>([&](DecodeLogicalNode* decode_node) {
     std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
     if (decode_op->HasFieldInCustomizedConf("data_dir") == false) { return; }
-    std::string data_dir =
-        decode_op->GetValFromCustomizedConf<std::string>("data_dir");
+    std::string data_dir = decode_op->GetValFromCustomizedConf<std::string>("data_dir");
     std::string part_name_prefix =
         decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");
     std::string data_info = data_dir + "_" + part_name_prefix;
     data_info2decode_nodes[data_info].emplace_back(decode_node);
     int32_t part_name_suffix_length =
         decode_op->GetValFromCustomizedConf<int32_t>("part_name_suffix_length");
-    if (data_info2suffix_length.find(data_info)
-        != data_info2suffix_length.end()) {
+    if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {
       CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
     } else {
       data_info2suffix_length[data_info] = part_name_suffix_length;
@@ -494,11 +462,10 @@ void LogicalGraph::BuildRecordLoadStruct() {
   for (auto& pair : data_info2decode_nodes) {
     std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
     for (DecodeLogicalNode* decode_node : pair.second) {
-      auto iter = std::find_if(
-          parallel_descs.begin(), parallel_descs.end(),
-          [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
-            return parallel_desc->Equal(decode_node->parallel_desc().get());
-          });
+      auto iter = std::find_if(parallel_descs.begin(), parallel_descs.end(),
+                               [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
+                                 return parallel_desc->Equal(decode_node->parallel_desc().get());
+                               });
       if (iter == parallel_descs.end()) {
         parallel_descs.emplace_back(decode_node->parallel_desc());
       }
@@ -510,9 +477,7 @@ void LogicalGraph::BuildRecordLoadStruct() {
       LogicalNode* record_load_node = NewNode<RecordLoadLogicalNode>();
       record_load_node->mut_parallel_desc() = parallel_desc;
       for (DecodeLogicalNode* decode_node : pair.second) {
-        if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) {
-          continue;
-        }
+        if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) { continue; }
         Connect<LogicalNode>(record_load_node, NewEdge(), decode_node);
       }
     }

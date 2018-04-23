@@ -14,29 +14,22 @@ class LossKernel : public KernelIf<device_type> {
 
  protected:
   virtual void VirtualLossForwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual const LossKernelConf& GetLossKernelConf(
-      const KernelConf& kernel_conf) const = 0;
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const = 0;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDataId(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataId(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardColNum(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
 struct LossKernelUtil {
-  static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num,
-                                          int64_t weight_length,
-                                          const T* weight, T* reduction,
-                                          LossReductionType type);
+  static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
+                                          const T* weight, T* reduction, LossReductionType type);
 };
 
 }  // namespace oneflow

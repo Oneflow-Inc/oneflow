@@ -11,13 +11,11 @@ CyclicPersistentInStreamWithLocalCopy::CyclicPersistentInStreamWithLocalCopy(
   in_stream_.reset(new NormalPersistentInStream(fs, file_path));
   local_copy_path_ = JoinPath(LogDir(), "global_fs_buffer", file_path);
   out_stream_.reset(new PersistentOutStream(LocalFS(), local_copy_path_));
-  read_line_mthd_ =
-      &CyclicPersistentInStreamWithLocalCopy::ReadLineAndWriteToLocal;
+  read_line_mthd_ = &CyclicPersistentInStreamWithLocalCopy::ReadLineAndWriteToLocal;
   read_mthd_ = &CyclicPersistentInStreamWithLocalCopy::ReadAndWriteToLocal;
 }
 
-int32_t CyclicPersistentInStreamWithLocalCopy::ReadLineAndWriteToLocal(
-    std::string* l) {
+int32_t CyclicPersistentInStreamWithLocalCopy::ReadLineAndWriteToLocal(std::string* l) {
   int32_t ret = in_stream_->ReadLine(l);
   if (ret == -1) {
     CopyToLocalFinish();
@@ -30,8 +28,7 @@ int32_t CyclicPersistentInStreamWithLocalCopy::ReadLineAndWriteToLocal(
   }
 }
 
-int32_t CyclicPersistentInStreamWithLocalCopy::ReadAndWriteToLocal(char* s,
-                                                                   size_t n) {
+int32_t CyclicPersistentInStreamWithLocalCopy::ReadAndWriteToLocal(char* s, size_t n) {
   int32_t ret = in_stream_->Read(s, n);
   if (ret == -1) {
     CopyToLocalFinish();
@@ -46,8 +43,7 @@ int32_t CyclicPersistentInStreamWithLocalCopy::ReadAndWriteToLocal(char* s,
 
 void CyclicPersistentInStreamWithLocalCopy::CopyToLocalFinish() {
   out_stream_.reset();
-  in_stream_.reset(new CyclicPersistentInStreamWithoutLocalCopy(
-      LocalFS(), local_copy_path_));
+  in_stream_.reset(new CyclicPersistentInStreamWithoutLocalCopy(LocalFS(), local_copy_path_));
   read_line_mthd_ = &CyclicPersistentInStreamWithLocalCopy::ReadLineFromLocal;
   read_mthd_ = &CyclicPersistentInStreamWithLocalCopy::ReadFromLocal;
 }

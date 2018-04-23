@@ -23,8 +23,7 @@
 
 #define OF_PP_MAKE_TUPLE_SEQ(...) OF_PP_INTERNAL_MAKE_TUPLE_SEQ(__VA_ARGS__)
 
-#define OF_PP_FOR_EACH_TUPLE(macro, seq) \
-  OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq)
+#define OF_PP_FOR_EACH_TUPLE(macro, seq) OF_PP_INTERNAL_FOR_EACH_TUPLE(macro, seq)
 
 #define OF_PP_SEQ_MAP(macro, seq) \
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(OF_PP_I_SEQ_MAP_DO_EACH, (macro), seq)

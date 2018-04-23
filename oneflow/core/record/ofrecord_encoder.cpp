@@ -3,16 +3,13 @@
 
 namespace oneflow {
 
-OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase encode_case,
-                                      DataType data_type) {
+OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase encode_case, DataType data_type) {
   static const HashMap<std::string, OFRecordEncoderIf*> obj = {
 
-#define MAKE_ENTRY(et, dt)                \
-  {GetHashKey(et, OF_PP_PAIR_SECOND(dt)), \
-   new OFRecordEncoderImpl<et, OF_PP_PAIR_FIRST(dt)>},
+#define MAKE_ENTRY(et, dt) \
+  {GetHashKey(et, OF_PP_PAIR_SECOND(dt)), new OFRecordEncoderImpl<et, OF_PP_PAIR_FIRST(dt)>},
 
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY,
-                                       OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw),
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw),
                                        ARITHMETIC_DATA_TYPE_SEQ)
 
   };

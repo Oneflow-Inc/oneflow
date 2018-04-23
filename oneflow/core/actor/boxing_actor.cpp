@@ -56,15 +56,14 @@ int BoxingActor::HandlerNormal(const ActorMsg& msg) {
 
 void BoxingActor::Act() {
   int64_t piece_id = readable_regst_mgr_.GetFirstCurReadable()->piece_id();
-  AsyncLaunchKernel(
-      GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
-        Regst* regst = GetCurWriteableRegst(regst_desc_id);
-        if (regst == nullptr) {
-          return readable_regst_mgr_.GetCurReadable(regst_desc_id);
-        } else {
-          return regst;
-        }
-      });
+  AsyncLaunchKernel(GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
+    Regst* regst = GetCurWriteableRegst(regst_desc_id);
+    if (regst == nullptr) {
+      return readable_regst_mgr_.GetCurReadable(regst_desc_id);
+    } else {
+      return regst;
+    }
+  });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();
@@ -75,32 +74,24 @@ void BoxingActor::Act() {
     cur_max_cid = std::max(cur_max_cid, regst->col_id());
     cur_max_maxcid = std::max(cur_max_maxcid, regst->max_col_id());
   });
-  readable_regst_mgr_.ReturnToProducerAndPopCurReadable(
-      this, [&](Regst* regst) {
-        if (col_id_order_ == ColIdOrder::kAscending) {
-          if (regst->IsMaxCol() && cur_max_cid < cur_max_maxcid) {
-            return false;
-          }
-        } else if (col_id_order_ == ColIdOrder::kDescending) {
-          if (regst->col_id() < cur_max_cid) { return false; }
-        } else {  // do nothing
-        }
-        return true;
-      });
+  readable_regst_mgr_.ReturnToProducerAndPopCurReadable(this, [&](Regst* regst) {
+    if (col_id_order_ == ColIdOrder::kAscending) {
+      if (regst->IsMaxCol() && cur_max_cid < cur_max_maxcid) { return false; }
+    } else if (col_id_order_ == ColIdOrder::kDescending) {
+      if (regst->col_id() < cur_max_cid) { return false; }
+    } else {  // do nothing
+    }
+    return true;
+  });
 }
 
 bool BoxingActor::IsReadReady() { return readable_regst_mgr_.IsReadReady(); }
 
-bool BoxingActor::IsReadAlwaysUnReadyFromNow() {
-  return is_eord_ && readable_regst_mgr_.IsEmpty();
-}
+bool BoxingActor::IsReadAlwaysUnReadyFromNow() { return is_eord_ && readable_regst_mgr_.IsEmpty(); }
 
-void BoxingActor::AsyncReturnAllReadableRegst() {
-  CHECK(readable_regst_mgr_.IsEmpty());
-}
+void BoxingActor::AsyncReturnAllReadableRegst() { CHECK(readable_regst_mgr_.IsEmpty()); }
 
-void BoxingActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> func) {
+void BoxingActor::ForEachCurReadableRegst(std::function<void(const Regst*)> func) {
   readable_regst_mgr_.ForEachCurReadableRegst(func);
 }
 

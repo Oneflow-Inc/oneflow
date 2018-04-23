@@ -44,9 +44,8 @@ class CtrlService final {
   class Stub final {
    public:
     Stub(std::shared_ptr<grpc::ChannelInterface> channel);
-#define DECLARE_STUB_METHOD(method)                   \
-  grpc::Status method(grpc::ClientContext* context,   \
-                      const method##Request& request, \
+#define DECLARE_STUB_METHOD(method)                                                 \
+  grpc::Status method(grpc::ClientContext* context, const method##Request& request, \
                       method##Response* response);
 
     OF_PP_FOR_EACH_TUPLE(DECLARE_STUB_METHOD, CTRL_METHOD_SEQ);

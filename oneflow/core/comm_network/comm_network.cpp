@@ -10,8 +10,8 @@ void CommNet::DeleteActorReadId(void* actor_read_id) {
   delete actor_read_ctx;
 }
 
-void* CommNet::Read(void* actor_read_id, int64_t src_machine_id,
-                    const void* src_token, const void* dst_token) {
+void* CommNet::Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
+                    const void* dst_token) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
@@ -24,8 +24,7 @@ void* CommNet::Read(void* actor_read_id, int64_t src_machine_id,
   return read_ctx;
 }
 
-void CommNet::AddReadCallBack(void* actor_read_id, void* read_id,
-                              std::function<void()> callback) {
+void CommNet::AddReadCallBack(void* actor_read_id, void* read_id, std::function<void()> callback) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (read_ctx) {
@@ -52,8 +51,7 @@ void CommNet::AddReadCallBackDone(void* read_id) {
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (IncreaseDoneCnt(read_ctx) == 2) {
-    std::unique_lock<std::mutex> lck(
-        read_ctx->actor_read_ctx->read_ctx_list_mtx);
+    std::unique_lock<std::mutex> lck(read_ctx->actor_read_ctx->read_ctx_list_mtx);
     FinishOneRead(read_ctx);
   }
 }
@@ -79,11 +77,9 @@ void CommNet::GenConnectionInfo(const Plan& plan) {
 
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
-      rid2mid.emplace(regst_desc_it.second.regst_desc_id(),
-                      task_proto.machine_id());
+      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_proto.machine_id());
     }
-    CHECK(
-        tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
+    CHECK(tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
   }
   for (const TaskProto& task_proto : plan.task()) {
     if (task_proto.machine_id() != this_machine_id) { continue; }

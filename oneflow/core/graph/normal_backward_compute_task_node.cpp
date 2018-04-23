@@ -34,25 +34,20 @@ void NormalBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
 }
 
 void NormalBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
-  std::shared_ptr<RegstDesc> activation_regst =
-      GetSoleConsumedRegst("activation");
+  std::shared_ptr<RegstDesc> activation_regst = GetSoleConsumedRegst("activation");
   auto activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
         || edge->dst_node()->op()->NeedOutWhenBackward()) {
-      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(),
-                                           activation_diff_regst);
-      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(),
-                                           activation_diff_regst);
+      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
+      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
       activation_diff_regst->AddLbi(edge->lbi());
     } else {
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
       edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
     }
-    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()),
-                                         activation_regst);
-    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()),
-                                         activation_regst);
+    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()), activation_regst);
+    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()), activation_regst);
   });
 }
 
@@ -80,8 +75,7 @@ void NormalBackwardCompTaskNode::VirtualConsumeRegstOnInEdge(TaskEdge* edge) {
   ConsumeRegst("out_diff", edge->GetSoleRegst());
 }
 
-void NormalBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(
-    TaskEdge* edge) {
+void NormalBackwardCompTaskNode::VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
   edge->AddRegst("in_diff", ProduceRegst("in_diff"));
 }
 
@@ -95,9 +89,8 @@ void NormalBackwardCompTaskNode::VirtualConsumeActivation(TaskEdge* edge) {
 
 void NormalBackwardCompTaskNode::VirtualInferBlobDescInActivationDiff() {
   auto activation_diff_regst = GetProducedRegst("activation_diff");
-  activation_diff_regst->CopyBlobDescWithoutAddLbi(
-      GetSoleConsumedRegst("activation").get(),
-      GetSoleConsumedRegst("out").get());
+  activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("activation").get(),
+                                                   GetSoleConsumedRegst("out").get());
 }
 
 void NormalBackwardCompTaskNode::VirtualConsumeInRegst() {

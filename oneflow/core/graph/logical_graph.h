@@ -37,9 +37,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
   void BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void NaiveBuildFwStruct(
-      HashMap<LogicalEdge*, std::string>* edge2ibn,
-      HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
+  void NaiveBuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn,
+                          HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FillNodeWithParallelDesc(
       const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void AddB121Clone(const HashMap<LogicalEdge*, std::string>& edge2ibn);
@@ -60,8 +59,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void BuildModelStruct(bool is_train);
   MdSaveLogicalNode* BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
                                        LogicalNode* need_save_logical);
-  NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(
-      bool is_train, ForwardLogicalNode* fw_logical);
+  NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
+                                                            ForwardLogicalNode* fw_logical);
   void BuildRecordLoadStruct();
   void ConnectFwToBw();
 

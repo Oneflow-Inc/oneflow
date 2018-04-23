@@ -15,9 +15,7 @@ struct BlobImplUtil<DeviceType::kGPU, T, NDIMS> {
 };
 
 #define INSTANTIATE_CPU_BLOB_IMPL_UTIL(data_type_pair, ndims) \
-  template struct BlobImplUtil<DeviceType::kGPU,              \
-                               OF_PP_PAIR_FIRST(data_type_pair), ndims>;
+  template struct BlobImplUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), ndims>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CPU_BLOB_IMPL_UTIL,
-                                 ALL_DATA_TYPE_SEQ, DIM_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_CPU_BLOB_IMPL_UTIL, ALL_DATA_TYPE_SEQ, DIM_SEQ)
 }  // namespace oneflow

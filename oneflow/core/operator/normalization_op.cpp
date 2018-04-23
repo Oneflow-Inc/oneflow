@@ -41,10 +41,9 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
   return op_conf().normalization_conf();
 }
 
-void NormalizationOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+void NormalizationOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                     const ParallelContext* parallel_ctx,
+                                     std::function<void(OpContext*)> EnrollOpCtx) const {
   const auto& conf = op_conf().normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();
@@ -55,8 +54,7 @@ void NormalizationOp::InferBlobDescs(
   if (op_ctx->need_transpose) {
     BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("trans_in");
     transpose_blob_desc->mut_shape() = in_blob_desc->shape();
-    transpose_blob_desc->mut_shape().Set(op_ctx->axis,
-                                         in_blob_desc->shape().At(0));
+    transpose_blob_desc->mut_shape().Set(op_ctx->axis, in_blob_desc->shape().At(0));
     transpose_blob_desc->mut_shape().Set(0, op_ctx->transpose_cols);
     transpose_blob_desc->set_data_type(in_data_type);
     *GetBlobDesc4BnInOp("trans_out") = *transpose_blob_desc;
@@ -65,10 +63,8 @@ void NormalizationOp::InferBlobDescs(
     *GetBlobDesc4BnInOp("normalized_in") = *in_blob_desc;
   }
 
-  BlobDesc blob_desc(Shape({op_ctx->transpose_cols}), in_data_type, false,
-                     false, 1);
-  std::list<std::string> blob_names = {"moving_mean", "moving_variance",
-                                       "inv_var"};
+  BlobDesc blob_desc(Shape({op_ctx->transpose_cols}), in_data_type, false, false, 1);
+  std::list<std::string> blob_names = {"moving_mean", "moving_variance", "inv_var"};
   std::list<std::string> bns_needless_in_predict = {"new_mean", "new_variance"};
   if (conf.center()) {
     blob_names.push_back("beta");
@@ -81,33 +77,25 @@ void NormalizationOp::InferBlobDescs(
     blob_names.push_back("gamma_diff");
   }
   if (Global<JobDesc>::Get()->IsTrain()) {
-    for (const std::string& bn : bns_needless_in_predict) {
-      blob_names.push_back(bn);
-    }
+    for (const std::string& bn : bns_needless_in_predict) { blob_names.push_back(bn); }
   }
-  for (const auto& bn_in_op : blob_names) {
-    *GetBlobDesc4BnInOp(bn_in_op) = blob_desc;
-  }
+  for (const auto& bn_in_op : blob_names) { *GetBlobDesc4BnInOp(bn_in_op) = blob_desc; }
   size_t tmp_storage_size = 0;
   if (device_type() == DeviceType::kGPU) {
-    tmp_storage_size =
-        GetTmpSizeForReduceSum(in_data_type, op_ctx->transpose_rows);
+    tmp_storage_size = GetTmpSizeForReduceSum(in_data_type, op_ctx->transpose_rows);
     CHECK_GT(tmp_storage_size, 0);
   }
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp_storage_for_sum");
   tmp_blob_desc->set_data_type(in_data_type);
-  tmp_blob_desc->mut_shape() = Shape(
-      {static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type))
-       + 1});
+  tmp_blob_desc->mut_shape() =
+      Shape({static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type)) + 1});
 }
 
 void NormalizationOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    const OpContext* op_ctx) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   NormalizationKernelConf* conf = kernel_conf->mutable_normalization_conf();
-  const NormalizationOpCtx* ctx =
-      static_cast<const NormalizationOpCtx*>(op_ctx);
+  const NormalizationOpCtx* ctx = static_cast<const NormalizationOpCtx*>(op_ctx);
   conf->set_axis(ctx->axis);
   conf->set_transpose_rows(ctx->transpose_rows);
   conf->set_transpose_cols(ctx->transpose_cols);
@@ -124,8 +112,7 @@ void NormalizationOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
   pr_desc->set_policy(ParallelPolicy::kDataParallel);
 }
 
-NormalizationOpCtx* NormalizationOp::NewNormalizationOpCtx(
-    const Shape& in_shape) const {
+NormalizationOpCtx* NormalizationOp::NewNormalizationOpCtx(const Shape& in_shape) const {
   NormalizationOpCtx* op_ctx = new NormalizationOpCtx();
   op_ctx->axis = op_conf().normalization_conf().axis();
   op_ctx->dims = in_shape.NumAxes();

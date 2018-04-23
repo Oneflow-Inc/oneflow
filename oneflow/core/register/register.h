@@ -33,18 +33,14 @@ class Regst final {
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
   Blob* GetBlobByLbi(const LogicalBlobId& lbi);
-  const HashMap<LogicalBlobId, std::unique_ptr<BlobIf>>& lbi2blob() const {
-    return lbi2blob_;
-  }
+  const HashMap<LogicalBlobId, std::unique_ptr<BlobIf>>& lbi2blob() const { return lbi2blob_; }
 
   Blob* packed_blob() { return static_cast<Blob*>(packed_blob_.get()); }
   template<typename RecordType>
   RecordBlob<RecordType>* GetRecordBlob() {
     return static_cast<RecordBlob<RecordType>*>(packed_blob_.get());
   }
-  RecordBlobIf* GetRecordBlobIf() {
-    return static_cast<RecordBlobIf*>(packed_blob_.get());
-  }
+  RecordBlobIf* GetRecordBlobIf() { return static_cast<RecordBlobIf*>(packed_blob_.get()); }
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
 

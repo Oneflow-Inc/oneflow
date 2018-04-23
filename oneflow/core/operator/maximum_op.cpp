@@ -7,9 +7,7 @@ void MaximumOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("mask");
 }
 
-const PbMessage& MaximumOp::GetCustomizedConf() const {
-  return op_conf().maximum_conf();
-}
+const PbMessage& MaximumOp::GetCustomizedConf() const { return op_conf().maximum_conf(); }
 
 void MaximumOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,

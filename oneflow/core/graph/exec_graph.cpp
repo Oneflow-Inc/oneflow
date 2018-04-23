@@ -2,15 +2,13 @@
 
 namespace oneflow {
 
-void ExecNode::BindBnInOpAndRegst(const std::string& bn_in_op,
-                                  std::weak_ptr<RegstDesc> regst) {
+void ExecNode::BindBnInOpAndRegst(const std::string& bn_in_op, std::weak_ptr<RegstDesc> regst) {
   CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
 }
 
 void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
-  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx,
-                     ret->mutable_kernel_conf(),
+  op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx, ret->mutable_kernel_conf(),
                      fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
@@ -26,8 +24,7 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
                         [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
 }
 
-std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
-    const {
+std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {
   return [this](const std::string& bn_in_op) -> BlobDesc* {
     auto it = bn_in_op2regst_.find(bn_in_op);
     if (it == bn_in_op2regst_.end()) { return nullptr; }
@@ -37,12 +34,10 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc()
   };
 }
 
-void ExecGraph::ToExecSequence(bool is_forward,
-                               const ParallelContext* parallel_ctx,
+void ExecGraph::ToExecSequence(bool is_forward, const ParallelContext* parallel_ctx,
                                ExecSequence* ret) const {
-  TopoForEachNode([&](ExecNode* node) {
-    node->ToProto(is_forward, parallel_ctx, ret->add_exec_node());
-  });
+  TopoForEachNode(
+      [&](ExecNode* node) { node->ToProto(is_forward, parallel_ctx, ret->add_exec_node()); });
 }
 
 }  // namespace oneflow

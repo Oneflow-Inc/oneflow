@@ -7,8 +7,7 @@ RandomGenerator::RandomGenerator(int64_t seed) : mt19937_generator_(seed) {
 #ifdef WITH_CUDA
   if (curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT)
       != CURAND_STATUS_SUCCESS) {
-    CudaCheck(
-        curandSetPseudoRandomGeneratorSeed(curand_generator_, GetCurTime()));
+    CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, GetCurTime()));
   }
 #endif
 }
@@ -21,13 +20,12 @@ RandomGenerator::~RandomGenerator() {
 
 template<typename T>
 struct RandomGeneratorUtil<DeviceType::kCPU, T> final {
-  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
-                      T* dptr) {
+  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt, T* dptr) {
     Uniform(rand_gen, elem_cnt, ZeroVal<T>::value, OneVal<T>::value, dptr);
   }
 
-  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
-                      const T min, const T max, T* dptr) {
+  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt, const T min, const T max,
+                      T* dptr) {
     CHECK_GE(elem_cnt, 0);
     CHECK(dptr);
     CHECK_LE(min, max);

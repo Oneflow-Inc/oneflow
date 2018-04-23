@@ -13,26 +13,21 @@ class ConcatKernel final : public KernelIf<device_type> {
   ~ConcatKernel() = default;
 
  private:
-  void ConcatKernelWork(
-      const KernelCtx& ctx, const std::string& obn,
-      const PbRpf<std::string>& ibns,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void ConcatKernelWork(const KernelCtx& ctx, const std::string& obn,
+                        const PbRpf<std::string>& ibns,
+                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  void ForwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void ForwardDataId(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataId(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void ForwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardColNum(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void BackwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardDataContent(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 }  // namespace oneflow

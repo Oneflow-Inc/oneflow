@@ -6,16 +6,12 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void UpdateModelGpu(const int64_t n, const T alpha,
-                               const T learning_rate, const T decay_rate,
-                               const T epsilon, const T* pre_model, T* model,
+__global__ void UpdateModelGpu(const int64_t n, const T alpha, const T learning_rate,
+                               const T decay_rate, const T epsilon, const T* pre_model, T* model,
                                T* mean_square, const T* model_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    mean_square[i] =
-        alpha * model_diff[i] * model_diff[i] + decay_rate * mean_square[i];
-    model[i] =
-        pre_model[i]
-        - learning_rate * model_diff[i] / std::sqrt(mean_square[i] + epsilon);
+    mean_square[i] = alpha * model_diff[i] * model_diff[i] + decay_rate * mean_square[i];
+    model[i] = pre_model[i] - learning_rate * model_diff[i] / std::sqrt(mean_square[i] + epsilon);
   }
 }
 
@@ -24,14 +20,11 @@ __global__ void UpdateModelGpu(const int64_t n, const T alpha,
 template<typename T>
 class RMSPropMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx* ctx, const int64_t n, const T alpha,
-                          const T learning_rate, const T decay_rate,
-                          const T epsilon, const T* pre_model, T* model,
+  static void UpdateModel(DeviceCtx* ctx, const int64_t n, const T alpha, const T learning_rate,
+                          const T decay_rate, const T epsilon, const T* pre_model, T* model,
                           T* mean_square, const T* model_diff) {
-    UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-                        ctx->cuda_stream()>>>(n, alpha, learning_rate,
-                                              decay_rate, epsilon, pre_model,
-                                              model, mean_square, model_diff);
+    UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, alpha, learning_rate, decay_rate, epsilon, pre_model, model, mean_square, model_diff);
   }
 };
 

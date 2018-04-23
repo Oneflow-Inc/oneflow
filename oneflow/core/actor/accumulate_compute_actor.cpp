@@ -2,8 +2,7 @@
 
 namespace oneflow {
 
-void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
-                               ColIdOrder order) {
+void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt, ColIdOrder order) {
   using namespace std::placeholders;
   is_in_eord_ = false;
   order_ = order;
@@ -16,8 +15,7 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
     );
   } else {
 #ifdef WITH_CUDA
-    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4,
-                          cudaMemcpyDeviceToDevice);
+    cpy_func_ = std::bind(Memcpy<DeviceType::kGPU>, _1, _2, _3, _4, cudaMemcpyDeviceToDevice);
 #else
     UNIMPLEMENTED();
 #endif
@@ -34,9 +32,7 @@ int AccumulateCompActor::HandlerNormal(const ActorMsg& msg) {
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
-    if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      pending_in_regst_.push(regst);
-    }
+    if (TryUpdtStateAsProducedRegst(regst) != 0) { pending_in_regst_.push(regst); }
     ActUntilFail();
   } else {
     UNIMPLEMENTED();
@@ -48,9 +44,7 @@ bool AccumulateCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_in_eord_ && pending_in_regst_.empty();
 }
 
-void AccumulateCompActor::AsyncReturnAllReadableRegst() {
-  CHECK(pending_in_regst_.empty());
-}
+void AccumulateCompActor::AsyncReturnAllReadableRegst() { CHECK(pending_in_regst_.empty()); }
 
 void AccumulateCompActor::Act() {
   Regst* in_regst = pending_in_regst_.front();
@@ -85,8 +79,7 @@ void AccumulateCompActor::Act() {
   pending_in_regst_.pop();
 }
 
-void AccumulateCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
+void AccumulateCompActor::ForEachCurReadableRegst(std::function<void(const Regst*)> handler) {
   handler(pending_in_regst_.front());
 }
 

@@ -73,8 +73,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   }
 }
 
-void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* src,
-                                          const RegstDesc* supple) {
+void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* src, const RegstDesc* supple) {
   CHECK_EQ(is_locked_, false);
   for (const auto& pair : lbi2blob_desc_) {
     auto src_it = src->lbi2blob_desc_.find(pair.first);
@@ -122,13 +121,12 @@ BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
   }
 }
 
-void RegstDesc::ForEachLbi(
-    std::function<void(const LogicalBlobId&)> func) const {
+void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const {
   for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
 
-static void SetHostPinnedMemoryAccordingToConsumers(
-    const HashSet<const TaskNode*>& consumers, MemoryCase* mem_case) {
+static void SetHostPinnedMemoryAccordingToConsumers(const HashSet<const TaskNode*>& consumers,
+                                                    MemoryCase* mem_case) {
   for (const TaskNode* consumer : consumers) {
     if (consumer->GetTaskType() == kCopyCommNet) {
       mem_case->mutable_host_pinned_mem()->set_used_by_network(true);
@@ -165,8 +163,7 @@ void RegstDesc::InferMemCase() {
 
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
-      &lbi2blob_desc_,
-      [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
+      &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
         return it->second->ByteSizeOfDataContentField() == 0;
       });
 }
@@ -174,9 +171,7 @@ void RegstDesc::EraseZeroSizeBlob() {
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
-  for (const TaskNode* consumer : consumers_) {
-    ret->add_consumer_task_id(consumer->task_id());
-  }
+  for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
   for (const auto& pair : lbi2blob_desc_) {
     LbiBlobDescPair* pb_pair = ret->mutable_lbi2blob_desc()->Add();
     *(pb_pair->mutable_lbi()) = pair.first;

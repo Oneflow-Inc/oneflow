@@ -30,14 +30,12 @@ class CtrlServer final {
   std::unique_ptr<grpc::Server> grpc_server_;
   std::thread loop_thread_;
   // Barrier
-  HashMap<std::string, std::pair<std::list<CtrlCallIf*>, int32_t>>
-      barrier_calls_;
+  HashMap<std::string, std::pair<std::list<CtrlCallIf*>, int32_t>> barrier_calls_;
   // TryLock, NotifyDone, WaitUntilDone
   HashMap<std::string, void*> name2lock_status_;
   // PushKV, ClearKV, PullKV
   HashMap<std::string, std::string> kv_;
-  HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>>
-      pending_kv_calls_;
+  HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>> pending_kv_calls_;
   // IncreaseCount, EraseCount
   HashMap<std::string, int32_t> count_;
 };

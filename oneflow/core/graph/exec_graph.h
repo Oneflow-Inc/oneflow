@@ -68,8 +68,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(bool is_forward, const ParallelContext*,
-                      ExecSequence*) const;
+  void ToExecSequence(bool is_forward, const ParallelContext*, ExecSequence*) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:

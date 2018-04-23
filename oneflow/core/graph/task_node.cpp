@@ -3,11 +3,10 @@
 namespace oneflow {
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},     {kNormalForward, "2"}, {kNormalBackward, "3"},
-    {kRecordLoad, "1"},  {kDecode, "1"},        {kLoss, "4"},
-    {kLossAcc, "5"},     {kLossPrint, "1"},     {kNormalMdUpdt, "6"},
-    {kMdSave, "1"},      {kMdDiffAcc, "7"},     {kCopyHd, "8"},
-    {kCopyCommNet, "9"}, {kBoxing, "10"},       {kPrint, "1"},
+    {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
+    {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
+    {kNormalMdUpdt, "6"}, {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},  {kBoxing, "10"},       {kPrint, "1"},
 };
 
 bool IsForwardTaskType(TaskType tt) {
@@ -31,13 +30,11 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   }
 }
 
-const std::vector<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(
-    const std::string& name) {
+const std::vector<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
   return consumed_regsts_.at(name);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(
-    const std::string& name) {
+std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) {
   const std::vector<std::weak_ptr<RegstDesc>>& vec = consumed_regsts_.at(name);
   CHECK_EQ(vec.size(), 1);
   return vec.front().lock();
@@ -68,8 +65,7 @@ void TaskNode::Build() {
 void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
-      &produced_regsts_,
-      [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
+      &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
         return it->second->NumOfLbi() == 0;
       });
 }
@@ -96,8 +92,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
-  exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false,
-                           parallel_ctx(), task_proto->mutable_exec_sequence());
+  exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false, parallel_ctx(),
+                           task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -107,8 +103,7 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   TODO();
 }
 
-void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge,
-                                         const std::string& name) {
+void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
@@ -116,8 +111,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
   return ProduceRegst(name, 1, kMaxRegisterNum);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
-                                                  int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
                                                   int32_t max_register_num) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
@@ -127,8 +121,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
   return regst;
 }
 
-void TaskNode::ConsumeRegst(const std::string& name,
-                            std::shared_ptr<RegstDesc> regst) {
+void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
   regst->AddConsumer(this);
   consumed_regsts_[name].push_back(regst);
 }
@@ -159,13 +152,11 @@ void TaskNode::UpdateTaskId() {
   task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
 }
 
-std::shared_ptr<RegstDesc> TaskEdge::GetRegst(
-    const std::string& name_in_producer) const {
+std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
   return name_in_producer2regst_.at(name_in_producer).lock();
 }
 
-void TaskEdge::AddRegst(const std::string& name_in_producer,
-                        std::shared_ptr<RegstDesc> regst) {
+void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 

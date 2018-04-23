@@ -5,9 +5,7 @@ namespace oneflow {
 
 void SinkCompTaskNode::ProduceAllRegstsAndBindEdges() {}
 
-void SinkCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
-}
+void SinkCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInEdge()->GetSoleRegst()); }
 
 void SinkCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();

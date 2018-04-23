@@ -95,8 +95,7 @@ bool DecodeCompActor::IsReadAlwaysUnReadyFromNow() {
   }
 }
 
-void DecodeCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
+void DecodeCompActor::ForEachCurReadableRegst(std::function<void(const Regst*)> handler) {
   if (!pending_in_regsts_.empty()) { handler(pending_in_regsts_.front()); }
 }
 

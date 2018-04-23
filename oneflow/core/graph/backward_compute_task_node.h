@@ -21,12 +21,8 @@ class BackwardCompTaskNode : public CompTaskNode {
   virtual void VirtualBuildActivationDiffRegst() {}
   virtual void VirtualBuildInDiffRegst() { UNIMPLEMENTED(); }
   virtual void VirtualBuildExtraRegsts() {}
-  virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) {
-    UNIMPLEMENTED();
-  };
-  virtual void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) {
-    UNIMPLEMENTED();
-  }
+  virtual void VirtualProduceInDiffAndBindEdge(TaskEdge* edge) { UNIMPLEMENTED(); };
+  virtual void VirtualProduceRegstOnRecurrentEdge(TaskEdge* edge) { UNIMPLEMENTED(); }
   virtual void VirtualProduceActivationDiff() {}
   virtual void VirtualConsumeActivation(TaskEdge* edge) {}
   virtual void VirtualConsumeRegstOnInEdge(TaskEdge* edge) { UNIMPLEMENTED(); }

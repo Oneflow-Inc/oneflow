@@ -34,8 +34,7 @@ using PbMap = google::protobuf::Map<K, V>;
 
 #define PROTOBUF_GET_FIELDDESC(msg, field_name)                            \
   auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
-  auto fd = const_cast<google::protobuf::FieldDescriptor*>(                \
-      d->FindFieldByName(field_name));
+  auto fd = const_cast<google::protobuf::FieldDescriptor*>(d->FindFieldByName(field_name));
 
 #define PROTOBUF_REFLECTION(msg, field_name) \
   PROTOBUF_GET_FIELDDESC(msg, field_name)    \
@@ -57,15 +56,13 @@ T GetValFromPbMessage(const PbMessage&, const std::string& field_name);
 int32_t GetEnumFromPbMessage(const PbMessage&, const std::string& field_name);
 
 template<typename T>
-const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg,
-                                    const std::string& field_name) {
+const PbRf<T>& GetPbRfFromPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_REFLECTION(msg, field_name);
   return r->GetRepeatedField<T>(msg, fd);
 }
 
 template<typename T>
-const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg,
-                                      const std::string& field_name) {
+const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_REFLECTION(msg, field_name);
   return r->GetRepeatedPtrField<T>(msg, fd);
 }
@@ -73,8 +70,7 @@ const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg,
 // Set In PbMessage
 
 template<typename T>
-void SetValInPbMessage(PbMessage* msg, const std::string& field_name,
-                       const T& val);
+void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 
@@ -133,12 +129,10 @@ inline bool operator!=(const google::protobuf::MessageLite& lhs,
 // Hack Oneof Getter
 
 template<typename T = PbMessage>
-const T* GetMsgPtrFromPbMessage(const PbMessage& msg,
-                                const std::string& field_name) {
+const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_name) {
   PROTOBUF_REFLECTION(msg, field_name);
   if (r->HasField(msg, fd)) {
-    return static_cast<const T*>(
-        &(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
+    return static_cast<const T*>(&(GetValFromPbMessage<const PbMessage&>(msg, field_name)));
   } else {
     return nullptr;
   }

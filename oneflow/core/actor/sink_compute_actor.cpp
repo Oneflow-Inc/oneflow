@@ -23,8 +23,7 @@ int SinkCompActor::HandlerNormal(const ActorMsg& msg) {
 void SinkCompActor::Act() {
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = NewOther();
-  AsyncLaunchKernel(kernel_ctx,
-                    [&](int64_t regst_desc_id) -> Regst* { return in_regst_; });
+  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* { return in_regst_; });
   AsyncSendRegstMsgToProducer(in_regst_);
   DeleteOther(kernel_ctx.other);
   in_regst_ = nullptr;
@@ -35,8 +34,7 @@ bool SinkCompActor::IsReadAlwaysUnReadyFromNow() {
   return false;
 }
 
-void SinkCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
+void SinkCompActor::ForEachCurReadableRegst(std::function<void(const Regst*)> handler) {
   handler(in_regst_);
 }
 

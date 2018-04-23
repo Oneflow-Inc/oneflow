@@ -12,13 +12,10 @@ void TestSoftmaxOp() {
   op_conf.mutable_softmax_conf()->set_out("softmax/out");
   auto softmax_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
-      {softmax_op->SoleIbn(),
-       new BlobDesc(Shape({3, 5}), data_type, has_data_id_field)},
+      {softmax_op->SoleIbn(), new BlobDesc(Shape({3, 5}), data_type, has_data_id_field)},
       {softmax_op->SoleObn(), new BlobDesc},
       {softmax_op->SoleDtbn(), new BlobDesc}};
-  auto fp = [&bn2blobdesc_map](const std::string& bn) {
-    return bn2blobdesc_map.at(bn);
-  };
+  auto fp = [&bn2blobdesc_map](const std::string& bn) { return bn2blobdesc_map.at(bn); };
   // infershape
   softmax_op->InferBlobDescs(fp, kDataParallel, 0, 1);
   // test

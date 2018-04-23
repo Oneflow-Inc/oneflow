@@ -25,24 +25,21 @@ class PersistentOutStream final {
 };
 
 template<typename T>
-typename std::enable_if<std::is_fundamental<T>::value,
-                        PersistentOutStream&>::type
-operator<<(PersistentOutStream& out_stream, const T& x) {
+typename std::enable_if<std::is_fundamental<T>::value, PersistentOutStream&>::type operator<<(
+    PersistentOutStream& out_stream, const T& x) {
   const char* x_ptr = reinterpret_cast<const char*>(&x);
   size_t n = sizeof(x);
   out_stream.Write(x_ptr, n);
   return out_stream;
 }
 
-inline PersistentOutStream& operator<<(PersistentOutStream& out_stream,
-                                       const std::string& s) {
+inline PersistentOutStream& operator<<(PersistentOutStream& out_stream, const std::string& s) {
   out_stream.Write(s.c_str(), s.size());
   return out_stream;
 }
 
 template<size_t n>
-PersistentOutStream& operator<<(PersistentOutStream& out_stream,
-                                const char (&s)[n]) {
+PersistentOutStream& operator<<(PersistentOutStream& out_stream, const char (&s)[n]) {
   out_stream.Write(s, strlen(s));
   return out_stream;
 }

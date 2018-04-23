@@ -14,19 +14,16 @@ void CopyHdKernel::VirtualKernelInit(const ParallelContext*) {
   }
 }
 
-void CopyHdKernel::Forward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void CopyHdKernel::Forward(const KernelCtx& ctx,
+                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(op_attribute().input_bns(0));
   Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(0));
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_memory_ptr(),
-                           in_blob->memory_ptr(), in_blob->TotalByteSize(),
-                           cp_kind_);
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_memory_ptr(), in_blob->memory_ptr(),
+                           in_blob->TotalByteSize(), cp_kind_);
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf,
-                         []() { return new CopyHdKernel; }));
+COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, []() { return new CopyHdKernel; }));
 
 #endif
 

@@ -17,12 +17,10 @@ const PbMessage& LocalResponseNormalizationOp::GetCustomizedConf() const {
 void LocalResponseNormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const LocalResponseNormalizationOpConf conf =
-      op_conf().local_response_normalization_conf();
+  const LocalResponseNormalizationOpConf conf = op_conf().local_response_normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(),
-           Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
 
   if (device_type() == DeviceType::kCPU) {
@@ -44,11 +42,9 @@ void LocalResponseNormalizationOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
-  in_shape.ToProto(kernel_conf->mutable_local_response_normalization_conf()
-                       ->mutable_batch());
+  in_shape.ToProto(kernel_conf->mutable_local_response_normalization_conf()->mutable_batch());
 }
 
-REGISTER_OP(OperatorConf::kLocalResponseNormalizationConf,
-            LocalResponseNormalizationOp);
+REGISTER_OP(OperatorConf::kLocalResponseNormalizationConf, LocalResponseNormalizationOp);
 
 }  // namespace oneflow

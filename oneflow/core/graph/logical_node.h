@@ -16,18 +16,12 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
 
   // op_vec_
   std::shared_ptr<Operator> SoleOp() const;
-  const std::vector<std::shared_ptr<Operator>>& op_vec() const {
-    return op_vec_;
-  }
+  const std::vector<std::shared_ptr<Operator>>& op_vec() const { return op_vec_; }
   std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
 
   // parallel_desc_
-  std::shared_ptr<const ParallelDesc> parallel_desc() const {
-    return parallel_desc_;
-  }
-  std::shared_ptr<const ParallelDesc>& mut_parallel_desc() {
-    return parallel_desc_;
-  }
+  std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
+  std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
 
   // shared_model_nodes_
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
@@ -47,9 +41,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   bool HasOpWithModelOrModelTmpBlob() const;
   bool HasOpWithModelBlob() const;
   bool HasOpWithForwardModelBlob() const;
-  void GenSortedCompTaskNodes(
-      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
-      std::function<void(CompTaskNode*)>) const;
+  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
+                              std::function<void(CompTaskNode*)>) const;
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
@@ -70,16 +63,14 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::vector<LogicalBlobId> lbi_121_;
 };
 
-#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                            \
-  (const LogicalNode* src_logical, const LogicalNode* dst_logical,             \
-   const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                    \
-   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                    \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box, \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>*                        \
-       logical2sorted_out_box,                                                 \
-   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id,            \
-                            int32_t mem_zone_id)>                              \
-       Mut121BufTask,                                                          \
+#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
+  (const LogicalNode* src_logical, const LogicalNode* dst_logical,                        \
+   const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                               \
+   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
+   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
+   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
+   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
+       Mut121BufTask,                                                                     \
    std::function<int64_t(const TaskNode*)> AllocateCpuThrdId)
 
 class TaskGraph;
@@ -103,17 +94,13 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
   std::vector<LogicalBlobId> lbis_;
 };
 
-BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src,
-                                        const LogicalNode* dst);
+BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src, const LogicalNode* dst);
 
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
-    const LogicalBlobId& lbi,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
-    const LogicalNode* in_logical,
-    const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
+    const LogicalBlobId& lbi, const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,
+    const LogicalNode* in_logical, const std::vector<BoxingTaskNode::EdgeInfo>& sorted_out_edges,
     const LogicalNode* out_logical, BoxingOpConf*);
-BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src,
-                                              const LogicalNode* dst);
+BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst);
 
 #define OVERRIDE_PURE_VIRTUAL_METHOD()   \
   const char* TypeName() const override; \

@@ -23,9 +23,8 @@ int32_t RecurrentOp::MaxModelSplitNum() const {
   return GetValFromCustomizedConf<int32_t>("hidden_size");
 }
 
-void RecurrentOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                 const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   DataType data_type = Global<JobDesc>::Get()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
@@ -38,8 +37,7 @@ void RecurrentOp::InferBlobDescs(
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
     CHECK_EQ(h0_blob_desc->shape(), h0_shape);
-    CHECK_EQ(h0_blob_desc->has_data_id_field(),
-             in_blob_desc->has_data_id_field());
+    CHECK_EQ(h0_blob_desc->has_data_id_field(), in_blob_desc->has_data_id_field());
     CHECK_EQ(h0_blob_desc->max_col_num(), 1);
   } else {
     *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
@@ -55,9 +53,7 @@ void RecurrentOp::InferBlobDescs(
   // recurrent_out
   BlobDesc* rec_out_blob_desc = GetBlobDesc4BnInOp("rec_out");
   *rec_out_blob_desc = *out_blob_desc;
-  if (parallel_ctx->policy() == kDataParallel) {
-    rec_out_blob_desc->set_max_col_num(1);
-  }
+  if (parallel_ctx->policy() == kDataParallel) { rec_out_blob_desc->set_max_col_num(1); }
 
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
@@ -66,8 +62,7 @@ LogicalBlobId RecurrentOp::ibn2lbi(const std::string& input_bn) const {
   if (input_bn == "rec_in") {
     return obn2lbi("rec_out");
   } else if (input_bn == "h0") {
-    return GenLogicalBlobId(
-        GetValFromCustomizedConf<std::string>("init_hidden"));
+    return GenLogicalBlobId(GetValFromCustomizedConf<std::string>("init_hidden"));
   } else if (input_bn == "in") {
     return GenLogicalBlobId(GetValFromCustomizedConf<std::string>("in"));
   } else {
