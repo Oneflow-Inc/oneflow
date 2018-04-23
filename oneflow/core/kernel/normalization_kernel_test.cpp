@@ -4,6 +4,56 @@ namespace oneflow {
 
 namespace test {
 
+DiffKernelImplTestCase* DiffNormalizationKernelCudnnImpl(
+    const std::string& job_type, const std::string& fw_or_bw,
+    const std::string& cpp_type, const std::string& scale,
+    const std::string& center, const std::string& axis) {
+  auto* test_case =
+      new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
+                                 DataType4CppTypeString(cpp_type));
+  auto* conf = test_case->mut_op_conf()->mutable_normalization_conf();
+  bool use_scale = (scale == "scale");
+  bool use_center = (center == "center");
+  conf->set_scale(use_scale);
+  conf->set_center(use_center);
+  conf->set_axis(std::stoi(axis));
+  conf->set_use_first_piece_init_moving(true);
+  test_case->set_initiate_kernel_ctx(
+      [=](const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+        std::tuple<int64_t, std::function<const Blob*(const std::string&)>>*
+            other_val =
+                new std::tuple<int64_t,
+                               std::function<const Blob*(const std::string&)>>(
+                    0, [&](const std::string& lbn) -> const Blob* {
+                      if (lbn.find("mean") != std::string::npos) {
+                        return BnInOp2Blob("moving_mean");
+                      } else {
+                        return BnInOp2Blob("moving_variance");
+                      }
+                    });
+        test_case->mut_kernel_ctx()->other = other_val;
+      });
+  Shape shape({20, 30, 28, 28});
+  std::list<std::string> input_or_weight_bns{"in"};
+  std::list<std::string> input_diff_or_weight_diff_bns{GenDiffBn("in")};
+  if (use_scale) {
+    input_or_weight_bns.push_back("gamma");
+    input_diff_or_weight_diff_bns.push_back(GenDiffBn("gamma"));
+  }
+  if (use_center) {
+    input_or_weight_bns.push_back("beta");
+    input_diff_or_weight_diff_bns.push_back(GenDiffBn("beta"));
+  }
+  test_case->SetBlobNames(input_or_weight_bns, {"out"}, {GenDiffBn("out")},
+                          input_diff_or_weight_diff_bns);
+  test_case->SetInputBlobDesc("in", shape, DataType4CppTypeString(cpp_type));
+  test_case->SetInputBlobDesc(GenDiffBn("out"), shape,
+                              DataType4CppTypeString(cpp_type));
+  return test_case;
+}
+TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelCudnnImpl, (train)(predict),
+                      (forward)(backward), (float), (scale), (center), (1)(3));
+
 DiffKernelImplTestCase* DiffNormalizationKernelImpl(const std::string& job_type,
                                                     const std::string& fw_or_bw,
                                                     const std::string& cpp_type,
@@ -35,7 +85,7 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl(const std::string& job_type,
                     });
         test_case->mut_kernel_ctx()->other = other_val;
       });
-  Shape shape({10, 10, 28, 28});
+  Shape shape({10, 30, 28, 28});
   std::list<std::string> input_or_weight_bns{"in"};
   std::list<std::string> input_diff_or_weight_diff_bns{GenDiffBn("in")};
   if (use_scale) {
@@ -56,7 +106,7 @@ DiffKernelImplTestCase* DiffNormalizationKernelImpl(const std::string& job_type,
 TEST_DIFF_KERNEL_IMPL(DiffNormalizationKernelImpl, (train)(predict),
                       (forward)(backward),
                       OF_PP_SEQ_MAP(OF_PP_PAIR_FIRST, FLOATING_DATA_TYPE_SEQ),
-                      (scale)(no_scale), (center)(no_center), (0)(1));
+                      (scale)(no_scale), (center)(no_center), (0)(2));
 
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_single_number(OpKernelTestCase* norm_test_case,
