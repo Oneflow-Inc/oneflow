@@ -26,7 +26,17 @@ else()
   list(APPEND oneflow_platform_excludes "windows")
 endif()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*")
+file(GLOB_RECURSE oneflow_all_h "${PROJECT_SOURCE_DIR}/oneflow/core/*.h")
+file(GLOB_RECURSE oneflow_all_cuh "${PROJECT_SOURCE_DIR}/oneflow/core/*.cuh")
+file(GLOB_RECURSE oneflow_all_cu "${PROJECT_SOURCE_DIR}/oneflow/core/*.cu")
+file(GLOB_RECURSE oneflow_all_cpp "${PROJECT_SOURCE_DIR}/oneflow/core/*.cpp")
+file(GLOB_RECURSE oneflow_all_proto "${PROJECT_SOURCE_DIR}/oneflow/core/*.proto")
+list(APPEND oneflow_all_src ${oneflow_all_h})
+list(APPEND oneflow_all_src ${oneflow_all_cuh})
+list(APPEND oneflow_all_src ${oneflow_all_cu})
+list(APPEND oneflow_all_src ${oneflow_all_cpp})
+list(APPEND oneflow_all_src ${oneflow_all_proto})
+
 foreach(oneflow_single_file ${oneflow_all_src})
   # Verify whether this file is for other platforms
   set(exclude_this OFF)
