@@ -47,6 +47,22 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   return cnt;
 }
 
+int64_t Shape::CountBeforeAxis(int64_t axis) const {
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, NumAxes());
+  int64_t cnt = 1;
+  for (int64_t i = 0; i < axis; ++i) { cnt *= At(i); }
+  return cnt;
+}
+
+int64_t Shape::CountAfterAxis(int64_t axis) const {
+  CHECK_GE(axis, 0);
+  CHECK_LT(axis, NumAxes());
+  int64_t cnt = 1;
+  for (int64_t i = axis + 1; i < NumAxes(); ++i) { cnt *= At(i); }
+  return cnt;
+}
+
 int64_t Shape::Count(int64_t begin_axis) const {
   return Count(begin_axis, NumAxes());
 }

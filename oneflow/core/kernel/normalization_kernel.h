@@ -21,6 +21,9 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
       DeviceCtx* ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitPureModelTmpBlobs(
+      DeviceCtx* ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;

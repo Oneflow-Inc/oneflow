@@ -283,7 +283,7 @@ KU_FLOATING_METHOD Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                         int n, const T alpha, const T* a, int lda, const T* x,
                         const int incx, const T beta, T* y, const int incy) {
   // Set col major to keep it as the same with cublas
-  cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x, incx,
+  cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, n, m, alpha, a, lda, x, incx,
                 beta, y, incy);
 }
 KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,

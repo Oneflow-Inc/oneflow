@@ -1,3 +1,4 @@
+#define protected public
 #include "oneflow/core/kernel/opkernel_test_case.h"
 #include "oneflow/core/device/cuda_stream_handle.h"
 
@@ -437,7 +438,9 @@ void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
                       default_device_type(), &parallel_ctx_, &kernel_conf,
                       op_context);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
-    kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
+    const auto& BnInOp2Blob = MakeGetterBnInOp2Blob();
+    kernel->InitPureModelTmpBlobs(kernel_ctx_.device_ctx, BnInOp2Blob);
+    kernel->Launch(kernel_ctx_, BnInOp2Blob);
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);
   };
   Launch(true);

@@ -100,6 +100,23 @@ void NormalizationKernel<device_type, T>::InitModelBlobsWithDir(
 }
 
 template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::InitPureModelTmpBlobs(
+    DeviceCtx* ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const auto& conf = this->kernel_conf().normalization_conf();
+  InitializerConf sum_multiplier_initializer_conf;
+  sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  if (BnInOp2Blob("in")->shape().CountAfterAxis(conf.axis()) > 1) {
+    KernelUtil<device_type, T>::InitializeWithConf(
+        ctx, sum_multiplier_initializer_conf, 0,
+        BnInOp2Blob("after_axis_sum_multiplier"));
+  }
+  KernelUtil<device_type, T>::InitializeWithConf(
+      ctx, sum_multiplier_initializer_conf, 0,
+      BnInOp2Blob("before_axis_sum_multiplier"));
+}
+
+template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -329,6 +346,30 @@ void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
   KernelUtil<device_type, T>::Scal(
       ctx.device_ctx, mean_blob->shape().elem_cnt(), inv_norm_elem_num,
       mean_blob->mut_dptr<T>(), 1);
+  // compute mean
+  Blob* raw_in_blob = BnInOp2Blob("in");
+  const Shape& in_shape = raw_in_blob->shape();
+  int num_before_axis_dim = in_shape.CountBeforeAxis(conf.axis());
+  int num_axis_dim = in_shape.At(conf.axis());
+  int num_after_axis_dim = in_shape.CountAfterAxis(conf.axis());
+  Blob* before_by_axis_blob = BnInOp2Blob("before_by_axis_matrix");
+  if (num_after_axis_dim > 1) {
+    Blob* after_axis_sum_multiplier = BnInOp2Blob("after_axis_sum_multiplier");
+    KernelUtil<device_type, T>::Gemv(
+        ctx.device_ctx, CblasNoTrans, num_before_axis_dim * num_axis_dim,
+        num_after_axis_dim, 1.0 / (num_before_axis_dim * num_after_axis_dim),
+        raw_in_blob->dptr<T>(), num_after_axis_dim,
+        after_axis_sum_multiplier->dptr<T>(), 1, 0.0,
+        before_by_axis_blob->mut_dptr<T>(), 1);
+  } else {
+    before_by_axis_blob = raw_in_blob;
+  }
+  Blob* before_axis_sum_multiplier = BnInOp2Blob("before_axis_sum_multiplier");
+  KernelUtil<device_type, T>::Gemv(ctx.device_ctx, CblasTrans,
+                                   num_before_axis_dim, num_axis_dim, 1.0,
+                                   before_by_axis_blob->dptr<T>(), num_axis_dim,
+                                   before_axis_sum_multiplier->dptr<T>(), 1,
+                                   0.0, mean_blob->mut_dptr<T>(), 1);
   //  It's safe to use `out' as tmp blob
   Blob* tmp_blob = BnInOp2Blob("out");
   Blob* variance_blob = BnInOp2Blob("new_variance");
