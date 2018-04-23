@@ -47,8 +47,6 @@ class NormalizationOp final : public Operator {
 #endif
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
   NormalizationOpCtx* NewNormalizationOpCtx(const Shape& in_shape) const;
-
-  // bool HasScaleOrCenter() const;
 };
 
 }  // namespace oneflow
