@@ -71,7 +71,6 @@ void CommNet::FinishOneRead(ReadContext* read_ctx) {
 }
 
 void CommNet::GenConnectionInfo(const Plan& plan) {
-  TODO();
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
