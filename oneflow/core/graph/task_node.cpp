@@ -2,13 +2,6 @@
 
 namespace oneflow {
 
-std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
-    {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"}, {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},  {kBoxing, "10"},       {kPrint, "1"},
-};
-
 bool IsForwardTaskType(TaskType tt) {
   return tt == TaskType::kNormalForward || tt == TaskType::kRecurrentForward;
 }
@@ -30,12 +23,12 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   }
 }
 
-const std::vector<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
+const std::list<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
   return consumed_regsts_.at(name);
 }
 
 std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) {
-  const std::vector<std::weak_ptr<RegstDesc>>& vec = consumed_regsts_.at(name);
+  const std::list<std::weak_ptr<RegstDesc>>& vec = consumed_regsts_.at(name);
   CHECK_EQ(vec.size(), 1);
   return vec.front().lock();
 }
@@ -83,8 +76,8 @@ std::string TaskNode::VisualStr() const {
 }
 
 bool TaskNode::IsMeaningLess() {
-  TODO();
-  return false;
+  ClearOutOfDateConsumedRegst();
+  return produced_regsts_.empty() && consumed_regsts_.empty();
 }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
@@ -100,7 +93,15 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  TODO();
+  ClearOutOfDateConsumedRegst();
+  auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
+  for (const auto& pair : consumed_regsts_) {
+    RegstDescIdSet regst_desc_ids;
+    for (std::weak_ptr<RegstDesc> regst : pair.second) {
+      regst_desc_ids.add_regst_desc_id(regst.lock()->regst_desc_id());
+    }
+    CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
+  }
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
@@ -127,13 +128,21 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
 }
 
 bool TaskNode::IsAllConsumedRegstLocked() {
-  TODO();
+  for (const auto& pair : consumed_regsts_) {
+    for (std::weak_ptr<RegstDesc> regst_desc : pair.second) {
+      if (regst_desc.lock()->IsLocked() == false) { return false; }
+    }
+  }
   return true;
 }
 
-bool TaskNode::TryLockConsumedRegst(const std::string& name) {
-  TODO();
-  return false;
+void TaskNode::TryLockConsumedRegst(const std::string& name) {
+  auto consumed_regsts_it = consumed_regsts_.find(name);
+  if (consumed_regsts_it == consumed_regsts_.end()) { return; }
+  for (std::weak_ptr<RegstDesc> wrd : consumed_regsts_it->second) {
+    std::shared_ptr<RegstDesc> srd = wrd.lock();
+    if (srd->IsLocked() == false) { srd->Lock(); }
+  }
 }
 
 void TaskNode::LockRegsts() {
@@ -152,17 +161,41 @@ void TaskNode::UpdateTaskId() {
   task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
 }
 
-std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
-  return name_in_producer2regst_.at(name_in_producer).lock();
+void TaskNode::ClearOutOfDateConsumedRegst() {
+  for (auto& pair : consumed_regsts_) {
+    for (auto it = pair.second.begin(); it != pair.second.end();) {
+      if (it->lock() == nullptr) {
+        pair.second.erase(it++);
+      } else {
+        ++it;
+      }
+    }
+  }
+  EraseIf<std::string, std::list<std::weak_ptr<RegstDesc>>>(
+      &consumed_regsts_,
+      [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
+        return it->second.empty();
+      });
 }
 
-void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
-  CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
+  return name_in_producer2regst_.at(name_in_producer).lock();
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   CHECK_EQ(name_in_producer2regst_.size(), 1);
   return name_in_producer2regst_.begin()->second.lock();
 }
+
+void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
+  CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+}
+
+std::map<TaskType, std::string> task_type2color = {
+    {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
+    {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
+    {kNormalMdUpdt, "6"}, {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},  {kBoxing, "10"},       {kPrint, "1"},
+};
 
 }  // namespace oneflow

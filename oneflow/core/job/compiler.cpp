@@ -32,8 +32,10 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
                  << "\"];\n";
     }
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
-                 << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        out_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
+                   << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
+      }
     }
   }
   out_stream << "}\n";

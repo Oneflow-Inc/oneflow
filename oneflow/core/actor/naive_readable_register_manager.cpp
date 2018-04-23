@@ -4,7 +4,9 @@ namespace oneflow {
 
 void NaiveReadableRegstMgr::Init(const TaskProto& task_proto) {
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    readable_regst_[pair.second] = {};
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      readable_regst_[regst_desc_id] = {};
+    }
   }
   readable_regst_cnt_ = 0;
 }

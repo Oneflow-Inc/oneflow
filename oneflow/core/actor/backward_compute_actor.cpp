@@ -11,7 +11,9 @@ void BackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   out_diff_regst_desc_id_ = RegstDescId4Name("out_diff");
   is_out_diff_eord_ = false;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    readable_regsts_[pair.second] = {};
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      readable_regsts_[regst_desc_id] = {};
+    }
   }
   readable_regst_cnt_ = 0;
   OF_SET_MSG_HANDLER(&BackwardCompActor::HandlerNormal);
