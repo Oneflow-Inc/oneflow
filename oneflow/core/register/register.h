@@ -17,7 +17,7 @@ struct RegstStatus {
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
-  ~Regst() { deleter_(); }
+  ~Regst();
 
   // Getters
   const RegstStatus& status() const { return status_; }
@@ -60,7 +60,7 @@ class Regst final {
 
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
-  std::function<void()> deleter_;
+  std::list<std::function<void()>> deleters_;
   HashMap<std::string, std::unique_ptr<BlobIf>> lbn2blob_;
   std::unique_ptr<BlobIf> packed_blob_;
 };

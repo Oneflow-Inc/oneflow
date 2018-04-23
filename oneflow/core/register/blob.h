@@ -39,8 +39,8 @@ class Blob : public BlobIf {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  const void* memory_ptr() const { return mem_ptr_; }
-  void* mut_memory_ptr() { return mem_ptr_; }
+  const void* head_memory_ptr() const { return head_mem_ptr_; }
+  void* mut_head_memory_ptr() { return head_mem_ptr_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -66,7 +66,9 @@ class Blob : public BlobIf {
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
+  size_t HeaderByteSize() const { return blob_desc_->HeaderByteSize(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
+  bool IsContinues() const { return is_continues_; }
 
   virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
   virtual void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
@@ -80,10 +82,8 @@ class Blob : public BlobIf {
   bool IsColValid() const;
 
  protected:
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-       const void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr,
+       char* body_mem_ptr, const void* comm_net_token);
 
  private:
   template<typename T>
@@ -95,17 +95,19 @@ class Blob : public BlobIf {
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
 
-  void* mem_ptr_;
+  void* head_mem_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;
   const void* comm_net_token_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
+  bool is_continues_;
 };
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              const void* comm_net_token, DeviceType device_type);
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* head_mem_ptr,
+              char* body_mem_ptr, const void* comm_net_token,
+              DeviceType device_type);
 
 class RecordBlobIf : public BlobIf {
  public:
