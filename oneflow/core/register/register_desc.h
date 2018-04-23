@@ -27,9 +27,9 @@ class RegstDesc final {
 
   // min_register_num_, max_register_num_
   int32_t min_register_num() const { return min_register_num_; }
-  void set_min_register_num(int32_t val);
+  void UpdtMinRegstNumIfNeed(int32_t val);
   int32_t max_register_num() const { return max_register_num_; }
-  void set_max_register_num(int32_t val);
+  void UpdtMaxRegstNumIfNeed(int32_t val);
 
   // lbn2blob_desc_
   bool IsLocked() const { return is_locked_; }

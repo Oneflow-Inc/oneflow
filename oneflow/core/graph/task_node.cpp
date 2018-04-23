@@ -67,8 +67,7 @@ void TaskNode::Build() {
 
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
-    pair.second->set_min_register_num(
-        std::max(pair.second->min_register_num(), pair.second->MaxColNum()));
+    pair.second->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
   }
 }
 
@@ -140,8 +139,8 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
                                                   int32_t max_register_num) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
-  regst->set_min_register_num(min_register_num);
-  regst->set_max_register_num(max_register_num);
+  regst->UpdtMinRegstNumIfNeed(min_register_num);
+  regst->UpdtMaxRegstNumIfNeed(max_register_num);
   CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }

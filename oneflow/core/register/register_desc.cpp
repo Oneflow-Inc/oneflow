@@ -17,21 +17,15 @@ void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
 }
 
-void RegstDesc::set_min_register_num(int32_t val) {
-  if (val < min_register_num_ || val > max_register_num_) {
-    LOG(WARNING) << "regst_desc_id = " << regst_desc_id_
-                 << " , try to set min_regst_num = " << val << " but failed.";
-    return;
+void RegstDesc::UpdtMinRegstNumIfNeed(int32_t val) {
+  if (val > min_register_num_ && val <= max_register_num_) {
+    min_register_num_ = val;
   }
-  min_register_num_ = val;
 }
-void RegstDesc::set_max_register_num(int32_t val) {
-  if (val < min_register_num_ || val > max_register_num_) {
-    LOG(WARNING) << "regst_desc_id = " << regst_desc_id_
-                 << " , try to set max_regst_num = " << val << " but failed.";
-    return;
+void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
+  if (val >= min_register_num_ && val < max_register_num_) {
+    max_register_num_ = val;
   }
-  max_register_num_ = val;
 }
 
 void RegstDesc::Lock() {
