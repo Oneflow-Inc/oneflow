@@ -95,7 +95,8 @@ class Blob : public BlobIf {
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
 
-  void* mem_ptr_;
+  void* head_mem_ptr_;
+  void* body_mem_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;
