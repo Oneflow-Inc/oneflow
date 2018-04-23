@@ -72,7 +72,6 @@ void CommNet::FinishOneRead(ReadContext* read_ctx) {
 
 void CommNet::GenConnectionInfo(const Plan& plan) {
   TODO();
-  /*
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
@@ -85,10 +84,12 @@ void CommNet::GenConnectionInfo(const Plan& plan) {
   }
   for (const TaskProto& task_proto : plan.task()) {
     if (task_proto.machine_id() != this_machine_id) { continue; }
-    for (const auto& regst_desc_it : task_proto.consumed_regst_desc_id()) {
-      auto rid2mid_it = rid2mid.find(regst_desc_it.second);
-      CHECK(rid2mid_it != rid2mid.end());
-      peer_machine_id_.insert(rid2mid_it->second);
+    for (const auto& regst_desc_set_it : task_proto.consumed_regst_desc_id()) {
+      for (int64_t regst_desc_id : regst_desc_set_it.second.regst_desc_id()) {
+        auto rid2mid_it = rid2mid.find(regst_desc_id);
+        CHECK(rid2mid_it != rid2mid.end());
+        peer_machine_id_.insert(rid2mid_it->second);
+      }
     }
     for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
       for (int64_t consumer_task_id : regst_desc_it.second.consumer_task_id()) {
@@ -99,7 +100,6 @@ void CommNet::GenConnectionInfo(const Plan& plan) {
     }
   }
   peer_machine_id_.erase(this_machine_id);
-  */
 }
 
 }  // namespace oneflow
