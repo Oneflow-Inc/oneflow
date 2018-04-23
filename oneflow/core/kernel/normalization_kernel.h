@@ -30,11 +30,6 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
   NormalizationKernel() = default;
   ~NormalizationKernel() = default;
 
-  void InitMovingMeanAndMovingVariance(
-      const KernelCtx& ctx,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-      bool use_new) const;
-
  private:
   std::unique_ptr<NormalizationCtx> normalization_ctx_;
 #ifdef WITH_CUDA
@@ -79,46 +74,20 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
                            const Blob* in_blob) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
+  void InitMovingMeanAndMovingVariance(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      bool use_new) const;
 
   void NormalizationCudnnForward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-      const NormalizationCtx&) const {
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {
     UNIMPLEMENTED();
   }
   void NormalizationCudnnBackward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-      const NormalizationCtx&) const {
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {
     UNIMPLEMENTED();
   }
 };
-
-/*
-template<DeviceType device_type, typename T>
-struct NormalizationKernelUtil {
-  static void NormalizationCudnnForward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-      const NormalizationCtx&, const NormalizationKernel<device_type, T>*);
-  static void NormalizationCudnnBackward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-      const NormalizationCtx&, const NormalizationKernel<device_type, T>*);
-};
-
-template<typename T>
-struct NormalizationKernelUtil<DeviceType::kCPU, T> {
-  static void NormalizationCudnnForward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-      const NormalizationCtx&,
-      const NormalizationKernel<DeviceType::kCPU, T>*) {
-    UNIMPLEMENTED();
-  }
-  static void NormalizationCudnnBackward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
-      const NormalizationCtx&,
-      const NormalizationKernel<DeviceType::kCPU, T>*) {
-    UNIMPLEMENTED();
-  }
-};
-*/
 
 }  // namespace oneflow
 
