@@ -23,8 +23,7 @@ template<typename RequestMessageType, typename ResponseMessageType>
 class CtrlCall final : public CtrlCallIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CtrlCall);
-  CtrlCall()
-      : status_(Status::kBeforeHandleRequest), responder_(&server_ctx_) {}
+  CtrlCall() : status_(Status::kBeforeHandleRequest), responder_(&server_ctx_) {}
   ~CtrlCall() = default;
 
   const RequestMessageType& request() const { return request_; }
@@ -32,12 +31,8 @@ class CtrlCall final : public CtrlCallIf {
   RequestMessageType* mut_request() { return &request_; }
   ResponseMessageType* mut_response() { return &response_; }
   grpc::ServerContext* mut_server_ctx() { return &server_ctx_; }
-  grpc::ServerAsyncResponseWriter<ResponseMessageType>* mut_responder() {
-    return &responder_;
-  }
-  void set_request_handler(std::function<void()> val) {
-    request_handler_ = val;
-  }
+  grpc::ServerAsyncResponseWriter<ResponseMessageType>* mut_responder() { return &responder_; }
+  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
 
   void Process() override {
     switch (status_) {

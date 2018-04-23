@@ -82,14 +82,12 @@ class Blob : public BlobIf {
  protected:
   Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
       : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-       const void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
 
  private:
   template<typename T>
   void CheckDataType() const {
-    LOG_IF(FATAL, (std::is_same<T, void>::value == false
-                   && std::is_same<T, char>::value == false
+    LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
                    && blob_desc_->data_type() != DataType::kChar
                    && blob_desc_->data_type() != GetDataType<T>::value))
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
@@ -104,8 +102,8 @@ class Blob : public BlobIf {
   Regst* regst_;
 };
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              const void* comm_net_token, DeviceType device_type);
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token,
+              DeviceType device_type);
 
 class RecordBlobIf : public BlobIf {
  public:
@@ -123,8 +121,7 @@ template<typename RecordType>
 class RecordBlob final : public RecordBlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
-  RecordBlob()
-      : records_(Global<JobDesc>::Get()->SinglePieceSize()), record_num_(0) {}
+  RecordBlob() : records_(Global<JobDesc>::Get()->SinglePieceSize()), record_num_(0) {}
   ~RecordBlob() = default;
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {

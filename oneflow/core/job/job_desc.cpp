@@ -4,21 +4,11 @@
 
 namespace oneflow {
 
-const std::string& JobDesc::MdLoadSnapshotPath() {
-  return job_conf_.model_load_snapshot_path();
-}
-size_t JobDesc::SizeOfOneDataId() const {
-  return job_conf_.max_data_id_length() * sizeof(char);
-}
-int32_t JobDesc::CommNetWorkerNum() const {
-  return resource_.comm_net_worker_num();
-}
-int32_t JobDesc::PersistenceWorkerNum() const {
-  return resource_.persistence_worker_num();
-}
-int32_t JobDesc::ParallelPieceSize() const {
-  return job_conf_.data_part_num() * SinglePieceSize();
-}
+const std::string& JobDesc::MdLoadSnapshotPath() { return job_conf_.model_load_snapshot_path(); }
+size_t JobDesc::SizeOfOneDataId() const { return job_conf_.max_data_id_length() * sizeof(char); }
+int32_t JobDesc::CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
+int32_t JobDesc::PersistenceWorkerNum() const { return resource_.persistence_worker_num(); }
+int32_t JobDesc::ParallelPieceSize() const { return job_conf_.data_part_num() * SinglePieceSize(); }
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.piece_num_of_experiment_phase();
 }
@@ -67,9 +57,7 @@ int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().piece_num_of_print_loss();
 }
-int32_t JobDesc::BatchSize() const {
-  return NumOfPiecesInBatch() * ParallelPieceSize();
-}
+int32_t JobDesc::BatchSize() const { return NumOfPiecesInBatch() * ParallelPieceSize(); }
 float JobDesc::L1() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().l1();
@@ -93,16 +81,13 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
   if (job_conf_.has_train_conf()) {
     TrainConf* train_conf = job_conf_.mutable_train_conf();
     if (train_conf->piece_num_of_print_loss() == -1) {
-      train_conf->set_piece_num_of_print_loss(
-          train_conf->num_of_pieces_in_batch());
+      train_conf->set_piece_num_of_print_loss(train_conf->num_of_pieces_in_batch());
     }
-    if (piece_exp == -1) {
-      piece_exp = 3 * train_conf->num_of_pieces_in_batch();
-    }
+    if (piece_exp == -1) { piece_exp = 3 * train_conf->num_of_pieces_in_batch(); }
     piece_exp = std::max(piece_exp, train_conf->num_of_pieces_in_batch());
     piece_exp = std::max(piece_exp, train_conf->piece_num_of_print_loss());
-    piece_exp = std::min(piece_exp, train_conf->total_batch_num()
-                                        * train_conf->num_of_pieces_in_batch());
+    piece_exp =
+        std::min(piece_exp, train_conf->total_batch_num() * train_conf->num_of_pieces_in_batch());
   } else {
     if (piece_exp == -1) { piece_exp = 16; }
   }
@@ -119,13 +104,10 @@ void JobDesc::SplitDecodeOps() {
     if (op_conf.has_decode_ofrecord_conf() == false) { continue; }
     if (op_conf.decode_ofrecord_conf().blob_size() == 1) { continue; }
     const DecodeOFRecordOpConf& decode_conf = op_conf.decode_ofrecord_conf();
-    PbRpf<BlobConf>* blobs =
-        op_conf.mutable_decode_ofrecord_conf()->mutable_blob();
+    PbRpf<BlobConf>* blobs = op_conf.mutable_decode_ofrecord_conf()->mutable_blob();
     Erase<PbRpf<BlobConf>>(
         *blobs,
-        [&](const BlobConf& blob_conf) -> bool {
-          return blob_conf.max_sequence_size() > 1;
-        },
+        [&](const BlobConf& blob_conf) -> bool { return blob_conf.max_sequence_size() > 1; },
         [&](const BlobConf& blob_conf) {
           gen_op_confs.emplace_back(op_conf);
           DecodeOFRecordOpConf* gen_decode_conf =
@@ -135,9 +117,7 @@ void JobDesc::SplitDecodeOps() {
           *gen_decode_conf->add_blob() = blob_conf;
         });
   }
-  for (OperatorConf& gen_op_conf : gen_op_confs) {
-    *dlnet_conf_.add_op() = gen_op_conf;
-  }
+  for (OperatorConf& gen_op_conf : gen_op_confs) { *dlnet_conf_.add_op() = gen_op_conf; }
 }
 
 }  // namespace oneflow

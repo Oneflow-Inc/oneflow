@@ -13,36 +13,31 @@ class SoftmaxKernel final : public KernelIf<device_type> {
   ~SoftmaxKernel() = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename T>
 struct SoftmaxKernelUtil {
   // n = number of data sample
   // w = number of (input/output) neuron
-  static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                         const T* out, T* tmp);
+  static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out, T* tmp);
 
-  static void ForwardSum(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                         const T* out, T* tmp);
+  static void ForwardSum(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out, T* tmp);
 
   // matrix[i][j] -= vector[i]
   // matrix shape = n*w, vector shape = n
-  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix,
-                  const T* vector);
+  static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector);
 
-  static void BackwardDot(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                          const T* out, const T* out_diff, T* tmp);
+  static void BackwardDot(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out,
+                          const T* out_diff, T* tmp);
 };
 
 template<DeviceType device_type, typename T>
-void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                        const T* in, T* tmp, T* prob) {
+void SoftmaxComputeProb(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* in, T* tmp,
+                        T* prob) {
   // copy in blob to prob blob
   KernelUtil<device_type, T>::Copy(ctx, n * w, in, 1, prob, 1);
   // max | calculate max of every sample vector prob[i], store in tmp[i]

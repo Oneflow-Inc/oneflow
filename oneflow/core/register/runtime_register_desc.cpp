@@ -18,8 +18,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   packed_blob_desc_ = BlobDesc(proto.packed_blob_desc());
 }
 
-const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(
-    const LogicalBlobId& lbi) const {
+const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const {
   auto it = lbi2blob_desc_.find(lbi);
   if (it == lbi2blob_desc_.end()) {
     CHECK(lbi.is_packed_id());

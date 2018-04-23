@@ -84,8 +84,7 @@ class Actor {
   int TrySwitchToZombieOrFinish();
 
   // Async Do on device_ctx_
-  void AsyncLaunchKernel(const KernelCtx&,
-                         std::function<Regst*(int64_t)> Regst4RegstDescId);
+  void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
@@ -139,9 +138,8 @@ struct ActorRegistry {
   }
 };
 
-#define REGISTER_ACTOR(TaskType, ActorType)            \
-  static ActorRegistry<TaskType, ActorType> OF_PP_CAT( \
-      g_actor_##ActorType##registry_var, __LINE__)
+#define REGISTER_ACTOR(TaskType, ActorType) \
+  static ActorRegistry<TaskType, ActorType> OF_PP_CAT(g_actor_##ActorType##registry_var, __LINE__)
 
 }  // namespace oneflow
 

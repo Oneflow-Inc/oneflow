@@ -6,18 +6,13 @@ void ReduceSumOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   // For Parallel
-  if (op_conf().reduce_sum_conf().has_axis() == false) {
-    EnrollDataTmpBn("tmp");
-  }
+  if (op_conf().reduce_sum_conf().has_axis() == false) { EnrollDataTmpBn("tmp"); }
 }
 
-const PbMessage& ReduceSumOp::GetCustomizedConf() const {
-  return op_conf().reduce_sum_conf();
-}
+const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
 
-void ReduceSumOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext*) const {
+void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                 const ParallelContext*) const {
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> out_dim_vec = {1};
   if (op_conf().reduce_sum_conf().has_axis()) {
@@ -44,16 +39,14 @@ void ReduceSumOp::InferBlobDescs(
 }
 
 void ReduceSumOp::VirtualGenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext*, KernelConf* kernel_conf) const {
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf) const {
   if (op_conf().reduce_sum_conf().has_axis() == false) { return; }
-  kernel_conf->mutable_reduce_sum_conf()->set_axis(
-      GetCorrectAxis(GetBlobDesc4BnInOp));
+  kernel_conf->mutable_reduce_sum_conf()->set_axis(GetCorrectAxis(GetBlobDesc4BnInOp));
 }
 
 int32_t ReduceSumOp::GetCorrectAxis(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp)
-    const {
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
   int32_t axis = op_conf().reduce_sum_conf().axis();
   if (axis < 0) { axis += GetBlobDesc4BnInOp("in")->shape().NumAxes(); }
   return axis;

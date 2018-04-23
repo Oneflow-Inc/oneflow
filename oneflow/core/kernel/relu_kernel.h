@@ -14,12 +14,10 @@ class ReluKernel final : public KernelIf<device_type> {
   ~ReluKernel() = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow

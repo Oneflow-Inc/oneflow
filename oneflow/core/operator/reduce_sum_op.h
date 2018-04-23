@@ -14,17 +14,15 @@ class ReduceSumOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 
  private:
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
-  int32_t GetCorrectAxis(std::function<const BlobDesc*(const std::string&)>
-                             GetBlobDesc4BnInOp) const;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
+  int32_t GetCorrectAxis(
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const;
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
     const ReduceSumOpConf& conf = op_conf().reduce_sum_conf();
     if (conf.has_in_sys()) {

@@ -27,15 +27,13 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   }
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      out_stream << "task" << std::to_string(task_proto.task_id())
-                 << "->regst_desc"
-                 << std::to_string(pair.second.regst_desc_id()) << "[label=\""
-                 << pair.first << "\"];\n";
+      out_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
+                 << std::to_string(pair.second.regst_desc_id()) << "[label=\"" << pair.first
+                 << "\"];\n";
     }
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
       out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
-                 << std::to_string(task_proto.task_id()) << "[label=\""
-                 << pair.first << "\"];\n";
+                 << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
     }
   }
   out_stream << "}\n";
@@ -48,14 +46,12 @@ Plan Compiler::Compile() {
 }
 
 Plan Compiler::DoCompile() {
-  auto logical_gph =
-      of_make_unique<LogicalGraph>(Global<JobDesc>::Get()->IsTrain());
+  auto logical_gph = of_make_unique<LogicalGraph>(Global<JobDesc>::Get()->IsTrain());
   auto task_gph = of_make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::Build, _1),
-                        std::bind(&TaskNode::IsReadyForBuild, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::InferMemCaseOfProducedRegst, _1));
   Plan plan;

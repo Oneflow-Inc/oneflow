@@ -5,8 +5,7 @@
 namespace oneflow {
 
 #ifdef WITH_CUDA
-CudnnLRNDesc::CudnnLRNDesc(unsigned depth_radius, double alpha, double beta,
-                           double bias) {
+CudnnLRNDesc::CudnnLRNDesc(unsigned depth_radius, double alpha, double beta, double bias) {
   CudaCheck(cudnnCreateLRNDescriptor(&val_));
   CudaCheck(cudnnSetLRNDescriptor(val_, depth_radius, alpha, beta, bias));
 }
@@ -16,8 +15,7 @@ CudnnLRNDesc::~CudnnLRNDesc() { CudaCheck(cudnnDestroyLRNDescriptor(val_)); }
 
 template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Shape& in_shape = in_blob->shape();
   Blob* out_blob = BnInOp2Blob("out");
@@ -35,8 +33,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
                             in_shape.elem_cnt() / in_shape.At(3));
   EigenMatrixMap<T> padded_square_mat(padded_square_blob->mut_dptr<T>(),
                                       padded_square_blob->shape().At(0), 1);
-  EigenMatrixMap<T> normalize_coef_mat(normalize_coef_blob->mut_dptr<T>(),
-                                       in_shape.At(3),
+  EigenMatrixMap<T> normalize_coef_mat(normalize_coef_blob->mut_dptr<T>(), in_shape.At(3),
                                        in_shape.elem_cnt() / in_shape.At(3));
 
   const LocalResponseNormalizationOpConf& lrn_conf =
@@ -44,16 +41,12 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
   const int32_t double_depth_radius = lrn_conf.depth_radius() * 2;
   FOR_RANGE(int32_t, r, 0, in_mat.cols()) {
     padded_square_mat.block(lrn_conf.depth_radius(), 0, out_mat.rows(), 1) =
-        in_mat.col(r).cwiseProduct(in_mat.col(r))
-        * static_cast<T>(lrn_conf.alpha());
+        in_mat.col(r).cwiseProduct(in_mat.col(r)) * static_cast<T>(lrn_conf.alpha());
     T accumulated_scale(0);
-    FOR_RANGE(int32_t, i, 0, double_depth_radius) {
-      accumulated_scale += padded_square_mat(i);
-    }
+    FOR_RANGE(int32_t, i, 0, double_depth_radius) { accumulated_scale += padded_square_mat(i); }
     FOR_RANGE(int32_t, i, 0, in_mat.rows()) {
       accumulated_scale += padded_square_mat(i + double_depth_radius);
-      normalize_coef_mat(i, r) =
-          static_cast<T>(lrn_conf.bias()) + accumulated_scale;
+      normalize_coef_mat(i, r) = static_cast<T>(lrn_conf.bias()) + accumulated_scale;
       accumulated_scale -= padded_square_mat(i);
     }
   }
@@ -63,17 +56,14 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::ForwardDataContent(
   } else if (lrn_conf.beta() == 0.5) {
     out_mat.array() = in_mat.array() * normalize_coef_mat.array().rsqrt();
   } else {
-    out_mat.array() =
-        in_mat.array()
-        * (normalize_coef_mat.array().log() * -static_cast<T>(lrn_conf.beta()))
-              .exp();
+    out_mat.array() = in_mat.array()
+                      * (normalize_coef_mat.array().log() * -static_cast<T>(lrn_conf.beta())).exp();
   }
 }
 
 template<typename T>
 void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const Shape& in_shape = in_blob->shape();
   const Blob* out_blob = BnInOp2Blob("out");
@@ -87,9 +77,8 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
                                 in_shape.elem_cnt() / in_shape.At(3));
   ConstEigenMatrixMap<T> out_mat(out_blob->dptr<T>(), in_shape.At(3),
                                  in_shape.elem_cnt() / in_shape.At(3));
-  ConstEigenMatrixMap<T> normalize_coef_mat(
-      normalize_coef_blob->dptr<T>(), in_shape.At(3),
-      in_shape.elem_cnt() / in_shape.At(3));
+  ConstEigenMatrixMap<T> normalize_coef_mat(normalize_coef_blob->dptr<T>(), in_shape.At(3),
+                                            in_shape.elem_cnt() / in_shape.At(3));
   ConstEigenMatrixMap<T> out_diff_mat(out_diff_blob->dptr<T>(), in_shape.At(3),
                                       in_shape.elem_cnt() / in_shape.At(3));
   EigenMatrixMap<T> in_diff_mat(in_diff_blob->mut_dptr<T>(), in_shape.At(3),
@@ -100,14 +89,13 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
   FOR_RANGE(int32_t, i, 0, in_diff_mat.rows()) {
     FOR_RANGE(int32_t, j, 0, in_diff_mat.cols()) {
       int32_t depth_begin = std::max(0, j - lrn_conf.depth_radius());
-      int32_t depth_end = std::min(static_cast<int32_t>(in_shape.At(3)),
-                                   j + lrn_conf.depth_radius() + 1);
+      int32_t depth_end =
+          std::min(static_cast<int32_t>(in_shape.At(3)), j + lrn_conf.depth_radius() + 1);
       FOR_RANGE(int32_t, k, depth_begin, depth_end) {
-        T dyi = T(-2) * lrn_conf.alpha() * lrn_conf.beta() * in_mat(i, k)
-                * out_mat(i, j) / normalize_coef_mat(i, j);
+        T dyi = T(-2) * lrn_conf.alpha() * lrn_conf.beta() * in_mat(i, k) * out_mat(i, j)
+                / normalize_coef_mat(i, j);
         if (k == j) {
-          dyi += Eigen::numext::pow(normalize_coef_mat(i, j),
-                                    static_cast<T>(-lrn_conf.beta()));
+          dyi += Eigen::numext::pow(normalize_coef_mat(i, j), static_cast<T>(-lrn_conf.beta()));
         }
         dyi *= out_diff_mat(i, j);
         in_diff_mat(i, k) += dyi;
@@ -117,7 +105,6 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::BackwardDataContent(
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kLocalResponseNormalizationConf,
-                           LocalResponseNormalizationKernel,
-                           FLOATING_DATA_TYPE_SEQ);
+                           LocalResponseNormalizationKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

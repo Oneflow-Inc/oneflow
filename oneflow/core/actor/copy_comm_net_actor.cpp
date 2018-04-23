@@ -5,9 +5,7 @@
 
 namespace oneflow {
 
-CopyCommNetActor::~CopyCommNetActor() {
-  Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_);
-}
+CopyCommNetActor::~CopyCommNetActor() { Global<CommNet>::Get()->DeleteActorReadId(actor_read_id_); }
 
 class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
  public:
@@ -33,8 +31,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 
 void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
-  comm_net_device_ctx_ =
-      new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
+  comm_net_device_ctx_ = new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);
 }
 
@@ -73,14 +70,13 @@ void CopyCommNetActor::Act() {
   const void* readable_token = readable_it->second.comm_net_token;
   Regst* readable_regst = readable_it->second.regst_raw_ptr;
   int64_t src_actor_id = readable_it->second.producer;
-  int64_t src_machine_id =
-      Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
+  int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
   const void* writeable_token = writeable_blob->comm_net_token();
   // Async
-  void* read_id = Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id,
-                                               readable_token, writeable_token);
+  void* read_id =
+      Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(next_piece_id_);
@@ -101,17 +97,13 @@ bool CopyCommNetActor::IsReadAlwaysUnReadyFromNow() {
   return is_in_eord_ && piece_id2regst_ctx.empty();
 }
 
-void CopyCommNetActor::AsyncReturnAllReadableRegst() {
-  CHECK(piece_id2regst_ctx.empty());
-}
+void CopyCommNetActor::AsyncReturnAllReadableRegst() { CHECK(piece_id2regst_ctx.empty()); }
 
-void CopyCommNetActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
+void CopyCommNetActor::ForEachCurReadableRegst(std::function<void(const Regst*)> handler) {
   handler(piece_id2regst_ctx.at(next_piece_id_).regst_raw_ptr);
 }
 
-void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst,
-                                            ReadableRegstInfo* info) {
+void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
   const RegstCtx& regst_ctx = piece_id2regst_ctx.at(next_piece_id_);
   CHECK(regst == regst_ctx.regst_raw_ptr);
   info->set_regst_desc_id(in_regst_desc_id_);

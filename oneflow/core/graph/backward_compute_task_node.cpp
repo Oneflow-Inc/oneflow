@@ -65,8 +65,7 @@ void BackwardCompTaskNode::LinkFwExecNode() {
 
 void BackwardCompTaskNode::BindModelDiffRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetSoleConsumedRegst("data_tmp");
-  std::shared_ptr<RegstDesc> model_tmp_regst =
-      GetSoleConsumedRegst("model_tmp");
+  std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
@@ -92,9 +91,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   }
 
   std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");
-  if (md_diff_regst) {
-    md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get());
-  }
+  if (md_diff_regst) { md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get()); }
 
   VirtualInferBlobDescInActivationDiff();
   VirtualInferBlobDescInHiddenDiff();
@@ -103,9 +100,7 @@ void BackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
 CompTaskNode* BackwardCompTaskNode::GetRelatedFwTaskNode() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* fw_node = edge->src_node();
-    if (IsForwardTaskType(fw_node->GetTaskType())) {
-      return static_cast<CompTaskNode*>(fw_node);
-    }
+    if (IsForwardTaskType(fw_node->GetTaskType())) { return static_cast<CompTaskNode*>(fw_node); }
   }
   return nullptr;
 }

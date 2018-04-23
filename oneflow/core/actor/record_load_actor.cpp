@@ -13,15 +13,14 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()) {
-      in_stream_.reset(new CyclicPersistentInStreamWithLocalCopy(
-          GlobalFS(), task_proto.data_path()));
+      in_stream_.reset(
+          new CyclicPersistentInStreamWithLocalCopy(GlobalFS(), task_proto.data_path()));
     } else {
-      in_stream_.reset(new CyclicPersistentInStreamWithoutLocalCopy(
-          GlobalFS(), task_proto.data_path()));
+      in_stream_.reset(
+          new CyclicPersistentInStreamWithoutLocalCopy(GlobalFS(), task_proto.data_path()));
     }
   } else {
-    in_stream_.reset(
-        new NormalPersistentInStream(GlobalFS(), task_proto.data_path()));
+    in_stream_.reset(new NormalPersistentInStream(GlobalFS(), task_proto.data_path()));
   }
 }
 
@@ -44,9 +43,7 @@ void RecordLoadActor::Act() {
   regst->set_piece_id(piece_id_++);
   RecordBlobIf* blob = regst->GetRecordBlobIf();
   blob->ReadFrom(in_stream_.get());
-  if (blob->record_num() < Global<JobDesc>::Get()->SinglePieceSize()) {
-    is_eof_ = true;
-  }
+  if (blob->record_num() < Global<JobDesc>::Get()->SinglePieceSize()) { is_eof_ = true; }
   if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 

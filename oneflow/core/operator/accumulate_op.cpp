@@ -9,9 +9,7 @@ void AccumulateOp::InitFromOpConf() {
   EnrollOutputBn("acc", false);
 }
 
-const PbMessage& AccumulateOp::GetCustomizedConf() const {
-  return op_conf().accumulate_conf();
-}
+const PbMessage& AccumulateOp::GetCustomizedConf() const { return op_conf().accumulate_conf(); }
 
 REGISTER_OP(OperatorConf::kAccumulateConf, AccumulateOp);
 

@@ -8,9 +8,7 @@ void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
   SoleOutEdge()->AddRegst("acc", acc_regst);
 }
 
-void AccCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("one", SoleInEdge()->GetSoleRegst());
-}
+void AccCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("one", SoleInEdge()->GetSoleRegst()); }
 
 void AccCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> one_regst = GetSoleConsumedRegst("one");

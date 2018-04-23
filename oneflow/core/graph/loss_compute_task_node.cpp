@@ -17,9 +17,7 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   }
 }
 
-void LossCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
-}
+void LossCompTaskNode::ConsumeAllRegsts() { ConsumeRegst("in", SoleInEdge()->GetSoleRegst()); }
 
 void LossCompTaskNode::BuildExecGphAndRegst() {
   // regst

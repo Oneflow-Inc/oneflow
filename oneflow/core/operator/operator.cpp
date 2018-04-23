@@ -26,16 +26,12 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (HasFieldInCustomizedConf("activation")) {
     ActivationType activation =
         static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-    if (activation != ActivationType::kNone) {
-      EnrollDataTmpBn("activation_buf");
-    }
+    if (activation != ActivationType::kNone) { EnrollDataTmpBn("activation_buf"); }
   }
   InitFromOpConf();
 }
 
-LogicalNode* Operator::NewProperLogicalNode() {
-  return new NormalForwardLogicalNode;
-}
+LogicalNode* Operator::NewProperLogicalNode() { return new NormalForwardLogicalNode; }
 
 const LogicalBlobId& Operator::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute_.bn_in_op2lbi().at(bn_in_op);
@@ -75,16 +71,14 @@ const std::string& Operator::SoleDtbn() const {
   return data_tmp_bns().Get(0);
 }
 
-void Operator::InferBlobDescsIf(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
   if (HasFieldInCustomizedConf("activation")) {
     ActivationType activation =
         static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-    if (activation != ActivationType::kNone
-        && Global<JobDesc>::Get()->IsTrain()) {
+    if (activation != ActivationType::kNone && Global<JobDesc>::Get()->IsTrain()) {
       BlobDesc* buf_blob_desc = GetBlobDesc4BnInOp("activation_buf");
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
       *buf_blob_desc = *out_blob_desc;
@@ -92,23 +86,20 @@ void Operator::InferBlobDescsIf(
   }
 }
 
-void Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx,
+                              std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void Operator::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx) const {
   UNIMPLEMENTED() << typeid(*this).name();
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDecodeOp()) {
-    CHECK_EQ(pr_desc->parallel_num(),
-             Global<JobDesc>::Get()->job_conf().data_part_num())
+    CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->job_conf().data_part_num())
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
@@ -120,8 +111,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
   }
   if (pr_desc->policy() == kDataParallel) {
-    pr_desc->RemoveNeedlessDevice(op_name(),
-                                  Global<JobDesc>::Get()->ParallelPieceSize());
+    pr_desc->RemoveNeedlessDevice(op_name(), Global<JobDesc>::Get()->ParallelPieceSize());
   }
   VirtualFixParallelDesc(pr_desc);
 }
@@ -146,27 +136,23 @@ static bool HasBlobDescWithField(
   return false;
 }
 
-void Operator::GenKernelConf(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    bool is_forward, const ParallelContext* parallel_ctx,
-    KernelConf* kernel_conf, const OpContext* op_ctx) const {
+void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             bool is_forward, const ParallelContext* parallel_ctx,
+                             KernelConf* kernel_conf, const OpContext* op_ctx) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   kernel_conf->set_need_do_data_id(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(),
-                           &BlobDesc::has_data_id_field)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
   const PbRpf<std::string>* bns = &output_bns();
   if (IsLossOp()) { bns = &input_bns(); }
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns,
-                           &BlobDesc::has_col_num_field)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
   }
 
   kernel_conf->set_is_forward(is_forward);
-  DataType data_type =
-      GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
+  DataType data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_bns());
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, input_bns());
   }
@@ -179,14 +165,12 @@ void Operator::GenKernelConf(
 
 void Operator::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    const OpContext* op_ctx) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
 LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
-  const google::protobuf::Descriptor* desc =
-      GetCustomizedConf().GetDescriptor();
+  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
   const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
   std::string name;
   if (fd) {
@@ -240,23 +224,19 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   }
 }
 
-void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num,
-                                     bool has_diff) {
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
   FOR_RANGE(int32_t, i, 0, num) {
     std::string ibn = ibn_prefix + "_" + std::to_string(i);
     EnrollInputBn(ibn, has_diff);
   }
 }
 
-void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix,
-                                     bool has_diff) {
-  EnrollRepeatedInputBn(
-      ibn_prefix, GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).size(),
-      has_diff);
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff) {
+  EnrollRepeatedInputBn(ibn_prefix, GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).size(),
+                        has_diff);
 }
 
-void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix,
-                                     int32_t num) {
+void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num) {
   EnrollRepeatedInputBn(ibn_prefix, num, true);
 }
 
@@ -298,8 +278,7 @@ void Operator::EnrollForwardModelBn(const std::string& fwmbn) {
 
 void Operator::StrFieldTolower(const std::string& field_name) {
   std::string field_val = GetValFromCustomizedConf<std::string>(field_name);
-  std::transform(field_val.begin(), field_val.end(), field_val.begin(),
-                 ::tolower);
+  std::transform(field_val.begin(), field_val.end(), field_val.begin(), ::tolower);
   SetValInCustomizedConf(field_name, field_val);
 }
 
@@ -316,8 +295,7 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
   return diff_bn.substr(0, diff_bn.size() - 5);
 }
 
-static HashMap<int, std::function<Operator*(const OperatorConf&)>>&
-OpTypeCase2Creator() {
+static HashMap<int, std::function<Operator*(const OperatorConf&)>>& OpTypeCase2Creator() {
   static HashMap<int, std::function<Operator*(const OperatorConf&)>> obj;
   return obj;
 }
@@ -327,11 +305,9 @@ void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
   CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
 }
 
-void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
-                  std::function<Operator*()> creator) {
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case, std::function<Operator*()> creator) {
   CHECK(OpTypeCase2Creator()
-            .emplace(op_type_case,
-                     [creator](const OperatorConf&) { return creator(); })
+            .emplace(op_type_case, [creator](const OperatorConf&) { return creator(); })
             .second);
 }
 
@@ -342,9 +318,8 @@ std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   return ret;
 }
 
-void EraseEmptyBnInVec(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    PbRpf<std::string>* bns) {
+void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                       PbRpf<std::string>* bns) {
   size_t idx_available = 0;
   for (size_t i = 0; i < bns->size(); ++i) {
     if (GetBlobDesc4BnInOp((*bns)[i])) {

@@ -13,11 +13,9 @@ class CloneKernel final : public KernelIf<device_type> {
   ~CloneKernel() = default;
 
  private:
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow

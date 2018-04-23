@@ -12,11 +12,10 @@ class RandomGenerator;
 
 template<DeviceType device_type, typename T>
 struct RandomGeneratorUtil final {
-  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
-                      T* dptr);
+  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt, T* dptr);
 
-  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
-                      const T min, const T max, T* dptr);
+  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt, const T min, const T max,
+                      T* dptr);
 };
 
 class RandomGenerator final {

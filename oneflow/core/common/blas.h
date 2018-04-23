@@ -17,20 +17,18 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(gemv) \
   OF_PP_MAKE_TUPLE_SEQ(gemm)
 
-#define CBLAS_TEMPLATE(name)                                               \
-  template<typename T, typename... Args>                                   \
-  auto cblas_##name(Args&&... args)                                        \
-      ->typename std::enable_if<std::is_same<T, float>::value,             \
-                                decltype(cblas_##s##name(                  \
-                                    std::forward<Args>(args)...))>::type { \
-    return cblas_##s##name(std::forward<Args>(args)...);                   \
-  }                                                                        \
-  template<typename T, typename... Args>                                   \
-  auto cblas_##name(Args&&... args)                                        \
-      ->typename std::enable_if<std::is_same<T, double>::value,            \
-                                decltype(cblas_##d##name(                  \
-                                    std::forward<Args>(args)...))>::type { \
-    return cblas_##d##name(std::forward<Args>(args)...);                   \
+#define CBLAS_TEMPLATE(name)                                                                    \
+  template<typename T, typename... Args>                                                        \
+  auto cblas_##name(Args&&... args)                                                             \
+      ->typename std::enable_if<std::is_same<T, float>::value,                                  \
+                                decltype(cblas_##s##name(std::forward<Args>(args)...))>::type { \
+    return cblas_##s##name(std::forward<Args>(args)...);                                        \
+  }                                                                                             \
+  template<typename T, typename... Args>                                                        \
+  auto cblas_##name(Args&&... args)                                                             \
+      ->typename std::enable_if<std::is_same<T, double>::value,                                 \
+                                decltype(cblas_##d##name(std::forward<Args>(args)...))>::type { \
+    return cblas_##d##name(std::forward<Args>(args)...);                                        \
   }
 
 OF_PP_FOR_EACH_TUPLE(CBLAS_TEMPLATE, BLAS_NAME_SEQ);
@@ -39,16 +37,14 @@ OF_PP_FOR_EACH_TUPLE(CBLAS_TEMPLATE, BLAS_NAME_SEQ);
 
 #ifdef WITH_CUDA
 
-#define CUBLAS_TEMPLATE(name)                                                  \
-  template<typename T, typename... Args>                                       \
-  typename std::enable_if<std::is_same<T, float>::value>::type cublas_##name(  \
-      Args&&... args) {                                                        \
-    CudaCheck(cublasS##name(std::forward<Args>(args)...));                     \
-  }                                                                            \
-  template<typename T, typename... Args>                                       \
-  typename std::enable_if<std::is_same<T, double>::value>::type cublas_##name( \
-      Args&&... args) {                                                        \
-    CudaCheck(cublasD##name(std::forward<Args>(args)...));                     \
+#define CUBLAS_TEMPLATE(name)                                                                   \
+  template<typename T, typename... Args>                                                        \
+  typename std::enable_if<std::is_same<T, float>::value>::type cublas_##name(Args&&... args) {  \
+    CudaCheck(cublasS##name(std::forward<Args>(args)...));                                      \
+  }                                                                                             \
+  template<typename T, typename... Args>                                                        \
+  typename std::enable_if<std::is_same<T, double>::value>::type cublas_##name(Args&&... args) { \
+    CudaCheck(cublasD##name(std::forward<Args>(args)...));                                      \
   }
 
 OF_PP_FOR_EACH_TUPLE(CUBLAS_TEMPLATE, BLAS_NAME_SEQ);

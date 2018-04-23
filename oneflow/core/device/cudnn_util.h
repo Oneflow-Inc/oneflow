@@ -23,8 +23,7 @@ struct CudnnDataType;
 
 #define SPECIALIZE_CUDNN_DATA_TYPE(type_cpp, type_cudnn) \
   template<>                                             \
-  struct CudnnDataType<type_cpp>                         \
-      : std::integral_constant<cudnnDataType_t, type_cudnn> {};
+  struct CudnnDataType<type_cpp> : std::integral_constant<cudnnDataType_t, type_cudnn> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
 #undef SPECIALIZE_CUDNN_DATA_TYPE
 
@@ -35,10 +34,8 @@ class CudnnTensorDesc final {
   ~CudnnTensorDesc();
 
   CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
-  CudnnTensorDesc(DataType data_type, int dims, const int* dim,
-                  const int* stride);
-  CudnnTensorDesc(DataType data_type, const Shape& shape,
-                  const std::string& data_format);
+  CudnnTensorDesc(DataType data_type, int dims, const int* dim, const int* stride);
+  CudnnTensorDesc(DataType data_type, const Shape& shape, const std::string& data_format);
 
   const cudnnTensorDescriptor_t& Get() const { return val_; }
 
@@ -52,8 +49,7 @@ class CudnnFilterDesc final {
   CudnnFilterDesc() = delete;
   ~CudnnFilterDesc();
 
-  CudnnFilterDesc(DataType data_type, const Shape& shape,
-                  const std::string& data_format);
+  CudnnFilterDesc(DataType data_type, const Shape& shape, const std::string& data_format);
 
   const cudnnFilterDescriptor_t& Get() const { return val_; }
 
@@ -67,8 +63,7 @@ class CudnnActivationDesc final {
   CudnnActivationDesc() = delete;
   ~CudnnActivationDesc();
 
-  CudnnActivationDesc(cudnnActivationMode_t mode,
-                      cudnnNanPropagation_t relu_nan_opt, double coef);
+  CudnnActivationDesc(cudnnActivationMode_t mode, cudnnNanPropagation_t relu_nan_opt, double coef);
 
   const cudnnActivationDescriptor_t& Get() const { return val_; }
 

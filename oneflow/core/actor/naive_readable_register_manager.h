@@ -13,13 +13,10 @@ class NaiveReadableRegstMgr final {
 
   void Init(const TaskProto& task_proto);
   void Push(Regst* regst);
-  void ReturnToProducerAndPopCurReadable(Actor* actor,
-                                         std::function<bool(Regst*)> IsAllowed);
+  void ReturnToProducerAndPopCurReadable(Actor* actor, std::function<bool(Regst*)> IsAllowed);
   void ReturnToProducerAndPopCurReadable(Actor* actor);
   Regst* GetCurReadable(int64_t regst_desc_id);
-  Regst* GetFirstCurReadable() {
-    return readable_regst_.begin()->second.front();
-  }
+  Regst* GetFirstCurReadable() { return readable_regst_.begin()->second.front(); }
   void ForEachCurReadableRegst(std::function<void(Regst*)> func);
   bool IsReadReady();
   bool IsEmpty() { return readable_regst_cnt_ == 0; }

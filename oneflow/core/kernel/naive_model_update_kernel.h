@@ -13,10 +13,9 @@ class NaiveMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
   ~NaiveMdUpdateKernel() = default;
 
  private:
-  void UpdateModel(
-      DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
-      int64_t next_model_vid, double learning_rate,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void UpdateModel(DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
+                   int64_t next_model_vid, double learning_rate,
+                   std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(Naive);

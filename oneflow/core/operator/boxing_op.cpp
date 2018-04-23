@@ -27,9 +27,7 @@ void BoxingOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& BoxingOp::GetCustomizedConf() const {
-  return op_conf().boxing_conf();
-}
+const PbMessage& BoxingOp::GetCustomizedConf() const { return op_conf().boxing_conf(); }
 
 LogicalBlobId BoxingOp::ibn2lbi(const std::string& input_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
@@ -39,9 +37,8 @@ LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
-void BoxingOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   if (conf.in_box_case() == BoxingOpConf::kAddBox) {
@@ -76,18 +73,15 @@ void BoxingOp::InferBlobDescs(
   }
 }
 
-void BoxingOp::InferDataTmpBlobDesc(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    std::vector<int64_t>* data_tmp_vec_ptr) const {
+void BoxingOp::InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                    std::vector<int64_t>* data_tmp_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {
     int32_t concat_axis = conf.concat_box().axis();
     CHECK_GE(concat_axis, 0);
     FOR_RANGE(size_t, ib_idx, 1, input_bns().size()) {
-      const BlobDesc* in_blob_desc =
-          GetBlobDesc4BnInOp(input_bns().Get(ib_idx));
-      const std::vector<int64_t>& in_blob_shape_vec =
-          in_blob_desc->shape().dim_vec();
+      const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(ib_idx));
+      const std::vector<int64_t>& in_blob_shape_vec = in_blob_desc->shape().dim_vec();
       CHECK_LT(concat_axis, in_blob_shape_vec.size());
       FOR_RANGE(size_t, i, 0, in_blob_shape_vec.size()) {
         if (i == concat_axis) {
@@ -104,8 +98,7 @@ void BoxingOp::InferDataTmpBlobDesc(
       && conf.out_box_case() == BoxingOpConf::kSplitBox) {
     BlobDesc* data_tmp_blob_desc = GetBlobDesc4BnInOp(SoleDtbn());
     data_tmp_blob_desc->mut_shape() = Shape(*data_tmp_vec_ptr);
-    data_tmp_blob_desc->set_data_type(
-        GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
+    data_tmp_blob_desc->set_data_type(GetBlobDesc4BnInOp(input_bns().Get(0))->data_type());
   }
 }
 

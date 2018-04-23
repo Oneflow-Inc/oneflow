@@ -29,8 +29,7 @@ class ActNode final : public Node<ActNode, ActEdge> {
       : act_event_(act_event), task_proto_(task_proto) {}
   ~ActNode() = default;
 
-  void ForEachProducedRegstDescId(
-      const std::function<void(int64_t)>& Handler) const;
+  void ForEachProducedRegstDescId(const std::function<void(int64_t)>& Handler) const;
 
   // Getters
   int64_t actor_id() const { return act_event_->actor_id(); }
@@ -40,14 +39,12 @@ class ActNode final : public Node<ActNode, ActEdge> {
   TaskType task_type() const { return task_proto_->task_type(); }
   std::string VisualStr() const override;
   int64_t depth() const { return depth_; }
-  const std::list<const ActNode*>& ConsumerNodes4RegstInfo(
-      const std::string& regst_uid) const {
+  const std::list<const ActNode*>& ConsumerNodes4RegstInfo(const std::string& regst_uid) const {
     return regst_uid2consumer_nodes_.at(regst_uid);
   }
 
   // Setters
-  void AddConsumerNode(const std::string& regst_uid,
-                       const ActNode* consumer_node);
+  void AddConsumerNode(const std::string& regst_uid, const ActNode* consumer_node);
   void set_depth(int64_t depth) { depth_ = depth; }
 
  private:
@@ -77,9 +74,7 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   const TaskProto& GetTaskProto(int64_t actor_id) const {
     return *task_id2task_proto_.at(actor_id);
   }
-  const HashMap<int64_t, int64_t>& actor_id2act_cnt() const {
-    return actor_id2act_cnt_;
-  }
+  const HashMap<int64_t, int64_t>& actor_id2act_cnt() const { return actor_id2act_cnt_; }
   const HashMap<int64_t, double>& actor_id2total_act_time() const {
     return actor_id2total_act_time_;
   }
@@ -89,28 +84,24 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   const ActNode* ProducerNode4RegstUid(const std::string& regst_uid) const {
     return regst_uid2producer_node_.at(regst_uid);
   }
-  const std::list<const ActNode*>& ConsumerNodes4RegstUid(
-      const std::string& regst_uid) const {
+  const std::list<const ActNode*>& ConsumerNodes4RegstUid(const std::string& regst_uid) const {
     return regst_uid2consumer_nodes_.at(regst_uid);
   }
 
  private:
   void ForEachRegstUidConsumerPathDuration(
-      const std::function<void(const std::string&, int64_t, double)>& Handler)
-      const;
+      const std::function<void(const std::string&, int64_t, double)>& Handler) const;
   void InitNodes();
   void InitEdges();
   void InitDepth();
   void InitTaskId2TaskProto();
   void InitActorStatistics();
   void ForEachDepthRangeRegstUids(
-      const std::function<void(const Range& range,
-                               const std::list<std::string>& regst_uids)>&
+      const std::function<void(const Range& range, const std::list<std::string>& regst_uids)>&
           Handler) const;
   void ForEachDepthRangeSubActGraph(
       const std::function<void(const DepthRangeActSubGraph&)>& Handler) const;
-  void ForEachRegstActSubGraph(
-      const std::function<void(const RegstActSubGraph&)>& Handler) const;
+  void ForEachRegstActSubGraph(const std::function<void(const RegstActSubGraph&)>& Handler) const;
   void TopoForEachActNode(const std::list<ActNode*>& starts,
                           const std::function<void(ActNode*)>& Handler) const;
 

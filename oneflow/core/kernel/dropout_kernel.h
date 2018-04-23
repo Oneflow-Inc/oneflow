@@ -16,28 +16,25 @@ class DropoutKernel final : public KernelIf<device_type> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 
   // random_mask = random_uniform(0, 1)
   // y = dropout(x, random_mask, dropout_rate)
-  void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* x,
-               float* random_mask, T* y) const;
+  void Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* x, float* random_mask,
+               T* y) const;
   // y = dropout(x, random_mask)
-  void DropoutBackward(DeviceCtx* ctx, const int64_t n, double dropout_rate,
-                       const T* dy, const float* random_mask, T* dx) const;
+  void DropoutBackward(DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* dy,
+                       const float* random_mask, T* dx) const;
   std::unique_ptr<RandomGenerator> random_generator_;
 };
 
 template<DeviceType device_type, typename T>
 struct DropoutKernelUtil final {
-  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, double threshold,
-                           double scale, const T* x, const float* random_mask,
-                           T* y);
+  static void MaskAndScale(DeviceCtx* ctx, const int64_t n, double threshold, double scale,
+                           const T* x, const float* random_mask, T* y);
 };
 
 }  // namespace oneflow

@@ -19,9 +19,7 @@ void BackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 
 int BackwardCompActor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
-    if (msg.eord_regst_desc_id() == out_diff_regst_desc_id_) {
-      is_out_diff_eord_ = true;
-    }
+    if (msg.eord_regst_desc_id() == out_diff_regst_desc_id_) { is_out_diff_eord_ = true; }
     DecreaseRemainingEordCnt();
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = msg.regst();
@@ -42,13 +40,10 @@ int BackwardCompActor::HandlerNormal(const ActorMsg& msg) {
   return TrySwitchToZombieOrFinish();
 }
 
-bool BackwardCompActor::IsReadReady() {
-  return readable_regsts_.size() == readable_regst_cnt_;
-}
+bool BackwardCompActor::IsReadReady() { return readable_regsts_.size() == readable_regst_cnt_; }
 
 bool BackwardCompActor::IsReadAlwaysUnReadyFromNow() {
-  return is_out_diff_eord_
-         && readable_regsts_.at(out_diff_regst_desc_id_).empty();
+  return is_out_diff_eord_ && readable_regsts_.at(out_diff_regst_desc_id_).empty();
 }
 
 void BackwardCompActor::AsyncReturnAllReadableRegst() {
@@ -66,19 +61,15 @@ void BackwardCompActor::AsyncReturnModelRegstUntilMatchCurOutRegst() {
   const Regst* cur_out_regst = readable_regsts_.at(out_regst_desc_id_).front();
   int64_t cur_model_id = cur_out_regst->model_version_id();
   std::queue<Regst*>& model_rq = readable_regsts_.at(model_regst_desc_id_);
-  while (!model_rq.empty()
-         && model_rq.front()->model_version_id() < cur_model_id) {
+  while (!model_rq.empty() && model_rq.front()->model_version_id() < cur_model_id) {
     AsyncSendRegstMsgToProducer(model_rq.front());
     model_rq.pop();
     if (model_rq.empty()) { readable_regst_cnt_ -= 1; }
   }
-  if (!model_rq.empty()) {
-    CHECK_EQ(model_rq.front()->model_version_id(), cur_model_id);
-  }
+  if (!model_rq.empty()) { CHECK_EQ(model_rq.front()->model_version_id(), cur_model_id); }
 }
 
-void BackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(
-    int64_t piece_id) {
+void BackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id) {
   if (model_regst_desc_id_ == -1) { return; }
   std::queue<Regst*>& model_rq = readable_regsts_.at(model_regst_desc_id_);
   while (model_rq.empty() == false) {
@@ -94,15 +85,14 @@ void BackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(
 void BackwardCompActor::Act() {
   std::queue<Regst*>& out_rq = readable_regsts_.at(out_regst_desc_id_);
   int64_t piece_id = out_rq.front()->piece_id();
-  AsyncLaunchKernel(GenDefaultKernelCtx(),
-                    [this](int64_t regst_desc_id) -> Regst* {
-                      Regst* regst = GetCurWriteableRegst(regst_desc_id);
-                      if (regst == nullptr) {
-                        return readable_regsts_.at(regst_desc_id).front();
-                      } else {
-                        return regst;
-                      }
-                    });
+  AsyncLaunchKernel(GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
+    Regst* regst = GetCurWriteableRegst(regst_desc_id);
+    if (regst == nullptr) {
+      return readable_regsts_.at(regst_desc_id).front();
+    } else {
+      return regst;
+    }
+  });
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     return true;
@@ -125,8 +115,7 @@ void BackwardCompActor::Act() {
   }
 }
 
-void BackwardCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> handler) {
+void BackwardCompActor::ForEachCurReadableRegst(std::function<void(const Regst*)> handler) {
   for (const auto& pair : readable_regsts_) { handler(pair.second.front()); }
 }
 

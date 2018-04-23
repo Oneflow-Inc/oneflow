@@ -23,19 +23,16 @@ class CtrlClient final {
   void PushKV(const std::string& k, const std::string& v);
   void PushKV(const std::string& k, const PbMessage& msg);
   template<typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(
-      const std::string& k, T v) {
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PushKVT(const std::string& k, T v) {
     PushKV(k, std::to_string(v));
   }
 
   void ClearKV(const std::string& k);
-  void PullKV(const std::string& k,
-              std::function<void(const std::string&)> VGetter);
+  void PullKV(const std::string& k, std::function<void(const std::string&)> VGetter);
   void PullKV(const std::string& k, std::string* v);
   void PullKV(const std::string& k, PbMessage* msg);
   template<typename T>
-  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(
-      const std::string& k, T* v) {
+  typename std::enable_if<std::is_arithmetic<T>::value>::type PullKVT(const std::string& k, T* v) {
     std::string v_str;
     PullKV(k, &v_str);
     *v = oneflow_cast<T>(v_str);

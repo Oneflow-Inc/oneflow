@@ -5,9 +5,9 @@ namespace oneflow {
 
 namespace {
 
-const LogicalNode* LogicalNodeOnEdge(
-    TaskEdge* edge, TaskNode* (TaskEdge::*GetNode)() const,
-    const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const) {
+const LogicalNode* LogicalNodeOnEdge(TaskEdge* edge, TaskNode* (TaskEdge::*GetNode)() const,
+                                     const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)()
+                                         const) {
   CompTaskNode* target_node = nullptr;
   do {
     TaskNode* tmp_node = (edge->*GetNode)();

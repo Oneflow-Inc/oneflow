@@ -9,25 +9,19 @@ void CloneOp::InitFromOpConf() {
   }
 }
 
-const PbMessage& CloneOp::GetCustomizedConf() const {
-  return op_conf().clone_conf();
-}
+const PbMessage& CloneOp::GetCustomizedConf() const { return op_conf().clone_conf(); }
 
-void CloneOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void CloneOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                             const ParallelContext* parallel_ctx) const {
   const BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
-  for (std::string obn : output_bns()) {
-    *GetBlobDesc4BnInOp(obn) = *input_blob_desc;
-  }
+  for (std::string obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *input_blob_desc; }
 }
 
 void CloneOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  EraseEmptyBnInVec(
-      GetBlobDesc4BnInOp,
-      kernel_conf->mutable_op_attribute()->mutable_output_diff_bns());
+  EraseEmptyBnInVec(GetBlobDesc4BnInOp,
+                    kernel_conf->mutable_op_attribute()->mutable_output_diff_bns());
 }
 
 REGISTER_OP(OperatorConf::kCloneConf, CloneOp);

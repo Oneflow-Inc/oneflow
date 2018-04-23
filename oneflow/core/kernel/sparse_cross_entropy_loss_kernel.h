@@ -6,29 +6,25 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-class SparseCrossEntropyLossKernel final
-    : public LossKernel<device_type, PredType, LabelType> {
+class SparseCrossEntropyLossKernel final : public LossKernel<device_type, PredType, LabelType> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SparseCrossEntropyLossKernel);
   SparseCrossEntropyLossKernel() = default;
   ~SparseCrossEntropyLossKernel() = default;
 
  private:
-  void VirtualLossForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  const LossKernelConf& GetLossKernelConf(
-      const KernelConf& kernel_conf) const override;
+  void VirtualLossForwardDataContent(const KernelCtx&,
+                                     std::function<Blob*(const std::string&)>) const override;
+  const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const override;
 };
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct SparseCrossEntropyLossKernelUtil {
-  static void Forward(DeviceCtx* ctx, const int64_t instance_num,
-                      const int64_t num_of_classes, const PredType* prediction,
-                      const LabelType* labels, PredType* loss);
-  static void Backward(DeviceCtx* ctx, const int64_t instance_num,
-                       const int64_t num_of_classes, const PredType* prediction,
-                       const LabelType* labels, PredType* prediction_diff);
+  static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t num_of_classes,
+                      const PredType* prediction, const LabelType* labels, PredType* loss);
+  static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t num_of_classes,
+                       const PredType* prediction, const LabelType* labels,
+                       PredType* prediction_diff);
 };
 
 }  // namespace oneflow

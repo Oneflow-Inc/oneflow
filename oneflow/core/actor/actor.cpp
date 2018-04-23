@@ -14,14 +14,11 @@ bool IsLastRegstInPieceWithOrder(const Regst* regst, ColIdOrder order) {
 
 bool NeedModelSave(int64_t model_version_id) {
   return model_version_id + 1 == Global<JobDesc>::Get()->TotalBatchNum()
-         || (model_version_id + 1)
-                    % Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
-                == 0;
+         || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
 }
 
 Actor::~Actor() {
-  if (Global<RuntimeCtx>::Get()->is_experiment_phase() == false
-      && act_id_ >= 0) {
+  if (Global<RuntimeCtx>::Get()->is_experiment_phase() == false && act_id_ >= 0) {
     double avg_act_interval = act_interval_acc_ / (act_id_ + 1);
     Global<CtrlClient>::Get()->PushAvgActInterval(actor_id_, avg_act_interval);
   }
@@ -42,9 +39,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   for (const auto& pair : task_proto.produced_regst_desc()) {
     Global<RegstMgr>::Get()->NewRegsts(
         pair.second, GetDeviceType(), task_proto.record_type(),
-        [this](Regst* regst) {
-          produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-        });
+        [this](Regst* regst) { produced_regsts_[regst->regst_desc_id()].emplace_back(regst); });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.emplace(pair.first, regst_desc_id).second);
   }
@@ -67,13 +62,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   VirtualActorInit(task_proto);
 }
 
-int64_t Actor::machine_id() const {
-  return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_);
-}
+int64_t Actor::machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
 
-int64_t Actor::thrd_id() const {
-  return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_);
-}
+int64_t Actor::thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
 
 int64_t Actor::RegstDescId4Name(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
@@ -89,10 +80,10 @@ void Actor::InitDeviceCtx(const ThreadCtx&) {
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(
-          NewWorkStreamId(), cuda_handle_.cuda_stream(),
-          cuda_handle_.cublas_pmh_handle(), cuda_handle_.cublas_pmd_handle(),
-          cuda_handle_.cudnn_handle(), cuda_handle_.eigen_gpu_device()));
+      device_ctx_.reset(
+          new CudaDeviceCtx(NewWorkStreamId(), cuda_handle_.cuda_stream(),
+                            cuda_handle_.cublas_pmh_handle(), cuda_handle_.cublas_pmd_handle(),
+                            cuda_handle_.cudnn_handle(), cuda_handle_.eigen_gpu_device()));
       break;
     }
 #endif
@@ -115,9 +106,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
-      AsyncSendRegstMsgToProducer(msg.regst());
-    }
+    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) { AsyncSendRegstMsgToProducer(msg.regst()); }
   } else {
     UNIMPLEMENTED();
   }
@@ -141,8 +130,7 @@ void Actor::ActUntilFail() {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
-      device_ctx_->AddCallBack(
-          [act_event]() { act_event->set_start_time(GetCurTime()); });
+      device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     double cur_time = GetCurTime();
     if (last_act_start_time_ > 0.0) {
@@ -182,15 +170,12 @@ int Actor::TrySwitchToZombieOrFinish() {
   return 0;
 }
 
-void Actor::AsyncLaunchKernel(
-    const KernelCtx& kernel_ctx,
-    std::function<Regst*(int64_t)> Regst4RegstDescId) {
+void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
+                              std::function<Regst*(int64_t)> Regst4RegstDescId) {
   for (const ExecKernel& ek : exec_kernel_vec_) {
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
-      if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) {
-        return nullptr;
-      }
+      if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
       Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
       return regst->GetBlobByLbi(lbi);
@@ -198,9 +183,8 @@ void Actor::AsyncLaunchKernel(
   }
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<bool(Regst*)> RegstPreProcess,
-    std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                        std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     if (pair.second.empty()) { continue; }
@@ -214,8 +198,7 @@ void Actor::AsyncSendRegstMsgToConsumer(
       regst_reading_cnt_it->second += 1;
       regst->set_act_id(act_id_);
       device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
-        ActorMsg msg =
-            ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
+        ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
         Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
       });
     }
@@ -224,13 +207,11 @@ void Actor::AsyncSendRegstMsgToConsumer(
   }
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<bool(Regst*)> RegstPreProcess) {
+void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess) {
   AsyncSendRegstMsgToConsumer(RegstPreProcess, [](int64_t) { return true; });
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(
-    std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(int64_t)> IsAllowedActor) {
   AsyncSendRegstMsgToConsumer([](Regst*) { return true; }, IsAllowedActor);
 }
 
@@ -239,21 +220,17 @@ void Actor::AsyncSendRegstMsgToConsumer() {
 }
 
 void Actor::AsyncSendEORDMsgToConsumers(int64_t regst_desc_id) {
-  const RtRegstDesc* regst_desc =
-      produced_regsts_.at(regst_desc_id).front()->regst_desc();
+  const RtRegstDesc* regst_desc = produced_regsts_.at(regst_desc_id).front()->regst_desc();
   device_ctx_->AddCallBack([regst_desc]() {
     for (int64_t consumer : regst_desc->consumers_actor_id()) {
-      ActorMsg msg =
-          ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
+      ActorMsg msg = ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
       Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
     }
   });
 }
 
 void Actor::AsyncSendEORDMsgForAllProducedRegstDesc() {
-  for (const auto& pair : produced_regsts_) {
-    AsyncSendEORDMsgToConsumers(pair.first);
-  }
+  for (const auto& pair : produced_regsts_) { AsyncSendEORDMsgToConsumers(pair.first); }
 }
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
@@ -262,13 +239,10 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
-  device_ctx_->AddCallBack(
-      [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); });
+  device_ctx_->AddCallBack([msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); });
 }
 
-void Actor::AsyncDo(std::function<void()> func) {
-  device_ctx_->AddCallBack(func);
-}
+void Actor::AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
@@ -301,8 +275,7 @@ Regst* Actor::GetCurSoleWriteableRegst() {
 }
 
 int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
-  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(),
-                                                       reserved_id);
+  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(), reserved_id);
 }
 
 int64_t Actor::NewWorkStreamId() {
@@ -322,8 +295,7 @@ void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
   CHECK(ActorCreatorMap().emplace(task_type, creator).second);
 }
 
-std::unique_ptr<Actor> NewActor(const TaskProto& task_proto,
-                                const ThreadCtx& thread_ctx) {
+std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   auto it = ActorCreatorMap().find(task_proto.task_type());
   CHECK(it != ActorCreatorMap().end()) << TaskType_Name(task_proto.task_type());
   Actor* rptr = it->second();

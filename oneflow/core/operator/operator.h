@@ -68,18 +68,15 @@ class Operator {
 
   template<typename T>
   const T& GetMsgFromCustomizedConf(const std::string& field_name) const {
-    return static_cast<const T&>(
-        GetValFromCustomizedConf<const PbMessage&>(field_name));
+    return static_cast<const T&>(GetValFromCustomizedConf<const PbMessage&>(field_name));
   }
 
   template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedConf(
-      const std::string& field_name) const {
+  const PbRf<T>& GetPbRfFromCustomizedConf(const std::string& field_name) const {
     return GetPbRfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
   template<typename T>
-  const PbRpf<T>& GetPbRpfFromCustomizedConf(
-      const std::string& field_name) const {
+  const PbRpf<T>& GetPbRpfFromCustomizedConf(const std::string& field_name) const {
     return GetPbRpfFromPbMessage<T>(GetCustomizedConf(), field_name);
   }
 
@@ -89,13 +86,9 @@ class Operator {
   const std::string& SoleOdbn() const;
   const std::string& SoleDtbn() const;
 
-#define DEFINE_BLOB_NAMES_GETTER(getter_name)     \
-  const PbRpf<std::string>& getter_name() const { \
-    return op_attribute_.getter_name();           \
-  }                                               \
-  PbRpf<std::string>* mut_##getter_name() {       \
-    return op_attribute_.mutable_##getter_name(); \
-  }
+#define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
+  const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
+  PbRpf<std::string>* mut_##getter_name() { return op_attribute_.mutable_##getter_name(); }
 
   DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
   DEFINE_BLOB_NAMES_GETTER(input_bns);
@@ -109,32 +102,24 @@ class Operator {
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
-  void set_device_type(DeviceType device_type) {
-    op_attribute_.set_device_type(device_type);
-  }
+  void set_device_type(DeviceType device_type) { op_attribute_.set_device_type(device_type); }
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
-  void InferBlobDescsIf(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const;
+  void InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                        const ParallelContext*, std::function<void(OpContext*)> EnrollOpCtx) const;
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext*,
+                              std::function<void(OpContext*)> EnrollOpCtx) const;
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext*) const;
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);
   virtual int32_t ModelSplitAxis() const { return -1; }
   virtual int32_t MaxModelSplitNum() const { return -1; }
-  void GenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      bool is_forward, const ParallelContext*, KernelConf*,
-      const OpContext*) const;
+  void GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                     bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
@@ -142,15 +127,12 @@ class Operator {
     return nullptr;
   }
   template<typename T>
-  void SetValInCustomizedConf(const std::string& field_name,
-                              const T& val) const {
-    SetValInPbMessage<T>(&const_cast<PbMessage&>(GetCustomizedConf()),
-                         field_name, val);
+  void SetValInCustomizedConf(const std::string& field_name, const T& val) const {
+    SetValInPbMessage<T>(&const_cast<PbMessage&>(GetCustomizedConf()), field_name, val);
   }
 
   template<typename T>
-  void SetValInCustomizedKernelConf(KernelConf* kernel_conf,
-                                    const std::string& field_name,
+  void SetValInCustomizedKernelConf(KernelConf* kernel_conf, const std::string& field_name,
                                     const T& val) const {
     PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
     SetValInPbMessage<T>(customized_conf, field_name, val);
@@ -160,13 +142,11 @@ class Operator {
   T* MutableMsgInCustomizedKernelConf(KernelConf* kernel_conf,
                                       const std::string& field_name) const {
     PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
-    return static_cast<T*>(
-        MutableMessageInPbMessage(customized_conf, field_name));
+    return static_cast<T*>(MutableMessageInPbMessage(customized_conf, field_name));
   }
 
   template<typename T>
-  void AddValToPbRfInCustomizedKernelConf(KernelConf* kernel_conf,
-                                          const std::string& field_name,
+  void AddValToPbRfInCustomizedKernelConf(KernelConf* kernel_conf, const std::string& field_name,
                                           const T& val) const {
     PbMessage* customized_conf = MutableCustomizedKernelConf(kernel_conf);
     AddValInPbRf<T>(customized_conf, field_name, val);
@@ -174,11 +154,11 @@ class Operator {
 
   virtual void VirtualFixParallelDesc(ParallelDesc* pr_desc) const {}
   virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*, const OpContext*) const;
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*, const OpContext*) const;
   virtual void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*) const {}
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*) const {}
 
   virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
   virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
@@ -192,8 +172,7 @@ class Operator {
   void EnrollDataTmpBn(const std::string& dtbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
-  void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num,
-                             bool has_diff);
+  void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, bool has_diff);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num);
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
@@ -223,8 +202,7 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 
 void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
                   std::function<Operator*(const OperatorConf&)> creator);
-void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
-                  std::function<Operator*()> creator);
+void AddOpCreator(OperatorConf::OpTypeCase op_type_case, std::function<Operator*()> creator);
 
 std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
 
@@ -248,9 +226,8 @@ struct OpCreatorRegister {
 #define REGISTER_OP_CREATOR(op_type_case, creator) \
   static OpCreatorRegister g_op_creator_register_var(op_type_case, creator);
 
-void EraseEmptyBnInVec(
-    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    PbRpf<std::string>* bns);
+void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                       PbRpf<std::string>* bns);
 
 inline LogicalBlobId GenPackedLbi() {
   LogicalBlobId lbi;

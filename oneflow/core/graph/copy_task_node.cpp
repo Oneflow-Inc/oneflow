@@ -9,9 +9,7 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) { edge->AddRegst(name, out_regst); }
 }
 
-void CopyTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("copy_in", SoleInEdge()->GetSoleRegst());
-}
+void CopyTaskNode::ConsumeAllRegsts() { ConsumeRegst("copy_in", SoleInEdge()->GetSoleRegst()); }
 
 void CopyTaskNode::BuildExecGphAndRegst() {
   auto out_regst = GetProducedRegst("copy_out");
@@ -23,8 +21,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
 }
 
-void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id,
-                          CopyHdOpConf::Type copy_type) {
+void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Type copy_type) {
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
   copy_type_ = copy_type;

@@ -21,8 +21,7 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   if (regst_desc_id == -1) { return; }
   Regst* regst = GetCurWriteableRegst(regst_desc_id);
-  ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(
-      actor_id(), related_init_model_actor_id_, regst);
+  ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(actor_id(), related_init_model_actor_id_, regst);
   Global<ActorMsgBus>::Get()->SendMsg(msg);
 }
 
@@ -66,9 +65,7 @@ int NormalMdUpdtCompActor::HandlerNormal(const ActorMsg& actor_msg) {
     DecreaseRemainingEordCnt();
   } else if (actor_msg.msg_type() == ActorMsgType::kRegstMsg) {
     Regst* regst = actor_msg.regst();
-    if (TryUpdtStateAsProducedRegst(regst) != 0) {
-      readable_regst_mgr_.Push(regst);
-    }
+    if (TryUpdtStateAsProducedRegst(regst) != 0) { readable_regst_mgr_.Push(regst); }
     ActUntilFail();
   } else {
     UNIMPLEMENTED();
@@ -104,24 +101,17 @@ void NormalMdUpdtCompActor::Act() {
   next_model_version_id_ += 1;
 }
 
-bool NormalMdUpdtCompActor::IsReadReady() {
-  return readable_regst_mgr_.IsReadReady();
-}
+bool NormalMdUpdtCompActor::IsReadReady() { return readable_regst_mgr_.IsReadReady(); }
 
 bool NormalMdUpdtCompActor::IsReadAlwaysUnReadyFromNow() {
   return is_model_diff_acc_eord_ && readable_regst_mgr_.IsEmpty();
 }
 
-bool NormalMdUpdtCompActor::IsWriteReady() {
-  return GetCurWriteableRegst(model_regst_desc_id_);
-}
+bool NormalMdUpdtCompActor::IsWriteReady() { return GetCurWriteableRegst(model_regst_desc_id_); }
 
-void NormalMdUpdtCompActor::AsyncReturnAllReadableRegst() {
-  CHECK(readable_regst_mgr_.IsEmpty());
-}
+void NormalMdUpdtCompActor::AsyncReturnAllReadableRegst() { CHECK(readable_regst_mgr_.IsEmpty()); }
 
-void NormalMdUpdtCompActor::ForEachCurReadableRegst(
-    std::function<void(const Regst*)> func) {
+void NormalMdUpdtCompActor::ForEachCurReadableRegst(std::function<void(const Regst*)> func) {
   readable_regst_mgr_.ForEachCurReadableRegst(func);
 }
 

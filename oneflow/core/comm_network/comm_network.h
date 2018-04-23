@@ -24,8 +24,7 @@ class CommNet {
   void DeleteActorReadId(void* actor_read_id);
   void* Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
              const void* dst_token);
-  void AddReadCallBack(void* actor_read_id, void* read_id,
-                       std::function<void()> callback);
+  void AddReadCallBack(void* actor_read_id, void* read_id, std::function<void()> callback);
   void AddReadCallBackDone(void* read_id);
   void ReadDone(void* read_id);
 
@@ -47,8 +46,8 @@ class CommNet {
     std::list<ReadContext*> read_ctx_list;
   };
 
-  virtual void DoRead(void* read_id, int64_t src_machine_id,
-                      const void* src_token, const void* dst_token) = 0;
+  virtual void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+                      const void* dst_token) = 0;
   void GenConnectionInfo(const Plan& plan);
 
  private:
