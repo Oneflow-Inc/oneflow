@@ -34,12 +34,19 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
-    TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kNormalMdUpdt) {
+    const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
+    if (strcmp(pred_logical->TypeName(), "NormalMdUpdt")) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      ConsumeRegst("in", edge->GetSoleRegst());
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(pred_logical, logical_node());
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        ConsumeRegst("boxing_ins", edge->GetSoleRegst());
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        ConsumeRegst("121_ins", edge->GetSoleRegst());
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
@@ -82,6 +89,8 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
     }
   }
   std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  const std::list<std::weak_ptr<RegstDesc>>& one2one_in_regsts = GetConsumedRegst("121_ins");
+  const std::list<std::weak_ptr<RegstDesc>>& boxing_in_regsts = GetConsumedRegst("boxing_ins");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);
@@ -93,25 +102,52 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
         edge->mut_dst_bn() = ibn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
-        cur_node->BindBnInOpAndRegst(ibn, in_regst);
+        for (std::weak_ptr<RegstDesc> regst : one2one_in_regsts) {
+          if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
+          cur_node->BindBnInOpAndRegst(ibn, regst);
+        }
+        for (std::weak_ptr<RegstDesc> regst : boxing_in_regsts) {
+          if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
+          cur_node->BindBnInOpAndRegst(ibn, regst);
+        }
       }
     }
   });
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  HashMap<LogicalBlobId, const LogicalNode*> lbi2logical_node;
+  const LogicalNode* fw_logical_node = logical_node();
+  for (LogicalEdge* out_edge : fw_logical_node->out_edges()) {
+    LogicalNode* dst_node = out_edge->dst_node();
+    if (strcmp(dst_node->TypeName(), "NormalForward") == 0
+        || strcmp(dst_node->TypeName(), "Loss") == 0) {
+      CHECK(lbi2logical_node.emplace(out_edge->SoleLbi(), dst_node).second);
+    }
+  }
+  std::shared_ptr<RegstDesc> one2one_out_regst = GetProducedRegst("121_out");
+  std::shared_ptr<RegstDesc> boxing_out_regst = GetProducedRegst("boxing_out");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
       if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
-      out_regst->AddLbi(lbi);
-      cur_node->BindBnInOpAndRegst(obn, out_regst);
+      const LogicalNode* dst_logical_node = lbi2logical_node.at(lbi);
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(fw_logical_node, dst_logical_node);
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        boxing_out_regst->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(obn, boxing_out_regst);
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        one2one_out_regst->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(obn, one2one_out_regst);
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   });
 }
+
 void NormalForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
