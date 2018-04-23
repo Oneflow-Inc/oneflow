@@ -3,22 +3,21 @@
 namespace oneflow {
 
 template<>
-void NormalizationKernelUtil<DeviceType::kGPU, float>::
-    NormalizationCudnnForward(
-        const KernelCtx& ctx,
-        const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-        const NormalizationCtx& normalization_ctx,
-        const NormalizationKernel<DeviceType::kGPU, float>* this_kernel) {
+void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+    const NormalizationCtx& normalization_ctx) const {
+  LOG(INFO) << "use_cudnn";
   const float* in = BnInOp2Blob("in")->dptr<float>();
   const float* gamma = BnInOp2Blob("gamma")->dptr<float>();
   const float* beta = BnInOp2Blob("beta")->dptr<float>();
   float* out = BnInOp2Blob("out")->mut_dptr<float>();
   float* moving_mean = BnInOp2Blob("moving_mean")->mut_dptr<float>();
   float* moving_variance = BnInOp2Blob("moving_variance")->mut_dptr<float>();
-  double epsilon = this_kernel->op_conf().normalization_conf().epsilon();
+  double epsilon = this->op_conf().normalization_conf().epsilon();
   if (Global<JobDesc>::Get()->IsTrain()) {
-    this_kernel->InitMovingMeanAndMovingVariance(ctx, BnInOp2Blob, false);
-    double momentum = this_kernel->op_conf().normalization_conf().momentum();
+    this->InitMovingMeanAndMovingVariance(ctx, BnInOp2Blob, false);
+    double momentum = this->op_conf().normalization_conf().momentum();
     CudaCheck(cudnnBatchNormalizationForwardTraining(
         ctx.device_ctx->cudnn_handle(),
         normalization_ctx.cudnn_batch_norm_mode(), OnePtr<float>::value,
@@ -39,12 +38,10 @@ void NormalizationKernelUtil<DeviceType::kGPU, float>::
   }
 }
 template<>
-void NormalizationKernelUtil<DeviceType::kGPU, float>::
-    NormalizationCudnnBackward(
-        const KernelCtx& ctx,
-        const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-        const NormalizationCtx& normalization_ctx,
-        const NormalizationKernel<DeviceType::kGPU, float>* this_kernel) {
+void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+    const NormalizationCtx& normalization_ctx) const {
   const cudnnTensorDescriptor_t& in_desc =
       normalization_ctx.cudnn_in_tensor_desc();
   CudaCheck(cudnnBatchNormalizationBackward(
@@ -57,12 +54,12 @@ void NormalizationKernelUtil<DeviceType::kGPU, float>::
       BnInOp2Blob("gamma")->dptr<float>(),
       BnInOp2Blob(GenDiffBn("gamma"))->mut_dptr<float>(),
       BnInOp2Blob(GenDiffBn("beta"))->mut_dptr<float>(),
-      static_cast<double>(
-          this_kernel->op_conf().normalization_conf().epsilon()),
+      static_cast<double>(this->op_conf().normalization_conf().epsilon()),
       BnInOp2Blob("cache_mean_for_cudnn_bw")->dptr<float>(),
       BnInOp2Blob("cache_inv_variance_for_cudnn_bw")->dptr<float>()));
 }
 
+/*
 template<>
 struct NormalizationKernelUtil<DeviceType::kCPU, double> {
   static void NormalizationCudnnForward(
@@ -78,5 +75,6 @@ struct NormalizationKernelUtil<DeviceType::kCPU, double> {
     UNIMPLEMENTED();
   }
 };
+*/
 
 }  // namespace oneflow

@@ -36,8 +36,8 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
       bool use_new) const;
 
  private:
-#ifdef WITH_CUDA
   std::unique_ptr<NormalizationCtx> normalization_ctx_;
+#ifdef WITH_CUDA
   void VirtualKernelInit(const ParallelContext*) override {
     if (this->kernel_conf().normalization_conf().use_cudnn()) {
       normalization_ctx_.reset(
@@ -79,8 +79,20 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
                            const Blob* in_blob) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
+
+  void NormalizationCudnnForward(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
+      const NormalizationCtx&) const {
+    UNIMPLEMENTED();
+  }
+  void NormalizationCudnnBackward(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&,
+      const NormalizationCtx&) const {
+    UNIMPLEMENTED();
+  }
 };
 
+/*
 template<DeviceType device_type, typename T>
 struct NormalizationKernelUtil {
   static void NormalizationCudnnForward(
@@ -106,6 +118,7 @@ struct NormalizationKernelUtil<DeviceType::kCPU, T> {
     UNIMPLEMENTED();
   }
 };
+*/
 
 }  // namespace oneflow
 

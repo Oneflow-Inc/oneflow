@@ -94,7 +94,8 @@ void NormalizationKernel<device_type, T>::InitMovingMeanAndMovingVariance(
   Blob* moving_mean_blob = BnInOp2Blob("moving_mean");
   Blob* moving_variance_blob = BnInOp2Blob("moving_variance");
   if (this->op_conf().model_load_dir() == ""
-      && Global<SnapshotMgr>::Get()->GetReadableSnapshot() == nullptr
+      && (Global<SnapshotMgr>::Get() == nullptr
+          || Global<SnapshotMgr>::Get()->GetReadableSnapshot() == nullptr)
       && piece_id == 0) {
     if (use_new) {
       if (conf.use_first_piece_init_moving()) {
@@ -193,8 +194,8 @@ void NormalizationKernel<device_type, T>::ForwardDataContent(
   const auto& conf = this->kernel_conf().normalization_conf();
 #ifdef WITH_CUDA
   if (conf.use_cudnn()) {
-    NormalizationKernelUtil<device_type, T>::NormalizationCudnnForward(
-        ctx, BnInOp2Blob, *normalization_ctx_, this);
+    NormalizationCudnnForward(
+        ctx, BnInOp2Blob, *normalization_ctx_);
     return;
   }
 #endif
@@ -240,8 +241,8 @@ void NormalizationKernel<device_type, T>::BackwardDataContent(
       this->kernel_conf().normalization_conf();
 #ifdef WITH_CUDA
   if (normalization_kernel_conf.use_cudnn()) {
-    NormalizationKernelUtil<device_type, T>::NormalizationCudnnBackward(
-        ctx, BnInOp2Blob, *normalization_ctx_, this);
+    NormalizationKernel<device_type, T>::NormalizationCudnnBackward(
+        ctx, BnInOp2Blob, *normalization_ctx_);
     return;
   }
 #endif

@@ -2,12 +2,6 @@
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
-/*
-bool NormalizationOp::HasScaleOrCenter() const {
-  const auto& conf = op_conf().normalization_conf();
-  return conf.center() || conf.scale();
-}
-*/
 
 void NormalizationOp::InitFromOpConf() {
   const auto& conf = op_conf().normalization_conf();
@@ -54,10 +48,10 @@ void NormalizationOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
 #ifdef WITH_CUDA
   int32_t in_dims = in_blob_desc->shape().NumAxes();
-  if (CUDNN_VERSION >= 5000 && in_data_type == DataType::kFloat && in_dims >= 4
-      && in_dims <= 5 && (conf.axis() == 1 || conf.axis() == in_dims - 1)) {
-    InferBlobDescsForCudnn(GetBlobDesc4BnInOp, parallel_ctx, device_type,
-                           EnrollOpCtx);
+  if (device_type == DeviceType::kGPU && CUDNN_VERSION >= 5000
+      && in_data_type == DataType::kFloat && in_dims >= 4 && in_dims <= 5
+      && (conf.axis() == 1 || conf.axis() == in_dims - 1)) {
+    InferBlobDescsForCudnn(GetBlobDesc4BnInOp);
     return;
   }
 #endif
@@ -155,18 +149,13 @@ void NormalizationOp::VirtualGenKernelConf(
 
 #ifdef WITH_CUDA
 void NormalizationOp::InferBlobDescsForCudnn(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const {
   const auto& conf = op_conf().normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();
   CHECK(conf.scale() && conf.center())
       << "Cudnn batch norm must use scale and center";
   CHECK_GT(conf.epsilon(), CUDNN_BN_MIN_EPSILON);
-  NormalizationCudnnOpCtx* op_ctx =
-      NewNormalizationCudnnOpCtx(in_blob_desc->shape());
-  EnrollOpCtx(op_ctx);
   InferParamBlobDescs(GetBlobDesc4BnInOp, conf,
                       in_blob_desc->shape().At(conf.axis()), in_data_type,
                       true);
@@ -178,7 +167,7 @@ void NormalizationOp::VirtualGenKernelConfForCudnn(
   NormalizationKernelConf* conf = kernel_conf->mutable_normalization_conf();
   conf->set_use_cudnn(true);
   GetBlobDesc4BnInOp("in")->shape().ToProto(conf->mutable_in());
-#if CUDNN_VERSION_MIN(7,0,0)
+#if (CUDNN_VERSION >= 7000)
   conf->set_cudnn_bn_mode(CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
 #else
   conf->set_cudnn_bn_mode(CUDNN_BATCHNORM_SPATIAL);

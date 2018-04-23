@@ -40,9 +40,7 @@ class NormalizationOp final : public Operator {
       const ParallelContext*, KernelConf*, const OpContext*) const override;
 #ifdef WITH_CUDA
   void InferBlobDescsForCudnn(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*, DeviceType,
-      std::function<void(OpContext*)> EnrollOpCtx) const;
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const;
   void VirtualGenKernelConfForCudnn(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*, KernelConf*) const;
