@@ -10,15 +10,14 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
 
-  this->in_desc_.reset(new CudnnTensorDesc(
-      GetDataType<T>::value, in_shape,
-      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
-  this->out_desc_.reset(new CudnnTensorDesc(
-      GetDataType<T>::value, out_shape,
-      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
-  this->filter_desc_.reset(new CudnnFilterDesc(
-      GetDataType<T>::value, weight_shape,
-      this->template GetValFromCustomizedOpConf<std::string>("data_format")));
+  const std::string& data_format =
+      this->template GetValFromCustomizedOpConf<std::string>("data_format");
+  this->in_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::value, in_shape, data_format));
+  this->out_desc_.reset(
+      new CudnnTensorDesc(GetDataType<T>::value, out_shape, data_format));
+  this->filter_desc_.reset(
+      new CudnnFilterDesc(GetDataType<T>::value, weight_shape, data_format));
   this->conv_desc_.reset(new CudnnConvDesc(GetDataType<T>::value, in_shape,
                                            this->GetCustomizedOpConf()));
 
@@ -26,20 +25,24 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(
     int32_t filters =
         this->template GetValFromCustomizedOpConf<int32_t>("filters");
 
-    if (this->OpKernelDim() == 2) {
-      if (this->template GetValFromCustomizedOpConf<std::string>("data_format")
-          == "channels_first") {
+    if ((this->OpKernelDim() == 1) || (this->OpKernelDim() == 2)) {
+      if (data_format == "channels_first") {
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NCHW, GetDataType<T>::value, 1, filters, 1, 1));
-      } else if (this->template GetValFromCustomizedOpConf<std::string>(
-                     "data_format")
-                 == "channels_last") {
+      } else if (data_format == "channels_last") {
+        if (GetDataType<T>::value == DataType::kDouble) {
+          LOG(FATAL) << "CUDNN 1d & 2d support channels last only if data type "
+                        "is float";
+        }
         this->bias_desc_.reset(new CudnnTensorDesc(
             CUDNN_TENSOR_NHWC, GetDataType<T>::value, 1, filters, 1, 1));
       } else {
         UNIMPLEMENTED();
       }
     } else {
+      if (data_format == "channels_last") {
+        LOG(FATAL) << "CUDNN Nd API only support channels first";
+      }
       std::vector<int32_t> bias_dim(this->OpKernelDim() + 2, 1);
       std::vector<int32_t> stride_of_bias_tensor(this->OpKernelDim() + 2, 1);
       bias_dim[1] = filters;

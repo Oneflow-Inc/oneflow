@@ -24,7 +24,8 @@ class NormalizationCtx final {
 };
 
 template<DeviceType device_type, typename T>
-class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
+class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
+                                  public KernelIfWithModel<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalizationKernel);
   NormalizationKernel() = default;
@@ -78,6 +79,7 @@ class NormalizationKernel final : public KernelIfWithModel<device_type, T> {
       const KernelCtx& ctx,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob,
       bool use_new) const;
+  const PbMessage& GetCustomizedOpConf() const override;
 
   void NormalizationCudnnForward(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {

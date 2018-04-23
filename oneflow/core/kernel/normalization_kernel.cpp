@@ -22,11 +22,11 @@ void ScalarSub(DeviceCtx* ctx, const int64_t n, const T* x, const T* scalar_ptr,
 }
 
 template<typename T>
-T* GetTmpForSumDptr(Blob* tmp_storage_blob) {
+T* GetTmpForSumDptr(Blob* tmp_storage_blob, T* nop_addr) {
   if (tmp_storage_blob != nullptr) {
     return tmp_storage_blob->mut_dptr<T>();
   } else {
-    return nullptr;
+    return nop_addr;
   }
 }
 size_t GetTmpForSumByteSize(Blob* tmp_storage_blob) {
@@ -277,7 +277,7 @@ void NormalizationKernel<device_type, T>::CalcAboutBetaDiff(
         ctx.device_ctx, norm_elem_num,
         out_diff_blob->dptr<T>() + i * norm_elem_num,
         beta_diff_blob->mut_dptr<T>() + i,
-        GetTmpForSumDptr<T>(tmp_storage_blob),
+        GetTmpForSumDptr<T>(tmp_storage_blob, beta_diff_blob->mut_dptr<T>()),
         GetTmpForSumByteSize(tmp_storage_blob));
     if (need_comp_in_diff) {
       KernelUtil<device_type, T>::Axpy(
@@ -370,7 +370,7 @@ void NormalizationKernel<device_type, T>::CalcMeanAndVariance(
   Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage_for_sum");
   const int32_t norm_part_num = conf.transpose_cols();
   const int64_t norm_elem_num = conf.transpose_rows();
-  T* tmp_dptr = GetTmpForSumDptr<T>(tmp_storage_blob);
+  T* tmp_dptr = GetTmpForSumDptr<T>(tmp_storage_blob, mean_blob->mut_dptr<T>());
   size_t tmp_byte_size = GetTmpForSumByteSize(tmp_storage_blob);
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
     KernelUtil<device_type, T>::Sum(
@@ -472,6 +472,12 @@ void NormalizationKernel<device_type, T>::InitMovingMeanAndMovingVariance(
     moving_variance_blob->CopyDataContentFrom(ctx.device_ctx,
                                               pre_moving_variance_blob);
   }
+}
+
+template<DeviceType device_type, typename T>
+const PbMessage& NormalizationKernel<device_type, T>::GetCustomizedOpConf()
+    const {
+  return this->op_conf().normalization_conf();
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kNormalizationConf,

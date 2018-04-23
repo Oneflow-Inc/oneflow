@@ -72,6 +72,7 @@ op {
     bias: 2
     alpha: 0.0001
     beta: 0.75
+    data_format: "channels_first"
   }
 }
 
@@ -122,6 +123,7 @@ op {
     bias: 2
     alpha: 0.0001
     beta: 0.75
+    data_format: "channels_first"
   }
 }
 
