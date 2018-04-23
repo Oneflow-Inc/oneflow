@@ -2,6 +2,20 @@
 
 namespace oneflow {
 
+template<DeviceType device_type>
+void ReshapeKernel<device_type>::Forward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("out")->CopyFrom(ctx.device_ctx, BnInOp2Blob("in"));
+}
+
+template<DeviceType device_type>
+void ReshapeKernel<device_type>::Backward(
+    const KernelCtx& ctx,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("in_diff")->CopyFrom(ctx.device_ctx, BnInOp2Blob("out_diff"));
+}
+
 namespace {
 
 Kernel* CreateReshapeKernel(const KernelConf& kernel_conf) {
