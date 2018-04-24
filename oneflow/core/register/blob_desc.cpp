@@ -39,9 +39,7 @@ size_t BlobDesc::ByteSizeOfDataIdField() const {
   }
 }
 
-size_t BlobDesc::OffsetOfColNumField() const {
-  return RoundUp(ByteSizeOfDataIdField(), CUDA_POINTER_ALIGNMENT);
-}
+size_t BlobDesc::OffsetOfColNumField() const { return ByteSizeOfDataIdField(); }
 
 size_t BlobDesc::ByteSizeOfColNumField() const {
   if (has_col_num_field_) {
