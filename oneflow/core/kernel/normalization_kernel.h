@@ -49,6 +49,24 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
+  void ComputeAxisSum(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      const Blob* x_blob, Blob* y_blob, const T alpha) const;
+  void ComputeAxisSum(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      const Blob* x_blob, Blob* y_blob) const;
+  void ComputeAxisMean(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      const Blob* x_blob, Blob* y_blob) const;
+  void AxisSliceAdd(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
+                    Blob* z_blob) const;
+  void AxisSliceSub(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
+                    Blob* z_blob) const;
+  void AxisSliceMul(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
+                    Blob* z_blob) const;
   const PbMessage& GetCustomizedOpConf() const override;
 };
 
