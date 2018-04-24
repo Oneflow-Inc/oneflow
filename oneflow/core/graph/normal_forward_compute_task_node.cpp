@@ -35,27 +35,17 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
-    if (strcmp(pred_logical->TypeName(), "NormalMdUpdt") == 0) {
+    if (pred_logical->TypeName() == "NormalMdUpdt") {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(pred_logical, logical_node());
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        ConsumeRegst("boxing_ins", edge->GetSoleRegst());
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        ConsumeRegst("121_ins", edge->GetSoleRegst());
-      } else {
-        UNIMPLEMENTED();
-      }
+      ConsumeRegst("in", edge->GetSoleRegst());
     }
   }
 }
 
 bool NormalForwardCompTaskNode::IsReadyForBuild() {
-  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("boxing_ins")) {
-    if (regst_desc.lock()->IsLocked() == false) { return false; }
-  }
-  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("121_ins")) {
+  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("in")) {
     if (regst_desc.lock()->IsLocked() == false) { return false; }
   }
   return true;
@@ -91,8 +81,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
       CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
     }
   }
-  const std::list<std::weak_ptr<RegstDesc>>& one2one_in_regsts = GetConsumedRegst("121_ins");
-  const std::list<std::weak_ptr<RegstDesc>>& boxing_in_regsts = GetConsumedRegst("boxing_ins");
+  const std::list<std::weak_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);
@@ -104,13 +93,10 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
         edge->mut_dst_bn() = ibn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
-        for (std::weak_ptr<RegstDesc> regst : one2one_in_regsts) {
+        for (std::weak_ptr<RegstDesc> regst : in_regsts) {
           if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
           cur_node->BindBnInOpAndRegst(ibn, regst);
-        }
-        for (std::weak_ptr<RegstDesc> regst : boxing_in_regsts) {
-          if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
-          cur_node->BindBnInOpAndRegst(ibn, regst);
+          break;
         }
       }
     }
