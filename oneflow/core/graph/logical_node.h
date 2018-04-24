@@ -34,6 +34,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // Lbis
   const std::vector<LogicalBlobId>& GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
+  const std::vector<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
+  const std::vector<LogicalBlobId>& lbi_121() const { return lbi_121_; }
 
   // util
   virtual const char* TypeName() const = 0;

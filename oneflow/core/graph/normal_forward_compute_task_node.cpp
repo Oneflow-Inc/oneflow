@@ -35,7 +35,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
-    if (strcmp(pred_logical->TypeName(), "NormalMdUpdt")) {
+    if (strcmp(pred_logical->TypeName(), "NormalMdUpdt") == 0) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
@@ -118,39 +118,22 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  HashMap<LogicalBlobId, BldSubTskGphMthd> lbi2bld_mthd;
-  const LogicalNode* cur_logical_node = logical_node();
-  for (LogicalEdge* out_edge : cur_logical_node->out_edges()) {
-    LogicalNode* dst_logical_node = out_edge->dst_node();
-    if (strcmp(dst_logical_node->TypeName(), "NormalForward") == 0
-        || strcmp(dst_logical_node->TypeName(), "Loss") == 0
-        || strcmp(dst_logical_node->TypeName(), "Print") == 0) {
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(cur_logical_node, dst_logical_node);
-      const LogicalBlobId& lbi = out_edge->SoleLbi();
-      auto iter = lbi2bld_mthd.find(lbi);
-      if (iter == lbi2bld_mthd.end()) {
-        CHECK(lbi2bld_mthd.emplace(lbi, mthd).second);
-      } else {
-        CHECK_EQ(mthd, lbi2bld_mthd.at(lbi));
-      }
-    }
-  }
-
-  std::shared_ptr<RegstDesc> one2one_out_regst = GetProducedRegst("121_out");
-  std::shared_ptr<RegstDesc> boxing_out_regst = GetProducedRegst("boxing_out");
+  std::shared_ptr<RegstDesc> out_regst_121 = GetProducedRegst("121_out");
+  std::shared_ptr<RegstDesc> out_regst_boxing = GetProducedRegst("boxing_out");
+  const std::vector<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
+  const std::vector<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
       if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
-      BldSubTskGphMthd mthd = lbi2bld_mthd.at(lbi);
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        boxing_out_regst->AddLbi(lbi);
-        cur_node->BindBnInOpAndRegst(obn, boxing_out_regst);
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        one2one_out_regst->AddLbi(lbi);
-        cur_node->BindBnInOpAndRegst(obn, one2one_out_regst);
+      if (std::find(lbi_boxing.begin(), lbi_boxing.end(), lbi) != lbi_boxing.end()) {
+        out_regst_boxing->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(obn, out_regst_boxing);
+      } else if (std::find(lbi_121.begin(), lbi_121.end(), lbi) != lbi_121.end()) {
+        out_regst_121->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(obn, out_regst_121);
       } else {
         UNIMPLEMENTED();
       }
