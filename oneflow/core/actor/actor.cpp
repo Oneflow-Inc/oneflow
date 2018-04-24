@@ -287,19 +287,8 @@ DeviceType Actor::GetDeviceType() const {
   return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
 }
 
-static HashMap<int, std::function<Actor*()>>& ActorCreatorMap() {
-  static HashMap<int, std::function<Actor*()>> obj;
-  return obj;
-}
-
-void AddActorCreator(TaskType task_type, std::function<Actor*()> creator) {
-  CHECK(ActorCreatorMap().emplace(task_type, creator).second);
-}
-
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  auto it = ActorCreatorMap().find(task_proto.task_type());
-  CHECK(it != ActorCreatorMap().end()) << TaskType_Name(task_proto.task_type());
-  Actor* rptr = it->second();
+  Actor* rptr = NewObj<Actor>(task_proto.task_type());
   rptr->Init(task_proto, thread_ctx);
   return std::unique_ptr<Actor>(rptr);
 }

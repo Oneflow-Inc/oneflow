@@ -295,27 +295,10 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
   return diff_bn.substr(0, diff_bn.size() - 5);
 }
 
-static HashMap<int, std::function<Operator*(const OperatorConf&)>>& OpTypeCase2Creator() {
-  static HashMap<int, std::function<Operator*(const OperatorConf&)>> obj;
-  return obj;
-}
-
-void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
-                  std::function<Operator*(const OperatorConf&)> creator) {
-  CHECK(OpTypeCase2Creator().emplace(op_type_case, creator).second);
-}
-
-void AddOpCreator(OperatorConf::OpTypeCase op_type_case, std::function<Operator*()> creator) {
-  CHECK(OpTypeCase2Creator()
-            .emplace(op_type_case, [creator](const OperatorConf&) { return creator(); })
-            .second);
-}
-
 std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
-  Operator* rptr = OpTypeCase2Creator().at(op_conf.op_type_case())(op_conf);
-  std::shared_ptr<Operator> ret(rptr);
-  ret->InitFromOpConf(op_conf);
-  return ret;
+  Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
+  rptr->InitFromOpConf(op_conf);
+  return std::shared_ptr<Operator>(rptr);
 }
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
