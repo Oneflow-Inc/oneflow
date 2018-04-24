@@ -34,8 +34,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // Lbis
   const std::vector<LogicalBlobId>& GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
-  const std::vector<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
-  const std::vector<LogicalBlobId>& lbi_121() const { return lbi_121_; }
+  const HashSet<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
+  const HashSet<LogicalBlobId>& lbi_121() const { return lbi_121_; }
 
   // util
   virtual const std::string TypeName() const = 0;
@@ -61,8 +61,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  std::vector<LogicalBlobId> lbi_boxing_;
-  std::vector<LogicalBlobId> lbi_121_;
+  HashSet<LogicalBlobId> lbi_boxing_;
+  HashSet<LogicalBlobId> lbi_121_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \

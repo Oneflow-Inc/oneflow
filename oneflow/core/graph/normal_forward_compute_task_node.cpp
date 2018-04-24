@@ -93,11 +93,14 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
         edge->mut_dst_bn() = ibn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
+        bool has_binded = false;
         for (std::weak_ptr<RegstDesc> regst : in_regsts) {
           if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
           cur_node->BindBnInOpAndRegst(ibn, regst);
+          has_binded = true;
           break;
         }
+        CHECK(has_binded);
       }
     }
   });
@@ -106,18 +109,22 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 void NormalForwardCompTaskNode::BuildOutRegst() {
   std::shared_ptr<RegstDesc> out_regst_121 = GetProducedRegst("121_out");
   std::shared_ptr<RegstDesc> out_regst_boxing = GetProducedRegst("boxing_out");
-  const std::vector<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
-  const std::vector<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
+  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
+  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
-      if (std::find(lbi_boxing.begin(), lbi_boxing.end(), lbi) != lbi_boxing.end()) {
+      if (found_lbis.find(lbi) != found_lbis.end()) {
+        CHECK(lbi_boxing.find(lbi) == lbi_boxing.end());
+        CHECK(lbi_121.find(lbi) == lbi_121.end());
+        continue;
+      }
+      if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
         out_regst_boxing->AddLbi(lbi);
         cur_node->BindBnInOpAndRegst(obn, out_regst_boxing);
-      } else if (std::find(lbi_121.begin(), lbi_121.end(), lbi) != lbi_121.end()) {
+      } else if (lbi_121.find(lbi) != lbi_121.end()) {
         out_regst_121->AddLbi(lbi);
         cur_node->BindBnInOpAndRegst(obn, out_regst_121);
       } else {
