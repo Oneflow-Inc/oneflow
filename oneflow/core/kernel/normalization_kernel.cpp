@@ -239,19 +239,27 @@ void NormalizationKernel<device_type, T>::CalcAboutGammaDiff(
     const KernelCtx& ctx,
     const std::function<Blob*(const std::string&)> BnInOp2Blob,
     const Blob* out_diff_blob, bool need_comp_in_diff) const {
-  const auto& normalization_kernel_conf =
-      this->kernel_conf().normalization_conf();
-  const int32_t norm_part_num = normalization_kernel_conf.transpose_cols();
-  const int64_t norm_elem_num = normalization_kernel_conf.transpose_rows();
+  const auto& conf = this->kernel_conf().normalization_conf();
+  const int32_t norm_part_num = conf.transpose_cols();
+  const int64_t norm_elem_num = conf.transpose_rows();
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* gamma_diff_blob = BnInOp2Blob("gamma_diff");
   Blob* inv_var_blob = BnInOp2Blob("inv_var");
+  // it's safe to use in_diff as tmp_blob
+  Blob* tmp_blob = BnInOp2Blob("in_diff");
+  Blob* raw_out_diff_blob = BnInOp2Blob("out_diff");
+  KernelUtil<device_type, T>::Mul(
+      ctx.device_ctx, raw_out_diff_blob->shape().elem_cnt(),
+      raw_out_diff_blob->dptr<T>(), normalized_blob->dptr<T>(),
+      tmp_blob->mut_dptr<T>());
+  ComputeAxisSum<device_type, T>(ctx, BnInOp2Blob, tmp_blob, gamma_diff_blob,
+                                 conf.axis());
   FOR_RANGE(int32_t, i, 0, norm_part_num) {
-    KernelUtil<device_type, T>::Dot(
-        ctx.device_ctx, norm_elem_num,
-        out_diff_blob->dptr<T>() + i * norm_elem_num, 1,
-        normalized_blob->dptr<T>() + i * norm_elem_num, 1,
-        gamma_diff_blob->mut_dptr<T>() + i);
+    //    KernelUtil<device_type, T>::Dot(
+    //        ctx.device_ctx, norm_elem_num,
+    //        out_diff_blob->dptr<T>() + i * norm_elem_num, 1,
+    //        normalized_blob->dptr<T>() + i * norm_elem_num, 1,
+    //        gamma_diff_blob->mut_dptr<T>() + i);
     if (need_comp_in_diff) {
       KernelUtil<device_type, T>::Scal(
           ctx.device_ctx, norm_elem_num, gamma_diff_blob->dptr<T>() + i,

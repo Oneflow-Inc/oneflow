@@ -204,7 +204,8 @@ void OpKernelTestUtil<DeviceType::kCPU>::BlobCmp(const std::string& blob_name,
   CHECK_EQ(lhs->data_type(), GetDataType<T>::value);
   if (IsFloatingDataType(lhs->data_type())) {
     for (int64_t i = 0; i < lhs->shape().elem_cnt(); ++i) {
-      ASSERT_NEAR(lhs->dptr<T>()[i], rhs->dptr<T>()[i], 1e-5) << blob_name;
+      ASSERT_NEAR(lhs->dptr<T>()[i], rhs->dptr<T>()[i], 1e-5)
+          << "i: " << i << ", " << blob_name;
     }
   } else {
     ASSERT_EQ(
