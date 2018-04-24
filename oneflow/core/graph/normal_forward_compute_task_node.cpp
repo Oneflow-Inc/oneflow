@@ -34,8 +34,8 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
-    TaskNode* src_node = edge->src_node();
-    if (src_node->GetTaskType() == TaskType::kNormalMdUpdt) {
+    const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
+    if (pred_logical->TypeName() == "NormalMdUpdt") {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
@@ -81,7 +81,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
       CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
     }
   }
-  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
+  const std::list<std::weak_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     for (const std::string& ibn : cur_node->op()->input_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);
@@ -93,25 +93,47 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
         edge->mut_dst_bn() = ibn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
-        cur_node->BindBnInOpAndRegst(ibn, in_regst);
+        bool has_binded = false;
+        for (std::weak_ptr<RegstDesc> regst : in_regsts) {
+          if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
+          cur_node->BindBnInOpAndRegst(ibn, regst);
+          has_binded = true;
+          break;
+        }
+        CHECK(has_binded);
       }
     }
   });
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  std::shared_ptr<RegstDesc> out_regst_121 = GetProducedRegst("121_out");
+  std::shared_ptr<RegstDesc> out_regst_boxing = GetProducedRegst("boxing_out");
+  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
+  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
-      out_regst->AddLbi(lbi);
-      cur_node->BindBnInOpAndRegst(obn, out_regst);
+      if (found_lbis.find(lbi) != found_lbis.end()) {
+        CHECK(lbi_boxing.find(lbi) == lbi_boxing.end());
+        CHECK(lbi_121.find(lbi) == lbi_121.end());
+        continue;
+      }
+      if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
+        out_regst_boxing->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(obn, out_regst_boxing);
+      } else if (lbi_121.find(lbi) != lbi_121.end()) {
+        out_regst_121->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(obn, out_regst_121);
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   });
 }
+
 void NormalForwardCompTaskNode::BuildActivationRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetProducedRegst("activation");
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
