@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/job/keyword.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
@@ -200,31 +200,13 @@ class Operator {
 std::string GenDiffBn(const std::string& bn);
 std::string GenUnDiffBn(const std::string& diff_bn);
 
-void AddOpCreator(OperatorConf::OpTypeCase op_type_case,
-                  std::function<Operator*(const OperatorConf&)> creator);
-void AddOpCreator(OperatorConf::OpTypeCase op_type_case, std::function<Operator*()> creator);
-
-std::shared_ptr<Operator> ConstructOp(const OperatorConf&);
-
-template<OperatorConf::OpTypeCase op_type_case, typename OpType>
-struct OpRegister {
-  OpRegister() {
-    AddOpCreator(op_type_case, []() { return new OpType; });
-  }
-};
-
-#define REGISTER_OP(OpTypeCase, OpType) \
-  static OpRegister<OpTypeCase, OpType> g_##OpType##_register_var;
-
-struct OpCreatorRegister {
-  OpCreatorRegister(OperatorConf::OpTypeCase op_type_case,
-                    std::function<Operator*(const OperatorConf&)> creator) {
-    AddOpCreator(op_type_case, creator);
-  }
-};
+#define REGISTER_OP(op_type_case, OpType) \
+  REGISTER_CLASS_WITH_ARGS(op_type_case, Operator, OpType, const OperatorConf&)
 
 #define REGISTER_OP_CREATOR(op_type_case, creator) \
-  static OpCreatorRegister g_op_creator_register_var(op_type_case, creator);
+  REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
+
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);

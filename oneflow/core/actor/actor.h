@@ -128,18 +128,9 @@ class Actor {
   double act_interval_acc_;
 };
 
-void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 
-template<TaskType task_type, typename T>
-struct ActorRegistry {
-  ActorRegistry() {
-    AddActorCreator(task_type, []() { return new T; });
-  }
-};
-
-#define REGISTER_ACTOR(TaskType, ActorType) \
-  static ActorRegistry<TaskType, ActorType> OF_PP_CAT(g_actor_##ActorType##registry_var, __LINE__)
+#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, Actor, ActorType)
 
 }  // namespace oneflow
 
