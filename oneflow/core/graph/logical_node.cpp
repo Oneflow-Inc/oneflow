@@ -113,9 +113,9 @@ void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<Logica
   CHECK(dst2data_lbis_.emplace(dst, lbis).second);
   BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(this, dst);
   if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-    lbi_boxing_.insert(lbi_boxing_.end(), lbis.begin(), lbis.end());
+    lbi_boxing_.insert(lbis.begin(), lbis.end());
   } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-    lbi_121_.insert(lbi_121_.end(), lbis.begin(), lbis.end());
+    lbi_121_.insert(lbis.begin(), lbis.end());
   } else {
     UNIMPLEMENTED();
   }
