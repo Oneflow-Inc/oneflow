@@ -12,9 +12,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("forward_model");
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    if (strcmp(succ_logical->TypeName(), "MdSave") == 0) {
+    if (succ_logical->TypeName() == "MdSave") {
       BindEdgeWithProducedRegst(edge, "forward_model");
-    } else if (strcmp(succ_logical->TypeName(), "NormalBackward") == 0) {
+    } else if (succ_logical->TypeName() == "NormalBackward") {
       BindEdgeWithProducedRegst(edge, "boxing_out");
       BindEdgeWithProducedRegst(edge, "121_out");
       BindEdgeWithProducedRegst(edge, "activation");
