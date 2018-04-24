@@ -278,8 +278,8 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)      \
   OF_PP_MAKE_TUPLE_SEQ(Print)
 
-#define DEFINE_VIRTUAL_METHOD(x)                                    \
-  const std::string x##LogicalNode::TypeName() const { return #x; } \
+#define DEFINE_VIRTUAL_METHOD(x)                              \
+  std::string x##LogicalNode::TypeName() const { return #x; } \
   CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 

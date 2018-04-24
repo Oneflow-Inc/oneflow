@@ -38,7 +38,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   const HashSet<LogicalBlobId>& lbi_121() const { return lbi_121_; }
 
   // util
-  virtual const std::string TypeName() const = 0;
+  virtual std::string TypeName() const = 0;
   std::string VisualStr() const;
   bool HasOpWithModelOrModelTmpBlob() const;
   bool HasOpWithModelBlob() const;
@@ -104,8 +104,8 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const LogicalNode* out_logical, BoxingOpConf*);
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()         \
-  const std::string TypeName() const override; \
+#define OVERRIDE_PURE_VIRTUAL_METHOD()   \
+  std::string TypeName() const override; \
   CompTaskNode* NewCompTaskNode() const override;
 
 #define LOGICAL_NODE_BOILERPLATE(class_name) \
