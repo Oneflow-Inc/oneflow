@@ -52,7 +52,10 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
 }
 
 bool NormalForwardCompTaskNode::IsReadyForBuild() {
-  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("in")) {
+  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("boxing_ins")) {
+    if (regst_desc.lock()->IsLocked() == false) { return false; }
+  }
+  for (std::weak_ptr<RegstDesc> regst_desc : GetConsumedRegst("121_ins")) {
     if (regst_desc.lock()->IsLocked() == false) { return false; }
   }
   return true;
@@ -88,7 +91,6 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
       CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
     }
   }
-  std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in");
   const std::list<std::weak_ptr<RegstDesc>>& one2one_in_regsts = GetConsumedRegst("121_ins");
   const std::list<std::weak_ptr<RegstDesc>>& boxing_in_regsts = GetConsumedRegst("boxing_ins");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
@@ -116,15 +118,24 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  HashMap<LogicalBlobId, const LogicalNode*> lbi2logical_node;
-  const LogicalNode* fw_logical_node = logical_node();
-  for (LogicalEdge* out_edge : fw_logical_node->out_edges()) {
-    LogicalNode* dst_node = out_edge->dst_node();
-    if (strcmp(dst_node->TypeName(), "NormalForward") == 0
-        || strcmp(dst_node->TypeName(), "Loss") == 0) {
-      CHECK(lbi2logical_node.emplace(out_edge->SoleLbi(), dst_node).second);
+  HashMap<LogicalBlobId, BldSubTskGphMthd> lbi2bld_mthd;
+  const LogicalNode* cur_logical_node = logical_node();
+  for (LogicalEdge* out_edge : cur_logical_node->out_edges()) {
+    LogicalNode* dst_logical_node = out_edge->dst_node();
+    if (strcmp(dst_logical_node->TypeName(), "NormalForward") == 0
+        || strcmp(dst_logical_node->TypeName(), "Loss") == 0
+        || strcmp(dst_logical_node->TypeName(), "Print") == 0) {
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(cur_logical_node, dst_logical_node);
+      const LogicalBlobId& lbi = out_edge->SoleLbi();
+      auto iter = lbi2bld_mthd.find(lbi);
+      if (iter == lbi2bld_mthd.end()) {
+        CHECK(lbi2bld_mthd.emplace(lbi, mthd).second);
+      } else {
+        CHECK_EQ(mthd, lbi2bld_mthd.at(lbi));
+      }
     }
   }
+
   std::shared_ptr<RegstDesc> one2one_out_regst = GetProducedRegst("121_out");
   std::shared_ptr<RegstDesc> boxing_out_regst = GetProducedRegst("boxing_out");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
@@ -133,8 +144,7 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
       if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
-      const LogicalNode* dst_logical_node = lbi2logical_node.at(lbi);
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(fw_logical_node, dst_logical_node);
+      BldSubTskGphMthd mthd = lbi2bld_mthd.at(lbi);
       if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
         boxing_out_regst->AddLbi(lbi);
         cur_node->BindBnInOpAndRegst(obn, boxing_out_regst);
