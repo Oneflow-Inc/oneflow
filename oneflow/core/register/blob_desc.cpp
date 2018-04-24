@@ -33,19 +33,27 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (has_data_id_field_) {
-    return RoundUp(shape_.At(0) * Global<JobDesc>::Get()->SizeOfOneDataId(),
-                   CUDA_POINTER_ALIGNMENT);
+    return shape_.At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
   } else {
     return 0;
   }
 }
 
+size_t BlobDesc::OffsetOfColNumField() const {
+  return RoundUp(ByteSizeOfDataIdField(), CUDA_POINTER_ALIGNMENT);
+}
+
 size_t BlobDesc::ByteSizeOfColNumField() const {
   if (has_col_num_field_) {
-    return RoundUp(shape_.At(0) * sizeof(int32_t), CUDA_POINTER_ALIGNMENT);
+    return shape_.At(0) * sizeof(int32_t);
   } else {
     return 0;
   }
+}
+
+size_t BlobDesc::OffsetOfDataContentField() const {
+  return RoundUp(OffsetOfColNumField() + ByteSizeOfColNumField(),
+                 CUDA_POINTER_ALIGNMENT);
 }
 
 size_t BlobDesc::ByteSizeOfDataContentField() const {
@@ -54,8 +62,7 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfDataIdField() + ByteSizeOfColNumField()
-         + ByteSizeOfDataContentField();
+  return OffsetOfDataContentField() + ByteSizeOfDataContentField();
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
