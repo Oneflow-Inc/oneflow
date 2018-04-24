@@ -3,11 +3,6 @@
 
 namespace oneflow {
 
-bool NormalizationOp::HasScaleOrCenter() const {
-  const auto& conf = op_conf().normalization_conf();
-  return conf.center() || conf.scale();
-}
-
 void NormalizationOp::InitFromOpConf() {
   const auto& conf = op_conf().normalization_conf();
   CHECK_GT(conf.epsilon(), 0.f);
@@ -19,7 +14,6 @@ void NormalizationOp::InitFromOpConf() {
   EnrollDataTmpBn("new_variance");
   EnrollForwardModelBn("moving_mean");
   EnrollForwardModelBn("moving_variance");
-
   if (conf.center()) {
     EnrollModelBn("beta");
   } else {
@@ -38,6 +32,8 @@ void NormalizationOp::InitFromOpConf() {
   EnrollDataTmpBn("before_by_axis_matrix");
   EnrollModelTmpBn("before_axis_sum_multiplier");
   EnrollModelTmpBn("after_axis_sum_multiplier");
+  EnrollDataTmpBn("cache_mean_for_cudnn_bw");
+  EnrollDataTmpBn("cache_inv_variance_for_cudnn_bw");
 }
 
 const PbMessage& NormalizationOp::GetCustomizedConf() const {
@@ -63,8 +59,19 @@ void NormalizationOp::InferBlobDescs(
   const DataType in_data_type = in_blob_desc->data_type();
   CHECK_EQ(in_data_type, Global<JobDesc>::Get()->DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
+#ifdef WITH_CUDA
+  int32_t in_dims = in_blob_desc->shape().NumAxes();
+  if (device_type == DeviceType::kGPU && CUDNN_VERSION >= 5000
+      && in_data_type == DataType::kFloat && in_dims >= 4 && in_dims <= 5
+      && (conf.axis() == 1 || conf.axis() == in_dims - 1)) {
+    InferBlobDescsForCudnn(GetBlobDesc4BnInOp);
+    return;
+  }
+#endif
   NormalizationOpCtx* op_ctx = NewNormalizationOpCtx(in_blob_desc->shape());
   EnrollOpCtx(op_ctx);
+  InferParamBlobDescs(GetBlobDesc4BnInOp, conf, op_ctx->transpose_cols,
+                      in_data_type, false);
   if (op_ctx->need_transpose) {
     BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("trans_in");
     transpose_blob_desc->mut_shape() = in_blob_desc->shape();
@@ -77,30 +84,6 @@ void NormalizationOp::InferBlobDescs(
   } else {
     *GetBlobDesc4BnInOp("normalized_in") = *in_blob_desc;
   }
-
-  BlobDesc blob_desc(Shape({op_ctx->transpose_cols}), in_data_type, false,
-                     false, 1);
-  std::list<std::string> blob_names = {"moving_mean", "moving_variance",
-                                       "inv_var"};
-  std::list<std::string> bns_needless_in_predict = {"new_mean", "new_variance"};
-  if (conf.center()) {
-    blob_names.push_back("beta");
-  } else {
-    blob_names.push_back("beta_diff");
-  }
-  if (conf.scale()) {
-    blob_names.push_back("gamma");
-  } else {
-    blob_names.push_back("gamma_diff");
-  }
-  if (Global<JobDesc>::Get()->IsTrain()) {
-    for (const std::string& bn : bns_needless_in_predict) {
-      blob_names.push_back(bn);
-    }
-  }
-  for (const auto& bn_in_op : blob_names) {
-    *GetBlobDesc4BnInOp(bn_in_op) = blob_desc;
-  }
   size_t tmp_storage_size = 0;
   if (device_type == DeviceType::kGPU) {
     tmp_storage_size =
@@ -112,7 +95,7 @@ void NormalizationOp::InferBlobDescs(
   int64_t tmp_elem_cnt =
       static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type))
       + 1;
-  if (tmp_elem_cnt > 1) { tmp_blob_desc->mut_shape() = Shape({tmp_elem_cnt}); }
+  if (tmp_elem_cnt >= 1) { tmp_blob_desc->mut_shape() = Shape({tmp_elem_cnt}); }
   int64_t num_before_axis_dim =
       in_blob_desc->shape().CountBeforeAxis(conf.axis());
   int64_t num_axis_dim = in_blob_desc->shape().At(conf.axis());
@@ -133,24 +116,85 @@ void NormalizationOp::InferBlobDescs(
   before_axis_sum_multiplier->set_data_type(in_data_type);
 }
 
+void NormalizationOp::InferParamBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const NormalizationOpConf& conf, int64_t norm_part_num,
+    DataType in_data_type, bool use_cudnn) const {
+  BlobDesc blob_desc(Shape({norm_part_num}), in_data_type, false, false, 1);
+  std::list<std::string> blob_names = {"moving_mean", "moving_variance"};
+  std::list<std::string> bns_needless_in_predict_or_cudnn = {"new_mean",
+                                                             "new_variance"};
+  std::list<std::string> bns_need_in_cudnn = {
+      "cache_mean_for_cudnn_bw", "cache_inv_variance_for_cudnn_bw"};
+  if (conf.center()) {
+    blob_names.push_back("beta");
+  } else {
+    blob_names.push_back("beta_diff");
+  }
+  if (conf.scale()) {
+    blob_names.push_back("gamma");
+  } else {
+    blob_names.push_back("gamma_diff");
+  }
+  if (Global<JobDesc>::Get()->IsTrain() && !use_cudnn) {
+    for (const std::string& bn : bns_needless_in_predict_or_cudnn) {
+      blob_names.push_back(bn);
+    }
+  }
+  if (use_cudnn) {
+    for (const std::string& bn : bns_need_in_cudnn) {
+      blob_names.push_back(bn);
+    }
+  } else {
+    blob_names.push_back("inv_var");
+  }
+  for (const auto& bn_in_op : blob_names) {
+    *GetBlobDesc4BnInOp(bn_in_op) = blob_desc;
+  }
+}
+
 void NormalizationOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
     const OpContext* op_ctx) const {
   NormalizationKernelConf* conf = kernel_conf->mutable_normalization_conf();
-  const NormalizationOpCtx* ctx =
-      static_cast<const NormalizationOpCtx*>(op_ctx);
-  conf->set_axis(ctx->axis);
-  conf->set_transpose_rows(ctx->transpose_rows);
-  conf->set_transpose_cols(ctx->transpose_cols);
-  conf->set_need_transpose(ctx->need_transpose);
-  if (ctx->need_transpose) {
-    PbRf<int32_t>* perm = conf->mutable_perm();
-    perm->Reserve(ctx->dims);
-    for (size_t i = 0; i < ctx->dims; ++i) { perm->Add(i); }
-    perm->SwapElements(ctx->axis, 0);
+  const auto* ctx = dynamic_cast<const NormalizationOpCtx*>(op_ctx);
+#ifdef WITH_CUDA
+  if (ctx == nullptr) {
+    VirtualGenKernelConfForCudnn(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
+    return;
   }
+#endif
+  conf->set_use_cudnn(false);
 }
+
+#ifdef WITH_CUDA
+void NormalizationOp::InferBlobDescsForCudnn(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const {
+  const auto& conf = op_conf().normalization_conf();
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  const DataType in_data_type = in_blob_desc->data_type();
+  CHECK(conf.scale() && conf.center())
+      << "Cudnn batch norm must use scale and center";
+  CHECK_GT(conf.epsilon(), CUDNN_BN_MIN_EPSILON);
+  InferParamBlobDescs(GetBlobDesc4BnInOp, conf,
+                      in_blob_desc->shape().At(conf.axis()), in_data_type,
+                      true);
+}
+
+void NormalizationOp::VirtualGenKernelConfForCudnn(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  NormalizationKernelConf* conf = kernel_conf->mutable_normalization_conf();
+  conf->set_use_cudnn(true);
+  GetBlobDesc4BnInOp("in")->shape().ToProto(conf->mutable_in());
+#if (CUDNN_VERSION >= 7000)
+  conf->set_cudnn_bn_mode(CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
+#else
+  conf->set_cudnn_bn_mode(CUDNN_BATCHNORM_SPATIAL);
+#endif
+}
+#endif
 
 void NormalizationOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
   pr_desc->set_policy(ParallelPolicy::kDataParallel);
@@ -166,11 +210,7 @@ NormalizationOpCtx* NormalizationOp::NewNormalizationOpCtx(
   CHECK_LT(op_ctx->axis, op_ctx->dims);
   op_ctx->transpose_cols = in_shape.At(op_ctx->axis);
   op_ctx->transpose_rows = in_shape.elem_cnt() / op_ctx->transpose_cols;
-  if (op_ctx->axis == 0) {
-    op_ctx->need_transpose = false;
-  } else {
-    op_ctx->need_transpose = true;
-  }
+  op_ctx->need_transpose = false;
   return op_ctx;
 }
 

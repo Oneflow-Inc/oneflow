@@ -31,7 +31,7 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDNN_DATA_TYPE, CUDNN_DATA_TYPE_SEQ);
 class CudnnTensorDesc final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnTensorDesc);
-  CudnnTensorDesc() = delete;
+  CudnnTensorDesc();
   ~CudnnTensorDesc();
 
   CudnnTensorDesc(cudnnTensorFormat_t, DataType, int n, int c, int h, int w);
