@@ -143,14 +143,17 @@ template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::InitPureModelTmpBlobs(
     DeviceCtx* ctx,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  InitializerConf sum_multiplier_initializer_conf;
-  sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
-  KernelUtil<device_type, T>::InitializeWithConf(
-      ctx, sum_multiplier_initializer_conf, 0,
-      BnInOp2Blob("after_axis_sum_multiplier"));
-  KernelUtil<device_type, T>::InitializeWithConf(
-      ctx, sum_multiplier_initializer_conf, 0,
-      BnInOp2Blob("before_axis_sum_multiplier"));
+  const auto& conf = this->kernel_conf().normalization_conf();
+  if (!conf.use_cudnn()) {
+    InitializerConf sum_multiplier_initializer_conf;
+    sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+    KernelUtil<device_type, T>::InitializeWithConf(
+        ctx, sum_multiplier_initializer_conf, 0,
+        BnInOp2Blob("after_axis_sum_multiplier"));
+    KernelUtil<device_type, T>::InitializeWithConf(
+        ctx, sum_multiplier_initializer_conf, 0,
+        BnInOp2Blob("before_axis_sum_multiplier"));
+  }
 }
 
 template<DeviceType device_type, typename T>
