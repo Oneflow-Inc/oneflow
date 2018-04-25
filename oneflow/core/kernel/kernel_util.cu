@@ -150,46 +150,46 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
   }
 }
 
-#define AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, prev_dim_size,          \
-                                    axis_dim_size, next_dim_size)              \
-  for (int64_t                                                                 \
-           index = blockIdx.x * blockDim.x + threadIdx.x,                      \
-           __total_size = (prev_dim_size) * (axis_dim_size) * (next_dim_size), \
-           __last_two_dim_size = (axis_dim_size) * (next_dim_size),            \
-           axis_index = 0;                                                     \
-       (axis_index = (index % __last_two_dim_size) / (next_dim_size)),         \
-           index < __total_size;                                               \
+#define AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, before_axis_dim_size,  \
+                                    axis_dim_size, after_axis_dim_size)       \
+  for (int64_t index = blockIdx.x * blockDim.x + threadIdx.x,                 \
+               __total_size = (before_axis_dim_size) * (axis_dim_size)        \
+                              * (after_axis_dim_size),                        \
+               __last_two_dim_size = (axis_dim_size) * (after_axis_dim_size), \
+               axis_index = 0;                                                \
+       (axis_index = (index % __last_two_dim_size) / (after_axis_dim_size)),  \
+               index < __total_size;                                          \
        index += blockDim.x * gridDim.x)
 
 template<typename T>
-__global__ void GpuAxisSliceAdd(const size_t prev_dim_size,
+__global__ void GpuAxisSliceAdd(const size_t before_axis_dim_size,
                                 const size_t axis_dim_size,
-                                const size_t next_dim_size, const T* x,
+                                const size_t after_axis_dim_size, const T* x,
                                 const T* y, T* z) {
-  AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, prev_dim_size, axis_dim_size,
-                              next_dim_size) {
+  AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, before_axis_dim_size,
+                              axis_dim_size, after_axis_dim_size) {
     z[index] = x[index] + y[axis_index];
   }
 }
 
 template<typename T>
-__global__ void GpuAxisSliceSub(const size_t prev_dim_size,
+__global__ void GpuAxisSliceSub(const size_t before_axis_dim_size,
                                 const size_t axis_dim_size,
-                                const size_t next_dim_size, const T* x,
+                                const size_t after_axis_dim_size, const T* x,
                                 const T* y, T* z) {
-  AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, prev_dim_size, axis_dim_size,
-                              next_dim_size) {
+  AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, before_axis_dim_size,
+                              axis_dim_size, after_axis_dim_size) {
     z[index] = x[index] - y[axis_index];
   }
 }
 
 template<typename T>
-__global__ void GpuAxisSliceMul(const size_t prev_dim_size,
+__global__ void GpuAxisSliceMul(const size_t before_axis_dim_size,
                                 const size_t axis_dim_size,
-                                const size_t next_dim_size, const T* x,
+                                const size_t after_axis_dim_size, const T* x,
                                 const T* y, T* z) {
-  AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, prev_dim_size, axis_dim_size,
-                              next_dim_size) {
+  AXIS_SLICE_CUDA_KERNEL_LOOP(index, axis_index, before_axis_dim_size,
+                              axis_dim_size, after_axis_dim_size) {
     z[index] = x[index] * y[axis_index];
   }
 }
@@ -300,33 +300,36 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
       num_in_each_dim);
   AFTER_CPU_INITIALIZE();
 }
-KU_IF_METHOD AxisSliceAdd(DeviceCtx* ctx, const size_t prev_dim_size,
+KU_IF_METHOD AxisSliceAdd(DeviceCtx* ctx, const size_t before_axis_dim_size,
                           const size_t axis_dim_size,
-                          const size_t next_dim_size, const T* x, const T* y,
-                          T* z) {
-  const size_t elem_cnt = prev_dim_size * axis_dim_size * next_dim_size;
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  const size_t elem_cnt =
+      before_axis_dim_size * axis_dim_size * after_axis_dim_size;
   GpuAxisSliceAdd<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-                       0, ctx->cuda_stream()>>>(prev_dim_size, axis_dim_size,
-                                                next_dim_size, x, y, z);
+                       0, ctx->cuda_stream()>>>(
+      before_axis_dim_size, axis_dim_size, after_axis_dim_size, x, y, z);
 }
 
-KU_IF_METHOD AxisSliceSub(DeviceCtx* ctx, const size_t prev_dim_size,
+KU_IF_METHOD AxisSliceSub(DeviceCtx* ctx, const size_t before_axis_dim_size,
                           const size_t axis_dim_size,
-                          const size_t next_dim_size, const T* x, const T* y,
-                          T* z) {
-  const size_t elem_cnt = prev_dim_size * axis_dim_size * next_dim_size;
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  const size_t elem_cnt =
+      before_axis_dim_size * axis_dim_size * after_axis_dim_size;
   GpuAxisSliceSub<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-                       0, ctx->cuda_stream()>>>(prev_dim_size, axis_dim_size,
-                                                next_dim_size, x, y, z);
+                       0, ctx->cuda_stream()>>>(
+      before_axis_dim_size, axis_dim_size, after_axis_dim_size, x, y, z);
 }
-KU_IF_METHOD AxisSliceMul(DeviceCtx* ctx, const size_t prev_dim_size,
+KU_IF_METHOD AxisSliceMul(DeviceCtx* ctx, const size_t before_axis_dim_size,
                           const size_t axis_dim_size,
-                          const size_t next_dim_size, const T* x, const T* y,
-                          T* z) {
-  const size_t elem_cnt = prev_dim_size * axis_dim_size * next_dim_size;
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  const size_t elem_cnt =
+      before_axis_dim_size * axis_dim_size * after_axis_dim_size;
   GpuAxisSliceMul<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
-                       0, ctx->cuda_stream()>>>(prev_dim_size, axis_dim_size,
-                                                next_dim_size, x, y, z);
+                       0, ctx->cuda_stream()>>>(
+      before_axis_dim_size, axis_dim_size, after_axis_dim_size, x, y, z);
 }
 
 #define KU_FLOATING_METHOD             \
