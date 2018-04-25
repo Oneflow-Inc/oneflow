@@ -13,4 +13,7 @@ void MomentumModelUpdateOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("momentum") = *model_blob_desc;
 }
 
+REGISTER_CLASS(NormalModelUpdateOpUserConf::kMomentumConf, NormalModelUpdtOp,
+               MomentumModelUpdateOp);
+
 }  // namespace oneflow

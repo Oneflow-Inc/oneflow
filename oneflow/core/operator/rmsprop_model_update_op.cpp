@@ -13,4 +13,6 @@ void RMSPropModelUpdateOp::InferBlobDescs(
   *GetBlobDesc4BnInOp("mean_square") = *model_blob_desc;
 }
 
+REGISTER_CLASS(NormalModelUpdateOpUserConf::kRmspropConf, NormalModelUpdtOp, RMSPropModelUpdateOp);
+
 }  // namespace oneflow
