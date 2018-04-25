@@ -66,35 +66,10 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   for (const auto& pair : lbi2blob_desc_) {
     auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
     if (rhs_it == rhs->lbi2blob_desc_.end()) {
-      *(pair.second) = *(rhs->lbi2blob_desc_.at(GenUnCloneLbi(pair.first)));
+      auto un_clone_it = rhs->lbi2blob_desc_.find(GenUnCloneLbi(pair.first));
+      if (un_clone_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(un_clone_it->second); }
     } else {
       *(pair.second) = *(rhs_it->second);
-    }
-  }
-}
-
-void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* src, const RegstDesc* supple) {
-  CHECK_EQ(is_locked_, false);
-  for (const auto& pair : lbi2blob_desc_) {
-    auto src_it = src->lbi2blob_desc_.find(pair.first);
-    auto supple_it = supple->lbi2blob_desc_.find(pair.first);
-    if (src_it != src->lbi2blob_desc_.end()) {
-      *(pair.second) = *(src_it->second);
-      continue;
-    }
-    if (supple_it != supple->lbi2blob_desc_.end()) {
-      *(pair.second) = *(supple_it->second);
-      continue;
-    }
-    const LogicalBlobId unclone_lbi = GenUnCloneLbi(pair.first);
-    src_it = src->lbi2blob_desc_.find(unclone_lbi);
-    supple_it = supple->lbi2blob_desc_.find(unclone_lbi);
-    if (src_it != src->lbi2blob_desc_.end()) {
-      *(pair.second) = *(src_it->second);
-    } else if (supple_it != supple->lbi2blob_desc_.end()) {
-      *(pair.second) = *(supple_it->second);
-    } else {
-      UNIMPLEMENTED();
     }
   }
 }
