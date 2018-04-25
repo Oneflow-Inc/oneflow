@@ -3,6 +3,10 @@
 
 namespace oneflow {
 
+struct NormalizationOpCtx : public OpContext {
+  bool use_cudnn;
+};
+
 void NormalizationOp::InitFromOpConf() {
   const auto& conf = op_conf().normalization_conf();
   CHECK_GT(conf.epsilon(), 0.f);
@@ -26,9 +30,6 @@ void NormalizationOp::InitFromOpConf() {
   }
   EnrollDataTmpBn("normalized_in");
   EnrollDataTmpBn("inv_var");
-  EnrollDataTmpBn("tmp_storage_for_sum");
-  EnrollDataTmpBn("trans_in");
-  EnrollDataTmpBn("trans_out");
   EnrollDataTmpBn("before_by_axis_matrix");
   EnrollModelTmpBn("before_axis_sum_multiplier");
   EnrollModelTmpBn("after_axis_sum_multiplier");
@@ -43,11 +44,7 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
 bool NormalizationOp::NeedOutWhenBackward() const {
   ActivationType activation =
       static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-  if (activation != ActivationType::kNone) {
-    return true;
-  } else {
-    return false;
-  }
+  return activation != ActivationType::kNone;
 }
 
 void NormalizationOp::InferBlobDescs(
@@ -59,43 +56,23 @@ void NormalizationOp::InferBlobDescs(
   const DataType in_data_type = in_blob_desc->data_type();
   CHECK_EQ(in_data_type, Global<JobDesc>::Get()->DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
+  auto* op_ctx = new NormalizationOpCtx();
+  EnrollOpCtx(op_ctx);
 #ifdef WITH_CUDA
   int32_t in_dims = in_blob_desc->shape().NumAxes();
   if (device_type == DeviceType::kGPU && CUDNN_VERSION >= 5000
       && in_data_type == DataType::kFloat && in_dims >= 4 && in_dims <= 5
       && (conf.axis() == 1 || conf.axis() == in_dims - 1)) {
+    op_ctx->use_cudnn = true;
     InferBlobDescsForCudnn(GetBlobDesc4BnInOp);
     return;
   }
 #endif
-  NormalizationOpCtx* op_ctx = NewNormalizationOpCtx(in_blob_desc->shape());
-  EnrollOpCtx(op_ctx);
-  InferParamBlobDescs(GetBlobDesc4BnInOp, conf, op_ctx->transpose_cols,
-                      in_data_type, false);
-  if (op_ctx->need_transpose) {
-    BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("trans_in");
-    transpose_blob_desc->mut_shape() = in_blob_desc->shape();
-    transpose_blob_desc->mut_shape().Set(op_ctx->axis,
-                                         in_blob_desc->shape().At(0));
-    transpose_blob_desc->mut_shape().Set(0, op_ctx->transpose_cols);
-    transpose_blob_desc->set_data_type(in_data_type);
-    *GetBlobDesc4BnInOp("trans_out") = *transpose_blob_desc;
-    *GetBlobDesc4BnInOp("normalized_in") = *transpose_blob_desc;
-  } else {
-    *GetBlobDesc4BnInOp("normalized_in") = *in_blob_desc;
-  }
-  size_t tmp_storage_size = 0;
-  if (device_type == DeviceType::kGPU) {
-    tmp_storage_size =
-        GetTmpSizeForReduceSum(in_data_type, op_ctx->transpose_rows);
-    CHECK_GT(tmp_storage_size, 0);
-  }
-  BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("tmp_storage_for_sum");
-  tmp_blob_desc->set_data_type(in_data_type);
-  int64_t tmp_elem_cnt =
-      static_cast<int64_t>(tmp_storage_size / GetSizeOfDataType(in_data_type))
-      + 1;
-  if (tmp_elem_cnt >= 1) { tmp_blob_desc->mut_shape() = Shape({tmp_elem_cnt}); }
+  op_ctx->use_cudnn = false;
+  InferParamBlobDescs(GetBlobDesc4BnInOp, conf,
+                      in_blob_desc->shape().At(conf.axis()), in_data_type,
+                      false);
+  *GetBlobDesc4BnInOp("normalized_in") = *in_blob_desc;
   int64_t num_before_axis_dim =
       in_blob_desc->shape().CountBeforeAxis(conf.axis());
   int64_t num_axis_dim = in_blob_desc->shape().At(conf.axis());
@@ -159,13 +136,13 @@ void NormalizationOp::VirtualGenKernelConf(
     const OpContext* op_ctx) const {
   NormalizationKernelConf* conf = kernel_conf->mutable_normalization_conf();
   const auto* ctx = dynamic_cast<const NormalizationOpCtx*>(op_ctx);
+  conf->set_use_cudnn(ctx->use_cudnn);
 #ifdef WITH_CUDA
-  if (ctx == nullptr) {
+  if (ctx->use_cudnn) {
     VirtualGenKernelConfForCudnn(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
     return;
   }
 #endif
-  conf->set_use_cudnn(false);
 }
 
 #ifdef WITH_CUDA
@@ -186,7 +163,6 @@ void NormalizationOp::VirtualGenKernelConfForCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   NormalizationKernelConf* conf = kernel_conf->mutable_normalization_conf();
-  conf->set_use_cudnn(true);
   GetBlobDesc4BnInOp("in")->shape().ToProto(conf->mutable_in());
 #if (CUDNN_VERSION >= 7000)
   conf->set_cudnn_bn_mode(CUDNN_BATCHNORM_SPATIAL_PERSISTENT);
@@ -198,20 +174,6 @@ void NormalizationOp::VirtualGenKernelConfForCudnn(
 
 void NormalizationOp::VirtualFixParallelDesc(ParallelDesc* pr_desc) const {
   pr_desc->set_policy(ParallelPolicy::kDataParallel);
-}
-
-NormalizationOpCtx* NormalizationOp::NewNormalizationOpCtx(
-    const Shape& in_shape) const {
-  NormalizationOpCtx* op_ctx = new NormalizationOpCtx();
-  op_ctx->axis = op_conf().normalization_conf().axis();
-  op_ctx->dims = in_shape.NumAxes();
-  if (op_ctx->axis < 0) { op_ctx->axis += op_ctx->dims; }
-  CHECK_GE(op_ctx->axis, 0);
-  CHECK_LT(op_ctx->axis, op_ctx->dims);
-  op_ctx->transpose_cols = in_shape.At(op_ctx->axis);
-  op_ctx->transpose_rows = in_shape.elem_cnt() / op_ctx->transpose_cols;
-  op_ctx->need_transpose = false;
-  return op_ctx;
 }
 
 REGISTER_OP(OperatorConf::kNormalizationConf, NormalizationOp);

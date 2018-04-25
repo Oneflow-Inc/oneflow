@@ -14,30 +14,6 @@ void Rsqrt(DeviceCtx* ctx, const int64_t n, const T* x, const float epsilon,
   KernelUtil<device_type, T>::Rsqrt(ctx, n, y, epsilon);
 }
 
-template<DeviceType device_type, typename T>
-void ScalarSub(DeviceCtx* ctx, const int64_t n, const T* x, const T* scalar_ptr,
-               T* y) {
-  KernelUtil<device_type, T>::Copy(ctx, n, x, 1, y, 1);
-  KernelUtil<device_type, T>::Axpy(ctx, n, static_cast<T>(-1), scalar_ptr, 0, y,
-                                   1);
-}
-
-template<typename T>
-T* GetTmpForSumDptr(Blob* tmp_storage_blob, T* nop_addr) {
-  if (tmp_storage_blob != nullptr) {
-    return tmp_storage_blob->mut_dptr<T>();
-  } else {
-    return nop_addr;
-  }
-}
-size_t GetTmpForSumByteSize(Blob* tmp_storage_blob) {
-  if (tmp_storage_blob != nullptr) {
-    return tmp_storage_blob->ByteSizeOfDataContentField();
-  } else {
-    return 0;
-  }
-}
-
 }  // namespace
 
 NormalizationCtx::NormalizationCtx(const KernelConf& kernel_conf,
