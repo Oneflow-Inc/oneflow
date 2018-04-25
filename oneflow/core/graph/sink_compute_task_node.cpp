@@ -13,15 +13,7 @@ void SinkCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
   for (const std::string& ibn : node->op()->input_bns()) {
-    const LogicalBlobId& lbi = logical_node()->SoleOp()->BnInOp2Lbi(ibn);
-    const std::list<std::weak_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
-    bool has_binded = false;
-    for (std::weak_ptr<RegstDesc> regst : in_regsts) {
-      if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
-      node->BindBnWithRegst(ibn, regst);
-      has_binded = true;
-    }
-    CHECK(has_binded);
+    node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
   CHECK(node->op()->data_tmp_bns().empty());
   CHECK(node->op()->output_bns().empty());
