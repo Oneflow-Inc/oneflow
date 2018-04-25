@@ -1,18 +1,27 @@
 #include "oneflow/core/graph/loss_compute_task_node.h"
+#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("loss");
-  ProduceRegst("in_diff");
+  ProduceRegst("boxing_in_diff");
+  ProduceRegst("121_in_diff");
   ProduceRegst("data_tmp", 1, 1);
   for (TaskEdge* edge : out_edges()) {
-    TaskType dst_task_node_type = edge->dst_node()->GetTaskType();
-    if (dst_task_node_type == TaskType::kLossAcc) {
+    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
+    if (succ_logical->TypeName() == "LossAcc") {
       BindEdgeWithProducedRegst(edge, "loss");
     } else {
-      BindEdgeWithProducedRegst(edge, "in_diff");
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        BindEdgeWithProducedRegst(edge, "boxing_in_diff");
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        BindEdgeWithProducedRegst(edge, "121_in_diff");
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
@@ -24,7 +33,8 @@ void LossCompTaskNode::ConsumeAllRegsts() {
 void LossCompTaskNode::BuildExecGphAndRegst() {
   // regst
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
-  std::shared_ptr<RegstDesc> in_diff_regst = GetProducedRegst("in_diff");
+  std::shared_ptr<RegstDesc> in_diff_regst_boxing = GetProducedRegst("boxing_in_diff");
+  std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("121_in_diff");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   // op
   const auto& op_vec = logical_node()->op_vec();
@@ -45,13 +55,23 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
     data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
     loss_node->BindBnWithRegst(obn, data_tmp_regst);
   }
-  for (const std::string& idbn : loss_op->input_diff_bns()) {
-    in_diff_regst->AddLbi(loss_op->BnInOp2Lbi(idbn));
-    loss_node->BindBnWithRegst(idbn, in_diff_regst);
-  }
   for (const std::string& dtbn : loss_op->data_tmp_bns()) {
     data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(dtbn));
     loss_node->BindBnWithRegst(dtbn, data_tmp_regst);
+  }
+  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
+  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
+  for (const std::string& idbn : loss_op->input_diff_bns()) {
+    const LogicalBlobId& lbi = loss_op->BnInOp2Lbi(idbn);
+    if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
+      in_diff_regst_boxing->AddLbi(lbi);
+      loss_node->BindBnWithRegst(idbn, in_diff_regst_boxing);
+    } else if (lbi_121.find(lbi) != lbi_121.end()) {
+      in_diff_regst_121->AddLbi(lbi);
+      loss_node->BindBnWithRegst(idbn, in_diff_regst_121);
+    } else {
+      CHECK(lbi_boxing.empty() && lbi_121.empty());
+    }
   }
   sum_node->BindBnWithRegst(sum_op->SoleIbn(), data_tmp_regst);
   loss_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
@@ -63,7 +83,8 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   loss_node->InferBlobDescs(parallel_ctx());
   sum_node->InferBlobDescs(parallel_ctx());
   for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-    in_diff_regst->CopyBlobDescWithoutAddLbi(regst.lock().get());
+    in_diff_regst_boxing->CopyBlobDescWithoutAddLbi(regst.lock().get());
+    in_diff_regst_121->CopyBlobDescWithoutAddLbi(regst.lock().get());
   }
 }
 
