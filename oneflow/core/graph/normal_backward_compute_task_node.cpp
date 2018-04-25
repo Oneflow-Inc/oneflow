@@ -161,18 +161,10 @@ void NormalBackwardCompTaskNode::BindModelDiffRegst() {
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      node->BindBnWithRegst(dtbn, data_tmp_regst);
-    }
-    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
-      node->BindBnWithRegst(mtbn, model_tmp_regst);
-    }
-    for (const std::string& mdbn : node->op()->model_diff_bns()) {
-      node->BindBnWithRegst(mdbn, model_diff_regst);
-    }
-    for (const std::string& mbn : node->op()->model_bns()) {
-      node->BindBnWithRegst(mbn, model_regst);
-    }
+    node->BindBnsWithRegst(&Operator::data_tmp_bns, data_tmp_regst);
+    node->BindBnsWithRegst(&Operator::model_tmp_bns, model_tmp_regst);
+    node->BindBnsWithRegst(&Operator::model_diff_bns, model_diff_regst);
+    node->BindBnsWithRegst(&Operator::model_bns, model_regst);
   });
 }
 
