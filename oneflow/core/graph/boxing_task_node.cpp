@@ -171,7 +171,7 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
     for (size_t i = 0; i < node->op()->input_bns().size(); ++i) {
       auto regst = sorted_in_edges[i].edge->GetSoleRegst();
       const std::string& ibn = node->op()->input_bns().Get(i);
-      node->BindBnInOpAndRegst(ibn, regst);
+      node->BindBnWithRegst(ibn, regst);
     }
     for (size_t i = 0; i < node->op()->output_bns().size(); ++i) {
       auto regst = sorted_out_edges[i].edge->GetSoleRegst();
@@ -182,12 +182,12 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
       } else {
         regst->AddLbi(lbi);
       }
-      node->BindBnInOpAndRegst(obn, regst);
+      node->BindBnWithRegst(obn, regst);
     }
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       CHECK(lbi.is_packed_id());
       middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
-      node->BindBnInOpAndRegst(dtbn, middle_regst);
+      node->BindBnWithRegst(dtbn, middle_regst);
     }
     if (lbi.is_packed_id() == false) { node->InferBlobDescs(nullptr); }
   }

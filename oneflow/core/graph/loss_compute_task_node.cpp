@@ -37,27 +37,25 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   sum_node->mut_op() = sum_op;
   Connect(loss_node, mut_exec_gph().NewEdge(), sum_node);
   // bind
-  for (const std::string& ibn : loss_op->input_bns()) {
-    loss_node->BindBnInOpAndRegst(ibn, in_regst);
-  }
+  for (const std::string& ibn : loss_op->input_bns()) { loss_node->BindBnWithRegst(ibn, in_regst); }
   for (const std::string& obn : loss_op->output_bns()) {
     data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
-    loss_node->BindBnInOpAndRegst(obn, data_tmp_regst);
+    loss_node->BindBnWithRegst(obn, data_tmp_regst);
   }
   for (const std::string& idbn : loss_op->input_diff_bns()) {
     in_diff_regst->AddLbi(loss_op->BnInOp2Lbi(idbn));
-    loss_node->BindBnInOpAndRegst(idbn, in_diff_regst);
+    loss_node->BindBnWithRegst(idbn, in_diff_regst);
   }
   for (const std::string& dtbn : loss_op->data_tmp_bns()) {
     data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(dtbn));
-    loss_node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+    loss_node->BindBnWithRegst(dtbn, data_tmp_regst);
   }
-  sum_node->BindBnInOpAndRegst(sum_op->SoleIbn(), data_tmp_regst);
+  sum_node->BindBnWithRegst(sum_op->SoleIbn(), data_tmp_regst);
   loss_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
-  sum_node->BindBnInOpAndRegst(sum_op->SoleObn(), loss_regst);
+  sum_node->BindBnWithRegst(sum_op->SoleObn(), loss_regst);
   if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
     loss_regst->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
-    loss_node->BindBnInOpAndRegst("reduction_coefficient", loss_regst);
+    loss_node->BindBnWithRegst("reduction_coefficient", loss_regst);
   }
   loss_node->InferBlobDescs(parallel_ctx());
   sum_node->InferBlobDescs(parallel_ctx());

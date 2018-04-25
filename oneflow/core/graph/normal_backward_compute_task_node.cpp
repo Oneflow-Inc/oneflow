@@ -26,8 +26,8 @@ void NormalBackwardCompTaskNode::VirtualBuildExecGphAndBindOutDiffRegst() {
         edge->mut_dst_bn() = odbn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
-        cur_node->BindBnInOpAndRegst(odbn, out_diff_regst);
-        cur_node->BindBnInOpAndRegst(GenUnDiffBn(odbn), out_regst);
+        cur_node->BindBnWithRegst(odbn, out_diff_regst);
+        cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst);
       }
     }
   });
@@ -39,15 +39,15 @@ void NormalBackwardCompTaskNode::VirtualBuildActivationDiffRegst() {
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
         || edge->dst_node()->op()->NeedOutWhenBackward()) {
-      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
-      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
+      edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_diff_regst);
+      edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_diff_regst);
       activation_diff_regst->AddLbi(edge->lbi());
     } else {
-      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
-      edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
+      edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_regst);
+      edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_regst);
     }
-    edge->src_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->src_bn()), activation_regst);
-    edge->dst_node()->BindBnInOpAndRegst(GenUnDiffBn(edge->dst_bn()), activation_regst);
+    edge->src_node()->BindBnWithRegst(GenUnDiffBn(edge->src_bn()), activation_regst);
+    edge->dst_node()->BindBnWithRegst(GenUnDiffBn(edge->dst_bn()), activation_regst);
   });
 }
 
@@ -64,9 +64,9 @@ void NormalBackwardCompTaskNode::VirtualBuildInDiffRegst() {
       if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
       if (in_diff_regst) {
         in_diff_regst->AddLbi(lbi);
-        cur_node->BindBnInOpAndRegst(idbn, in_diff_regst);
+        cur_node->BindBnWithRegst(idbn, in_diff_regst);
       }
-      cur_node->BindBnInOpAndRegst(GenUnDiffBn(idbn), in_regst);
+      cur_node->BindBnWithRegst(GenUnDiffBn(idbn), in_regst);
     }
   });
 }

@@ -17,8 +17,8 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   out_regst->CopyBlobDescFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = ConstructOp(NewCopyOpConf());
-  node->BindBnInOpAndRegst(node->op()->SoleIbn(), in_regst);
-  node->BindBnInOpAndRegst(node->op()->SoleObn(), out_regst);
+  node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
+  node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
 
 void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Type copy_type) {

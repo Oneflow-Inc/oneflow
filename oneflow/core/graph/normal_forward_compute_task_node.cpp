@@ -96,7 +96,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
         bool has_binded = false;
         for (std::weak_ptr<RegstDesc> regst : in_regsts) {
           if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
-          cur_node->BindBnInOpAndRegst(ibn, regst);
+          cur_node->BindBnWithRegst(ibn, regst);
           has_binded = true;
           break;
         }
@@ -123,10 +123,10 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
       }
       if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
         out_regst_boxing->AddLbi(lbi);
-        cur_node->BindBnInOpAndRegst(obn, out_regst_boxing);
+        cur_node->BindBnWithRegst(obn, out_regst_boxing);
       } else if (lbi_121.find(lbi) != lbi_121.end()) {
         out_regst_121->AddLbi(lbi);
-        cur_node->BindBnInOpAndRegst(obn, out_regst_121);
+        cur_node->BindBnWithRegst(obn, out_regst_121);
       } else {
         UNIMPLEMENTED();
       }
@@ -139,47 +139,38 @@ void NormalForwardCompTaskNode::BuildActivationRegst() {
   mut_exec_gph().ForEachEdge([&](const ExecEdge* edge) {
     if (activation_regst->GetBlobDesc(edge->lbi()) == nullptr) {
       activation_regst->AddLbi(edge->lbi());
-      edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_regst);
+      edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_regst);
     }
-    edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_regst);
+    edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_regst);
   });
 }
 
 void NormalForwardCompTaskNode::BuildModelAndTmpRegsts() {
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(dtbn);
-      data_tmp_regst->AddLbi(lbi);
-      node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
-    }
+    node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
       if (!model_tmp_regst->IsLocked()) {
         const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mtbn);
         model_tmp_regst->AddLbi(lbi);
       }
-      node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
+      node->BindBnWithRegst(mtbn, model_tmp_regst);
     }
     for (const std::string& mbn : node->op()->model_bns()) {
       if (!model_regst->IsLocked()) {
         const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mbn);
         model_regst->AddLbi(lbi);
       }
-      node->BindBnInOpAndRegst(mbn, model_regst);
+      node->BindBnWithRegst(mbn, model_regst);
     }
   });
 }
 
 void NormalForwardCompTaskNode::BuildForwardModelRegsts() {
-  std::shared_ptr<RegstDesc> forward_model_regst = GetProducedRegst("forward_model");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    std::shared_ptr<const Operator> cur_op = cur_node->op();
-    for (const std::string& fwmbn : cur_op->forward_model_bns()) {
-      forward_model_regst->AddLbi(cur_op->BnInOp2Lbi(fwmbn));
-      cur_node->BindBnInOpAndRegst(fwmbn, forward_model_regst);
-    }
+    cur_node->AddBnToRegstAndBindIt(&Operator::forward_model_bns,
+                                    GetProducedRegst("forward_model"));
   });
 }
 

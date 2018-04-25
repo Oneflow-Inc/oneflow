@@ -27,16 +27,16 @@ void DecodeCompTaskNode::BuildExecGphAndRegst() {
   //  const std::string& lbn = node->op()->Lbn4BnInOp(obn);
   //  if (data_output_lbns.find(lbn) == data_output_lbns.end()) {
   //    data_tmp_regst->AddLbn(lbn);
-  //    node->BindBnInOpAndRegst(obn, data_tmp_regst);
+  //    node->BindBnWithRegst(obn, data_tmp_regst);
   //  } else {
   //    out_regst->AddLbn(lbn);
-  //    node->BindBnInOpAndRegst(obn, out_regst);
+  //    node->BindBnWithRegst(obn, out_regst);
   //  }
   //}
   // for (const std::string& dtbn : node->op()->data_tmp_bns()) {
   //  const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
   //  data_tmp_regst->AddLbn(lbn);
-  //  node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+  //  node->BindBnWithRegst(dtbn, data_tmp_regst);
   //}
   // node->InferBlobDescs(parallel_ctx(), device_type());
 }
