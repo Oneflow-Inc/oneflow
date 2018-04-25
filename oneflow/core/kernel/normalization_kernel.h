@@ -86,6 +86,10 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
       const KernelCtx& ctx,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob,
       const Blob* x_blob, Blob* y_blob) const;
+  template<void (*handler)(DeviceCtx*, const size_t, const size_t, const size_t,
+                           const T*, const T*, T*)>
+  void AxisSliceDo(const KernelCtx& ctx, const Blob* x_blob, const Blob* y_blob,
+                   Blob* z_blob) const;
   void AxisSliceAdd(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
                     Blob* z_blob) const;
   void AxisSliceSub(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,

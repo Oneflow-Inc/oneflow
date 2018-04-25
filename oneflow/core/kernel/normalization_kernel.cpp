@@ -410,19 +410,30 @@ void NormalizationKernel<device_type, T>::ComputeAxisMean(
 }
 
 template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::AxisSliceAdd(const KernelCtx& ctx,
-                                                       const Blob* x_blob,
-                                                       const Blob* y_blob,
-                                                       Blob* z_blob) const {
+template<void (*handler)(DeviceCtx*, const size_t, const size_t, const size_t,
+                         const T*, const T*, T*)>
+void NormalizationKernel<device_type, T>::AxisSliceDo(const KernelCtx& ctx,
+                                                      const Blob* x_blob,
+                                                      const Blob* y_blob,
+                                                      Blob* z_blob) const {
   int64_t axis = this->op_conf().normalization_conf().axis();
   size_t before_axis_dim_size = x_blob->shape().CountBeforeAxis(axis);
   size_t axis_dim_size = x_blob->shape().At(axis);
   size_t after_axis_dim_size = x_blob->shape().CountAfterAxis(axis);
   CHECK_EQ(axis_dim_size, y_blob->shape().elem_cnt());
   CHECK_EQ(x_blob->shape(), z_blob->shape());
-  KernelUtil<device_type, T>::AxisSliceAdd(
-      ctx.device_ctx, before_axis_dim_size, axis_dim_size, after_axis_dim_size,
-      x_blob->dptr<T>(), y_blob->dptr<T>(), z_blob->mut_dptr<T>());
+  handler(ctx.device_ctx, before_axis_dim_size, axis_dim_size,
+          after_axis_dim_size, x_blob->dptr<T>(), y_blob->dptr<T>(),
+          z_blob->mut_dptr<T>());
+}
+
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::AxisSliceAdd(const KernelCtx& ctx,
+                                                       const Blob* x_blob,
+                                                       const Blob* y_blob,
+                                                       Blob* z_blob) const {
+  AxisSliceDo<&KernelUtil<device_type, T>::AxisSliceAdd>(ctx, x_blob, y_blob,
+                                                         z_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -430,15 +441,8 @@ void NormalizationKernel<device_type, T>::AxisSliceSub(const KernelCtx& ctx,
                                                        const Blob* x_blob,
                                                        const Blob* y_blob,
                                                        Blob* z_blob) const {
-  int64_t axis = this->op_conf().normalization_conf().axis();
-  size_t before_axis_dim_size = x_blob->shape().CountBeforeAxis(axis);
-  size_t axis_dim_size = x_blob->shape().At(axis);
-  size_t after_axis_dim_size = x_blob->shape().CountAfterAxis(axis);
-  CHECK_EQ(axis_dim_size, y_blob->shape().elem_cnt());
-  CHECK_EQ(x_blob->shape(), z_blob->shape());
-  KernelUtil<device_type, T>::AxisSliceSub(
-      ctx.device_ctx, before_axis_dim_size, axis_dim_size, after_axis_dim_size,
-      x_blob->dptr<T>(), y_blob->dptr<T>(), z_blob->mut_dptr<T>());
+  AxisSliceDo<&KernelUtil<device_type, T>::AxisSliceSub>(ctx, x_blob, y_blob,
+                                                         z_blob);
 }
 
 template<DeviceType device_type, typename T>
@@ -446,15 +450,8 @@ void NormalizationKernel<device_type, T>::AxisSliceMul(const KernelCtx& ctx,
                                                        const Blob* x_blob,
                                                        const Blob* y_blob,
                                                        Blob* z_blob) const {
-  int64_t axis = this->op_conf().normalization_conf().axis();
-  size_t before_axis_dim_size = x_blob->shape().CountBeforeAxis(axis);
-  size_t axis_dim_size = x_blob->shape().At(axis);
-  size_t after_axis_dim_size = x_blob->shape().CountAfterAxis(axis);
-  CHECK_EQ(axis_dim_size, y_blob->shape().elem_cnt());
-  CHECK_EQ(x_blob->shape(), z_blob->shape());
-  KernelUtil<device_type, T>::AxisSliceMul(
-      ctx.device_ctx, before_axis_dim_size, axis_dim_size, after_axis_dim_size,
-      x_blob->dptr<T>(), y_blob->dptr<T>(), z_blob->mut_dptr<T>());
+  AxisSliceDo<&KernelUtil<device_type, T>::AxisSliceMul>(ctx, x_blob, y_blob,
+                                                         z_blob);
 }
 
 template<DeviceType device_type, typename T>
