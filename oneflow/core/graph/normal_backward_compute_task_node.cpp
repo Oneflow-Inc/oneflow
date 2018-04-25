@@ -5,14 +5,13 @@
 namespace oneflow {
 
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("model_diff");
   ProduceRegst("boxing_in_diff");
   ProduceRegst("121_in_diff");
   ProduceRegst("activation_diff", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc") {
-      BindEdgeWithProducedRegst(edge, "model_diff");
+      BindEdgeWithProducedRegst(edge, ProduceRegst("model_diff"));
     } else {
       BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
       if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
@@ -110,9 +109,7 @@ void NormalBackwardCompTaskNode::LinkFwExecNode() {
   });
   mut_exec_gph().ForEachNode([&](ExecNode* bw_exec) {
     auto fw_exec_it = op_name2fw_exec.find(bw_exec->op()->op_name());
-    if (fw_exec_it == op_name2fw_exec.end()) {
-      // CHECK(bw_exec->op()->IsCloneOp());
-    } else {
+    if (fw_exec_it != op_name2fw_exec.end()) {
       bw_exec->set_fw_node(fw_exec_it->second);
     }
   });
@@ -123,7 +120,9 @@ void NormalBackwardCompTaskNode::BuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
     if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
-        || edge->dst_node()->op()->NeedOutWhenBackward()) {
+        || edge->dst_node()->op()->NeedOutWhenBackward()
+        || edge->src_node()->fw_node() == nullptr
+        || edge->dst_node()->fw_node() == nullptr) {
       edge->src_node()->BindBnInOpAndRegst(edge->src_bn(), activation_diff_regst);
       edge->dst_node()->BindBnInOpAndRegst(edge->dst_bn(), activation_diff_regst);
       activation_diff_regst->AddLbi(edge->lbi());
@@ -149,7 +148,11 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     }
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
-      if (found_lbis.find(lbi) != found_lbis.end()) { continue; }
+      if (found_lbis.find(lbi) != found_lbis.end()) {
+        CHECK(lbi_boxing.find(lbi) == lbi_boxing.end());
+        CHECK(lbi_121.find(lbi) == lbi_121.end());
+        continue;
+      }
       bool has_binded_in_regst = false;
       for (std::weak_ptr<RegstDesc> regst : in_regst) {
         if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
@@ -158,16 +161,15 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
         break;
       }
       CHECK(has_binded_in_regst);
-      if (lbi_boxing.empty() && lbi_121.empty()) {
-        continue;
-      } else if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
+      if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
         in_diff_regst_boxing->AddLbi(lbi);
         cur_node->BindBnInOpAndRegst(idbn, in_diff_regst_boxing);
       } else if (lbi_121.find(lbi) != lbi_121.end()) {
         in_diff_regst_121->AddLbi(lbi);
         cur_node->BindBnInOpAndRegst(idbn, in_diff_regst_121);
       } else {
-        UNIMPLEMENTED();
+        CHECK(lbi_boxing.empty());
+        CHECK(lbi_121.empty());
       }
     }
   });
@@ -209,8 +211,9 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   if (md_diff_regst) { md_diff_regst->CopyBlobDescFrom(GetSoleConsumedRegst("model").get()); }
 
   std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");
-  activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("activation").get(),
-                                                   GetSoleConsumedRegst("out").get());
+  activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("activation").get());
+  activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("boxing_out").get());
+  activation_diff_regst->CopyBlobDescWithoutAddLbi(GetSoleConsumedRegst("121_out").get());
 }
 
 CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {

@@ -74,32 +74,6 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   }
 }
 
-void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* src, const RegstDesc* supple) {
-  CHECK_EQ(is_locked_, false);
-  for (const auto& pair : lbi2blob_desc_) {
-    auto src_it = src->lbi2blob_desc_.find(pair.first);
-    auto supple_it = supple->lbi2blob_desc_.find(pair.first);
-    if (src_it != src->lbi2blob_desc_.end()) {
-      *(pair.second) = *(src_it->second);
-      continue;
-    }
-    if (supple_it != supple->lbi2blob_desc_.end()) {
-      *(pair.second) = *(supple_it->second);
-      continue;
-    }
-    const LogicalBlobId unclone_lbi = GenUnCloneLbi(pair.first);
-    src_it = src->lbi2blob_desc_.find(unclone_lbi);
-    supple_it = supple->lbi2blob_desc_.find(unclone_lbi);
-    if (src_it != src->lbi2blob_desc_.end()) {
-      *(pair.second) = *(src_it->second);
-    } else if (supple_it != supple->lbi2blob_desc_.end()) {
-      *(pair.second) = *(supple_it->second);
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-}
-
 BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK_EQ(is_locked_, false);
   CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
