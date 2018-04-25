@@ -36,6 +36,6 @@ void DecodeRandomKernel::Forward(const KernelCtx& ctx,
                  BnInOp2Blob(op_attribute().output_bns(0)));
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kDecodeRandomConf, []() { return new DecodeRandomKernel; }));
+REGISTER_KERNEL(OperatorConf::kDecodeRandomConf, DecodeRandomKernel);
 
 }  // namespace oneflow

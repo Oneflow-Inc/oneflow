@@ -43,7 +43,12 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
-  void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
+  void BindBnWithRegst(const std::string& bn, std::weak_ptr<RegstDesc>);
+  void BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                        std::weak_ptr<RegstDesc>);
+  void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                             std::shared_ptr<RegstDesc>);
+  void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::weak_ptr<RegstDesc>>&);
 
   void set_fw_node(ExecNode* val) { fw_node_ = val; }
   ExecNode* fw_node() { return fw_node_; }

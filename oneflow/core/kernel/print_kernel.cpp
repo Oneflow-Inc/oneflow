@@ -63,6 +63,6 @@ void PrintKernel::Forward(const KernelCtx& ctx,
   out_stream_->Flush();
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kPrintConf, []() { return new PrintKernel; }));
+REGISTER_KERNEL(OperatorConf::kPrintConf, PrintKernel);
 
 }  // namespace oneflow

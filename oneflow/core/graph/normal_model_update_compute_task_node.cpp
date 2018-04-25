@@ -52,14 +52,14 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
-    node->BindBnInOpAndRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front().lock());
+    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front().lock());
   }
-  node->BindBnInOpAndRegst(node->op()->SoleObn(), GetProducedRegst("model"));
+  node->BindBnWithRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   auto data_tmp_regst = GetProducedRegst("data_tmp");
   for (const std::string& dtbn : node->op()->data_tmp_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(dtbn);
     data_tmp_regst->AddLbi(lbi);
-    node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+    node->BindBnWithRegst(dtbn, data_tmp_regst);
   }
   node->InferBlobDescs(nullptr);
 }
