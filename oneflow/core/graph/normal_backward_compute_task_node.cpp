@@ -6,6 +6,9 @@ namespace oneflow {
 
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("model_diff");
+  ProduceRegst("boxing_in_diff");
+  ProduceRegst("121_in_diff");
+  ProduceRegst("activation_diff", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc") {
@@ -13,17 +16,14 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     } else {
       BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
       if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        if (GetProducedRegst("boxing_in_diff") == nullptr) { ProduceRegst("boxing_in_diff"); }
         BindEdgeWithProducedRegst(edge, "boxing_in_diff");
       } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        if (GetProducedRegst("121_in_diff") == nullptr) { ProduceRegst("121_in_diff"); }
         BindEdgeWithProducedRegst(edge, "121_in_diff");
       } else {
         UNIMPLEMENTED();
       }
     }
   }
-  ProduceRegst("activation_diff", 1, 1);
 }
 
 void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
@@ -42,22 +42,9 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
   }
-  CompTaskNode* fw_node = GetRelatedFwTaskNode();
-  for (TaskEdge* edge : fw_node->in_edges()) {
-    TaskNode* pred_fw_node = edge->src_node();
-    if (!IsMdUpdtTaskType(pred_fw_node->GetTaskType())) {
-      ConsumeRegst("in", edge->GetSoleRegst());
-      const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(pred_logical, fw_node->logical_node());
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        in_regst_boxing_.push_back(edge->GetSoleRegst());
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        in_regst_121_.push_back(edge->GetSoleRegst());
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-  }
+  const std::list<std::weak_ptr<RegstDesc>>& in_regst =
+      GetRelatedFwTaskNode()->GetConsumedRegst("in");
+  for (std::weak_ptr<RegstDesc> regst : in_regst) { ConsumeRegst("in", regst.lock()); }
 }
 
 void NormalBackwardCompTaskNode::BuildExecGphAndRegst() {
@@ -171,16 +158,14 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
         break;
       }
       CHECK(has_binded_in_regst);
-      if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
-        if (in_diff_regst_boxing) {
-          in_diff_regst_boxing->AddLbi(lbi);
-          cur_node->BindBnInOpAndRegst(idbn, in_diff_regst_boxing);
-        }
+      if (lbi_boxing.empty() && lbi_121.empty()) {
+        continue;
+      } else if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
+        in_diff_regst_boxing->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(idbn, in_diff_regst_boxing);
       } else if (lbi_121.find(lbi) != lbi_121.end()) {
-        if (in_diff_regst_121) {
-          in_diff_regst_121->AddLbi(lbi);
-          cur_node->BindBnInOpAndRegst(idbn, in_diff_regst_121);
-        }
+        in_diff_regst_121->AddLbi(lbi);
+        cur_node->BindBnInOpAndRegst(idbn, in_diff_regst_121);
       } else {
         UNIMPLEMENTED();
       }
@@ -210,16 +195,14 @@ void NormalBackwardCompTaskNode::BindModelDiffRegst() {
 }
 
 void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
-  if (std::shared_ptr<RegstDesc> in_diff_regst_boxing = GetProducedRegst("boxing_in_diff")) {
-    for (std::weak_ptr<RegstDesc> regst : in_regst_boxing_) {
-      in_diff_regst_boxing->CopyBlobDescWithoutAddLbi(regst.lock().get());
-    }
+  std::shared_ptr<RegstDesc> in_diff_regst_boxing = GetProducedRegst("boxing_in_diff");
+  for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+    in_diff_regst_boxing->CopyBlobDescWithoutAddLbi(regst.lock().get());
   }
 
-  if (std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("121_in_diff")) {
-    for (std::weak_ptr<RegstDesc> regst : in_regst_121_) {
-      in_diff_regst_121->CopyBlobDescWithoutAddLbi(regst.lock().get());
-    }
+  std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("boxing_in_121");
+  for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+    in_diff_regst_121->CopyBlobDescWithoutAddLbi(regst.lock().get());
   }
 
   std::shared_ptr<RegstDesc> md_diff_regst = GetProducedRegst("model_diff");

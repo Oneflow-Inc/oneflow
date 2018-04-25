@@ -14,7 +14,6 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
-  CompTaskNode* GetRelatedFwTaskNode();
 
  protected:
   void BuildExecGphAndBindOutDiffRegst();
@@ -25,9 +24,7 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void LinkFwExecNode();
   void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
-
-  std::list<std::weak_ptr<RegstDesc>> in_regst_boxing_;
-  std::list<std::weak_ptr<RegstDesc>> in_regst_121_;
+  CompTaskNode* GetRelatedFwTaskNode();
 };
 
 }  // namespace oneflow
