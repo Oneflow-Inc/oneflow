@@ -6,14 +6,6 @@
 
 namespace oneflow {
 
-struct NormalizationOpCtx : public OpContext {
-  int32_t axis;
-  int32_t dims;
-  int64_t transpose_rows;
-  int64_t transpose_cols;
-  bool need_transpose;
-};
-
 class NormalizationOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalizationOp);
@@ -46,7 +38,6 @@ class NormalizationOp final : public Operator {
       const ParallelContext*, KernelConf*) const;
 #endif
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
-  NormalizationOpCtx* NewNormalizationOpCtx(const Shape& in_shape) const;
 };
 
 }  // namespace oneflow

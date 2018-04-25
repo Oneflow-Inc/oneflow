@@ -122,6 +122,7 @@ void NormalizationTestCase_single_number(OpKernelTestCase* norm_test_case,
   auto* conf = norm_test_case->mut_op_conf()->mutable_normalization_conf();
   bool scale = true;
   bool center = true;
+  conf->set_axis(0);
   conf->set_scale(scale);
   conf->set_center(center);
 

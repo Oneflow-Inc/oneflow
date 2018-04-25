@@ -254,6 +254,45 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 
+#define AXIS_SLICE_CPU_LOOP(index, axis_index, before_axis_dim_size,          \
+                            axis_dim_size, after_axis_dim_size)               \
+  for (int64_t index = 0,                                                     \
+               __total_size = (before_axis_dim_size) * (axis_dim_size)        \
+                              * (after_axis_dim_size),                        \
+               __last_two_dim_size = (axis_dim_size) * (after_axis_dim_size), \
+               axis_index = 0;                                                \
+       (axis_index = (index % __last_two_dim_size) / (after_axis_dim_size)),  \
+               index < __total_size;                                          \
+       ++index)
+
+KU_IF_METHOD AxisSliceAdd(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                          const size_t axis_dim_size,
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  AXIS_SLICE_CPU_LOOP(i, axis_index, before_axis_dim_size, axis_dim_size,
+                      after_axis_dim_size) {
+    z[i] = x[i] + y[axis_index];
+  }
+}
+KU_IF_METHOD AxisSliceSub(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                          const size_t axis_dim_size,
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  AXIS_SLICE_CPU_LOOP(i, axis_index, before_axis_dim_size, axis_dim_size,
+                      after_axis_dim_size) {
+    z[i] = x[i] - y[axis_index];
+  }
+}
+KU_IF_METHOD AxisSliceMul(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                          const size_t axis_dim_size,
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  AXIS_SLICE_CPU_LOOP(i, axis_index, before_axis_dim_size, axis_dim_size,
+                      after_axis_dim_size) {
+    z[i] = x[i] * y[axis_index];
+  }
+}
+
 #define KU_FLOATING_METHOD             \
   template<typename T>                 \
   void KernelUtil<DeviceType::kCPU, T, \
@@ -283,7 +322,7 @@ KU_FLOATING_METHOD Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
                         int n, const T alpha, const T* a, int lda, const T* x,
                         const int incx, const T beta, T* y, const int incy) {
   // Set col major to keep it as the same with cublas
-  cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, m, n, alpha, a, lda, x, incx,
+  cblas_gemv<T>(CBLAS_ORDER::CblasColMajor, trans, n, m, alpha, a, lda, x, incx,
                 beta, y, incy);
 }
 KU_FLOATING_METHOD Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
