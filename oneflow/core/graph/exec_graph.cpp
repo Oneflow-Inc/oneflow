@@ -2,8 +2,19 @@
 
 namespace oneflow {
 
-void ExecNode::BindBnInOpAndRegst(const std::string& bn_in_op, std::weak_ptr<RegstDesc> regst) {
-  CHECK(bn_in_op2regst_.emplace(bn_in_op, regst).second);
+void ExecNode::BindBnWithRegst(const std::string& bn, std::weak_ptr<RegstDesc> regst) {
+  CHECK(bn_in_op2regst_.emplace(bn, regst).second);
+}
+
+void ExecNode::BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                                std::weak_ptr<RegstDesc> regst) {
+  for (const std::string& bn : (op_.get()->*bns_getter)()) { BindBnWithRegst(bn, regst); }
+}
+
+void ExecNode::AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                                     std::shared_ptr<RegstDesc> regst) {
+  for (const std::string& bn : (op_.get()->*bns_getter)()) { regst->AddLbi(op_->BnInOp2Lbi(bn)); }
+  BindBnsWithRegst(bns_getter, regst);
 }
 
 void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,

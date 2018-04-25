@@ -17,8 +17,8 @@ void AccCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> op = logical_node()->SoleOp();
   ExecNode* exec_node = mut_exec_gph().NewNode();
   exec_node->mut_op() = op;
-  exec_node->BindBnInOpAndRegst(op->SoleIbn(), one_regst);
-  exec_node->BindBnInOpAndRegst(op->SoleObn(), acc_regst);
+  exec_node->BindBnWithRegst(op->SoleIbn(), one_regst);
+  exec_node->BindBnWithRegst(op->SoleObn(), acc_regst);
 }
 
 }  // namespace oneflow

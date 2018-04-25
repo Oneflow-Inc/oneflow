@@ -18,7 +18,7 @@ void SinkCompTaskNode::BuildExecGphAndRegst() {
     bool has_binded = false;
     for (std::weak_ptr<RegstDesc> regst : in_regsts) {
       if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
-      node->BindBnInOpAndRegst(ibn, regst);
+      node->BindBnWithRegst(ibn, regst);
       has_binded = true;
     }
     CHECK(has_binded);
