@@ -25,6 +25,9 @@ class NormalBackwardCompTaskNode : public CompTaskNode {
   void LinkFwExecNode();
   void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
+
+  std::list<std::weak_ptr<RegstDesc>> in_regst_boxing_;
+  std::list<std::weak_ptr<RegstDesc>> in_regst_121_;
 };
 
 }  // namespace oneflow
