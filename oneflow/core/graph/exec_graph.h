@@ -51,6 +51,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::weak_ptr<RegstDesc>>&);
 
   void set_fw_node(ExecNode* val) { fw_node_ = val; }
+  ExecNode* fw_node() { return fw_node_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
