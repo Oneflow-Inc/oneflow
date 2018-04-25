@@ -195,9 +195,9 @@ void NormalizationTestCase_single_number(OpKernelTestCase* norm_test_case,
   }
 }
 
-TEST_GPU_ONLY_OPKERNEL(NormalizationTestCase_single_number,
-                       FLOATING_DATA_TYPE_SEQ, (train)(predict),
-                       (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(NormalizationTestCase_single_number,
+                          FLOATING_DATA_TYPE_SEQ, (train)(predict),
+                          (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void NormalizationTestCase_first_piece(OpKernelTestCase* norm_test_case,
@@ -613,6 +613,7 @@ void NormalizationTestCase_second_piece_without_beta_and_gamma(
                                                   one_blob_desc, {5.655440});
   }
 }
+
 TEST_CPU_AND_GPU_OPKERNEL(
     NormalizationTestCase_second_piece_without_beta_and_gamma,
     FLOATING_DATA_TYPE_SEQ, (train)(predict), (forward)(backward));

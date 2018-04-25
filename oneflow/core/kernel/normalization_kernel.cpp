@@ -172,38 +172,30 @@ void NormalizationKernel<device_type, T>::BackwardDataContent(
   }
 #endif
   const auto& normalization_op_conf = this->op_conf().normalization_conf();
-  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
-  const Blob* comp_out_diff_blob = nullptr;
-  Blob* comp_in_diff_blob = nullptr;
-  Blob* in_diff_blob = BnInOp2Blob("in_diff");
-  bool need_comp_in_diff = (in_diff_blob != nullptr);
-  comp_in_diff_blob = in_diff_blob;
-  comp_out_diff_blob = out_diff_blob;
+  bool need_comp_in_diff = (BnInOp2Blob("in_diff") != nullptr);
   if (need_comp_in_diff || normalization_op_conf.scale()) {
-    CalcAboutGammaDiff(ctx, BnInOp2Blob, comp_out_diff_blob, need_comp_in_diff);
+    CalcAboutGammaDiff(ctx, BnInOp2Blob, need_comp_in_diff);
   }
   if (need_comp_in_diff || normalization_op_conf.center()) {
     CalcAboutBetaDiff(ctx, BnInOp2Blob, need_comp_in_diff);
   }
-  if (need_comp_in_diff) {
-    CalcInDiff(ctx, BnInOp2Blob, comp_out_diff_blob, comp_in_diff_blob);
-  }
+  if (need_comp_in_diff) { CalcInDiff(ctx, BnInOp2Blob); }
 }
 
 template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::CalcAboutGammaDiff(
     const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const Blob* out_diff_blob, bool need_comp_in_diff) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+    bool need_comp_in_diff) const {
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* gamma_diff_blob = BnInOp2Blob("gamma_diff");
   Blob* inv_var_blob = BnInOp2Blob("inv_var");
   // it's safe to use in_diff as tmp blob
   Blob* tmp_blob = BnInOp2Blob("in_diff");
-  Blob* raw_out_diff_blob = BnInOp2Blob("out_diff");
+  const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   KernelUtil<device_type, T>::Mul(
-      ctx.device_ctx, raw_out_diff_blob->shape().elem_cnt(),
-      raw_out_diff_blob->dptr<T>(), normalized_blob->dptr<T>(),
+      ctx.device_ctx, out_diff_blob->shape().elem_cnt(),
+      out_diff_blob->dptr<T>(), normalized_blob->dptr<T>(),
       tmp_blob->mut_dptr<T>());
   ComputeAxisSum(ctx, BnInOp2Blob, tmp_blob, gamma_diff_blob);
   if (need_comp_in_diff) {
@@ -220,7 +212,7 @@ void NormalizationKernel<device_type, T>::CalcAboutGammaDiff(
 template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::CalcAboutBetaDiff(
     const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
     bool need_comp_in_diff) const {
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* beta_diff_blob = BnInOp2Blob("beta_diff");
@@ -233,8 +225,7 @@ void NormalizationKernel<device_type, T>::CalcAboutBetaDiff(
 template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::CalcInDiff(
     const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)> BnInOp2Blob,
-    const Blob* out_diff_blob, Blob* in_diff_blob) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   int64_t axis = this->op_conf().normalization_conf().axis();
   Blob* normalized_blob = BnInOp2Blob("normalized_in");
   Blob* inv_var_blob = BnInOp2Blob("inv_var");
@@ -245,9 +236,9 @@ void NormalizationKernel<device_type, T>::CalcInDiff(
       normalized_blob->mut_dptr<T>(), 1);
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, normalized_blob->shape().elem_cnt(), static_cast<T>(1),
-      out_diff_blob->dptr<T>(), 1, normalized_blob->mut_dptr<T>(), 1);
+      BnInOp2Blob("out_diff")->dptr<T>(), 1, normalized_blob->mut_dptr<T>(), 1);
   AxisSliceMul(ctx, normalized_blob, inv_var_blob, normalized_blob);
-  in_diff_blob->CopyDataContentFrom(ctx.device_ctx, normalized_blob);
+  BnInOp2Blob("in_diff")->CopyDataContentFrom(ctx.device_ctx, normalized_blob);
 }
 
 template<DeviceType device_type, typename T>

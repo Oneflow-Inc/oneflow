@@ -59,15 +59,13 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
       std::function<Blob*(const std::string&)>) const override;
 
   void CalcAboutGammaDiff(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>,
-                          const Blob* out_diff_blob,
+                          const std::function<Blob*(const std::string&)>&,
                           bool need_comp_in_diff) const;
   void CalcAboutBetaDiff(const KernelCtx&,
-                         const std::function<Blob*(const std::string&)>,
+                         const std::function<Blob*(const std::string&)>&,
                          bool need_comp_in_diff) const;
   void CalcInDiff(const KernelCtx&,
-                  const std::function<Blob*(const std::string&)>,
-                  const Blob* out_diff_blob, Blob* in_diff_blob) const;
+                  const std::function<Blob*(const std::string&)>&) const;
   void Normalize(const KernelCtx&,
                  const std::function<Blob*(const std::string&)>&,
                  const Blob* mean_blob, const Blob* variance_blob,
