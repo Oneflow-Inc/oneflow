@@ -23,7 +23,7 @@ void CopyHdKernel::Forward(const KernelCtx& ctx,
                            in_blob->TotalByteSize(), cp_kind_);
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kCopyHdConf, []() { return new CopyHdKernel; }));
+REGISTER_KERNEL(OperatorConf::kCopyHdConf, CopyHdKernel);
 
 #endif
 

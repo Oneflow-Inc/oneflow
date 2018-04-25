@@ -50,6 +50,6 @@ Kernel* CreateConcatKernel(const KernelConf& kernel_conf) {
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kConcatConf, CreateConcatKernel));
+REGISTER_KERNEL_CREATOR(OperatorConf::kConcatConf, CreateConcatKernel);
 
 }  // namespace oneflow

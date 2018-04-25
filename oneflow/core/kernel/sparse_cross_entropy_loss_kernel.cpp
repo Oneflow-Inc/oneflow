@@ -74,12 +74,12 @@ Kernel* CreateSparseCrossEntropyLossKernel(const KernelConf& kernel_conf) {
 
 }  // namespace
 
+REGISTER_KERNEL_CREATOR(OperatorConf::kSparseCrossEntropyLossConf,
+                        CreateSparseCrossEntropyLossKernel);
+
 #define MAKE_ENTRY(data_type_pair, label_type_pair) \
   template struct SparseCrossEntropyLossKernelUtil< \
       DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), OF_PP_PAIR_FIRST(label_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
-
-COMMAND(AddKernelCreator(OperatorConf::kSparseCrossEntropyLossConf,
-                         CreateSparseCrossEntropyLossKernel));
 
 }  // namespace oneflow

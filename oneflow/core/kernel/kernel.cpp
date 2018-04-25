@@ -215,28 +215,9 @@ void KernelIfWithActivation<device_type, T>::BackwardActivate(
   }
 }
 
-namespace {
-
-HashMap<int, KernelCreator1>& GetCreatorsMap() {
-  static HashMap<int, KernelCreator1> obj;
-  return obj;
-}
-
-}  // namespace
-
-void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator1 creator) {
-  CHECK(GetCreatorsMap().emplace(opcase, creator).second);
-}
-void AddKernelCreator(OperatorConf::OpTypeCase opcase, KernelCreator2 creator) {
-  AddKernelCreator(opcase, [creator](const KernelConf&) { return creator(); });
-}
-
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
                                               const KernelConf& conf) {
-  OperatorConf::OpTypeCase opcase = conf.op_attribute().op_conf().op_type_case();
-  auto it = GetCreatorsMap().find(opcase);
-  CHECK(it != GetCreatorsMap().end()) << opcase;
-  Kernel* rptr = it->second(conf);
+  Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
   rptr->Init(parallel_ctx, conf);
   return std::unique_ptr<const Kernel>(rptr);
 }

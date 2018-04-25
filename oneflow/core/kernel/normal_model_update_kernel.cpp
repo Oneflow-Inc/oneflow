@@ -169,6 +169,6 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
   }
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel));
+REGISTER_KERNEL_CREATOR(OperatorConf::kNormalMdupdtConf, CreateMdUpdtKernel);
 
 }  // namespace oneflow
