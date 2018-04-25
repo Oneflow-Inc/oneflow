@@ -159,10 +159,9 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
-using KernelCreator1 = std::function<Kernel*(const KernelConf&)>;
-using KernelCreator2 = std::function<Kernel*()>;
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator1);
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
+#define REGISTER_KERNEL(k, KernelType) REGISTER_CLASS(k, Kernel, KernelType)
+#define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
+
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&);
 
 }  // namespace oneflow
@@ -182,7 +181,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const Kern
         GetHashKey(kernel_conf.op_attribute().device_type(), kernel_conf.data_type()))(); \
   }                                                                                       \
                                                                                           \
-  COMMAND(AddKernelCreator(op_type_case, OF_PP_CAT(CreateKernel, __LINE__)));             \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));               \
   }
 
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
@@ -199,7 +198,7 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const Kern
     return creators.at(kernel_conf.data_type())();                                      \
   }                                                                                     \
                                                                                         \
-  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                                \
+  REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

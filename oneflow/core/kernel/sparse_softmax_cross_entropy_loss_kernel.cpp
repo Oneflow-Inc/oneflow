@@ -69,7 +69,7 @@ Kernel* CreateSparseSoftmaxCrossEntropyLossKernel(const KernelConf& kernel_conf)
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kSparseSoftmaxCrossEntropyLossConf,
-                         CreateSparseSoftmaxCrossEntropyLossKernel));
+REGISTER_KERNEL_CREATOR(OperatorConf::kSparseSoftmaxCrossEntropyLossConf,
+                        CreateSparseSoftmaxCrossEntropyLossKernel);
 
 }  // namespace oneflow

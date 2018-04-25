@@ -21,6 +21,6 @@ void ModelSaveKernel::Forward(const KernelCtx& kernel_ctx,
   });
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kModelSaveConf, []() { return new ModelSaveKernel; }));
+REGISTER_KERNEL(OperatorConf::kModelSaveConf, ModelSaveKernel);
 
 }  // namespace oneflow

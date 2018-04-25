@@ -38,7 +38,6 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
   CHECK_GE(status->max_col_id_, 0);
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kDecodeOfrecordConf,
-                         []() { return new DecodeOFRecordKernel; }));
+REGISTER_KERNEL(OperatorConf::kDecodeOfrecordConf, DecodeOFRecordKernel);
 
 }  // namespace oneflow

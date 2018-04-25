@@ -34,6 +34,6 @@ Kernel* CreateReshapeKernel(const KernelConf& kernel_conf) {
 
 }  // namespace
 
-COMMAND(AddKernelCreator(OperatorConf::kReshapeConf, CreateReshapeKernel));
+REGISTER_KERNEL_CREATOR(OperatorConf::kReshapeConf, CreateReshapeKernel);
 
 }  // namespace oneflow
