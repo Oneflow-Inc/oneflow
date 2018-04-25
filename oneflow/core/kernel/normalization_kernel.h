@@ -91,6 +91,15 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
   }
 };
 
+template<>
+void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+
+template<>
+void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_NORMALIZATION_KERNEL_H_
