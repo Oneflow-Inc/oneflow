@@ -66,7 +66,8 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   for (const auto& pair : lbi2blob_desc_) {
     auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
     if (rhs_it == rhs->lbi2blob_desc_.end()) {
-      *(pair.second) = *(rhs->lbi2blob_desc_.at(GenUnCloneLbi(pair.first)));
+      auto un_clone_it = rhs->lbi2blob_desc_.find(GenUnCloneLbi(pair.first));
+      if (un_clone_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(un_clone_it->second); }
     } else {
       *(pair.second) = *(rhs_it->second);
     }
