@@ -5,11 +5,11 @@
 
 namespace oneflow {
 
-class NormalBackwardCompTaskNode : public CompTaskNode {
+class NormalBackwardCompTaskNode final : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalBackwardCompTaskNode);
   NormalBackwardCompTaskNode() = default;
-  virtual ~NormalBackwardCompTaskNode() = default;
+  ~NormalBackwardCompTaskNode() = default;
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
