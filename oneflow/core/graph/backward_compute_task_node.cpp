@@ -70,16 +70,16 @@ void BackwardCompTaskNode::BindModelDiffRegst() {
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
+      node->BindBnWithRegst(dtbn, data_tmp_regst);
     }
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
-      node->BindBnInOpAndRegst(mtbn, model_tmp_regst);
+      node->BindBnWithRegst(mtbn, model_tmp_regst);
     }
     for (const std::string& mdbn : node->op()->model_diff_bns()) {
-      node->BindBnInOpAndRegst(mdbn, model_diff_regst);
+      node->BindBnWithRegst(mdbn, model_diff_regst);
     }
     for (const std::string& mbn : node->op()->model_bns()) {
-      node->BindBnInOpAndRegst(mbn, model_regst);
+      node->BindBnWithRegst(mbn, model_regst);
     }
   });
 }
