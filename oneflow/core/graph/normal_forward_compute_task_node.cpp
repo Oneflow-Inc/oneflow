@@ -93,14 +93,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
         edge->mut_dst_bn() = ibn;
         Connect(producer_it->second.first, edge, cur_node);
       } else {
-        bool has_binded = false;
-        for (std::weak_ptr<RegstDesc> regst : in_regsts) {
-          if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
-          cur_node->BindBnWithRegst(ibn, regst);
-          has_binded = true;
-          break;
-        }
-        CHECK(has_binded);
+        cur_node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
       }
     }
   });

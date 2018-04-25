@@ -17,6 +17,19 @@ void ExecNode::AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_g
   BindBnsWithRegst(bns_getter, regst);
 }
 
+void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
+                                        const std::list<std::weak_ptr<RegstDesc>>& regsts) {
+  const LogicalBlobId& lbi = op()->BnInOp2Lbi(bn);
+  bool has_binded = false;
+  for (std::weak_ptr<RegstDesc> regst : regsts) {
+    if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
+    BindBnWithRegst(bn, regst);
+    has_binded = true;
+    break;
+  }
+  CHECK(has_binded);
+}
+
 void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx, ret->mutable_kernel_conf(),

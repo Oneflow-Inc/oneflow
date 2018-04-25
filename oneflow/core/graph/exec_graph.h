@@ -48,6 +48,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
                         std::weak_ptr<RegstDesc>);
   void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
                              std::shared_ptr<RegstDesc>);
+  void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::weak_ptr<RegstDesc>>&);
 
   void set_fw_node(ExecNode* val) { fw_node_ = val; }
 
