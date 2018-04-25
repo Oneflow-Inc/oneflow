@@ -51,14 +51,8 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   for (const std::string& ibn : loss_op->input_bns()) {
     loss_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
-  for (const std::string& obn : loss_op->output_bns()) {
-    data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
-    loss_node->BindBnWithRegst(obn, data_tmp_regst);
-  }
-  for (const std::string& dtbn : loss_op->data_tmp_bns()) {
-    data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(dtbn));
-    loss_node->BindBnWithRegst(dtbn, data_tmp_regst);
-  }
+  loss_node->AddBnToRegstAndBindIt(&Operator::output_bns, data_tmp_regst);
+  loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
   const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
   const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
   for (const std::string& idbn : loss_op->input_diff_bns()) {
