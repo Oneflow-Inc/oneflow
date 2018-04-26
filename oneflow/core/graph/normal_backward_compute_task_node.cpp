@@ -136,9 +136,8 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     }
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
-      if (found_lbis.find(lbi) != found_lbis.end()) {
-        CHECK(lbi_boxing.find(lbi) == lbi_boxing.end());
-        CHECK(lbi_121.find(lbi) == lbi_121.end());
+      if (found_lbis.find(lbi) != found_lbis.end() && lbi_boxing.find(lbi) == lbi_boxing.end()
+          && lbi_121.find(lbi) == lbi_121.end()) {
         continue;
       }
       cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));

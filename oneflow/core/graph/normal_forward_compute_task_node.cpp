@@ -109,9 +109,8 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (found_lbis.find(lbi) != found_lbis.end()) {
-        CHECK(lbi_boxing.find(lbi) == lbi_boxing.end());
-        CHECK(lbi_121.find(lbi) == lbi_121.end());
+      if (found_lbis.find(lbi) != found_lbis.end() && lbi_boxing.find(lbi) == lbi_boxing.end()
+          && lbi_121.find(lbi) == lbi_121.end()) {
         continue;
       }
       if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
