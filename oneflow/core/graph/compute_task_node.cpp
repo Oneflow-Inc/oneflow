@@ -1,5 +1,4 @@
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
@@ -37,22 +36,6 @@ const LogicalNode* CompTaskNode::GetOneSuccLogicalNodeOnEdge(TaskEdge* edge) {
 
 const LogicalNode* CompTaskNode::GetOnePredLogicalNodeOnEdge(TaskEdge* edge) {
   return LogicalNodeOnEdge(edge, &TaskEdge::src_node, &TaskNode::in_edges);
-}
-
-void CompTaskNode::BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge) {
-  BindEdgeWithProducedBoxingOr121Regst(out_edge, GetOneSuccLogicalNodeOnEdge(out_edge));
-}
-
-void CompTaskNode::BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge,
-                                                        const LogicalNode* succ_node) {
-  BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_node);
-  if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-    BindEdgeWithProducedRegst(out_edge, "boxing_out");
-  } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-    BindEdgeWithProducedRegst(out_edge, "121_out");
-  } else {
-    UNIMPLEMENTED();
-  }
 }
 
 }  // namespace oneflow

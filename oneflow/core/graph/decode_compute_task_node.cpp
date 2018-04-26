@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/decode_compute_task_node.h"
+#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
@@ -7,7 +8,17 @@ void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", 1, 1);
   ProduceRegst("boxing_out");
   ProduceRegst("121_out");
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedBoxingOr121Regst(edge); }
+  for (TaskEdge* edge : out_edges()) {
+    const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
+    BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
+    if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+      BindEdgeWithProducedRegst(edge, "boxing_out");
+    } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+      BindEdgeWithProducedRegst(edge, "121_out");
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
 }
 
 void DecodeCompTaskNode::ConsumeAllRegsts() {

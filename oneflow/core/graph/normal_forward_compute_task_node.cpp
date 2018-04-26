@@ -20,7 +20,14 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       BindEdgeWithProducedRegst(edge, "activation");
       BindEdgeWithProducedRegst(edge, "data_tmp");
     } else {
-      BindEdgeWithProducedBoxingOr121Regst(edge, succ_logical);
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        BindEdgeWithProducedRegst(edge, "boxing_out");
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        BindEdgeWithProducedRegst(edge, "121_out");
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
