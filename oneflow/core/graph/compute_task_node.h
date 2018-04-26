@@ -26,6 +26,10 @@ class CompTaskNode : public TaskNode {
   const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
 
+ protected:
+  void BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge);
+  void BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge, const LogicalNode* succ_node);
+
  private:
   ParallelContext parallel_ctx_;
   const LogicalNode* logical_node_;
