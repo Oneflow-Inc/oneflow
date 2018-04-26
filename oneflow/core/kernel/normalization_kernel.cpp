@@ -80,20 +80,6 @@ const cudnnTensorDescriptor_t& NormalizationCtx::cudnn_param_tensor_desc()
 #endif  // WITH_CUDA
 
 template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::NormalizationCudnnForward(
-    const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::NormalizationCudnnBackward(
-    const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename T>
 void NormalizationKernel<device_type, T>::InitModelBlobsWithRandomSeed(
     DeviceCtx* ctx, std::mt19937* random_seed_gen,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {

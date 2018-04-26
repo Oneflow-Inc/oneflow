@@ -57,4 +57,24 @@ void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
       BnInOp2Blob("cache_inv_variance_for_cudnn_bw")->dptr<float>()));
 }
 
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::NormalizationCudnnForward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  UNIMPLEMENTED();
+}
+
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::NormalizationCudnnBackward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  UNIMPLEMENTED();
+}
+
+#define MAKE_NORMALIZATION_KERNEL_ENTRY(device_type, data_type) \
+  template class NormalizationKernel<device_type, OF_PP_PAIR_FIRST(data_type)>;
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NORMALIZATION_KERNEL_ENTRY,
+                                 DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+
 }  // namespace oneflow
