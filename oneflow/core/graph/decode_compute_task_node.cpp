@@ -51,11 +51,7 @@ void DecodeCompTaskNode::BuildExecGphAndRegst() {
       node->BindBnWithRegst(obn, data_tmp_regst);
     }
   }
-  for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-    const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(dtbn);
-    data_tmp_regst->AddLbi(lbi);
-    node->BindBnWithRegst(dtbn, data_tmp_regst);
-  }
+  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
   node->InferBlobDescs(parallel_ctx());
 }
 
