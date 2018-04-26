@@ -20,7 +20,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       BindEdgeWithProducedRegst(edge, "activation");
       BindEdgeWithProducedRegst(edge, "data_tmp");
     } else {
-      BindEdgeWithProducedBoxingOr121Regst(edge, succ_logical);
+      BindEdgeWithProducedBoxingOr121Regst(edge, succ_logical, "boxing_out", "121_out");
     }
   }
 }

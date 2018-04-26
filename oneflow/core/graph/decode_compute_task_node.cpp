@@ -7,7 +7,9 @@ void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", 1, 1);
   ProduceRegst("boxing_out");
   ProduceRegst("121_out");
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedBoxingOr121Regst(edge); }
+  for (TaskEdge* edge : out_edges()) {
+    BindEdgeWithProducedBoxingOr121Regst(edge, "boxing_out", "121_out");
+  }
 }
 
 void DecodeCompTaskNode::ConsumeAllRegsts() {

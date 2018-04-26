@@ -27,8 +27,12 @@ class CompTaskNode : public TaskNode {
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
 
  protected:
-  void BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge);
-  void BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge, const LogicalNode* succ_node);
+  void BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge,
+                                            const std::string& boxing_regst_name,
+                                            const std::string& one2one_regst_name);
+  void BindEdgeWithProducedBoxingOr121Regst(TaskEdge* out_edge, const LogicalNode* succ_node,
+                                            const std::string& boxing_regst_name,
+                                            const std::string& one2one_regst_name);
 
  private:
   ParallelContext parallel_ctx_;
