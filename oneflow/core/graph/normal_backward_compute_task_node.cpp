@@ -13,7 +13,14 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     if (succ_logical->TypeName() == "MdDiffAcc") {
       edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     } else {
-      BindEdgeWithProducedBoxingOr121Regst(edge, succ_logical, "boxing_in_diff", "121_in_diff");
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        BindEdgeWithProducedRegst(edge, "boxing_in_diff");
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        BindEdgeWithProducedRegst(edge, "121_in_diff");
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
