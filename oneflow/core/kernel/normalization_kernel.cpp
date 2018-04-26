@@ -79,6 +79,20 @@ const cudnnTensorDescriptor_t& NormalizationCtx::cudnn_param_tensor_desc()
 }
 #endif  // WITH_CUDA
 
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::NormalizationCudnnForward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  UNIMPLEMENTED();
+}
+
+template<DeviceType device_type, typename T>
+void NormalizationKernel<device_type, T>::NormalizationCudnnBackward(
+    const KernelCtx& ctx,
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  UNIMPLEMENTED();
+}
+
 template<>
 void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
     const KernelCtx& ctx,
@@ -133,20 +147,6 @@ void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
       static_cast<double>(this->op_conf().normalization_conf().epsilon()),
       BnInOp2Blob("cache_mean_for_cudnn_bw")->dptr<float>(),
       BnInOp2Blob("cache_inv_variance_for_cudnn_bw")->dptr<float>()));
-}
-
-template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::NormalizationCudnnForward(
-    const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  UNIMPLEMENTED();
-}
-
-template<DeviceType device_type, typename T>
-void NormalizationKernel<device_type, T>::NormalizationCudnnBackward(
-    const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  UNIMPLEMENTED();
 }
 
 template<DeviceType device_type, typename T>
