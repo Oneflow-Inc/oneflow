@@ -91,9 +91,6 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   sum_node->mut_op() = sum_op;
   Connect(loss_node, mut_exec_gph().NewEdge(), sum_node);
 
-  // when training, store another copy in data_tmp_regst
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
-  loss_node->AddBnToRegstAndBindIt(&Operator::output_bns, data_tmp_regst);
   sum_node->BindBnWithRegst(sum_op->SoleIbn(), data_tmp_regst);
   // assume mthd between Loss and LossAcc is 121
   out_regst_121->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
