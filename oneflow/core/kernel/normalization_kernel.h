@@ -82,24 +82,11 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
   const PbMessage& GetCustomizedOpConf() const override;
 
   void NormalizationCudnnForward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {
-    UNIMPLEMENTED();
-  }
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
   void NormalizationCudnnBackward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {
-    UNIMPLEMENTED();
-  }
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
 };
 
-template<>
-void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
-    const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-
-template<>
-void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnBackward(
-    const KernelCtx& ctx,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_NORMALIZATION_KERNEL_H_
