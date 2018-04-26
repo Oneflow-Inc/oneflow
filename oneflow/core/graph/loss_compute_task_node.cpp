@@ -91,7 +91,14 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   sum_node->mut_op() = sum_op;
   Connect(loss_node, mut_exec_gph().NewEdge(), sum_node);
 
-  sum_node->BindBnWithRegst(sum_op->SoleIbn(), data_tmp_regst);
+  const LogicalBlobId& sum_ilbi = sum_op->BnInOp2Lbi(sum_op->SoleIbn());
+  if (out_regst_boxing->GetBlobDesc(sum_ilbi)) {
+    sum_node->BindBnWithRegst(sum_op->SoleIbn(), out_regst_boxing);
+  } else if (out_regst_121->GetBlobDesc(sum_ilbi)) {
+    sum_node->BindBnWithRegst(sum_op->SoleIbn(), out_regst_121);
+  } else {
+    UNIMPLEMENTED();
+  }
   // assume mthd between Loss and LossAcc is 121
   out_regst_121->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
   sum_node->BindBnWithRegst(sum_op->SoleObn(), out_regst_121);
