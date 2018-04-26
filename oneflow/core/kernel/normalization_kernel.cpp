@@ -237,8 +237,7 @@ void NormalizationKernel<device_type, T>::CalcInDiff(
   KernelUtil<device_type, T>::Axpy(
       ctx.device_ctx, normalized_blob->shape().elem_cnt(), static_cast<T>(1),
       BnInOp2Blob("out_diff")->dptr<T>(), 1, normalized_blob->mut_dptr<T>(), 1);
-  AxisSliceMul(ctx, normalized_blob, inv_var_blob, normalized_blob);
-  BnInOp2Blob("in_diff")->CopyDataContentFrom(ctx.device_ctx, normalized_blob);
+  AxisSliceMul(ctx, normalized_blob, inv_var_blob, BnInOp2Blob("in_diff"));
 }
 
 template<DeviceType device_type, typename T>
@@ -258,14 +257,18 @@ void NormalizationKernel<device_type, T>::Normalize(
                         inv_var_blob->mut_dptr<T>());
   AxisSliceSub(ctx, in_blob, mean_blob, normalized_blob);
   AxisSliceMul(ctx, normalized_blob, inv_var_blob, normalized_blob);
-  out_blob->CopyDataContentFrom(ctx.device_ctx, normalized_blob);
+  if (!(scale || center)) {
+    out_blob->CopyDataContentFrom(ctx.device_ctx, normalized_blob);
+    return;
+  }
   if (scale) {
     const Blob* gamma_blob = BnInOp2Blob("gamma");
-    AxisSliceMul(ctx, out_blob, gamma_blob, out_blob);
+    AxisSliceMul(ctx, normalized_blob, gamma_blob, out_blob);
   }
   if (center) {
     const Blob* beta_blob = BnInOp2Blob("beta");
-    AxisSliceAdd(ctx, out_blob, beta_blob, out_blob);
+    AxisSliceAdd(ctx, (scale ? out_blob : normalized_blob), beta_blob,
+                 out_blob);
   }
 }
 

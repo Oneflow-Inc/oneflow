@@ -17,9 +17,10 @@ template<typename T>
 void CudaCheck(T error);
 
 // CUDA: grid stride looping
-#define CUDA_1D_KERNEL_LOOP(i, n)                                  \
-  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x; i < (n); \
-       i += blockDim.x * gridDim.x)
+#define CUDA_1D_KERNEL_LOOP(i, n)                         \
+  for (int32_t i = blockIdx.x * blockDim.x + threadIdx.x, \
+               __thread_cnt = blockDim.x * gridDim.x;     \
+       i < (n); i += __thread_cnt)
 
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 4096;
