@@ -32,7 +32,7 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
     if (IsForwardTaskType(src_task_type)) {
       ConsumeRegst("activation", edge->GetRegst("activation"));
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
-      ConsumeRegst("boxing_out", edge->GetRegst("bxoing_out"));
+      ConsumeRegst("boxing_out", edge->GetRegst("boxing_out"));
       ConsumeRegst("121_out", edge->GetRegst("121_out"));
     } else if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
@@ -144,7 +144,7 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
         in_diff_regst_121->AddLbi(lbi);
         cur_node->BindBnWithRegst(idbn, in_diff_regst_121);
       } else {
-        CHECK(found_lbis.find(lbi) != found_lbis.end());
+        CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
       }
     }
   });
@@ -169,7 +169,7 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
     in_diff_regst_boxing->CopyBlobDescWithoutAddLbi(regst.lock().get());
   }
 
-  std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("boxing_in_121");
+  std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("121_in_diff");
   for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
     in_diff_regst_121->CopyBlobDescWithoutAddLbi(regst.lock().get());
   }

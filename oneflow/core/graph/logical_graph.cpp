@@ -31,7 +31,7 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
 void LogicalGraph::BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(edge2ibn, &op_name2nodes);
-  FillNodeWithParallelDesc(op_name2nodes);
+  FixSharedModelNodes(op_name2nodes);
   AddB121Clone(*edge2ibn);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
@@ -44,12 +44,25 @@ void LogicalGraph::NaiveBuildFwStruct(
     HashMap<LogicalEdge*, std::string>* edge2ibn,
     HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes) {
   const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
+  const Placement& placement = Global<JobDesc>::Get()->placement();
+  HashMap<std::string, ParallelDesc*> name2parallel_desc;
+  for (const PlacementGroup& p_group : placement.placement_group()) {
+    for (const std::string& op_name : p_group.op_set().op_name()) {
+      auto parallel_desc_raw_ptr = new ParallelDesc(p_group.parallel_conf());
+      CHECK(name2parallel_desc.emplace(op_name, parallel_desc_raw_ptr).second);
+    }
+  }
+
   HashMap<LogicalBlobId, LogicalNode*> lbi2producer;
   for (const OperatorConf& cur_op_conf : dlnet_conf.op()) {
-    std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
+    ParallelDesc* parallel_desc_raw_ptr = name2parallel_desc.at(cur_op_conf.name());
+    std::shared_ptr<Operator> cur_op =
+        ConstructOp(cur_op_conf, parallel_desc_raw_ptr->device_type());
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
+    cur_node->SoleOp()->FixParallelDesc(parallel_desc_raw_ptr);
+    cur_node->mut_parallel_desc().reset(parallel_desc_raw_ptr);
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
@@ -67,11 +80,16 @@ void LogicalGraph::NaiveBuildFwStruct(
       Connect(pred_node, edge, cur_node);
     }
   });
+}
+
+void LogicalGraph::FixSharedModelNodes(
+    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
+  const DLNetConf& dlnet_conf = Global<JobDesc>::Get()->dlnet_conf();
   for (const OpNameSet& op_name_set : dlnet_conf.shared_model_group()) {
     auto shared_model_nodes = std::make_shared<std::vector<LogicalNode*>>();
     for (const std::string& op_name : op_name_set.op_name()) {
-      CHECK_EQ(op_name2nodes->at(op_name).size(), 1);
-      shared_model_nodes->push_back(op_name2nodes->at(op_name).front());
+      CHECK_EQ(op_name2nodes.at(op_name).size(), 1);
+      shared_model_nodes->push_back(op_name2nodes.at(op_name).front());
     }
     SortAndRemoveDuplication(shared_model_nodes.get());
     for (LogicalNode* cur_node : *shared_model_nodes) {
@@ -80,21 +98,6 @@ void LogicalGraph::NaiveBuildFwStruct(
     const std::string& shared_op_name = shared_model_nodes->front()->SoleOp()->op_name();
     FOR_RANGE(size_t, i, 1, shared_model_nodes->size()) {
       shared_model_nodes->at(i)->SoleOp()->FixLbiWhenShareModel(shared_op_name);
-    }
-  }
-}
-
-void LogicalGraph::FillNodeWithParallelDesc(
-    const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes) {
-  const Placement& placement = Global<JobDesc>::Get()->placement();
-  for (const PlacementGroup& p_group : placement.placement_group()) {
-    for (const std::string& op_name : p_group.op_set().op_name()) {
-      const std::vector<LogicalNode*>& nodes = op_name2nodes.at(op_name);
-      for (LogicalNode* node : nodes) {
-        auto parallel_desc_raw_ptr = new ParallelDesc(p_group.parallel_conf());
-        node->SoleOp()->FixParallelDesc(parallel_desc_raw_ptr);
-        node->mut_parallel_desc().reset(parallel_desc_raw_ptr);
-      }
     }
   }
   ForEachNode([&](LogicalNode* cur_node) {
@@ -156,7 +159,8 @@ void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info,
   OperatorConf clone_op_conf;
   clone_op_conf.set_name("b121_clone_" + NewUniqueId());
   clone_op_conf.mutable_clone_conf()->set_out_num(2);
-  std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
+  std::shared_ptr<Operator> clone_op =
+      ConstructOp(clone_op_conf, clone_info.pred_node->SoleOp()->device_type());
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIbn())) = clone_info.lbi;
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
   *(clone_op->MutBnInOp2Lbi(clone_op->output_bns().Get(0))) = lbi_boxing;
@@ -264,7 +268,8 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info,
   OperatorConf clone_op_conf;
   clone_op_conf.set_name("bw_clone_" + NewUniqueId());
   clone_op_conf.mutable_clone_conf()->set_out_num(clone_info.edges.size());
-  std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
+  std::shared_ptr<Operator> clone_op =
+      ConstructOp(clone_op_conf, clone_info.succ_node->SoleOp()->device_type());
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
   FOR_RANGE(size_t, i, 0, clone_info.edges.size()) {
     LogicalBlobId lbi_clone_i = clone_info.lbi;
@@ -323,13 +328,14 @@ void LogicalGraph::BuildLossPrintStruct() {
     *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
     reduce_sum_conf->set_out("out");
     reduce_sum_conf->set_axis(0);
-    std::shared_ptr<Operator> reduce_loss_op = ConstructOp(reduce_loss_op_conf);
+    std::shared_ptr<Operator> reduce_loss_op =
+        ConstructOp(reduce_loss_op_conf, loss_op->device_type());
     loss_logical->mut_op_vec().push_back(reduce_loss_op);
     // Loss Accumulate Logical
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + loss_op->op_name());
     loss_acc_op_conf.mutable_accumulate_conf();
-    std::shared_ptr<Operator> loss_acc_op = ConstructOp(loss_acc_op_conf);
+    std::shared_ptr<Operator> loss_acc_op = ConstructOp(loss_acc_op_conf, loss_op->device_type());
     LossAccLogicalNode* loss_acc_logical = NewNode<LossAccLogicalNode>();
     loss_acc_logical->mut_op_vec() = {loss_acc_op};
     loss_acc_logical->mut_parallel_desc() = loss_logical->parallel_desc();
@@ -347,7 +353,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     loss_print_conf->set_weight_scalar(loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_conf->set_reduction_type(
         static_cast<LossReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
-    std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
+    std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf, DeviceType::kCPU);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(Global<IDMgr>::Get()->MachineName4MachineId(0) + ":cpu:1");
@@ -389,7 +395,8 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         OperatorConf md_diff_acc_op_conf;
         md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
         md_diff_acc_op_conf.mutable_accumulate_conf();
-        auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
+        auto md_diff_acc_op =
+            ConstructOp(md_diff_acc_op_conf, fw_logical->parallel_desc()->device_type());
         auto md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
         md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
         auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
@@ -410,7 +417,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       *(mdupdt_conf->mutable_user_conf()) = job_desc->job_conf().train_conf().model_update_conf();
     }
     mdupdt_conf->set_in_num(node->in_edges().size());
-    node->mut_op_vec() = {ConstructOp(op_conf)};
+    node->mut_op_vec() = {ConstructOp(op_conf, node->parallel_desc()->device_type())};
   });
 }
 
@@ -419,7 +426,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   OperatorConf md_save_op_conf;
   md_save_op_conf.set_name("md_save_" + NewUniqueId());
   md_save_op_conf.mutable_model_save_conf();
-  auto model_save_op = ConstructOp(md_save_op_conf);
+  auto model_save_op = ConstructOp(md_save_op_conf, fw_logical->parallel_desc()->device_type());
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));

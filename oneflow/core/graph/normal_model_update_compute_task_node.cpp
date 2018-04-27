@@ -49,6 +49,7 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   if (Global<JobDesc>::Get()->IsPredict()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
     node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front().lock());

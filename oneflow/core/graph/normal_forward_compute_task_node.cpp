@@ -34,8 +34,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
-    const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
-    if (pred_logical->TypeName() == "NormalMdUpdt") {
+    TaskNode* src_node = edge->src_node();
+    TaskType src_task_type = src_node->GetTaskType();
+    if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
@@ -136,6 +137,7 @@ void NormalForwardCompTaskNode::BuildActivationRegst() {
 void NormalForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
+  if (!model_regst && !model_tmp_regst) { return; }
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
