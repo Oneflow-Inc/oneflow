@@ -26,14 +26,13 @@ class NormalBackwardCompActor final : public CompActor {
 
   void AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_version_id);
   void AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id);
-  
+
   int64_t b121_out_regst_desc_id_;
 
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
   std::queue<Regst*> model_regst_queue_;
   Regst* model_tmp_regst_;
-
 };
 
 }  // namespace oneflow

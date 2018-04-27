@@ -20,7 +20,6 @@ class CopyHdActor final : public Actor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }
-
 };
 
 #endif
