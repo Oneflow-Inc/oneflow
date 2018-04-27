@@ -137,7 +137,6 @@ void NormalForwardCompTaskNode::BuildActivationRegst() {
 void NormalForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
-  if (!model_regst && !model_tmp_regst) { return; }
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
