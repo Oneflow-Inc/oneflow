@@ -16,13 +16,12 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
     data_id_ptr_ = nullptr;
   }
   if (blob_desc->has_col_num_field()) {
-    col_num_ptr_ = reinterpret_cast<int32_t*>(
-        mem_ptr + blob_desc->ByteSizeOfDataIdField());
+    col_num_ptr_ =
+        reinterpret_cast<int32_t*>(mem_ptr + blob_desc->OffsetOfColNumField());
   } else {
     col_num_ptr_ = nullptr;
   }
-  dptr_ = mem_ptr + blob_desc->ByteSizeOfDataIdField()
-          + blob_desc->ByteSizeOfColNumField();
+  dptr_ = mem_ptr + blob_desc->OffsetOfDataContentField();
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
   regst_ = regst;
