@@ -42,7 +42,8 @@ void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   mut_device_ctx().reset(comm_net_device_ctx_);
 }
 
-void CopyCommNetActor::ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)> handler) {
+void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
+    std::function<void(const Regst*)> handler) {
   handler(piece_id2regst_ctx.at(next_piece_id_).regst_raw_ptr);
 }
 
@@ -95,7 +96,9 @@ bool CopyCommNetActor::IsCustomizedReadAlwaysUnReadyFromNow() {
   return is_in_eord_ && piece_id2regst_ctx.empty();
 }
 
-void CopyCommNetActor::AsyncReturnAllCustomizedReadableRegst() { CHECK(piece_id2regst_ctx.empty()); }
+void CopyCommNetActor::AsyncReturnAllCustomizedReadableRegst() {
+  CHECK(piece_id2regst_ctx.empty());
+}
 
 REGISTER_ACTOR(TaskType::kCopyCommNet, CopyCommNetActor);
 

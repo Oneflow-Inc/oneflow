@@ -4,9 +4,7 @@ namespace oneflow {
 
 void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   b121_out_regst_desc_id_ = Name2SoleRegstDescId("boxing_out");
-  if (b121_out_regst_desc_id_ == -1) {
-    b121_out_regst_desc_id_ = Name2SoleRegstDescId("121_out");
-  }
+  if (b121_out_regst_desc_id_ == -1) { b121_out_regst_desc_id_ = Name2SoleRegstDescId("121_out"); }
   CHECK_NE(b121_out_regst_desc_id_, -1);
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   model_tmp_regst_desc_id_ = Name2SoleRegstDescId("model_tmp");
@@ -14,7 +12,8 @@ void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) 
   OF_SET_MSG_HANDLER(&NormalBackwardCompActor::HandlerNormal);
 }
 
-void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)> handler) {
+void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(
+    std::function<void(const Regst*)> handler) {
   if (model_regst_desc_id_ != -1) {
     CHECK_EQ(model_regst_queue_.empty(), false);
     handler(model_regst_queue_.front());
@@ -71,9 +70,7 @@ bool NormalBackwardCompActor::IsCustomizedReadReady() {
     int64_t expected_model_vid = GetNaiveCurReadable(b121_out_regst_desc_id_)->model_version_id();
     CHECK_EQ(expected_model_vid, model_regst_queue_.front()->model_version_id());
   }
-  if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) {
-    return false;
-  }
+  if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) { return false; }
   return true;
 }
 
@@ -88,7 +85,8 @@ void NormalBackwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
 
 void NormalBackwardCompActor::AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_vid) {
   if (model_regst_desc_id_ == -1) { return; }
-  while (!model_regst_queue_.empty() && model_regst_queue_.front()->model_version_id() < model_vid) {
+  while (!model_regst_queue_.empty()
+         && model_regst_queue_.front()->model_version_id() < model_vid) {
     AsyncSendRegstMsgToProducer(model_regst_queue_.front());
     model_regst_queue_.pop();
   }

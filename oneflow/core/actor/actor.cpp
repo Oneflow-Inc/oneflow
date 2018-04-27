@@ -159,7 +159,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     UNIMPLEMENTED();
   }
   if ((is_naive_readable_eord_ && naive_readable_regst_cnt_ == 0)
-        || IsCustomizedReadAlwaysUnReadyFromNow()) {
+      || IsCustomizedReadAlwaysUnReadyFromNow()) {
     CHECK_EQ(naive_readable_regst_cnt_, 0);
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
@@ -240,12 +240,8 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
       Regst* regst = GetCurWriteableRegst(regst_desc_id_it->second);
-      if (regst == nullptr) {
-        regst = GetNaiveCurReadable(regst_desc_id_it->second);
-      }
-      if (regst == nullptr) {
-        regst = Regst4RegstDescId(regst_desc_id_it->second);
-      }
+      if (regst == nullptr) { regst = GetNaiveCurReadable(regst_desc_id_it->second); }
+      if (regst == nullptr) { regst = Regst4RegstDescId(regst_desc_id_it->second); }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
       return regst->GetBlobByLbi(lbi);
     });
@@ -254,8 +250,8 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
   AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* {
-      UNIMPLEMENTED();
-      return nullptr;
+    UNIMPLEMENTED();
+    return nullptr;
   });
 }
 
@@ -387,15 +383,11 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
   if (isall_or_names.first) {
-    for (const auto& pair : consumed_ids) {
-      AddNaiveConsumed(pair.second);
-    }
+    for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
   } else {
     for (const std::string& name : isall_or_names.second) {
       auto it = consumed_ids.find(name);
-      if (it != consumed_ids.end()) {
-        AddNaiveConsumed(it->second);
-      }
+      if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
     }
   }
 }

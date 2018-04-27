@@ -22,7 +22,6 @@ class SinkCompActor : public CompActor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }
-
 };
 
 }  // namespace oneflow
