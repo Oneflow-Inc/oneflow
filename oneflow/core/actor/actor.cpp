@@ -41,35 +41,54 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
         pair.second, GetDeviceType(), task_proto.record_type(),
         [this](Regst* regst) { produced_regsts_[regst->regst_desc_id()].emplace_back(regst); });
     int64_t regst_desc_id = pair.second.regst_desc_id();
-    CHECK(name2regst_desc_id_.emplace(pair.first, regst_desc_id).second);
+    CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
   }
-  TODO();
-  // for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-  //   CHECK(name2regst_desc_id_.emplace(pair.first, pair.second).second);
-  // }
+  for (const auto& pair : task_proto.consumed_regst_desc_id()) {
+    CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
+    std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      regst_desc_id_vec.push_back(regst_desc_id);
+    }
+  }
   msg_handler_ = nullptr;
+  eord_regst_desc_ids_.clear();
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
       writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
-  writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
+  writeable_produced_regst_desc_cnt_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
   remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
+  naive_readable_regst_.clear();
+  naive_readable_regst_cnt_ = 0;
+  is_naive_readable_eord_ = false;
+  TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
   InitDeviceCtx(thread_ctx);
   VirtualActorInit(task_proto);
 }
 
-int64_t Actor::machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
+int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
+  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(), reserved_id);
+}
 
-int64_t Actor::thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
+int64_t Actor::NewWorkStreamId() {
+  return Global<IDMgr>::Get()->NewWorkStreamId(machine_id(), thrd_id());
+}
 
-int64_t Actor::RegstDescId4Name(const std::string& name) const {
+DeviceType Actor::GetDeviceType() const {
+  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
+}
+
+int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   auto find_it = name2regst_desc_id_.find(name);
-  if (find_it != name2regst_desc_id_.end()) { return find_it->second; }
+  if (find_it != name2regst_desc_id_.end()) {
+    CHECK_EQ(find_it->second.size(), 1);
+    return find_it->second.front();
+  }
   return -1;
 }
 
@@ -101,6 +120,58 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
 void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
   info->set_regst_desc_id(regst->regst_desc_id());
   info->set_act_id(regst->act_id());
+}
+
+void Actor::ForEachCurReadableRegst(std::function<void(const Regst*)> func) {
+  for (const auto& pair : naive_readable_regst_) {
+    if (pair.second.empty() == false) { func(pair.second.front()); }
+  }
+  ForEachCurCustomizedReadableRegst(func);
+}
+
+int Actor::HandlerNormal(const ActorMsg& msg) {
+  if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    remaining_eord_cnt_ -= 1;
+    CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
+    if (naive_readable_regst_.find(msg.eord_regst_desc_id()) != naive_readable_regst_.end()) {
+      is_naive_readable_eord_ = true;
+    } else {
+      NormalProcessCustomizedEordMsg(msg);
+    }
+  } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
+    if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
+      Regst* regst = msg.regst();
+      auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
+      if (naive_readable_regst_it != naive_readable_regst_.end()) {
+        if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
+        naive_readable_regst_it->second.push_back(regst);
+        NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
+      } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
+        // do nothing
+      } else {
+        NormalProcessCustomizedReadableRegstMsg(msg);
+      }
+    } else {
+      NormalProcessMsgFromOtherMachine(msg);
+    }
+    ActUntilFail();
+  } else {
+    UNIMPLEMENTED();
+  }
+  if ((is_naive_readable_eord_ && naive_readable_regst_cnt_ == 0)
+        || IsCustomizedReadAlwaysUnReadyFromNow()) {
+    CHECK_EQ(naive_readable_regst_cnt_, 0);
+    AsyncReturnAllCustomizedReadableRegst();
+    AsyncSendEORDMsgForAllProducedRegstDesc();
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+      OF_SET_MSG_HANDLER(nullptr);
+      return 1;
+    } else {
+      OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
+      return 0;
+    }
+  }
+  return 0;
 }
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
@@ -139,7 +210,15 @@ void Actor::ActUntilFail() {
       act_interval_acc_ += interval;
     }
     last_act_start_time_ = cur_time;
-    Act();
+    std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
+    Act(&IsNaiveAllowedReturnToProducer);
+    for (auto& pair : naive_readable_regst_) {
+      CHECK_EQ(pair.second.empty(), false);
+      if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
+      AsyncSendRegstMsgToProducer(pair.second.front());
+      pair.second.pop_front();
+      if (pair.second.empty()) { naive_readable_regst_cnt_ -= 1; }
+    }
     if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
       device_ctx_->AddCallBack([act_event]() {
         act_event->set_stop_time(GetCurTime());
@@ -151,24 +230,7 @@ void Actor::ActUntilFail() {
 }
 
 bool Actor::IsWriteReady() {
-  return writeable_produced_regst_desc_num_ == writeable_produced_regst_.size();
-}
-
-void Actor::DecreaseRemainingEordCnt() { remaining_eord_cnt_ -= 1; }
-
-int Actor::TrySwitchToZombieOrFinish() {
-  if (IsReadAlwaysUnReadyFromNow()) {
-    AsyncReturnAllReadableRegst();
-    AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
-      OF_SET_MSG_HANDLER(nullptr);
-      return 1;
-    } else {
-      OF_SET_MSG_HANDLER(&Actor::HandlerZombie);
-      return 0;
-    }
-  }
-  return 0;
+  return writeable_produced_regst_desc_cnt_ == writeable_produced_regst_.size();
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
@@ -177,11 +239,24 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
     ek.kernel->Launch(kernel_ctx, [&](const std::string& bn_in_op) -> Blob* {
       auto regst_desc_id_it = ek.bn_in_op2regst_desc_id.find(bn_in_op);
       if (regst_desc_id_it == ek.bn_in_op2regst_desc_id.end()) { return nullptr; }
-      Regst* regst = Regst4RegstDescId(regst_desc_id_it->second);
+      Regst* regst = GetCurWriteableRegst(regst_desc_id_it->second);
+      if (regst == nullptr) {
+        regst = GetNaiveCurReadable(regst_desc_id_it->second);
+      }
+      if (regst == nullptr) {
+        regst = Regst4RegstDescId(regst_desc_id_it->second);
+      }
       const LogicalBlobId& lbi = ek.kernel->BnInOp2Lbi(bn_in_op);
       return regst->GetBlobByLbi(lbi);
     });
   }
+}
+
+void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
+  AsyncLaunchKernel(kernel_ctx, [](int64_t) -> Regst* {
+      UNIMPLEMENTED();
+      return nullptr;
+  });
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
@@ -204,7 +279,7 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
       });
     }
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
-    if (pair.second.empty()) { writeable_produced_regst_desc_num_ -= 1; }
+    if (pair.second.empty()) { writeable_produced_regst_desc_cnt_ -= 1; }
   }
 }
 
@@ -243,7 +318,57 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
   device_ctx_->AddCallBack([msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); });
 }
 
-void Actor::AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
+Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
+  auto it = writeable_produced_regst_.find(regst_desc_id);
+  if (it == writeable_produced_regst_.end()) { return nullptr; }
+  if (it->second.empty()) { return nullptr; }
+  return it->second.front();
+}
+
+Regst* Actor::GetCurWriteableRegst(const std::string& name) {
+  return GetCurWriteableRegst(Name2SoleRegstDescId(name));
+}
+
+Regst* Actor::GetCurSoleWriteableRegst() {
+  CHECK_EQ(writeable_produced_regst_.size(), 1);
+  return writeable_produced_regst_.begin()->second.front();
+}
+
+std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
+  return {false, {}};
+}
+
+Regst* Actor::GetNaiveCurReadable(int64_t regst_desc_id) {
+  auto it = naive_readable_regst_.find(regst_desc_id);
+  if (it != naive_readable_regst_.end() && it->second.empty() == false) {
+    return it->second.front();
+  } else {
+    return nullptr;
+  }
+}
+
+Regst* Actor::GetNaiveNextReadable(int64_t regst_desc_id) {
+  auto it = naive_readable_regst_.find(regst_desc_id);
+  if (it == naive_readable_regst_.end()) { return nullptr; }
+  if (it->second.size() < 2) { return nullptr; }
+  return it->second.at(1);
+}
+
+Regst* Actor::GetNaiveSoleCurReadable() {
+  CHECK_EQ(naive_readable_regst_.size(), 1);
+  return GetNaiveFirstCurReadable();
+}
+
+Regst* Actor::GetNaiveFirstCurReadable() {
+  auto naive_readable_regst_it = naive_readable_regst_.begin();
+  CHECK(naive_readable_regst_it != naive_readable_regst_.end());
+  CHECK_EQ(naive_readable_regst_it->second.empty(), false);
+  return naive_readable_regst_it->second.front();
+}
+
+bool Actor::IsReadReady() {
+  return naive_readable_regst_.size() == naive_readable_regst_cnt_ && IsCustomizedReadReady();
+}
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
@@ -254,37 +379,31 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   if (reading_cnt_it->second != 0) { return 0; }
   auto writeable_it = writeable_produced_regst_.find(regst->regst_desc_id());
   if (writeable_it == writeable_produced_regst_.end()) { return 0; }
-  if (writeable_it->second.empty()) { writeable_produced_regst_desc_num_ += 1; }
+  if (writeable_it->second.empty()) { writeable_produced_regst_desc_cnt_ += 1; }
   writeable_it->second.push_back(regst);
   return 0;
 }
 
-Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
-  auto it = writeable_produced_regst_.find(regst_desc_id);
-  if (it == writeable_produced_regst_.end()) { return nullptr; }
-  if (it->second.empty()) { return nullptr; }
-  return it->second.front();
+void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
+  std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
+  if (isall_or_names.first) {
+    for (const auto& pair : consumed_ids) {
+      AddNaiveConsumed(pair.second);
+    }
+  } else {
+    for (const std::string& name : isall_or_names.second) {
+      auto it = consumed_ids.find(name);
+      if (it != consumed_ids.end()) {
+        AddNaiveConsumed(it->second);
+      }
+    }
+  }
 }
 
-Regst* Actor::GetCurWriteableRegst(const std::string& name) {
-  return GetCurWriteableRegst(RegstDescId4Name(name));
-}
-
-Regst* Actor::GetCurSoleWriteableRegst() {
-  CHECK_EQ(writeable_produced_regst_.size(), 1);
-  return writeable_produced_regst_.begin()->second.front();
-}
-
-int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
-  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(), reserved_id);
-}
-
-int64_t Actor::NewWorkStreamId() {
-  return Global<IDMgr>::Get()->NewWorkStreamId(machine_id(), thrd_id());
-}
-
-DeviceType Actor::GetDeviceType() const {
-  return Global<IDMgr>::Get()->GetDeviceTypeFromActorId(actor_id_);
+void Actor::AddNaiveConsumed(const RegstDescIdSet& regst_desc_ids) {
+  for (int64_t regst_desc_id : regst_desc_ids.regst_desc_id()) {
+    naive_readable_regst_[regst_desc_id] = {};
+  }
 }
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {

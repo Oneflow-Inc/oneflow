@@ -14,14 +14,14 @@ class RecordLoadActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
+  void Act() override;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {false, {}};
+  }
+  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() override { return !IsCustomizedReadReady(); }
 
   int HandlerWaitToStart(const ActorMsg&);
-  int HandlerNormal(const ActorMsg&) override;
-
-  void Act() override;
-  bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
-  void AsyncReturnAllReadableRegst() override {}
 
   int32_t piece_id_;
   bool is_eof_;
