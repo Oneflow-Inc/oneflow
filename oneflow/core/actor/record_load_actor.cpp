@@ -29,7 +29,7 @@ void RecordLoadActor::Act() {
   regst->set_piece_id(piece_id_++);
   RecordBlobIf* blob = regst->GetRecordBlobIf();
   blob->ReadFrom(in_stream_.get());
-  if (blob->record_num() < Global<JobDesc>::Get()->SinglePieceSize()) { is_eof_ = true; }
+  if (blob->record_num() < Global<JobDesc>::Get()->PieceSizeInOneDataPart()) { is_eof_ = true; }
   if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 

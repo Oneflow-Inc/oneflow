@@ -111,7 +111,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
     pr_desc->RemoveNeedlessDevice(op_name(), MaxModelSplitNum());
   }
   if (pr_desc->policy() == kDataParallel) {
-    pr_desc->RemoveNeedlessDevice(op_name(), Global<JobDesc>::Get()->ParallelPieceSize());
+    pr_desc->RemoveNeedlessDevice(op_name(), Global<JobDesc>::Get()->PieceSize());
   }
   VirtualFixParallelDesc(pr_desc);
 }
