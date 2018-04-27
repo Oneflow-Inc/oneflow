@@ -109,10 +109,6 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (found_lbis.find(lbi) != found_lbis.end() && lbi_boxing.find(lbi) == lbi_boxing.end()
-          && lbi_121.find(lbi) == lbi_121.end()) {
-        continue;
-      }
       if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
         out_regst_boxing->AddLbi(lbi);
         cur_node->BindBnWithRegst(obn, out_regst_boxing);
@@ -120,7 +116,7 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
         out_regst_121->AddLbi(lbi);
         cur_node->BindBnWithRegst(obn, out_regst_121);
       } else {
-        UNIMPLEMENTED();
+        CHECK(found_lbis.find(lbi) != found_lbis.end());
       }
     }
   });

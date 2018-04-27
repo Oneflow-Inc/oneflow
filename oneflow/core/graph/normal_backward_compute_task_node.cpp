@@ -136,10 +136,6 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     }
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
-      if (found_lbis.find(lbi) != found_lbis.end() && lbi_boxing.find(lbi) == lbi_boxing.end()
-          && lbi_121.find(lbi) == lbi_121.end()) {
-        continue;
-      }
       cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));
       if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
         in_diff_regst_boxing->AddLbi(lbi);
@@ -148,7 +144,7 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
         in_diff_regst_121->AddLbi(lbi);
         cur_node->BindBnWithRegst(idbn, in_diff_regst_121);
       } else {
-        CHECK(lbi_boxing.empty() && lbi_121.empty());
+        CHECK(found_lbis.find(lbi) != found_lbis.end());
       }
     }
   });
