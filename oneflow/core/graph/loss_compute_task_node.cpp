@@ -5,18 +5,23 @@
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  ProduceRegst("loss");
   ProduceRegst("boxing_out");
   ProduceRegst("121_out");
   ProduceRegst("data_tmp", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
-    BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
-    if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-      BindEdgeWithProducedRegst(edge, "boxing_out");
-    } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-      BindEdgeWithProducedRegst(edge, "121_out");
+    if (succ_logical->TypeName() == "LossAcc") {
+      BindEdgeWithProducedRegst(edge, "loss");
     } else {
-      UNIMPLEMENTED();
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        BindEdgeWithProducedRegst(edge, "boxing_out");
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        BindEdgeWithProducedRegst(edge, "121_out");
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   }
 }
@@ -99,12 +104,13 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   } else {
     UNIMPLEMENTED();
   }
-  // assume mthd between Loss and LossAcc is 121
-  out_regst_121->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
-  sum_node->BindBnWithRegst(sum_op->SoleObn(), out_regst_121);
+
+  std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
+  loss_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
+  sum_node->BindBnWithRegst(sum_op->SoleObn(), loss_regst);
   if (!loss_op->GetValFromCustomizedConf<std::string>("weight").empty()) {
-    out_regst_121->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
-    loss_node->BindBnWithRegst("reduction_coefficient", out_regst_121);
+    loss_regst->AddLbi(loss_op->BnInOp2Lbi("reduction_coefficient"));
+    loss_node->BindBnWithRegst("reduction_coefficient", loss_regst);
   }
   sum_node->InferBlobDescs(parallel_ctx());
 }
