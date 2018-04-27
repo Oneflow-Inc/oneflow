@@ -24,31 +24,23 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
-  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
-  ActUntilFail();
-  OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
-  return 0;
-}
-
-int RecordLoadActor::HandlerNormal(const ActorMsg& msg) {
-  CHECK_EQ(msg.msg_type(), ActorMsgType::kRegstMsg);
-  CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
-  ActUntilFail();
-  return TrySwitchToZombieOrFinish();
-}
-
 void RecordLoadActor::Act() {
   Regst* regst = GetCurSoleWriteableRegst();
   regst->set_piece_id(piece_id_++);
   RecordBlobIf* blob = regst->GetRecordBlobIf();
   blob->ReadFrom(in_stream_.get());
-  if (blob->record_num() < Global<JobDesc>::Get()->SinglePieceSize()) { is_eof_ = true; }
+  if (blob->record_num() < Global<JobDesc>::Get()->PieceSizeInOneDataPart()) { is_eof_ = true; }
   if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 
-bool RecordLoadActor::IsReadReady() {
+bool RecordLoadActor::IsCustomizedReadReady() {
   return !is_eof_ && piece_id_ < Global<RuntimeCtx>::Get()->total_piece_num();
+}
+
+int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
+  CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+  OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
+  return HandlerNormal(msg);
 }
 
 REGISTER_ACTOR(kRecordLoad, RecordLoadActor);

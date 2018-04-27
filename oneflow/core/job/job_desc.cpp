@@ -8,7 +8,11 @@ const std::string& JobDesc::MdLoadSnapshotPath() { return job_conf_.model_load_s
 size_t JobDesc::SizeOfOneDataId() const { return job_conf_.max_data_id_length() * sizeof(char); }
 int32_t JobDesc::CommNetWorkerNum() const { return resource_.comm_net_worker_num(); }
 int32_t JobDesc::PersistenceWorkerNum() const { return resource_.persistence_worker_num(); }
-int32_t JobDesc::ParallelPieceSize() const { return job_conf_.data_part_num() * SinglePieceSize(); }
+int64_t JobDesc::PieceSize() const { return job_conf_.piece_size(); }
+int64_t JobDesc::PieceSizeInOneDataPart() const {
+  CHECK_EQ(PieceSize() % job_conf_.data_part_num(), 0);
+  return PieceSize() / job_conf_.data_part_num();
+}
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.piece_num_of_experiment_phase();
 }
@@ -36,10 +40,6 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().num_of_batches_in_snapshot();
 }
-int32_t JobDesc::NumOfPiecesInBatch() const {
-  CHECK(IsTrain());
-  return job_conf_.train_conf().num_of_pieces_in_batch();
-}
 int32_t JobDesc::Staleness() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().staleness();
@@ -57,7 +57,14 @@ int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().piece_num_of_print_loss();
 }
-int32_t JobDesc::BatchSize() const { return NumOfPiecesInBatch() * ParallelPieceSize(); }
+int64_t JobDesc::BatchSize() const {
+  CHECK(IsTrain());
+  return job_conf_.train_conf().batch_size();
+}
+int64_t JobDesc::NumOfPiecesInBatch() const {
+  CHECK_EQ(BatchSize() % PieceSize(), 0);
+  return BatchSize() / PieceSize();
+}
 float JobDesc::L1() const {
   CHECK(IsTrain());
   return job_conf_.train_conf().l1();
@@ -81,13 +88,12 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
   if (job_conf_.has_train_conf()) {
     TrainConf* train_conf = job_conf_.mutable_train_conf();
     if (train_conf->piece_num_of_print_loss() == -1) {
-      train_conf->set_piece_num_of_print_loss(train_conf->num_of_pieces_in_batch());
+      train_conf->set_piece_num_of_print_loss(NumOfPiecesInBatch());
     }
-    if (piece_exp == -1) { piece_exp = 3 * train_conf->num_of_pieces_in_batch(); }
-    piece_exp = std::max(piece_exp, train_conf->num_of_pieces_in_batch());
+    if (piece_exp == -1) { piece_exp = 3 * NumOfPiecesInBatch(); }
+    piece_exp = std::max(piece_exp, NumOfPiecesInBatch());
     piece_exp = std::max(piece_exp, train_conf->piece_num_of_print_loss());
-    piece_exp =
-        std::min(piece_exp, train_conf->total_batch_num() * train_conf->num_of_pieces_in_batch());
+    piece_exp = std::min(piece_exp, train_conf->total_batch_num() * NumOfPiecesInBatch());
   } else {
     if (piece_exp == -1) { piece_exp = 16; }
   }
