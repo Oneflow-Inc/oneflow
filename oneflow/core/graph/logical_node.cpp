@@ -57,10 +57,10 @@ std::string ConcatTypeName(const LogicalNode* lhs, const LogicalNode* rhs) {
 
 using FuncForFindBldSubTskGphMthd =
     std::function<BldSubTskGphMthd(const LogicalNode* src, const LogicalNode* dst)>;
-HashMap<std::string, FuncForFindBldSubTskGphMthd>* GetFuncForFindBldSubTskGphMthd() {
-  static HashMap<std::string, FuncForFindBldSubTskGphMthd> obj;
-  return &obj;
-}
+
+DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindBldSubTskGphMthd>,
+                  GetFuncForFindBldSubTskGphMthd);
+
 void AddFuncForFindBldSubTskGphMthd(const std::string& k, FuncForFindBldSubTskGphMthd v) {
   CHECK(GetFuncForFindBldSubTskGphMthd()->emplace(k, v).second);
 }
@@ -74,10 +74,9 @@ void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
 
 using FuncForFindBldBoxingOpConfMthd =
     std::function<BldBoxingOpConfMthd(const LogicalNode* src, const LogicalNode* dst)>;
-HashMap<std::string, FuncForFindBldBoxingOpConfMthd>* GetFuncForFindBldBoxingOpConfMthd() {
-  static HashMap<std::string, FuncForFindBldBoxingOpConfMthd> obj;
-  return &obj;
-}
+DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindBldBoxingOpConfMthd>,
+                  GetFuncForFindBldBoxingOpConfMthd);
+
 void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, FuncForFindBldBoxingOpConfMthd v) {
   CHECK(GetFuncForFindBldBoxingOpConfMthd()->emplace(k, v).second);
 }
@@ -100,10 +99,7 @@ BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* sav
 
 using FuncForFindLbis =
     std::function<std::vector<LogicalBlobId>(const LogicalNode* src, const LogicalNode* dst)>;
-HashMap<std::string, FuncForFindLbis>* GetFuncForFindLbis() {
-  static HashMap<std::string, FuncForFindLbis> obj;
-  return &obj;
-}
+DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindLbis>, GetFuncForFindLbis);
 
 #define REGISTER_FUNC_FOR_FIND_LBIS(k, v) COMMAND(CHECK(GetFuncForFindLbis()->emplace(k, v).second))
 
