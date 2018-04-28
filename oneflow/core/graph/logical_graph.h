@@ -48,6 +48,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
                           const std::vector<LogicalEdge*>& edges,
                           const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  void SetMainModelParallel();
   void BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
   void NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
   void AddBackwardClone(const HashMap<LogicalEdge*, std::string>& edge2ibn);

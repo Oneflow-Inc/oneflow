@@ -45,11 +45,15 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   bool HasOpWithForwardModelBlob() const;
   void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
                               std::function<void(CompTaskNode*)>) const;
+
+  // model split
+  LogicalNode* main_model_parallel() const { return main_model_parallel_; }
+  void set_main_model_parallel(LogicalNode* val) { main_model_parallel_ = val; }
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
  protected:
-  LogicalNode() = default;
+  LogicalNode() : main_model_parallel_(nullptr) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
@@ -59,6 +63,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::vector<std::shared_ptr<Operator>> op_vec_;
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
+  LogicalNode* main_model_parallel_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   HashSet<LogicalBlobId> lbi_boxing_;
