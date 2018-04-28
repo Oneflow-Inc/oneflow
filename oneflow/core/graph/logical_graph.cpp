@@ -8,6 +8,7 @@ namespace oneflow {
 LogicalGraph::LogicalGraph(bool is_train) {
   HashMap<LogicalEdge*, std::string> edge2ibn;
   BuildFwStruct(&edge2ibn);
+  SetMainModelParallel();
   if (is_train) { BuildBwStruct(&edge2ibn); }
   MergeEdge();
   SetNodeDataLbi();
@@ -187,6 +188,17 @@ void LogicalGraph::ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlob
     Connect(clone_node, edge, dst_node);
     edge->mut_lbis() = {lbi};
   }
+}
+
+void LogicalGraph::SetMainModelParallel() {
+  ForEachNode([](LogicalNode* node) {
+    LogicalNode* pred_node = node;
+    while (pred_node->SoleOp()->IsElemWiseOp()) { pred_node = pred_node->SoleInEdge()->src_node(); }
+    if (pred_node != node && pred_node->parallel_desc()->policy() == kModelParallel) {
+      node->mut_parallel_desc() = pred_node->parallel_desc();
+      node->set_main_model_parallel(pred_node);
+    }
+  });
 }
 
 void LogicalGraph::BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {

@@ -193,19 +193,27 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)>
 }
 
 int32_t LogicalNode::GetModelSplitAxis() const {
-  if (parallel_desc_->policy() == ParallelPolicy::kDataParallel) { return -1; }
-  for (std::shared_ptr<Operator> op : op_vec_) {
-    if (op->ModelSplitAxis() != -1) { return op->ModelSplitAxis(); }
+  CHECK_EQ(parallel_desc_->policy(), kModelParallel);
+  if (main_model_parallel_) {
+    CHECK(SoleOp()->IsElemWiseOp());
+    return main_model_parallel_->GetModelSplitAxis();
+  } else {
+    int32_t ret = SoleOp()->ModelSplitAxis();
+    CHECK_NE(ret, -1);
+    return ret;
   }
-  return -1;
 }
 
 int32_t LogicalNode::GetMaxModelSplitNum() const {
-  if (parallel_desc_->policy() == ParallelPolicy::kDataParallel) { return -1; }
-  for (std::shared_ptr<Operator> op : op_vec_) {
-    if (op->MaxModelSplitNum() != -1) { return op->MaxModelSplitNum(); }
+  CHECK_EQ(parallel_desc_->policy(), kModelParallel);
+  if (main_model_parallel_) {
+    CHECK(SoleOp()->IsElemWiseOp());
+    return main_model_parallel_->GetMaxModelSplitNum();
+  } else {
+    int32_t ret = SoleOp()->MaxModelSplitNum();
+    CHECK_NE(ret, -1);
+    return ret;
   }
-  return -1;
 }
 
 bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) const {
@@ -213,6 +221,19 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
     if (cond(op.get())) { return true; }
   }
   return false;
+}
+
+static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
+  if (src_node->SoleOp()->IsElemWiseOp() && dst_node->SoleOp()->IsElemWiseOp()) {
+    CHECK_EQ(src_node->main_model_parallel(), dst_node->main_model_parallel());
+    return true;
+  } else if (src_node->SoleOp()->IsElemWiseOp() && src_node->main_model_parallel() == dst_node) {
+    return true;
+  } else if (dst_node->SoleOp()->IsElemWiseOp() && dst_node->main_model_parallel() == src_node) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
@@ -224,6 +245,11 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   if (src_pd->parallel_num() == dst_pd->parallel_num()) {
     if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
       return &TaskGraph::BldSubTskGphByOneToOne;
+    } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
+               && IsModelParallel121(src_node, dst_node)) {
+      return &TaskGraph::BldSubTskGphByOneToOne;
+    } else {
+      // do nothing
     }
   }
   return &TaskGraph::BldSubTskGphByBoxing;
@@ -312,6 +338,7 @@ BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {
   bw_node_->mut_op_vec() = op_vec();
   bw_node_->mut_parallel_desc() = parallel_desc();
   bw_node_->fw_node_ = this;
+  bw_node_->set_main_model_parallel(main_model_parallel());
   return bw_node_;
 }
 
