@@ -23,8 +23,14 @@ class CompTaskNode : public TaskNode {
   // logical_node_
   const LogicalNode* logical_node() const { return logical_node_; }
   void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
+
+ protected:
   const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);
   const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
+  void ProduceB121Regst(const std::string& b121_name);
+  void BindEdgeWithProducedB121Regst(TaskEdge*, const std::string& b121_name);
+  bool TryAddLbiToB121RegstAndBindIt(ExecNode*, const std::string& bn,
+                                     const std::string& b121_name);
 
  private:
   ParallelContext parallel_ctx_;

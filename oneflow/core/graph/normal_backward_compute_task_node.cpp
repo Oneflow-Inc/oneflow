@@ -5,22 +5,14 @@
 namespace oneflow {
 
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("boxing_in_diff");
-  ProduceRegst("121_in_diff");
+  ProduceB121Regst("in_diff");
   ProduceRegst("activation_diff", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc") {
       edge->AddRegst("model_diff", ProduceRegst("model_diff"));
     } else {
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        BindEdgeWithProducedRegst(edge, "boxing_in_diff");
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        BindEdgeWithProducedRegst(edge, "121_in_diff");
-      } else {
-        UNIMPLEMENTED();
-      }
+      BindEdgeWithProducedB121Regst(edge, "in_diff");
     }
   }
 }
@@ -125,10 +117,6 @@ void NormalBackwardCompTaskNode::BuildActivationDiffRegst() {
 }
 
 void NormalBackwardCompTaskNode::BuildInDiffRegst() {
-  std::shared_ptr<RegstDesc> in_diff_regst_boxing = GetProducedRegst("boxing_in_diff");
-  std::shared_ptr<RegstDesc> in_diff_regst_121 = GetProducedRegst("121_in_diff");
-  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
-  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) {
@@ -137,13 +125,7 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
       cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));
-      if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
-        in_diff_regst_boxing->AddLbi(lbi);
-        cur_node->BindBnWithRegst(idbn, in_diff_regst_boxing);
-      } else if (lbi_121.find(lbi) != lbi_121.end()) {
-        in_diff_regst_121->AddLbi(lbi);
-        cur_node->BindBnWithRegst(idbn, in_diff_regst_121);
-      } else {
+      if (TryAddLbiToB121RegstAndBindIt(cur_node, idbn, "in_diff") == false) {
         CHECK(found_lbis.find(lbi) != found_lbis.end());
       }
     }
