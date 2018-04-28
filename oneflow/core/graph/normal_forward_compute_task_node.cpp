@@ -5,8 +5,7 @@
 namespace oneflow {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("boxing_out");
-  ProduceRegst("121_out");
+  ProduceB121Regst("out");
   ProduceRegst("activation");
   ProduceRegst("data_tmp");
   ProduceRegst("forward_model");
@@ -20,14 +19,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       BindEdgeWithProducedRegst(edge, "activation");
       BindEdgeWithProducedRegst(edge, "data_tmp");
     } else {
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        BindEdgeWithProducedRegst(edge, "boxing_out");
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        BindEdgeWithProducedRegst(edge, "121_out");
-      } else {
-        UNIMPLEMENTED();
-      }
+      BindEdgeWithProducedB121Regst(edge, "out");
     }
   }
 }
@@ -101,22 +93,12 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
-  std::shared_ptr<RegstDesc> out_regst_121 = GetProducedRegst("121_out");
-  std::shared_ptr<RegstDesc> out_regst_boxing = GetProducedRegst("boxing_out");
-  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
-  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
-        out_regst_boxing->AddLbi(lbi);
-        cur_node->BindBnWithRegst(obn, out_regst_boxing);
-      } else if (lbi_121.find(lbi) != lbi_121.end()) {
-        out_regst_121->AddLbi(lbi);
-        cur_node->BindBnWithRegst(obn, out_regst_121);
-      } else {
+      if (TryAddLbiToB121RegstAndBindIt(cur_node, obn, "out") == false) {
         CHECK(found_lbis.find(lbi) != found_lbis.end());
       }
     }

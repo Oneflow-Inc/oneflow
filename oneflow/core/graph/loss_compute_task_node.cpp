@@ -6,22 +6,14 @@ namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("loss");
-  ProduceRegst("boxing_out");
-  ProduceRegst("121_out");
+  ProduceB121Regst("out");
   ProduceRegst("data_tmp", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "LossAcc") {
       BindEdgeWithProducedRegst(edge, "loss");
     } else {
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), succ_logical);
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        BindEdgeWithProducedRegst(edge, "boxing_out");
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        BindEdgeWithProducedRegst(edge, "121_out");
-      } else {
-        UNIMPLEMENTED();
-      }
+      BindEdgeWithProducedB121Regst(edge, "out");
     }
   }
 }
@@ -45,20 +37,9 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   }
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
-  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
-  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
-  std::shared_ptr<RegstDesc> out_regst_boxing = GetProducedRegst("boxing_out");
-  std::shared_ptr<RegstDesc> out_regst_121 = GetProducedRegst("121_out");
   for (const std::string& obn : loss_op->output_bns()) {
-    const LogicalBlobId& lbi = loss_op->BnInOp2Lbi(obn);
-    if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
-      out_regst_boxing->AddLbi(lbi);
-      loss_node->BindBnWithRegst(obn, out_regst_boxing);
-    } else if (lbi_121.find(lbi) != lbi_121.end()) {
-      out_regst_121->AddLbi(lbi);
-      loss_node->BindBnWithRegst(obn, out_regst_121);
-    } else {
-      data_tmp_regst->AddLbi(lbi);
+    if (!TryAddLbiToB121RegstAndBindIt(loss_node, obn, "out")) {
+      data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
       loss_node->BindBnWithRegst(obn, data_tmp_regst);
     }
   }
@@ -71,22 +52,11 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   const auto& op_vec = logical_node()->op_vec();
   ExecNode* loss_node = mut_exec_gph().SoleNode();
   std::shared_ptr<const Operator> loss_op = op_vec[0];
+  for (const std::string& idbn : loss_op->input_diff_bns()) {
+    TryAddLbiToB121RegstAndBindIt(loss_node, idbn, "out");
+  }
   std::shared_ptr<RegstDesc> out_regst_boxing = GetProducedRegst("boxing_out");
   std::shared_ptr<RegstDesc> out_regst_121 = GetProducedRegst("121_out");
-  const HashSet<LogicalBlobId>& lbi_boxing = logical_node()->lbi_boxing();
-  const HashSet<LogicalBlobId>& lbi_121 = logical_node()->lbi_121();
-  for (const std::string& idbn : loss_op->input_diff_bns()) {
-    const LogicalBlobId& lbi = loss_op->BnInOp2Lbi(idbn);
-    if (lbi_boxing.find(lbi) != lbi_boxing.end()) {
-      out_regst_boxing->AddLbi(lbi);
-      loss_node->BindBnWithRegst(idbn, out_regst_boxing);
-    } else if (lbi_121.find(lbi) != lbi_121.end()) {
-      out_regst_121->AddLbi(lbi);
-      loss_node->BindBnWithRegst(idbn, out_regst_121);
-    } else {
-      CHECK(lbi_boxing.empty() && lbi_121.empty());
-    }
-  }
   for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
     out_regst_boxing->CopyBlobDescWithoutAddLbi(regst.lock().get());
     out_regst_121->CopyBlobDescWithoutAddLbi(regst.lock().get());

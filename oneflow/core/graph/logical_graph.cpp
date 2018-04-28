@@ -10,8 +10,8 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct(&edge2ibn);
   if (is_train) { BuildBwStruct(&edge2ibn); }
   MergeEdge();
-  if (is_train) { BuildLossPrintStruct(); }
   SetNodeDataLbi();
+  if (is_train) { BuildLossPrintStruct(); }
   BuildModelStruct(is_train);
   BuildRecordLoadStruct();
   if (is_train) { ConnectFwToBw(); }

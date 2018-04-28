@@ -43,7 +43,7 @@ namespace oneflow {
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
-#define TODO() LOG(FATAL) << "TODO";
+#define TODO() LOG(FATAL) << "TODO"
 
 template<typename T>
 class Global final {
@@ -70,6 +70,14 @@ class Global final {
     return &ptr;
   }
 };
+
+#define OF_COMMA ,
+
+#define DEFINE_STATIC_VAR(type, name) \
+  static type* name() {               \
+    static type var;                  \
+    return &var;                      \
+  }
 
 #define COMMAND(...)                                                \
   namespace {                                                       \

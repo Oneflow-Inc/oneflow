@@ -32,7 +32,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   }
 
   // Lbis
-  const std::vector<LogicalBlobId>& GetLbisTo(const LogicalNode* dst) const;
+  std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
   const HashSet<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
   const HashSet<LogicalBlobId>& lbi_121() const { return lbi_121_; }

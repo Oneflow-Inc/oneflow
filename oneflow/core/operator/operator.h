@@ -13,9 +13,6 @@
 
 namespace oneflow {
 
-// bn  : blob name
-// lbi : LogicalBlobId
-
 struct OpContext {
   virtual ~OpContext() {}
 };
