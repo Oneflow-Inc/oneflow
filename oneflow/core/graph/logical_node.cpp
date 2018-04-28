@@ -98,6 +98,26 @@ BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* sav
   }
 }
 
+using FuncForFindLbis =
+    std::function<std::vector<LogicalBlobId>(const LogicalNode* src, const LogicalNode* dst)>;
+HashMap<std::string, FuncForFindLbis>* GetFuncForFindLbis() {
+  static HashMap<std::string, FuncForFindLbis> obj;
+  return &obj;
+}
+
+#define REGISTER_FUNC_FOR_FIND_LBIS(k, v) COMMAND(CHECK(GetFuncForFindLbis()->emplace(k, v).second))
+
+std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const LogicalNode* dst) {
+  return {GenPackedLbi()};
+}
+
+REGISTER_FUNC_FOR_FIND_LBIS("LossAcc"
+                            "LossPrint",
+                            ReturnPackedLbi);
+REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
+                            "NormalMdUpdt",
+                            ReturnPackedLbi);
+
 }  // namespace
 
 std::shared_ptr<Operator> LogicalNode::SoleOp() const {
@@ -105,8 +125,16 @@ std::shared_ptr<Operator> LogicalNode::SoleOp() const {
   return op_vec_.front();
 }
 
-const std::vector<LogicalBlobId>& LogicalNode::GetLbisTo(const LogicalNode* dst) const {
-  return dst2data_lbis_.at(dst);
+std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const {
+  auto it = dst2data_lbis_.find(dst);
+  if (it != dst2data_lbis_.end()) {
+    return it->second;
+  } else {
+    std::string k = ConcatTypeName(this, dst);
+    auto func_it = GetFuncForFindLbis()->find(k);
+    CHECK(func_it != GetFuncForFindLbis()->end()) << k;
+    return func_it->second(this, dst);
+  }
 }
 
 void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
