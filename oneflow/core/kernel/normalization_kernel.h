@@ -103,13 +103,9 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
   const PbMessage& GetCustomizedOpConf() const override;
 
   void NormalizationCudnnForward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {
-    UNIMPLEMENTED();
-  }
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
   void NormalizationCudnnBackward(
-      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const {
-    UNIMPLEMENTED();
-  }
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
 };
 
 }  // namespace oneflow

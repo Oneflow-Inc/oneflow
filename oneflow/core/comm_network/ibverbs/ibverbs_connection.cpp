@@ -9,6 +9,7 @@ void IBVerbsConnection::PostReadRequest(void* read_ctx,
                                         IBVerbsMemDescProto& remote_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
   wr.wr_id = reinterpret_cast<uint64_t>(read_ctx);
+  wr.next = nullptr;
   wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = local_mem->ibv_sge_ptr();
   wr.num_sge = 1;
