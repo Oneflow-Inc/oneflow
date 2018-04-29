@@ -49,6 +49,7 @@ Plan Compiler::Compile() {
 
 Plan Compiler::DoCompile() {
   auto logical_gph = of_make_unique<LogicalGraph>(Global<JobDesc>::Get()->IsTrain());
+  int64_t total_mbn_num = logical_gph->total_mbn_num();
   auto task_gph = of_make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
@@ -61,7 +62,7 @@ Plan Compiler::DoCompile() {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan.mutable_task()->Add());
   });
-  plan.set_total_mbn_num(Global<LogicalGraph>::Get()->total_mbn_num());
+  plan.set_total_mbn_num(total_mbn_num);
   ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
   return plan;
 }

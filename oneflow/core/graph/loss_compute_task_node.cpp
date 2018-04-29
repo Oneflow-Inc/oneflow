@@ -38,7 +38,10 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
   for (const std::string& obn : loss_op->output_bns()) {
-    TryAddLbiToB121RegstAndBindIt(loss_node, obn, "out");
+    if (!TryAddLbiToB121RegstAndBindIt(loss_node, obn, "out")) {
+      data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(obn));
+      loss_node->BindBnWithRegst(obn, data_tmp_regst);
+    }
   }
   loss_node->InferBlobDescs(parallel_ctx());
 
@@ -70,7 +73,7 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   } else if (out_regst_121->GetBlobDesc(sum_ilbi)) {
     sum_node->BindBnWithRegst(sum_op->SoleIbn(), out_regst_121);
   } else {
-    UNIMPLEMENTED();
+    sum_node->BindBnWithRegst(sum_op->SoleIbn(), GetProducedRegst("data_tmp"));
   }
 
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");

@@ -26,8 +26,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void NormalForwardCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
-    const LogicalNode* pred_logical = GetOnePredLogicalNodeOnEdge(edge);
-    if (pred_logical->TypeName() == "NormalMdUpdt") {
+    TaskNode* src_node = edge->src_node();
+    TaskType src_task_type = src_node->GetTaskType();
+    if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
