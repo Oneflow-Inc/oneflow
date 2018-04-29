@@ -26,7 +26,7 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  void InitFromOpConf(const OperatorConf& op_conf);
+  void InitFromOpConf(const OperatorConf& op_conf, DeviceType device_type);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
@@ -203,7 +203,7 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 #define REGISTER_OP_CREATOR(op_type_case, creator) \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type);
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);

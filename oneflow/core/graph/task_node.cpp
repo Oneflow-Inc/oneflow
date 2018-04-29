@@ -28,7 +28,9 @@ const std::list<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std:
 }
 
 std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) {
-  const std::list<std::weak_ptr<RegstDesc>>& vec = consumed_regsts_.at(name);
+  auto it = consumed_regsts_.find(name);
+  if (it == consumed_regsts_.end()) { return nullptr; }
+  const std::list<std::weak_ptr<RegstDesc>>& vec = it->second;
   CHECK_EQ(vec.size(), 1);
   return vec.front().lock();
 }
