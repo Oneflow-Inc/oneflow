@@ -118,6 +118,27 @@ struct CpuKernelUtilIf {
                                 int32_t part_num, const std::string& model_dir,
                                 Blob* blob, const std::string& bn_in_op,
                                 int32_t dim_num, int64_t num_in_each_dim);
+  // z[i] = x[i] + y[axis_index(i)]
+  // shape of x or z: [before_axis_dim_size, axis_dim_size, after_axis_dim_size]
+  // shape of y: [axis_dim_size]
+  static void AxisSliceAdd(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                           const size_t axis_dim_size,
+                           const size_t after_axis_dim_size, const T* x,
+                           const T* y, T* z);
+  // z[i] = x[i] - y[axis_index(i)]
+  // shape of x or z: [before_axis_dim_size, axis_dim_size, after_axis_dim_size]
+  // shape of y: [axis_dim_size]
+  static void AxisSliceSub(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                           const size_t axis_dim_size,
+                           const size_t after_axis_dim_size, const T* x,
+                           const T* y, T* z);
+  // z[i] = x[i] * y[axis_index(i)]
+  // shape of x or z: [before_axis_dim_size, axis_dim_size, after_axis_dim_size]
+  // shape of y: [axis_dim_size]
+  static void AxisSliceMul(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                           const size_t axis_dim_size,
+                           const size_t after_axis_dim_size, const T* x,
+                           const T* y, T* z);
 };
 
 // CPU, Floating
@@ -214,6 +235,27 @@ struct GpuKernelUtilIf {
                                 int32_t part_num, const std::string& model_dir,
                                 Blob* blob, const std::string& bn_in_op,
                                 int32_t dim_num, int64_t num_in_each_dim);
+  // z[i] = x[i] + y[axis_index(i)]
+  // shape of x or z: [before_axis_dim_size, axis_dim_size, after_axis_dim_size]
+  // shape of y: [axis_dim_size]
+  static void AxisSliceAdd(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                           const size_t axis_dim_size,
+                           const size_t after_axis_dim_size, const T* x,
+                           const T* y, T* z);
+  // z[i] = x[i] - y[axis_index(i)]
+  // shape of x or z: [before_axis_dim_size, axis_dim_size, after_axis_dim_size]
+  // shape of y: [axis_dim_size]
+  static void AxisSliceSub(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                           const size_t axis_dim_size,
+                           const size_t after_axis_dim_size, const T* x,
+                           const T* y, T* z);
+  // z[i] = x[i] * y[axis_index(i)]
+  // shape of x or z: [before_axis_dim_size, axis_dim_size, after_axis_dim_size]
+  // shape of y: [axis_dim_size]
+  static void AxisSliceMul(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                           const size_t axis_dim_size,
+                           const size_t after_axis_dim_size, const T* x,
+                           const T* y, T* z);
 };
 
 // GPU, Floating

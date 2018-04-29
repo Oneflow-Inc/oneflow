@@ -150,6 +150,36 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
   }
 }
 
+template<typename T>
+__global__ void GpuAxisSliceAdd(const size_t total_dim_size,
+                                const size_t last_two_dim_size,
+                                const size_t last_dim_size, const T* x,
+                                const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, total_dim_size) {
+    z[i] = x[i] + y[(i % last_two_dim_size) / last_dim_size];
+  }
+}
+
+template<typename T>
+__global__ void GpuAxisSliceSub(const size_t total_dim_size,
+                                const size_t last_two_dim_size,
+                                const size_t last_dim_size, const T* x,
+                                const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, total_dim_size) {
+    z[i] = x[i] - y[(i % last_two_dim_size) / last_dim_size];
+  }
+}
+
+template<typename T>
+__global__ void GpuAxisSliceMul(const size_t total_dim_size,
+                                const size_t last_two_dim_size,
+                                const size_t last_dim_size, const T* x,
+                                const T* y, T* z) {
+  CUDA_1D_KERNEL_LOOP(i, total_dim_size) {
+    z[i] = x[i] * y[(i % last_two_dim_size) / last_dim_size];
+  }
+}
+
 }  // namespace
 
 template<>
@@ -255,6 +285,36 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id,
       ctx, part_id, part_num, model_dir, host_blob.get(), bn_in_op, dim_num,
       num_in_each_dim);
   AFTER_CPU_INITIALIZE();
+}
+KU_IF_METHOD AxisSliceAdd(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                          const size_t axis_dim_size,
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  const size_t last_two_dim_size = axis_dim_size * after_axis_dim_size;
+  const size_t elem_cnt = before_axis_dim_size * last_two_dim_size;
+  GpuAxisSliceAdd<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
+                       0, ctx->cuda_stream()>>>(elem_cnt, last_two_dim_size,
+                                                after_axis_dim_size, x, y, z);
+}
+KU_IF_METHOD AxisSliceSub(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                          const size_t axis_dim_size,
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  const size_t last_two_dim_size = axis_dim_size * after_axis_dim_size;
+  const size_t elem_cnt = before_axis_dim_size * last_two_dim_size;
+  GpuAxisSliceSub<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
+                       0, ctx->cuda_stream()>>>(elem_cnt, last_two_dim_size,
+                                                after_axis_dim_size, x, y, z);
+}
+KU_IF_METHOD AxisSliceMul(DeviceCtx* ctx, const size_t before_axis_dim_size,
+                          const size_t axis_dim_size,
+                          const size_t after_axis_dim_size, const T* x,
+                          const T* y, T* z) {
+  const size_t last_two_dim_size = axis_dim_size * after_axis_dim_size;
+  const size_t elem_cnt = before_axis_dim_size * last_two_dim_size;
+  GpuAxisSliceMul<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock,
+                       0, ctx->cuda_stream()>>>(elem_cnt, last_two_dim_size,
+                                                after_axis_dim_size, x, y, z);
 }
 
 #define KU_FLOATING_METHOD             \

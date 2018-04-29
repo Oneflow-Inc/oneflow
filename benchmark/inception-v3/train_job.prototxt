@@ -1,0 +1,32 @@
+dlnet_filepath: "./train_net.prototxt"
+resource_filepath: "./resource.prototxt"
+placement_filepath: "./train_placement.prototxt"
+use_rdma: false
+globalfs_conf {
+  localfs_conf {
+#		namenode: "hdfs://192.168.1.11:9000" 
+  }
+}
+single_piece_size: 7
+data_part_num: 6
+model_load_snapshot_path: ""
+reserved_device_mem_mbyte_size: 600
+max_data_id_length: 8
+train_conf {
+  model_save_snapshots_path: "/home/lixinqi/snapshot"
+  num_of_batches_in_snapshot: 100
+  staleness: 0
+  total_batch_num: 10000
+  default_initializer_conf {
+    random_normal_conf {
+      mean: 0.0
+      std: 0.1
+    }
+  }
+  num_of_pieces_in_batch: 10
+  model_update_conf {
+		learning_rate: 0.005
+    naive_conf {
+    }
+  }
+}

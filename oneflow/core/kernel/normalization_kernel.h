@@ -48,6 +48,9 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
       DeviceCtx* ctx, int32_t part_id, int32_t part_num,
       const std::string& model_load_dir,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitPureModelTmpBlobs(
+      DeviceCtx* ctx,
+      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardDataContent(
       const KernelCtx&,
       std::function<Blob*(const std::string&)>) const override;
@@ -56,25 +59,43 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
       std::function<Blob*(const std::string&)>) const override;
 
   void CalcAboutGammaDiff(const KernelCtx&,
-                          const std::function<Blob*(const std::string&)>,
-                          const Blob* out_diff_blob,
+                          const std::function<Blob*(const std::string&)>&,
                           bool need_comp_in_diff) const;
   void CalcAboutBetaDiff(const KernelCtx&,
-                         const std::function<Blob*(const std::string&)>,
-                         const Blob* out_diff_blob,
+                         const std::function<Blob*(const std::string&)>&,
                          bool need_comp_in_diff) const;
   void CalcInDiff(const KernelCtx&,
-                  const std::function<Blob*(const std::string&)>,
-                  const Blob* out_diff_blob, Blob* in_diff_blob) const;
+                  const std::function<Blob*(const std::string&)>&) const;
   void Normalize(const KernelCtx&,
                  const std::function<Blob*(const std::string&)>&,
                  const Blob* mean_blob, const Blob* variance_blob,
                  const Blob* in_blob, Blob* out_blob) const;
-  void CalcMeanAndVariance(const KernelCtx&,
-                           const std::function<Blob*(const std::string&)>&,
-                           const Blob* in_blob) const;
+  void CalcMeanAndVariance(
+      const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
   void UpdateMovingMeanAndMovingVariance(
       const KernelCtx&, const std::function<Blob*(const std::string&)>&) const;
+  void ComputeAxisSum(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      const Blob* x_blob, Blob* y_blob, const T alpha) const;
+  void ComputeAxisSum(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      const Blob* x_blob, Blob* y_blob) const;
+  void ComputeAxisMean(
+      const KernelCtx& ctx,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
+      const Blob* x_blob, Blob* y_blob) const;
+  template<void (*handler)(DeviceCtx*, const size_t, const size_t, const size_t,
+                           const T*, const T*, T*)>
+  void AxisSliceDo(const KernelCtx& ctx, const Blob* x_blob, const Blob* y_blob,
+                   Blob* z_blob) const;
+  void AxisSliceAdd(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
+                    Blob* z_blob) const;
+  void AxisSliceSub(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
+                    Blob* z_blob) const;
+  void AxisSliceMul(const KernelCtx&, const Blob* x_blob, const Blob* y_blob,
+                    Blob* z_blob) const;
   void InitMovingMeanAndMovingVariance(
       const KernelCtx& ctx,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob,
