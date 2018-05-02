@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_COMMON_FACTORY_H_
-#define ONEFLOW_CORE_COMMON_FACTORY_H_
+#ifndef ONEFLOW_CORE_COMMON_AUTO_REGISTRATION_FACTORY_H_
+#define ONEFLOW_CORE_COMMON_AUTO_REGISTRATION_FACTORY_H_
 
 #include "oneflow/core/common/util.h"
 
@@ -55,4 +55,4 @@ inline Base* NewObj(int32_t k, Args&&... args) {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_FACTORY_H_
+#endif  // ONEFLOW_CORE_COMMON_AUTO_REGISTRATION_FACTORY_H_
