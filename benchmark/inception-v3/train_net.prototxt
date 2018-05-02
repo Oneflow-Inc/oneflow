@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/imagenet_small/train"
+    data_dir: "/dataset/imagenet/train/60"
     blob {
       name: "encoded"
       data_type: kFloat
@@ -3273,7 +3273,7 @@ op {
   fully_connected_conf {
     in: "drop/out"
     out: "out"
-    units: 10
+    units: 1000
     use_bias: true
     weight_initializer {
       msra_conf {
