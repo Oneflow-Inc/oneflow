@@ -159,7 +159,8 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
-#define REGISTER_KERNEL(k, KernelType) REGISTER_CLASS(k, Kernel, KernelType)
+#define REGISTER_KERNEL(k, KernelType) \
+  REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&);
