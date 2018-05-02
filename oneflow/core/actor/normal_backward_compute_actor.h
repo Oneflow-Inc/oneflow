@@ -21,7 +21,7 @@ class NormalBackwardCompActor final : public CompActor {
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {false, {"activation", "data_tmp", "boxing_out", "121_out", "out_diff"}};
+    return {false, {"activation", "data_tmp", "boxing_out", "121_out", "out_diff", "in"}};
   }
 
   void AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_version_id);

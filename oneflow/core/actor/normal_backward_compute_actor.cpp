@@ -37,7 +37,7 @@ void NormalBackwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Acto
     CHECK(model_tmp_regst_ == nullptr);
     model_tmp_regst_ = msg.regst();
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << msg.regst()->regst_desc_id();
   }
 }
 
@@ -79,8 +79,10 @@ void NormalBackwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
     AsyncSendRegstMsgToProducer(model_regst_queue_.front());
     model_regst_queue_.pop();
   }
-  AsyncSendRegstMsgToProducer(model_tmp_regst_);
-  model_tmp_regst_ = nullptr;
+  if (model_tmp_regst_) {
+    AsyncSendRegstMsgToProducer(model_tmp_regst_);
+    model_tmp_regst_ = nullptr;
+  }
 }
 
 void NormalBackwardCompActor::AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_vid) {

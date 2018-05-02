@@ -20,7 +20,7 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(const LogicalBlobId&
   std::string op_name_dir = JoinPath(root_path_, lbi.op_name());
   OF_CALL_ONCE(op_name_dir, GlobalFS()->CreateDir(op_name_dir));
   // bn_in_op_tmp_dir
-  std::string bn_in_op_tmp_dir = JoinPath(op_name_dir, lbi.blob_name() + "_tmp");
+  std::string bn_in_op_tmp_dir = JoinPath(op_name_dir, lbi.blob_name() + "_tmp4a58");
   OF_CALL_ONCE(bn_in_op_tmp_dir, GlobalFS()->CreateDir(bn_in_op_tmp_dir));
   // part_file
   std::string part_file = JoinPath(bn_in_op_tmp_dir, "part_" + std::to_string(part_id));
@@ -39,7 +39,7 @@ void Snapshot::OnePartDone(const LogicalBlobId& lbi, int32_t part_id, int32_t pa
 void Snapshot::ConcatLbnFile(const LogicalBlobId& lbi, int32_t part_num,
                              const std::string& concat_file) {
   std::vector<char> buffer(Global<JobDesc>::Get()->persistence_buffer_byte_size());
-  std::string part_dir = JoinPath(root_path_, lbi.op_name(), lbi.blob_name(), "_tmp");
+  std::string part_dir = JoinPath(root_path_, lbi.op_name(), lbi.blob_name() + "_tmp4a58");
   {
     PersistentOutStream out_stream(GlobalFS(), concat_file);
     for (int32_t i = 0; i < part_num; ++i) {

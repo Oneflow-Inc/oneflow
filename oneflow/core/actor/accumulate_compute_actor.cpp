@@ -46,7 +46,6 @@ void AccumulateCompActor::Act() {
     acc_cnt_ = 0;
     next_piece_id_ += 1;
   }
-  AsyncSendRegstMsgToProducer(in_regst);
 }
 
 }  // namespace oneflow
