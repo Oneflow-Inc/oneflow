@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_FORWARD_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_FORWARD_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_NORMAL_FORWARD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_NORMAL_FORWARD_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 
@@ -42,4 +42,4 @@ class NormalForwardCompActor final : public CompActor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_FORWARD_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_NORMAL_FORWARD_COMPUTE_ACTOR_H_

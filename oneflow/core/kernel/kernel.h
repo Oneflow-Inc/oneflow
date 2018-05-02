@@ -27,13 +27,13 @@ class Kernel {
   void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
+  const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
 
  protected:
   Kernel() = default;
   virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
-  const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
 
   virtual void InitPureModelTmpBlobs(DeviceCtx* ctx,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
