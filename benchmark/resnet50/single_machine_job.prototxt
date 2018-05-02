@@ -6,12 +6,12 @@ globalfs_conf {
   localfs_conf {
   }
 }
-single_piece_size: 1
+piece_size: 30
 data_part_num: 30
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
-  model_save_snapshots_path: "/tmp/snapshots"
+  model_save_snapshots_path: "/tmp/snapshot"
   num_of_batches_in_snapshot: 50000
   staleness: 0
   total_batch_num: 600000
@@ -22,7 +22,7 @@ train_conf {
     }
   }
   l2: 0.0001
-  num_of_pieces_in_batch: 8
+  batch_size: 240
   model_update_conf {
     learning_rate: 0.1
     momentum_conf {
