@@ -40,7 +40,7 @@ bool RecordLoadActor::IsCustomizedReadReady() {
 int RecordLoadActor::HandlerWaitToStart(const ActorMsg& msg) {
   CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
-  return HandlerNormal(msg);
+  return ProcessMsg(msg);
 }
 
 REGISTER_ACTOR(kRecordLoad, RecordLoadActor);

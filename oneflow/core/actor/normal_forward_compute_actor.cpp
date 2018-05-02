@@ -46,9 +46,9 @@ void NormalForwardCompActor::Act() {
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  int64_t piece_id = GetNaiveSoleCurReadable()->piece_id();
+  int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
   std::tuple<int64_t, std::function<const Blob*(const LogicalBlobId&)>> other_val(
-      piece_id, [=](const LogicalBlobId& lbi) -> const Blob* {
+      piece_id, [this](const LogicalBlobId& lbi) -> const Blob* {
         CHECK_NOTNULL(pre_forward_model_regst_);
         return pre_forward_model_regst_->GetBlobByLbi(lbi);
       });
