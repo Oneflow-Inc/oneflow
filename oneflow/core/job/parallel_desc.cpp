@@ -11,8 +11,8 @@ void ParseDeviceNameConf(const std::string& device_name, std::string* mchn_name,
   size_t first_delimiter_pos = device_name.rfind(":", second_delimiter_pos - 1);
   CHECK_NE(first_delimiter_pos, std::string::npos);
   *mchn_name = device_name.substr(0, first_delimiter_pos);
-  *device_tag = device_name.substr(
-      first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
+  *device_tag =
+      device_name.substr(first_delimiter_pos + 1, second_delimiter_pos - first_delimiter_pos - 1);
   *device_id_str = device_name.substr(second_delimiter_pos + 1);
 }
 
@@ -31,13 +31,11 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     if (device_tag == "cpu") {
       int64_t part_num = oneflow_cast<int64_t>(device_id_str);
       device_id_str = "0-" + std::to_string(part_num - 1);
-      CHECK(device_type_ == DeviceType::kInvalidDevice
-            || device_type_ == DeviceType::kCPU);
+      CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
       device_type_ = DeviceType::kCPU;
     } else {
       CHECK_STREQ(device_tag.c_str(), "gpu");
-      CHECK(device_type_ == DeviceType::kInvalidDevice
-            || device_type_ == DeviceType::kGPU);
+      CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
     }
     int64_t machine_id = Global<IDMgr>::Get()->MachineID4MachineName(mchn_name);
@@ -60,12 +58,10 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
   ClearUp();
 }
 
-void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name,
-                                        int32_t max_device_num) {
+void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num) {
   if (max_device_num >= parallel_num_) { return; }
-  LOG_IF(WARNING, op_name != "")
-      << "parallel_num of " << op_name << " is greater than max_device_num "
-      << max_device_num;
+  LOG_IF(WARNING, op_name != "") << "parallel_num of " << op_name
+                                 << " is greater than max_device_num " << max_device_num;
   int32_t device_cnt = 0;
   int64_t max_machine_id = -1;
   for (int64_t machine_id : sorted_machine_ids_) {
@@ -73,8 +69,7 @@ void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name,
     int32_t cur_device_num = it->second.size();
     int32_t cur_device_max_num = max_device_num - device_cnt;
     if (cur_device_num > cur_device_max_num) {
-      it->second.erase(it->second.begin() + cur_device_max_num,
-                       it->second.end());
+      it->second.erase(it->second.begin() + cur_device_max_num, it->second.end());
       if (it->second.empty()) {
         max_machine_id = machine_id - 1;
       } else {
@@ -92,27 +87,23 @@ void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name,
       break;
     }
   }
-  EraseIf<int64_t, std::vector<int64_t>>(
-      &machine_id2sorted_dev_phy_ids_,
-      [&](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
-        return it->first > max_machine_id;
-      });
+  EraseIf<int64_t, std::vector<int64_t>>(&machine_id2sorted_dev_phy_ids_,
+                                         [&](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
+                                           return it->first > max_machine_id;
+                                         });
   parallel_num_ = max_device_num;
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && policy_ == rhs.policy_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
-         && machine_id2sorted_dev_phy_ids_
-                == rhs.machine_id2sorted_dev_phy_ids_;
+         && machine_id2sorted_dev_phy_ids_ == rhs.machine_id2sorted_dev_phy_ids_;
 }
 
 void ParallelDesc::ClearUp() {
   EraseIf<int64_t, std::vector<int64_t>>(
       &machine_id2sorted_dev_phy_ids_,
-      [](HashMap<int64_t, std::vector<int64_t>>::iterator it) {
-        return it->second.empty();
-      });
+      [](HashMap<int64_t, std::vector<int64_t>>::iterator it) { return it->second.empty(); });
   sorted_machine_ids_.clear();
   parallel_num_ = 0;
   for (auto& pair : machine_id2sorted_dev_phy_ids_) {
@@ -128,8 +119,7 @@ std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
   if (parallel_ctx->policy() == kDataParallel) {
     return std::make_tuple(0, 1);
   } else if (parallel_ctx->policy() == kModelParallel) {
-    return std::make_tuple(parallel_ctx->parallel_id(),
-                           parallel_ctx->parallel_num());
+    return std::make_tuple(parallel_ctx->parallel_id(), parallel_ctx->parallel_num());
   } else {
     UNIMPLEMENTED();
   }

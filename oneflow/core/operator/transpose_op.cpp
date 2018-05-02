@@ -22,13 +22,10 @@ void TransposeOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& TransposeOp::GetCustomizedConf() const {
-  return op_conf().transpose_conf();
-}
+const PbMessage& TransposeOp::GetCustomizedConf() const { return op_conf().transpose_conf(); }
 
-void TransposeOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                 const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const Shape& in_blob_shape = in_blob_desc->shape();
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
@@ -49,8 +46,7 @@ void TransposeOp::VirtualGenKernelConf(
   perm->Add(0);
   perm->MergeFrom(src_perm);
   CHECK_EQ(perm->size(), src_perm.size() + 1);
-  PbRf<int32_t>* invert_perm =
-      kernel_conf->mutable_transpose_conf()->mutable_invert_perm();
+  PbRf<int32_t>* invert_perm = kernel_conf->mutable_transpose_conf()->mutable_invert_perm();
   invert_perm->Reserve(perm->size());
   invert_perm->CopyFrom(*perm);
   FOR_RANGE(size_t, i, 0, perm->size()) { (*invert_perm)[(*perm)[i]] = i; }

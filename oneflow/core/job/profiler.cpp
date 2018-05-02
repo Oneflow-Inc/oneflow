@@ -18,19 +18,15 @@ void Profiler::Profile() {
                                                 actor_id2profile_info_.end());
   std::sort(profile_info_vec.begin(), profile_info_vec.end(),
             [](const ProfileInfoPair& lhs, const ProfileInfoPair& rhs) {
-              return lhs.second.CalcBottleNeckScore()
-                     > rhs.second.CalcBottleNeckScore();
+              return lhs.second.CalcBottleNeckScore() > rhs.second.CalcBottleNeckScore();
             });
-  PersistentOutStream out_stream(LocalFS(),
-                                 JoinPath(LogDir(), "oneflow.profile"));
+  PersistentOutStream out_stream(LocalFS(), JoinPath(LogDir(), "oneflow.profile"));
   for (const ProfileInfoPair& pair : profile_info_vec) {
     out_stream << "actor_id: " << std::to_string(pair.first)
-               << " avg_act_time: "
-               << std::to_string(pair.second.avg_act_time())
-               << " avg_act_interval: "
-               << std::to_string(pair.second.avg_act_interval())
-               << " bottleneck_score: "
-               << std::to_string(pair.second.CalcBottleNeckScore()) << "\n";
+               << " avg_act_time: " << std::to_string(pair.second.avg_act_time())
+               << " avg_act_interval: " << std::to_string(pair.second.avg_act_interval())
+               << " bottleneck_score: " << std::to_string(pair.second.CalcBottleNeckScore())
+               << "\n";
   }
 }
 

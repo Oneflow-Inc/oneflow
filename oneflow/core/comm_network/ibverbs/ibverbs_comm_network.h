@@ -36,9 +36,7 @@ class IBVerbsCommNet final : public CommNet {
 template<>
 class Global<IBVerbsCommNet> final {
  public:
-  static IBVerbsCommNet* Get() {
-    return static_cast<IBVerbsCommNet*>(Global<CommNet>::Get());
-  }
+  static IBVerbsCommNet* Get() { return static_cast<IBVerbsCommNet*>(Global<CommNet>::Get()); }
 };
 
 }  // namespace oneflow

@@ -4,8 +4,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   VirtualLossForwardDataContent(ctx, BnInOp2Blob);
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
@@ -18,18 +17,16 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
     if (weight_blob != nullptr) {
       PredType* weight = weight_blob->mut_dptr<PredType>();
       if (weight_blob->shape().elem_cnt() == n) {
-        KernelUtil<device_type, PredType>::Mul(
-            ctx.device_ctx, n, weight, prediction_diff, prediction_diff);
+        KernelUtil<device_type, PredType>::Mul(ctx.device_ctx, n, weight, prediction_diff,
+                                               prediction_diff);
       } else if (weight_blob->shape().elem_cnt() == 1) {
-        KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight,
-                                                prediction_diff, 1);
+        KernelUtil<device_type, PredType>::Scal(ctx.device_ctx, n, weight, prediction_diff, 1);
       } else {
         UNIMPLEMENTED();
       }
     } else if (conf.weight_scalar() > 1.0 || conf.weight_scalar() < 1.0) {
       KernelUtil<device_type, PredType>::Scal(
-          ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()),
-          prediction_diff, 1);
+          ctx.device_ctx, n, static_cast<PredType>(conf.weight_scalar()), prediction_diff, 1);
     }
   }
 
@@ -38,42 +35,33 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
   if (reduction_blob != nullptr) {
     CHECK(weight_blob != nullptr);
     LossKernelUtil<device_type, PredType>::ComputeReductionCoefficient(
-        ctx.device_ctx, n, weight_blob->shape().elem_cnt(),
-        weight_blob->dptr<PredType>(), reduction_blob->mut_dptr<PredType>(),
-        conf.reduction());
+        ctx.device_ctx, n, weight_blob->shape().elem_cnt(), weight_blob->dptr<PredType>(),
+        reduction_blob->mut_dptr<PredType>(), conf.reduction());
   }
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataId(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("loss")->CopyDataIdFrom(ctx.device_ctx,
-                                      BnInOp2Blob("prediction"));
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("loss")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardColNum(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob(GenDiffBn("prediction"))
-      ->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob(GenDiffBn("prediction"))->CopyColNumFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
 }
 
 template<typename T>
 struct LossKernelUtil<DeviceType::kCPU, T> {
-  static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num,
-                                          int64_t weight_length,
-                                          const T* weight, T* reduction,
-                                          LossReductionType type) {
+  static void ComputeReductionCoefficient(DeviceCtx* ctx, int64_t data_num, int64_t weight_length,
+                                          const T* weight, T* reduction, LossReductionType type) {
     switch (type) {
       case kSumOverOne: *reduction = 1.0; break;
       case kSumOverWeight: {
         if (weight_length == data_num) {
           *reduction = 0;
-          for (size_t i = 0; i < weight_length; ++i) {
-            (*reduction) += weight[i];
-          }
+          for (size_t i = 0; i < weight_length; ++i) { (*reduction) += weight[i]; }
         } else if (weight_length == 1) {
           *reduction = (*weight) * data_num;
         } else {
@@ -109,7 +97,7 @@ OF_PP_FOR_EACH_TUPLE(MAKE_LOSS_KERNEL_UTIL_ENTRY, FLOATING_DATA_TYPE_SEQ)
   template class LossKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair), \
                             OF_PP_PAIR_FIRST(label_type_pair)>;
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ,
-                                 FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_LOSS_ENTRY, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

@@ -13,8 +13,7 @@ void RngUniformGpu<float>(const curandGenerator_t& gen, int64_t n, float* ret) {
 }
 
 template<>
-void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n,
-                           double* ret) {
+void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret) {
   CudaCheck(curandGenerateUniformDouble(gen, ret, n));
 }
 
@@ -22,13 +21,12 @@ void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n,
 
 template<typename T>
 struct RandomGeneratorUtil<DeviceType::kGPU, T> final {
-  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
-                      T* dptr) {
+  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt, T* dptr) {
     RngUniformGpu(*rand_gen->mut_curand_generator(), elem_cnt, dptr);
   }
 
-  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt,
-                      const T min, const T max, T* dptr) {
+  static void Uniform(RandomGenerator* rand_gen, const int64_t elem_cnt, const T min, const T max,
+                      T* dptr) {
     UNIMPLEMENTED();
   }
 };

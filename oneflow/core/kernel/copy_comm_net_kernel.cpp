@@ -3,7 +3,6 @@
 
 namespace oneflow {
 
-COMMAND(AddKernelCreator(OperatorConf::kCopyCommNetConf,
-                         []() { return new CopyCommNetKernel; }));
+REGISTER_KERNEL(OperatorConf::kCopyCommNetConf, CopyCommNetKernel);
 
 }  // namespace oneflow

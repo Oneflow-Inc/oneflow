@@ -16,9 +16,7 @@ SocketHelper::~SocketHelper() {
   delete write_helper_;
 }
 
-void SocketHelper::AsyncWrite(const SocketMsg& msg) {
-  write_helper_->AsyncWrite(msg);
-}
+void SocketHelper::AsyncWrite(const SocketMsg& msg) { write_helper_->AsyncWrite(msg); }
 
 }  // namespace oneflow
 

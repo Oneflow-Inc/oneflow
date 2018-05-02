@@ -241,7 +241,6 @@ message CopyHdOpConf {
 
 message CloneOpConf {
   required int32 out_num = 1;
-  required string lbn = 2;
 }
 
 message BoxConcatConf {
@@ -259,8 +258,16 @@ message BoxSplitConf {
 message BoxCloneConf {
 }
 
+message LogicalBlobId {
+  optional string op_name = 1;
+  optional string blob_name = 2;
+  optional int32 b121_id = 3 [default = -1]; // [0, boxing], [1, 121]
+  optional int32 clone_id = 4 [default = -1];
+  optional bool is_packed_id = 5 [default = false];
+}
+
 message BoxingOpConf {
-  required string lbn = 1;
+  required LogicalBlobId lbi = 1;
   required int32 in_num = 2;
   required int32 out_num = 3;
 
@@ -343,7 +350,7 @@ message LearningRateDecayConf {
 message NormalModelUpdateOpUserConf {
   optional double learning_rate = 1 [default = 0.01];
   optional LearningRateDecayConf learning_rate_decay = 2;
-  oneof mdupdt {
+  oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
@@ -376,17 +383,20 @@ message PrintOpConf {
 }
 
 message LossPrintOpConf {
-  required string loss_lbn = 1;
-  optional string reduction_lbn = 2;
+  required LogicalBlobId loss_lbi = 1;
+  optional LogicalBlobId reduction_lbi = 2;
   optional float weight_scalar = 3 [default = 1.0];
   optional LossReductionType reduction_type = 4 [default = kSumOverN];
 }
 
 message ReduceSumOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 axis = 3;
-  optional bool keepdims = 4 [default = false];
+  oneof in_conf {
+    string in = 1; // For User
+    LogicalBlobId in_sys = 2; // For System
+  }
+  required string out = 3;
+  optional int32 axis = 4;
+  optional bool keepdims = 5 [default = false];
 }
 
 message BasicRnnOpConf {

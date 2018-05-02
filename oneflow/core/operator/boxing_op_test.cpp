@@ -38,9 +38,7 @@ void TestBoxingOp() {
       {boxing_op->output_bns()[1], new BlobDesc},
       {boxing_op->output_bns()[2], new BlobDesc},
   };
-  auto fp = [&bn2blobdesc_map](const std::string& bn) {
-    return bn2blobdesc_map.at(bn);
-  };
+  auto fp = [&bn2blobdesc_map](const std::string& bn) { return bn2blobdesc_map.at(bn); };
 
   // do infer shape
   boxing_op->InferBlobDescs(fp, kModelParallel, 0, 1);
@@ -107,8 +105,7 @@ void TestBoxingOp() {
 
 TEST(BoxingOp, infer_blob_desc) {
 #define MAKE_ENTRY(x, y) TestBoxingOp<OF_PP_PAIR_FIRST(x), y>();
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ,
-                                   BOOL_SEQ)
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ, BOOL_SEQ)
 }
 
 }  // namespace oneflow

@@ -5,15 +5,13 @@
 
 namespace oneflow {
 
-class CyclicPersistentInStreamWithoutLocalCopy final
-    : public PersistentInStreamWithoutLocalCopy {
+class CyclicPersistentInStreamWithoutLocalCopy final : public PersistentInStreamWithoutLocalCopy {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CyclicPersistentInStreamWithoutLocalCopy);
   CyclicPersistentInStreamWithoutLocalCopy() = delete;
   ~CyclicPersistentInStreamWithoutLocalCopy() = default;
 
-  CyclicPersistentInStreamWithoutLocalCopy(fs::FileSystem* fs,
-                                           const std::string& file_path);
+  CyclicPersistentInStreamWithoutLocalCopy(fs::FileSystem* fs, const std::string& file_path);
 
  private:
   void UpdateBuffer() override;

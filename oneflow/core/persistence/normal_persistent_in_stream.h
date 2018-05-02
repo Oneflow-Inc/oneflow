@@ -5,14 +5,12 @@
 
 namespace oneflow {
 
-class NormalPersistentInStream final
-    : public PersistentInStreamWithoutLocalCopy {
+class NormalPersistentInStream final : public PersistentInStreamWithoutLocalCopy {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalPersistentInStream);
   NormalPersistentInStream() = delete;
 
-  NormalPersistentInStream(fs::FileSystem* fs, const std::string& file_path,
-                           uint64_t offset)
+  NormalPersistentInStream(fs::FileSystem* fs, const std::string& file_path, uint64_t offset)
       : PersistentInStreamWithoutLocalCopy(fs, file_path, offset) {
     LOG(INFO) << "New NormalPersistentInStream " << file_path;
   }
@@ -21,9 +19,7 @@ class NormalPersistentInStream final
       : NormalPersistentInStream(fs, file_path, 0) {}
 
  private:
-  void AddNForCurFilePos(uint64_t n) override {
-    set_cur_file_pos(cur_file_pos() + n);
-  }
+  void AddNForCurFilePos(uint64_t n) override { set_cur_file_pos(cur_file_pos() + n); }
 };
 
 }  // namespace oneflow

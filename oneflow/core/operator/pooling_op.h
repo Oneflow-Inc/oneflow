@@ -14,21 +14,18 @@ class PoolingOp : public Operator {
 
   void InitFromOpConf() override;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual int32_t GetDim() const = 0;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 
  private:
   void CheckPoolSizeAndStrides() const;
-  Shape GetOutShape(int64_t in_n, int64_t in_c,
-                    const std::vector<int64_t>& out) const;
+  Shape GetOutShape(int64_t in_n, int64_t in_c, const std::vector<int64_t>& out) const;
 };
 
 }  // namespace oneflow

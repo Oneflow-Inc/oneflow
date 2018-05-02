@@ -15,16 +15,11 @@ TEST(ConcatOp, concat_two_3x3) {
   auto concat_op = ConstructOp(op_conf);
 
   HashMap<std::string, BlobDesc*> bn2blob_desc_map{
-      {concat_op->input_bns().at(0),
-       new BlobDesc(Shape({2, 3, 4, 5}), DataType::kFloat, false)},
-      {concat_op->input_bns().at(1),
-       new BlobDesc(Shape({2, 3, 1, 5}), DataType::kFloat, false)},
-      {concat_op->input_bns().at(2),
-       new BlobDesc(Shape({2, 3, 9, 5}), DataType::kFloat, false)},
+      {concat_op->input_bns().at(0), new BlobDesc(Shape({2, 3, 4, 5}), DataType::kFloat, false)},
+      {concat_op->input_bns().at(1), new BlobDesc(Shape({2, 3, 1, 5}), DataType::kFloat, false)},
+      {concat_op->input_bns().at(2), new BlobDesc(Shape({2, 3, 9, 5}), DataType::kFloat, false)},
       {concat_op->SoleObn(), new BlobDesc}};
-  auto bn2blob_desc_func = [&](const std::string& bn) {
-    return bn2blob_desc_map.at(bn);
-  };
+  auto bn2blob_desc_func = [&](const std::string& bn) { return bn2blob_desc_map.at(bn); };
   concat_op->InferBlobDescs(bn2blob_desc_func, kDataParallel, 0, 1);
   ASSERT_TRUE(*(bn2blob_desc_map.at(concat_op->SoleObn()))
               == BlobDesc(Shape({2, 3, 14, 5}), DataType::kFloat, false));

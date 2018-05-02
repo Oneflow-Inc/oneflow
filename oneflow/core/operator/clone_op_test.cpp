@@ -13,12 +13,8 @@ void TestCloneOp() {
   HashMap<std::string, BlobDesc*> bn2blobdesc_map;
   bn2blobdesc_map[clone_op->SoleIbn()] =
       new BlobDesc(Shape({4, 3}), GetDataType<T>::value, has_data_id_field);
-  for (const std::string& obn : clone_op->output_bns()) {
-    bn2blobdesc_map[obn] = new BlobDesc;
-  }
-  auto bn2blobdesc_func = [&](const std::string& bn) {
-    return bn2blobdesc_map.at(bn);
-  };
+  for (const std::string& obn : clone_op->output_bns()) { bn2blobdesc_map[obn] = new BlobDesc; }
+  auto bn2blobdesc_func = [&](const std::string& bn) { return bn2blobdesc_map.at(bn); };
   clone_op->InferBlobDescs(bn2blobdesc_func, kDataParallel, 3, 10);
   const BlobDesc* in_blob_desc = bn2blobdesc_map.at(clone_op->SoleIbn());
   for (const std::string& obn : clone_op->output_bns()) {

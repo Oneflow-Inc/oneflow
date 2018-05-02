@@ -29,9 +29,8 @@ void PushAvailableMemDescOfThisMachine() {
   }
 #endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
-  Global<CtrlClient>::Get()->PushKV(
-      GetAmdCtrlKey(Global<MachineCtx>::Get()->this_machine_id()),
-      this_machine_mem_desc);
+  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(Global<MachineCtx>::Get()->this_machine_id()),
+                                    this_machine_mem_desc);
 }
 
 AvailableMemDesc PullAvailableMemDesc() {
@@ -71,8 +70,7 @@ class Oneflow final {
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const JobDescProto& job_desc,
-                 const std::string& this_mchn_name) {
+Oneflow::Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name) {
   // New All Global
   Global<JobDesc>::New(job_desc);
   Global<IDMgr>::New();
@@ -101,8 +99,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
     const AvailableMemDesc& amd = PullAvailableMemDesc();
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     Improver improver(amd);
-    plan = improver.Improve(
-        plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    plan = improver.Improve(plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
@@ -113,9 +110,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc,
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) {
-    Global<Profiler>::Get()->Profile();
-  }
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(); }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
@@ -144,10 +139,8 @@ int main(int argc, char** argv) {
     JobConf* jc = job_desc.mutable_job_conf();
     ParseProtoFromTextFile(FLAGS_job_conf_filepath, jc);
     ParseProtoFromTextFile(jc->dlnet_filepath(), job_desc.mutable_dlnet_conf());
-    ParseProtoFromTextFile(jc->resource_filepath(),
-                           job_desc.mutable_resource());
-    ParseProtoFromTextFile(jc->placement_filepath(),
-                           job_desc.mutable_placement());
+    ParseProtoFromTextFile(jc->resource_filepath(), job_desc.mutable_resource());
+    ParseProtoFromTextFile(jc->placement_filepath(), job_desc.mutable_placement());
   } else {
     LOG(FATAL) << "Please Set job_conf_filepath or job_desc_filepath";
   }

@@ -3,9 +3,8 @@
 namespace oneflow {
 
 template<typename T>
-void LossPrintKernel<T>::Forward(
-    const KernelCtx& kernel_ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void LossPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* loss_acc_blob = BnInOp2Blob("loss_acc");
   const Blob* reduction_acc_blob = BnInOp2Blob("reduction_acc");
   T loss_reduced = loss_acc_blob->dptr<T>()[0];
@@ -13,11 +12,10 @@ void LossPrintKernel<T>::Forward(
   if (reduction_acc_blob != nullptr) {
     reduction_coefficient = reduction_acc_blob->dptr<T>()[0];
   } else {
-    auto conf = kernel_conf().op_conf().loss_print_conf();
+    auto conf = op_conf().loss_print_conf();
     reduction_coefficient = GetReductionCoefficient(
         conf.weight_scalar(), conf.reduction_type(),
-        Global<JobDesc>::Get()->ParallelPieceSize()
-            * Global<JobDesc>::Get()->PieceNumOfPrintLoss());
+        Global<JobDesc>::Get()->PieceSize() * Global<JobDesc>::Get()->PieceNumOfPrintLoss());
   }
   loss_reduced /= reduction_coefficient;
   const char* loss_op_name = op_conf().name().c_str() + 11;
@@ -25,8 +23,7 @@ void LossPrintKernel<T>::Forward(
 }
 
 template<typename T>
-T LossPrintKernel<T>::GetReductionCoefficient(T weight_scalar,
-                                              LossReductionType type,
+T LossPrintKernel<T>::GetReductionCoefficient(T weight_scalar, LossReductionType type,
                                               int32_t n) const {
   switch (type) {
     case kSumOverOne: return 1.0;

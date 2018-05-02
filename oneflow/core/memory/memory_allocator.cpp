@@ -4,8 +4,8 @@
 
 namespace oneflow {
 
-std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
-    MemoryCase mem_case, std::size_t size) {
+std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase mem_case,
+                                                                                std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
   const void* comm_net_token = nullptr;
@@ -40,13 +40,12 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
   else {
     UNIMPLEMENTED();
   }
-  return std::make_tuple(dptr, comm_net_token,
-                         std::bind(&MemoryAllocator::Deallocate, this, dptr,
-                                   comm_net_token, mem_case));
+  return std::make_tuple(
+      dptr, comm_net_token,
+      std::bind(&MemoryAllocator::Deallocate, this, dptr, comm_net_token, mem_case));
 }
 
-void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
-                                 MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token, MemoryCase mem_case) {
   if (mem_case.has_host_pageable_mem()) {
     free(dptr);
   } else if (mem_case.has_host_pinned_mem()) {

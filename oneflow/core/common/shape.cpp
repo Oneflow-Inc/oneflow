@@ -3,9 +3,7 @@
 
 namespace oneflow {
 
-Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) {
-  UpdateElemCnt();
-}
+Shape::Shape(const std::vector<int64_t>& dim_vec) : dim_vec_(dim_vec) { UpdateElemCnt(); }
 
 Shape::Shape(const ShapeProto& shape_proto) {
   dim_vec_.assign(shape_proto.dim().begin(), shape_proto.dim().end());
@@ -18,9 +16,7 @@ Shape& Shape::operator=(const Shape& shape) {
   return *this;
 }
 
-bool Shape::operator==(const Shape& rhs) const {
-  return dim_vec_ == rhs.dim_vec_;
-}
+bool Shape::operator==(const Shape& rhs) const { return dim_vec_ == rhs.dim_vec_; }
 
 std::string Shape::DebugStr() const {
   std::stringstream ss;
@@ -47,9 +43,7 @@ int64_t Shape::Count(int64_t begin_axis, int64_t end_axis) const {
   return cnt;
 }
 
-int64_t Shape::Count(int64_t begin_axis) const {
-  return Count(begin_axis, NumAxes());
-}
+int64_t Shape::Count(int64_t begin_axis) const { return Count(begin_axis, NumAxes()); }
 
 void Shape::UpdateElemCnt() {
   elem_cnt_ = 1;

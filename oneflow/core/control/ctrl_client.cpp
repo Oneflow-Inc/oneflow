@@ -57,9 +57,7 @@ void CtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
 TryLockResult CtrlClient::TryLock(const std::string& name) {
   {
     std::unique_lock<std::mutex> lck(done_names_mtx_);
-    if (done_names_.find(name) != done_names_.end()) {
-      return TryLockResult::kDone;
-    }
+    if (done_names_.find(name) != done_names_.end()) { return TryLockResult::kDone; }
   }
   TryLockClientCall call;
   call.mut_request()->set_name(name);
@@ -83,8 +81,7 @@ void CtrlClient::WaitUntilDone(const std::string& name) {
   call(GetResponsibleStub(name));
 }
 
-void CtrlClient::PushKV(const std::string& k,
-                        std::function<void(std::string*)> VSetter) {
+void CtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
   PushKVClientCall call;
   call.mut_request()->set_key(k);
   VSetter(call.mut_request()->mutable_val());
@@ -105,8 +102,7 @@ void CtrlClient::ClearKV(const std::string& k) {
   call(GetResponsibleStub(k));
 }
 
-void CtrlClient::PullKV(const std::string& k,
-                        std::function<void(const std::string&)> VGetter) {
+void CtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
   PullKVClientCall call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
@@ -183,8 +179,7 @@ CtrlClient::CtrlClient() {
   });
 }
 
-void CtrlClient::LoadServer(const std::string& server_addr,
-                            CtrlService::Stub* stub) {
+void CtrlClient::LoadServer(const std::string& server_addr, CtrlService::Stub* stub) {
   int32_t retry_idx = 0;
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
@@ -192,12 +187,10 @@ void CtrlClient::LoadServer(const std::string& server_addr,
     LoadServerResponse response;
     grpc::Status st = stub->LoadServer(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
-      LOG(INFO) << "LoadServer " << server_addr << " Successful at "
-                << retry_idx << " times";
+      LOG(INFO) << "LoadServer " << server_addr << " Successful at " << retry_idx << " times";
       break;
     } else if (st.error_code() == grpc::StatusCode::UNAVAILABLE) {
-      LOG(INFO) << "LoadServer " << server_addr << " Failed at " << retry_idx
-                << " times";
+      LOG(INFO) << "LoadServer " << server_addr << " Failed at " << retry_idx << " times";
       std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
       continue;
     } else {
@@ -212,8 +205,7 @@ CtrlService::Stub* CtrlClient::GetThisStub() {
 }
 
 CtrlService::Stub* CtrlClient::GetResponsibleStub(const std::string& key) {
-  int64_t machine_id = (std::hash<std::string>{}(key))
-                       % Global<JobDesc>::Get()->TotalMachineNum();
+  int64_t machine_id = (std::hash<std::string>{}(key)) % Global<JobDesc>::Get()->TotalMachineNum();
   return stubs_[machine_id].get();
 }
 

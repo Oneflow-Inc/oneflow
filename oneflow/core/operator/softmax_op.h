@@ -23,15 +23,13 @@ class SoftmaxOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*, DeviceType,
-      std::function<void(OpContext*)> EnrollOpCtx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext*,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*, const OpContext*) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
   SoftmaxOpCtx* NewSoftmaxOpCtx(const Shape& in_shape) const;
 };
 

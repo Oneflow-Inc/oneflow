@@ -13,22 +13,13 @@ class CopyHdActor final : public Actor {
   CopyHdActor() = default;
   ~CopyHdActor() = default;
 
-  void VirtualActorInit(const TaskProto&) override;
-
  private:
+  void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx&) override;
-
-  int HandlerNormal(const ActorMsg&) override;
-
   void Act() override;
-  bool IsReadReady() override { return !pending_in_regst_.empty(); }
-  bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
-
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-
-  bool is_in_eord_;
-  std::queue<Regst*> pending_in_regst_;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {true, {}};
+  }
 };
 
 #endif

@@ -23,8 +23,7 @@ class CudnnConvDesc final {
   CudnnConvDesc() = delete;
   ~CudnnConvDesc();
 
-  CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape,
-                const PbMessage& conv_conf);
+  CudnnConvDesc(const DataType& data_type, const Shape& in_blob_shape, const PbMessage& conv_conf);
 
   const cudnnConvolutionDescriptor_t& Get() const { return val_; }
 
@@ -42,28 +41,24 @@ class ConvOp : public Operator {
 
   void InitFromOpConf() override;
   bool NeedOutWhenBackward() const override;
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*, DeviceType) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext*) const override;
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
 
  private:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*) const override;
   void GenKernelConfWithoutCudnn(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       ConvKernelConf* conv_conf) const;
-  void GenKernelConfWithCudnn(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      KernelConf* kernel_conf, ConvKernelConf* conv_conf) const;
+  void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                              KernelConf* kernel_conf, ConvKernelConf* conv_conf) const;
 #ifdef WITH_CUDA
-  void InferCudnnAlgo(
-      std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      CudnnConvAlgoCtx* conv_ctx) const;
+  void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      CudnnConvAlgoCtx* conv_ctx) const;
 #endif  // WITH_CUDA
 };
 

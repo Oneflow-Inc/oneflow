@@ -71,8 +71,8 @@ class FileSystem {
   //
   // The ownership of the returned RandomAccessFile is passed to the caller
   // and the object should be deleted when is not used.
-  virtual void NewRandomAccessFile(
-      const std::string& fname, std::unique_ptr<RandomAccessFile>* result) = 0;
+  virtual void NewRandomAccessFile(const std::string& fname,
+                                   std::unique_ptr<RandomAccessFile>* result) = 0;
 
   // Creates an object that writes to a new file with the specified
   // name.
@@ -85,8 +85,7 @@ class FileSystem {
   //
   // The ownership of the returned WritableFile is passed to the caller
   // and the object should be deleted when is not used.
-  virtual void NewWritableFile(const std::string& fname,
-                               std::unique_ptr<WritableFile>* result) = 0;
+  virtual void NewWritableFile(const std::string& fname, std::unique_ptr<WritableFile>* result) = 0;
 
   // Creates an object that either appends to an existing file, or
   // writes to a new file (if the file does not exist to begin with).
@@ -135,8 +134,7 @@ class FileSystem {
   virtual uint64_t GetFileSize(const std::string& fname) = 0;
 
   // Overwrites the target if it exists.
-  virtual void RenameFile(const std::string& old_name,
-                          const std::string& new_name) = 0;
+  virtual void RenameFile(const std::string& old_name, const std::string& new_name) = 0;
 
   // Translate an URI to a filename for the FileSystem implementation.
   //

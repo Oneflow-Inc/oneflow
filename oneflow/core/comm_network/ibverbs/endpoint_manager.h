@@ -23,8 +23,7 @@ class EndpointManager {
   IBVerbsMemDesc* NewIBVerbsMemDesc(void* mem_ptr, size_t byte_size);
   IBVerbsConnection* NewIBVerbsConnection();
 
-  void Read(void* read_ctx, int64_t src_machine_id,
-            IBVerbsMemDesc* local_mem_desc,
+  void Read(void* read_ctx, int64_t src_machine_id, IBVerbsMemDesc* local_mem_desc,
             IBVerbsMemDescProto& remote_mem_desc_proto);
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg);
 

@@ -16,17 +16,11 @@ class DeviceCtx {
 #ifdef WITH_CUDA
   const cudaStream_t& cuda_stream() const { return *cuda_stream_; }
   // cublas handle with POINTER_MODE_HOST(pmh)
-  const cublasHandle_t& cublas_pmh_handle() const {
-    return *cublas_pmh_handle_;
-  }
+  const cublasHandle_t& cublas_pmh_handle() const { return *cublas_pmh_handle_; }
   // cublas handle with POINTER_MODE_DEVICE(pmd)
-  const cublasHandle_t& cublas_pmd_handle() const {
-    return *cublas_pmd_handle_;
-  }
+  const cublasHandle_t& cublas_pmd_handle() const { return *cublas_pmd_handle_; }
   const cudnnHandle_t& cudnn_handle() const { return *cudnn_handle_; }
-  const Eigen::GpuDevice& eigen_gpu_device() const {
-    return *eigen_gpu_device_;
-  }
+  const Eigen::GpuDevice& eigen_gpu_device() const { return *eigen_gpu_device_; }
 #endif
 
   virtual void AddCallBack(std::function<void()>) const = 0;
@@ -49,16 +43,10 @@ class DeviceCtx {
 
 #ifdef WITH_CUDA
   void set_cuda_stream(const cudaStream_t* val) { cuda_stream_ = val; }
-  void set_cublas_pmh_handle(const cublasHandle_t* val) {
-    cublas_pmh_handle_ = val;
-  }
-  void set_cublas_pmd_handle(const cublasHandle_t* val) {
-    cublas_pmd_handle_ = val;
-  }
+  void set_cublas_pmh_handle(const cublasHandle_t* val) { cublas_pmh_handle_ = val; }
+  void set_cublas_pmd_handle(const cublasHandle_t* val) { cublas_pmd_handle_ = val; }
   void set_cudnn_handle(const cudnnHandle_t* val) { cudnn_handle_ = val; }
-  void set_eigen_gpu_device(const Eigen::GpuDevice* val) {
-    eigen_gpu_device_ = val;
-  }
+  void set_eigen_gpu_device(const Eigen::GpuDevice* val) { eigen_gpu_device_ = val; }
 #endif
 
  private:
