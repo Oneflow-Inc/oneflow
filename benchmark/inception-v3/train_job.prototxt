@@ -13,7 +13,7 @@ model_load_snapshot_path: ""
 reserved_device_mem_mbyte_size: 600
 max_data_id_length: 8
 train_conf {
-  model_save_snapshots_path: "/home/lixinqi/snapshot"
+  model_save_snapshots_path: "/inception_v3_snapshot"
   piece_num_of_print_loss: 10
   num_of_batches_in_snapshot: 2000
   staleness: 0
@@ -26,7 +26,7 @@ train_conf {
   }
   num_of_pieces_in_batch: 1
   model_update_conf {
-		learning_rate: 0.0267
+    learning_rate: 0.0267
     naive_conf {
     }
   }
