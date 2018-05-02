@@ -13,8 +13,7 @@ inline void StringReplace(std::string* str, char old_ch, char new_ch) {
   }
 }
 
-const char* StrToToken(const char* text, const std::string& delims,
-                       std::string* token);
+const char* StrToToken(const char* text, const std::string& delims, std::string* token);
 
 void Split(const std::string& text, const std::string& delims,
            std::function<void(std::string&&)> Func);
@@ -26,9 +25,7 @@ void SplitAndParseAs(const std::string& text, const std::string& delims,
 }
 
 // Return true if path is absolute.
-inline bool IsAbsolutePath(const std::string& path) {
-  return !path.empty() && path[0] == '/';
-}
+inline bool IsAbsolutePath(const std::string& path) { return !path.empty() && path[0] == '/'; }
 
 namespace internal {
 

@@ -9,21 +9,18 @@ void ConcatOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& ConcatOp::GetCustomizedConf() const {
-  return op_conf().concat_conf();
-}
+const PbMessage& ConcatOp::GetCustomizedConf() const { return op_conf().concat_conf(); }
 
-void ConcatOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void ConcatOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx) const {
   const ConcatOpConf& conf = op_conf().concat_conf();
-  const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().at(0));
+  const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   std::vector<int64_t> out_dim_vec = in_0_blob_desc->shape().dim_vec();
   int32_t concat_axis = conf.axis();
   if (concat_axis < 0) { concat_axis += out_dim_vec.size(); }
   CHECK_GE(concat_axis, 1);
   for (size_t i = 1; i < input_bns().size(); ++i) {
-    const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().at(i));
+    const BlobDesc* in_i_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(i));
     for (int64_t j = 0; j < in_i_blob_desc->shape().NumAxes(); ++j) {
       if (j == concat_axis) {
         out_dim_vec[j] += in_i_blob_desc->shape().At(j);
@@ -32,8 +29,7 @@ void ConcatOp::InferBlobDescs(
       }
     }
     CHECK_EQ(in_i_blob_desc->data_type(), in_0_blob_desc->data_type());
-    CHECK_EQ(in_i_blob_desc->has_data_id_field(),
-             in_0_blob_desc->has_data_id_field());
+    CHECK_EQ(in_i_blob_desc->has_data_id_field(), in_0_blob_desc->has_data_id_field());
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_0_blob_desc;

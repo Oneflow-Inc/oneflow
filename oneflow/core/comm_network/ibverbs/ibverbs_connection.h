@@ -18,22 +18,13 @@ class IBVerbsConnection {
 
   void set_ibv_mtu(enum ibv_mtu active_mtu) { active_mtu_ = active_mtu; }
   void set_ibv_qp_ptr(ibv_qp* ibv_qp_ptr) { qp_ptr_ = ibv_qp_ptr; }
-  IBVerbsConnectionInfo& mut_this_machine_conn_info() {
-    return this_machine_conn_info_;
-  }
-  IBVerbsConnectionInfo& mut_peer_machine_conn_info() {
-    return peer_machine_conn_info_;
-  }
+  IBVerbsConnectionInfo& mut_this_machine_conn_info() { return this_machine_conn_info_; }
+  IBVerbsConnectionInfo& mut_peer_machine_conn_info() { return peer_machine_conn_info_; }
 
-  IBVerbsConnectionInfo* mut_this_machine_conn_info_ptr() {
-    return &this_machine_conn_info_;
-  }
-  IBVerbsConnectionInfo* mut_peer_machine_conn_info_ptr() {
-    return &peer_machine_conn_info_;
-  }
+  IBVerbsConnectionInfo* mut_this_machine_conn_info_ptr() { return &this_machine_conn_info_; }
+  IBVerbsConnectionInfo* mut_peer_machine_conn_info_ptr() { return &peer_machine_conn_info_; }
 
-  void PostReadRequest(void* read_ctx, IBVerbsMemDesc* local_mem,
-                       IBVerbsMemDescProto& remote_mem);
+  void PostReadRequest(void* read_ctx, IBVerbsMemDesc* local_mem, IBVerbsMemDescProto& remote_mem);
   void PostSendRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem);
   void PostRecvRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem);
   void CompleteConnection();

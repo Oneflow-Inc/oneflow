@@ -425,7 +425,7 @@ void OpKernelTestCase::InferBlobDesc(std::shared_ptr<Operator>* op,
   *op = ConstructOp(op_conf_);
   if (NeedInferBlobDescs(op->get())) {
     (*op)->InferBlobDescs(MakeGetterBnInOp2BlobDesc(), &parallel_ctx_,
-                          default_device_type(),
+
                           [&](OpContext* op_ctx) { *op_context = op_ctx; });
   }
 }
@@ -433,9 +433,8 @@ void OpKernelTestCase::InferBlobDesc(std::shared_ptr<Operator>* op,
 void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
   auto Launch = [&](bool is_forward) {
     KernelConf kernel_conf;
-    op->GenKernelConf(MakeGetterBnInOp2BlobDesc(), is_forward,
-                      default_device_type(), &parallel_ctx_, &kernel_conf,
-                      op_context);
+    op->GenKernelConf(MakeGetterBnInOp2BlobDesc(), is_forward, &parallel_ctx_,
+                      &kernel_conf, op_context);
     auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
     kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);

@@ -6,9 +6,8 @@ globalfs_conf {
   localfs_conf {
   }
 }
-# batch size = single_piece_size * data_part_num * num_of_pieces_in_batch
-single_piece_size: 8
 data_part_num: 30
+piece_size: 240
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
@@ -22,7 +21,7 @@ train_conf {
       std: 0.01
     }
   }
-  num_of_pieces_in_batch: 1
+  batch_size: 240
   l2: 0.0005
   model_update_conf {
     learning_rate: 0.01

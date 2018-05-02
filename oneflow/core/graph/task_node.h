@@ -26,9 +26,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
-  std::shared_ptr<RegstDesc> GetConsumedRegst(const std::string& name);
+  const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
+  std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
+  int64_t MemZoneId() const { return Global<IDMgr>::Get()->GetMemZoneIdFromThrdId(thrd_id_); }
 
   // Setters
   void set_machine_id(int64_t val);
@@ -48,17 +50,19 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
   virtual bool IsPersistence() const { return false; }
+  void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name,
-                                          int32_t min_register_num,
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
-  const HashMap<std::string, std::weak_ptr<RegstDesc>>& consumed_regsts();
-  bool TryLockConsumedRegst(const std::string& name);
+  const HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>& consumed_regsts() {
+    return consumed_regsts_;
+  }
+  void TryLockConsumedRegst(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
@@ -66,6 +70,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
  private:
   void UpdateTaskId();
+  void ClearOutOfDateConsumedRegst();
 
   int64_t machine_id_;
   int64_t thrd_id_;
@@ -73,7 +78,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
-  HashMap<std::string, std::weak_ptr<RegstDesc>> consumed_regsts_;
+  HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
@@ -82,11 +87,10 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   TaskEdge() = default;
   ~TaskEdge() = default;
 
-  std::shared_ptr<RegstDesc> GetRegst(
-      const std::string& name_in_producer) const;
-  void AddRegst(const std::string& name_in_producer,
-                std::shared_ptr<RegstDesc> regst);
+  std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
+
+  void AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst);
 
  private:
   HashMap<std::string, std::weak_ptr<RegstDesc>> name_in_producer2regst_;

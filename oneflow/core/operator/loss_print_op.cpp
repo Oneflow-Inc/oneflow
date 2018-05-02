@@ -5,14 +5,10 @@ namespace oneflow {
 void LossPrintOp::InitFromOpConf() {
   CHECK(op_conf().has_loss_print_conf());
   EnrollInputBn("loss_acc");
-  if (!op_conf().loss_print_conf().reduction_lbn().empty()) {
-    EnrollInputBn("reduction_acc");
-  }
+  if (op_conf().loss_print_conf().has_reduction_lbi()) { EnrollInputBn("reduction_acc"); }
 }
 
-const PbMessage& LossPrintOp::GetCustomizedConf() const {
-  return op_conf().loss_print_conf();
-}
+const PbMessage& LossPrintOp::GetCustomizedConf() const { return op_conf().loss_print_conf(); }
 
 REGISTER_OP(OperatorConf::kLossPrintConf, LossPrintOp);
 

@@ -10,21 +10,19 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   OF_CALL_ONCE(root_path, GlobalFS()->RecursivelyCreateDir(root_path));
   int32_t part_name_suffix_length = conf.part_name_suffix_length();
   std::string num = std::to_string(parallel_ctx->parallel_id());
-  int32_t zero_count =
-      std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
-  std::string file_path = JoinPath(
-      root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);
+  int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
+  std::string file_path =
+      JoinPath(root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);
   out_stream_.reset(new PersistentOutStream(GlobalFS(), file_path));
 }
 
-void PrintKernel::Forward(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void PrintKernel::Forward(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto GetBlob = [&](int64_t blob_id) -> Blob* {
-    return BnInOp2Blob(this->kernel_conf().input_bns(blob_id));
+    return BnInOp2Blob(this->op_attribute().input_bns(blob_id));
   };
   const auto& conf = op_conf().print_conf();
-  int32_t total_blob_num = kernel_conf().input_bns().size();
+  int32_t total_blob_num = op_attribute().input_bns().size();
   const Blob* first_blob = GetBlob(0);
   int64_t max_record_num = first_blob->shape().At(0);
   bool has_data_id_field = first_blob->has_data_id_field();
@@ -41,7 +39,7 @@ void PrintKernel::Forward(
     record.clear_feature();
     if (has_data_id_field) {
       const char* data_id_str = first_blob->data_id(record_id);
-      FOR_RANGE(int32_t, blob_id, 1, kernel_conf().input_bns().size()) {
+      FOR_RANGE(int32_t, blob_id, 1, op_attribute().input_bns().size()) {
         CHECK_STREQ(data_id_str, GetBlob(blob_id)->data_id(record_id));
       }
       if (*data_id_str == '\0') { break; }
@@ -56,17 +54,15 @@ void PrintKernel::Forward(
           << "Field " << field_name << " found repeatedly in OfRecord";
       int64_t one_col_elem_num = cur_blob->shape().Count(1);
       Feature& feature = (*(record.mutable_feature()))[field_name];
-      GetOFRecordEncoder(cur_print_conf.encode_case().encode_case(),
-                         cur_blob->data_type())
-          ->EncodeOneCol(ctx.device_ctx, cur_blob, record_id * one_col_elem_num,
-                         feature, field_name, one_col_elem_num);
+      GetOFRecordEncoder(cur_print_conf.encode_case().encode_case(), cur_blob->data_type())
+          ->EncodeOneCol(ctx.device_ctx, cur_blob, record_id * one_col_elem_num, feature,
+                         field_name, one_col_elem_num);
     }
     *out_stream_ << record;
   }
   out_stream_->Flush();
 }
 
-COMMAND(AddKernelCreator(OperatorConf::kPrintConf,
-                         []() { return new PrintKernel; }));
+REGISTER_KERNEL(OperatorConf::kPrintConf, PrintKernel);
 
 }  // namespace oneflow

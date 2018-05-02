@@ -18,8 +18,7 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
       == Global<MachineCtx>::Get()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
   } else {
-    msg.regst_wrapper_.comm_net_token =
-        regst_raw_ptr->packed_blob()->comm_net_token();
+    msg.regst_wrapper_.comm_net_token = regst_raw_ptr->packed_blob()->comm_net_token();
     msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
   }
   return msg;

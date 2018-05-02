@@ -1,4 +1,4 @@
-#include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/graph/logical_node.h"
 #include "oneflow/core/graph/sink_compute_task_node.h"
 
 namespace oneflow {
@@ -6,14 +6,14 @@ namespace oneflow {
 void SinkCompTaskNode::ProduceAllRegstsAndBindEdges() {}
 
 void SinkCompTaskNode::ConsumeAllRegsts() {
-  ConsumeRegst("in", SoleInEdge()->GetSoleRegst());
+  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
 }
 
 void SinkCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = chain_node()->SoleOp();
+  node->mut_op() = logical_node()->SoleOp();
   for (const std::string& ibn : node->op()->input_bns()) {
-    node->BindBnInOpAndRegst(ibn, SoleInEdge()->GetSoleRegst());
+    node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
   }
   CHECK(node->op()->data_tmp_bns().empty());
   CHECK(node->op()->output_bns().empty());

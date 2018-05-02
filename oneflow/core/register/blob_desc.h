@@ -19,8 +19,7 @@ class BlobDesc final {
   ~BlobDesc() = default;
 
   BlobDesc();
-  BlobDesc(Shape, DataType, bool has_data_id_field, bool has_col_num_field,
-           int32_t max_col_num);
+  BlobDesc(Shape, DataType, bool has_data_id_field, bool has_col_num_field, int32_t max_col_num);
   BlobDesc(Shape shape) : BlobDesc() { shape_ = shape; }
   BlobDesc(const BlobDescProto& proto);
 

@@ -47,8 +47,7 @@ class Edge {
   virtual std::string VisualStr() const { return ""; }
 
  private:
-  friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge,
-                                          NodeType* dst_node);
+  friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge, NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   int64_t edge_id_;
@@ -98,8 +97,7 @@ class Node {
   virtual std::string VisualStr() const { return ""; }
 
  private:
-  friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge,
-                                          NodeType* dst_node);
+  friend void Connect<NodeType, EdgeType>(NodeType* src_node, EdgeType* edge, NodeType* dst_node);
   friend void DisConnect<EdgeType>(EdgeType* edge);
 
   int64_t node_id_;

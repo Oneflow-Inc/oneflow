@@ -42,9 +42,7 @@ class EpollCommNet final : public CommNet {
 template<>
 class Global<EpollCommNet> final {
  public:
-  static EpollCommNet* Get() {
-    return static_cast<EpollCommNet*>(Global<CommNet>::Get());
-  }
+  static EpollCommNet* Get() { return static_cast<EpollCommNet*>(Global<CommNet>::Get()); }
 };
 
 }  // namespace oneflow

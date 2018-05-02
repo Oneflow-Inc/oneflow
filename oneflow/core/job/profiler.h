@@ -24,9 +24,7 @@ class Profiler final {
     double avg_act_interval() const { return avg_act_interval_; }
     double avg_act_time() const { return avg_act_time_; }
 
-    double CalcBottleNeckScore() const {
-      return avg_act_time_ / avg_act_interval_;
-    }
+    double CalcBottleNeckScore() const { return avg_act_time_ / avg_act_interval_; }
 
     void set_avg_act_interval(double val) { avg_act_interval_ = val; }
     void set_avg_act_time(double val) { avg_act_time_ = val; }

@@ -11,8 +11,8 @@ class MemoryAllocator final {
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
   ~MemoryAllocator() = default;
 
-  std::tuple<char*, const void*, std::function<void()>> Allocate(
-      MemoryCase mem_case, std::size_t size);
+  std::tuple<char*, const void*, std::function<void()>> Allocate(MemoryCase mem_case,
+                                                                 std::size_t size);
 
  private:
   MemoryAllocator() = default;

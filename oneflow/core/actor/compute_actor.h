@@ -16,9 +16,7 @@ class CompActor : public Actor {
   virtual void VirtualCompActorInit(const TaskProto& task_proto) {}
 
  private:
-  void VirtualActorInit(const TaskProto& task_proto) override {
-    VirtualCompActorInit(task_proto);
-  }
+  void VirtualActorInit(const TaskProto& task_proto) override { VirtualCompActorInit(task_proto); }
 };
 
 inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {

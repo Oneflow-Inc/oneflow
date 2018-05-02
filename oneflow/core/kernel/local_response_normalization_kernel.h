@@ -35,20 +35,14 @@ class LocalResponseNormalizationKernel<DeviceType::kCPU, T> final
   ~LocalResponseNormalizationKernel() = default;
 
  private:
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void NCHWForward(const KernelCtx&,
-                   std::function<Blob*(const std::string&)>) const;
-  void NHWCForward(const KernelCtx&,
-                   std::function<Blob*(const std::string&)>) const;
-  void NCHWBackward(const KernelCtx&,
-                    std::function<Blob*(const std::string&)>) const;
-  void NHWCBackward(const KernelCtx&,
-                    std::function<Blob*(const std::string&)>) const;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
+  void NCHWForward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
+  void NHWCForward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
+  void NCHWBackward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
+  void NHWCBackward(const KernelCtx&, std::function<Blob*(const std::string&)>) const;
 };
 
 template<typename T>
@@ -61,12 +55,10 @@ class LocalResponseNormalizationKernel<DeviceType::kGPU, T> final
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+  void BackwardDataContent(const KernelCtx&,
+                           std::function<Blob*(const std::string&)>) const override;
 #ifdef WITH_CUDA
   std::unique_ptr<CudnnTensorDesc> batch_desc_;
   std::unique_ptr<CudnnLRNDesc> normalize_desc_;

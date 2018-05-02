@@ -6,7 +6,7 @@ globalfs_conf {
   localfs_conf {
   }
 }
-single_piece_size: 100
+piece_size: 600
 data_part_num: 6
 model_load_snapshot_path: ""
 max_data_id_length: 8
@@ -21,7 +21,7 @@ train_conf {
       std: 0.1
     }
   }
-  num_of_pieces_in_batch: 100
+  batch_size: 60000
   model_update_conf {
     learning_rate: 0.01
     naive_conf {

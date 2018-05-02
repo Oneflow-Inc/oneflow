@@ -12,12 +12,9 @@ void TestReluOp() {
   op_conf.mutable_relu_conf()->set_out("relu/out");
   auto relu_op = ConstructOp(op_conf);
   HashMap<std::string, BlobDesc*> bn2blobdesc_map{
-      {relu_op->SoleIbn(),
-       new BlobDesc(Shape({3, 5, 4}), data_type, has_data_id_field)},
+      {relu_op->SoleIbn(), new BlobDesc(Shape({3, 5, 4}), data_type, has_data_id_field)},
       {relu_op->SoleObn(), new BlobDesc}};
-  auto fp = [&bn2blobdesc_map](const std::string& bn) {
-    return bn2blobdesc_map.at(bn);
-  };
+  auto fp = [&bn2blobdesc_map](const std::string& bn) { return bn2blobdesc_map.at(bn); };
   // do infer shape
   relu_op->InferBlobDescs(fp, kDataParallel, 0, 1);
   // test
@@ -27,8 +24,7 @@ void TestReluOp() {
 
 TEST(ReluOp, infer_blob_desc) {
 #define MAKE_ENTRY(x, y) TestReluOp<OF_PP_PAIR_FIRST(x), y>();
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ,
-                                   BOOL_SEQ)
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ARITHMETIC_DATA_TYPE_SEQ, BOOL_SEQ)
 }
 
 }  // namespace oneflow

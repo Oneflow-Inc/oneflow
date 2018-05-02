@@ -23,6 +23,8 @@
 #include <unordered_set>
 #include <utility>
 
+#include "oneflow/core/operator/op_conf.pb.h"
+
 DECLARE_string(log_dir);
 
 namespace oneflow {
@@ -69,6 +71,14 @@ class Global final {
   }
 };
 
+#define OF_COMMA ,
+
+#define DEFINE_STATIC_VAR(type, name) \
+  static type* name() {               \
+    static type var;                  \
+    return &var;                      \
+  }
+
 #define COMMAND(...)                                                \
   namespace {                                                       \
   struct OF_PP_CAT(CommandT, __LINE__) {                            \
@@ -111,8 +121,7 @@ inline const std::string& LogDir() {
 }
 
 template<typename K, typename V>
-void EraseIf(HashMap<K, V>* hash_map,
-             std::function<bool(typename HashMap<K, V>::iterator)> cond) {
+void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>::iterator)> cond) {
   for (auto it = hash_map->begin(); it != hash_map->end();) {
     if (cond(it)) {
       hash_map->erase(it++);
@@ -157,15 +166,13 @@ inline uint32_t NewRandomSeed() {
 #define DIM_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
 
 #define BOOL_SEQ (true)(false)
-#define PARALLEL_POLICY_SEQ \
-  (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
+#define PARALLEL_POLICY_SEQ (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
 #define ENCODE_CASE_SEQ                  \
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 
 #define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
-#define FOR_EACH(it, container) \
-  for (auto it = container.begin(); it != container.end(); ++it)
+#define FOR_EACH(it, container) for (auto it = container.begin(); it != container.end(); ++it)
 
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();
@@ -174,18 +181,15 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-inline size_t RoundUp(size_t n, size_t align) {
-  return (n + align - 1) / align * align;
-}
+inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align * align; }
 
 #define CUDA_POINTER_ALIGNMENT (256UL)
 
 size_t GetAvailableCpuMemSize();
 
 template<typename T>
-void Erase(
-    T& container, std::function<bool(const typename T::value_type&)> NeedErase,
-    std::function<void(const typename T::value_type&)> EraseElementHandler) {
+void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase,
+           std::function<void(const typename T::value_type&)> EraseElementHandler) {
   auto iter = container.begin();
   auto erase_from = container.end();
   while (iter != erase_from) {
@@ -198,17 +202,29 @@ void Erase(
     }
   }
   for (; iter != container.end(); ++iter) { EraseElementHandler(*iter); }
-  if (erase_from != container.end()) {
-    container.erase(erase_from, container.end());
-  }
+  if (erase_from != container.end()) { container.erase(erase_from, container.end()); }
 }
 
 template<typename T>
-void Erase(T& container,
-           std::function<bool(const typename T::value_type&)> NeedErase) {
+void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
+inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
+  return lhs.SerializeAsString() < rhs.SerializeAsString();
+}
+
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::LogicalBlobId> {
+  size_t operator()(const oneflow::LogicalBlobId& lbi) const {
+    return std::hash<std::string>()(lbi.SerializeAsString());
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

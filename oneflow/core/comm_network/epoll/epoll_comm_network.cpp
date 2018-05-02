@@ -9,8 +9,7 @@ namespace oneflow {
 namespace {
 
 sockaddr_in GetSockAddr(int64_t machine_id, uint16_t port) {
-  const Machine& machine =
-      Global<JobDesc>::Get()->resource().machine(machine_id);
+  const Machine& machine = Global<JobDesc>::Get()->resource().machine(machine_id);
   const std::string& addr = machine.addr();
   sockaddr_in sa;
   sa.sin_family = AF_INET;
@@ -24,28 +23,20 @@ int64_t GetMachineId(const sockaddr_in& sa) {
   memset(addr, '\0', sizeof(addr));
   PCHECK(inet_ntop(AF_INET, &(sa.sin_addr), addr, INET_ADDRSTRLEN));
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {
-    if (Global<JobDesc>::Get()->resource().machine(i).addr() == addr) {
-      return i;
-    }
+    if (Global<JobDesc>::Get()->resource().machine(i).addr() == addr) { return i; }
   }
   UNIMPLEMENTED();
 }
 
-std::string GenPortKey(int64_t machine_id) {
-  return "EpollPort/" + std::to_string(machine_id);
-}
+std::string GenPortKey(int64_t machine_id) { return "EpollPort/" + std::to_string(machine_id); }
 void PushPort(int64_t machine_id, uint16_t port) {
-  Global<CtrlClient>::Get()->PushKV(GenPortKey(machine_id),
-                                    std::to_string(port));
+  Global<CtrlClient>::Get()->PushKV(GenPortKey(machine_id), std::to_string(port));
 }
-void ClearPort(int64_t machine_id) {
-  Global<CtrlClient>::Get()->ClearKV(GenPortKey(machine_id));
-}
+void ClearPort(int64_t machine_id) { Global<CtrlClient>::Get()->ClearKV(GenPortKey(machine_id)); }
 uint16_t PullPort(int64_t machine_id) {
   uint16_t port = 0;
   Global<CtrlClient>::Get()->PullKV(
-      GenPortKey(machine_id),
-      [&](const std::string& v) { port = oneflow_cast<uint16_t>(v); });
+      GenPortKey(machine_id), [&](const std::string& v) { port = oneflow_cast<uint16_t>(v); });
   return port;
 }
 
@@ -61,9 +52,7 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::Init(const Plan& plan) {
-  Global<CommNet>::SetAllocated(new EpollCommNet(plan));
-}
+void EpollCommNet::Init(const Plan& plan) { Global<CommNet>::SetAllocated(new EpollCommNet(plan)); }
 
 const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   auto mem_desc = new SocketMemDesc;
@@ -73,16 +62,13 @@ const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   return mem_desc;
 }
 
-void EpollCommNet::UnRegisterMemory(const void* token) {
-  mem_desc_mgr_.UnRegisterMemDesc();
-}
+void EpollCommNet::UnRegisterMemory(const void* token) { mem_desc_mgr_.UnRegisterMemDesc(); }
 
 void EpollCommNet::RegisterMemoryDone() {
   // do nothing
 }
 
-void EpollCommNet::SendActorMsg(int64_t dst_machine_id,
-                                const ActorMsg& actor_msg) {
+void EpollCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& actor_msg) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kActor;
   msg.actor_msg = actor_msg;
@@ -96,9 +82,7 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
 EpollCommNet::EpollCommNet(const Plan& plan) {
   GenConnectionInfo(plan);
   pollers_.resize(Global<JobDesc>::Get()->CommNetWorkerNum(), nullptr);
-  for (size_t i = 0; i < pollers_.size(); ++i) {
-    pollers_[i] = new IOEventPoller;
-  }
+  for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
   InitSockets();
   for (IOEventPoller* poller : pollers_) { poller->Start(); }
 }
@@ -121,8 +105,7 @@ void EpollCommNet::InitSockets() {
   for (; this_listen_port < listen_port_max; ++this_listen_port) {
     sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, this_listen_port);
     int bind_result =
-        bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr),
-             sizeof(this_sockaddr));
+        bind(listen_sockfd, reinterpret_cast<sockaddr*>(&this_sockaddr), sizeof(this_sockaddr));
     if (bind_result == 0) {
       PCHECK(listen(listen_sockfd, total_machine_num) == 0);
       PushPort(this_machine_id, this_listen_port);
@@ -142,8 +125,7 @@ void EpollCommNet::InitSockets() {
     uint16_t peer_port = PullPort(peer_id);
     sockaddr_in peer_sockaddr = GetSockAddr(peer_id, peer_port);
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr),
-                   sizeof(peer_sockaddr))
+    PCHECK(connect(sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), sizeof(peer_sockaddr))
            == 0);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     machine_id2sockfd_[peer_id] = sockfd;
@@ -152,8 +134,7 @@ void EpollCommNet::InitSockets() {
   FOR_RANGE(int32_t, idx, 0, src_machine_count) {
     sockaddr_in peer_sockaddr;
     socklen_t len = sizeof(peer_sockaddr);
-    int sockfd = accept(listen_sockfd,
-                        reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
+    int sockfd = accept(listen_sockfd, reinterpret_cast<sockaddr*>(&peer_sockaddr), &len);
     PCHECK(sockfd != -1);
     CHECK(sockfd2helper_.emplace(sockfd, NewSocketHelper(sockfd)).second);
     int64_t peer_machine_id = GetMachineId(peer_sockaddr);
@@ -163,8 +144,7 @@ void EpollCommNet::InitSockets() {
   ClearPort(this_machine_id);
   // useful log
   FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
-    LOG(INFO) << "machine " << machine_id << " sockfd "
-              << machine_id2sockfd_[machine_id];
+    LOG(INFO) << "machine " << machine_id << " sockfd " << machine_id2sockfd_[machine_id];
   }
 }
 
@@ -173,13 +153,12 @@ SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
   return sockfd2helper_.at(sockfd);
 }
 
-void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id,
-                          const void* src_token, const void* dst_token) {
+void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+                          const void* dst_token) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
-  msg.request_write_msg.dst_machine_id =
-      Global<MachineCtx>::Get()->this_machine_id();
+  msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   msg.request_write_msg.dst_token = dst_token;
   msg.request_write_msg.read_id = read_id;
   GetSocketHelper(src_machine_id)->AsyncWrite(msg);

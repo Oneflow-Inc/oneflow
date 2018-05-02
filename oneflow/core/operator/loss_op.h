@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_LOSS_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -12,31 +13,32 @@ class LossOp : public Operator {
   virtual ~LossOp() = default;
 
   void InitFromOpConf() override;
-  bool IsLossOp() const override { return true; }
+  LogicalNode* NewProperLogicalNode() override { return new LossLogicalNode; }
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
+  bool IsLossOp() const override { return true; }
 
  protected:
   virtual void VirtualInitFromOpConf() {}
-  virtual void VirtualInferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
+  virtual void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                     const ParallelContext* parallel_ctx) const {}
   virtual LossKernelConf* GetMutLossKernelConf(KernelConf*) const = 0;
 
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 
  private:
-  std::string obn2lbn(const std::string& output_bn) const override {
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override {
+    LogicalBlobId ret;
+    ret.set_op_name(op_name());
     if (output_bn == "reduction_coefficient") {
-      return op_name() + "/reduction_coefficient";
+      ret.set_blob_name("reduction_coefficient");
     } else {
-      return op_name() + "/" + GetValFromCustomizedConf<std::string>(output_bn);
+      ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
     }
+    return ret;
   }
 };
 

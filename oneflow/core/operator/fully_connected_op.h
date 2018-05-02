@@ -15,13 +15,10 @@ class FullyConnectedOp final : public Operator {
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
   int32_t ModelSplitAxis() const override { return 1; }
-  int32_t MaxModelSplitNum() const override {
-    return op_conf().fully_connected_conf().units();
-  }
+  int32_t MaxModelSplitNum() const override { return op_conf().fully_connected_conf().units(); }
 };
 
 }  // namespace oneflow

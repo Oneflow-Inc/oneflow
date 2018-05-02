@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_REGISTER_REGISTER_H_
 #define ONEFLOW_CORE_REGISTER_REGISTER_H_
 
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/register/runtime_register_desc.h"
 
@@ -31,19 +32,15 @@ class Regst final {
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
-  Blob* GetBlobByLbn(const std::string& lbn);
-  const HashMap<std::string, std::unique_ptr<BlobIf>>& lbn2blob() const {
-    return lbn2blob_;
-  }
+  Blob* GetBlobByLbi(const LogicalBlobId& lbi);
+  const HashMap<LogicalBlobId, std::unique_ptr<BlobIf>>& lbi2blob() const { return lbi2blob_; }
 
   Blob* packed_blob() { return static_cast<Blob*>(packed_blob_.get()); }
   template<typename RecordType>
   RecordBlob<RecordType>* GetRecordBlob() {
     return static_cast<RecordBlob<RecordType>*>(packed_blob_.get());
   }
-  RecordBlobIf* GetRecordBlobIf() {
-    return static_cast<RecordBlobIf*>(packed_blob_.get());
-  }
+  RecordBlobIf* GetRecordBlobIf() { return static_cast<RecordBlobIf*>(packed_blob_.get()); }
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
 
@@ -61,7 +58,7 @@ class Regst final {
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
   std::function<void()> deleter_;
-  HashMap<std::string, std::unique_ptr<BlobIf>> lbn2blob_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobIf>> lbi2blob_;
   std::unique_ptr<BlobIf> packed_blob_;
 };
 
