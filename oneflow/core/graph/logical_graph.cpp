@@ -196,6 +196,9 @@ void LogicalGraph::ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlob
 
 void LogicalGraph::SetMainModelParallel() {
   ForEachNode([](LogicalNode* node) {
+    if (node->parallel_desc()->policy() == kModelParallel) { node->set_main_model_parallel(node); }
+  });
+  ForEachNode([](LogicalNode* node) {
     LogicalNode* pred_node = node;
     while (pred_node->SoleOp()->IsElemWiseOp()) { pred_node = pred_node->SoleInEdge()->src_node(); }
     if (pred_node != node && pred_node->parallel_desc()->policy() == kModelParallel) {

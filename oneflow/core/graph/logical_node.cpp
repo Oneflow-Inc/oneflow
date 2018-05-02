@@ -194,25 +194,25 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)>
 
 int32_t LogicalNode::GetModelSplitAxis() const {
   CHECK_EQ(parallel_desc_->policy(), kModelParallel);
-  if (main_model_parallel_) {
-    CHECK(SoleOp()->IsElemWiseOp());
-    return main_model_parallel_->GetModelSplitAxis();
-  } else {
+  CHECK_NOTNULL(main_model_parallel_);
+  if (main_model_parallel_ == this) {
     int32_t ret = SoleOp()->ModelSplitAxis();
     CHECK_NE(ret, -1);
     return ret;
+  } else {
+    return main_model_parallel_->GetModelSplitAxis();
   }
 }
 
 int32_t LogicalNode::GetMaxModelSplitNum() const {
   CHECK_EQ(parallel_desc_->policy(), kModelParallel);
-  if (main_model_parallel_) {
-    CHECK(SoleOp()->IsElemWiseOp());
-    return main_model_parallel_->GetMaxModelSplitNum();
-  } else {
+  CHECK_NOTNULL(main_model_parallel_);
+  if (main_model_parallel_ == this) {
     int32_t ret = SoleOp()->MaxModelSplitNum();
     CHECK_NE(ret, -1);
     return ret;
+  } else {
+    return main_model_parallel_->GetMaxModelSplitNum();
   }
 }
 
@@ -224,16 +224,7 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
 }
 
 static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
-  if (src_node->SoleOp()->IsElemWiseOp() && dst_node->SoleOp()->IsElemWiseOp()) {
-    CHECK_EQ(src_node->main_model_parallel(), dst_node->main_model_parallel());
-    return true;
-  } else if (src_node->SoleOp()->IsElemWiseOp() && src_node->main_model_parallel() == dst_node) {
-    return true;
-  } else if (dst_node->SoleOp()->IsElemWiseOp() && dst_node->main_model_parallel() == src_node) {
-    return true;
-  } else {
-    return false;
-  }
+  return src_node->main_model_parallel() == dst_node->main_model_parallel();
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {

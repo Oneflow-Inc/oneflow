@@ -185,7 +185,7 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
       node->BindBnWithRegst(obn, regst);
     }
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      CHECK(lbi.is_packed_id());
+      CHECK_EQ(lbi.is_packed_id(), false);
       middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
       node->BindBnWithRegst(dtbn, middle_regst);
     }
