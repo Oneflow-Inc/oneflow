@@ -110,6 +110,11 @@ class Operator {
                               std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
+  virtual void InferDiffBlobDescsWithoutFwBlob(
+      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      const ParallelContext*) const {
+    UNIMPLEMENTED();
+  }
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);
