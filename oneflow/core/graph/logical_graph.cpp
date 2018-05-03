@@ -301,6 +301,7 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info,
   FOR_RANGE(size_t, i, 0, clone_op->output_diff_bns().size()) {
     const LogicalBlobId& lbi_clone_i = clone_op->BnInOp2Lbi(clone_op->output_diff_bns().Get(i));
     LogicalEdge* edge = clone_info.edges.at(i);
+    *edge->MutSoleLbi() = lbi_clone_i;
     LogicalNode* src_node = edge->src_node();
     *(src_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2ibn.at(edge)))) = lbi_clone_i;
     DisConnect(edge);
