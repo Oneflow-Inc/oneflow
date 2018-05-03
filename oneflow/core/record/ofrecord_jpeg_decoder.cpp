@@ -3,6 +3,23 @@
 
 namespace oneflow {
 
+namespace {
+
+void ConvertChannel(cv::Mat* src, cv::Mat* dst, int32_t src_cn,
+                    int32_t dst_cn) {
+  if (src_cn == dst_cn) { return; }
+
+  if (src_cn == 3 && dst_cn == 1) {
+    cv::cvtColor(*src, *dst, cv::COLOR_BGR2GRAY);
+  } else if (src_cn == 1 && dst_cn == 3) {
+    cv::cvtColor(*src, *dst, cv::COLOR_GRAY2BGR);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+}  // namespace
+
 template<typename T>
 int32_t OFRecordDecoderImpl<EncodeCase::kJpeg, T>::GetColNumOfFeature(
     const Feature& feature, int64_t one_col_elem_num) const {
@@ -27,6 +44,9 @@ void OFRecordDecoderImpl<EncodeCase::kJpeg, T>::ReadOneCol(
   CHECK_EQ(blob_conf.shape().dim_size(), 3);
   CHECK_EQ(blob_conf.shape().dim(0), image.rows);
   CHECK_EQ(blob_conf.shape().dim(1), image.cols);
+  if (blob_conf.shape().dim(2) != image.channels()) {
+    ConvertChannel(&image, &image, image.channels(), blob_conf.shape().dim(2));
+  }
   CHECK_EQ(blob_conf.shape().dim(2), image.channels());
   CHECK_EQ(one_col_elem_num, image.total() * image.channels());
 
