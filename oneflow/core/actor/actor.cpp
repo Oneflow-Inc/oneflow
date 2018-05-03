@@ -43,12 +43,14 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
   }
+  remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
     std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
       regst_desc_id_vec.push_back(regst_desc_id);
     }
+    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
   }
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -60,7 +62,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   writeable_produced_regst_desc_cnt_ = writeable_produced_regst_.size();
   total_reading_cnt_ = 0;
-  remaining_eord_cnt_ = task_proto.consumed_regst_desc_id().size();
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
@@ -155,6 +156,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessMsgFromOtherMachine(msg);
     }
     ActUntilFail();
+  } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
+    CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
+    ActUntilFail();
   } else {
     UNIMPLEMENTED();
   }
@@ -176,6 +180,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
 
 int Actor::HandlerZombie(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
+    CHECK_GE(remaining_eord_cnt_, 1);
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) { AsyncSendRegstMsgToProducer(msg.regst()); }

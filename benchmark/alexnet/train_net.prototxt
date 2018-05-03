@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/imagenet/30/train"
+    data_dir: "/dataset/imagenet/train/30"
     blob {
       name: "encoded"
       data_type: kFloat
@@ -72,6 +72,7 @@ op {
     bias: 2
     alpha: 0.0001
     beta: 0.75
+    data_format: "channels_first"
   }
 }
 
@@ -122,6 +123,7 @@ op {
     bias: 2
     alpha: 0.0001
     beta: 0.75
+    data_format: "channels_first"
   }
 }
 

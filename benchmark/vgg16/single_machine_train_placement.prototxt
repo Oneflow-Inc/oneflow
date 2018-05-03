@@ -11,18 +11,24 @@ placement_group {
 placement_group {
   op_set {
     op_name: "transpose"
-    op_name: "conv1"
-    op_name: "lrn1"
+    op_name: "conv1_1"
+    op_name: "conv1_2"
     op_name: "pool1"
-    op_name: "conv2"
-    op_name: "lrn2"
+    op_name: "conv2_1"
+    op_name: "conv2_2"
     op_name: "pool2"
-    op_name: "conv3"
-    op_name: "conv4"
-    op_name: "conv5"
+    op_name: "conv3_1"
+    op_name: "conv3_2"
+    op_name: "conv3_3"
+    op_name: "pool3"
+    op_name: "conv4_1"
+    op_name: "conv4_2"
+    op_name: "conv4_3"
+    op_name: "pool4"
+    op_name: "conv5_1"
+    op_name: "conv5_2"
+    op_name: "conv5_3"
     op_name: "pool5"
-    op_name: "dropout1"
-    op_name: "dropout2"
     op_name: "softmax_loss"
   }
   parallel_conf {
@@ -33,9 +39,11 @@ placement_group {
 
 placement_group {
   op_set {
-    op_name: "fc1"
-    op_name: "fc2"
-    op_name: "fc3"
+    op_name: "fc6"
+    op_name: "drop6"
+    op_name: "fc7"
+    op_name: "drop7"
+    op_name: "fc8"
   }
   parallel_conf {
     policy: kModelParallel

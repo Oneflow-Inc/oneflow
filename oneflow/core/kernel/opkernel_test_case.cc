@@ -337,6 +337,7 @@ OpKernelTestCase::MakeGetterBnInOp2Blob() {
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
       const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
       if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
+      if (it->second.shape().dim_vec().empty()) { return nullptr; }
       DeviceType dev_type = GetBlobDeviceType(bn_in_op);
       const BlobDesc* blob_desc = &it->second;
       bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
@@ -571,6 +572,7 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   CopyBlobDesc4DiffBlob();
   RandomInitInputOrigin();
   auto Run = [&](const std::string& dump_prefix) {
+    op_context = nullptr;
     std::shared_ptr<Operator> op;
     InferBlobDesc(&op, &op_context);
     InitInputBlobs();
@@ -583,9 +585,7 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   Run("cpu_");
   set_default_device_type(DeviceType::kGPU);
   Run("gpu_");
-  mut_op_conf()->set_use_cudnn_on_gpu(true);
-  Run("cudnn_");
-  CheckMultiRunResults("cpu_", {"gpu_", "cudnn_"});
+  CheckMultiRunResults("cpu_", {"gpu_"});
 }
 
 #define INSTANTIATE_OPKERNEL_TEST_CASE_METHODS(T, type_proto)              \

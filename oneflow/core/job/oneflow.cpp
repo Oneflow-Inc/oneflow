@@ -110,7 +110,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
-  Global<Profiler>::Get()->Profile();
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(); }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();

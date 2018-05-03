@@ -30,6 +30,7 @@ void FullyConnectedKernelTestCase(OpKernelTestCase* test_case, const std::string
   test_case->template InitBlob<T>("in", blob_desc2122, {-1, 2, -3, 4, 5, -6, 7, 8});
   test_case->template InitBlob<T>("weight", blob_desc34, {5, 4, 5, 3, 2, 1, 7, 0, 1, 1, 9, 8});
   test_case->template InitBlob<T>("out_diff", blob_desc23, {-5, 2, 3, -7, 2, 5});
+  test_case->template RandomInitBlob<T>("activation_buf", blob_desc23);
   if (use_bias) {
     test_case->template InitBlob<T>("bias", blob_desc13, {2, 3, 5});
     test_case->template InitBlob<T>("bias_multiplier", blob_desc21, {1, 1});

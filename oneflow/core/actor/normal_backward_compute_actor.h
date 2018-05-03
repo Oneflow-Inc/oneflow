@@ -1,5 +1,5 @@
-#ifndef ONEFLOW_CORE_ACTOR_BACKWARD_COMPUTE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_BACKWARD_COMPUTE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_NORMAL_BACKWARD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_NORMAL_BACKWARD_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
 
@@ -21,7 +21,7 @@ class NormalBackwardCompActor final : public CompActor {
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {false, {"activation", "data_tmp", "boxing_out", "121_out", "out_diff"}};
+    return {false, {"activation", "data_tmp", "boxing_out", "121_out", "out_diff", "in"}};
   }
 
   void AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_version_id);
@@ -33,8 +33,10 @@ class NormalBackwardCompActor final : public CompActor {
   int64_t model_tmp_regst_desc_id_;
   std::queue<Regst*> model_regst_queue_;
   Regst* model_tmp_regst_;
+
+  int32_t staleness_;
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_BACKWARD_COMPUTE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_NORMAL_BACKWARD_COMPUTE_ACTOR_H_

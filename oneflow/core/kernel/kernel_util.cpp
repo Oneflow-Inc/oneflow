@@ -268,11 +268,17 @@ KU_FLOATING_METHOD Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
 KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha) {
   for (int64_t i = 0; i < n; ++i) { x[i] = x[i] / (*alpha); }
 }
+KU_FLOATING_METHOD Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
+  for (int64_t i = 0; i < n; ++i) { z[i] = x[i] / y[i]; }
+}
 KU_FLOATING_METHOD Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z) {
   for (int64_t i = 0; i < n; ++i) { z[i] = x[i] * y[i]; }
 }
 KU_FLOATING_METHOD Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon) {
   for (int64_t i = 0; i < n; ++i) { x[i] = 1.0 / std::sqrt(x[i] + epsilon); }
+}
+KU_FLOATING_METHOD Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y) {
+  for (int64_t i = 0; i < n; ++i) { y[i] = std::pow(x[i], power); }
 }
 
 KU_FLOATING_METHOD Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {

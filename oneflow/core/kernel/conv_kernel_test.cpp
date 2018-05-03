@@ -54,8 +54,8 @@ void ConvTestCase1DChannelsFirst(OpKernelTestCase* conv_test_case, const std::st
   conv_test_case->template BackwardCheckBlob<T>("bias_diff", bias_blob_desc, {12, 12, 12});
 }
 
-TEST_CPU_ONLY_OPKERNEL(ConvTestCase1DChannelsFirst, FLOATING_DATA_TYPE_SEQ, (train),
-                       (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ConvTestCase1DChannelsFirst, FLOATING_DATA_TYPE_SEQ, (train),
+                          (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase1DChannelsLast(OpKernelTestCase* conv_test_case, const std::string& job_type,
@@ -108,6 +108,8 @@ void ConvTestCase1DChannelsLast(OpKernelTestCase* conv_test_case, const std::str
 }
 
 TEST_CPU_ONLY_OPKERNEL(ConvTestCase1DChannelsLast, FLOATING_DATA_TYPE_SEQ, (train),
+                       (forward)(backward));
+TEST_GPU_ONLY_OPKERNEL(ConvTestCase1DChannelsLast, ((float, DataType::kFloat)), (train),
                        (forward)(backward));
 
 template<DeviceType device_type, typename T>
@@ -177,6 +179,8 @@ void ConvTestCase2DChannelsLast(OpKernelTestCase* conv_test_case, const std::str
 
 TEST_CPU_ONLY_OPKERNEL(ConvTestCase2DChannelsLast, FLOATING_DATA_TYPE_SEQ, (train),
                        (forward)(backward));
+TEST_GPU_ONLY_OPKERNEL(ConvTestCase2DChannelsLast, ((float, DataType::kFloat)), (train),
+                       (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase2DChannelsFirst(OpKernelTestCase* conv_test_case, const std::string& job_type,
@@ -244,6 +248,8 @@ void ConvTestCase2DChannelsFirst(OpKernelTestCase* conv_test_case, const std::st
 }
 
 TEST_CPU_ONLY_OPKERNEL(ConvTestCase2DChannelsFirst, FLOATING_DATA_TYPE_SEQ, (train),
+                       (forward)(backward));
+TEST_GPU_ONLY_OPKERNEL(ConvTestCase2DChannelsFirst, FLOATING_DATA_TYPE_SEQ, (train),
                        (forward)(backward));
 
 template<DeviceType device_type, typename T>
@@ -346,8 +352,8 @@ void ConvTestCase3DChannelsFirst(OpKernelTestCase* conv_test_case, const std::st
   conv_test_case->template BackwardCheckBlob<T>("bias_diff", bias_blob_desc, {128, 128, 128});
 }
 
-TEST_CPU_ONLY_OPKERNEL(ConvTestCase3DChannelsFirst, FLOATING_DATA_TYPE_SEQ, (train),
-                       (forward)(backward));
+TEST_CPU_AND_GPU_OPKERNEL(ConvTestCase3DChannelsFirst, FLOATING_DATA_TYPE_SEQ, (train),
+                          (forward)(backward));
 
 template<DeviceType device_type, typename T>
 void ConvTestCase3DChannelsLast(OpKernelTestCase* conv_test_case, const std::string& job_type,

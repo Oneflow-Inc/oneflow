@@ -121,7 +121,8 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kG
 template<typename T>
 class ColBufWriter {
  public:
-  ColBufWriter() = default;
+  ColBufWriter(const T* src_ptr, T* dst_ptr, int64_t c_size, int64_t id_size, int64_t ih_size,
+               int64_t iw_size, int64_t od_size, int64_t oh_size, int64_t ow_size);
   virtual ~ColBufWriter() = default;
   virtual void DHWCWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) = 0;
   virtual void CDHWWrite(int64_t c, int64_t id, int64_t ih, int64_t iw) = 0;
@@ -129,6 +130,17 @@ class ColBufWriter {
   virtual void InvalidHFunc() = 0;
   virtual void InvalidWFunc() = 0;
   virtual void NextImCSize() = 0;
+
+ protected:
+  const T* src_ptr_;
+  T* dst_ptr_;
+  int64_t c_size_;
+  int64_t id_size_;
+  int64_t ih_size_;
+  int64_t iw_size_;
+  int64_t od_size_;
+  int64_t oh_size_;
+  int64_t ow_size_;
 };
 
 template<typename T>
@@ -143,17 +155,6 @@ class Im2ColWriter final : public ColBufWriter<T> {
   void InvalidHFunc() override;
   void InvalidWFunc() override;
   void NextImCSize() override;
-
- private:
-  const T* src_ptr_;
-  T* dst_ptr_;
-  int64_t c_size_;
-  int64_t id_size_;
-  int64_t ih_size_;
-  int64_t iw_size_;
-  int64_t od_size_;
-  int64_t oh_size_;
-  int64_t ow_size_;
 };
 
 template<typename T>
@@ -168,17 +169,6 @@ class Col2ImWriter final : public ColBufWriter<T> {
   void InvalidHFunc() override;
   void InvalidWFunc() override;
   void NextImCSize() override;
-
- private:
-  const T* src_ptr_;
-  T* dst_ptr_;
-  int64_t c_size_;
-  int64_t id_size_;
-  int64_t ih_size_;
-  int64_t iw_size_;
-  int64_t od_size_;
-  int64_t oh_size_;
-  int64_t ow_size_;
 };
 
 template<typename T>
