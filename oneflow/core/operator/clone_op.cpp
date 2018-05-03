@@ -20,7 +20,7 @@ void CloneOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlob
 void CloneOp::InferDiffBlobDescsWithoutFwBlob(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
-  const BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(*(output_diff_bns().begin()));
+  const BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(output_diff_bns().Get(0));
   *GetBlobDesc4BnInOp(SoleIdbn()) = *out_diff_blob_desc;
 }
 
