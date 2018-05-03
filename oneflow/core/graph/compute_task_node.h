@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ChainNode;
+class LogicalNode;
 
 class CompTaskNode : public TaskNode {
  public:
@@ -17,23 +17,25 @@ class CompTaskNode : public TaskNode {
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }
-  const ParallelContext* parallel_ctx() const override {
-    return &parallel_ctx_;
-  }
+  const ParallelContext* parallel_ctx() const override { return &parallel_ctx_; }
   ParallelContext* mut_parallel_ctx() { return &parallel_ctx_; }
 
-  // chain_node_
-  const ChainNode* chain_node() const { return chain_node_; }
-  void set_chain_node(const ChainNode* val) { chain_node_ = val; }
-  const ChainNode* SuccChainNodeOnEdge(TaskEdge* edge);
-  const ChainNode* PredChainNodeOnEdge(TaskEdge* edge);
+  // logical_node_
+  const LogicalNode* logical_node() const { return logical_node_; }
+  void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
+
+ protected:
+  const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);
+  const LogicalNode* GetOnePredLogicalNodeOnEdge(TaskEdge* edge);
+  void ProduceB121Regst(const std::string& b121_name);
+  void BindEdgeWithProducedB121Regst(TaskEdge*, const std::string& b121_name);
+  bool TryAddLbiToB121RegstAndBindIt(ExecNode*, const std::string& bn,
+                                     const std::string& b121_name);
 
  private:
   ParallelContext parallel_ctx_;
-  const ChainNode* chain_node_;
+  const LogicalNode* logical_node_;
 };
-
-void SortByParallelId(std::vector<CompTaskNode*>* node_vec);
 
 }  // namespace oneflow
 

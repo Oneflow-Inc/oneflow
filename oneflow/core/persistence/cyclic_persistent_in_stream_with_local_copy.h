@@ -12,12 +12,9 @@ class CyclicPersistentInStreamWithLocalCopy final : public PersistentInStream {
   CyclicPersistentInStreamWithLocalCopy() = delete;
   ~CyclicPersistentInStreamWithLocalCopy() = default;
 
-  CyclicPersistentInStreamWithLocalCopy(fs::FileSystem* fs,
-                                        const std::string& file_path);
+  CyclicPersistentInStreamWithLocalCopy(fs::FileSystem* fs, const std::string& file_path);
 
-  int32_t ReadLine(std::string* l) override {
-    return (this->*read_line_mthd_)(l);
-  }
+  int32_t ReadLine(std::string* l) override { return (this->*read_line_mthd_)(l); }
   int32_t Read(char* s, size_t n) override { return (this->*read_mthd_)(s, n); }
 
  private:
@@ -31,8 +28,7 @@ class CyclicPersistentInStreamWithLocalCopy final : public PersistentInStream {
   std::unique_ptr<PersistentInStream> in_stream_;
   std::string local_copy_path_;
   std::unique_ptr<PersistentOutStream> out_stream_;
-  int32_t (CyclicPersistentInStreamWithLocalCopy::*read_line_mthd_)(
-      std::string*);
+  int32_t (CyclicPersistentInStreamWithLocalCopy::*read_line_mthd_)(std::string*);
   int32_t (CyclicPersistentInStreamWithLocalCopy::*read_mthd_)(char*, size_t);
 };
 

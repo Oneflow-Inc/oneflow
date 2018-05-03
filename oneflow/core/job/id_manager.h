@@ -12,20 +12,37 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
-  // Compile
+  // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
-  const std::string& MachineName4MachineId(int64_t machine_id) const;
-  DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
+  const std::string& MachineName4MachineId(int64_t machine_id) const {
+    return machine_id2machine_name_.at(machine_id);
+  }
 
+  // Get ThrdId, TaskId, RegstDescId
   int64_t GetGpuDeviceThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
-  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
-  int64_t GetPersistenceThrdId(int64_t offset) const;
-  int64_t CommNetThrdId() const;
-
-  int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
-
+  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
+  int64_t GetPersistenceThrdId(int64_t offset) const {
+    return gpu_device_num_ + cpu_device_num_ + offset;
+  }
+  int64_t CommNetThrdId() const {
+    return gpu_device_num_ + cpu_device_num_ + Global<JobDesc>::Get()->PersistenceWorkerNum();
+  }
+  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
+
+  // Get MemZoneId
+  int64_t CpuMemZoneId() const { return Global<JobDesc>::Get()->GpuDeviceNum(); }
+  int64_t GpuMemZoneId(int64_t dev_phy_id) { return dev_phy_id; }
+
+  // GetFromThrdId
+  DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
+  int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
+  int64_t GetMemZoneIdFromThrdId(int64_t thrd_id) const;
+
+  int64_t GetThrdIdFromGpuMemZoneId(int64_t mem_zone_id) {
+    CHECK_NE(mem_zone_id, CpuMemZoneId());
+    return mem_zone_id;
+  }
 
   // Runtime
   DeviceType GetDeviceTypeFromActorId(int64_t actor_id) const;
@@ -36,9 +53,9 @@ class IDMgr final {
   // for cpu:
   //   0: the actor thread
   // for gpu:
-  //   0: the copy cuda stream
-  int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id,
-                                  int64_t reserved_id);
+  //   0: the copy h2d cuda stream
+  //   1: the copy d2h cuda stream
+  int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id, int64_t reserved_id);
   // start from: 1000
   int64_t NewWorkStreamId(int64_t machine_id, int64_t thrd_id);
 

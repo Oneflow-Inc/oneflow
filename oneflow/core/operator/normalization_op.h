@@ -25,25 +25,21 @@ class NormalizationOp final : public Operator {
   bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext*, DeviceType,
-      std::function<void(OpContext*)> EnrollOpCtx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext*,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
-  void InferParamBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const NormalizationOpConf&, int64_t norm_part_num, DataType in_data_type,
-      bool use_cudnn) const;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*, const OpContext*) const override;
+  void InferParamBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                           const NormalizationOpConf&, int64_t norm_part_num, DataType in_data_type,
+                           bool use_cudnn) const;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
 #ifdef WITH_CUDA
-  void InferBlobDescsForCudnn(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const;
+  void InferBlobDescsForCudnn(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp) const;
   void VirtualGenKernelConfForCudnn(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, KernelConf*) const;
+      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+      KernelConf*) const;
 #endif
   void VirtualFixParallelDesc(ParallelDesc* pr_desc) const override;
   NormalizationOpCtx* NewNormalizationOpCtx(const Shape& in_shape) const;

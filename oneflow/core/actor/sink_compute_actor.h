@@ -13,23 +13,15 @@ class SinkCompActor : public CompActor {
 
  protected:
   virtual void VirtualSinkCompActorInit(const TaskProto&) {}
-  Regst* in_regst() { return in_regst_; }
   virtual void* NewOther() { return nullptr; }
   virtual void DeleteOther(void*) {}
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-
-  int HandlerNormal(const ActorMsg&) override;
-
   void Act() override;
-  bool IsReadReady() override { return in_regst_; }
-  bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
-
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-
-  Regst* in_regst_;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {true, {}};
+  }
 };
 
 }  // namespace oneflow

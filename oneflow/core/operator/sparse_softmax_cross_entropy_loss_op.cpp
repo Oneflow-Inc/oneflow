@@ -2,9 +2,7 @@
 
 namespace oneflow {
 
-void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() {
-  EnrollDataTmpBn("prob");
-}
+void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() { EnrollDataTmpBn("prob"); }
 
 const PbMessage& SparseSoftmaxCrossEntropyLossOp::GetCustomizedConf() const {
   return op_conf().sparse_softmax_cross_entropy_loss_conf();
@@ -12,8 +10,7 @@ const PbMessage& SparseSoftmaxCrossEntropyLossOp::GetCustomizedConf() const {
 
 LossKernelConf* SparseSoftmaxCrossEntropyLossOp::GetMutLossKernelConf(
     KernelConf* kernel_conf) const {
-  return kernel_conf->mutable_sparse_softmax_cross_entropy_loss_conf()
-      ->mutable_loss_conf();
+  return kernel_conf->mutable_sparse_softmax_cross_entropy_loss_conf()->mutable_loss_conf();
 }
 
 void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
@@ -26,7 +23,6 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
 }
 
-REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf,
-            SparseSoftmaxCrossEntropyLossOp);
+REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf, SparseSoftmaxCrossEntropyLossOp);
 
 }  // namespace oneflow

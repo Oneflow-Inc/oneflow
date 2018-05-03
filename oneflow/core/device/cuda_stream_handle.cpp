@@ -27,8 +27,7 @@ const cublasHandle_t* CudaStreamHandle::cublas_pmd_handle() {
     cublas_pmd_handle_.reset(new cublasHandle_t);
     CudaCheck(cublasCreate(cublas_pmd_handle_.get()));
     CudaCheck(cublasSetStream(*cublas_pmd_handle_, *cuda_stream()));
-    CudaCheck(
-        cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
+    CudaCheck(cublasSetPointerMode(*cublas_pmd_handle_, CUBLAS_POINTER_MODE_DEVICE));
   }
   return cublas_pmd_handle_.get();
 }

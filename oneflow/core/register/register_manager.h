@@ -16,8 +16,7 @@ class RegstMgr final {
   ~RegstMgr() = default;
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
-                 RecordTypeProto record_type,
-                 std::function<void(Regst*)> OneRegstDone);
+                 RecordTypeProto record_type, std::function<void(Regst*)> OneRegstDone);
 
  private:
   friend class Global<RegstMgr>;

@@ -4,15 +4,13 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void ReduceSumKernel<device_type, T>::ForwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
   if (this->kernel_conf().reduce_sum_conf().has_axis() == false) {
     Blob* tmp_blob = BnInOp2Blob("tmp");
-    KernelUtil<device_type, T>::Sum(ctx.device_ctx, in_blob->shape().elem_cnt(),
-                                    in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-                                    tmp_blob->mut_dptr<T>(),
+    KernelUtil<device_type, T>::Sum(ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(),
+                                    out_blob->mut_dptr<T>(), tmp_blob->mut_dptr<T>(),
                                     tmp_blob->ByteSizeOfDataContentField());
     return;
   }
@@ -25,17 +23,15 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
     T* dst_ptr = out_blob->mut_dptr<T>() + lhs_i * rhs_num;
     Memcpy<device_type>(ctx.device_ctx, dst_ptr, src_ptr, rhs_num * sizeof(T));
     FOR_RANGE(int64_t, middle_i, 1, middle_num) {
-      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, rhs_num, 1.0f,
-                                       src_ptr + middle_i * rhs_num, 1, dst_ptr,
-                                       1);
+      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, rhs_num, 1.0f, src_ptr + middle_i * rhs_num,
+                                       1, dst_ptr, 1);
     }
   }
 }
 
 template<DeviceType device_type, typename T>
 void ReduceSumKernel<device_type, T>::BackwardDataContent(
-    const KernelCtx& ctx,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob("out_diff");
   Blob* in_diff_blob = BnInOp2Blob("in_diff");
 
@@ -56,14 +52,12 @@ void ReduceSumKernel<device_type, T>::BackwardDataContent(
     const T* src_ptr = out_diff_blob->dptr<T>() + lhs_i * rhs_num;
     T* dst_ptr = in_diff_blob->mut_dptr<T>() + lhs_i * middle_num * rhs_num;
     FOR_RANGE(int64_t, middle_i, 0, middle_num) {
-      Memcpy<device_type>(ctx.device_ctx, dst_ptr, src_ptr,
-                          rhs_num * sizeof(T));
+      Memcpy<device_type>(ctx.device_ctx, dst_ptr, src_ptr, rhs_num * sizeof(T));
       dst_ptr += rhs_num;
     }
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel,
-                           ARITHMETIC_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceSumConf, ReduceSumKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

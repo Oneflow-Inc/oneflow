@@ -13,16 +13,15 @@ class ModelSaveKernel final : public KernelIf<DeviceType::kCPU> {
 
  protected:
   void VirtualKernelInit(const ParallelContext*) override;
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 
  private:
   int32_t part_id_;
   int32_t part_num_;
 };
 
-using LbnBlobHandler = std::function<void(const std::string& lbn, const Blob*)>;
-using MdSaveOther = std::tuple<Snapshot*, std::function<void(LbnBlobHandler)>>;
+using LbiBlobHandler = std::function<void(const LogicalBlobId& lbi, const Blob*)>;
+using MdSaveOther = std::tuple<Snapshot*, std::function<void(LbiBlobHandler)>>;
 
 }  // namespace oneflow
 

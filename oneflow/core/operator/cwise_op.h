@@ -13,16 +13,14 @@ class CWiseOp : public Operator {
 
   void InitFromOpConf() override;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 
  protected:
   virtual void VirtualInitFromOpConf() { UNIMPLEMENTED(); }
 
-  virtual void VirtualInferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const {}
+  virtual void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                     const ParallelContext* parallel_ctx) const {}
 };
 
 }  // namespace oneflow

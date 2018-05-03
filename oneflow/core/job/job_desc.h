@@ -30,12 +30,13 @@ class JobDesc final {
   int32_t CpuDeviceNum() const { return resource_.cpu_device_num(); }
   void SetCpuDeviceNum(int32_t val) { resource_.set_cpu_device_num(val); }
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
+  int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t CommNetWorkerNum() const;
   int32_t PersistenceWorkerNum() const;
   bool IsTrain() const { return job_conf_.has_train_conf(); }
   bool IsPredict() const { return job_conf_.has_predict_conf(); }
-  int32_t SinglePieceSize() const { return job_conf_.single_piece_size(); }
-  int32_t ParallelPieceSize() const;
+  int64_t PieceSize() const;
+  int64_t PieceSizeInOneDataPart() const;
   int64_t piece_num_of_experiment_phase() const;
   float available_zone_mem_ratio() const;
   uint64_t persistence_buffer_byte_size() const;
@@ -46,12 +47,12 @@ class JobDesc final {
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
   int32_t NumOfBatchesInSnapshot() const;
-  int32_t NumOfPiecesInBatch() const;
   int32_t Staleness() const;
   int64_t TotalBatchNum() const;
   const InitializerConf* DefaultInitializerConf() const;
   int32_t PieceNumOfPrintLoss() const;
-  int32_t BatchSize() const;
+  int64_t BatchSize() const;
+  int64_t NumOfPiecesInBatch() const;
   float L1() const;
   float L2() const;
 

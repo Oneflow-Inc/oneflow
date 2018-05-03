@@ -14,17 +14,15 @@ class SparseSoftmaxCrossEntropyLossKernel final
   ~SparseSoftmaxCrossEntropyLossKernel() = default;
 
  private:
-  void VirtualLossForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
-  const LossKernelConf& GetLossKernelConf(
-      const KernelConf& kernel_conf) const override;
+  void VirtualLossForwardDataContent(const KernelCtx&,
+                                     std::function<Blob*(const std::string&)>) const override;
+  const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const override;
 };
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct SparseSoftmaxCrossEntropyLossKernelUtil {
-  static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w,
-                          const LabelType* label, PredType* in_diff);
+  static void BackwardSub(DeviceCtx* ctx, const int64_t n, const int64_t w, const LabelType* label,
+                          PredType* in_diff);
 };
 
 }  // namespace oneflow

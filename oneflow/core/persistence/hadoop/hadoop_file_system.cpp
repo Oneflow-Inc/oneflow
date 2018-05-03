@@ -29,8 +29,7 @@ namespace internal {
 
 #ifdef PLATFORM_POSIX
 
-bool GetSymbolFromLibrary(void* handle, const char* symbol_name,
-                          void** symbol) {
+bool GetSymbolFromLibrary(void* handle, const char* symbol_name, void** symbol) {
   *symbol = dlsym(handle, symbol_name);
   if (!*symbol) {
     PLOG(WARNING) << dlerror();
@@ -58,8 +57,7 @@ bool LoadLibrary(const char* library_filename, void** handle) {
 
   std::wstring ws_file_name(WindowsFileSystem::Utf8ToWideChar(file_name));
 
-  HMODULE hModule =
-      LoadLibraryExW(ws_file_name.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
+  HMODULE hModule = LoadLibraryExW(ws_file_name.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
   if (!hModule) {
     PLOG(WARNING) << file_name + "not found";
     return false;
@@ -68,8 +66,7 @@ bool LoadLibrary(const char* library_filename, void** handle) {
   return true;
 }
 
-bool GetSymbolFromLibrary(void* handle, const char* symbol_name,
-                          void** symbol) {
+bool GetSymbolFromLibrary(void* handle, const char* symbol_name, void** symbol) {
   FARPROC found_symbol;
   found_symbol = GetProcAddress((HMODULE)handle, symbol_name);
   if (found_symbol == NULL) {
@@ -87,8 +84,7 @@ bool GetSymbolFromLibrary(void* handle, const char* symbol_name,
 template<typename R, typename... Args>
 bool BindFunc(void* handle, const char* name, std::function<R(Args...)>* func) {
   void* symbol_ptr = nullptr;
-  FS_RETURN_FALSE_IF_FALSE(
-      internal::GetSymbolFromLibrary(handle, name, &symbol_ptr));
+  FS_RETURN_FALSE_IF_FALSE(internal::GetSymbolFromLibrary(handle, name, &symbol_ptr));
   *func = reinterpret_cast<R (*)(Args...)>(symbol_ptr);
   return true;
 }
@@ -96,8 +92,7 @@ bool BindFunc(void* handle, const char* name, std::function<R(Args...)>* func) {
 void LibHDFS::LoadAndBind() {
   auto TryLoadAndBind = [this](const char* name, void** handle) -> bool {
     FS_RETURN_FALSE_IF_FALSE(internal::LoadLibrary(name, handle));
-#define BIND_HDFS_FUNC(function) \
-  FS_RETURN_FALSE_IF_FALSE(BindFunc(*handle, #function, &function));
+#define BIND_HDFS_FUNC(function) FS_RETURN_FALSE_IF_FALSE(BindFunc(*handle, #function, &function));
 
     BIND_HDFS_FUNC(hdfsBuilderConnect);
     BIND_HDFS_FUNC(hdfsNewBuilder);
@@ -167,14 +162,9 @@ bool HadoopFileSystem::Connect(hdfsFS* fs) {
 
 class HDFSRandomAccessFile : public RandomAccessFile {
  public:
-  HDFSRandomAccessFile(const std::string& filename,
-                       const std::string& hdfs_filename, LibHDFS* hdfs,
+  HDFSRandomAccessFile(const std::string& filename, const std::string& hdfs_filename, LibHDFS* hdfs,
                        hdfsFS fs, hdfsFile file)
-      : filename_(filename),
-        hdfs_filename_(hdfs_filename),
-        hdfs_(hdfs),
-        fs_(fs),
-        file_(file) {}
+      : filename_(filename), hdfs_filename_(hdfs_filename), hdfs_(hdfs), fs_(fs), file_(file) {}
 
   ~HDFSRandomAccessFile() override {
     if (file_ != nullptr) {
@@ -190,8 +180,8 @@ class HDFSRandomAccessFile : public RandomAccessFile {
       // We lock inside the loop rather than outside so we don't block other
       // concurrent readers.
       std::unique_lock<std::mutex> lock(mu_);
-      tSize r = hdfs_->hdfsPread(fs_, file_, static_cast<tOffset>(offset), dst,
-                                 static_cast<tSize>(n));
+      tSize r =
+          hdfs_->hdfsPread(fs_, file_, static_cast<tOffset>(offset), dst, static_cast<tSize>(n));
       if (r > 0) {
         dst += r;
         n -= r;
@@ -201,10 +191,8 @@ class HDFSRandomAccessFile : public RandomAccessFile {
         // If writers are streaming contents while others are concurrently
         // reading, HDFS requires that we reopen the file to see updated
         // contents.
-        PCHECK(file_ == nullptr || hdfs_->hdfsCloseFile(fs_, file_) == 0)
-            << filename_;
-        file_ =
-            hdfs_->hdfsOpenFile(fs_, hdfs_filename_.c_str(), O_RDONLY, 0, 0, 0);
+        PCHECK(file_ == nullptr || hdfs_->hdfsCloseFile(fs_, file_) == 0) << filename_;
+        file_ = hdfs_->hdfsOpenFile(fs_, hdfs_filename_.c_str(), O_RDONLY, 0, 0, 0);
         PCHECK(file_ != nullptr) << filename_;
         eof_retried = true;
       } else if (eof_retried && r == 0) {
@@ -229,23 +217,20 @@ class HDFSRandomAccessFile : public RandomAccessFile {
   mutable hdfsFile file_;
 };
 
-void HadoopFileSystem::NewRandomAccessFile(
-    const std::string& fname, std::unique_ptr<RandomAccessFile>* result) {
+void HadoopFileSystem::NewRandomAccessFile(const std::string& fname,
+                                           std::unique_ptr<RandomAccessFile>* result) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
 
-  hdfsFile file =
-      hdfs_->hdfsOpenFile(fs, TranslateName(fname).c_str(), O_RDONLY, 0, 0, 0);
+  hdfsFile file = hdfs_->hdfsOpenFile(fs, TranslateName(fname).c_str(), O_RDONLY, 0, 0, 0);
   PCHECK(file != nullptr) << fname;
-  result->reset(
-      new HDFSRandomAccessFile(fname, TranslateName(fname), hdfs_, fs, file));
+  result->reset(new HDFSRandomAccessFile(fname, TranslateName(fname), hdfs_, fs, file));
   CHECK_NOTNULL(result->get());
 }
 
 class HDFSWritableFile : public WritableFile {
  public:
-  HDFSWritableFile(const std::string& fname, LibHDFS* hdfs, hdfsFS fs,
-                   hdfsFile file)
+  HDFSWritableFile(const std::string& fname, LibHDFS* hdfs, hdfsFS fs, hdfsFile file)
       : filename_(fname), hdfs_(hdfs), fs_(fs), file_(file) {}
 
   ~HDFSWritableFile() override {
@@ -253,8 +238,7 @@ class HDFSWritableFile : public WritableFile {
   }
 
   void Append(const char* data, size_t n) override {
-    PCHECK(hdfs_->hdfsWrite(fs_, file_, data, static_cast<tSize>(n)) != -1)
-        << filename_;
+    PCHECK(hdfs_->hdfsWrite(fs_, file_, data, static_cast<tSize>(n)) != -1) << filename_;
   }
 
   void Close() override {
@@ -265,9 +249,7 @@ class HDFSWritableFile : public WritableFile {
     PCHECK(result == 0) << filename_;
   }
 
-  void Flush() override {
-    PCHECK(hdfs_->hdfsHFlush(fs_, file_) == 0) << filename_;
-  }
+  void Flush() override { PCHECK(hdfs_->hdfsHFlush(fs_, file_) == 0) << filename_; }
 
  private:
   std::string filename_;
@@ -281,20 +263,19 @@ void HadoopFileSystem::NewWritableFile(const std::string& fname,
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
 
-  hdfsFile file =
-      hdfs_->hdfsOpenFile(fs, TranslateName(fname).c_str(), O_WRONLY, 0, 0, 0);
+  hdfsFile file = hdfs_->hdfsOpenFile(fs, TranslateName(fname).c_str(), O_WRONLY, 0, 0, 0);
   PCHECK(file != nullptr) << fname;
   result->reset(new HDFSWritableFile(fname, hdfs_, fs, file));
   CHECK_NOTNULL(result->get());
 }
 
-void HadoopFileSystem::NewAppendableFile(
-    const std::string& fname, std::unique_ptr<WritableFile>* result) {
+void HadoopFileSystem::NewAppendableFile(const std::string& fname,
+                                         std::unique_ptr<WritableFile>* result) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
 
-  hdfsFile file = hdfs_->hdfsOpenFile(fs, TranslateName(fname).c_str(),
-                                      O_WRONLY | O_APPEND, 0, 0, 0);
+  hdfsFile file =
+      hdfs_->hdfsOpenFile(fs, TranslateName(fname).c_str(), O_WRONLY | O_APPEND, 0, 0, 0);
   PCHECK(file != nullptr) << fname;
   result->reset(new HDFSWritableFile(fname, hdfs_, fs, file));
   CHECK_NOTNULL(result->get());
@@ -317,15 +298,12 @@ std::vector<std::string> HadoopFileSystem::ListDir(const std::string& dir) {
   CHECK(IsDirectory(dir));
 
   int entries = 0;
-  hdfsFileInfo* info =
-      hdfs_->hdfsListDirectory(fs, TranslateName(dir).c_str(), &entries);
+  hdfsFileInfo* info = hdfs_->hdfsListDirectory(fs, TranslateName(dir).c_str(), &entries);
   if (info == nullptr) {
     // Assume it's an empty directory.
     return result;
   }
-  for (int i = 0; i < entries; i++) {
-    result.push_back(Basename(info[i].mName));
-  }
+  for (int i = 0; i < entries; i++) { result.push_back(Basename(info[i].mName)); }
   hdfs_->hdfsFreeFileInfo(info, entries);
   return result;
 }
@@ -333,17 +311,14 @@ std::vector<std::string> HadoopFileSystem::ListDir(const std::string& dir) {
 void HadoopFileSystem::DelFile(const std::string& fname) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
-  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(fname).c_str(), /*recursive=*/0)
-         == 0)
-      << fname;
+  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(fname).c_str(), /*recursive=*/0) == 0) << fname;
 }
 
 void HadoopFileSystem::CreateDir(const std::string& dir) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
 
-  PCHECK(hdfs_->hdfsCreateDirectory(fs, TranslateName(dir).c_str()) == 0)
-      << dir;
+  PCHECK(hdfs_->hdfsCreateDirectory(fs, TranslateName(dir).c_str()) == 0) << dir;
 }
 
 void HadoopFileSystem::DeleteDir(const std::string& dir) {
@@ -355,26 +330,21 @@ void HadoopFileSystem::DeleteDir(const std::string& dir) {
   // a race condition where a file may be added after this check, in which
   // case the directory will still be deleted.
   int entries = 0;
-  hdfsFileInfo* info =
-      hdfs_->hdfsListDirectory(fs, TranslateName(dir).c_str(), &entries);
+  hdfsFileInfo* info = hdfs_->hdfsListDirectory(fs, TranslateName(dir).c_str(), &entries);
   if (info != nullptr) { hdfs_->hdfsFreeFileInfo(info, entries); }
   // Due to HDFS bug HDFS-8407, we can't distinguish between an error and empty
   // folder, expscially for Kerberos enable setup, EAGAIN is quite common
   // when the call is actually successful. Check again by Stat.
   if (info == nullptr && errno != 0) { CHECK(IsDirectory(dir)); }
   PCHECK(entries == 0) << dir << "Cannot delete a non-empty directory.";
-  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(dir).c_str(), /*recursive=*/1)
-         == 0)
-      << dir;
+  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(dir).c_str(), /*recursive=*/1) == 0) << dir;
 }
 
 void HadoopFileSystem::RecursivelyDeleteDir(const std::string& dirname) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
 
-  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(dirname).c_str(), /*recursive=*/1)
-         == 0)
-      << dirname;
+  PCHECK(hdfs_->hdfsDelete(fs, TranslateName(dirname).c_str(), /*recursive=*/1) == 0) << dirname;
 }
 
 uint64_t HadoopFileSystem::GetFileSize(const std::string& fname) {
@@ -388,19 +358,15 @@ uint64_t HadoopFileSystem::GetFileSize(const std::string& fname) {
   return ret;
 }
 
-void HadoopFileSystem::RenameFile(const std::string& old_name,
-                                  const std::string& new_name) {
+void HadoopFileSystem::RenameFile(const std::string& old_name, const std::string& new_name) {
   hdfsFS fs = nullptr;
   CHECK(Connect(&fs));
 
-  PCHECK(
-      hdfs_->hdfsExists(fs, TranslateName(new_name).c_str()) != 0
-      || hdfs_->hdfsDelete(fs, TranslateName(new_name).c_str(), /*recursive=*/0)
-             == 0)
+  PCHECK(hdfs_->hdfsExists(fs, TranslateName(new_name).c_str()) != 0
+         || hdfs_->hdfsDelete(fs, TranslateName(new_name).c_str(), /*recursive=*/0) == 0)
       << new_name;
 
-  PCHECK(hdfs_->hdfsRename(fs, TranslateName(old_name).c_str(),
-                           TranslateName(new_name).c_str())
+  PCHECK(hdfs_->hdfsRename(fs, TranslateName(old_name).c_str(), TranslateName(new_name).c_str())
          == 0)
       << old_name;
 }

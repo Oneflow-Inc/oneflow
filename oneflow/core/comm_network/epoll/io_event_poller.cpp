@@ -14,8 +14,7 @@ IOEventPoller::IOEventPoller() {
   io_handlers_.clear();
   break_epoll_loop_fd_ = eventfd(0, 0);
   PCHECK(break_epoll_loop_fd_ != -1);
-  AddFdWithOnlyReadHandler(break_epoll_loop_fd_,
-                           []() { LOG(INFO) << "Break Epoll Loop"; });
+  AddFdWithOnlyReadHandler(break_epoll_loop_fd_, []() { LOG(INFO) << "Break Epoll Loop"; });
 }
 
 IOEventPoller::~IOEventPoller() {
@@ -32,14 +31,11 @@ void IOEventPoller::AddFd(int fd, std::function<void()> read_handler,
   AddFd(fd, &read_handler, &write_handler);
 }
 
-void IOEventPoller::AddFdWithOnlyReadHandler(
-    int fd, std::function<void()> read_handler) {
+void IOEventPoller::AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler) {
   AddFd(fd, &read_handler, nullptr);
 }
 
-void IOEventPoller::Start() {
-  thread_ = std::thread(&IOEventPoller::EpollLoop, this);
-}
+void IOEventPoller::Start() { thread_ = std::thread(&IOEventPoller::EpollLoop, this); }
 
 void IOEventPoller::Stop() {
   uint64_t break_epoll_loop_event = 1;

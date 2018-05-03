@@ -15,14 +15,13 @@ class LossPrintOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override {
     if (input_bn == "loss_acc") {
-      return op_conf().loss_print_conf().loss_lbn();
+      return op_conf().loss_print_conf().loss_lbi();
     } else if (input_bn == "reduction_acc") {
-      return op_conf().loss_print_conf().reduction_lbn();
+      return op_conf().loss_print_conf().reduction_lbi();
     } else {
       UNIMPLEMENTED();
-      return "";
     }
   }
 };

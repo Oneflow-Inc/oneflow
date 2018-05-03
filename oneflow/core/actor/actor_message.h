@@ -27,10 +27,8 @@ class ActorMsg final {
   ~ActorMsg() = default;
 
   // Build Msg
-  static ActorMsg BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
-                                          Regst*);
-  static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer,
-                                          Regst*);
+  static ActorMsg BuildRegstMsgToConsumer(int64_t producer, int64_t consumer, Regst*);
+  static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer, Regst*);
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
 

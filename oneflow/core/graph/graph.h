@@ -24,16 +24,13 @@ class Graph {
 
   void BfsForEachNode(
       const std::list<NodeType*>& starts,
-      const std::function<
-          void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
       const std::function<void(NodeType*)>& Handler) const;
 
   void TopoForEachNode(
       const std::list<NodeType*>& starts,
-      const std::function<void(
-          NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
-      const std::function<void(
-          NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       const std::function<void(NodeType*)>& Handler) const;
 
   // Getters
@@ -65,15 +62,13 @@ class Graph {
 };
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ForEachNode(
-    std::function<void(NodeType*)> NodeHandler) const {
+void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeHandler) const {
   for (auto& x : nodes_) { NodeHandler(x.get()); }
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ForEachNode(
-    std::function<void(NodeType*)> NodeHandler,
-    std::function<bool(NodeType*)> IsNodeReady) const {
+void Graph<NodeType, EdgeType>::ForEachNode(std::function<void(NodeType*)> NodeHandler,
+                                            std::function<bool(NodeType*)> IsNodeReady) const {
   std::queue<NodeType*> node_queue;
   HashSet<NodeType*> nodes_pushed;
   for (auto& x : nodes_) {
@@ -87,8 +82,7 @@ void Graph<NodeType, EdgeType>::ForEachNode(
     node_queue.pop();
     NodeHandler(cur_node);
     cur_node->ForEachNodeOnInOutEdge([&](NodeType* candidate) {
-      if (nodes_pushed.find(candidate) == nodes_pushed.end()
-          && IsNodeReady(candidate)) {
+      if (nodes_pushed.find(candidate) == nodes_pushed.end() && IsNodeReady(candidate)) {
         node_queue.push(candidate);
         CHECK(nodes_pushed.insert(candidate).second);
       }
@@ -97,14 +91,13 @@ void Graph<NodeType, EdgeType>::ForEachNode(
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::TopoForEachNode(
-    std::function<void(NodeType*)> NodeHandler) const {
+void Graph<NodeType, EdgeType>::TopoForEachNode(std::function<void(NodeType*)> NodeHandler) const {
   std::list<NodeType*> starts;
   ForEachNode([&](NodeType* node) {
     if (node->in_edges().empty()) { starts.push_back(node); }
   });
-  TopoForEachNode(starts, &NodeType::ForEachNodeOnInEdge,
-                  &NodeType::ForEachNodeOnOutEdge, NodeHandler);
+  TopoForEachNode(starts, &NodeType::ForEachNodeOnInEdge, &NodeType::ForEachNodeOnOutEdge,
+                  NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
@@ -114,14 +107,16 @@ void Graph<NodeType, EdgeType>::ReverseTopoForEachNode(
   ForEachNode([&](NodeType* node) {
     if (node->out_edges().empty()) { starts.push_back(node); }
   });
-  TopoForEachNode(starts, &NodeType::ForEachNodeOnOutEdge,
-                  &NodeType::ForEachNodeOnInEdge, NodeHandler);
+  TopoForEachNode(starts, &NodeType::ForEachNodeOnOutEdge, &NodeType::ForEachNodeOnInEdge,
+                  NodeHandler);
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ForEachEdge(
-    std::function<void(EdgeType*)> EdgeHandler) const {
-  for (auto& x : edges_) { EdgeHandler(x.get()); }
+void Graph<NodeType, EdgeType>::ForEachEdge(std::function<void(EdgeType*)> EdgeHandler) const {
+  for (auto& x : edges_) {
+    if (x->src_node() == nullptr && x->dst_node() == nullptr) { continue; }
+    EdgeHandler(x.get());
+  }
 }
 
 template<typename NodeType, typename EdgeType>
@@ -159,9 +154,7 @@ template<typename NodeType, typename EdgeType>
 template<typename StreamT>
 void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
   out_stream << "digraph {\n";
-  this->ForEachNode([&](NodeType* node) {
-    out_stream << "\"" << node->VisualStr() << "\"\n";
-  });
+  this->ForEachNode([&](NodeType* node) { out_stream << "\"" << node->VisualStr() << "\"\n"; });
   this->ForEachEdge([&](const EdgeType* edge) {
     out_stream << "\"" << edge->src_node()->VisualStr() << "\" -> "
                << "\"" << edge->dst_node()->VisualStr() << "\""
@@ -171,28 +164,23 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
 }
 
 template<typename NodeType, typename EdgeType>
-void Graph<NodeType, EdgeType>::ToDotWithFilePath(
-    const std::string& file_path) {
+void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
   std::string dir_name = Dirname(file_path);
-  if (!LocalFS()->IsDirectory(dir_name)) {
-    LocalFS()->RecursivelyCreateDir(dir_name);
-  }
+  if (!LocalFS()->IsDirectory(dir_name)) { LocalFS()->RecursivelyCreateDir(dir_name); }
   PersistentOutStream out_stream(LocalFS(), file_path);
   ToDotWithStream(out_stream);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithAutoFilePath() {
-  std::string file_path =
-      LogDir() + "/dot/" + TypeName() + "/" + NewUniqueId() + ".dot";
+  std::string file_path = LogDir() + "/dot/" + TypeName() + "/" + NewUniqueId() + ".dot";
   ToDotWithFilePath(file_path);
 }
 
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::BfsForEachNode(
     const std::list<NodeType*>& starts,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>&
-        ForEachNext,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachNext,
     const std::function<void(NodeType*)>& Handler) const {
   HashMap<NodeType*, bool> has_queued;
   std::queue<NodeType*> queue;
@@ -216,10 +204,8 @@ void Graph<NodeType, EdgeType>::BfsForEachNode(
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::TopoForEachNode(
     const std::list<NodeType*>& starts,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>&
-        ForEachInNode,
-    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>&
-        ForEachOutNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<void(NodeType*)>& Handler) const {
   HashMap<NodeType*, bool> has_queued;
   std::queue<NodeType*> queue;

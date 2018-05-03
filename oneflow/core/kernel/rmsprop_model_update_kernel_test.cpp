@@ -8,12 +8,10 @@ namespace test {
 namespace {
 
 template<DeviceType device_type, typename T>
-Kernel* BuildRMSPropMdUpdateKernel(float learning_rate, float decay_rate,
-                                   float epsilon) {
+Kernel* BuildRMSPropMdUpdateKernel(float learning_rate, float decay_rate, float epsilon) {
   OperatorConf op_conf;
   op_conf.set_name("rmsprop_model_update_test");
-  RMSPropModelUpdateOpConf* rmsprop_md_update_conf =
-      op_conf.mutable_rmsprop_mdupdt_conf();
+  RMSPropModelUpdateOpConf* rmsprop_md_update_conf = op_conf.mutable_rmsprop_mdupdt_conf();
   rmsprop_md_update_conf->set_learning_rate(learning_rate);
   rmsprop_md_update_conf->set_decay_rate(decay_rate);
   rmsprop_md_update_conf->set_epsilon(epsilon);
@@ -34,12 +32,10 @@ void InitJobDesc(int32_t piece_size, int32_t num_of_pieces_in_batch) {
 }
 
 template<DeviceType device_type, typename T>
-std::function<Blob*(const std::string&)> BuildBnInOp2Blob(
-    std::vector<int64_t>& dim_vec) {
+std::function<Blob*(const std::string&)> BuildBnInOp2Blob(std::vector<int64_t>& dim_vec) {
   using KTC = KTCommon<device_type, T>;
 
-  BlobDesc* blob_desc =
-      new BlobDesc(Shape(dim_vec), GetDataType<T>::value, false);
+  BlobDesc* blob_desc = new BlobDesc(Shape(dim_vec), GetDataType<T>::value, false);
 
   auto bn2blob = new HashMap<std::string, Blob*>;
   (*bn2blob)["model"] = KTC::CreateBlobWithSameVal(blob_desc, 2);
@@ -62,8 +58,8 @@ void TestRMSPropMdUpdateKernel() {
   const float decay_rate = 1.0f / 2;
   const float epsilon = 3.0f;
   auto BnInOp2Blob = BuildBnInOp2Blob<device_type, T>(dim_vec);
-  auto rmsprop_md_update_kernel = BuildRMSPropMdUpdateKernel<device_type, T>(
-      learning_rate, decay_rate, epsilon);
+  auto rmsprop_md_update_kernel =
+      BuildRMSPropMdUpdateKernel<device_type, T>(learning_rate, decay_rate, epsilon);
   int32_t piece_size = 1;
   int32_t num_of_pieces_in_batch = 2;
   InitJobDesc(piece_size, num_of_pieces_in_batch);
@@ -84,8 +80,8 @@ void TestRMSPropMdUpdateKernel() {
 TEST(RMSPropMdUpdateKernel, model_update) {
 #define MAKE_ENTRY(device_type, type_pair) \
   test::TestRMSPropMdUpdateKernel<device_type, OF_PP_PAIR_FIRST(type_pair)>();
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, OF_PP_INTERNAL_SEQ_PRODUCT(
-                                       DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ))
+  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY,
+                       OF_PP_INTERNAL_SEQ_PRODUCT(DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ))
 }
 
 }  // namespace oneflow

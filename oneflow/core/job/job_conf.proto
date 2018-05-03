@@ -11,7 +11,7 @@ message TrainConf {
   required int64 total_batch_num = 4;
   optional InitializerConf default_initializer_conf = 5;
   optional int64 piece_num_of_print_loss = 6 [default = -1];
-  required int64 num_of_pieces_in_batch = 7;
+  required int64 batch_size = 7; // batch_size % piece_size = 0
   optional float l1 = 8 [default = 0];
   optional float l2 = 9 [default = 0];
   required NormalModelUpdateOpUserConf model_update_conf = 10;
@@ -39,8 +39,8 @@ message JobConf {
   required string resource_filepath = 2;
   required string placement_filepath = 3;
   required GlobalFSConf globalfs_conf = 4;
-  required int32 single_piece_size = 5;
-  required int32 data_part_num = 6;
+  required int64 piece_size = 5;
+  required int32 data_part_num = 6; // piece_size % data_part_num = 0
   optional string model_load_snapshot_path = 7 [default = ""];
   optional int32 max_data_id_length = 8 [default = 0];
   optional bool use_rdma = 9 [default = false];

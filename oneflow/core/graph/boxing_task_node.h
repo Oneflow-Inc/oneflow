@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ChainNode;
+class LogicalNode;
 
 class BoxingTaskNode : public TaskNode {
  public:
@@ -25,12 +25,11 @@ class BoxingTaskNode : public TaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
 
-#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                 \
-  void BldBoxingOpConfWith##x(const std::string& lbn,                        \
-                              const std::vector<EdgeInfo>& sorted_in_edges,  \
-                              const ChainNode* in_chain,                     \
-                              const std::vector<EdgeInfo>& sorted_out_edges, \
-                              const ChainNode* out_chain, BoxingOpConf*)
+#define DECLARE_BLD_BOXING_OP_CONF_METHOD(x)                                        \
+  void BldBoxingOpConfWith##x(                                                      \
+      const LogicalBlobId& lbi, const std::vector<EdgeInfo>& sorted_in_edges,       \
+      const LogicalNode* in_logical, const std::vector<EdgeInfo>& sorted_out_edges, \
+      const LogicalNode* out_logical, BoxingOpConf*)
 
 #define DECLARE_VIRTUAL_BLD_BOXING_OP_CONF_METHOD(x) \
   virtual DECLARE_BLD_BOXING_OP_CONF_METHOD(x) = 0
@@ -45,23 +44,22 @@ class BoxingTaskNode : public TaskNode {
   DECLARE_BLD_BOXING_OP_CONF_METHOD(AddAndClone);
 
  private:
-  void InitChain2SortedEdgeInfo(
-      const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)() const,
-      TaskEdge* (TaskNode::*SoleEdge)() const,
-      TaskNode* (TaskEdge::*SoleNode)() const,
-      HashMap<const ChainNode*, std::vector<EdgeInfo>>*);
-  void BuildWithChainPair(const ChainNode* in_chain,
-                          const std::vector<EdgeInfo>& sorted_in_edges,
-                          const ChainNode* out_chain,
-                          const std::vector<EdgeInfo>& sorted_out_edges);
-  std::shared_ptr<Operator> NewBoxingOp(
-      const std::string& lbn, const ChainNode* in_chain,
-      const ChainNode* out_chain, const std::vector<EdgeInfo>& sorted_in_edges,
-      const std::vector<EdgeInfo>& sorted_out_edges);
+  void InitLogical2SortedEdgeInfo(const std::unordered_set<TaskEdge*>& (TaskNode::*GetEdges)()
+                                      const,
+                                  TaskEdge* (TaskNode::*SoleEdge)() const,
+                                  TaskNode* (TaskEdge::*SoleNode)() const,
+                                  HashMap<const LogicalNode*, std::vector<EdgeInfo>>*);
+  void BuildWithLogicalPair(const LogicalNode* in_logical,
+                            const std::vector<EdgeInfo>& sorted_in_edges,
+                            const LogicalNode* out_logical,
+                            const std::vector<EdgeInfo>& sorted_out_edges);
+  std::shared_ptr<Operator> NewBoxingOp(const LogicalBlobId& lbi, const LogicalNode* in_logical,
+                                        const LogicalNode* out_logical,
+                                        const std::vector<EdgeInfo>& sorted_in_edges,
+                                        const std::vector<EdgeInfo>& sorted_out_edges);
 };
 
-#define OVERRIDE_BLD_BOXING_OP_METHOD(x) \
-  DECLARE_BLD_BOXING_OP_CONF_METHOD(x) override
+#define OVERRIDE_BLD_BOXING_OP_METHOD(x) DECLARE_BLD_BOXING_OP_CONF_METHOD(x) override
 
 class InBoxingTaskNode final : public BoxingTaskNode {
  public:

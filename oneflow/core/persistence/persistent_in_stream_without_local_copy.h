@@ -16,8 +16,7 @@ class PersistentInStreamWithoutLocalCopy : public PersistentInStream {
   int32_t Read(char* s, size_t n) override;
 
  protected:
-  PersistentInStreamWithoutLocalCopy(fs::FileSystem*,
-                                     const std::string& file_path,
+  PersistentInStreamWithoutLocalCopy(fs::FileSystem*, const std::string& file_path,
                                      uint64_t offset);
   virtual void UpdateBuffer();
   virtual void AddNForCurFilePos(uint64_t n) = 0;

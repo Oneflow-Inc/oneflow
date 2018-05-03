@@ -6,8 +6,7 @@
 
 namespace oneflow {
 
-class AveragePooling3DOp final : public PoolingNdOp<3>,
-                                 public AveragePoolingOp {
+class AveragePooling3DOp final : public PoolingNdOp<3>, public AveragePoolingOp {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AveragePooling3DOp);
   AveragePooling3DOp() = default;

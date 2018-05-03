@@ -1,24 +1,35 @@
 #ifndef ONEFLOW_CORE_GRAPH_NORMAL_FORWARD_COMPUTE_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_NORMAL_FORWARD_COMPUTE_TASK_NODE_H_
 
-#include "oneflow/core/graph/forward_compute_task_node.h"
+#include "oneflow/core/graph/compute_task_node.h"
 
 namespace oneflow {
 
-class NormalForwardCompTaskNode final : public ForwardCompTaskNode {
+class NormalForwardCompTaskNode final : public CompTaskNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalForwardCompTaskNode);
   NormalForwardCompTaskNode() = default;
   ~NormalForwardCompTaskNode() = default;
 
-  TaskType GetTaskType() const override { return TaskType::kNormalForward; }
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
   bool IsReadyForBuild() override;
 
+  TaskType GetTaskType() const override { return TaskType::kNormalForward; }
+  virtual void ToProto(TaskProto*) override;
+
+  void set_random_seed(int64_t random_seed) { random_seed_ = random_seed; }
+
  private:
-  void VirtualConsumeRegstOnInEdge(TaskEdge* edge) override;
-  void VirtualBuildExecGphStructAndBindInRegst() override;
-  void VirtualBuildOutRegst() override;
-  void VirtualBuildExtraRegsts() override;
+  void BuildExecGphAndRegst() override;
+  void LockRegsts() override;
+  void BuildExecGphStructAndBindInRegst();
+  void BuildOutRegst();
+  void BuildActivationRegst();
+  void BuildModelAndTmpRegsts();
+  void BuildForwardModelRegsts();
+
+  int64_t random_seed_;
 };
 
 }  // namespace oneflow

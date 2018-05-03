@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_OPERATOR_DECODE_OFRECORD_OP_H_
 
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
@@ -13,21 +14,20 @@ class DecodeOFRecordOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+
+  LogicalNode* NewProperLogicalNode() override { return new DecodeLogicalNode; }
+
   bool IsDecodeOp() const override { return true; }
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
-  }
-  std::string obn2lbn(const std::string& output_bn) const override;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
 }  // namespace oneflow

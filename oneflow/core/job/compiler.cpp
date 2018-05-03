@@ -27,15 +27,15 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
   }
   for (const TaskProto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
-      out_stream << "task" << std::to_string(task_proto.task_id())
-                 << "->regst_desc"
-                 << std::to_string(pair.second.regst_desc_id()) << "[label=\""
-                 << pair.first << "\"];\n";
+      out_stream << "task" << std::to_string(task_proto.task_id()) << "->regst_desc"
+                 << std::to_string(pair.second.regst_desc_id()) << "[label=\"" << pair.first
+                 << "\"];\n";
     }
     for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-      out_stream << "regst_desc" << std::to_string(pair.second) << "->task"
-                 << std::to_string(task_proto.task_id()) << "[label=\""
-                 << pair.first << "\"];\n";
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        out_stream << "regst_desc" << std::to_string(regst_desc_id) << "->task"
+                   << std::to_string(task_proto.task_id()) << "[label=\"" << pair.first << "\"];\n";
+      }
     }
   }
   out_stream << "}\n";
@@ -43,21 +43,18 @@ void ToDotFile(const Plan& plan, const std::string& filepath) {
 }  // namespace
 
 Plan Compiler::Compile() {
-  Global<LogicalGraph>::New();
   Plan plan = DoCompile();
-  Global<LogicalGraph>::Delete();
   return plan;
 }
 
 Plan Compiler::DoCompile() {
-  auto chain_gph =
-      of_make_unique<ChainGraph>(Global<JobDesc>::Get()->IsTrain());
-  auto task_gph = of_make_unique<TaskGraph>(std::move(chain_gph));
+  auto logical_gph = of_make_unique<LogicalGraph>(Global<JobDesc>::Get()->IsTrain());
+  int64_t total_mbn_num = logical_gph->total_mbn_num();
+  auto task_gph = of_make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::Build, _1),
-                        std::bind(&TaskNode::IsReadyForBuild, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::InferMemCaseOfProducedRegst, _1));
   Plan plan;
@@ -65,7 +62,7 @@ Plan Compiler::DoCompile() {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan.mutable_task()->Add());
   });
-  plan.set_total_mbn_num(Global<LogicalGraph>::Get()->total_mbn_num());
+  plan.set_total_mbn_num(total_mbn_num);
   ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
   return plan;
 }

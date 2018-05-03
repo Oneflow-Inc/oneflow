@@ -13,14 +13,11 @@ void SoftmaxOp::InitFromOpConf() {
   EnrollDataTmpBn("transpose_out_diff");
 }
 
-const PbMessage& SoftmaxOp::GetCustomizedConf() const {
-  return op_conf().softmax_conf();
-}
+const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
 
-void SoftmaxOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, DeviceType device_type,
-    std::function<void(OpContext*)> EnrollOpCtx) const {
+void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                               const ParallelContext* parallel_ctx,
+                               std::function<void(OpContext*)> EnrollOpCtx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // out
@@ -36,10 +33,8 @@ void SoftmaxOp::InferBlobDescs(
     // transpose blob
     BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_in");
     transpose_blob_desc->mut_shape() = in_blob_desc->shape();
-    transpose_blob_desc->mut_shape().Set(
-        op_ctx->axis, in_blob_desc->shape().At(op_ctx->dims - 1));
-    transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1,
-                                         op_ctx->transpose_cols);
+    transpose_blob_desc->mut_shape().Set(op_ctx->axis, in_blob_desc->shape().At(op_ctx->dims - 1));
+    transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
     transpose_blob_desc->set_data_type(in_blob_desc->data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
@@ -48,8 +43,7 @@ void SoftmaxOp::InferBlobDescs(
 
 void SoftmaxOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf,
-    const OpContext* op_ctx) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   SoftmaxKernelConf* conf = kernel_conf->mutable_softmax_conf();
   const SoftmaxOpCtx* softmax_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
   conf->set_axis(softmax_ctx->axis);

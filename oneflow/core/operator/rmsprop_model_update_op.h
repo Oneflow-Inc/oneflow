@@ -11,18 +11,13 @@ class RMSPropModelUpdateOp final : public NormalModelUpdtOp {
   RMSPropModelUpdateOp() = default;
   ~RMSPropModelUpdateOp() = default;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
 
  private:
   void MdUpdtVirtualInitFromOpConf() override;
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return kPackedBlobName;
-  }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return kPackedBlobName;
-  }
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
 };
 
 }  // namespace oneflow

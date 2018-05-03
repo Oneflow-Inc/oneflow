@@ -1,12 +1,13 @@
 #include "oneflow/core/graph/decode_compute_task_node.h"
-#include "oneflow/core/graph/chain_node.h"
+#include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
 void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", 1, 1);
-  std::shared_ptr<RegstDesc> out_regst = ProduceRegst("out");
-  for (TaskEdge* edge : out_edges()) { edge->AddRegst("out", out_regst); }
+  ProduceB121Regst("out");
+  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedB121Regst(edge, "out"); }
 }
 
 void DecodeCompTaskNode::ConsumeAllRegsts() {
@@ -18,27 +19,18 @@ void DecodeCompTaskNode::ConsumeAllRegsts() {
 }
 
 void DecodeCompTaskNode::BuildExecGphAndRegst() {
-  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = chain_node()->SoleOp();
-  const auto& data_output_lbns = chain_node()->data_output_lbns();
+  node->mut_op() = logical_node()->SoleOp();
   for (const std::string& obn : node->op()->output_bns()) {
-    const std::string& lbn = node->op()->Lbn4BnInOp(obn);
-    if (data_output_lbns.find(lbn) == data_output_lbns.end()) {
-      data_tmp_regst->AddLbn(lbn);
-      node->BindBnInOpAndRegst(obn, data_tmp_regst);
-    } else {
-      out_regst->AddLbn(lbn);
-      node->BindBnInOpAndRegst(obn, out_regst);
+    const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
+    if (TryAddLbiToB121RegstAndBindIt(node, obn, "out") == false) {
+      data_tmp_regst->AddLbi(lbi);
+      node->BindBnWithRegst(obn, data_tmp_regst);
     }
   }
-  for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-    const std::string& lbn = node->op()->Lbn4BnInOp(dtbn);
-    data_tmp_regst->AddLbn(lbn);
-    node->BindBnInOpAndRegst(dtbn, data_tmp_regst);
-  }
-  node->InferBlobDescs(parallel_ctx(), device_type());
+  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
+  node->InferBlobDescs(parallel_ctx());
 }
 
 }  // namespace oneflow
