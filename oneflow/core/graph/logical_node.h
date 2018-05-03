@@ -93,10 +93,6 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
     CHECK_EQ(lbis_.size(), 1);
     return lbis_.front();
   }
-  LogicalBlobId* MutSoleLbi() {
-    CHECK_EQ(lbis_.size(), 1);
-    return &lbis_.front();
-  }
 
   const std::vector<LogicalBlobId>& lbis() const { return lbis_; }
   std::vector<LogicalBlobId>& mut_lbis() { return lbis_; }
