@@ -21,8 +21,6 @@ class RuntimeCtx final {
   void DecreaseCounter(const std::string& name);
   void WaitUntilCntEqualZero(const std::string& name);
 
-  int32_t Staleness() const;
-
  private:
   friend class Global<RuntimeCtx>;
   RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase);

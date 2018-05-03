@@ -38,6 +38,7 @@ class NormalForwardCompActor final : public CompActor {
   Regst* model_regst_;
   Regst* model_tmp_regst_;
   Regst* pre_forward_model_regst_;
+  int32_t staleness_;
 };
 
 }  // namespace oneflow

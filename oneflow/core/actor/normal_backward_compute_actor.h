@@ -33,6 +33,8 @@ class NormalBackwardCompActor final : public CompActor {
   int64_t model_tmp_regst_desc_id_;
   std::queue<Regst*> model_regst_queue_;
   Regst* model_tmp_regst_;
+
+  int32_t staleness_;
 };
 
 }  // namespace oneflow
