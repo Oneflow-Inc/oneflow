@@ -1,6 +1,9 @@
 #include "oneflow/core/control/ctrl_server.h"
 #include "oneflow/core/actor/act_event_logger.h"
 #include "oneflow/core/job/profiler.h"
+#include "grpc/grpc_posix.h"
+
+DEFINE_bool(grpc_use_no_signal, false, "prevent GRPC library from using any signals");
 
 namespace oneflow {
 
@@ -21,6 +24,7 @@ CtrlServer::~CtrlServer() {
 }
 
 CtrlServer::CtrlServer(const std::string& server_addr) {
+  if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
   int port = ExtractPortFromAddr(server_addr);
   grpc::ServerBuilder server_builder;
   int bound_port = 0;
