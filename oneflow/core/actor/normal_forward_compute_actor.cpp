@@ -13,6 +13,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   if (forward_model_regst_desc_id_ != -1) {
     pre_forward_model_regst_ = GetCurWriteableRegst(forward_model_regst_desc_id_);
   }
+  staleness_ = -1;
   if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
     if (forward_model_regst_desc_id_ != -1) {
       AsyncInitModel();
@@ -72,7 +73,7 @@ void NormalForwardCompActor::Act() {
   });
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
-      int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_version_id);
+      int64_t last_piece_id = GetLastPieceIdForModelVersionId(staleness_, model_version_id);
       CHECK_LE(piece_id, last_piece_id);
       if (piece_id == last_piece_id) { AsyncReturnModelRegst(); }
     }
@@ -96,6 +97,8 @@ int NormalForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   Regst* regst = msg.regst();
   if (regst->regst_desc_id() == model_regst_desc_id_) {
     model_regst_ = regst;
+    CHECK_EQ(staleness_, -1);
+    staleness_ = model_regst_->regst_desc()->register_num() - 1;
   } else if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
     model_tmp_regst_ = regst;
   } else {
