@@ -12,7 +12,7 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
   if (Global<JobDesc>::Get()->IsTrain()) {
-    if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()) {
+    if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs() && GlobalFS() != LocalFS()) {
       in_stream_.reset(
           new CyclicPersistentInStreamWithLocalCopy(GlobalFS(), task_proto.data_path()));
     } else {

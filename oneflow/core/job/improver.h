@@ -41,10 +41,10 @@ class Improver final {
   void MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2regst_desc) const;
   double CalcMaxRegstDescDuration(
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
-
       const MemZoneRegstDescs& mz_regst_descs) const;
 
   AvailableMemDesc amd_;
+  std::vector<int32_t> record_load_task_num_;
 };
 
 }  // namespace oneflow
