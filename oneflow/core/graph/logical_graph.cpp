@@ -509,7 +509,7 @@ void LogicalGraph::BuildRecordLoadStruct() {
 
 void LogicalGraph::ConnectFwToBw() {
   ForEachLogicalNode<BackwardLogicalNode>([this](BackwardLogicalNode* bw_node) {
-    if (bw_node->SoleOp()->op_conf().has_clone_conf()) { return; }
+    if (bw_node->fw_node() == nullptr) { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
 }
