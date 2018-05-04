@@ -59,6 +59,8 @@ void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 
 bool Blob::IsColValid() const { return col_id() <= max_col_id(); }
 
+const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
+
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                                 \
   {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type),                       \
    [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token) { \

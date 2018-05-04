@@ -3,6 +3,7 @@
 
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/eigen_util.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
@@ -78,6 +79,8 @@ class Blob : public BlobIf {
   int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
   bool IsColValid() const;
+
+  const MemoryCase& mem_case() const;
 
  protected:
   Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
