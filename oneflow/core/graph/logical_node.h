@@ -166,35 +166,18 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
   LOGICAL_NODE_BOILERPLATE(NormalBackwardLogicalNode);
 };
 
-class RecordLoadLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(RecordLoadLogicalNode);
-};
+#define DECLARE_NAIVE_LOGICAL_NODE(name)  \
+  class name final : public LogicalNode { \
+   public:                                \
+    LOGICAL_NODE_BOILERPLATE(name);       \
+  }
 
-class DecodeLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(DecodeLogicalNode);
-};
-
-class LossLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(LossLogicalNode);
-};
-
-class PrintLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(PrintLogicalNode);
-};
-
-class LossAccLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(LossAccLogicalNode);
-};
-
-class LossPrintLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(LossPrintLogicalNode);
-};
+DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
 
 class NormalMdUpdtLogicalNode final : public LogicalNode {
  public:
@@ -210,15 +193,11 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
   uint32_t random_seed_;
 };
 
-class MdSaveLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(MdSaveLogicalNode);
-};
-
-class MdDiffAccLogicalNode final : public LogicalNode {
- public:
-  LOGICAL_NODE_BOILERPLATE(MdDiffAccLogicalNode);
-};
+DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 
 }  // namespace oneflow
 

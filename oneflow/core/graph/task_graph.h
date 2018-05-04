@@ -23,6 +23,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByP2PWithoutH2D);
 
  private:
   TaskNode* Build121BufTo(

@@ -133,6 +133,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, Mut121BufTask, AllocateCpuThrdId);
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByP2PWithoutH2D) { TODO(); }
+
 TaskNode* TaskGraph::Build121BufTo(
     TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
     std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
