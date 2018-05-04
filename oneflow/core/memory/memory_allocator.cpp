@@ -9,35 +9,23 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
   const int memset_val = 0;
   char* dptr = nullptr;
   const void* comm_net_token = nullptr;
-  if (mem_case.has_host_pageable_mem()) {
-    dptr = reinterpret_cast<char*>(malloc(size));
-    CHECK_NOTNULL(dptr);
-    memset(dptr, memset_val, size);
-  } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().used_by_device()) {
-#ifdef WITH_CUDA
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().used_by_device()) {
       CudaCheck(cudaMallocHost(&dptr, size));
-#else
-      UNIMPLEMENTED();
-#endif
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
     }
-    if (mem_case.host_pinned_mem().used_by_network()) {
+    if (mem_case.host_mem().used_by_network()) {
       comm_net_token = Global<CommNet>::Get()->RegisterMemory(dptr, size);
     }
     memset(dptr, memset_val, size);
-  }
-#ifdef WITH_CUDA
-  else if (mem_case.has_device_cuda_mem()) {
+  } else if (mem_case.has_device_cuda_mem()) {
     int32_t current_device_id;
     CudaCheck(cudaGetDevice(&current_device_id));
     CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
     CudaCheck(cudaMalloc(&dptr, size));
     CudaCheck(cudaMemset(dptr, memset_val, size));
-  }
-#endif
-  else {
+  } else {
     UNIMPLEMENTED();
   }
   return std::make_tuple(
@@ -46,31 +34,21 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
 }
 
 void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token, MemoryCase mem_case) {
-  if (mem_case.has_host_pageable_mem()) {
-    free(dptr);
-  } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().used_by_network()) {
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().used_by_network()) {
       Global<CommNet>::Get()->UnRegisterMemory(comm_net_token);
     }
-    if (mem_case.host_pinned_mem().used_by_device()) {
-#ifdef WITH_CUDA
+    if (mem_case.host_mem().used_by_device()) {
       CudaCheck(cudaFreeHost(dptr));
-#else
-      UNIMPLEMENTED();
-#endif
     } else {
       free(dptr);
     }
-  }
-#ifdef WITH_CUDA
-  else if (mem_case.has_device_cuda_mem()) {
-    int32_t current_device_id;
+  } else if (mem_case.has_device_cuda_mem()) {
+    int32_t current_device_id = -1;
     CudaCheck(cudaGetDevice(&current_device_id));
     CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
     CudaCheck(cudaFree(dptr));
-  }
-#endif
-  else {
+  } else {
     UNIMPLEMENTED();
   }
 }

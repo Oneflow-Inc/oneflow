@@ -100,42 +100,6 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
   for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
 
-static void SetHostPinnedMemoryAccordingToConsumers(const HashSet<const TaskNode*>& consumers,
-                                                    MemoryCase* mem_case) {
-  for (const TaskNode* consumer : consumers) {
-    if (consumer->GetTaskType() == kCopyCommNet) {
-      mem_case->mutable_host_pinned_mem()->set_used_by_network(true);
-    }
-    if (consumer->GetTaskType() == kCopyHd) {
-      mem_case->mutable_host_pinned_mem()->set_used_by_device(true);
-    }
-  }
-}
-
-void RegstDesc::InferMemCase() {
-  int64_t thrd_id = producer_->thrd_id();
-  if (auto cp_hd_producer = dynamic_cast<const CopyHdTaskNode*>(producer_)) {
-    if (cp_hd_producer->copy_type() == CopyHdOpConf::H2D) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(
-          Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id));
-    } else {
-      mem_case_.mutable_host_pinned_mem()->set_used_by_device(true);
-      SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
-    }
-  } else if (producer_->GetTaskType() == kCopyCommNet) {
-    mem_case_.mutable_host_pinned_mem()->set_used_by_network(true);
-    SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
-  } else {
-    if (producer_->device_type() == kGPU) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(
-          Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id));
-    } else {
-      mem_case_.mutable_host_pageable_mem();
-      SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
-    }
-  }
-}
-
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {

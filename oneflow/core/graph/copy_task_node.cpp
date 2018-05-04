@@ -27,6 +27,16 @@ void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Typ
   copy_type_ = copy_type;
 }
 
+void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+  if (copy_type_ == CopyHdOpConf::H2D) {
+    TaskNode::InitProducedRegstMemCase(mem_case);
+  } else if (copy_type_ == CopyHdOpConf::D2H) {
+    mem_case->mutable_host_mem()->set_used_by_device(true);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
@@ -37,6 +47,15 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
 void CopyCommNetTaskNode::Init(int64_t machine_id) {
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
+}
+
+void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+  mem_case->mutable_host_mem()->set_used_by_network(true);
+}
+
+void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
+  CHECK(mem_case->has_host_mem());
+  mem_case->mutable_host_mem()->set_used_by_network(true);
 }
 
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
