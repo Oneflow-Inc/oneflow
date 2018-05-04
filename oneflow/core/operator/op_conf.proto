@@ -534,6 +534,18 @@ message TransposeOpConf {
   repeated int32 perm = 3;
 }
 
+message ReduceScatterOpConf {
+  required int32 out_num = 1;
+};
+
+message ReduceAddOpConf {
+  required int32 in_num = 1;
+};
+
+message ReduceGatherOpConf {
+  required int32 in_num = 1;
+};
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -577,6 +589,9 @@ message OperatorConf {
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
+    ReduceScatterOpConf reduce_scatter_conf = 400;
+    ReduceAddOpConf reduce_add_conf = 401;
+    ReduceGatherOpConf reduce_gather_conf = 402;
   }
 }
 
