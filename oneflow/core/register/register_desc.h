@@ -42,9 +42,12 @@ class RegstDesc final {
   void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
   size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
 
+  // mem_case
+  const MemoryCase& mem_case() const { return mem_case_; }
+  MemoryCase* mut_mem_case() { return &mem_case_; }
+
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
-  void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
