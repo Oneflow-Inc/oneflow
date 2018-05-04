@@ -176,10 +176,10 @@ uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) 
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
   JobDesc* job_desc = Global<JobDesc>::Get();
   if (memory_zone_id == job_desc->GpuDeviceNum()) {
-    mem_size -= job_desc->reserved_host_mem_byte_size();
-    mem_size -= job_desc->persistence_buffer_byte_size() * job_desc->PersistenceWorkerNum();
+    mem_size -= job_desc->reserved_host_mem_byte();
+    mem_size -= job_desc->persistence_buffer_byte() * record_load_task_num_.at(machine_id);
   } else {
-    mem_size -= job_desc->reserved_device_mem_byte_size();
+    mem_size -= job_desc->reserved_device_mem_byte();
   }
   CHECK_GT(mem_size, 0);
   return static_cast<uint64_t>(mem_size);
@@ -281,6 +281,12 @@ void Improver::MemoryLimitedAllocate(const ActGraph& graph,
 }
 
 Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_filepath) {
+  record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
+  for (const TaskProto& task_proto : naive_plan.task()) {
+    if (task_proto.task_type() == TaskType::kRecordLoad) {
+      record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
+    }
+  }
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));

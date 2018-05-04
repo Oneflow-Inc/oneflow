@@ -48,6 +48,10 @@ void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
                         [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
 }
 
+void ExecNode::InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx) {
+  op_->InferDiffBlobDescsWithoutFwBlob(GetBlobDesc4BnInOpFunc(), parallel_ctx);
+}
+
 std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() const {
   return [this](const std::string& bn_in_op) -> BlobDesc* {
     auto it = bn_in_op2regst_.find(bn_in_op);

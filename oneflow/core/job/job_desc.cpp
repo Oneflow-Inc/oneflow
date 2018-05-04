@@ -17,15 +17,15 @@ int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.piece_num_of_experiment_phase();
 }
 
-uint64_t JobDesc::persistence_buffer_byte_size() const {
-  return job_conf_.persistence_buffer_mbyte_size() * 1024 * 1024;
+uint64_t JobDesc::persistence_buffer_byte() const {
+  return job_conf_.persistence_buffer_mbyte() * 1024 * 1024;
 }
-uint64_t JobDesc::reserved_host_mem_byte_size() const {
-  return job_conf_.reserved_host_mem_mbyte_size() * 1024 * 1024;
+uint64_t JobDesc::reserved_host_mem_byte() const {
+  return job_conf_.reserved_host_mem_mbyte() * 1024 * 1024;
 }
 
-uint64_t JobDesc::reserved_device_mem_byte_size() const {
-  return job_conf_.reserved_device_mem_mbyte_size() * 1024 * 1024;
+uint64_t JobDesc::reserved_device_mem_byte() const {
+  return job_conf_.reserved_device_mem_mbyte() * 1024 * 1024;
 }
 
 bool JobDesc::save_downloaded_file_to_local_fs() const {

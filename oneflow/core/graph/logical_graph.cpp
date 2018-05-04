@@ -33,7 +33,7 @@ void LogicalGraph::BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(edge2ibn, &op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
-  AddB121Clone(*edge2ibn);
+  AddB121Clone(edge2ibn);
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     total_mbn_num_ +=
@@ -119,7 +119,7 @@ void LogicalGraph::FixSharedModelNodes(
   });
 }
 
-void LogicalGraph::AddB121Clone(const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+void LogicalGraph::AddB121Clone(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   std::vector<B121CloneInfo> clone_infos;
   CollectB121CloneInfos(&clone_infos);
   for (const B121CloneInfo& clone_info : clone_infos) { AddOneB121CloneNode(clone_info, edge2ibn); }
@@ -150,7 +150,7 @@ void LogicalGraph::CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos
 }
 
 void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info,
-                                       const HashMap<LogicalEdge*, std::string>& edge2ibn) {
+                                       HashMap<LogicalEdge*, std::string>* edge2ibn) {
   // lbi_boxing, lbi_121
   LogicalBlobId lbi_boxing = clone_info.lbi;
   lbi_boxing.set_b121_id(0);
@@ -176,8 +176,9 @@ void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info,
   LogicalEdge* edge = NewEdge();
   edge->mut_lbis() = {clone_info.lbi};
   Connect(clone_info.pred_node, edge, clone_node);
-  ReConnectToFwClone(clone_node, lbi_boxing, clone_info.edges_boxing, edge2ibn);
-  ReConnectToFwClone(clone_node, lbi_121, clone_info.edges_121, edge2ibn);
+  CHECK(edge2ibn->emplace(edge, clone_op->SoleIbn()).second);
+  ReConnectToFwClone(clone_node, lbi_boxing, clone_info.edges_boxing, *edge2ibn);
+  ReConnectToFwClone(clone_node, lbi_121, clone_info.edges_121, *edge2ibn);
 }
 
 void LogicalGraph::ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
@@ -300,6 +301,9 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info,
   FOR_RANGE(size_t, i, 0, clone_op->output_diff_bns().size()) {
     const LogicalBlobId& lbi_clone_i = clone_op->BnInOp2Lbi(clone_op->output_diff_bns().Get(i));
     LogicalEdge* edge = clone_info.edges.at(i);
+    std::vector<LogicalBlobId>& edge_lbis = edge->mut_lbis();
+    CHECK_EQ(1, edge_lbis.size());
+    edge_lbis.front() = lbi_clone_i;
     LogicalNode* src_node = edge->src_node();
     *(src_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2ibn.at(edge)))) = lbi_clone_i;
     DisConnect(edge);
@@ -508,6 +512,7 @@ void LogicalGraph::BuildRecordLoadStruct() {
 
 void LogicalGraph::ConnectFwToBw() {
   ForEachLogicalNode<BackwardLogicalNode>([this](BackwardLogicalNode* bw_node) {
+    if (bw_node->fw_node() == nullptr) { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
 }

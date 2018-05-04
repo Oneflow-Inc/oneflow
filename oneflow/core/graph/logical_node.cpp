@@ -234,7 +234,9 @@ BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const Logic
   std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
   if (src_pd->parallel_num() == dst_pd->parallel_num()) {
-    if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
+    if (src_pd->parallel_num() == 1) {
+      return &TaskGraph::BldSubTskGphByOneToOne;
+    } else if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
       return &TaskGraph::BldSubTskGphByOneToOne;
     } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
                && IsModelParallel121(src_node, dst_node)) {

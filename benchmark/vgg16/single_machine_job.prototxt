@@ -7,7 +7,7 @@ globalfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
   }
 }
-single_piece_size: 1
+piece_size: 30
 data_part_num: 30
 max_data_id_length: 0
 train_conf {
@@ -20,7 +20,7 @@ train_conf {
       variance_norm: kFanOut
     }
   }
-  num_of_pieces_in_batch: 8
+  batch_size: 240
   l2: 0.0005
   model_update_conf {
     momentum_conf {
