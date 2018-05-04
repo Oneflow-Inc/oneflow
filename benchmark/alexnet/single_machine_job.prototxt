@@ -7,7 +7,7 @@ globalfs_conf {
   }
 }
 data_part_num: 30
-piece_size: 240
+piece_size: 60
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
