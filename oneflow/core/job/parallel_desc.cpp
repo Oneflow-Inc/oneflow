@@ -94,6 +94,20 @@ void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_
   parallel_num_ = max_device_num;
 }
 
+void ParallelDesc::RandomSelectOneDeviceAndRemoveTheOthers() {
+  CHECK_GE(parallel_num_, 1);
+  if (parallel_num_ == 1) { return; }
+  std::mt19937 gen(NewRandomSeed());
+  std::uniform_int_distribution<> machine_selector(0, sorted_machine_ids_.size() - 1);
+  int64_t selected_machine_id = sorted_machine_ids_.at(machine_selector(gen));
+  const auto& devs_on_selected_machine = machine_id2sorted_dev_phy_ids_.at(selected_machine_id);
+  std::uniform_int_distribution<> device_selector(0, devs_on_selected_machine.size() - 1);
+  int64_t selected_dev_id = devs_on_selected_machine.at(device_selector(gen));
+  sorted_machine_ids_ = {selected_machine_id};
+  machine_id2sorted_dev_phy_ids_ = {{selected_machine_id, {selected_dev_id}}};
+  parallel_num_ = 1;
+}
+
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && policy_ == rhs.policy_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
