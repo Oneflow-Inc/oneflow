@@ -140,20 +140,20 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessCustomizedEordMsg(msg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
-      Regst* regst = msg.regst();
-      auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
-      if (naive_readable_regst_it != naive_readable_regst_.end()) {
-        if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
-        naive_readable_regst_it->second.push_back(regst);
-        NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
-      } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
-        // do nothing
+    Regst* regst = msg.regst();
+    if (TryUpdtStateAsProducedRegst(regst) == -1) {
+      if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
+        auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
+        if (naive_readable_regst_it != naive_readable_regst_.end()) {
+          if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
+          naive_readable_regst_it->second.push_back(regst);
+          NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
+        } else {
+          NormalProcessCustomizedReadableRegstMsg(msg);
+        }
       } else {
-        NormalProcessCustomizedReadableRegstMsg(msg);
+        NormalProcessReadableMsgFromOtherMachine(msg);
       }
-    } else {
-      NormalProcessMsgFromOtherMachine(msg);
     }
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {

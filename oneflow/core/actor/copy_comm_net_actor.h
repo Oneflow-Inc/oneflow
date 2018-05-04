@@ -25,7 +25,7 @@ class CopyCommNetActor final : public Actor {
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) override;
   void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
-  void NormalProcessMsgFromOtherMachine(const ActorMsg&) override;
+  void NormalProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
   void Act() override;
   bool IsCustomizedReadReady() override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() override;
