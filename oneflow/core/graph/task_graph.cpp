@@ -133,7 +133,22 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, Mut121BufTask, AllocateCpuThrdId);
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByP2PWithoutH2D) { TODO(); }
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByP2PWithMultiD2HAndWithoutH2D) {
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      ConnectWithoutH2D(AddCopyD2HTaskIfNotCpu(src_comp_task), dst_comp_task);
+    }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByP2PWithOneD2HAndWithoutH2D) {
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    TaskNode* src_bound_task = AddCopyD2HTaskIfNotCpu(src_comp_task);
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      ConnectWithoutH2D(src_bound_task, dst_comp_task);
+    }
+  }
+}
 
 TaskNode* TaskGraph::Build121BufTo(
     TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
@@ -237,6 +252,14 @@ void TaskGraph::BuildInBoxing(const LogicalNode* logical,
     boxing_task->set_thrd_id(AllocateCpuThrdId(boxing_task));
     for (TaskNode* task : pair.second) { Connect<TaskNode>(boxing_task, NewEdge(), task); }
     sorted_in_box->push_back(boxing_task);
+  }
+}
+
+void TaskGraph::ConnectWithoutH2D(TaskNode* src, TaskNode* dst) {
+  if (src->machine_id() == dst->machine_id()) {
+    Connect(src, NewEdge(), dst);
+  } else {
+    AddCopyCommNetTask(src, dst);
   }
 }
 

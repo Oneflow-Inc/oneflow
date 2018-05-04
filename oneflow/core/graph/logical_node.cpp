@@ -296,10 +296,10 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceAdd",
-                              &TaskGraph::BldSubTskGphByP2PWithoutH2D);
+                              &TaskGraph::BldSubTskGphByP2PWithMultiD2HAndWithoutH2D);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
                               "ReduceGather",
-                              &TaskGraph::BldSubTskGphByP2PWithoutH2D);
+                              &TaskGraph::BldSubTskGphByP2PWithOneD2HAndWithoutH2D);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
