@@ -10,6 +10,9 @@
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
+#include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
@@ -286,7 +289,20 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                                 } else {
                                   UNIMPLEMENTED();
                                 }
-                              });
+                              });  // TODO: delete
+
+REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
+                              "ReduceAdd",
+                              &TaskGraph::BldSubTskGphByP2PWithoutH2D);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
+                              "ReduceGather",
+                              &TaskGraph::BldSubTskGphByP2PWithoutH2D);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
