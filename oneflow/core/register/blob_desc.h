@@ -40,9 +40,7 @@ class BlobDesc final {
 
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfDataIdField() const;
-  size_t OffsetOfColNumField() const;
   size_t ByteSizeOfColNumField() const;
-  size_t OffsetOfDataContentField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
   bool operator==(const BlobDesc& rhs) const;

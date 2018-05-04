@@ -64,9 +64,9 @@ class Blob : public BlobIf {
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
-  size_t ByteSizeOfDataIdField() const;
-  size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfDataContentField() const;
+  size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
+  size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
+  size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
@@ -78,8 +78,7 @@ class Blob : public BlobIf {
   void set_col_id(int32_t val);
   int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
-  bool IsColValid() const;
-
+  bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
 
  protected:

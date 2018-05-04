@@ -38,8 +38,6 @@ size_t BlobDesc::ByteSizeOfDataIdField() const {
   }
 }
 
-size_t BlobDesc::OffsetOfColNumField() const { return ByteSizeOfDataIdField(); }
-
 size_t BlobDesc::ByteSizeOfColNumField() const {
   if (has_col_num_field_) {
     return shape_.At(0) * sizeof(int32_t);
@@ -48,16 +46,14 @@ size_t BlobDesc::ByteSizeOfColNumField() const {
   }
 }
 
-size_t BlobDesc::OffsetOfDataContentField() const {
-  return RoundUp(OffsetOfColNumField() + ByteSizeOfColNumField(), CUDA_POINTER_ALIGNMENT);
-}
-
 size_t BlobDesc::ByteSizeOfDataContentField() const {
-  return RoundUp(shape_.elem_cnt() * GetSizeOfDataType(data_type_), CUDA_POINTER_ALIGNMENT);
+  return shape_.elem_cnt() * GetSizeOfDataType(data_type_);
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return OffsetOfDataContentField() + ByteSizeOfDataContentField();
+  return RoundUp(ByteSizeOfDataIdField(), kCudaAlignSize)
+         + RoundUp(ByteSizeOfColNumField(), kCudaAlignSize)
+         + RoundUp(ByteSizeOfDataContentField(), kCudaAlignSize);
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
