@@ -51,6 +51,14 @@ void TaskNode::set_thrd_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
+void TaskNode::PinConsumedRegst() {
+  for (auto& pair : consumed_regsts_) {
+    for (std::weak_ptr<RegstDesc> regst : pair.second) {
+      PinConsumedRegstMemCase(regst.lock()->mut_mem_case());
+    }
+  }
+}
+
 void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
@@ -63,10 +71,6 @@ void TaskNode::EraseEmptyProducedRegst() {
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
         return it->second->NumOfLbi() == 0;
       });
-}
-
-void TaskNode::InferMemCaseOfProducedRegst() {
-  for (auto& pair : produced_regsts_) { pair.second->InferMemCase(); }
 }
 
 std::string TaskNode::VisualStr() const {
@@ -120,8 +124,30 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32
   regst->set_producer(this);
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
+  InitProducedRegstMemCase(regst.get());
   CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
+}
+
+void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
+  InitProducedRegstMemCase(regst->mut_mem_case());
+}
+
+void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
+  if (device_type() == DeviceType::kCPU) {
+    mem_case->mutable_host_mem();
+  } else if (device_type() == DeviceType::kGPU) {
+    mem_case->mutable_device_cuda_mem()->set_device_id(
+        Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id_));
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
+  if (mem_case->has_host_mem() && device_type() == DeviceType::kGPU) {
+    mem_case->mutable_host_mem()->set_used_by_device(true);
+  }
 }
 
 void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {

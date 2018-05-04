@@ -54,9 +54,9 @@ Plan Compiler::DoCompile() {
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
+  task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::InferMemCaseOfProducedRegst, _1));
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }

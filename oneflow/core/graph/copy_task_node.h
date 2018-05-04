@@ -34,6 +34,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
 
  private:
+  void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 
   CopyHdOpConf::Type copy_type_;
@@ -50,6 +51,8 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   void Init(int64_t machine_id);
 
  private:
+  void InitProducedRegstMemCase(MemoryCase*) override;
+  void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 };
 

@@ -39,10 +39,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
   virtual void ConsumeAllRegsts() = 0;
+  void PinConsumedRegst();
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
   virtual void EraseEmptyProducedRegst();
-  void InferMemCaseOfProducedRegst();
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
@@ -56,6 +56,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num);
+  virtual void InitProducedRegstMemCase(RegstDesc* regst);
+  virtual void InitProducedRegstMemCase(MemoryCase*);
+  virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
