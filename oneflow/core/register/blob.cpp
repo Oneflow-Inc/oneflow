@@ -14,12 +14,13 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* c
   } else {
     data_id_ptr_ = nullptr;
   }
+  char* offset = mem_ptr + RoundUp(blob_desc->ByteSizeOfDataIdField(), kCudaAlignSize);
   if (blob_desc->has_col_num_field()) {
-    col_num_ptr_ = reinterpret_cast<int32_t*>(mem_ptr + blob_desc->OffsetOfColNumField());
+    col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
   } else {
     col_num_ptr_ = nullptr;
   }
-  dptr_ = mem_ptr + blob_desc->OffsetOfDataContentField();
+  dptr_ = offset + RoundUp(blob_desc->ByteSizeOfColNumField(), kCudaAlignSize);
   blob_desc_ = blob_desc;
   comm_net_token_ = comm_net_token;
   regst_ = regst;
@@ -43,22 +44,10 @@ void Blob::set_col_num(int32_t no, int32_t val) {
   *(col_num_ptr_ + no) = val;
 }
 
-size_t Blob::ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
-
-size_t Blob::ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
-
-size_t Blob::ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
-
 int32_t Blob::col_id() const { return regst_->col_id(); }
-
 void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
-
 int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
-
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
-
-bool Blob::IsColValid() const { return col_id() <= max_col_id(); }
-
 const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
 
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                                 \

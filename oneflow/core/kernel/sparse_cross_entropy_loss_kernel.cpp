@@ -16,7 +16,7 @@ void SparseCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLoss
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff != nullptr) {
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(), 0,
-                        prediction_diff->TotalByteSize());
+                        prediction_diff->ByteSizeOfDataContentField());
     SparseCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Backward(
         ctx.device_ctx, prediction->shape().At(0), prediction->shape().At(1),
         prediction->dptr<PredType>(), label->dptr<LabelType>(),
