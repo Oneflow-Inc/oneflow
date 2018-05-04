@@ -54,13 +54,14 @@ void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInf
   info->set_act_id(regst_ctx.act_id);
 }
 
-void CopyCommNetActor::NormalProcessMsgFromOtherMachine(const ActorMsg& msg) {
+bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg& msg) {
   RegstCtx regst_ctx;
   regst_ctx.comm_net_token = msg.comm_net_token();
   regst_ctx.regst_raw_ptr = msg.regst();
   regst_ctx.producer = msg.src_actor_id();
   regst_ctx.act_id = msg.act_id();
   CHECK(piece_id2regst_ctx.emplace(msg.piece_id(), regst_ctx).second);
+  return true;
 }
 
 void CopyCommNetActor::Act() {

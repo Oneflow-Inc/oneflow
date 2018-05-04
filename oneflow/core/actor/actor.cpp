@@ -153,7 +153,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
         NormalProcessCustomizedReadableRegstMsg(msg);
       }
     } else {
-      NormalProcessMsgFromOtherMachine(msg);
+      if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
+        CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+      }
     }
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
@@ -374,6 +376,7 @@ bool Actor::IsReadReady() {
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
+  CHECK(produced_regsts_.find(regst->regst_desc_id()) != produced_regsts_.end());
   CHECK_GE(reading_cnt_it->second, 1);
   reading_cnt_it->second -= 1;
   total_reading_cnt_ -= 1;
