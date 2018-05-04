@@ -450,7 +450,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
   if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    md_save_pr_desc->RemoveNeedlessDevice(1);
+    md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
   }
   md_save_pr_desc->set_device_type(DeviceType::kCPU);
   md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);
