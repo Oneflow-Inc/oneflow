@@ -411,28 +411,37 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       if (is_train && fw_logical->HasOpWithModelBlob()) {
         BackwardLogicalNode* bw_logical = fw_logical->bw_node();
         Connect<LogicalNode>(md_updt_logical, NewEdge(), bw_logical);
-        OperatorConf md_diff_acc_op_conf;
-        md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
-        md_diff_acc_op_conf.mutable_accumulate_conf();
-        auto md_diff_acc_op =
-            ConstructOp(md_diff_acc_op_conf, fw_logical->parallel_desc()->device_type());
-        auto md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
-        md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
-        auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
-        md_diff_acc_pr_desc->set_policy(kInvalidParallel);
-        md_diff_acc_logical->mut_parallel_desc().reset(md_diff_acc_pr_desc);
-        Connect<LogicalNode>(bw_logical, NewEdge(), md_diff_acc_logical);
-        Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
+        LogicalNode* md_diff_acc_logical = nullptr;
+        if (Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
+          OperatorConf md_diff_acc_op_conf;
+          md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
+          md_diff_acc_op_conf.mutable_accumulate_conf();
+          auto md_diff_acc_op =
+              ConstructOp(md_diff_acc_op_conf, fw_logical->parallel_desc()->device_type());
+          md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
+          md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
+          auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
+          md_diff_acc_pr_desc->set_policy(kInvalidParallel);
+          md_diff_acc_logical->mut_parallel_desc().reset(md_diff_acc_pr_desc);
+          Connect<LogicalNode>(bw_logical, NewEdge(), md_diff_acc_logical);
+        } else {
+          md_diff_acc_logical = bw_logical;
+        }
+        Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);  // TODO: reduce
       }
     }
   });
-  ForEachLogicalNode<NormalMdUpdtLogicalNode>([&](NormalMdUpdtLogicalNode* node) {
+  SetupNormalMdUpdtOp();
+}
+
+void LogicalGraph::SetupNormalMdUpdtOp() {
+  ForEachLogicalNode<NormalMdUpdtLogicalNode>([](NormalMdUpdtLogicalNode* node) {
     if (node->in_edges().size() < 1) { return; }
     OperatorConf op_conf;
     op_conf.set_name("md_update_" + NewUniqueId());
     NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
     const JobDesc* job_desc = Global<JobDesc>::Get();
-    if (is_train) {
+    if (Global<JobDesc>::Get()->IsTrain()) {
       *(mdupdt_conf->mutable_user_conf()) = job_desc->job_conf().train_conf().model_update_conf();
     }
     mdupdt_conf->set_in_num(node->in_edges().size());
@@ -450,7 +459,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
   if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-    md_save_pr_desc->RemoveNeedlessDevice(1);
+    md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
   }
   md_save_pr_desc->set_device_type(DeviceType::kCPU);
   md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);

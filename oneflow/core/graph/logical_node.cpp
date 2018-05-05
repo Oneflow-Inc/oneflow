@@ -10,6 +10,9 @@
 #include "oneflow/core/graph/print_compute_task_node.h"
 #include "oneflow/core/graph/decode_compute_task_node.h"
 #include "oneflow/core/graph/record_load_compute_task_node.h"
+#include "oneflow/core/graph/reduce_scatter_compute_task_node.h"
+#include "oneflow/core/graph/reduce_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
@@ -97,6 +100,16 @@ BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* sav
   }
 }
 
+BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
+  if (updt->parallel_desc()->policy() == kDataParallel) {
+    return &TaskGraph::BldSubTskGphByBoxing;
+  } else if (updt->parallel_desc()->policy() == kModelParallel) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 using FuncForFindLbis =
     std::function<std::vector<LogicalBlobId>(const LogicalNode* src, const LogicalNode* dst)>;
 DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindLbis>, GetFuncForFindLbis);
@@ -111,6 +124,9 @@ REGISTER_FUNC_FOR_FIND_LBIS("LossAcc"
                             "LossPrint",
                             ReturnPackedLbi);
 REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
+                            "NormalMdUpdt",
+                            ReturnPackedLbi);
+REGISTER_FUNC_FOR_FIND_LBIS("NormalBackward"
                             "NormalMdUpdt",
                             ReturnPackedLbi);
 
@@ -228,15 +244,16 @@ static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* d
 }
 
 BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
+  std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
+  std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
+  if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
+    return &TaskGraph::BldSubTskGphByOneToOne;
+  }
   std::string k = ConcatTypeName(src_node, dst_node);
   auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
   if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
-  std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
-  std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
   if (src_pd->parallel_num() == dst_pd->parallel_num()) {
-    if (src_pd->parallel_num() == 1) {
-      return &TaskGraph::BldSubTskGphByOneToOne;
-    } else if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
+    if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
       return &TaskGraph::BldSubTskGphByOneToOne;
     } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
                && IsModelParallel121(src_node, dst_node)) {
@@ -274,19 +291,22 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("Loss"
                               &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "NormalMdUpdt",
-                              [](const LogicalNode* diff_acc, const LogicalNode* updt) {
-                                if (updt->parallel_desc()->policy() == kDataParallel) {
-                                  if (updt->parallel_desc()->parallel_num() == 1) {
-                                    return &TaskGraph::BldSubTskGphByOneToOne;
-                                  } else {
-                                    return &TaskGraph::BldSubTskGphByBoxing;
-                                  }
-                                } else if (updt->parallel_desc()->policy() == kModelParallel) {
-                                  return &TaskGraph::BldSubTskGphByOneToOne;
-                                } else {
-                                  UNIMPLEMENTED();
-                                }
-                              });
+                              BldSubTskGphToNormalMdUpdt);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
+                              "NormalMdUpdt",
+                              BldSubTskGphToNormalMdUpdt);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
+                              "ReduceAdd",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceAdd);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceAdd"
+                              "ReduceGather",
+                              &TaskGraph::BldSubTskGphByReduceAdd2ReduceGather);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
+                              "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);
@@ -305,6 +325,9 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("LossAcc"
                                  "LossPrint",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
+                                 "NormalMdUpdt",
+                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
+REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 

@@ -23,6 +23,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
 
  private:
   TaskNode* Build121BufTo(
@@ -40,6 +42,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_in_box,
                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
+  void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
 };

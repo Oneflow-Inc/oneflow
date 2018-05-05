@@ -38,7 +38,7 @@ placement_group {
     op_name: "fc3"
   }
   parallel_conf {
-    policy: kModelParallel
+    policy: kDataParallel
     device_name: "first:gpu:0-1"
   }
 }
