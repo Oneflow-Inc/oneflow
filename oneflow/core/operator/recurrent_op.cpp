@@ -80,7 +80,7 @@ LogicalBlobId RecurrentOp::obn2lbi(const std::string& output_bn) const {
   } else {
     UNIMPLEMENTED();
   }
-  return LogicalBlobId();
+  return ret;
 }
 
 }  // namespace oneflow
