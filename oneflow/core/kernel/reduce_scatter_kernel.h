@@ -1,23 +1,30 @@
-#ifndef ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
-#define ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
+#ifndef ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_
+#define ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T>
-class SoftmaxKernel final : public KernelIf<device_type> {
+template<DeviceType device_type>
+class ReduceScatterKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(SoftmaxKernel);
-  SoftmaxKernel() = default;
-  ~SoftmaxKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceScatterKernel);
+  ReduceScatterKernel() = default;
+  ~ReduceScatterKernel() = default;
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  int32_t parallel_id_;
+};
+
+template<DeviceType device_type>
+struct ReduceScatterKernelUtil {
+  static void DoMemcpy(DeviceCtx* ctx, char* dst, const char* src, size_t sz,
+                       bool is_same_parallel_id);
 };
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_KERNEL_SOFTMAX_KERNEL_H_
+#endif  // ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_
