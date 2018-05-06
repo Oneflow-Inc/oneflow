@@ -18,7 +18,7 @@ class ReduceAddOp final : public Operator {
                       const ParallelContext* parallel_ctx) const override;
 
  private:
-  LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 

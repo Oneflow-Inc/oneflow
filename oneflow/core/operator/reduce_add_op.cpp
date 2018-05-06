@@ -12,14 +12,11 @@ void ReduceAddOp::InitFromOpConf() {
 
 const PbMessage& ReduceAddOp::GetCustomizedConf() const { return op_conf().reduce_add_conf(); }
 
-LogicalBlobId ReduceAddOp::ibn2lbi(const std::string& input_bn) const {
-  UNIMPLEMENTED();
-  return LogicalBlobId();
-}
-
 LogicalBlobId ReduceAddOp::obn2lbi(const std::string& output_bn) const {
-  UNIMPLEMENTED();
-  return LogicalBlobId();
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(output_bn);
+  return ret;
 }
 
 void ReduceAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
