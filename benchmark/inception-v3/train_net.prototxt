@@ -20,6 +20,14 @@ op {
 					}
         }
       }
+      preprocess {
+        norm_by_channel_conf {
+          data_format: "channels_last"
+          mean_value: 104
+          mean_value: 117
+          mean_value: 123
+				}
+      }
     }
     blob {
       name: "class/label"
@@ -65,20 +73,14 @@ op {
   normalization_conf {
     in: "conv1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "conv1_relu"
-  relu_conf {
-    in: "conv1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "conv2_conv"
   conv_2d_conf {
-    in: "conv1_relu/out"
+    in: "conv1_bn/out"
     out: "out"
     filters: 32
     padding: "valid"
@@ -97,20 +99,14 @@ op {
   normalization_conf {
     in: "conv2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "conv2_relu"
-  relu_conf {
-    in: "conv2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "conv3_conv"
   conv_2d_conf {
-    in: "conv2_relu/out"
+    in: "conv2_bn/out"
     out: "out"
     filters: 64
     padding: "same"
@@ -129,20 +125,14 @@ op {
   normalization_conf {
     in: "conv3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "conv3_relu"
-  relu_conf {
-    in: "conv3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "pool1"
   max_pooling_2d_conf {
-    in: "conv3_relu/out"
+    in: "conv3_bn/out"
     out: "out"
     padding: "valid"
     data_format: "channels_first"
@@ -174,20 +164,14 @@ op {
   normalization_conf {
     in: "conv4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "conv4_relu"
-  relu_conf {
-    in: "conv4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "conv5_conv"
   conv_2d_conf {
-    in: "conv4_relu/out"
+    in: "conv4_bn/out"
     out: "out"
     filters: 192
     padding: "valid"
@@ -206,20 +190,14 @@ op {
   normalization_conf {
     in: "conv5_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "conv5_relu"
-  relu_conf {
-    in: "conv5_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "pool2"
   max_pooling_2d_conf {
-    in: "conv5_relu/out"
+    in: "conv5_bn/out"
     out: "out"
     padding: "valid"
     data_format: "channels_first"
@@ -251,14 +229,8 @@ op {
   normalization_conf {
     in: "mixed1_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_b1x1_relu"
-  relu_conf {
-    in: "mixed1_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -283,20 +255,14 @@ op {
   normalization_conf {
     in: "mixed1_b5x5-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_b5x5-1_relu"
-  relu_conf {
-    in: "mixed1_b5x5-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed1_b5x5_conv"
   conv_2d_conf {
-    in: "mixed1_b5x5-1_relu/out"
+    in: "mixed1_b5x5-1_bn/out"
     out: "out"
     filters: 64
     padding: "same"
@@ -315,14 +281,8 @@ op {
   normalization_conf {
     in: "mixed1_b5x5_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_b5x5_relu"
-  relu_conf {
-    in: "mixed1_b5x5_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -347,20 +307,14 @@ op {
   normalization_conf {
     in: "mixed1_b3x3d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_b3x3d-1_relu"
-  relu_conf {
-    in: "mixed1_b3x3d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed1_b3x3d-2_conv"
   conv_2d_conf {
-    in: "mixed1_b3x3d-1_relu/out"
+    in: "mixed1_b3x3d-1_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -379,20 +333,14 @@ op {
   normalization_conf {
     in: "mixed1_b3x3d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_b3x3d-2_relu"
-  relu_conf {
-    in: "mixed1_b3x3d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed1_b3x3d_conv"
   conv_2d_conf {
-    in: "mixed1_b3x3d-2_relu/out"
+    in: "mixed1_b3x3d-2_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -411,14 +359,8 @@ op {
   normalization_conf {
     in: "mixed1_b3x3d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_b3x3d_relu"
-  relu_conf {
-    in: "mixed1_b3x3d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -456,23 +398,17 @@ op {
   normalization_conf {
     in: "mixed1_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed1_bPool_relu"
-  relu_conf {
-    in: "mixed1_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed1_concat"
   concat_conf {
-    in: "mixed1_b1x1_relu/out"
-    in: "mixed1_b5x5_relu/out"
-    in: "mixed1_b3x3d_relu/out"
-    in: "mixed1_bPool_relu/out"
+    in: "mixed1_b1x1_bn/out"
+    in: "mixed1_b5x5_bn/out"
+    in: "mixed1_b3x3d_bn/out"
+    in: "mixed1_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -499,14 +435,8 @@ op {
   normalization_conf {
     in: "mixed2_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_b1x1_relu"
-  relu_conf {
-    in: "mixed2_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -531,20 +461,14 @@ op {
   normalization_conf {
     in: "mixed2_b5x5-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_b5x5-1_relu"
-  relu_conf {
-    in: "mixed2_b5x5-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed2_b5x5_conv"
   conv_2d_conf {
-    in: "mixed2_b5x5-1_relu/out"
+    in: "mixed2_b5x5-1_bn/out"
     out: "out"
     filters: 64
     padding: "same"
@@ -563,14 +487,8 @@ op {
   normalization_conf {
     in: "mixed2_b5x5_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_b5x5_relu"
-  relu_conf {
-    in: "mixed2_b5x5_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -595,20 +513,14 @@ op {
   normalization_conf {
     in: "mixed2_b3x3d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_b3x3d-1_relu"
-  relu_conf {
-    in: "mixed2_b3x3d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed2_b3x3d-2_conv"
   conv_2d_conf {
-    in: "mixed2_b3x3d-1_relu/out"
+    in: "mixed2_b3x3d-1_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -627,20 +539,14 @@ op {
   normalization_conf {
     in: "mixed2_b3x3d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_b3x3d-2_relu"
-  relu_conf {
-    in: "mixed2_b3x3d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed2_b3x3d_conv"
   conv_2d_conf {
-    in: "mixed2_b3x3d-2_relu/out"
+    in: "mixed2_b3x3d-2_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -659,14 +565,8 @@ op {
   normalization_conf {
     in: "mixed2_b3x3d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_b3x3d_relu"
-  relu_conf {
-    in: "mixed2_b3x3d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -704,23 +604,17 @@ op {
   normalization_conf {
     in: "mixed2_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed2_bPool_relu"
-  relu_conf {
-    in: "mixed2_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed2_concat"
   concat_conf {
-    in: "mixed2_b1x1_relu/out"
-    in: "mixed2_b5x5_relu/out"
-    in: "mixed2_b3x3d_relu/out"
-    in: "mixed2_bPool_relu/out"
+    in: "mixed2_b1x1_bn/out"
+    in: "mixed2_b5x5_bn/out"
+    in: "mixed2_b3x3d_bn/out"
+    in: "mixed2_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -747,14 +641,8 @@ op {
   normalization_conf {
     in: "mixed3_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_b1x1_relu"
-  relu_conf {
-    in: "mixed3_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -779,20 +667,14 @@ op {
   normalization_conf {
     in: "mixed3_b5x5-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_b5x5-1_relu"
-  relu_conf {
-    in: "mixed3_b5x5-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed3_b5x5_conv"
   conv_2d_conf {
-    in: "mixed3_b5x5-1_relu/out"
+    in: "mixed3_b5x5-1_bn/out"
     out: "out"
     filters: 64
     padding: "same"
@@ -811,14 +693,8 @@ op {
   normalization_conf {
     in: "mixed3_b5x5_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_b5x5_relu"
-  relu_conf {
-    in: "mixed3_b5x5_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -843,20 +719,14 @@ op {
   normalization_conf {
     in: "mixed3_b3x3d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_b3x3d-1_relu"
-  relu_conf {
-    in: "mixed3_b3x3d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed3_b3x3d-2_conv"
   conv_2d_conf {
-    in: "mixed3_b3x3d-1_relu/out"
+    in: "mixed3_b3x3d-1_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -875,20 +745,14 @@ op {
   normalization_conf {
     in: "mixed3_b3x3d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_b3x3d-2_relu"
-  relu_conf {
-    in: "mixed3_b3x3d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed3_b3x3d_conv"
   conv_2d_conf {
-    in: "mixed3_b3x3d-2_relu/out"
+    in: "mixed3_b3x3d-2_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -907,14 +771,8 @@ op {
   normalization_conf {
     in: "mixed3_b3x3d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_b3x3d_relu"
-  relu_conf {
-    in: "mixed3_b3x3d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -952,23 +810,17 @@ op {
   normalization_conf {
     in: "mixed3_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed3_bPool_relu"
-  relu_conf {
-    in: "mixed3_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed3_concat"
   concat_conf {
-    in: "mixed3_b1x1_relu/out"
-    in: "mixed3_b5x5_relu/out"
-    in: "mixed3_b3x3d_relu/out"
-    in: "mixed3_bPool_relu/out"
+    in: "mixed3_b1x1_bn/out"
+    in: "mixed3_b5x5_bn/out"
+    in: "mixed3_b3x3d_bn/out"
+    in: "mixed3_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -995,14 +847,8 @@ op {
   normalization_conf {
     in: "mixed4_b3x3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed4_b3x3_relu"
-  relu_conf {
-    in: "mixed4_b3x3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1027,20 +873,14 @@ op {
   normalization_conf {
     in: "mixed4_b3x3d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed4_b3x3d-1_relu"
-  relu_conf {
-    in: "mixed4_b3x3d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed4_b3x3d-2_conv"
   conv_2d_conf {
-    in: "mixed4_b3x3d-1_relu/out"
+    in: "mixed4_b3x3d-1_bn/out"
     out: "out"
     filters: 96
     padding: "same"
@@ -1059,20 +899,14 @@ op {
   normalization_conf {
     in: "mixed4_b3x3d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed4_b3x3d-2_relu"
-  relu_conf {
-    in: "mixed4_b3x3d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed4_b3x3d_conv"
   conv_2d_conf {
-    in: "mixed4_b3x3d-2_relu/out"
+    in: "mixed4_b3x3d-2_bn/out"
     out: "out"
     filters: 96
     padding: "valid"
@@ -1091,14 +925,8 @@ op {
   normalization_conf {
     in: "mixed4_b3x3d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed4_b3x3d_relu"
-  relu_conf {
-    in: "mixed4_b3x3d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1117,8 +945,8 @@ op {
 op {
   name: "mixed4_concat"
   concat_conf {
-    in: "mixed4_b3x3_relu/out"
-    in: "mixed4_b3x3d_relu/out"
+    in: "mixed4_b3x3_bn/out"
+    in: "mixed4_b3x3d_bn/out"
     in: "mixed4_pool/out"
     out: "out"
     axis: 1
@@ -1146,14 +974,8 @@ op {
   normalization_conf {
     in: "mixed5_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b1x1_relu"
-  relu_conf {
-    in: "mixed5_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1178,20 +1000,14 @@ op {
   normalization_conf {
     in: "mixed5_b7x7-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7-1_relu"
-  relu_conf {
-    in: "mixed5_b7x7-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed5_b7x7_conv"
   conv_2d_conf {
-    in: "mixed5_b7x7-1_relu/out"
+    in: "mixed5_b7x7-1_bn/out"
     out: "out"
     filters: 128
     padding: "same"
@@ -1210,14 +1026,8 @@ op {
   normalization_conf {
     in: "mixed5_b7x7_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7_relu"
-  relu_conf {
-    in: "mixed5_b7x7_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1242,20 +1052,14 @@ op {
   normalization_conf {
     in: "mixed5_b7x7d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7d-1_relu"
-  relu_conf {
-    in: "mixed5_b7x7d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed5_b7x7d-2_conv"
   conv_2d_conf {
-    in: "mixed5_b7x7d-1_relu/out"
+    in: "mixed5_b7x7d-1_bn/out"
     out: "out"
     filters: 128
     padding: "same"
@@ -1274,20 +1078,14 @@ op {
   normalization_conf {
     in: "mixed5_b7x7d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7d-2_relu"
-  relu_conf {
-    in: "mixed5_b7x7d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed5_b7x7d-3_conv"
   conv_2d_conf {
-    in: "mixed5_b7x7d-2_relu/out"
+    in: "mixed5_b7x7d-2_bn/out"
     out: "out"
     filters: 128
     padding: "same"
@@ -1306,20 +1104,14 @@ op {
   normalization_conf {
     in: "mixed5_b7x7d-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7d-3_relu"
-  relu_conf {
-    in: "mixed5_b7x7d-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed5_b7x7d-4_conv"
   conv_2d_conf {
-    in: "mixed5_b7x7d-3_relu/out"
+    in: "mixed5_b7x7d-3_bn/out"
     out: "out"
     filters: 128
     padding: "same"
@@ -1338,20 +1130,14 @@ op {
   normalization_conf {
     in: "mixed5_b7x7d-4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7d-4_relu"
-  relu_conf {
-    in: "mixed5_b7x7d-4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed5_b7x7d_conv"
   conv_2d_conf {
-    in: "mixed5_b7x7d-4_relu/out"
+    in: "mixed5_b7x7d-4_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -1370,14 +1156,8 @@ op {
   normalization_conf {
     in: "mixed5_b7x7d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_b7x7d_relu"
-  relu_conf {
-    in: "mixed5_b7x7d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1415,23 +1195,17 @@ op {
   normalization_conf {
     in: "mixed5_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed5_bPool_relu"
-  relu_conf {
-    in: "mixed5_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed5_concat"
   concat_conf {
-    in: "mixed5_b1x1_relu/out"
-    in: "mixed5_b7x7_relu/out"
-    in: "mixed5_b7x7d_relu/out"
-    in: "mixed5_bPool_relu/out"
+    in: "mixed5_b1x1_bn/out"
+    in: "mixed5_b7x7_bn/out"
+    in: "mixed5_b7x7d_bn/out"
+    in: "mixed5_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -1458,14 +1232,8 @@ op {
   normalization_conf {
     in: "mixed6_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b1x1_relu"
-  relu_conf {
-    in: "mixed6_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1490,20 +1258,14 @@ op {
   normalization_conf {
     in: "mixed6_b7x7-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7-1_relu"
-  relu_conf {
-    in: "mixed6_b7x7-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed6_b7x7_conv"
   conv_2d_conf {
-    in: "mixed6_b7x7-1_relu/out"
+    in: "mixed6_b7x7-1_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1522,14 +1284,8 @@ op {
   normalization_conf {
     in: "mixed6_b7x7_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7_relu"
-  relu_conf {
-    in: "mixed6_b7x7_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1554,20 +1310,14 @@ op {
   normalization_conf {
     in: "mixed6_b7x7d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7d-1_relu"
-  relu_conf {
-    in: "mixed6_b7x7d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed6_b7x7d-2_conv"
   conv_2d_conf {
-    in: "mixed6_b7x7d-1_relu/out"
+    in: "mixed6_b7x7d-1_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1586,20 +1336,14 @@ op {
   normalization_conf {
     in: "mixed6_b7x7d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7d-2_relu"
-  relu_conf {
-    in: "mixed6_b7x7d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed6_b7x7d-3_conv"
   conv_2d_conf {
-    in: "mixed6_b7x7d-2_relu/out"
+    in: "mixed6_b7x7d-2_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1618,20 +1362,14 @@ op {
   normalization_conf {
     in: "mixed6_b7x7d-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7d-3_relu"
-  relu_conf {
-    in: "mixed6_b7x7d-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed6_b7x7d-4_conv"
   conv_2d_conf {
-    in: "mixed6_b7x7d-3_relu/out"
+    in: "mixed6_b7x7d-3_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1650,20 +1388,14 @@ op {
   normalization_conf {
     in: "mixed6_b7x7d-4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7d-4_relu"
-  relu_conf {
-    in: "mixed6_b7x7d-4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed6_b7x7d_conv"
   conv_2d_conf {
-    in: "mixed6_b7x7d-4_relu/out"
+    in: "mixed6_b7x7d-4_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -1682,14 +1414,8 @@ op {
   normalization_conf {
     in: "mixed6_b7x7d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_b7x7d_relu"
-  relu_conf {
-    in: "mixed6_b7x7d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1727,23 +1453,17 @@ op {
   normalization_conf {
     in: "mixed6_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed6_bPool_relu"
-  relu_conf {
-    in: "mixed6_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed6_concat"
   concat_conf {
-    in: "mixed6_b1x1_relu/out"
-    in: "mixed6_b7x7_relu/out"
-    in: "mixed6_b7x7d_relu/out"
-    in: "mixed6_bPool_relu/out"
+    in: "mixed6_b1x1_bn/out"
+    in: "mixed6_b7x7_bn/out"
+    in: "mixed6_b7x7d_bn/out"
+    in: "mixed6_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -1770,14 +1490,8 @@ op {
   normalization_conf {
     in: "mixed7_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b1x1_relu"
-  relu_conf {
-    in: "mixed7_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1802,20 +1516,14 @@ op {
   normalization_conf {
     in: "mixed7_b7x7-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7-1_relu"
-  relu_conf {
-    in: "mixed7_b7x7-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed7_b7x7_conv"
   conv_2d_conf {
-    in: "mixed7_b7x7-1_relu/out"
+    in: "mixed7_b7x7-1_bn/out"
     out: "out"
     filters: 128
     padding: "same"
@@ -1834,14 +1542,8 @@ op {
   normalization_conf {
     in: "mixed7_b7x7_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7_relu"
-  relu_conf {
-    in: "mixed7_b7x7_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -1866,20 +1568,14 @@ op {
   normalization_conf {
     in: "mixed7_b7x7d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7d-1_relu"
-  relu_conf {
-    in: "mixed7_b7x7d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed7_b7x7d-2_conv"
   conv_2d_conf {
-    in: "mixed7_b7x7d-1_relu/out"
+    in: "mixed7_b7x7d-1_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1898,20 +1594,14 @@ op {
   normalization_conf {
     in: "mixed7_b7x7d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7d-2_relu"
-  relu_conf {
-    in: "mixed7_b7x7d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed7_b7x7d-3_conv"
   conv_2d_conf {
-    in: "mixed7_b7x7d-2_relu/out"
+    in: "mixed7_b7x7d-2_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1930,20 +1620,14 @@ op {
   normalization_conf {
     in: "mixed7_b7x7d-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7d-3_relu"
-  relu_conf {
-    in: "mixed7_b7x7d-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed7_b7x7d-4_conv"
   conv_2d_conf {
-    in: "mixed7_b7x7d-3_relu/out"
+    in: "mixed7_b7x7d-3_bn/out"
     out: "out"
     filters: 160
     padding: "same"
@@ -1962,20 +1646,14 @@ op {
   normalization_conf {
     in: "mixed7_b7x7d-4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7d-4_relu"
-  relu_conf {
-    in: "mixed7_b7x7d-4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed7_b7x7d_conv"
   conv_2d_conf {
-    in: "mixed7_b7x7d-4_relu/out"
+    in: "mixed7_b7x7d-4_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -1994,14 +1672,8 @@ op {
   normalization_conf {
     in: "mixed7_b7x7d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_b7x7d_relu"
-  relu_conf {
-    in: "mixed7_b7x7d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2039,23 +1711,17 @@ op {
   normalization_conf {
     in: "mixed7_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed7_bPool_relu"
-  relu_conf {
-    in: "mixed7_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed7_concat"
   concat_conf {
-    in: "mixed7_b1x1_relu/out"
-    in: "mixed7_b7x7_relu/out"
-    in: "mixed7_b7x7d_relu/out"
-    in: "mixed7_bPool_relu/out"
+    in: "mixed7_b1x1_bn/out"
+    in: "mixed7_b7x7_bn/out"
+    in: "mixed7_b7x7d_bn/out"
+    in: "mixed7_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -2082,14 +1748,8 @@ op {
   normalization_conf {
     in: "mixed8_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b1x1_relu"
-  relu_conf {
-    in: "mixed8_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2114,20 +1774,14 @@ op {
   normalization_conf {
     in: "mixed8_b7x7-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7-1_relu"
-  relu_conf {
-    in: "mixed8_b7x7-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed8_b7x7_conv"
   conv_2d_conf {
-    in: "mixed8_b7x7-1_relu/out"
+    in: "mixed8_b7x7-1_bn/out"
     out: "out"
     filters: 128
     padding: "same"
@@ -2146,14 +1800,8 @@ op {
   normalization_conf {
     in: "mixed8_b7x7_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7_relu"
-  relu_conf {
-    in: "mixed8_b7x7_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2178,20 +1826,14 @@ op {
   normalization_conf {
     in: "mixed8_b7x7d-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7d-1_relu"
-  relu_conf {
-    in: "mixed8_b7x7d-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed8_b7x7d-2_conv"
   conv_2d_conf {
-    in: "mixed8_b7x7d-1_relu/out"
+    in: "mixed8_b7x7d-1_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -2210,20 +1852,14 @@ op {
   normalization_conf {
     in: "mixed8_b7x7d-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7d-2_relu"
-  relu_conf {
-    in: "mixed8_b7x7d-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed8_b7x7d-3_conv"
   conv_2d_conf {
-    in: "mixed8_b7x7d-2_relu/out"
+    in: "mixed8_b7x7d-2_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -2242,20 +1878,14 @@ op {
   normalization_conf {
     in: "mixed8_b7x7d-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7d-3_relu"
-  relu_conf {
-    in: "mixed8_b7x7d-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed8_b7x7d-4_conv"
   conv_2d_conf {
-    in: "mixed8_b7x7d-3_relu/out"
+    in: "mixed8_b7x7d-3_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -2274,20 +1904,14 @@ op {
   normalization_conf {
     in: "mixed8_b7x7d-4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7d-4_relu"
-  relu_conf {
-    in: "mixed8_b7x7d-4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed8_b7x7d_conv"
   conv_2d_conf {
-    in: "mixed8_b7x7d-4_relu/out"
+    in: "mixed8_b7x7d-4_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -2306,14 +1930,8 @@ op {
   normalization_conf {
     in: "mixed8_b7x7d_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_b7x7d_relu"
-  relu_conf {
-    in: "mixed8_b7x7d_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2351,23 +1969,17 @@ op {
   normalization_conf {
     in: "mixed8_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed8_bPool_relu"
-  relu_conf {
-    in: "mixed8_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed8_concat"
   concat_conf {
-    in: "mixed8_b1x1_relu/out"
-    in: "mixed8_b7x7_relu/out"
-    in: "mixed8_b7x7d_relu/out"
-    in: "mixed8_bPool_relu/out"
+    in: "mixed8_b1x1_bn/out"
+    in: "mixed8_b7x7_bn/out"
+    in: "mixed8_b7x7d_bn/out"
+    in: "mixed8_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -2394,20 +2006,14 @@ op {
   normalization_conf {
     in: "mixed9_b3x3-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed9_b3x3-1_relu"
-  relu_conf {
-    in: "mixed9_b3x3-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed9_b3x3_conv"
   conv_2d_conf {
-    in: "mixed9_b3x3-1_relu/out"
+    in: "mixed9_b3x3-1_bn/out"
     out: "out"
     filters: 320
     padding: "valid"
@@ -2426,14 +2032,8 @@ op {
   normalization_conf {
     in: "mixed9_b3x3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed9_b3x3_relu"
-  relu_conf {
-    in: "mixed9_b3x3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2458,20 +2058,14 @@ op {
   normalization_conf {
     in: "mixed9_b7x7-3x3-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed9_b7x7-3x3-1_relu"
-  relu_conf {
-    in: "mixed9_b7x7-3x3-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed9_b7x7-3x3-2_conv"
   conv_2d_conf {
-    in: "mixed9_b7x7-3x3-1_relu/out"
+    in: "mixed9_b7x7-3x3-1_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -2490,20 +2084,14 @@ op {
   normalization_conf {
     in: "mixed9_b7x7-3x3-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed9_b7x7-3x3-2_relu"
-  relu_conf {
-    in: "mixed9_b7x7-3x3-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed9_b7x7-3x3-3_conv"
   conv_2d_conf {
-    in: "mixed9_b7x7-3x3-2_relu/out"
+    in: "mixed9_b7x7-3x3-2_bn/out"
     out: "out"
     filters: 192
     padding: "same"
@@ -2522,20 +2110,14 @@ op {
   normalization_conf {
     in: "mixed9_b7x7-3x3-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed9_b7x7-3x3-3_relu"
-  relu_conf {
-    in: "mixed9_b7x7-3x3-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed9_b7x7-3x3_conv"
   conv_2d_conf {
-    in: "mixed9_b7x7-3x3-3_relu/out"
+    in: "mixed9_b7x7-3x3-3_bn/out"
     out: "out"
     filters: 192
     padding: "valid"
@@ -2554,14 +2136,8 @@ op {
   normalization_conf {
     in: "mixed9_b7x7-3x3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed9_b7x7-3x3_relu"
-  relu_conf {
-    in: "mixed9_b7x7-3x3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2580,8 +2156,8 @@ op {
 op {
   name: "mixed9_concat"
   concat_conf {
-    in: "mixed9_b3x3_relu/out"
-    in: "mixed9_b7x7-3x3_relu/out"
+    in: "mixed9_b3x3_bn/out"
+    in: "mixed9_b7x7-3x3_bn/out"
     in: "mixed9_pool/out"
     out: "out"
     axis: 1
@@ -2609,14 +2185,8 @@ op {
   normalization_conf {
     in: "mixed10_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b1x1_relu"
-  relu_conf {
-    in: "mixed10_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2641,20 +2211,14 @@ op {
   normalization_conf {
     in: "mixed10_b3x3-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3-1_relu"
-  relu_conf {
-    in: "mixed10_b3x3-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_b3x3-2_conv"
   conv_2d_conf {
-    in: "mixed10_b3x3-1_relu/out"
+    in: "mixed10_b3x3-1_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -2673,20 +2237,14 @@ op {
   normalization_conf {
     in: "mixed10_b3x3-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3-2_relu"
-  relu_conf {
-    in: "mixed10_b3x3-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_b3x3-3_conv"
   conv_2d_conf {
-    in: "mixed10_b3x3-1_relu/out"
+    in: "mixed10_b3x3-1_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -2705,21 +2263,15 @@ op {
   normalization_conf {
     in: "mixed10_b3x3-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3-3_relu"
-  relu_conf {
-    in: "mixed10_b3x3-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_concat3x3"
   concat_conf {
-    in: "mixed10_b3x3-2_relu/out"
-    in: "mixed10_b3x3-3_relu/out"
+    in: "mixed10_b3x3-2_bn/out"
+    in: "mixed10_b3x3-3_bn/out"
     out: "out"
     axis: 1
   }
@@ -2746,20 +2298,14 @@ op {
   normalization_conf {
     in: "mixed10_b3x3-3x3-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3-3x3-1_relu"
-  relu_conf {
-    in: "mixed10_b3x3-3x3-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_b3x3-3x3-2_conv"
   conv_2d_conf {
-    in: "mixed10_b3x3-3x3-1_relu/out"
+    in: "mixed10_b3x3-3x3-1_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -2778,20 +2324,14 @@ op {
   normalization_conf {
     in: "mixed10_b3x3-3x3-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3-3x3-2_relu"
-  relu_conf {
-    in: "mixed10_b3x3-3x3-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_b3x3_3x3_3_conv"
   conv_2d_conf {
-    in: "mixed10_b3x3-3x3-2_relu/out"
+    in: "mixed10_b3x3-3x3-2_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -2810,20 +2350,14 @@ op {
   normalization_conf {
     in: "mixed10_b3x3_3x3_3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3_3x3_3_relu"
-  relu_conf {
-    in: "mixed10_b3x3_3x3_3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_b3x3_3x3_4_conv"
   conv_2d_conf {
-    in: "mixed10_b3x3-3x3-2_relu/out"
+    in: "mixed10_b3x3-3x3-2_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -2842,21 +2376,15 @@ op {
   normalization_conf {
     in: "mixed10_b3x3_3x3_4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_b3x3_3x3_4_relu"
-  relu_conf {
-    in: "mixed10_b3x3_3x3_4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_concat3x3-3x3"
   concat_conf {
-    in: "mixed10_b3x3_3x3_3_relu/out"
-    in: "mixed10_b3x3_3x3_4_relu/out"
+    in: "mixed10_b3x3_3x3_3_bn/out"
+    in: "mixed10_b3x3_3x3_4_bn/out"
     out: "out"
     axis: 1
   }
@@ -2896,23 +2424,17 @@ op {
   normalization_conf {
     in: "mixed10_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed10_bPool_relu"
-  relu_conf {
-    in: "mixed10_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed10_concat"
   concat_conf {
-    in: "mixed10_b1x1_relu/out"
+    in: "mixed10_b1x1_bn/out"
     in: "mixed10_concat3x3/out"
     in: "mixed10_concat3x3-3x3/out"
-    in: "mixed10_bPool_relu/out"
+    in: "mixed10_bPool_bn/out"
     out: "out"
     axis: 1
   }
@@ -2939,14 +2461,8 @@ op {
   normalization_conf {
     in: "mixed11_b1x1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b1x1_relu"
-  relu_conf {
-    in: "mixed11_b1x1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
@@ -2971,20 +2487,14 @@ op {
   normalization_conf {
     in: "mixed11_b3x3-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3-1_relu"
-  relu_conf {
-    in: "mixed11_b3x3-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_b3x3-2_conv"
   conv_2d_conf {
-    in: "mixed11_b3x3-1_relu/out"
+    in: "mixed11_b3x3-1_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -3003,20 +2513,14 @@ op {
   normalization_conf {
     in: "mixed11_b3x3-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3-2_relu"
-  relu_conf {
-    in: "mixed11_b3x3-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_b3x3-3_conv"
   conv_2d_conf {
-    in: "mixed11_b3x3-1_relu/out"
+    in: "mixed11_b3x3-1_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -3035,21 +2539,15 @@ op {
   normalization_conf {
     in: "mixed11_b3x3-3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3-3_relu"
-  relu_conf {
-    in: "mixed11_b3x3-3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_concat3x3"
   concat_conf {
-    in: "mixed11_b3x3-2_relu/out"
-    in: "mixed11_b3x3-3_relu/out"
+    in: "mixed11_b3x3-2_bn/out"
+    in: "mixed11_b3x3-3_bn/out"
     out: "out"
     axis: 1
   }
@@ -3076,20 +2574,14 @@ op {
   normalization_conf {
     in: "mixed11_b3x3-3x3-1_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3-3x3-1_relu"
-  relu_conf {
-    in: "mixed11_b3x3-3x3-1_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_b3x3-3x3-2_conv"
   conv_2d_conf {
-    in: "mixed11_b3x3-3x3-1_relu/out"
+    in: "mixed11_b3x3-3x3-1_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -3108,20 +2600,14 @@ op {
   normalization_conf {
     in: "mixed11_b3x3-3x3-2_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3-3x3-2_relu"
-  relu_conf {
-    in: "mixed11_b3x3-3x3-2_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_b3x3_3x3_3_conv"
   conv_2d_conf {
-    in: "mixed11_b3x3-3x3-2_relu/out"
+    in: "mixed11_b3x3-3x3-2_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -3140,20 +2626,14 @@ op {
   normalization_conf {
     in: "mixed11_b3x3_3x3_3_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3_3x3_3_relu"
-  relu_conf {
-    in: "mixed11_b3x3_3x3_3_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_b3x3_3x3_4_conv"
   conv_2d_conf {
-    in: "mixed11_b3x3-3x3-2_relu/out"
+    in: "mixed11_b3x3-3x3-2_bn/out"
     out: "out"
     filters: 384
     padding: "same"
@@ -3172,21 +2652,15 @@ op {
   normalization_conf {
     in: "mixed11_b3x3_3x3_4_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_b3x3_3x3_4_relu"
-  relu_conf {
-    in: "mixed11_b3x3_3x3_4_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_concat3x3-3x3"
   concat_conf {
-    in: "mixed11_b3x3_3x3_3_relu/out"
-    in: "mixed11_b3x3_3x3_4_relu/out"
+    in: "mixed11_b3x3_3x3_3_bn/out"
+    in: "mixed11_b3x3_3x3_4_bn/out"
     out: "out"
     axis: 1
   }
@@ -3226,23 +2700,17 @@ op {
   normalization_conf {
     in: "mixed11_bPool_conv/out"
     out: "out"
-		axis: 1
-  }
-}
-op {
-  name: "mixed11_bPool_relu"
-  relu_conf {
-    in: "mixed11_bPool_bn/out"
-    out: "out"
+    axis: 1
+    activation: kRelu
   }
 }
 op {
   name: "mixed11_concat"
   concat_conf {
-    in: "mixed11_b1x1_relu/out"
+    in: "mixed11_b1x1_bn/out"
     in: "mixed11_concat3x3/out"
     in: "mixed11_concat3x3-3x3/out"
-    in: "mixed11_bPool_relu/out"
+    in: "mixed11_bPool_bn/out"
     out: "out"
     axis: 1
   }

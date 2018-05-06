@@ -1,14 +1,14 @@
 dlnet_filepath: "./train_net.prototxt"
-resource_filepath: "./resource.prototxt"
-placement_filepath: "./train_placement.prototxt"
+resource_filepath: "./single_machine_resource.prototxt"
+placement_filepath: "./single_machine_train_placement.prototxt"
 use_rdma: false
 globalfs_conf {
   hdfs_conf {
 		namenode: "hdfs://192.168.1.11:9000" 
   }
 }
-single_piece_size: 1
-data_part_num: 54
+single_piece_size: 2
+data_part_num: 32
 model_load_snapshot_path: ""
 reserved_device_mem_mbyte_size: 600
 max_data_id_length: 8
@@ -26,8 +26,10 @@ train_conf {
   }
   num_of_pieces_in_batch: 1
   model_update_conf {
-    learning_rate: 0.0267
-    naive_conf {
+    learning_rate: 0.045
+    rmsprop_conf {
+      decay_rate: 0.9
+      epsilon: 1.0
     }
   }
 }
