@@ -11,7 +11,7 @@ template<DeviceType device_type, typename T>
 void ReduceAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const PbRpf<std::string>& input_bns = this->op_attribute().input_bns();
-  Blob* same_parallel_in_blob = BnInOp2Blob(input_bns[parallel_id_]);
+  Blob* same_parallel_in_blob = BnInOp2Blob(input_bns.Get(parallel_id_));
   Blob* out_blob = BnInOp2Blob("out");
   Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(),
                       same_parallel_in_blob->dptr<char>(), out_blob->ByteSizeOfDataContentField());
