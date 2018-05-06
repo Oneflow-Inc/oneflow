@@ -18,7 +18,6 @@ class ReduceAddCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-  void InitProducedRegstMemCase(MemoryCase*) override;
 };
 
 }  // namespace oneflow
