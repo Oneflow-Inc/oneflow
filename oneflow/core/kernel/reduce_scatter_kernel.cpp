@@ -11,15 +11,13 @@ template<DeviceType device_type>
 void ReduceScatterKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const char* src_cur_dptr = BnInOp2Blob("in")->dptr<char>();
-  int32_t cur_out_parallel_id = 0;
-  for (const std::string& obn : this->op_attribute().output_bns()) {
-    Blob* out_blob = BnInOp2Blob(obn);
+  const PbRpf<std::string>& output_bns = this->op_attribute().output_bns();
+  for (int32_t i = 0; i < output_bns.size(); ++i) {
+    Blob* out_blob = BnInOp2Blob(output_bns.Get(i));
     size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
     ReduceScatterKernelUtil<device_type>::DoMemcpy(ctx.device_ctx, out_blob->mut_dptr<char>(),
-                                                   src_cur_dptr, out_byte_size,
-                                                   cur_out_parallel_id == parallel_id_);
+                                                   src_cur_dptr, out_byte_size, i == parallel_id_);
     src_cur_dptr += out_byte_size;
-    ++cur_out_parallel_id;
   }
 }
 
