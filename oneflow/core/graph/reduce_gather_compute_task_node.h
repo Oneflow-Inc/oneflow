@@ -14,7 +14,7 @@ class ReduceGatherCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
 
-  TaskType GetTaskType() const override { return TaskType::kReduceScatter; }
+  TaskType GetTaskType() const override { return TaskType::kReduceGather; }
 
  private:
   void BuildExecGphAndRegst() override;
