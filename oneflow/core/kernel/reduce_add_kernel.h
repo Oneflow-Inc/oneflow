@@ -19,11 +19,6 @@ class ReduceAddKernel final : public KernelIf<device_type> {
   int32_t parallel_id_;
 };
 
-template<DeviceType device_type, typename T>
-struct ReduceAddKernelUtil {
-  static void DoAdd(DeviceCtx* ctx, T* dst, const T* src, size_t n, T* tmp);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_REDUCE_ADD_KERNEL_H_

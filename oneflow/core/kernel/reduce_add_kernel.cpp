@@ -15,28 +15,21 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
   Blob* out_blob = BnInOp2Blob("out");
   Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(),
                       same_parallel_in_blob->dptr<char>(), out_blob->ByteSizeOfDataContentField());
+  int64_t elem_cnt = out_blob->shape().elem_cnt();
   for (int32_t i = 0; i < input_bns.size(); ++i) {
     if (i == parallel_id_) { continue; }
-    ReduceAddKernelUtil<device_type, T>::DoAdd(
-        ctx.device_ctx, out_blob->mut_dptr<T>(), BnInOp2Blob(input_bns[parallel_id_])->dptr<T>(),
-        out_blob->shape().elem_cnt(), same_parallel_in_blob->mut_dptr<T>());
+    Blob* in_blob = BnInOp2Blob(input_bns.Get(i));
+    Blob* src_blob = in_blob;
+    if (in_blob->mem_case().has_host_mem() && out_blob->mem_case().has_device_cuda_mem()) {
+      Memcpy<DeviceType::kGPU>(ctx.device_ctx, same_parallel_in_blob->mut_dptr<T>(),
+                               in_blob->dptr<T>(), elem_cnt,
+                               cudaMemcpyKind::cudaMemcpyHostToDevice);
+      src_blob = same_parallel_in_blob;
+    }
+    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, 1.0, src_blob->dptr<T>(), 1,
+                                     out_blob->mut_dptr<T>(), 1);
   }
 }
-
-template<typename T>
-struct ReduceAddKernelUtil<DeviceType::kCPU, T> {
-  static void DoAdd(DeviceCtx* ctx, T* dst, const T* src, size_t n, T* tmp) {
-    KernelUtil<DeviceType::kCPU, T>::Axpy(ctx, n, 1.0, src, 1, dst, 1);
-  }
-};
-
-template<typename T>
-struct ReduceAddKernelUtil<DeviceType::kGPU, T> {
-  static void DoAdd(DeviceCtx* ctx, T* dst, const T* src, size_t n, T* tmp) {
-    Memcpy<DeviceType::kGPU>(ctx, tmp, src, n, cudaMemcpyKind::cudaMemcpyHostToDevice);
-    KernelUtil<DeviceType::kGPU, T>::Axpy(ctx, n, 1.0, tmp, 1, dst, 1);
-  }
-};
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAddConf, ReduceAddKernel, FLOATING_DATA_TYPE_SEQ);
 
