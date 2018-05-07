@@ -3,8 +3,6 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
-DEFINE_bool(model_diff_reduce, false, "");
-
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
@@ -431,7 +429,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         } else {
           md_diff_acc_logical = bw_logical;
         }
-        if (FLAGS_model_diff_reduce) {
+        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1) {
           BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
