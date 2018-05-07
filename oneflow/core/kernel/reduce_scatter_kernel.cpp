@@ -2,8 +2,8 @@
 
 namespace oneflow {
 
-void ReduceScatterKernel::Forward(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void ReduceScatterKernel::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   const char* src_cur_dptr = in_blob->dptr<char>();
   for (const std::string& obn : this->op_attribute().output_bns()) {
