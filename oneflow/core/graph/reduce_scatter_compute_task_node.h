@@ -11,7 +11,14 @@ class ReduceScatterCompTaskNode final : public CompTaskNode {
   ReduceScatterCompTaskNode() = default;
   ~ReduceScatterCompTaskNode() = default;
 
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kReduceScatter; }
+
  private:
+  void BuildExecGphAndRegst() override;
+  void InitProducedRegstMemCase(MemoryCase*) override;
 };
 
 }  // namespace oneflow
