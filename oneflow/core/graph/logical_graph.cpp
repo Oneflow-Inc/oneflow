@@ -3,6 +3,8 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 
+DEFINE_bool(model_diff_reduce, false, "");
+
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
@@ -427,11 +429,48 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         } else {
           md_diff_acc_logical = bw_logical;
         }
-        Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);  // TODO: reduce
+        if (FLAGS_model_diff_reduce) {
+          BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
+        } else {
+          Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
+        }
       }
     }
   });
   SetupNormalMdUpdtOp();
+}
+
+void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
+  CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+  CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
+  // Reduce Scatter
+  OperatorConf reduce_scatter_op_conf;
+  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(src_pd->parallel_num());
+  LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
+  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf, src_pd->device_type())};
+  reduce_scatter_node->mut_parallel_desc() = src_pd;
+  // Reduce Add
+  OperatorConf reduce_add_op_conf;
+  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(src_pd->parallel_num());
+  LogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
+  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf, src_pd->device_type())};
+  reduce_add_node->mut_parallel_desc() = src_pd;
+  // Reduce Gather
+  OperatorConf reduce_gather_op_conf;
+  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
+  reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(src_pd->parallel_num());
+  LogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
+  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf, src_pd->device_type())};
+  reduce_gather_node->mut_parallel_desc() = src_pd;
+  // Connect
+  Connect(src, NewEdge(), reduce_scatter_node);
+  Connect(reduce_scatter_node, NewEdge(), reduce_add_node);
+  Connect(reduce_add_node, NewEdge(), reduce_gather_node);
+  Connect(reduce_gather_node, NewEdge(), dst);
 }
 
 void LogicalGraph::SetupNormalMdUpdtOp() {
