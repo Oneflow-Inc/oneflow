@@ -51,9 +51,13 @@ class Kernel {
   virtual void ForwardActivate(const KernelCtx& ctx,
                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(const KernelCtx& ctx,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual void ForwardColNum(const KernelCtx& ctx,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
 
   virtual void Backward(const KernelCtx& ctx,
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -62,9 +66,13 @@ class Kernel {
   virtual void BackwardActivate(const KernelCtx& ctx,
                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual void BackwardColNum(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
   virtual void L2Regularization(const KernelCtx& ctx,
                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
