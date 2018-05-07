@@ -5,24 +5,15 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class ReduceGatherKernel final : public KernelIf<device_type> {
+class ReduceGatherKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceGatherKernel);
   ReduceGatherKernel() = default;
   ~ReduceGatherKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  int32_t parallel_id_;
-};
-
-template<DeviceType device_type>
-struct ReduceGatherKernelUtil {
-  static void DoMemcpy(DeviceCtx* ctx, char* dst, const char* src, size_t sz,
-                       bool is_same_parallel_id);
 };
 
 }  // namespace oneflow
