@@ -5,16 +5,14 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-class ReduceScatterKernel final : public KernelIf<device_type> {
+class ReduceScatterKernel final : public Kernel {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceScatterKernel);
   ReduceScatterKernel() = default;
   ~ReduceScatterKernel() = default;
 
  private:
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 };
 
 }  // namespace oneflow
