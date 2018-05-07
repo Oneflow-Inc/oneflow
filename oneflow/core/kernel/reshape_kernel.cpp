@@ -22,18 +22,6 @@ void ReshapeKernel<device_type>::Backward(
                       out_diff_blob->TotalByteSize());
 }
 
-namespace {
-
-Kernel* CreateReshapeKernel(const KernelConf& kernel_conf) {
-  static const HashMap<int32_t, std::function<Kernel*()>> creators = {
-#define RESHAPE_KERNEL_ENTRY(device_type) \
-  {device_type, []() { return new ReshapeKernel<device_type>; }},
-      OF_PP_FOR_EACH_TUPLE(RESHAPE_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(kernel_conf.op_attribute().device_type())();
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kReshapeConf, CreateReshapeKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReshapeConf, ReshapeKernel);
 
 }  // namespace oneflow

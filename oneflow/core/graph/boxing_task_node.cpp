@@ -199,12 +199,13 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   BldBoxingOpConfMthd method = GetMthdForBldBoxingOpConf(in_logical, out_logical);
   OperatorConf op_conf;
   op_conf.set_name("boxing_op_" + NewUniqueId());
+  op_conf.set_device_type(device_type());
   BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
   *(boxing_conf->mutable_lbi()) = lbi;
   boxing_conf->set_in_num(sorted_in_edges.size());
   boxing_conf->set_out_num(sorted_out_edges.size());
   (this->*method)(lbi, sorted_in_edges, in_logical, sorted_out_edges, out_logical, boxing_conf);
-  return ConstructOp(op_conf, device_type());
+  return ConstructOp(op_conf);
 }
 
 }  // namespace oneflow

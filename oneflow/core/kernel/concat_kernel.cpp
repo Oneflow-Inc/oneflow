@@ -38,18 +38,6 @@ void ConcatKernel<device_type>::BackwardDataContent(
   CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
-namespace {
-
-Kernel* CreateConcatKernel(const KernelConf& kernel_conf) {
-  static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define CONCAT_KERNEL_ENTRY(device_type) \
-  {GetHashKey(device_type), []() { return new ConcatKernel<device_type>; }},
-      OF_PP_FOR_EACH_TUPLE(CONCAT_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(GetHashKey(kernel_conf.op_attribute().device_type()))();
-}
-
-}  // namespace
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kConcatConf, CreateConcatKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kConcatConf, ConcatKernel);
 
 }  // namespace oneflow
