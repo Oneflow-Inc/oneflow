@@ -5,8 +5,7 @@ namespace oneflow {
 
 namespace {
 
-void ConvertChannel(cv::Mat* src, cv::Mat* dst, int32_t src_cn,
-                    int32_t dst_cn) {
+void ConvertChannel(cv::Mat* src, cv::Mat* dst, int32_t src_cn, int32_t dst_cn) {
   if (src_cn == dst_cn) { return; }
 
   if (src_cn == 3 && dst_cn == 1) {
