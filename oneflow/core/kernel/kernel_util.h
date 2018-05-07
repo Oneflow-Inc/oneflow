@@ -15,7 +15,9 @@
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+template<cudaMemcpyKind cpy_kind>
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
+
 template<DeviceType device_type>
 struct GetCudaMemcpyKind;
 template<>
@@ -27,15 +29,13 @@ struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
 size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
-#endif
 
 template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz
-#ifdef WITH_CUDA
-            ,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val
-#endif
-);
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
+            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
+
+void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);

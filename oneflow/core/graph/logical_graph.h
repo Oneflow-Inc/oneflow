@@ -57,6 +57,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void SetNodeDataLbi();
   void BuildLossPrintStruct();
   void BuildModelStruct(bool is_train);
+  void BuildReduceStruct(LogicalNode* src, LogicalNode* dst);
   void SetupNormalMdUpdtOp();
   MdSaveLogicalNode* BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
                                        LogicalNode* need_save_logical);
