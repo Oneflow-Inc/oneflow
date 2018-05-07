@@ -41,22 +41,6 @@ struct ReduceScatterKernelUtil<DeviceType::kGPU> {
   }
 };
 
-namespace {
-
-Kernel* CreateReduceScatterKernel(const KernelConf& kernel_conf) {
-  static const HashMap<int32_t, std::function<Kernel*()>> creators = {
-#define REDUCE_SCATTER_KERNEL_ENTRY(device_type) \
-  {device_type, []() { return new ReduceScatterKernel<device_type>; }},
-      OF_PP_FOR_EACH_TUPLE(REDUCE_SCATTER_KERNEL_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(kernel_conf.op_attribute().device_type())();
-}
-
-}  // namespace
-
-#define INSTANTIATE_REDUCE_SCATTER_KERNEL_UTIL(device_type) \
-  template struct ReduceScatterKernelUtil<device_type>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_REDUCE_SCATTER_KERNEL_UTIL, DEVICE_TYPE_SEQ)
-
-REGISTER_KERNEL_CREATOR(OperatorConf::kReduceScatterConf, CreateReduceScatterKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceScatterConf, ReduceScatterKernel);
 
 }  // namespace oneflow
