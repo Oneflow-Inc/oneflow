@@ -19,12 +19,6 @@ class ReduceScatterKernel final : public KernelIf<device_type> {
   int32_t parallel_id_;
 };
 
-template<DeviceType device_type>
-struct ReduceScatterKernelUtil {
-  static void DoMemcpy(DeviceCtx* ctx, char* dst, const char* src, size_t sz,
-                       bool is_same_parallel_id);
-};
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_REDUCE_SCATTER_KERNEL_H_
