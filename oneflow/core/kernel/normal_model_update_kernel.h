@@ -36,13 +36,13 @@ double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t n
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 
-#define DEFINE_MDUPDT_KERNEL_CREATOR(x)                                                   \
-  Kernel* Create##x##MdUpdtKernel(const KernelConf& kernel_conf) {                        \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {              \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (x##MdUpdateKernel),  \
-                                         DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};       \
-    return creators.at(                                                                   \
-        GetHashKey(kernel_conf.op_attribute().device_type(), kernel_conf.data_type()))(); \
+#define DEFINE_MDUPDT_KERNEL_CREATOR(x)                                                  \
+  Kernel* Create##x##MdUpdtKernel(const KernelConf& kernel_conf) {                       \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {             \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (x##MdUpdateKernel), \
+                                         DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};      \
+    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),    \
+                                  kernel_conf.data_type()))();                           \
   }
 
 }  // namespace oneflow

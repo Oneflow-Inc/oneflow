@@ -4,6 +4,7 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/record/image.proto";
+import "oneflow/core/job/resource.proto";
 
 enum ActivationType {
   kNone = 0;
@@ -551,6 +552,7 @@ message OperatorConf {
   optional string model_load_dir = 2;
   optional bool use_cudnn_on_gpu = 3;
   optional bool trainable = 4 [default = true];
+  optional DeviceType device_type = 5 [default = kInvalidDevice];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
     DecodeOFRecordOpConf decode_ofrecord_conf = 102;

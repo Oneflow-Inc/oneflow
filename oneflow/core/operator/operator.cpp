@@ -17,9 +17,8 @@ DataType GetDataTypeFromBnInOpVec(
 
 }  // namespace
 
-void Operator::InitFromOpConf(const OperatorConf& op_conf, DeviceType device_type) {
+void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
-  op_attribute_.set_device_type(device_type);
   *this_op_conf = op_conf;
   if (this_op_conf->has_use_cudnn_on_gpu() == false) {
     this_op_conf->set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
@@ -296,9 +295,9 @@ std::string GenUnDiffBn(const std::string& diff_bn) {
   return diff_bn.substr(0, diff_bn.size() - 5);
 }
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type) {
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf) {
   Operator* rptr = NewObj<Operator>(op_conf.op_type_case(), op_conf);
-  rptr->InitFromOpConf(op_conf, device_type);
+  rptr->InitFromOpConf(op_conf);
   return std::shared_ptr<Operator>(rptr);
 }
 

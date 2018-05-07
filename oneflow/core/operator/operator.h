@@ -26,7 +26,7 @@ class Operator {
   virtual ~Operator() = default;
 
   //
-  void InitFromOpConf(const OperatorConf& op_conf, DeviceType device_type);
+  void InitFromOpConf(const OperatorConf& op_conf);
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
@@ -45,7 +45,7 @@ class Operator {
 
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
-  DeviceType device_type() const { return op_attribute_.device_type(); }
+  DeviceType device_type() const { return op_attribute_.op_conf().device_type(); }
   bool UseCudnn() const;
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
@@ -98,8 +98,6 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
-
-  void set_device_type(DeviceType device_type) { op_attribute_.set_device_type(device_type); }
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
@@ -208,7 +206,7 @@ std::string GenUnDiffBn(const std::string& diff_bn);
 #define REGISTER_OP_CREATOR(op_type_case, creator) \
   REGISTER_CLASS_CREATOR(op_type_case, Operator, creator, const OperatorConf&)
 
-std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf, DeviceType device_type);
+std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);
