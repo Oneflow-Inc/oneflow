@@ -11,7 +11,13 @@ class ReduceAddCompTaskNode final : public CompTaskNode {
   ReduceAddCompTaskNode() = default;
   ~ReduceAddCompTaskNode() = default;
 
+  void ProduceAllRegstsAndBindEdges() override;
+  void ConsumeAllRegsts() override;
+
+  TaskType GetTaskType() const override { return TaskType::kReduceAdd; }
+
  private:
+  void BuildExecGphAndRegst() override;
 };
 
 }  // namespace oneflow
