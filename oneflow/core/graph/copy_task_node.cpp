@@ -16,7 +16,7 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   auto in_regst = GetSoleConsumedRegst("copy_in");
   out_regst->CopyBlobDescFrom(in_regst.get());
   ExecNode* node = mut_exec_gph().NewNode();
-  node->mut_op() = ConstructOp(NewCopyOpConf(), device_type());
+  node->mut_op() = ConstructOp(NewCopyOpConf());
   node->BindBnWithRegst(node->op()->SoleIbn(), in_regst);
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
@@ -40,6 +40,7 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
+  conf.set_device_type(device_type());
   conf.mutable_copy_hd_conf()->set_type(copy_type_);
   return conf;
 }
@@ -61,6 +62,7 @@ void CopyCommNetTaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
 OperatorConf CopyCommNetTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_comm_net_" + NewUniqueId());
+  conf.set_device_type(device_type());
   conf.mutable_copy_comm_net_conf();
   return conf;
 }
