@@ -87,7 +87,7 @@ const BlobDesc* RegstDesc::GetBlobDesc(const LogicalBlobId& lbi) const {
 }
 
 BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
-  if (lbi.is_packed_id()) { return packed_blob_desc_.get(); }
+  if (lbi.is_packed_id() && packed_blob_desc_.get()) { return packed_blob_desc_.get(); }
   auto it = lbi2blob_desc_.find(lbi);
   if (it != lbi2blob_desc_.end()) {
     return it->second.get();
