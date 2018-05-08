@@ -210,7 +210,18 @@ void Erase(T& container, std::function<bool(const typename T::value_type&)> Need
 }
 
 inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  return lhs.SerializeAsString() < rhs.SerializeAsString();
+  if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
+  if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
+  if (lhs.b121_id() != rhs.b121_id()) { return lhs.b121_id() < rhs.b121_id(); }
+  if (lhs.clone_id() != rhs.clone_id()) { return lhs.clone_id() < rhs.clone_id(); }
+  if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
+  return false;
+}
+
+inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
+  return lhs.op_name() == rhs.op_name() && lhs.blob_name() == rhs.blob_name()
+         && lhs.b121_id() == rhs.b121_id() && lhs.clone_id() == rhs.clone_id()
+         && lhs.is_packed_id() == rhs.is_packed_id();
 }
 
 }  // namespace oneflow
@@ -220,7 +231,9 @@ namespace std {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.SerializeAsString());
+    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.b121_id())
+                                    + std::to_string(lbi.clone_id())
+                                    + std::to_string(lbi.is_packed_id()));
   }
 };
 

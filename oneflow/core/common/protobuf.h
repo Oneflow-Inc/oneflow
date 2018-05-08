@@ -115,17 +115,6 @@ google::protobuf::Map<K, V> HashMap2PbMap(const HashMap<K, V>& hash_map) {
   return RetType(hash_map.begin(), hash_map.end());
 }
 
-// operator
-inline bool operator==(const google::protobuf::MessageLite& lhs,
-                       const google::protobuf::MessageLite& rhs) {
-  return lhs.SerializeAsString() == rhs.SerializeAsString();
-}
-
-inline bool operator!=(const google::protobuf::MessageLite& lhs,
-                       const google::protobuf::MessageLite& rhs) {
-  return !(lhs == rhs);
-}
-
 // Hack Oneof Getter
 
 template<typename T = PbMessage>
