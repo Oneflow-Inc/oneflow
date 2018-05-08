@@ -51,8 +51,6 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
   Blob* nc_blob = BnInOp2Blob("normalize_coef");
   Memset<DeviceType::kCPU>(ctx.device_ctx, ps_blob->mut_dptr(), 0,
                            ps_blob->ByteSizeOfDataContentField());
-  Memset<DeviceType::kCPU>(ctx.device_ctx, nc_blob->mut_dptr(), 0,
-                           nc_blob->ByteSizeOfDataContentField());
 
   T* ps_dptr = ps_blob->mut_dptr<T>();
   T* nc_dptr = nc_blob->mut_dptr<T>();
