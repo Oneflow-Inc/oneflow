@@ -231,9 +231,9 @@ namespace std {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.op_name()) ^ std::hash<std::string>()(lbi.blob_name())
-           ^ std::hash<int32_t>()(lbi.b121_id()) ^ std::hash<int32_t>()(lbi.clone_id())
-           ^ std::hash<bool>()(lbi.is_packed_id());
+    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.b121_id())
+                                    + std::to_string(lbi.clone_id())
+                                    + std::to_string(lbi.is_packed_id()));
   }
 };
 
