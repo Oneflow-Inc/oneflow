@@ -44,7 +44,7 @@ op {
   conv_2d_conf {
     in: "transpose/out"
     out: "out"
-    filters: 96
+    filters: 64
     padding: "SAME"
     data_format: "channels_first"
     kernel_size: 11
@@ -170,7 +170,7 @@ op {
   conv_2d_conf {
     in: "conv3/out"
     out: "out"
-    filters: 256
+    filters: 384
     padding: "SAME"
     data_format: "channels_first"
     kernel_size: 3
