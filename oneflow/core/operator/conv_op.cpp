@@ -68,8 +68,10 @@ void ConvOp<NDims>::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollModelTmpBn("bias_multiplier");
   }
-  EnrollDataTmpBn("cudnn_buf");
-  EnrollDataTmpBn("col_buf");
+  EnrollFwBufBn("fw_cudnn_buf");
+  EnrollBwBufBn("bw_cudnn_buf");
+  EnrollFwBufBn("fw_col_buf");
+  EnrollBwBufBn("bw_col_buf");
 }
 
 template<int32_t NDims>
@@ -135,7 +137,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
     for (size_t i = 0; i != NDims; ++i) {
       col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
     }
-    GetBlobDesc4BnInOp("col_buf")->mut_shape() = Shape(col_buf_shape);
+    GetBlobDesc4BnInOp("fw_col_buf")->mut_shape() = Shape(col_buf_shape);
   }
 
 #ifdef WITH_CUDA
@@ -144,10 +146,39 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
     CudnnConvAlgoCtx conv_ctx;
     InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
 
-    int64_t cudnn_buf_size = static_cast<int64_t>(
-        std::max({conv_ctx.fwd_ws_size, conv_ctx.bwd_filter_ws_size, conv_ctx.bwd_data_ws_size}));
-    GetBlobDesc4BnInOp("cudnn_buf")->set_data_type(DataType::kChar);
-    GetBlobDesc4BnInOp("cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
+    int64_t cudnn_buf_size = static_cast<int64_t>(conv_ctx.fwd_ws_size);
+    GetBlobDesc4BnInOp("fw_cudnn_buf")->set_data_type(DataType::kChar);
+    GetBlobDesc4BnInOp("fw_cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
+  }
+#endif  // WITH_CUDA
+}
+
+template<int32_t NDims>
+void ConvOp<NDims>::InferBwBufBlobDescs(
+    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx) const {
+  const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
+  if (!UseCudnn()) {
+    // col_buf
+    const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
+    const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
+    std::vector<int64_t> col_buf_shape(2 * NDims + 1);
+    for (size_t i = 0; i != NDims + 1; ++i) { col_buf_shape[i] = weight_shape.At(i + 1); }
+    for (size_t i = 0; i != NDims; ++i) {
+      col_buf_shape[NDims + i + 1] = out_shape.At(DhwOffset(data_format) + i);
+    }
+    GetBlobDesc4BnInOp("bw_col_buf")->mut_shape() = Shape(col_buf_shape);
+  }
+
+#ifdef WITH_CUDA
+  if (device_type() == DeviceType::kGPU) {
+    // cudnn_buf
+    CudnnConvAlgoCtx conv_ctx;
+    InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
+    int64_t cudnn_buf_size =
+        static_cast<int64_t>(std::max({conv_ctx.bwd_filter_ws_size, conv_ctx.bwd_data_ws_size}));
+    GetBlobDesc4BnInOp("bw_cudnn_buf")->set_data_type(DataType::kChar);
+    GetBlobDesc4BnInOp("bw_cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
   }
 #endif  // WITH_CUDA
 }

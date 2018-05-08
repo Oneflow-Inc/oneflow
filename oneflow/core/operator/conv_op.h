@@ -43,6 +43,8 @@ class ConvOp : public Operator {
   bool NeedOutWhenBackward() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                       const ParallelContext*) const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                           const ParallelContext*) const override;
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;

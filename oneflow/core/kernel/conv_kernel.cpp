@@ -127,13 +127,13 @@ template<typename T>
 void ConvKernel<DeviceType::kCPU, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* col_buf_blob = BnInOp2Blob("col_buf");
+  Blob* col_buf_blob = BnInOp2Blob("fw_col_buf");
   FOR_RANGE(int64_t, i, 0, in_shape_.At(0)) {
     im2col_func_(device_ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_, out_shape_,
                  strides_, dilation_rate_, padding_before_, col_buf_blob->mut_dptr<T>());
 
-    // channels first: out = weight * col_buf
-    // channels last:  out = (weight * col_buf)(T)
+    // channels first: out = weight * fw_col_buf
+    // channels last:  out = (weight * fw_col_buf)(T)
     forward_func_(device_ctx, CblasNoTrans, CblasNoTrans,
                   weight_shape_.At(0),                             // filter
                   out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  // od * oh * ow
@@ -161,7 +161,7 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
     DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* col_buf_blob = BnInOp2Blob("col_buf");
+  Blob* col_buf_blob = BnInOp2Blob("bw_col_buf");
   Memset<DeviceType::kCPU>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
                            weight_diff_blob->ByteSizeOfDataContentField());
   if (in_diff_blob != nullptr) {
@@ -172,8 +172,8 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
     im2col_func_(ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_, out_shape_, strides_,
                  dilation_rate_, padding_before_, col_buf_blob->mut_dptr<T>());
 
-    // channels first:  weight' += out[i]' * col_buf(T)
-    // channels last :  weight' += out[i]'(T) * col_buf(T)
+    // channels first:  weight' += out[i]' * bw_col_buf(T)
+    // channels last :  weight' += out[i]'(T) * bw_col_buf(T)
     KernelUtil<DeviceType::kCPU, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasTrans,
         weight_shape_.At(0),                             //  filter
@@ -183,8 +183,8 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
         static_cast<T>(1), weight_diff_blob->mut_dptr<T>());
 
     if (in_diff_blob != nullptr) {
-      // channels first:  col_buf' = weight(T) * out[i]'
-      // channels last :  col_buf' = weight(T) * out[i]'(T)
+      // channels first:  bw_col_buf' = weight(T) * out[i]'
+      // channels last :  bw_col_buf' = weight(T) * out[i]'(T)
       KernelUtil<DeviceType::kCPU, T>::OFGemm(
           ctx, CblasTrans, is_out_diff_need_trans_,
           weight_shape_.Count(1),                          //  ci * kd * kh * kw
@@ -193,7 +193,7 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
           static_cast<T>(1), weight_blob->dptr<T>(), GetImgDptr<T>(out_diff_blob, i),
           static_cast<T>(0), col_buf_blob->mut_dptr<T>());
 
-      // in' = col2im(col_buf')
+      // in' = col2im(bw_col_buf')
       col2im_func_(ctx, col_buf_blob->dptr<T>(), in_shape_, weight_shape_, out_shape_, strides_,
                    dilation_rate_, padding_before_, GetImgMutDptr<T>(in_diff_blob, i));
     }

@@ -51,7 +51,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  Blob* cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
   int64_t cudnn_buf_size = 0;
   T* cudnn_buf_dptr = nullptr;
   if (cudnn_buf) {
@@ -78,7 +78,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* cudnn_buf = BnInOp2Blob("cudnn_buf");
+  Blob* cudnn_buf = BnInOp2Blob("bw_cudnn_buf");
   int64_t cudnn_buf_size = 0;
   T* cudnn_buf_dptr = nullptr;
   if (cudnn_buf) {

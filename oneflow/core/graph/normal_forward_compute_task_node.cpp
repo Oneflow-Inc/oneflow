@@ -9,6 +9,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("activation");
   ProduceRegst("data_tmp");
   ProduceRegst("forward_model");
+  ProduceRegst("fw_buf", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdSave") {
@@ -121,6 +122,7 @@ void NormalForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+    node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
     for (const std::string& mtbn : node->op()->model_tmp_bns()) {
       if (!model_tmp_regst->IsLocked()) {
         const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mtbn);
