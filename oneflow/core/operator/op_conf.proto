@@ -550,9 +550,11 @@ message ReduceGatherOpConf {
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
-  optional bool use_cudnn_on_gpu = 3;
-  optional bool trainable = 4 [default = true];
-  optional DeviceType device_type = 5 [default = kInvalidDevice];
+  optional bool trainable = 3 [default = true];
+  optional DeviceType device_type = 4 [default = kInvalidDevice];
+  optional bool use_cudnn_on_gpu = 5;
+  optional int64 cudnn_fw_buf_limit_mbyte = 6 [default = 64];
+  optional int64 cudnn_bw_buf_limit_mbyte = 7 [default = 64];
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
     DecodeOFRecordOpConf decode_ofrecord_conf = 102;
