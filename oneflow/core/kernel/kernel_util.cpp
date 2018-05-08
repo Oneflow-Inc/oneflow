@@ -154,6 +154,28 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
   memcpy(dst, src, sz);
 }
 
+void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case) {
+  void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz, cudaMemcpyKind);
+  cudaMemcpyKind kind;
+  if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {
+    func = &Memcpy<DeviceType::kCPU>;
+    kind = cudaMemcpyKind::cudaMemcpyHostToHost;
+  } else {
+    func = &Memcpy<DeviceType::kGPU>;
+    if (src_mem_case.has_host_mem() && dst_mem_case.has_device_cuda_mem()) {
+      kind = cudaMemcpyKind::cudaMemcpyHostToDevice;
+    } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_host_mem()) {
+      kind = cudaMemcpyKind::cudaMemcpyDeviceToHost;
+    } else if (src_mem_case.has_device_cuda_mem() && dst_mem_case.has_device_cuda_mem()) {
+      kind = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
+  func(ctx, dst, src, sz, kind);
+}
+
 template<>
 void Memset<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const char value, size_t sz) {
   memset(dst, value, sz);

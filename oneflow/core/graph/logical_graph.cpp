@@ -55,10 +55,10 @@ void LogicalGraph::NaiveBuildFwStruct(
   }
 
   HashMap<LogicalBlobId, LogicalNode*> lbi2producer;
-  for (const OperatorConf& cur_op_conf : dlnet_conf.op()) {
+  for (OperatorConf cur_op_conf : dlnet_conf.op()) {
     ParallelDesc* parallel_desc_raw_ptr = name2parallel_desc.at(cur_op_conf.name());
-    std::shared_ptr<Operator> cur_op =
-        ConstructOp(cur_op_conf, parallel_desc_raw_ptr->device_type());
+    cur_op_conf.set_device_type(parallel_desc_raw_ptr->device_type());
+    std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
     AddAllocatedNode(cur_node);
     cur_node->mut_op_vec() = {cur_op};
@@ -159,9 +159,9 @@ void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info,
   // Clone Op
   OperatorConf clone_op_conf;
   clone_op_conf.set_name("b121_clone_" + NewUniqueId());
+  clone_op_conf.set_device_type(clone_info.pred_node->SoleOp()->device_type());
   clone_op_conf.mutable_clone_conf()->set_out_num(2);
-  std::shared_ptr<Operator> clone_op =
-      ConstructOp(clone_op_conf, clone_info.pred_node->SoleOp()->device_type());
+  std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIbn())) = clone_info.lbi;
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
   *(clone_op->MutBnInOp2Lbi(clone_op->output_bns().Get(0))) = lbi_boxing;
@@ -283,9 +283,9 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info,
                                        const HashMap<LogicalEdge*, std::string>& edge2ibn) {
   OperatorConf clone_op_conf;
   clone_op_conf.set_name("bw_clone_" + NewUniqueId());
+  clone_op_conf.set_device_type(clone_info.succ_node->SoleOp()->device_type());
   clone_op_conf.mutable_clone_conf()->set_out_num(clone_info.edges.size());
-  std::shared_ptr<Operator> clone_op =
-      ConstructOp(clone_op_conf, clone_info.succ_node->SoleOp()->device_type());
+  std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
   FOR_RANGE(size_t, i, 0, clone_info.edges.size()) {
     LogicalBlobId lbi_clone_i = clone_info.lbi;
@@ -343,18 +343,19 @@ void LogicalGraph::BuildLossPrintStruct() {
     // Reduce Sum op
     OperatorConf reduce_loss_op_conf;
     reduce_loss_op_conf.set_name("reduce_loss_" + loss_op->op_name());
+    reduce_loss_op_conf.set_device_type(loss_op->device_type());
     auto reduce_sum_conf = reduce_loss_op_conf.mutable_reduce_sum_conf();
     *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
     reduce_sum_conf->set_out("out");
     reduce_sum_conf->set_axis(0);
-    std::shared_ptr<Operator> reduce_loss_op =
-        ConstructOp(reduce_loss_op_conf, loss_op->device_type());
+    std::shared_ptr<Operator> reduce_loss_op = ConstructOp(reduce_loss_op_conf);
     loss_logical->mut_op_vec().push_back(reduce_loss_op);
     // Loss Accumulate Logical
     OperatorConf loss_acc_op_conf;
     loss_acc_op_conf.set_name("loss_acc_" + loss_op->op_name());
+    loss_acc_op_conf.set_device_type(loss_op->device_type());
     loss_acc_op_conf.mutable_accumulate_conf();
-    std::shared_ptr<Operator> loss_acc_op = ConstructOp(loss_acc_op_conf, loss_op->device_type());
+    std::shared_ptr<Operator> loss_acc_op = ConstructOp(loss_acc_op_conf);
     LossAccLogicalNode* loss_acc_logical = NewNode<LossAccLogicalNode>();
     loss_acc_logical->mut_op_vec() = {loss_acc_op};
     loss_acc_logical->mut_parallel_desc() = loss_logical->parallel_desc();
@@ -362,6 +363,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     // Loss Print Logical
     OperatorConf loss_print_op_conf;
     loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
+    loss_print_op_conf.set_device_type(DeviceType::kCPU);
     auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
 
     *(loss_print_conf->mutable_loss_lbi()) = reduce_loss_op->BnInOp2Lbi("out");
@@ -372,7 +374,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     loss_print_conf->set_weight_scalar(loss_op->GetValFromCustomizedConf<float>("weight_scalar"));
     loss_print_conf->set_reduction_type(
         static_cast<LossReductionType>(loss_op->GetEnumFromCustomizedConf("reduction")));
-    std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf, DeviceType::kCPU);
+    std::shared_ptr<Operator> loss_print_op = ConstructOp(loss_print_op_conf);
     ParallelConf loss_print_pr_conf;
     loss_print_pr_conf.set_policy(kDataParallel);
     loss_print_pr_conf.add_device_name(Global<IDMgr>::Get()->MachineName4MachineId(0) + ":cpu:1");
@@ -415,9 +417,9 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         if (Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
           OperatorConf md_diff_acc_op_conf;
           md_diff_acc_op_conf.set_name("md_diff_acc_" + NewUniqueId());
+          md_diff_acc_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());
           md_diff_acc_op_conf.mutable_accumulate_conf();
-          auto md_diff_acc_op =
-              ConstructOp(md_diff_acc_op_conf, fw_logical->parallel_desc()->device_type());
+          auto md_diff_acc_op = ConstructOp(md_diff_acc_op_conf);
           md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
           md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
           auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
@@ -427,11 +429,51 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         } else {
           md_diff_acc_logical = bw_logical;
         }
-        Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);  // TODO: reduce
+        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1) {
+          BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
+        } else {
+          Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
+        }
       }
     }
   });
   SetupNormalMdUpdtOp();
+}
+
+void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
+  std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
+  std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
+  CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
+  CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
+  // Reduce Scatter
+  OperatorConf reduce_scatter_op_conf;
+  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
+  reduce_scatter_op_conf.set_device_type(src_pd->device_type());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(src_pd->parallel_num());
+  LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
+  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf)};
+  reduce_scatter_node->mut_parallel_desc() = src_pd;
+  // Reduce Add
+  OperatorConf reduce_add_op_conf;
+  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
+  reduce_add_op_conf.set_device_type(src_pd->device_type());
+  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(src_pd->parallel_num());
+  LogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
+  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf)};
+  reduce_add_node->mut_parallel_desc() = src_pd;
+  // Reduce Gather
+  OperatorConf reduce_gather_op_conf;
+  reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
+  reduce_gather_op_conf.set_device_type(src_pd->device_type());
+  reduce_gather_op_conf.mutable_reduce_gather_conf()->set_in_num(src_pd->parallel_num());
+  LogicalNode* reduce_gather_node = NewNode<ReduceGatherLogicalNode>();
+  reduce_gather_node->mut_op_vec() = {ConstructOp(reduce_gather_op_conf)};
+  reduce_gather_node->mut_parallel_desc() = src_pd;
+  // Connect
+  Connect(src, NewEdge(), reduce_scatter_node);
+  Connect(reduce_scatter_node, NewEdge(), reduce_add_node);
+  Connect(reduce_add_node, NewEdge(), reduce_gather_node);
+  Connect(reduce_gather_node, NewEdge(), dst);
 }
 
 void LogicalGraph::SetupNormalMdUpdtOp() {
@@ -439,13 +481,14 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
     if (node->in_edges().size() < 1) { return; }
     OperatorConf op_conf;
     op_conf.set_name("md_update_" + NewUniqueId());
+    op_conf.set_device_type(node->parallel_desc()->device_type());
     NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
     const JobDesc* job_desc = Global<JobDesc>::Get();
     if (Global<JobDesc>::Get()->IsTrain()) {
       *(mdupdt_conf->mutable_user_conf()) = job_desc->job_conf().train_conf().model_update_conf();
     }
     mdupdt_conf->set_in_num(node->in_edges().size());
-    node->mut_op_vec() = {ConstructOp(op_conf, node->parallel_desc()->device_type())};
+    node->mut_op_vec() = {ConstructOp(op_conf)};
   });
 }
 
@@ -453,8 +496,9 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
                                                    LogicalNode* need_save_logical) {
   OperatorConf md_save_op_conf;
   md_save_op_conf.set_name("md_save_" + NewUniqueId());
+  md_save_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());
   md_save_op_conf.mutable_model_save_conf();
-  auto model_save_op = ConstructOp(md_save_op_conf, fw_logical->parallel_desc()->device_type());
+  auto model_save_op = ConstructOp(md_save_op_conf);
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));

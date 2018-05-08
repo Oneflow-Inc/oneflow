@@ -342,7 +342,10 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt)   \
   OF_PP_MAKE_TUPLE_SEQ(MdSave)         \
   OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)      \
-  OF_PP_MAKE_TUPLE_SEQ(Print)
+  OF_PP_MAKE_TUPLE_SEQ(Print)          \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter)  \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceAdd)      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather)
 
 #define DEFINE_VIRTUAL_METHOD(x)                              \
   std::string x##LogicalNode::TypeName() const { return #x; } \

@@ -216,8 +216,6 @@ TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
 
 void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
-  CHECK_EQ(src->device_type(), DeviceType::kCPU);
-  CHECK_EQ(dst->device_type(), DeviceType::kCPU);
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
   copy_comm_net_task->Init(dst->machine_id());
   Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
