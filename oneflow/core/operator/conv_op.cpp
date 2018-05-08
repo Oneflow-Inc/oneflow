@@ -6,8 +6,6 @@ namespace oneflow {
 
 namespace {
 
-static const size_t kConvCudnnWorkspaceLimitBytes = 64 * 1024 * 1024;
-
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
@@ -287,18 +285,18 @@ void ConvOp<NDims>::InferCudnnAlgo(
                               GetValFromCustomizedConf<std::string>("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(), GetCustomizedConf());
 
-  CudaCheck(cudnnGetConvolutionForwardAlgorithm(
-      *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(), conv_desc.Get(),
-      out_desc.Get(), CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT, kConvCudnnWorkspaceLimitBytes,
-      &conv_ctx->fwd_algo));
+  CudaCheck(cudnnGetConvolutionForwardAlgorithm(*cuda_handle.cudnn_handle(), in_desc.Get(),
+                                                filter_desc.Get(), conv_desc.Get(), out_desc.Get(),
+                                                CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
+                                                cudnn_fw_buf_limit_byte(), &conv_ctx->fwd_algo));
   CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
       *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(), conv_desc.Get(),
       filter_desc.Get(), CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
-      kConvCudnnWorkspaceLimitBytes, &conv_ctx->bwd_filter_algo));
+      cudnn_bw_buf_limit_byte(), &conv_ctx->bwd_filter_algo));
   CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(), conv_desc.Get(),
-      in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
-      kConvCudnnWorkspaceLimitBytes, &conv_ctx->bwd_data_algo));
+      in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT, cudnn_bw_buf_limit_byte(),
+      &conv_ctx->bwd_data_algo));
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(), conv_desc.Get(),
       out_desc.Get(), conv_ctx->fwd_algo, &conv_ctx->fwd_ws_size));

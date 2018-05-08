@@ -41,6 +41,8 @@ op {
 
 op {
   name: "conv1"
+  cudnn_fw_buf_limit_mbyte: 4096
+  cudnn_bw_buf_limit_mbyte: 4096
   conv_2d_conf {
     in: "transpose/out"
     out: "out"
@@ -92,6 +94,8 @@ op {
 
 op {
   name: "conv2"
+  cudnn_fw_buf_limit_mbyte: 4096
+  cudnn_bw_buf_limit_mbyte: 4096
   conv_2d_conf {
     in: "pool1/out"
     out: "out"
@@ -143,6 +147,8 @@ op {
 
 op {
   name: "conv3"
+  cudnn_fw_buf_limit_mbyte: 4096
+  cudnn_bw_buf_limit_mbyte: 4096
   conv_2d_conf {
     in: "pool2/out"
     out: "out"
@@ -167,6 +173,8 @@ op {
 
 op {
   name: "conv4"
+  cudnn_fw_buf_limit_mbyte: 4096
+  cudnn_bw_buf_limit_mbyte: 4096
   conv_2d_conf {
     in: "conv3/out"
     out: "out"
@@ -191,6 +199,8 @@ op {
 
 op {
   name: "conv5"
+  cudnn_fw_buf_limit_mbyte: 4096
+  cudnn_bw_buf_limit_mbyte: 4096
   conv_2d_conf {
     in: "conv4/out"
     out: "out"
