@@ -93,6 +93,10 @@ int64_t Actor::Name2SoleRegstDescId(const std::string& name) const {
   return -1;
 }
 
+const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) const {
+  return name2regst_desc_id_.at(name);
+}
+
 void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
