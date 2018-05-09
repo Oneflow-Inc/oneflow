@@ -429,7 +429,8 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         } else {
           md_diff_acc_logical = bw_logical;
         }
-        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1) {
+        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
+            && md_diff_acc_logical->parallel_desc()->policy() != kModelParallel) {
           BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
