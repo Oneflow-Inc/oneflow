@@ -295,6 +295,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
+                              "ReduceScatter",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "ReduceScatter",
                               &TaskGraph::BldSubTskGphByOneToOne);
