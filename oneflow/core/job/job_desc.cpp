@@ -90,12 +90,12 @@ JobDesc::JobDesc(const JobDescProto& job_desc) {
     if (train_conf->piece_num_of_print_loss() == -1) {
       train_conf->set_piece_num_of_print_loss(NumOfPiecesInBatch());
     }
-    if (piece_exp == -1) { piece_exp = 3 * NumOfPiecesInBatch(); }
+    if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
     piece_exp = std::max(piece_exp, NumOfPiecesInBatch());
     piece_exp = std::max(piece_exp, train_conf->piece_num_of_print_loss());
     piece_exp = std::min(piece_exp, train_conf->total_batch_num() * NumOfPiecesInBatch());
   } else {
-    if (piece_exp == -1) { piece_exp = 16; }
+    if (piece_exp == -1) { piece_exp = 19; }
   }
   LOG(INFO) << "Set piece_num_of_experiment_phase " << piece_exp;
   job_conf_.set_piece_num_of_experiment_phase(piece_exp);
