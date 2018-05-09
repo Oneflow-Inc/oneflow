@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_JOB_PROFILER_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/plan.pb.h"
 
 namespace oneflow {
 
@@ -14,7 +15,7 @@ class Profiler final {
   void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
   void PushAvgActTime(int64_t actor_id, double avg_act_time);
 
-  void Profile();
+  void Profile(const Plan& plan);
 
  private:
   class ActorProfileInfo {
