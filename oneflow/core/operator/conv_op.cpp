@@ -86,7 +86,8 @@ bool ConvOp<NDims>::NeedOutWhenBackward() const {
 
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx) const {
+                                   const ParallelContext* parallel_ctx,
+                                   std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
   // in
@@ -130,6 +131,9 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
     }
   }
 
+  ConvOpCtx* conv_op_ctx = new ConvOpCtx();
+  EnrollOpCtx(conv_op_ctx);
+
   if (!UseCudnn()) {
     // col_buf
     std::vector<int64_t> col_buf_shape(2 * NDims + 1);
@@ -138,17 +142,17 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
       col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
     }
     GetBlobDesc4BnInOp("fw_col_buf")->mut_shape() = Shape(col_buf_shape);
+    conv_op_ctx->bw_col_buf_shape = Shape(col_buf_shape);
   }
 
 #ifdef WITH_CUDA
   if (device_type() == DeviceType::kGPU) {
     // cudnn_buf
-    CudnnConvAlgoCtx conv_ctx;
-    InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
+    InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx));
 
-    int64_t cudnn_buf_size = static_cast<int64_t>(conv_ctx.fwd_ws_size);
+    int64_t fw_cudnn_buf_size = static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size);
     GetBlobDesc4BnInOp("fw_cudnn_buf")->set_data_type(DataType::kChar);
-    GetBlobDesc4BnInOp("fw_cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
+    GetBlobDesc4BnInOp("fw_cudnn_buf")->mut_shape() = Shape({fw_cudnn_buf_size});
   }
 #endif  // WITH_CUDA
 }
@@ -156,29 +160,21 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
 template<int32_t NDims>
 void ConvOp<NDims>::InferBwBufBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
+    const ParallelContext* parallel_ctx, const OpContext* op_ctx) const {
+  const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
   if (!UseCudnn()) {
     // col_buf
-    const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->shape();
-    const Shape& out_shape = GetBlobDesc4BnInOp("out")->shape();
-    std::vector<int64_t> col_buf_shape(2 * NDims + 1);
-    for (size_t i = 0; i != NDims + 1; ++i) { col_buf_shape[i] = weight_shape.At(i + 1); }
-    for (size_t i = 0; i != NDims; ++i) {
-      col_buf_shape[NDims + i + 1] = out_shape.At(DhwOffset(data_format) + i);
-    }
-    GetBlobDesc4BnInOp("bw_col_buf")->mut_shape() = Shape(col_buf_shape);
+    GetBlobDesc4BnInOp("bw_col_buf")->mut_shape() = conv_op_ctx->bw_col_buf_shape;
   }
 
 #ifdef WITH_CUDA
   if (device_type() == DeviceType::kGPU) {
     // cudnn_buf
-    CudnnConvAlgoCtx conv_ctx;
-    InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
-    int64_t cudnn_buf_size =
-        static_cast<int64_t>(std::max({conv_ctx.bwd_filter_ws_size, conv_ctx.bwd_data_ws_size}));
+    int64_t bw_cudnn_buf_size =
+        static_cast<int64_t>(std::max({conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
+                                       conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size}));
     GetBlobDesc4BnInOp("bw_cudnn_buf")->set_data_type(DataType::kChar);
-    GetBlobDesc4BnInOp("bw_cudnn_buf")->mut_shape() = Shape({cudnn_buf_size});
+    GetBlobDesc4BnInOp("bw_cudnn_buf")->mut_shape() = Shape({bw_cudnn_buf_size});
   }
 #endif  // WITH_CUDA
 }
@@ -234,7 +230,7 @@ void ConvOp<NDims>::GenKernelConfWithoutCudnn(
 template<int32_t NDims>
 void ConvOp<NDims>::GenKernelConfWithCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, KernelConf* kernel_conf,
-    ConvKernelConf* conv_conf) const {
+    ConvKernelConf* conv_conf, const OpContext* op_ctx) const {
   GetBlobDesc4BnInOp("in")->shape().ToProto(conv_conf->mutable_in());
   GetBlobDesc4BnInOp("out")->shape().ToProto(conv_conf->mutable_out());
   GetBlobDesc4BnInOp("weight")->shape().ToProto(conv_conf->mutable_weight());
@@ -250,14 +246,15 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
   }
 #ifdef WITH_CUDA
   if (device_type() == DeviceType::kGPU) {
-    CudnnConvAlgoCtx conv_ctx;
-    InferCudnnAlgo(GetBlobDesc4BnInOp, &conv_ctx);
+    const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
     SetValInCustomizedKernelConf(kernel_conf, "cudnn_fwd_algo",
-                                 static_cast<int32_t>(conv_ctx.fwd_algo));
-    SetValInCustomizedKernelConf(kernel_conf, "cudnn_bwd_filter_algo",
-                                 static_cast<int32_t>(conv_ctx.bwd_filter_algo));
-    SetValInCustomizedKernelConf(kernel_conf, "cudnn_bwd_data_algo",
-                                 static_cast<int32_t>(conv_ctx.bwd_data_algo));
+                                 static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_algo));
+    SetValInCustomizedKernelConf(
+        kernel_conf, "cudnn_bwd_filter_algo",
+        static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_algo));
+    SetValInCustomizedKernelConf(
+        kernel_conf, "cudnn_bwd_data_algo",
+        static_cast<int32_t>(conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_algo));
   }
 #endif  // WITH_CUDA
 }
@@ -265,13 +262,13 @@ void ConvOp<NDims>::GenKernelConfWithCudnn(
 template<int32_t NDims>
 void ConvOp<NDims>::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   conv_conf->set_dim(NDims);
   if (!UseCudnn()) {
     GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
   } else {
-    GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf);
+    GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf, op_ctx);
   }
 }
 

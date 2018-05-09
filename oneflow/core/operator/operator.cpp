@@ -105,6 +105,12 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlo
   UNIMPLEMENTED() << typeid(*this).name();
 }
 
+void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx,
+                                   const OpContext* op_ctx) const {
+  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+}
+
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDecodeOp()) {
     CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->job_conf().data_part_num())

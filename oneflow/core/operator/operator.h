@@ -114,6 +114,8 @@ class Operator {
                               const ParallelContext*) const;
   virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                                    const ParallelContext*) const {}
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*, const OpContext*) const;
   virtual void InferDiffBlobDescsWithoutFwBlob(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
