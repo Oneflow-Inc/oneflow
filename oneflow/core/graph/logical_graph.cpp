@@ -423,13 +423,13 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
           md_diff_acc_logical = NewNode<MdDiffAccLogicalNode>();
           md_diff_acc_logical->mut_op_vec() = {md_diff_acc_op};
           auto md_diff_acc_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
-          md_diff_acc_pr_desc->set_policy(kInvalidParallel);
           md_diff_acc_logical->mut_parallel_desc().reset(md_diff_acc_pr_desc);
           Connect<LogicalNode>(bw_logical, NewEdge(), md_diff_acc_logical);
         } else {
           md_diff_acc_logical = bw_logical;
         }
-        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1) {
+        if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
+            && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
           BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
