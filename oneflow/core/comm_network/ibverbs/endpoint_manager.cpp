@@ -156,9 +156,9 @@ void EndpointManager::PollLoop() {
 
 void EndpointManager::PollSendQueue() {
   ibv_wc wc;
-  int32_t len = ibv_poll_cq(send_cq_, 1, &wc);
-
-  if (len <= 0) { return; }
+  int32_t num_comp;
+  do { num_comp = ibv_poll_cq(send_cq_, 1, &wc); } while (num_comp == 0);
+  if (num_comp < 0) { LOG(FATAL) << "ibv_poll_cq() failed"; }
 
   if (wc.status != IBV_WC_SUCCESS) { LOG(FATAL) << "PollSendQueue Error Code: " << wc.status; }
   switch (wc.opcode) {
@@ -176,9 +176,9 @@ void EndpointManager::PollSendQueue() {
 
 void EndpointManager::PollRecvQueue() {
   ibv_wc wc;
-  int32_t len = ibv_poll_cq(recv_cq_, 1, &wc);
-
-  if (len <= 0) { return; }
+  int32_t num_comp;
+  do { num_comp = ibv_poll_cq(recv_cq_, 1, &wc); } while (num_comp == 0);
+  if (num_comp < 0) { LOG(FATAL) << "ibv_poll_cq() failed"; }
 
   if (wc.status != IBV_WC_SUCCESS) { LOG(FATAL) << "PollRecvQueue Error Code:  " << wc.status; }
   ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);

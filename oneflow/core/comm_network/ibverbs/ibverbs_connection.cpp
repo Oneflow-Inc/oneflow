@@ -7,23 +7,22 @@ namespace oneflow {
 void IBVerbsConnection::PostReadRequest(void* read_ctx, IBVerbsMemDesc* local_mem,
                                         IBVerbsMemDescProto& remote_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
+  memset(&wr, 0, sizeof(wr));
   wr.wr_id = reinterpret_cast<uint64_t>(read_ctx);
-  wr.next = nullptr;
-  wr.opcode = IBV_WR_RDMA_READ;
   wr.sg_list = local_mem->ibv_sge_ptr();
   wr.num_sge = 1;
+  wr.opcode = IBV_WR_RDMA_READ;
   wr.send_flags = IBV_SEND_SIGNALED;
   wr.wr.rdma.remote_addr = remote_mem.mem_ptr();
   wr.wr.rdma.rkey = remote_mem.mr_rkey();
 
-  // return val may be incorrect when successfully executing
-  ibv_post_send(qp_ptr_, &wr, &bad_wr);
+  CHECK_EQ(ibv_post_send(qp_ptr_, &wr, &bad_wr), 0);
 }
 
 void IBVerbsConnection::PostSendRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) {
   ibv_send_wr wr, *bad_wr = nullptr;
+  memset(&wr, 0, sizeof(wr));
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
-  wr.next = nullptr;
   wr.sg_list = msg_mem->ibv_sge_ptr();
   wr.num_sge = 1;
   wr.opcode = IBV_WR_SEND;
@@ -34,8 +33,8 @@ void IBVerbsConnection::PostSendRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) 
 
 void IBVerbsConnection::PostRecvRequest(ActorMsg* msg, IBVerbsMemDesc* msg_mem) {
   ibv_recv_wr wr, *bad_wr = nullptr;
+  memset(&wr, 0, sizeof(wr));
   wr.wr_id = reinterpret_cast<uint64_t>(msg);
-  wr.next = nullptr;
   wr.sg_list = msg_mem->ibv_sge_ptr();
   wr.num_sge = 1;
 
