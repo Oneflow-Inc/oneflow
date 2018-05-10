@@ -63,7 +63,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWForward(
   FOR_RANGE(int64_t, n, 0, in_shape.At(0)) {
     const T* in_dptr = in_blob->dptr<T>() + image_size * n;
     KernelUtil<DeviceType::kCPU, T>::Mul(ctx.device_ctx, image_size, in_dptr, in_dptr,
-                                         ps_dptr + lrn_conf.depth_radius());
+                                         ps_dptr + lrn_conf.depth_radius() * channel_size);
     FOR_RANGE(int64_t, c, 0, size) {
       KernelUtil<DeviceType::kCPU, T>::Axpy(ctx.device_ctx, channel_size, alpha_over_n,
                                             ps_dptr + c * channel_size, 1, nc_dptr, 1);
@@ -123,7 +123,7 @@ void LocalResponseNormalizationKernel<DeviceType::kCPU, T>::NCHWBackward(
         nc_dptr + n * image_size, ps_dptr + lrn_conf.depth_radius() * channel_size);
     T* accum_ratio_data = nc_dptr + n * image_size;
     T* accum_ratio_times_bottom = accum_ratio_data + channel_size;
-    Memset<DeviceType::kCPU>(ctx.device_ctx, nc_dptr + n * image_size, 0, channel_size);
+    Memset<DeviceType::kCPU>(ctx.device_ctx, accum_ratio_data, 0, channel_size * sizeof(T));
     FOR_RANGE(int64_t, c, 0, size - 1) {
       KernelUtil<DeviceType::kCPU, T>::Axpy(ctx.device_ctx, channel_size, 1.,
                                             ps_dptr + c * channel_size, 1, accum_ratio_data, 1);
