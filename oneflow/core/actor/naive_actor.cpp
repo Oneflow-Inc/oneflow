@@ -3,7 +3,6 @@
 namespace oneflow {
 
 void NaiveActor::Act() {
-  LOG(INFO) << actor_id() << "  launch kernel";
   AsyncLaunchKernel(GenDefaultKernelCtx());
   int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
