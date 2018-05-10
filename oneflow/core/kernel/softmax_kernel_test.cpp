@@ -7,9 +7,14 @@ namespace test {
 template<DeviceType device_type, typename T>
 void SoftmaxTestCase(OpKernelTestCase* softmax_test_case, const std::string& job_type,
                      const std::string& forward_or_backward) {
+  softmax_test_case->InitJobConf([](JobConf* job_conf) { job_conf->set_piece_size(1); });
   softmax_test_case->set_is_train(job_type == "train");
   softmax_test_case->set_is_forward(forward_or_backward == "forward");
-  softmax_test_case->mut_op_conf()->mutable_softmax_conf();
+  OperatorConf* op_conf = softmax_test_case->mut_op_conf();
+  op_conf->set_device_type(device_type);
+  SoftmaxOpConf* softmax_conf = op_conf->mutable_softmax_conf();
+  softmax_conf->set_in("test/in");
+  softmax_conf->set_out("test/out");
 
   BlobDesc* blob_desc = new BlobDesc(Shape({2, 4}), GetDataType<T>::value, false, false, 1);
   softmax_test_case->template InitBlob<T>(

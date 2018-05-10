@@ -15,9 +15,16 @@ struct SoftmaxLossTestUtil final {
   template<typename LabelType>
   static void Test(OpKernelTestCase* test_case, const std::string& job_type,
                    const std::string& fw_or_bw) {
+    test_case->InitJobConf([](JobConf* job_conf) { job_conf->set_piece_size(1); });
     test_case->set_is_train(job_type == "train");
     test_case->set_is_forward(fw_or_bw == "forward");
-    test_case->mut_op_conf()->mutable_sparse_softmax_cross_entropy_loss_conf();
+    OperatorConf* op_conf = test_case->mut_op_conf();
+    op_conf->set_device_type(device_type);
+    SparseSoftmaxCrossEntropyLossOpConf* sparse_softmax_xent_conf =
+        op_conf->mutable_sparse_softmax_cross_entropy_loss_conf();
+    sparse_softmax_xent_conf->set_prediction("test/prediction");
+    sparse_softmax_xent_conf->set_label("test/label");
+    sparse_softmax_xent_conf->set_loss("test/loss");
     BlobDesc* label_blob_desc =
         new BlobDesc(Shape({2}), GetDataType<LabelType>::value, false, false, 1);
     BlobDesc* blob_desc24 =
