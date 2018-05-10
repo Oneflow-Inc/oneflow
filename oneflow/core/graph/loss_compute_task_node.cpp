@@ -75,6 +75,7 @@ void LossCompTaskNode::BuildRegstWhenTraining() {
   } else {
     sum_node->BindBnWithRegst(sum_op->SoleIbn(), GetProducedRegst("data_tmp"));
   }
+  sum_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
 
   std::shared_ptr<RegstDesc> loss_regst = GetProducedRegst("loss");
   loss_regst->AddLbi(sum_op->BnInOp2Lbi(sum_op->SoleObn()));
