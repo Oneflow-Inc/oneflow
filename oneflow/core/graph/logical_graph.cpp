@@ -347,7 +347,6 @@ void LogicalGraph::BuildLossPrintStruct() {
     auto reduce_sum_conf = reduce_loss_op_conf.mutable_reduce_sum_conf();
     *(reduce_sum_conf->mutable_in_sys()) = loss_op->BnInOp2Lbi("loss");
     reduce_sum_conf->set_out("out");
-    reduce_sum_conf->set_axis(0);
     std::shared_ptr<Operator> reduce_loss_op = ConstructOp(reduce_loss_op_conf);
     loss_logical->mut_op_vec().push_back(reduce_loss_op);
     // Loss Accumulate Logical
