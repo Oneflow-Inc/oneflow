@@ -53,7 +53,7 @@ void PoolingCtx::set_pooling_2d_desc(DataType type) {
   std::vector<int> padding(2);
   std::vector<int> strides(2);
   FOR_RANGE(size_t, i, 0, 2) {
-    pool_size[i] = in_dim[i + 3];  // NCDHW, start from the 3-rd dimension
+    pool_size[i] = kernel_conf_.pool_size().Get(i + 1);
     padding[i] =
         std::max(kernel_conf_.padding_before().Get(i + 1), kernel_conf_.padding_after().Get(i + 1));
     strides[i] = kernel_conf_.strides().Get(i + 1);
@@ -63,10 +63,10 @@ void PoolingCtx::set_pooling_2d_desc(DataType type) {
   int n, c, in_h, in_w, out_h, out_w;
   n = in_dim[0];
   c = in_dim[1];
-  in_h = in_dim[2];
-  in_w = in_dim[3];
-  out_h = out_dim[2];
-  out_w = out_dim[3];
+  in_h = in_dim[3];
+  in_w = in_dim[4];
+  out_h = out_dim[3];
+  out_w = out_dim[4];
   const std::string& data_format = kernel_conf_.data_format();
   cudnnTensorFormat_t cudnn_tensor_format;
   if ("channels_first" == data_format) {
