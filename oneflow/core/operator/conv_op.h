@@ -32,6 +32,13 @@ class CudnnConvDesc final {
 };
 #endif  // WITH_CUDA
 
+struct ConvOpCtx : public OpContext {
+  Shape bw_col_buf_shape;
+#ifdef WITH_CUDA
+  CudnnConvAlgoCtx cudnn_conv_algo_ctx;
+#endif  // WITH_CUDA
+};
+
 template<int32_t NDims>
 class ConvOp : public Operator {
  public:
@@ -42,7 +49,10 @@ class ConvOp : public Operator {
   void InitFromOpConf() override;
   bool NeedOutWhenBackward() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      const ParallelContext*) const override;
+                      const ParallelContext*,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                           const ParallelContext*, const OpContext*) const override;
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
@@ -50,12 +60,13 @@ class ConvOp : public Operator {
  private:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                            const ParallelContext*, KernelConf*) const override;
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
   void GenKernelConfWithoutCudnn(
       std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       ConvKernelConf* conv_conf) const;
   void GenKernelConfWithCudnn(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              KernelConf* kernel_conf, ConvKernelConf* conv_conf) const;
+                              KernelConf* kernel_conf, ConvKernelConf* conv_conf,
+                              const OpContext*) const;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                       CudnnConvAlgoCtx* conv_ctx) const;

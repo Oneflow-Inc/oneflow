@@ -57,9 +57,11 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
 
   void InferBlobDescs(const ParallelContext* parallel_ctx);
+  void InferBwBufBlobDescs(const ParallelContext* parallel_ctx);
   void InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx);
 
  private:
+  const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
