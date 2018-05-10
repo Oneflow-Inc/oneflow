@@ -6,11 +6,6 @@ namespace oneflow {
 
 namespace {
 
-<<<<<<< HEAD
-static const size_t kConvCudnnWorkspaceLimitBytes = 1024 * 1024 * 1024;
-
-=======
->>>>>>> c6654971d3f4fe3c8ab88f8659be8341123c8639
 void GetOutAndPad(const Shape& in_blob_shape, const PbMessage& conv_conf, std::vector<int64_t>* out,
                   std::vector<int32_t>* pad_small_side, std::vector<int32_t>* pad_large_side) {
   int32_t opkernel_dim = in_blob_shape.NumAxes() - 2;
