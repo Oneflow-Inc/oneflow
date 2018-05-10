@@ -106,6 +106,7 @@ void PoolingOp::VirtualGenKernelConf(
 
   auto pooling_conf =
       MutableMsgInCustomizedKernelConf<PoolingKernelConf>(kernel_conf, "pooling_conf");
+  pooling_conf->set_dim(GetDim());
   FOR_RANGE(size_t, i, 0, 3) {
     pooling_conf->mutable_pool_size()->Add(pool_size.at(i));
     pooling_conf->mutable_strides()->Add(strides.at(i));

@@ -22,6 +22,65 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
     : kernel_conf_(kernel_conf) {
 #ifdef WITH_CUDA
   pooling_mode_ = pooling_mode;
+  int32_t dim = kernel_conf_.dim();
+  if (dim == 2) {
+    set_pooling_2d_desc(type);
+  } else if (dim == 3) {
+    set_pooling_3d_desc(type);
+  } else {
+    UNIMPLEMENTED();
+  }
+#endif  // WITH_CUDA
+}
+
+#ifdef WITH_CUDA
+const cudnnTensorDescriptor_t& PoolingCtx::cudnn_in_tensor_desc() const { return in_desc_->Get(); }
+
+const cudnnTensorDescriptor_t& PoolingCtx::cudnn_out_tensor_desc() const {
+  return out_desc_->Get();
+}
+
+const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
+  return pooling_desc_->Get();
+}
+
+void PoolingCtx::set_pooling_2d_desc(DataType type) {
+  std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
+  std::vector<int> out_dim = GetStdVecFromShapeInKernelConf("out");
+
+  // Omitting D dimension in DHW
+  std::vector<int> pool_size(2);
+  std::vector<int> padding(2);
+  std::vector<int> strides(2);
+  FOR_RANGE(size_t, i, 0, 2) {
+    pool_size[i] = in_dim[i + 3];  // NCDHW, start from the 3-rd dimension
+    padding[i] =
+        std::max(kernel_conf_.padding_before().Get(i + 1), kernel_conf_.padding_after().Get(i + 1));
+    strides[i] = kernel_conf_.strides().Get(i + 1);
+  }
+  pooling_desc_.reset(
+      new CudnnPoolingDesc(pooling_mode_, 2, pool_size.data(), padding.data(), strides.data()));
+  int n, c, in_h, in_w, out_h, out_w;
+  n = in_dim[0];
+  c = in_dim[1];
+  in_h = in_dim[2];
+  in_w = in_dim[3];
+  out_h = out_dim[2];
+  out_w = out_dim[3];
+  const std::string& data_format = kernel_conf_.data_format();
+  cudnnTensorFormat_t cudnn_tensor_format;
+  if ("channels_first" == data_format) {
+    cudnn_tensor_format = CUDNN_TENSOR_NCHW;
+  } else if ("channels_last" == data_format) {
+    cudnn_tensor_format = CUDNN_TENSOR_NHWC;
+  } else {
+    UNIMPLEMENTED();
+  }
+  in_desc_.reset(new CudnnTensorDesc(cudnn_tensor_format, type, n, c, in_h, in_w));
+  out_desc_.reset(new CudnnTensorDesc(cudnn_tensor_format, type, n, c, out_h, out_w));
+}
+
+void PoolingCtx::set_pooling_3d_desc(DataType type) {
   std::vector<int> padding(kernel_conf_.padding_before().size());
   FOR_RANGE(size_t, i, 0, kernel_conf_.padding_before().size()) {
     padding[i] =
@@ -50,18 +109,6 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
                                            padding.data(), kernel_conf_.strides().data()));
   in_desc_.reset(new CudnnTensorDesc(type, 5, in_dim.data(), in_stride.data()));
   out_desc_.reset(new CudnnTensorDesc(type, 5, out_dim.data(), out_stride.data()));
-#endif  // WITH_CUDA
-}
-
-#ifdef WITH_CUDA
-const cudnnTensorDescriptor_t& PoolingCtx::cudnn_in_tensor_desc() const { return in_desc_->Get(); }
-
-const cudnnTensorDescriptor_t& PoolingCtx::cudnn_out_tensor_desc() const {
-  return out_desc_->Get();
-}
-
-const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
-  return pooling_desc_->Get();
 }
 #endif  // WITH_CUDA
 
