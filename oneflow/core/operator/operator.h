@@ -82,12 +82,16 @@ class Operator {
   const std::string& SoleObn() const;
   const std::string& SoleOdbn() const;
   const std::string& SoleDtbn() const;
+  const std::string& SoleFbbn() const;
+  const std::string& SoleBbbn() const;
 
 #define DEFINE_BLOB_NAMES_GETTER(getter_name)                                           \
   const PbRpf<std::string>& getter_name() const { return op_attribute_.getter_name(); } \
   PbRpf<std::string>* mut_##getter_name() { return op_attribute_.mutable_##getter_name(); }
 
   DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
+  DEFINE_BLOB_NAMES_GETTER(fw_buf_bns);
+  DEFINE_BLOB_NAMES_GETTER(bw_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(input_bns);
   DEFINE_BLOB_NAMES_GETTER(input_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
@@ -108,6 +112,10 @@ class Operator {
                               std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*) const {}
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*, const OpContext*) const;
   virtual void InferDiffBlobDescsWithoutFwBlob(
       std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
@@ -177,6 +185,8 @@ class Operator {
 
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
+  void EnrollFwBufBn(const std::string& fbbn);
+  void EnrollBwBufBn(const std::string& bbbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
@@ -196,6 +206,8 @@ class Operator {
 
  private:
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
+  LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const;
+  LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const;
 
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
