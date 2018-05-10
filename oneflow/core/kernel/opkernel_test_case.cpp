@@ -240,8 +240,6 @@ void OpKernelTestCase::CheckBlob(const std::string& name, const BlobDesc* blob_d
   CHECK(bn_in_op2blob_.emplace(ExpectedBlobName(name), expected_blob).second);
 }
 
-#define __LOC__() (__FILE__ ":" OF_PP_STRINGIZE(__LINE__))
-
 template<typename T>
 void OpKernelTestCase::CheckBlobWithAnother(const std::string& name, const BlobDesc* blob_desc,
                                             const std::string& expected_existed_blob_name,
@@ -253,7 +251,7 @@ void OpKernelTestCase::CheckBlobWithAnother(const std::string& name, const BlobD
     CHECK(bn_in_op2blob_.emplace(name, blob).second);
   }
   CHECK(bn_in_op2blob_.find(expected_existed_blob_name) != bn_in_op2blob_.end())
-      << __LOC__() << ": " << expected_existed_blob_name;
+      << FILE_LINE_STR << ": " << expected_existed_blob_name;
   Blob* expected_blob = bn_in_op2blob_.at(expected_existed_blob_name);
   SetBlobSpecializedDeviceType(ExpectedBlobName(name),
                                GetBlobDeviceType(expected_existed_blob_name));
@@ -316,7 +314,8 @@ std::function<Blob*(const std::string&)> OpKernelTestCase::MakeGetterBnInOp2Blob
           SwitchCase(dev_type, blob_desc->data_type()), blob_desc, bn_in_op2regst_[bn_in_op]);
     }
 
-    CHECK(bn_in_op2blob_.find(bn_in_op) != bn_in_op2blob_.end()) << __LOC__() << ": " << bn_in_op;
+    CHECK(bn_in_op2blob_.find(bn_in_op) != bn_in_op2blob_.end())
+        << FILE_LINE_STR << ": " << bn_in_op;
     return bn_in_op2blob_.at(bn_in_op);
   };
 }
@@ -328,6 +327,7 @@ OpKernelTestCase::OpKernelTestCase()
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
+  job_conf_.set_piece_size(1);
 }
 
 void OpKernelTestCase::InitJobConf(const std::function<void(JobConf*)>& Init) {
@@ -388,10 +388,10 @@ std::function<BlobDesc*(const std::string&)> OpKernelTestCase::MakeGetterBnInOp2
 }
 
 void OpKernelTestCase::InferBlobDesc(std::shared_ptr<Operator>* op, OpContext** op_context) {
+  op_conf_.set_device_type(default_device_type_);
   *op = ConstructOp(op_conf_);
   if (NeedInferBlobDescs(op->get())) {
     (*op)->InferBlobDescs(MakeGetterBnInOp2BlobDesc(), &parallel_ctx_,
-
                           [&](OpContext* op_ctx) { *op_context = op_ctx; });
   }
 }

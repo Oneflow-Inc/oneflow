@@ -9,7 +9,9 @@ void ReluTestCase(OpKernelTestCase* relu_test_case, const std::string& job_type,
                   const std::string& forward_or_backward) {
   relu_test_case->set_is_train(job_type == "train");
   relu_test_case->set_is_forward(forward_or_backward == "forward");
-  relu_test_case->mut_op_conf()->mutable_relu_conf();
+  ReluOpConf* relu_conf = relu_test_case->mut_op_conf()->mutable_relu_conf();
+  relu_conf->set_in("test/in");
+  relu_conf->set_out("test/out");
 
   BlobDesc* blob_desc = new BlobDesc(Shape({1, 8}), GetDataType<T>::value, false, false, 1);
   relu_test_case->template InitBlob<T>("in", blob_desc, {1, -1, -2, 2, 0, 5, -10, 100});
@@ -25,7 +27,9 @@ DiffKernelImplTestCase* DiffReluKernelImpl(const std::string& job_type, const st
                                            const std::string& cpp_type) {
   auto* test_case = new DiffKernelImplTestCase(job_type == "train", fw_or_bw == "forward",
                                                DataType4CppTypeString(cpp_type));
-  test_case->mut_op_conf()->mutable_relu_conf();
+  ReluOpConf* relu_conf = test_case->mut_op_conf()->mutable_relu_conf();
+  relu_conf->set_in("test/in");
+  relu_conf->set_out("test/out");
   test_case->SetBlobNames({"in"}, {"out"}, {GenDiffBn("out")}, {GenDiffBn("in")});
   test_case->SetInputBlobDesc("in", Shape({1, 8}), DataType4CppTypeString(cpp_type));
   return test_case;
