@@ -17,7 +17,11 @@ struct SoftmaxLossTestUtil final {
                    const std::string& fw_or_bw) {
     test_case->set_is_train(job_type == "train");
     test_case->set_is_forward(fw_or_bw == "forward");
-    test_case->mut_op_conf()->mutable_sparse_softmax_cross_entropy_loss_conf();
+    SparseSoftmaxCrossEntropyLossOpConf* sparse_softmax_xent_conf =
+        test_case->mut_op_conf()->mutable_sparse_softmax_cross_entropy_loss_conf();
+    sparse_softmax_xent_conf->set_prediction("test/prediction");
+    sparse_softmax_xent_conf->set_label("test/label");
+    sparse_softmax_xent_conf->set_loss("test/loss");
     BlobDesc* label_blob_desc =
         new BlobDesc(Shape({2}), GetDataType<LabelType>::value, false, false, 1);
     BlobDesc* blob_desc24 =
