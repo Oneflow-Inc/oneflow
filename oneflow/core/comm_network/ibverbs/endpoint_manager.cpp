@@ -105,10 +105,9 @@ IBVerbsConnection* EndpointManager::NewIBVerbsConnection() {
   // Init connection info
   ibv_port_attr attr;
   CHECK_EQ(ibv_query_port(context_, (uint8_t)1, &attr), 0);
-  srand((unsigned)time(NULL));
   conn->mut_this_machine_conn_info_ptr()->set_lid(attr.lid);
   conn->mut_this_machine_conn_info_ptr()->set_qpn(qp_ptr->qp_num);
-  conn->mut_this_machine_conn_info_ptr()->set_psn(static_cast<uint32_t>(rand()) & 0xffffff);
+  conn->mut_this_machine_conn_info_ptr()->set_psn(0);
   union ibv_gid gid;
   CHECK_EQ(ibv_query_gid(context_, (uint8_t)1, 0, &gid), 0);
   conn->mut_this_machine_conn_info_ptr()->set_snp(gid.global.subnet_prefix);

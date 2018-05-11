@@ -1,7 +1,13 @@
 machine {
-  addr: "127.0.0.1"
+  addr: "192.168.1.15"
   port: 7099
   name: "first"
+}
+
+machine {
+  addr: "192.168.1.16"
+  port: 7099
+  name: "second"
 }
 
 cpu_device_num: 4

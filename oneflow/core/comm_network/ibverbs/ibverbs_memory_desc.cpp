@@ -15,11 +15,9 @@ IBVerbsMemDesc::IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size) {
   sge_.lkey = mr_->lkey;
 }
 
-IBVerbsMemDescProto IBVerbsMemDesc::IBVerbsMemDescToProto() {
-  IBVerbsMemDescProto ibverbs_mem_desc_proto;
-  ibverbs_mem_desc_proto.set_mem_ptr(reinterpret_cast<uint64_t>(sge_.addr));
-  ibverbs_mem_desc_proto.set_mr_rkey(mr_->rkey);
-  return ibverbs_mem_desc_proto;
+void IBVerbsMemDesc::ToProto(IBVerbsMemDescProto* proto) {
+  proto->set_mem_ptr(sge_.addr);
+  proto->set_mr_rkey(mr_->rkey);
 }
 
 }  // namespace oneflow

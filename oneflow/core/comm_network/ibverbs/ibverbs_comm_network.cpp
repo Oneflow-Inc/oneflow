@@ -1,5 +1,4 @@
 #include "oneflow/core/comm_network/ibverbs/ibverbs_comm_network.h"
-#include "oneflow/core/comm_network/ibverbs/ibverbs_tokens_message.pb.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -12,12 +11,6 @@ std::string GenTokensMsgKey(int64_t machine_id) {
 }
 
 }  // namespace
-
-void IBVerbsCommNet::Init(const Plan& plan) {
-  IBVerbsCommNet* comm_net = new IBVerbsCommNet(plan);
-  Global<CommNet>::SetAllocated(comm_net);
-  comm_net->endpoint_manager_.reset(new EndpointManager());
-}
 
 const void* IBVerbsCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   IBVerbsMemDesc* ibverbs_mem_desc = endpoint_manager_->NewIBVerbsMemDesc(mem_ptr, byte_size);
