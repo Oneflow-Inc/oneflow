@@ -9,7 +9,9 @@ void SoftmaxTestCase(OpKernelTestCase* softmax_test_case, const std::string& job
                      const std::string& forward_or_backward) {
   softmax_test_case->set_is_train(job_type == "train");
   softmax_test_case->set_is_forward(forward_or_backward == "forward");
-  softmax_test_case->mut_op_conf()->mutable_softmax_conf();
+  SoftmaxOpConf* softmax_conf = softmax_test_case->mut_op_conf()->mutable_softmax_conf();
+  softmax_conf->set_in("test/in");
+  softmax_conf->set_out("test/out");
 
   BlobDesc* blob_desc = new BlobDesc(Shape({2, 4}), GetDataType<T>::value, false, false, 1);
   softmax_test_case->template InitBlob<T>(
