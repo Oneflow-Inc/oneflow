@@ -27,8 +27,8 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
   float l1 = Global<JobDesc>::Get()->L1();
   float l2 = Global<JobDesc>::Get()->L2();
-  UpdateModel(ctx.device_ctx, std::get<1>(*tpl), in_0, next_model_vid, batch_size,
-              static_cast<T>(learning_rate), static_cast<T>(l1), static_cast<T>(l2), BnInOp2Blob);
+  UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
+              static_cast<T>(l2), std::get<1>(*tpl), in_0, next_model_vid, BnInOp2Blob);
 }
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
