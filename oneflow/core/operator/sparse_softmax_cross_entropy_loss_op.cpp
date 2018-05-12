@@ -26,7 +26,7 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
 
   BlobDesc* sum_multiplier_blob_desc = GetBlobDesc4BnInOp("sum_multiplier");
-  sum_multiplier_blob_desc->mul_shape() = Shape({pred_blob_desc->shape().Count(1)});
+  sum_multiplier_blob_desc->mut_shape() = Shape({pred_blob_desc->shape().Count(1)});
   sum_multiplier_blob_desc->set_data_type(pred_blob_desc->data_type());
 }
 
