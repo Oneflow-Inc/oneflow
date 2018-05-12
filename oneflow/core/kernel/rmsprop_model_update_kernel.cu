@@ -14,7 +14,7 @@ __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T alpha, T learnin
     mean_square[i] = alpha * avg_model_diff * avg_model_diff + decay_rate * mean_square[i];
     model[i] = pre_model[i] - learning_rate * avg_model_diff / std::sqrt(mean_square[i] + epsilon);
     model[i] -= l2 * learning_rate * pre_model[i];
-    model[i] -= l1 * ((pre_model[i] >= 0) - (pre_model[i] <= 0));
+    model[i] -= l1 * learning_rate * ((pre_model[i] >= 0) - (pre_model[i] <= 0));
   }
 }
 

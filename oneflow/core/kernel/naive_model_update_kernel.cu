@@ -12,7 +12,7 @@ __global__ void UpdateModelGpu(const int64_t n, int64_t batch_size, T learning_r
     T avg_model_diff = model_diff[i] / batch_size;
     model[i] = pre_model[i] - learning_rate * avg_model_diff;
     model[i] -= l2 * learning_rate * pre_model[i];
-    model[i] -= l1 * ((pre_model[i] >= 0) - (pre_model[i] <= 0));
+    model[i] -= l1 * learning_rate * ((pre_model[i] >= 0) - (pre_model[i] <= 0));
   }
 }
 
