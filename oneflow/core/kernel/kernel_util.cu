@@ -360,11 +360,36 @@ template<>
 __device__ double gpu_atomic_add(double* address, const double val) {
   auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
   unsigned long long int old = *address_as_ull;
-  unsigned long long int assumed;
+  unsigned long long int assumed = 0;
   do {
     assumed = old;
     old = atomicCAS(address_as_ull, assumed,
                     __double_as_longlong(val + __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+
+template<>
+__device__ float gpu_atomic_max(float* address, const float val) {
+  int* address_as_i = (int*)address;
+  int old = *address_as_i;
+  int assumed = 0;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_i, assumed, __float_as_int(fmaxf(val, __int_as_float(assumed))));
+  } while (assumed != old);
+  return __int_as_float(old);
+}
+
+template<>
+__device__ double gpu_atomic_max(double* address, const double val) {
+  unsigned long long int* address_as_i = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_i;
+  unsigned long long int assumed = 0;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_i, assumed,
+                    __double_as_longlong(fmaxf(val, __longlong_as_double(assumed))));
   } while (assumed != old);
   return __longlong_as_double(old);
 }

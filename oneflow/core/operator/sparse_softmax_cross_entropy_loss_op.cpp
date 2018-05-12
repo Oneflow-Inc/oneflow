@@ -2,7 +2,10 @@
 
 namespace oneflow {
 
-void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() { EnrollDataTmpBn("prob"); }
+void SparseSoftmaxCrossEntropyLossOp::VirtualInitFromOpConf() {
+  EnrollDataTmpBn("prob");
+  EnrollModelTmpBn("sum_multiplier");
+}
 
 const PbMessage& SparseSoftmaxCrossEntropyLossOp::GetCustomizedConf() const {
   return op_conf().sparse_softmax_cross_entropy_loss_conf();
@@ -21,6 +24,7 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
+  TODO();  // infer sum_multiplier zhangwenxiao
 }
 
 REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf, SparseSoftmaxCrossEntropyLossOp);

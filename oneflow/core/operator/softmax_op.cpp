@@ -7,6 +7,7 @@ void SoftmaxOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
+  EnrollModelTmpBn("sum_multiplier");
   EnrollDataTmpBn("softmax_num");
   EnrollDataTmpBn("transpose_in");
   EnrollDataTmpBn("transpose_out");
@@ -39,6 +40,8 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBl
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
+
+  TODO();  // infer sum_multiplier zhangwenxiao
 }
 
 void SoftmaxOp::VirtualGenKernelConf(

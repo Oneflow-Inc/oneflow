@@ -8,13 +8,16 @@ namespace {
 
 template<DeviceType device_type, typename T>
 void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out_diff,
-                        const T* out, T* tmp, T* in_diff) {
+                        const T* out, T* sum_vec, T* in_diff, const T* sum_multiplier) {
+  // it's safe to use in_diff as tmp
+  // dot product | get dot product sum_vec[i] from out[i] * out_diff[i]
+  T* tmp = in_diff;
+  KernelUtil<device_type, T>::Mul(ctx, n * w, out, out_diff, tmp);
+  SoftmaxKernelUtil<device_type, T>::RowSum(ctx, n, w, tmp, sum_vec, sum_multiplier);
   // copy out_diff to in_diff
   KernelUtil<device_type, T>::Copy(ctx, n * w, out_diff, 1, in_diff, 1);
-  // dot product | get dot product tmp[i] from out[i] * out_diff[i]
-  SoftmaxKernelUtil<device_type, T>::BackwardDot(ctx, n, w, out, out_diff, tmp);
-  // sub | in_diff[i][j] -= tmp[i]
-  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, in_diff, tmp);
+  // sub | in_diff[i][j] -= sum_vec[i]
+  SoftmaxKernelUtil<device_type, T>::Sub(ctx, n, w, in_diff, sum_vec);
   // elementwise multiplication | in_diff[i][j] *= out[i][j]
   KernelUtil<device_type, T>::Mul(ctx, n * w, in_diff, out, in_diff);
 }
@@ -22,11 +25,18 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
 }  // namespace
 
 template<DeviceType device_type, typename T>
+void SoftmaxKernel<device_type, T>::InitPureModelTmpBlobs(
+    DeviceCtx*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  TODO(); // guoran
+}
+
+template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
   Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
   Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  const Blob* sum_multiplier_blob = BnInOp2Blob("sum_multiplier");
   auto conf = this->kernel_conf().softmax_conf();
   const int64_t n = conf.transpose_rows();
   const int64_t w = conf.transpose_cols();
@@ -36,11 +46,12 @@ void SoftmaxKernel<device_type, T>::ForwardDataContent(
     Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
     Transpose<device_type, T>(ctx.device_ctx, in_blob, transpose_in_blob, conf.perm());
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, transpose_in_blob->dptr<T>(), tmp,
-                                       transpose_out_blob->mut_dptr<T>());
+                                       transpose_out_blob->mut_dptr<T>(),
+                                       sum_multiplier_blob->dptr<T>());
     Transpose<device_type, T>(ctx.device_ctx, transpose_out_blob, out_blob, conf.perm());
   } else {
     SoftmaxComputeProb<device_type, T>(ctx.device_ctx, n, w, in_blob->dptr<T>(), tmp,
-                                       out_blob->mut_dptr<T>());
+                                       out_blob->mut_dptr<T>(), sum_multiplier_blob->dptr<T>());
   }
 }
 
@@ -51,6 +62,7 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
   const Blob* out_diff_blob = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
   Blob* tmp_blob = BnInOp2Blob("softmax_num");
+  const Blob* sum_multiplier_blob = BnInOp2Blob("sum_multiplier");
   auto conf = this->kernel_conf().softmax_conf();
   const int64_t n = conf.transpose_rows();
   const int64_t w = conf.transpose_cols();
@@ -60,13 +72,14 @@ void SoftmaxKernel<device_type, T>::BackwardDataContent(
     Blob* transpose_out_blob = BnInOp2Blob("transpose_out");
     Blob* transpose_out_diff_blob = BnInOp2Blob("transpose_out_diff");
     Transpose<device_type, T>(ctx.device_ctx, out_diff_blob, transpose_out_diff_blob, conf.perm());
-    SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, transpose_out_diff_blob->dptr<T>(),
-                                       transpose_out_blob->dptr<T>(), tmp,
-                                       transpose_in_diff_blob->mut_dptr<T>());
+    SoftmaxComputeDiff<device_type, T>(
+        ctx.device_ctx, n, w, transpose_out_diff_blob->dptr<T>(), transpose_out_blob->dptr<T>(),
+        tmp, transpose_in_diff_blob->mut_dptr<T>(), sum_multiplier_blob->dptr<T>());
     Transpose<device_type, T>(ctx.device_ctx, transpose_in_diff_blob, in_diff_blob, conf.perm());
   } else {
     SoftmaxComputeDiff<device_type, T>(ctx.device_ctx, n, w, out_diff_blob->dptr<T>(),
-                                       out_blob->dptr<T>(), tmp, in_diff_blob->mut_dptr<T>());
+                                       out_blob->dptr<T>(), tmp, in_diff_blob->mut_dptr<T>(),
+                                       sum_multiplier_blob->dptr<T>());
   }
 }
 
@@ -78,10 +91,10 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  static void ForwardSum(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out, T* tmp) {
-    for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Sum(ctx, w, out + i * w, tmp + i);
-    }
+  static void RowSum(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* matrix, T* sum_vec,
+                     const T* sum_multiplier) {
+    KernelUtil<DeviceType::kCPU, T>::Gemv(ctx, CblasTrans, n, w, 1, matrix, w, sum_multiplier, 1, 0,
+                                          sum_vec, 1);
   }
 
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
@@ -90,10 +103,9 @@ struct SoftmaxKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  static void BackwardDot(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out,
-                          const T* out_diff, T* tmp) {
+  static void Div(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     for (int64_t i = 0; i < n; ++i) {
-      KernelUtil<DeviceType::kCPU, T>::Dot(ctx, w, out + i * w, 1, out_diff + i * w, 1, tmp + i);
+      KernelUtil<DeviceType::kCPU, T>::Div(ctx, n, matrix + i * w, vector + i);
     }
   }
 };
