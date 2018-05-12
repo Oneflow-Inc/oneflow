@@ -26,8 +26,11 @@ void SoftmaxComputeDiff(DeviceCtx* ctx, const int64_t n, const int64_t w, const 
 
 template<DeviceType device_type, typename T>
 void SoftmaxKernel<device_type, T>::InitPureModelTmpBlobs(
-    DeviceCtx*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO(); // guoran
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitializerConf sum_multiplier_initializer_conf;
+  sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  KernelUtil<device_type, T>::InitializeWithConf(ctx, sum_multiplier_initializer_conf, 0,
+                                                 BnInOp2Blob("sum_multiplier"));
 }
 
 template<DeviceType device_type, typename T>
