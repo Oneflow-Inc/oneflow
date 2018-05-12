@@ -5,7 +5,8 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
     DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob, int64_t next_model_vid,
-    double learning_rate, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    int64_t batch_size, T learning_rate, T l1, T l2,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* mean_square_blob = BnInOp2Blob("mean_square");
   const RMSPropModelUpdateConf& conf =
@@ -13,11 +14,12 @@ void RMSPropMdUpdateKernel<device_type, T>::UpdateModel(
   float decay_rate = conf.decay_rate();
   if (next_model_vid == 1) { decay_rate = 0.0f; }
 
-  RMSPropMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), static_cast<T>(1.0f - decay_rate),
-      static_cast<T>(learning_rate), static_cast<T>(decay_rate), static_cast<T>(conf.epsilon()),
-      pre_model_blob->dptr<T>(), model_blob->mut_dptr<T>(), mean_square_blob->mut_dptr<T>(),
-      model_diff_blob->dptr<T>());
+  // TODO(jiyuan)
+  // RMSPropMdUpdateKernelUtil<device_type, T>::UpdateModel(
+  //    ctx, model_blob->shape().elem_cnt(), static_cast<T>(1.0f - decay_rate),
+  //    static_cast<T>(learning_rate), static_cast<T>(decay_rate), static_cast<T>(conf.epsilon()),
+  //    pre_model_blob->dptr<T>(), model_blob->mut_dptr<T>(), mean_square_blob->mut_dptr<T>(),
+  //    model_diff_blob->dptr<T>());
 }
 
 template<typename T>

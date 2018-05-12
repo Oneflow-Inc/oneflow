@@ -51,7 +51,8 @@ void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardActivate(ctx, BnInOp2Blob);
   BackwardDataContent(ctx, BnInOp2Blob);
-  if (HasModelBns() && Global<JobDesc>::Get()->L2() > 0.0f) { L2Regularization(ctx, BnInOp2Blob); }
+  // if (HasModelBns() && Global<JobDesc>::Get()->L2() > 0.0f) { L2Regularization(ctx, BnInOp2Blob);
+  // }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
