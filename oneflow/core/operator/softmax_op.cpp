@@ -41,7 +41,9 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBl
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
 
-  TODO();  // infer sum_multiplier zhangwenxiao
+  BlobDesc* sum_multiplier_blob_desc = GetBlobDesc4BnInOp("sum_multiplier");
+  sum_multiplier_blob_desc->mut_shape() = Shape({op_ctx->transpose_cols});
+  sum_multiplier_blob_desc->set_data_type(in_blob_desc->data_type());
 }
 
 void SoftmaxOp::VirtualGenKernelConf(
