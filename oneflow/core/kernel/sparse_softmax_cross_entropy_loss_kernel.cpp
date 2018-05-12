@@ -6,8 +6,11 @@ namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::InitPureModelTmpBlobs(
-    DeviceCtx*, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO(); // guoran
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitializerConf sum_multiplier_initializer_conf;
+  sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  KernelUtil<device_type, PredType>::InitializeWithConf(ctx, sum_multiplier_initializer_conf, 0,
+                                                        BnInOp2Blob("sum_multiplier"));
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
