@@ -73,10 +73,6 @@ class Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
-  virtual void L2Regularization(const KernelCtx& ctx,
-                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
@@ -145,9 +141,6 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
 
  protected:
   KernelIfWithModel() = default;
-
-  void L2Regularization(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>

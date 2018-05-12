@@ -51,8 +51,6 @@ void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardActivate(ctx, BnInOp2Blob);
   BackwardDataContent(ctx, BnInOp2Blob);
-  // if (HasModelBns() && Global<JobDesc>::Get()->L2() > 0.0f) { L2Regularization(ctx, BnInOp2Blob);
-  // }
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
@@ -126,20 +124,6 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
       Blob* out_blob = BnInOp2Blob(to_bns[i]);
       (out_blob->*Copy)(ctx, in_blob);
     }
-  }
-}
-
-template<DeviceType device_type, typename ModelType>
-void KernelIfWithModel<device_type, ModelType>::L2Regularization(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const std::string& mbn : this->op_attribute().model_bns()) {
-    const Blob* model_blob = BnInOp2Blob(mbn);
-    ModelType l2 = static_cast<ModelType>(
-        Global<JobDesc>::Get()->L2()
-        * BnInOp2Blob(this->op_attribute().output_diff_bns()[0])->shape().At(0));
-    KernelUtil<device_type, ModelType>::Axpy(
-        ctx.device_ctx, static_cast<int>(model_blob->shape().elem_cnt()), l2,
-        model_blob->dptr<ModelType>(), 1, BnInOp2Blob(GenDiffBn(mbn))->mut_dptr<ModelType>(), 1);
   }
 }
 
