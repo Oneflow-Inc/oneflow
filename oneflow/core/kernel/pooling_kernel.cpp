@@ -62,25 +62,6 @@ void PoolingCtx::set_pooling_2d_desc(DataType type) {
       new CudnnPoolingDesc(pooling_mode_, 2, pool_size.data(), padding.data(), strides.data()));
   const std::string& data_format = kernel_conf_.data_format();
 
-  /*
-    int n, c, in_h, in_w, out_h, out_w;
-    n = in_dim[0];
-    c = in_dim[1];
-    in_h = in_dim[3];
-    in_w = in_dim[4];
-    out_h = out_dim[3];
-    out_w = out_dim[4];
-    cudnnTensorFormat_t cudnn_tensor_format;
-    if ("channels_first" == data_format) {
-      cudnn_tensor_format = CUDNN_TENSOR_NCHW;
-    } else if ("channels_last" == data_format) {
-      cudnn_tensor_format = CUDNN_TENSOR_NHWC;
-    } else {
-      UNIMPLEMENTED();
-    }
-    in_desc_.reset(new CudnnTensorDesc(cudnn_tensor_format, type, n, c, in_h, in_w));
-    out_desc_.reset(new CudnnTensorDesc(cudnn_tensor_format, type, n, c, out_h, out_w));
-  */
   std::vector<int> in_shape = {in_dim[0], in_dim[1], in_dim[3], in_dim[4]};
   std::vector<int> out_shape = {out_dim[0], out_dim[1], out_dim[3], out_dim[4]};
   std::vector<int> in_stride;
