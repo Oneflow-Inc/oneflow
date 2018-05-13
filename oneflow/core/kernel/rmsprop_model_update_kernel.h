@@ -21,12 +21,11 @@ class RMSPropMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> 
 template<DeviceType device_type, typename T>
 class RMSPropMdUpdateKernelUtil final {
  public:
-  // alpha = 1 - decay_rate
-  // mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
+  // mean_square = (1 - decay_rate) * model_diff ^ 2 + decay_rate * mean_square
   // model = pre_model - learning_rate * model_diff / sqrt(mean_square + epsilon)
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T alpha, T learning_rate,
-                          T decay_rate, T epsilon, T l1, T l2, const T* pre_model, T* model,
-                          T* mean_square, const T* model_diff);
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T decay_rate,
+                          T epsilon, T l1, T l2, const T* pre_model, T* model, T* mean_square,
+                          const T* model_diff);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);

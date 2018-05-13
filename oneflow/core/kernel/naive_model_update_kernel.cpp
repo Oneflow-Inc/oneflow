@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/naive_model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -21,10 +22,8 @@ class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
   static void UpdateModel(DeviceCtx*, const int64_t n, int64_t batch_size, T learning_rate, T l1,
                           T l2, const T* model_diff, const T* pre_model, T* model) {
     for (int64_t i = 0; i != n; ++i) {
-      T avg_model_diff = model_diff[i] / batch_size;
-      model[i] = pre_model[i] - learning_rate * avg_model_diff;
-      model[i] -= l2 * learning_rate * pre_model[i];
-      model[i] -= l1 * learning_rate * ((pre_model[i] >= 0) - (pre_model[i] <= 0));
+      T reg_diff = regularized_diff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+      model[i] = pre_model[i] - learning_rate * reg_diff;
     }
   }
 };
