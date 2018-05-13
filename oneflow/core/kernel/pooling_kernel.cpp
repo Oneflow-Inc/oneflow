@@ -25,10 +25,10 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
   int32_t dim = kernel_conf_.dim();
   if (dim == 2) {
     set_pooling_2d_desc(type);
-  } else if (dim == 3) {
-    set_pooling_3d_desc(type);
   } else {
-    UNIMPLEMENTED();
+    // cudnn pooling only supports 2D and 3D tensor, however we could treat a 1D {W} tensor as a 3D
+    // {1, 1, W} tensor.
+    set_pooling_3d_desc(type);
   }
 #endif  // WITH_CUDA
 }
