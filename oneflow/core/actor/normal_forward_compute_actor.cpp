@@ -21,7 +21,13 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     }
     OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
   } else {
-    OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndModelTmp);
+    if (model_regst_desc_id_ == -1) {
+      model_tmp_regst_ = GetSoleProducedRegst(model_tmp_regst_desc_id_);
+      AsyncInitModel();
+      OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
+    } else {
+      OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndModelTmp);
+    }
   }
 }
 
@@ -69,7 +75,11 @@ void NormalForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
-    return regst->regst_desc_id() != forward_model_regst_desc_id_;
+    if (regst->regst_desc_id() == forward_model_regst_desc_id_) { return false; }
+    if (model_regst_desc_id_ == -1 && regst->regst_desc_id() == model_tmp_regst_desc_id_) {
+      return false;
+    }
+    return true;
   });
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
