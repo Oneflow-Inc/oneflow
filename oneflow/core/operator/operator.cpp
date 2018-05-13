@@ -118,7 +118,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
            "job.prototxt";
   }
   if (model_bns().empty()) {
-    CHECK(model_tmp_bns().empty());
+    if (IsLossOp() == false) { CHECK(model_tmp_bns().empty()); }
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
