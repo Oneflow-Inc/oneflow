@@ -16,40 +16,20 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, next_model_vid - 1);
   }
-  UpdateModel(ctx.device_ctx, std::get<1>(*tpl),
-              DiffAveragingAndL1Regularization(ctx.device_ctx, BnInOp2Blob), next_model_vid,
-              learning_rate, BnInOp2Blob);
-}
-
-template<DeviceType device_type, typename T>
-Blob* NormalMdUpdateKernel<device_type, T>::DiffAveragingAndL1Regularization(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
   Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
   FOR_RANGE(size_t, i, 1, op_attribute.input_bns().size()) {
     Blob* in_i = BnInOp2Blob(op_attribute.input_bns(i));
-    KernelUtil<device_type, T>::Axpy(ctx, in_0->shape().elem_cnt(), 1.0, in_i->dptr<T>(), 1,
-                                     in_0->mut_dptr<T>(), 1);
+    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, in_0->shape().elem_cnt(), static_cast<T>(1.0),
+                                     in_i->dptr<T>(), 1, in_0->mut_dptr<T>(), 1);
   }
-  const Blob* model = BnInOp2Blob("model");
-  float l1 = Global<JobDesc>::Get()->L1();
-  NormalMdUpdateKernelUtil<device_type, T>::DiffAveragingAndL1Regularization(
-      ctx, model->shape().elem_cnt(), static_cast<T>(l1), model->dptr<T>(), in_0->mut_dptr<T>());
-  return in_0;
-}
 
-template<typename T>
-class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
- public:
-  static void DiffAveragingAndL1Regularization(DeviceCtx* ctx, int64_t n, T l1, const T* model,
-                                               T* model_diff_acc) {
-    T zero = ZeroVal<T>::value;
-    for (int64_t i = 0; i != n; ++i) {
-      model_diff_acc[i] /= Global<JobDesc>::Get()->BatchSize();
-      model_diff_acc[i] += l1 * ((model[i] >= zero) - (model[i] <= zero));
-    }
-  }
-};
+  int64_t batch_size = Global<JobDesc>::Get()->BatchSize();
+  float l1 = Global<JobDesc>::Get()->L1();
+  float l2 = Global<JobDesc>::Get()->L2();
+  UpdateModel(ctx.device_ctx, batch_size, static_cast<T>(learning_rate), static_cast<T>(l1),
+              static_cast<T>(l2), std::get<1>(*tpl), in_0, next_model_vid, BnInOp2Blob);
+}
 
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
   template struct NormalMdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
