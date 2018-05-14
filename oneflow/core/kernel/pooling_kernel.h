@@ -40,8 +40,7 @@ class PoolingCtx final {
   const cudnnTensorDescriptor_t& cudnn_in_tensor_desc() const;
   const cudnnTensorDescriptor_t& cudnn_out_tensor_desc() const;
   const cudnnPoolingDescriptor_t& cudnn_pooling_desc() const;
-  void set_pooling_2d_desc(DataType type);
-  void set_pooling_3d_desc(DataType type);
+  void set_pooling_desc(DataType type, int32_t dim);
 #endif  // WITH_CUDA
 
  private:
