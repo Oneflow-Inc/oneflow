@@ -28,9 +28,9 @@ void NormalBackwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("data_tmp", edge->GetRegst("data_tmp"));
       ConsumeRegst("boxing_out", edge->GetRegst("boxing_out"));
       ConsumeRegst("121_out", edge->GetRegst("121_out"));
+      ConsumeRegst("const_buf", edge->GetRegst("const_buf"));
     } else if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
-      ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
       ConsumeRegst("out_diff", edge->GetSoleRegst());
     }
@@ -152,13 +152,13 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
 void NormalBackwardCompTaskNode::BindModelDiffRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetSoleConsumedRegst("data_tmp");
   std::shared_ptr<RegstDesc> bw_buf_regst = GetProducedRegst("bw_buf");
-  std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
+  std::shared_ptr<RegstDesc> const_buf_regst = GetSoleConsumedRegst("const_buf");
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->BindBnsWithRegst(&Operator::data_tmp_bns, data_tmp_regst);
     node->AddBnToRegstAndBindIt(&Operator::bw_buf_bns, bw_buf_regst);
-    node->BindBnsWithRegst(&Operator::model_tmp_bns, model_tmp_regst);
+    node->BindBnsWithRegst(&Operator::const_buf_bns, const_buf_regst);
     node->BindBnsWithRegst(&Operator::model_diff_bns, model_diff_regst);
     node->BindBnsWithRegst(&Operator::model_bns, model_regst);
   });

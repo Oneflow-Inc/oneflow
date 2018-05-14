@@ -373,11 +373,19 @@ Regst* Actor::GetNaiveFirstCurReadable() {
   return naive_readable_regst_it->second.front();
 }
 
+Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
+  auto it = produced_regsts_.find(regst_desc_id);
+  CHECK(it != produced_regsts_.end());
+  CHECK_EQ(it->second.size(), 1);
+  return it->second.front().get();
+}
+
 bool Actor::IsReadReady() {
   return naive_readable_regst_.size() == naive_readable_regst_cnt_ && IsCustomizedReadReady();
 }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
+  if (regst->consumers_actor_id().empty()) { return 0; }
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
   CHECK(produced_regsts_.find(regst->regst_desc_id()) != produced_regsts_.end());

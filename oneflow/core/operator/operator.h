@@ -98,13 +98,13 @@ class Operator {
   DEFINE_BLOB_NAMES_GETTER(output_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(model_bns);
   DEFINE_BLOB_NAMES_GETTER(model_diff_bns);
-  DEFINE_BLOB_NAMES_GETTER(model_tmp_bns);
+  DEFINE_BLOB_NAMES_GETTER(const_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(forward_model_bns);
 
 #undef DEFINE_BLOB_NAMES_GETTER
 
   // Read: shape of input_blobs
-  // Write: shape of output_blobs, model_blobs, data_tmp_blobs, model_tmp_blobs
+  // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_buf_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                         const ParallelContext*, std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
@@ -177,7 +177,7 @@ class Operator {
 
   virtual LogicalBlobId ibn2lbi(const std::string& input_bn) const;
   virtual LogicalBlobId obn2lbi(const std::string& output_bn) const;
-  virtual LogicalBlobId mtbn2lbi(const std::string& model_tmp_bn) const;
+  virtual LogicalBlobId cbbn2lbi(const std::string& const_buf_bn) const;
   virtual LogicalBlobId mbn2lbi(const std::string& model_bn) const;
   virtual LogicalBlobId fwmbn2lbi(const std::string& forward_model_bn) const;
 
@@ -198,7 +198,7 @@ class Operator {
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
-  void EnrollModelTmpBn(const std::string& mtbn);
+  void EnrollConstBufBn(const std::string& cbbn);
 
   void EnrollForwardModelBn(const std::string& fwmbn);
 

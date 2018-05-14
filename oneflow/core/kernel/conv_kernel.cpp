@@ -38,7 +38,7 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void ConvKernelIf<device_type, T>::InitPureModelTmpBlobs(
+void ConvKernelIf<device_type, T>::InitPureConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && !this->UseCudnn()) {
     InitializerConf bias_multiplier_initializer_conf;
