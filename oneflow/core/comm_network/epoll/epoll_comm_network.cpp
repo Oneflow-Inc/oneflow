@@ -153,14 +153,14 @@ SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
   return sockfd2helper_.at(sockfd);
 }
 
-void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+void EpollCommNet::DoRead(ReadContext* read_ctx, int64_t src_machine_id, const void* src_token,
                           const void* dst_token) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;
   msg.request_write_msg.dst_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   msg.request_write_msg.dst_token = dst_token;
-  msg.request_write_msg.read_id = read_id;
+  msg.request_write_msg.read_ctx = read_ctx;
   GetSocketHelper(src_machine_id)->AsyncWrite(msg);
 }
 

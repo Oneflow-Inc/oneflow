@@ -48,8 +48,7 @@ void CommNet::AddReadCallBackDone(void* read_id) {
   if (IncreaseDoneCnt(read_ctx) == 2) { FinishOneRead(read_ctx); }
 }
 
-void CommNet::ReadDone(void* read_id) {
-  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
+void CommNet::ReadDone(ReadContext* read_ctx) {
   if (IncreaseDoneCnt(read_ctx) == 2) {
     std::unique_lock<std::mutex> lck(read_ctx->actor_read_ctx->read_ctx_list_mtx);
     FinishOneRead(read_ctx);

@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/comm_network/comm_network.h"
 
 #ifdef PLATFORM_POSIX
 
@@ -33,13 +34,13 @@ struct RequestWriteMsg {
   const void* src_token;
   int64_t dst_machine_id;
   const void* dst_token;
-  void* read_id;
+  ReadContext* read_ctx;
 };
 
 struct RequestReadMsg {
   const void* src_token;
   const void* dst_token;
-  void* read_id;
+  ReadContext* read_ctx;
 };
 
 struct SocketMsg {

@@ -28,7 +28,7 @@ class EpollCommNet final : public CommNet {
   EpollCommNet(const Plan& plan);
   void InitSockets();
   SocketHelper* GetSocketHelper(int64_t machine_id);
-  void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+  void DoRead(ReadContext*, int64_t src_machine_id, const void* src_token,
               const void* dst_token) override;
 
   // Memory Desc

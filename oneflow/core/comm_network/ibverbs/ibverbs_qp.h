@@ -12,17 +12,19 @@ class ActorMsgMR final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ActorMsgMR);
   ActorMsgMR() = delete;
-  ActorMsgMR(ibv_pd* pd) { mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_))); }
+  ActorMsgMR(ibv_pd* pd) {
+    mem_desc_.reset(new IBVerbsMemDesc(pd, &msg_, sizeof(msg_)));
+    CHECK_EQ(mem_desc_->sge_vec().size(), 1);
+  }
   ~ActorMsgMR() { mem_desc_.reset(); }
 
   const ActorMsg& msg() const { return msg_; }
-  void set_msg(const ActorMsg& val) { msg_ = val }
-  const IBVerbsMemDesc& mem_desc() const { return mem_desc_; }
+  void set_msg(const ActorMsg& val) { msg_ = val; }
+  const IBVerbsMemDesc& mem_desc() const { return *mem_desc_; }
 
  private:
   ActorMsg msg_;
   std::unique_ptr<IBVerbsMemDesc> mem_desc_;
-
 };
 
 class IBVerbsQP final {
@@ -36,21 +38,28 @@ class IBVerbsQP final {
 
   void PostReadRequest(const IBVerbsMemDescProto& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_ctx);
-
   void PostSendRequest(const ActorMsg& msg);
+
+  void ReadDone(uint64_t wr_id);
   void SendDone(uint64_t wr_id);
   void RecvDone(uint64_t wr_id);
 
  private:
-  void PostRecvActorMsgRequest(ActorMsgMR*);
+  void PostRecvRequest(ActorMsgMR*);
   ActorMsgMR* GetOneSendMsgMRFromBuf();
+  void TryPostPendingReadWR();
+  void TryPostPendingSendWR();
 
   ibv_context* ctx_;
   ibv_pd* pd_;
+  uint32_t max_recv_wr_;
+  ibv_qp* qp_;
+  uint32_t remaining_sendable_wr_cnt_;
   std::queue<ActorMsgMR*> send_msg_buf_;
   std::vector<ActorMsgMR*> recv_msg_buf_;
-  ibv_qp* qp_;
-
+  uint32_t remote_remaining_recvable_wr_cnt_;
+  std::queue<ibv_send_wr> pending_read_wr_;
+  std::queue<ibv_send_wr> pending_send_wr_;
 };
 
 }  // namespace oneflow

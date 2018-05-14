@@ -8,6 +8,18 @@
 
 namespace oneflow {
 
+struct ActorReadContext;
+struct ReadContext {
+  ActorReadContext* actor_read_ctx;
+  std::list<std::function<void()>> cbl;
+  std::mutex done_cnt_mtx;
+  int8_t done_cnt;
+};
+struct ActorReadContext {
+  std::mutex read_ctx_list_mtx;
+  std::list<ReadContext*> read_ctx_list;
+};
+
 class CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNet);
@@ -26,7 +38,7 @@ class CommNet {
              const void* dst_token);
   void AddReadCallBack(void* actor_read_id, void* read_id, std::function<void()> callback);
   void AddReadCallBackDone(void* read_id);
-  void ReadDone(void* read_id);
+  void ReadDone(ReadContext* read_ctx);
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
@@ -34,19 +46,8 @@ class CommNet {
 
  protected:
   CommNet() = default;
-  struct ActorReadContext;
-  struct ReadContext {
-    ActorReadContext* actor_read_ctx;
-    std::list<std::function<void()>> cbl;
-    std::mutex done_cnt_mtx;
-    int8_t done_cnt;
-  };
-  struct ActorReadContext {
-    std::mutex read_ctx_list_mtx;
-    std::list<ReadContext*> read_ctx_list;
-  };
 
-  virtual void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+  virtual void DoRead(ReadContext*, int64_t src_machine_id, const void* src_token,
                       const void* dst_token) = 0;
   void GenConnectionInfo(const Plan& plan);
 

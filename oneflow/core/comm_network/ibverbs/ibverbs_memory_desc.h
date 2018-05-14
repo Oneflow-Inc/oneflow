@@ -16,15 +16,15 @@ class IBVerbsMemDesc final {
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsMemDesc);
   IBVerbsMemDesc() = delete;
   IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size);
-  ~IBVerbsMemDesc() { PCHECK(ibv_dereg_mr(mr_) == 0); }
+  ~IBVerbsMemDesc();
 
-  const ibv_sge& ibv_sge() { return sge_; }
+  const std::vector<ibv_sge>& sge_vec() const { return sge_vec_; }
 
-  void ToProto(IBVerbsMemDescProto* proto);
+  IBVerbsMemDescProto ToProto();
 
  private:
-  ibv_sge sge_;
-  ibv_mr* mr_;
+  std::vector<ibv_sge> sge_vec_;
+  std::vector<ibv_mr*> mr_vec_;
 };
 
 }  // namespace oneflow

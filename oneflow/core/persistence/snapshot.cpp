@@ -38,7 +38,7 @@ void Snapshot::OnePartDone(const LogicalBlobId& lbi, int32_t part_id, int32_t pa
 
 void Snapshot::ConcatLbnFile(const LogicalBlobId& lbi, int32_t part_num,
                              const std::string& concat_file) {
-  std::vector<char> buffer(Global<JobDesc>::Get()->persistence_buffer_byte());
+  std::vector<char> buffer(Global<JobDesc>::Get()->persistence_buf_byte());
   std::string part_dir = JoinPath(root_path_, lbi.op_name(), lbi.blob_name() + "_tmp4a58");
   {
     PersistentOutStream out_stream(GlobalFS(), concat_file);
