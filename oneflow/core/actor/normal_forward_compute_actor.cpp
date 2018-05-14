@@ -14,22 +14,16 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     pre_forward_model_regst_ = GetCurWriteableRegst(forward_model_regst_desc_id_);
   }
   staleness_ = -1;
-  if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && const_buf_regst_desc_id_ == -1)) {
-    if (forward_model_regst_desc_id_ != -1) {
-      AsyncInitModel();
-      SendMsgToForwardModelSaveActor(0);
-    }
+  if (const_buf_regst_desc_id_ != -1) {
+    const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
+  }
+  if (random_seed_ == -1 || model_regst_desc_id_ == -1) {
+    if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) { AsyncInitModel(); }
+    if (forward_model_regst_desc_id_ != -1) { SendMsgToForwardModelSaveActor(0); }
+    if (const_buf_regst_desc_id_ != -1) { SendConstBufInitMsgToBwActor(); }
     OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
   } else {
-    if (const_buf_regst_desc_id_ != -1) {
-      const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
-    }
-    if (model_regst_desc_id_ == -1) {
-      AsyncInitModel();
-      OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
-    } else {
-      OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndConstBuf);
-    }
+    OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndConstBuf);
   }
 }
 
@@ -110,6 +104,7 @@ int NormalForwardCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
     model_regst_ = nullptr;
   }
   if (forward_model_regst_desc_id_ != -1) { SendMsgToForwardModelSaveActor(0); }
+  if (const_buf_regst_desc_id_ != -1) { SendConstBufInitMsgToBwActor(); }
   OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
   return 0;
 }
@@ -163,6 +158,11 @@ void NormalForwardCompActor::SendMsgToForwardModelSaveActor(int64_t batch_id) {
     regst->set_model_version_id(batch_id);
     return regst->regst_desc_id() == forward_model_regst_desc_id_;
   });
+}
+
+void NormalForwardCompActor::SendConstBufInitMsgToBwActor() {
+  AsyncSendRegstMsgToConsumer(
+      [&](Regst* regst) { return regst->regst_desc_id() == const_buf_regst_desc_id_; });
 }
 
 REGISTER_ACTOR(TaskType::kNormalForward, NormalForwardCompActor);

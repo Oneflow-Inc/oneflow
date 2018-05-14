@@ -385,7 +385,6 @@ bool Actor::IsReadReady() {
 }
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
-  if (regst->consumers_actor_id().empty()) { return 0; }
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
   CHECK(produced_regsts_.find(regst->regst_desc_id()) != produced_regsts_.end());

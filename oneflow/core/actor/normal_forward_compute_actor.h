@@ -29,6 +29,7 @@ class NormalForwardCompActor final : public CompActor {
   void TryAsyncReturnModelRegst();
   void TrySendMsgToForwardModelSaveActor(int64_t piece_id);
   void SendMsgToForwardModelSaveActor(int64_t batch_id);
+  void SendConstBufInitMsgToBwActor();
 
   int64_t model_regst_desc_id_;
   int64_t const_buf_regst_desc_id_;
