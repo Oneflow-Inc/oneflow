@@ -129,6 +129,12 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32
   return regst;
 }
 
+std::shared_ptr<RegstDesc> TaskNode::ProduceConstRegst(const std::string& name) {
+  auto regst = ProduceRegst(name, 1, 1);
+  regst->set_is_const(true);
+  return regst;
+}
+
 void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
   InitProducedRegstMemCase(regst->mut_mem_case());
 }

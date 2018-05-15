@@ -20,4 +20,5 @@ message RegstDescProto {
   required int32 max_register_num = 7;
   required int32 register_num = 8;
   required MemoryCase mem_case = 9;
+  required bool is_const = 10;
 }

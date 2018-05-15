@@ -11,6 +11,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
+  is_const_ = proto.is_const();
   for (const LbiBlobDescPair& pair : proto.lbi2blob_desc()) {
     auto blob_desc = of_make_unique<BlobDesc>(pair.blob_desc());
     CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);

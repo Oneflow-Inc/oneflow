@@ -10,7 +10,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp");
   ProduceRegst("forward_model");
   ProduceRegst("fw_buf", 1, 1);
-  ProduceRegst("const_buf", 1, 1);
+  ProduceConstRegst("const_buf");
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdSave") {

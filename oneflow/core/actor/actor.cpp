@@ -56,7 +56,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   eord_regst_desc_ids_.clear();
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
-      writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
+      if (!regst->is_const()) {
+        writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
+      }
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
@@ -269,9 +271,18 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
 void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                         std::function<bool(int64_t)> IsAllowedActor) {
   int64_t this_actor_id = actor_id_;
-  for (auto& pair : writeable_produced_regst_) {
-    if (pair.second.empty()) { continue; }
-    Regst* regst = pair.second.front();
+  for (const auto& produced_regst_pair : produced_regsts_) {
+    Regst* regst = nullptr;
+    auto writeble_regst_it = writeable_produced_regst_.find(produced_regst_pair.first);
+    if (writeble_regst_it != writeable_produced_regst_.end()) {
+      if (writeble_regst_it->second.empty()) { continue; }
+      regst = writeble_regst_it->second.front();
+    } else {
+      CHECK_EQ(produced_regst_pair.second.size(), 1);
+      regst = produced_regst_pair.second.front().get();
+      CHECK(regst->is_const());
+      if (produced_regst2reading_cnt_.at(regst) > 0) { continue; }
+    }
     if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_regst2reading_cnt_.find(regst);
     CHECK_EQ(regst_reading_cnt_it->second, 0);
@@ -285,8 +296,10 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
         Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
       });
     }
-    if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
-    if (pair.second.empty()) { writeable_produced_regst_desc_cnt_ -= 1; }
+    if (writeble_regst_it != writeable_produced_regst_.end()) {
+      if (!regst->consumers_actor_id().empty()) { writeble_regst_it->second.pop_front(); }
+      if (writeble_regst_it->second.empty()) { writeable_produced_regst_desc_cnt_ -= 1; }
+    }
   }
 }
 

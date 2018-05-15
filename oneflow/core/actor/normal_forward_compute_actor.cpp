@@ -75,8 +75,7 @@ void NormalForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
-    return regst->regst_desc_id() != forward_model_regst_desc_id_
-           && regst->regst_desc_id() != const_buf_regst_desc_id_;
+    return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
