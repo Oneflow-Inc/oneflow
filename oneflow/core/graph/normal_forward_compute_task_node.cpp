@@ -32,6 +32,7 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
     TaskType src_task_type = src_node->GetTaskType();
     if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
+      ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
     } else {
       ConsumeRegst("in", edge->GetSoleRegst());
     }
@@ -62,6 +63,7 @@ void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
 void NormalForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
+  TryLockConsumedRegst("model_tmp");
 }
 
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
@@ -118,10 +120,18 @@ void NormalForwardCompTaskNode::BuildActivationRegst() {
 
 void NormalForwardCompTaskNode::BuildModelAndTmpRegsts() {
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
+  std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
     node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
     node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
+    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
+      if (!model_tmp_regst->IsLocked()) {
+        const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mtbn);
+        model_tmp_regst->AddLbi(lbi);
+      }
+      node->BindBnWithRegst(mtbn, model_tmp_regst);
+    }
     for (const std::string& mbn : node->op()->model_bns()) {
       if (!model_regst->IsLocked()) {
         const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mbn);

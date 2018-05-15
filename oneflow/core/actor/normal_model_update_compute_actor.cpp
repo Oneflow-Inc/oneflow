@@ -5,13 +5,15 @@ namespace oneflow {
 
 void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
+  model_tmp_regst_desc_id_ = Name2SoleRegstDescId("model_tmp");
   init_remaining_cnt_ = 0;
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
+  if (model_tmp_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   next_model_version_id_ = 0;
   related_save_model_actor_id_ = task_proto.related_save_model_task_id();
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
   pre_model_regst_ = nullptr;
-  OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstBuf);
+  OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndModelTmp);
 }
 
 void NormalMdUpdtCompActor::Act() {
@@ -43,10 +45,11 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   Global<ActorMsgBus>::Get()->SendMsg(msg);
 }
 
-int NormalMdUpdtCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
+int NormalMdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
-    InitRegstBySendToFw(model_regst_desc_id_);
+    if (model_regst_desc_id_ != -1) { InitRegstBySendToFw(model_regst_desc_id_); }
+    if (model_tmp_regst_desc_id_ != -1) { InitRegstBySendToFw(model_tmp_regst_desc_id_); }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     init_remaining_cnt_ -= 1;
   } else {
