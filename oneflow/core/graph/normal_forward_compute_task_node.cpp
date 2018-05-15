@@ -20,6 +20,7 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       BindEdgeWithProducedRegst(edge, "121_out");
       BindEdgeWithProducedRegst(edge, "activation");
       BindEdgeWithProducedRegst(edge, "data_tmp");
+      BindEdgeWithProducedRegst(edge, "const_buf");
     } else {
       BindEdgeWithProducedB121Regst(edge, "out");
     }

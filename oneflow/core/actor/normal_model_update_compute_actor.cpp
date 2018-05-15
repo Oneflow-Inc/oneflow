@@ -48,8 +48,8 @@ void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
 int NormalMdUpdtCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kInitModel);
-    if (model_regst_desc_id_ != -1) { InitRegstBySendToFw(model_regst_desc_id_); }
-    if (model_tmp_regst_desc_id_ != -1) { InitRegstBySendToFw(model_tmp_regst_desc_id_); }
+    InitRegstBySendToFw(model_regst_desc_id_);
+    InitRegstBySendToFw(model_tmp_regst_desc_id_);
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     init_remaining_cnt_ -= 1;
   } else {
