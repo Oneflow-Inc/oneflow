@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/mnist_kaggle/train/6"
+    data_dir: "/dataset/mnist_kaggle/test/6"
     blob {
       name: "img_raw"
       data_type: kFloat
