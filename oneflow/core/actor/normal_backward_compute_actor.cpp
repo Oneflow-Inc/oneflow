@@ -57,6 +57,8 @@ void NormalBackwardCompActor::Act() {
   AsyncLaunchKernel(GenDefaultKernelCtx(), [this](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == model_regst_desc_id_) {
       return model_regst_queue_.front();
+    } else if (regst_desc_id == model_tmp_regst_desc_id_) {
+      return model_tmp_regst_;
     } else if (regst_desc_id == const_buf_regst_desc_id_) {
       return const_buf_regst_;
     } else {

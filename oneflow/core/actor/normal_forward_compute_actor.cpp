@@ -9,6 +9,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   forward_model_regst_desc_id_ = Name2SoleRegstDescId("forward_model");
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
+  model_tmp_regst_ = nullptr;
   const_buf_regst_ = nullptr;
   pre_forward_model_regst_ = nullptr;
   if (forward_model_regst_desc_id_ != -1) {
