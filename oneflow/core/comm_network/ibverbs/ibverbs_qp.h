@@ -45,6 +45,7 @@ class IBVerbsQP final {
 
   uint32_t qp_num() const { return qp_->qp_num; }
   void Connect(const IBVerbsConnectionInfo& peer_info);
+  void PostAllRecvRequest();
 
   void PostReadRequest(const IBVerbsMemDescProto& remote_mem, const IBVerbsMemDesc& local_mem,
                        void* read_id);

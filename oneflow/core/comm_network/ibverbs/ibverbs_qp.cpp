@@ -94,7 +94,9 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
                              | IBV_QP_RNR_RETRY | IBV_QP_TIMEOUT),
 
            0);
-  // other
+}
+
+void IBVerbsQP::PostAllRecvRequest() {
   for (ActorMsgMR* msg_mr : recv_msg_buf_) { PostRecvRequest(msg_mr); }
 }
 

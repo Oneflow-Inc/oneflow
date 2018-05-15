@@ -99,6 +99,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_I
   }
   OF_BARRIER();
   for (int64_t peer_id : peer_machine_id()) {
+    qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
   poll_thread_ = std::thread(std::bind(&IBVerbsCommNet::PollCQ, this));
