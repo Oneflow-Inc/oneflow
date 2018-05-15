@@ -102,7 +102,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_I
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  poll_thread_ = std::thread(std::bind(&IBVerbsCommNet::PollCQ, this));
+  poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
@@ -120,7 +120,7 @@ void IBVerbsCommNet::PollCQ() {
     CHECK_GE(found_wc_num, 0);
     FOR_RANGE(int32_t, i, 0, found_wc_num) {
       const ibv_wc& wc = wc_vec.at(i);
-      CHECK_EQ(wc.status, IBV_WC_SUCCESS);
+      CHECK_EQ(wc.status, IBV_WC_SUCCESS) << wc.opcode;
       WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
       IBVerbsQP* qp = wr_id->qp;
       switch (wc.opcode) {
