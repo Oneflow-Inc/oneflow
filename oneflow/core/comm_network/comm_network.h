@@ -14,6 +14,7 @@ struct ReadContext {
   std::list<std::function<void()>> cbl;
   std::mutex done_cnt_mtx;
   int8_t done_cnt;
+  void* other;
 };
 struct ActorReadContext {
   std::mutex read_ctx_list_mtx;
@@ -38,18 +39,18 @@ class CommNet {
              const void* dst_token);
   void AddReadCallBack(void* actor_read_id, void* read_id, std::function<void()> callback);
   void AddReadCallBackDone(void* read_id);
-  void ReadDone(ReadContext* read_ctx);
+  void ReadDone(void* read_id);
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
-  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
  protected:
   CommNet() = default;
 
-  virtual void DoRead(ReadContext*, int64_t src_machine_id, const void* src_token,
+  virtual void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
                       const void* dst_token) = 0;
   void GenConnectionInfo(const Plan& plan);
+  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
  private:
   friend class Global<CommNet>;

@@ -16,6 +16,7 @@ void* CommNet::Read(void* actor_read_id, int64_t src_machine_id, const void* src
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
   read_ctx->done_cnt = 0;
+  read_ctx->other = nullptr;
   {
     std::unique_lock<std::mutex> lck(actor_read_ctx->read_ctx_list_mtx);
     actor_read_ctx->read_ctx_list.push_back(read_ctx);
@@ -48,7 +49,8 @@ void CommNet::AddReadCallBackDone(void* read_id) {
   if (IncreaseDoneCnt(read_ctx) == 2) { FinishOneRead(read_ctx); }
 }
 
-void CommNet::ReadDone(ReadContext* read_ctx) {
+void CommNet::ReadDone(void* read_id) {
+  ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (IncreaseDoneCnt(read_ctx) == 2) {
     std::unique_lock<std::mutex> lck(read_ctx->actor_read_ctx->read_ctx_list_mtx);
     FinishOneRead(read_ctx);

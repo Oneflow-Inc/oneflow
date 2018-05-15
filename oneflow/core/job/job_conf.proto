@@ -53,7 +53,7 @@ message JobConf {
   optional uint64 reserved_device_mem_mbyte = 151 [default = 500];
   optional bool save_downloaded_file_to_local_fs = 152 [default = true];
   optional uint64 rdma_mem_block_mbyte = 160 [default = 8];
-  optional uint64 rdma_recv_msg_buf_mbyte = 161 [default = 1];
+  optional uint64 rdma_recv_msg_buf_mbyte = 161 [default = 6];
 
   oneof JobType {
     TrainConf train_conf = 1000;

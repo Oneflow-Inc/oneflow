@@ -63,7 +63,7 @@ void SocketReadHelper::SetStatusWhenMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenMsgBodyDone() {
   if (cur_msg_.msg_type == SocketMsgType::kRequestRead) {
-    Global<EpollCommNet>::Get()->ReadDone(cur_msg_.request_read_msg.read_ctx);
+    Global<EpollCommNet>::Get()->ReadDone(cur_msg_.request_read_msg.read_id);
   }
   SwitchToMsgHeadReadHandle();
 }
@@ -73,7 +73,7 @@ void SocketReadHelper::SetStatusWhenRequestWriteMsgHeadDone() {
   msg_to_send.msg_type = SocketMsgType::kRequestRead;
   msg_to_send.request_read_msg.src_token = cur_msg_.request_write_msg.src_token;
   msg_to_send.request_read_msg.dst_token = cur_msg_.request_write_msg.dst_token;
-  msg_to_send.request_read_msg.read_ctx = cur_msg_.request_write_msg.read_ctx;
+  msg_to_send.request_read_msg.read_id = cur_msg_.request_write_msg.read_id;
   Global<EpollCommNet>::Get()->SendSocketMsg(cur_msg_.request_write_msg.dst_machine_id,
                                              msg_to_send);
   SwitchToMsgHeadReadHandle();

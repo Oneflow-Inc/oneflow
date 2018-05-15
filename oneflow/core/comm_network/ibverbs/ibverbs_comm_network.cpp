@@ -7,17 +7,28 @@ namespace oneflow {
 
 namespace {
 
+OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ibv_wc_status);
+
 std::string GenTokensMsgKey(int64_t machine_id) {
   return "IBVerbsTokensMsg/" + std::to_string(machine_id);
 }
 
 std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
-  return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + " " + std::to_string(dst_machine_id);
+  return "IBVerbsConnInfo/" + std::to_string(src_machine_id) + "/" + std::to_string(dst_machine_id);
 }
 
 }  // namespace
 
-IBVerbsCommNet::~IBVerbsCommNet() { TODO(); }
+IBVerbsCommNet::~IBVerbsCommNet() {
+  poll_exit_flag_.test_and_set();
+  poll_thread_.join();
+  for (IBVerbsQP* qp : qp_vec_) {
+    if (qp) { delete qp; }
+  }
+  CHECK_EQ(ibv_destroy_cq(cq_), 0);
+  CHECK_EQ(ibv_dealloc_pd(pd_), 0);
+  CHECK_EQ(ibv_close_device(context_), 0);
+}
 
 const void* IBVerbsCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
   IBVerbsMemDesc* mem_desc = new IBVerbsMemDesc(pd_, mem_ptr, byte_size);
@@ -41,7 +52,8 @@ void IBVerbsCommNet::RegisterMemoryDone() {
     IBVerbsTokensMsg peer_tokens_msg;
     Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_machine_id), &peer_tokens_msg);
     for (const auto& pair : peer_tokens_msg.token2mem_desc()) {
-      CHECK(token2mem_desc_.insert({reinterpret_cast<void*>(pair.first), pair.second}).second);
+      CHECK(
+          token2mem_desc_.insert({reinterpret_cast<const void*>(pair.first), pair.second}).second);
     }
   }
   OF_BARRIER();
@@ -52,88 +64,84 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
-IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) {
+IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_INIT) {
   GenConnectionInfo(plan);
-  // Init Adapter
-  ibv_device** device_list = ibv_get_device_list(NULL);
+  ibv_device** device_list = ibv_get_device_list(nullptr);
+  PCHECK(device_list);
   ibv_device* device = device_list[0];
   context_ = ibv_open_device(device);
   CHECK(context_);
+  ibv_free_device_list(device_list);
   pd_ = ibv_alloc_pd(context_);
   CHECK(pd_);
-
-  // Init env
-  send_cq_ = ibv_create_cq(context_, 10, NULL, NULL, 0);  // cqe
-  CHECK(send_cq_);
-  recv_cq_ = ibv_create_cq(context_, 10, NULL, NULL, 0);  // cqe
-  CHECK(recv_cq_);
-
-  ibv_free_device_list(device_list);
-  InitRdma();
-  Start();
+  cq_ = ibv_create_cq(context_, 11, nullptr, nullptr, 0);
+  CHECK(cq_);
+  ibv_port_attr port_attr;
+  CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
+  ibv_gid gid;
+  CHECK_EQ(ibv_query_gid(context_, 1, 0, &gid), 0);
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  for (int64_t peer_machine_id : Global<CommNet>::Get()->peer_machine_id()) {
-    IBVerbsConnection* conn = NewIBVerbsConnection();
-    connection_pool_.emplace(peer_machine_id, conn);
-    Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_machine_id, peer_machine_id),
-                                      conn->mut_this_machine_conn_info());
+  qp_vec_.assign(Global<JobDesc>::Get()->TotalMachineNum(), nullptr);
+  for (int64_t peer_id : peer_machine_id()) {
+    IBVerbsQP* cur_qp = new IBVerbsQP(context_, pd_, cq_, cq_);
+    qp_vec_.at(peer_id) = cur_qp;
+    IBVerbsConnectionInfo conn_info;
+    conn_info.set_lid(port_attr.lid);
+    conn_info.set_qp_num(cur_qp->qp_num());
+    conn_info.set_subnet_prefix(gid.global.subnet_prefix);
+    conn_info.set_interface_id(gid.global.interface_id);
+    Global<CtrlClient>::Get()->PushKV(GenConnInfoKey(this_machine_id, peer_id), conn_info);
+  }
+  for (int64_t peer_id : peer_machine_id()) {
+    IBVerbsConnectionInfo conn_info;
+    Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_id, this_machine_id), &conn_info);
+    qp_vec_.at(peer_id)->Connect(conn_info);
   }
   OF_BARRIER();
-  for (int64_t peer_machine_id : Global<CommNet>::Get()->peer_machine_id()) {
-    IBVerbsConnection* conn = connection_pool_[peer_machine_id];
-    Global<CtrlClient>::Get()->PullKV(GenConnInfoKey(peer_machine_id, this_machine_id),
-                                      conn->mut_peer_machine_conn_info_ptr());
-    for (size_t i = 0; i != kPrePostRecvNum; ++i) {
-      ActorMsg* actor_msg = new ActorMsg;
-      auto ibverbs_mem_desc = NewIBVerbsMemDesc(actor_msg, sizeof(ActorMsg));
-      recv_msg2conn_ptr_.emplace(actor_msg, conn);
-      recv_msg2mem_desc_.emplace(actor_msg, ibverbs_mem_desc);
-      conn->PostRecvRequest(actor_msg, ibverbs_mem_desc);
-    }
-    conn->CompleteConnection();
+  for (int64_t peer_id : peer_machine_id()) {
+    Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
-  OF_BARRIER();
+  poll_thread_ = std::thread(std::bind(&IBVerbsCommNet::PollCQ, this));
 }
 
-void IBVerbsCommNet::DoRead(ReadContext* read_ctx, int64_t src_machine_id, const void* src_token,
+void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
                             const void* dst_token) {
   qp_vec_.at(src_machine_id)
       ->PostReadRequest(token2mem_desc_.at(src_token),
-                        static_cast<const IBVerbsMemDesc*>(dst_token), read_ctx);
+                        *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);
 }
 
-void PollCQ() {
-  ibv_wc wc;
-  int32_t num_comp = ibv_poll_cq(send_cq_, 1, &wc);
-  CHECK_GE(num_comp, 0);
-  if (num_comp == 0) { return; }
-
-  if (wc.status != IBV_WC_SUCCESS) { LOG(FATAL) << "PollSendQueue Error Code: " << wc.status; }
-  switch (wc.opcode) {
-    case IBV_WC_SEND: {
-      ReleaseSendMsg(reinterpret_cast<ActorMsg*>(wc.wr_id));
-      return;
+void IBVerbsCommNet::PollCQ() {
+  std::vector<ibv_wc> wc_vec(max_poll_wc_num_);
+  while (poll_exit_flag_.test_and_set() == false) {
+    poll_exit_flag_.clear();
+    int32_t found_wc_num = ibv_poll_cq(cq_, max_poll_wc_num_, wc_vec.data());
+    CHECK_GE(found_wc_num, 0);
+    FOR_RANGE(int32_t, i, 0, found_wc_num) {
+      const ibv_wc& wc = wc_vec.at(i);
+      CHECK_EQ(wc.status, IBV_WC_SUCCESS);
+      WorkRequestId* wr_id = reinterpret_cast<WorkRequestId*>(wc.wr_id);
+      IBVerbsQP* qp = wr_id->qp;
+      switch (wc.opcode) {
+        case IBV_WC_RDMA_READ: {
+          qp->ReadDone(wr_id);
+          break;
+        }
+        case IBV_WC_SEND: {
+          qp->SendDone(wr_id);
+          break;
+        }
+        case IBV_WC_RECV: {
+          qp->RecvDone(wr_id);
+          break;
+        }
+        default: UNIMPLEMENTED();
+      }
     }
-    case IBV_WC_RDMA_READ: {
-      Global<CommNet>::Get()->ReadDone(reinterpret_cast<void*>(wc.wr_id));
-      return;
-    }
-    default: return;
   }
-  ibv_wc wc;
-  int32_t num_comp = ibv_poll_cq(recv_cq_, 1, &wc);
-  CHECK_GE(num_comp, 0);
-  if (num_comp == 0) { return; }
-
-  if (wc.status != IBV_WC_SUCCESS) { LOG(FATAL) << "PollRecvQueue Error Code:  " << wc.status; }
-  ActorMsg* msg = reinterpret_cast<ActorMsg*>(wc.wr_id);
-
-  Global<ActorMsgBus>::Get()->SendMsg(*msg);
-  CHECK(recv_msg2conn_ptr_.find(msg) != recv_msg2conn_ptr_.end());
-  IBVerbsConnection* conn = recv_msg2conn_ptr_.at(msg);
-  auto msg2mem_it = recv_msg2mem_desc_.find(msg);
-  conn->PostRecvRequest(msg, msg2mem_it->second);
 }
+
+const int32_t IBVerbsCommNet::max_poll_wc_num_ = 32;
 
 }  // namespace oneflow
 

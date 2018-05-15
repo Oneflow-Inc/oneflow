@@ -34,13 +34,13 @@ struct RequestWriteMsg {
   const void* src_token;
   int64_t dst_machine_id;
   const void* dst_token;
-  ReadContext* read_ctx;
+  void* read_id;
 };
 
 struct RequestReadMsg {
   const void* src_token;
   const void* dst_token;
-  ReadContext* read_ctx;
+  void* read_id;
 };
 
 struct SocketMsg {

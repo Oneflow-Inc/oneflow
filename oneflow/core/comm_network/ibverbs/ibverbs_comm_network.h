@@ -30,9 +30,11 @@ class IBVerbsCommNet final : public CommNet {
 
  private:
   IBVerbsCommNet(const Plan&);
-  void DoRead(ReadContext* read_ctx, int64_t src_machine_id, const void* src_token,
+  void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
               const void* dst_token) override;
   void PollCQ();
+
+  static const int32_t max_poll_wc_num_;
 
   MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
   HashMap<const void*, IBVerbsMemDescProto> token2mem_desc_;
@@ -40,6 +42,7 @@ class IBVerbsCommNet final : public CommNet {
   ibv_pd* pd_;
   ibv_cq* cq_;
   std::vector<IBVerbsQP*> qp_vec_;
+  std::atomic_flag poll_exit_flag_;
   std::thread poll_thread_;
 };
 

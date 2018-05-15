@@ -7,11 +7,10 @@ message IBVerbsMemDescProto {
 }
 
 message IBVerbsConnectionInfo {
-  required int32 lid = 1;
-  required int32 qp_num = 2;
-  required uint64 subnet_prefix = 4;
-  required uint64 interface_id = 5;
-  required uint32 max_recv_wr = 6;
+  required uint32 lid = 1;
+  required uint32 qp_num = 2;
+  required uint64 subnet_prefix = 3;
+  required uint64 interface_id = 4;
 }
 
 message IBVerbsTokensMsg {
