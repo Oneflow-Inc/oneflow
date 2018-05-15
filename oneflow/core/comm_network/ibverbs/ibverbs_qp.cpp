@@ -104,7 +104,7 @@ void IBVerbsQP::PostReadRequest(const IBVerbsMemDescProto& remote_mem,
                                 const IBVerbsMemDesc& local_mem, void* read_id) {
   CHECK_EQ(remote_mem.mem_ptr_size(), local_mem.sge_vec().size());
   WorkRequestId* wr_id = NewWorkRequestId();
-  wr_id->outstanding_sge_num = local_mem.sge_vec().size();
+  wr_id->outstanding_sge_cnt = local_mem.sge_vec().size();
   wr_id->read_id = read_id;
   FOR_RANGE(size_t, i, 0, local_mem.sge_vec().size()) {
     ibv_send_wr wr;
@@ -141,9 +141,9 @@ void IBVerbsQP::PostSendRequest(const ActorMsg& msg) {
 }
 
 void IBVerbsQP::ReadDone(WorkRequestId* wr_id) {
-  CHECK_GE(wr_id->outstanding_sge_num, 1);
-  wr_id->outstanding_sge_num -= 1;
-  if (wr_id->outstanding_sge_num == 0) {
+  CHECK_GE(wr_id->outstanding_sge_cnt, 1);
+  wr_id->outstanding_sge_cnt -= 1;
+  if (wr_id->outstanding_sge_cnt == 0) {
     Global<CommNet>::Get()->ReadDone(wr_id->read_id);
     DeleteWorkRequestId(wr_id);
   }
@@ -184,7 +184,7 @@ ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
 WorkRequestId* IBVerbsQP::NewWorkRequestId() {
   WorkRequestId* wr_id = new WorkRequestId;
   wr_id->qp = this;
-  wr_id->outstanding_sge_num = 0;
+  wr_id->outstanding_sge_cnt = 0;
   wr_id->read_id = nullptr;
   wr_id->msg_mr = nullptr;
   return wr_id;
