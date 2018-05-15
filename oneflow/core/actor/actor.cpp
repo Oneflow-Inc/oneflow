@@ -386,11 +386,13 @@ Regst* Actor::GetNaiveFirstCurReadable() {
   return naive_readable_regst_it->second.front();
 }
 
-Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
+Regst* Actor::GetProducedConstRegst(int64_t regst_desc_id) {
   auto it = produced_regsts_.find(regst_desc_id);
   CHECK(it != produced_regsts_.end());
   CHECK_EQ(it->second.size(), 1);
-  return it->second.front().get();
+  Regst* regst = it->second.front().get();
+  CHECK(regst->is_const());
+  return regst;
 }
 
 bool Actor::IsReadReady() {

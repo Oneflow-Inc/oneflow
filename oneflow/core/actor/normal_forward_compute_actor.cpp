@@ -17,7 +17,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
   staleness_ = -1;
   if (const_buf_regst_desc_id_ != -1) {
-    const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
+    const_buf_regst_ = GetProducedConstRegst(const_buf_regst_desc_id_);
   }
   if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
     if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) { AsyncInitModel(); }
