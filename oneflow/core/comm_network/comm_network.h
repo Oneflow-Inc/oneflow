@@ -8,19 +8,6 @@
 
 namespace oneflow {
 
-struct ActorReadContext;
-struct ReadContext {
-  ActorReadContext* actor_read_ctx;
-  std::list<std::function<void()>> cbl;
-  std::mutex done_cnt_mtx;
-  int8_t done_cnt;
-  void* other;
-};
-struct ActorReadContext {
-  std::mutex read_ctx_list_mtx;
-  std::list<ReadContext*> read_ctx_list;
-};
-
 class CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNet);
@@ -53,6 +40,17 @@ class CommNet {
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
  private:
+  struct ActorReadContext;
+  struct ReadContext {
+    ActorReadContext* actor_read_ctx;
+    std::list<std::function<void()>> cbl;
+    std::mutex done_cnt_mtx;
+    int8_t done_cnt;
+  };
+  struct ActorReadContext {
+    std::mutex read_ctx_list_mtx;
+    std::list<ReadContext*> read_ctx_list;
+  };
   friend class Global<CommNet>;
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneRead(ReadContext*);
