@@ -87,7 +87,7 @@ void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  Global<ActorMsgBus>::Get()->SendMsg(cur_msg_.actor_msg);
+  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.actor_msg);
   SwitchToMsgHeadReadHandle();
 }
 

@@ -30,10 +30,16 @@ class CommNet {
 
   //
   virtual void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) = 0;
-  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
  protected:
   CommNet() = default;
+
+  virtual void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
+                      const void* dst_token) = 0;
+  void GenConnectionInfo(const Plan& plan);
+  const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
+
+ private:
   struct ActorReadContext;
   struct ReadContext {
     ActorReadContext* actor_read_ctx;
@@ -45,12 +51,6 @@ class CommNet {
     std::mutex read_ctx_list_mtx;
     std::list<ReadContext*> read_ctx_list;
   };
-
-  virtual void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
-                      const void* dst_token) = 0;
-  void GenConnectionInfo(const Plan& plan);
-
- private:
   friend class Global<CommNet>;
   int8_t IncreaseDoneCnt(ReadContext*);
   void FinishOneRead(ReadContext*);

@@ -22,7 +22,7 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
     Blob* src_blob = in_blob;
     if (in_blob->mem_case().has_host_mem() && out_blob->mem_case().has_device_cuda_mem()) {
       Memcpy<DeviceType::kGPU>(ctx.device_ctx, same_parallel_in_blob->mut_dptr<T>(),
-                               in_blob->dptr<T>(), elem_cnt,
+                               in_blob->dptr<T>(), in_blob->ByteSizeOfDataContentField(),
                                cudaMemcpyKind::cudaMemcpyHostToDevice);
       src_blob = same_parallel_in_blob;
     }
