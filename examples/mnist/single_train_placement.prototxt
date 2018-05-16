@@ -4,8 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "first:cpu:3"
-    device_name: "second:cpu:3"
+    device_name: "first:cpu:6"
   }
 }
 
@@ -26,6 +25,5 @@ placement_group {
   parallel_conf {
     policy: kDataParallel
     device_name: "first:gpu:0-1"
-    device_name: "second:gpu:0-1"
   }
 }
