@@ -55,7 +55,7 @@ class Blob : public BlobIf {
     return static_cast<T*>(dptr_);
   }
 
-  const void* comm_net_token() const { return comm_net_token_; }
+  void* comm_net_token() const { return comm_net_token_; }
 
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
@@ -84,7 +84,7 @@ class Blob : public BlobIf {
  protected:
   Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
       : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token);
 
  private:
   template<typename T>
@@ -99,12 +99,12 @@ class Blob : public BlobIf {
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;
-  const void* comm_net_token_;
+  void* comm_net_token_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
 };
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token,
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token,
               DeviceType device_type);
 
 class RecordBlobIf : public BlobIf {

@@ -10,8 +10,7 @@ void CommNet::DeleteActorReadId(void* actor_read_id) {
   delete actor_read_ctx;
 }
 
-void* CommNet::Read(void* actor_read_id, int64_t src_machine_id, const void* src_token,
-                    const void* dst_token) {
+void* CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
@@ -56,21 +55,7 @@ void CommNet::ReadDone(void* read_id) {
   }
 }
 
-int8_t CommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
-  std::unique_lock<std::mutex> lck(read_ctx->done_cnt_mtx);
-  read_ctx->done_cnt += 1;
-  return read_ctx->done_cnt;
-}
-
-void CommNet::FinishOneRead(ReadContext* read_ctx) {
-  ActorReadContext* actor_read_ctx = read_ctx->actor_read_ctx;
-  CHECK_EQ(actor_read_ctx->read_ctx_list.front(), read_ctx);
-  actor_read_ctx->read_ctx_list.pop_front();
-  for (std::function<void()>& callback : read_ctx->cbl) { callback(); }
-  delete read_ctx;
-}
-
-void CommNet::GenConnectionInfo(const Plan& plan) {
+CommNet::CommNet(const Plan& plan) {
   HashMap<int64_t, int64_t> rid2mid;
   HashMap<int64_t, int64_t> tid2mid;
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
@@ -99,6 +84,20 @@ void CommNet::GenConnectionInfo(const Plan& plan) {
     }
   }
   peer_machine_id_.erase(this_machine_id);
+}
+
+int8_t CommNet::IncreaseDoneCnt(ReadContext* read_ctx) {
+  std::unique_lock<std::mutex> lck(read_ctx->done_cnt_mtx);
+  read_ctx->done_cnt += 1;
+  return read_ctx->done_cnt;
+}
+
+void CommNet::FinishOneRead(ReadContext* read_ctx) {
+  ActorReadContext* actor_read_ctx = read_ctx->actor_read_ctx;
+  CHECK_EQ(actor_read_ctx->read_ctx_list.front(), read_ctx);
+  actor_read_ctx->read_ctx_list.pop_front();
+  for (std::function<void()>& callback : read_ctx->cbl) { callback(); }
+  delete read_ctx;
 }
 
 }  // namespace oneflow

@@ -21,6 +21,8 @@ class RegstMgr final {
  private:
   friend class Global<RegstMgr>;
   RegstMgr() = default;
+
+  std::mutex rt_regst_descs_mtx_;
   std::list<std::unique_ptr<const RtRegstDesc>> rt_regst_descs_;
 };
 

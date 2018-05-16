@@ -10,7 +10,7 @@ template<typename T>
 __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T beta, T learning_rate, T l1, T l2,
                                const T* model_diff, const T* pre_model, T* momentum, T* model) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = regularized_diff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
     momentum[i] = beta * momentum[i] - learning_rate * reg_diff;
     model[i] = pre_model[i] + momentum[i];
   }
