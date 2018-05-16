@@ -115,7 +115,7 @@ class Actor {
   Regst* GetNaiveFirstCurReadable();
   Regst* GetSoleProducedRegst(int64_t regst_desc_id);
 
-  void DecreaseActualWriteableProducedRegstDescNum(uint64_t amount) {
+  void DecreaseActualWriteableProducedRegstDescNum(int64_t amount) {
     actual_writeable_produced_regst_desc_num_ -= amount;
   }
 
