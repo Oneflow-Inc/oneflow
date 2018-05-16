@@ -74,7 +74,9 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_I
   ibv_free_device_list(device_list);
   pd_ = ibv_alloc_pd(context_);
   CHECK(pd_);
-  cq_ = ibv_create_cq(context_, 11, nullptr, nullptr, 0);
+  ibv_device_attr device_attr;
+  CHECK_EQ(ibv_query_device(context_, &device_attr), 0);
+  cq_ = ibv_create_cq(context_, device_attr.max_cqe, nullptr, nullptr, 0);
   CHECK(cq_);
   ibv_port_attr port_attr;
   CHECK_EQ(ibv_query_port(context_, 1, &port_attr), 0);
@@ -102,7 +104,9 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_I
     qp_vec_.at(peer_id)->PostAllRecvRequest();
     Global<CtrlClient>::Get()->ClearKV(GenConnInfoKey(this_machine_id, peer_id));
   }
+  OF_BARRIER();
   poll_thread_ = std::thread(&IBVerbsCommNet::PollCQ, this);
+  OF_BARRIER();
 }
 
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,

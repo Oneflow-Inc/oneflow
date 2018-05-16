@@ -178,7 +178,9 @@ void IBVerbsQP::PostRecvRequest(ActorMsgMR* msg_mr) {
 ActorMsgMR* IBVerbsQP::GetOneSendMsgMRFromBuf() {
   std::unique_lock<std::mutex> lck(send_msg_buf_mtx_);
   if (send_msg_buf_.empty()) { send_msg_buf_.push(new ActorMsgMR(pd_)); }
-  return send_msg_buf_.front();
+  ActorMsgMR* msg_mr = send_msg_buf_.front();
+  send_msg_buf_.pop();
+  return msg_mr;
 }
 
 WorkRequestId* IBVerbsQP::NewWorkRequestId() {
