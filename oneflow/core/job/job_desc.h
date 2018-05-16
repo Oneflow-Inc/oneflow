@@ -39,10 +39,12 @@ class JobDesc final {
   int64_t PieceSizeInOneDataPart() const;
   int64_t piece_num_of_experiment_phase() const;
   float available_zone_mem_ratio() const;
-  uint64_t persistence_buffer_byte() const;
-  uint64_t reserved_host_mem_byte() const;
-  uint64_t reserved_device_mem_byte() const;
+  size_t persistence_buf_byte() const;
+  size_t reserved_host_mem_byte() const;
+  size_t reserved_device_mem_byte() const;
   bool save_downloaded_file_to_local_fs() const;
+  size_t rdma_mem_block_byte() const;
+  size_t rdma_recv_msg_buf_byte() const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;

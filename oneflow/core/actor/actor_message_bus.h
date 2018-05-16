@@ -14,6 +14,7 @@ class ActorMsgBus final {
   ~ActorMsgBus() = default;
 
   void SendMsg(const ActorMsg& msg);
+  void SendMsgWithoutCommNet(const ActorMsg& msg);
 
  private:
   ActorMsgBus() = default;

@@ -28,7 +28,7 @@ class RMSPropMdUpdateKernelUtil<DeviceType::kCPU, T> final {
                           T epsilon, T l1, T l2, const T* pre_model, T* model, T* mean_square,
                           const T* model_diff) {
     for (int64_t i = 0; i < n; ++i) {
-      T reg_diff = regularized_diff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+      T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
       mean_square[i] = (1 - decay_rate) * reg_diff * reg_diff + decay_rate * mean_square[i];
       model[i] = pre_model[i] - learning_rate * reg_diff / std::sqrt(mean_square[i] + epsilon);
     }

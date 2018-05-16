@@ -14,7 +14,7 @@ class CopyCommNetActor final : public Actor {
  private:
   class CommNetDeviceCtx;
   struct RegstCtx {
-    const void* comm_net_token;
+    void* comm_net_token;
     Regst* regst_raw_ptr;
     int64_t producer;
     int64_t act_id;
