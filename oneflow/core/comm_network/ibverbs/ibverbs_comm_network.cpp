@@ -20,7 +20,7 @@ std::string GenConnInfoKey(int64_t src_machine_id, int64_t dst_machine_id) {
 }  // namespace
 
 IBVerbsCommNet::~IBVerbsCommNet() {
-  poll_exit_flag_.test_and_set();
+  while (poll_exit_flag_.test_and_set() == true) {}
   poll_thread_.join();
   for (IBVerbsQP* qp : qp_vec_) {
     if (qp) { delete qp; }
