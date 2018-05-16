@@ -17,19 +17,27 @@ int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.piece_num_of_experiment_phase();
 }
 
-uint64_t JobDesc::persistence_buffer_byte() const {
-  return job_conf_.persistence_buffer_mbyte() * 1024 * 1024;
-}
-uint64_t JobDesc::reserved_host_mem_byte() const {
-  return job_conf_.reserved_host_mem_mbyte() * 1024 * 1024;
+size_t JobDesc::persistence_buf_byte() const {
+  return job_conf_.persistence_buf_mbyte() * 1024 * 1024;
 }
 
-uint64_t JobDesc::reserved_device_mem_byte() const {
+size_t JobDesc::reserved_host_mem_byte() const {
+  return job_conf_.reserved_host_mem_mbyte() * 1024 * 1024;
+}
+size_t JobDesc::reserved_device_mem_byte() const {
   return job_conf_.reserved_device_mem_mbyte() * 1024 * 1024;
 }
 
 bool JobDesc::save_downloaded_file_to_local_fs() const {
   return job_conf_.save_downloaded_file_to_local_fs();
+}
+
+size_t JobDesc::rdma_mem_block_byte() const {
+  return job_conf_.rdma_mem_block_mbyte() * 1024 * 1024;
+}
+
+size_t JobDesc::rdma_recv_msg_buf_byte() const {
+  return job_conf_.rdma_recv_msg_buf_mbyte() * 1024 * 1024;
 }
 
 const std::string& JobDesc::MdSaveSnapshotsPath() const {
