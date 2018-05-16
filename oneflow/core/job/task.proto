@@ -42,7 +42,6 @@ message TaskProto {
   required ExecSequence exec_sequence = 5;
   map<string, RegstDescProto> produced_regst_desc = 6;
   map<string, RegstDescIdSet> consumed_regst_desc_id = 7;
-  repeated int64 const_regst_desc_id = 8;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask

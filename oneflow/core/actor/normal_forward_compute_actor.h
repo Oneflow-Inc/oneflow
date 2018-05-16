@@ -32,6 +32,8 @@ class NormalForwardCompActor final : public CompActor {
   void SendMsgToForwardModelSaveActor(int64_t batch_id);
   void SendConstBufInitMsgToBwActor();
 
+  int32_t WritingFreeProducedRegstDescNum() const override;
+
   int64_t model_regst_desc_id_;
   int64_t model_tmp_regst_desc_id_;
   int64_t const_buf_regst_desc_id_;
