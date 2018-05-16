@@ -31,7 +31,6 @@ IBVerbsCommNet::~IBVerbsCommNet() {
 }
 
 void IBVerbsCommNet::RegisterMemoryDone() {
-  int64_t total_machine_num = Global<JobDesc>::Get()->TotalMachineNum();
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   IBVerbsTokensMsg this_tokens_msg;
   for (IBVerbsMemDesc* mem_desc : mem_descs()) {
@@ -39,12 +38,13 @@ void IBVerbsCommNet::RegisterMemoryDone() {
         {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
   }
   Global<CtrlClient>::Get()->PushKV(GenTokensMsgKey(this_machine_id), this_tokens_msg);
-  FOR_RANGE(int64_t, peer_machine_id, 0, total_machine_num) {
-    if (peer_machine_id == this_machine_id) { continue; }
+  for (int64_t peer_id : peer_machine_id()) {
     IBVerbsTokensMsg peer_tokens_msg;
-    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_machine_id), &peer_tokens_msg);
+    Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_id), &peer_tokens_msg);
     for (const auto& pair : peer_tokens_msg.token2mem_desc()) {
-      CHECK(token2mem_desc_.insert({reinterpret_cast<void*>(pair.first), pair.second}).second);
+      CHECK(token2mem_desc_.at(peer_id)
+                .emplace(reinterpret_cast<void*>(pair.first), pair.second)
+                .second);
     }
   }
   OF_BARRIER();
@@ -56,7 +56,9 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
 }
 
 IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
-    : CommNetIf(plan), poll_exit_flag_(ATOMIC_FLAG_INIT) {
+    : CommNetIf(plan),
+      token2mem_desc_(Global<JobDesc>::Get()->TotalMachineNum()),
+      poll_exit_flag_(ATOMIC_FLAG_INIT) {
   ibv_device** device_list = ibv_get_device_list(nullptr);
   PCHECK(device_list);
   ibv_device* device = device_list[0];
@@ -103,7 +105,7 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
 void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
                             void* dst_token) {
   qp_vec_.at(src_machine_id)
-      ->PostReadRequest(token2mem_desc_.at(src_token),
+      ->PostReadRequest(token2mem_desc_.at(src_machine_id).at(src_token),
                         *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);
 }
 
