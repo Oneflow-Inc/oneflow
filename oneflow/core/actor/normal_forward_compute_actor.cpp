@@ -20,7 +20,9 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
     const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
   }
   if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
-    if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) { AsyncInitModel(); }
+    if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) {
+      AsyncInitModelAndConstBuf();
+    }
     if (forward_model_regst_desc_id_ != -1) { SendMsgToForwardModelSaveActor(0); }
     if (const_buf_regst_desc_id_ != -1) { SendConstBufInitMsgToBwActor(); }
     OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
@@ -29,7 +31,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
-int32_t NormalForwardCompActor::WritingFreeProducedRegstDescNum() const {
+int64_t NormalForwardCompActor::WritingFreeProducedRegstDescNum() const {
   return const_buf_regst_desc_id_ != -1 ? 1 : 0;
 }
 
@@ -116,7 +118,7 @@ int NormalForwardCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
   }
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return 0; }
   if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) { return 0; }
-  AsyncInitModel();
+  AsyncInitModelAndConstBuf();
   if (model_regst_) {
     AsyncSendRegstMsgToProducer(model_regst_);
     model_regst_ = nullptr;
@@ -136,7 +138,7 @@ void NormalForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
   model_regst_ = regst;
 }
 
-void NormalForwardCompActor::AsyncInitModel() {
+void NormalForwardCompActor::AsyncInitModelAndConstBuf() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     std::mt19937 random_seed_gen(random_seed_);
