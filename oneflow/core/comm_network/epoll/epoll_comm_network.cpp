@@ -52,18 +52,6 @@ EpollCommNet::~EpollCommNet() {
   for (auto& pair : sockfd2helper_) { delete pair.second; }
 }
 
-void EpollCommNet::Init(const Plan& plan) { Global<CommNet>::SetAllocated(new EpollCommNet(plan)); }
-
-const void* EpollCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
-  auto mem_desc = new SocketMemDesc;
-  mem_desc->mem_ptr = mem_ptr;
-  mem_desc->byte_size = byte_size;
-  mem_desc_mgr_.RegisterMemDesc(mem_desc);
-  return mem_desc;
-}
-
-void EpollCommNet::UnRegisterMemory(const void* token) { mem_desc_mgr_.UnRegisterMemDesc(); }
-
 void EpollCommNet::RegisterMemoryDone() {
   // do nothing
 }
@@ -79,8 +67,14 @@ void EpollCommNet::SendSocketMsg(int64_t dst_machine_id, const SocketMsg& msg) {
   GetSocketHelper(dst_machine_id)->AsyncWrite(msg);
 }
 
-EpollCommNet::EpollCommNet(const Plan& plan) {
-  GenConnectionInfo(plan);
+SocketMemDesc* EpollCommNet::NewMemDesc(void* ptr, size_t byte_size) {
+  SocketMemDesc* mem_desc = new SocketMemDesc;
+  mem_desc->mem_ptr = ptr;
+  mem_desc->byte_size = byte_size;
+  return mem_desc;
+}
+
+EpollCommNet::EpollCommNet(const Plan& plan) : CommNetIf(plan) {
   pollers_.resize(Global<JobDesc>::Get()->CommNetWorkerNum(), nullptr);
   for (size_t i = 0; i < pollers_.size(); ++i) { pollers_[i] = new IOEventPoller; }
   InitSockets();
@@ -153,8 +147,7 @@ SocketHelper* EpollCommNet::GetSocketHelper(int64_t machine_id) {
   return sockfd2helper_.at(sockfd);
 }
 
-void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
-                          const void* dst_token) {
+void EpollCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) {
   SocketMsg msg;
   msg.msg_type = SocketMsgType::kRequestWrite;
   msg.request_write_msg.src_token = src_token;

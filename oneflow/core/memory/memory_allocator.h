@@ -11,12 +11,11 @@ class MemoryAllocator final {
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
   ~MemoryAllocator() = default;
 
-  std::tuple<char*, const void*, std::function<void()>> Allocate(MemoryCase mem_case,
-                                                                 std::size_t size);
+  std::tuple<char*, void*, std::function<void()>> Allocate(MemoryCase mem_case, std::size_t size);
 
  private:
   MemoryAllocator() = default;
-  void Deallocate(char* dptr, const void*, MemoryCase mem_case);
+  void Deallocate(char* dptr, void*, MemoryCase mem_case);
 };
 
 }  // namespace oneflow

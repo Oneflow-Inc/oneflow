@@ -11,7 +11,7 @@ __global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T learning_rate, T
                                T epsilon, T l1, T l2, const T* pre_model, T* model, T* mean_square,
                                const T* model_diff) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    T reg_diff = regularized_diff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
     mean_square[i] = (1 - decay_rate) * reg_diff * reg_diff + decay_rate * mean_square[i];
     model[i] = pre_model[i] - learning_rate * reg_diff / std::sqrt(mean_square[i] + epsilon);
   }

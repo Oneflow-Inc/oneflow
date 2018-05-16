@@ -31,15 +31,15 @@ enum class SocketMsgType {
 };
 
 struct RequestWriteMsg {
-  const void* src_token;
+  void* src_token;
   int64_t dst_machine_id;
-  const void* dst_token;
+  void* dst_token;
   void* read_id;
 };
 
 struct RequestReadMsg {
-  const void* src_token;
-  const void* dst_token;
+  void* src_token;
+  void* dst_token;
   void* read_id;
 };
 

@@ -30,19 +30,11 @@ IBVerbsCommNet::~IBVerbsCommNet() {
   CHECK_EQ(ibv_close_device(context_), 0);
 }
 
-const void* IBVerbsCommNet::RegisterMemory(void* mem_ptr, size_t byte_size) {
-  IBVerbsMemDesc* mem_desc = new IBVerbsMemDesc(pd_, mem_ptr, byte_size);
-  mem_desc_mgr_.RegisterMemDesc(mem_desc);
-  return mem_desc;
-}
-
-void IBVerbsCommNet::UnRegisterMemory(const void* token) { mem_desc_mgr_.UnRegisterMemDesc(); }
-
 void IBVerbsCommNet::RegisterMemoryDone() {
   int64_t total_machine_num = Global<JobDesc>::Get()->TotalMachineNum();
   int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   IBVerbsTokensMsg this_tokens_msg;
-  for (IBVerbsMemDesc* mem_desc : mem_desc_mgr_.mem_descs()) {
+  for (IBVerbsMemDesc* mem_desc : mem_descs()) {
     this_tokens_msg.mutable_token2mem_desc()->insert(
         {reinterpret_cast<uint64_t>(mem_desc), mem_desc->ToProto()});
   }
@@ -52,8 +44,7 @@ void IBVerbsCommNet::RegisterMemoryDone() {
     IBVerbsTokensMsg peer_tokens_msg;
     Global<CtrlClient>::Get()->PullKV(GenTokensMsgKey(peer_machine_id), &peer_tokens_msg);
     for (const auto& pair : peer_tokens_msg.token2mem_desc()) {
-      CHECK(
-          token2mem_desc_.insert({reinterpret_cast<const void*>(pair.first), pair.second}).second);
+      CHECK(token2mem_desc_.insert({reinterpret_cast<void*>(pair.first), pair.second}).second);
     }
   }
   OF_BARRIER();
@@ -64,8 +55,8 @@ void IBVerbsCommNet::SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) {
   qp_vec_.at(dst_machine_id)->PostSendRequest(msg);
 }
 
-IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_INIT) {
-  GenConnectionInfo(plan);
+IBVerbsCommNet::IBVerbsCommNet(const Plan& plan)
+    : CommNetIf(plan), poll_exit_flag_(ATOMIC_FLAG_INIT) {
   ibv_device** device_list = ibv_get_device_list(nullptr);
   PCHECK(device_list);
   ibv_device* device = device_list[0];
@@ -109,8 +100,8 @@ IBVerbsCommNet::IBVerbsCommNet(const Plan& plan) : poll_exit_flag_(ATOMIC_FLAG_I
   OF_BARRIER();
 }
 
-void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
-                            const void* dst_token) {
+void IBVerbsCommNet::DoRead(void* read_id, int64_t src_machine_id, void* src_token,
+                            void* dst_token) {
   qp_vec_.at(src_machine_id)
       ->PostReadRequest(token2mem_desc_.at(src_token),
                         *static_cast<const IBVerbsMemDesc*>(dst_token), read_id);

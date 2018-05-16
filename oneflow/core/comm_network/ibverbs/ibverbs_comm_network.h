@@ -14,7 +14,7 @@
 
 namespace oneflow {
 
-class IBVerbsCommNet final : public CommNet {
+class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
   IBVerbsCommNet() = delete;
@@ -22,22 +22,22 @@ class IBVerbsCommNet final : public CommNet {
 
   static void Init(const Plan& plan) { Global<CommNet>::SetAllocated(new IBVerbsCommNet(plan)); }
 
-  const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
-  void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
+  IBVerbsMemDesc* NewMemDesc(void* ptr, size_t byte_size) override {
+    return new IBVerbsMemDesc(pd_, ptr, byte_size);
+  }
+
   IBVerbsCommNet(const Plan&);
-  void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
-              const void* dst_token) override;
+  void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
   void PollCQ();
 
   static const int32_t max_poll_wc_num_;
 
-  MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
-  HashMap<const void*, IBVerbsMemDescProto> token2mem_desc_;
+  HashMap<void*, IBVerbsMemDescProto> token2mem_desc_;
   ibv_context* context_;
   ibv_pd* pd_;
   ibv_cq* cq_;
