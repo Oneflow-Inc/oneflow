@@ -12,7 +12,7 @@ void FullyConnectedOp::InitFromOpConf() {
 
   if (op_conf().fully_connected_conf().use_bias()) {
     EnrollModelBn("bias");
-    EnrollModelTmpBn("bias_multiplier");
+    EnrollConstBufBn("bias_multiplier");
   }
 }
 

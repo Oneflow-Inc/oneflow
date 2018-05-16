@@ -113,6 +113,9 @@ class Actor {
   Regst* GetNaiveNextReadable(int64_t regst_desc_id);
   Regst* GetNaiveSoleCurReadable();
   Regst* GetNaiveFirstCurReadable();
+  Regst* GetSoleProducedRegst(int64_t regst_desc_id);
+
+  virtual int64_t WritingFreeProducedRegstDescNum() const { return 0; }
 
  private:
   bool IsReadReady();

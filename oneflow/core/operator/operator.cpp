@@ -117,8 +117,7 @@ void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
-  if (model_bns().empty()) {
-    CHECK(model_tmp_bns().empty());
+  if (model_bns().empty() && model_tmp_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
   if (pr_desc->policy() == kModelParallel && MaxModelSplitNum() != -1) {
@@ -210,6 +209,12 @@ LogicalBlobId Operator::mtbn2lbi(const std::string& model_tmp_bn) const {
   ret.set_blob_name(model_tmp_bn);
   return ret;
 }
+LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
+  ret.set_blob_name(const_buf_bn);
+  return ret;
+}
 LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
@@ -291,6 +296,10 @@ void Operator::EnrollModelBn(const std::string& mbn) {
 void Operator::EnrollModelTmpBn(const std::string& mtbn) {
   *(mut_model_tmp_bns()->Add()) = mtbn;
   CHECK(mut_bn_in_op2lbi()->insert({mtbn, mtbn2lbi(mtbn)}).second);
+}
+void Operator::EnrollConstBufBn(const std::string& cbbn) {
+  *(mut_const_buf_bns()->Add()) = cbbn;
+  CHECK(mut_bn_in_op2lbi()->insert({cbbn, cbbn2lbi(cbbn)}).second);
 }
 void Operator::EnrollForwardModelBn(const std::string& fwmbn) {
   LogicalBlobId lbi = fwmbn2lbi(fwmbn);
