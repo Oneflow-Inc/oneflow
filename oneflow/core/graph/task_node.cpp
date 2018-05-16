@@ -108,6 +108,9 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
+  for (const RegstDesc* regst_desc : const_regsts_) {
+    task_proto->add_const_regst_desc_id(regst_desc->regst_desc_id());
+  }
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
@@ -131,7 +134,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceConstRegst(const std::string& name) {
   auto regst = ProduceRegst(name, 1, 1);
-  regst->set_is_const(true);
+  const_regsts_.push_back(regst.get());
   return regst;
 }
 

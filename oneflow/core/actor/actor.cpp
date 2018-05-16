@@ -54,9 +54,13 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
+  HashMap<int64_t, bool> regst_desc_id2is_const;
+  for (int64_t regst_desc_id : task_proto.const_regst_desc_id()) {
+    regst_desc_id2is_const.insert({regst_desc_id, true});
+  }
   for (const auto& pair : produced_regsts_) {
     for (const auto& regst : pair.second) {
-      if (!regst->is_const()) {
+      if (!regst_desc_id2is_const[regst->regst_desc_id()]) {
         writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
       }
       produced_regst2reading_cnt_[regst.get()] = 0;
@@ -280,7 +284,6 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
     } else {
       CHECK_EQ(produced_regst_pair.second.size(), 1);
       regst = produced_regst_pair.second.front().get();
-      CHECK(regst->is_const());
       if (produced_regst2reading_cnt_.at(regst) > 0) { continue; }
     }
     if (RegstPreProcess(regst) == false) { continue; }
@@ -391,7 +394,7 @@ Regst* Actor::GetProducedConstRegst(int64_t regst_desc_id) {
   CHECK(it != produced_regsts_.end());
   CHECK_EQ(it->second.size(), 1);
   Regst* regst = it->second.front().get();
-  CHECK(regst->is_const());
+  CHECK(writeable_produced_regst_.find(regst->regst_desc_id()) == writeable_produced_regst_.end());
   return regst;
 }
 

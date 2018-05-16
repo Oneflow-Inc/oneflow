@@ -52,8 +52,6 @@ class RegstDesc final {
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
 
-  void set_is_const(bool is_const) { is_const_ = is_const; }
-
  private:
   int64_t regst_desc_id_;
   const TaskNode* producer_;
@@ -66,7 +64,6 @@ class RegstDesc final {
   bool is_locked_;
 
   MemoryCase mem_case_;
-  bool is_const_;
 };
 
 }  // namespace oneflow

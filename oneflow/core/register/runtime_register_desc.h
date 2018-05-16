@@ -20,7 +20,6 @@ class RtRegstDesc {
   const std::vector<int64_t>& consumers_actor_id() const { return consumers_actor_id_; }
   int64_t register_num() const { return register_num_; }
   const MemoryCase& mem_case() const { return mem_case_; }
-  bool is_const() const { return is_const_; }
 
   const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
   const BlobDesc* packed_blob_desc() const { return &packed_blob_desc_; }
@@ -31,7 +30,6 @@ class RtRegstDesc {
   std::vector<int64_t> consumers_actor_id_;
   int64_t register_num_;
   MemoryCase mem_case_;
-  bool is_const_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
   BlobDesc packed_blob_desc_;
 };

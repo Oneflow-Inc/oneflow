@@ -35,8 +35,8 @@ class Kernel {
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
-  virtual void InitPureConstBufBlobs(DeviceCtx* ctx,
-                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void InitConstBufBlobs(DeviceCtx* ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}

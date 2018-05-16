@@ -83,6 +83,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
+  std::list<const RegstDesc*> const_regsts_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
