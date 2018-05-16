@@ -241,7 +241,8 @@ void Actor::ActUntilFail() {
 }
 
 bool Actor::IsWriteReady() {
-  return writeable_produced_regst_desc_cnt_ == writeable_produced_regst_.size();
+  return writeable_produced_regst_desc_cnt_
+         == (writeable_produced_regst_.size() - WritingFreeProducedRegstDescNum());
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
@@ -371,6 +372,13 @@ Regst* Actor::GetNaiveFirstCurReadable() {
   CHECK(naive_readable_regst_it != naive_readable_regst_.end());
   CHECK_EQ(naive_readable_regst_it->second.empty(), false);
   return naive_readable_regst_it->second.front();
+}
+
+Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
+  auto it = produced_regsts_.find(regst_desc_id);
+  CHECK(it != produced_regsts_.end());
+  CHECK_EQ(it->second.size(), 1);
+  return it->second.front().get();
 }
 
 bool Actor::IsReadReady() {
