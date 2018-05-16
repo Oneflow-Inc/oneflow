@@ -60,7 +60,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
-  writeable_produced_regst_desc_cnt_ = writeable_produced_regst_.size();
+  actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
+  writeable_produced_regst_desc_cnt_ = actual_writeable_produced_regst_desc_num_;
   total_reading_cnt_ = 0;
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
@@ -241,8 +242,7 @@ void Actor::ActUntilFail() {
 }
 
 bool Actor::IsWriteReady() {
-  return writeable_produced_regst_desc_cnt_
-         == (writeable_produced_regst_.size() - WritingFreeProducedRegstDescNum());
+  return writeable_produced_regst_desc_cnt_ == actual_writeable_produced_regst_desc_num_;
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
