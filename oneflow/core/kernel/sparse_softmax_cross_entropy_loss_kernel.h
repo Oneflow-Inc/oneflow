@@ -14,8 +14,8 @@ class SparseSoftmaxCrossEntropyLossKernel final
   ~SparseSoftmaxCrossEntropyLossKernel() = default;
 
  private:
-  void InitPureModelTmpBlobs(DeviceCtx*,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitConstBufBlobs(DeviceCtx*,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void VirtualLossForwardDataContent(const KernelCtx&,
                                      std::function<Blob*(const std::string&)>) const override;
   const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const override;

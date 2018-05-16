@@ -32,7 +32,8 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 int64_t NormalForwardCompActor::WritingFreeProducedRegstDescNum() const {
-  return const_buf_regst_desc_id_ != -1 ? 1 : 0;
+  if (const_buf_regst_desc_id_ == -1) { return 0; }
+  return const_buf_regst_->consumers_actor_id().size() > 0 ? 1 : 0;
 }
 
 void NormalForwardCompActor::ForEachCurCustomizedReadableRegst(
@@ -81,11 +82,7 @@ void NormalForwardCompActor::Act() {
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
-    if (regst->regst_desc_id() == forward_model_regst_desc_id_) { return false; }
-    if (model_regst_desc_id_ == -1 && regst->regst_desc_id() == model_tmp_regst_desc_id_) {
-      return false;
-    }
-    return true;
+    return regst->regst_desc_id() != forward_model_regst_desc_id_;
   });
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {

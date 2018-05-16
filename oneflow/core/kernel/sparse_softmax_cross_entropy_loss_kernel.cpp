@@ -5,7 +5,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
-void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::InitPureModelTmpBlobs(
+void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf sum_multiplier_initializer_conf;
   sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
