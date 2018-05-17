@@ -15,8 +15,8 @@ class CudaDeviceCtx final : public DeviceCtx {
   CudaDeviceCtx() = delete;
   ~CudaDeviceCtx() = default;
 
-  CudaDeviceCtx(int64_t work_stream_id, void* buf_ptr, CudaStreamHandle* cuda_handler)
-      : DeviceCtx(work_stream_id, buf_ptr), cuda_handler_(cuda_handler) {}
+  CudaDeviceCtx(void* buf_ptr, CudaStreamHandle* cuda_handler)
+      : DeviceCtx(buf_ptr), cuda_handler_(cuda_handler) {}
 
   const cudaStream_t& cuda_stream() const { return *(cuda_handler_->cuda_stream()); }
   const cublasHandle_t& cublas_pmh_handle() const { return *(cuda_handler_->cublas_pmh_handle()); }
