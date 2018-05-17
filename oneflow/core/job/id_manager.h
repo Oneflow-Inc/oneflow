@@ -53,8 +53,9 @@ class IDMgr final {
   // for cpu:
   //   0: the actor thread
   // for gpu:
-  //   0: the copy h2d cuda stream
-  //   1: the copy d2h cuda stream
+  //   0: the compute cuda stream
+  //   1: the copy h2d cuda stream
+  //   2: the copy d2h cuda stream
   int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id, int64_t reserved_id);
   // start from: 1000
   int64_t NewWorkStreamId(int64_t machine_id, int64_t thrd_id);
