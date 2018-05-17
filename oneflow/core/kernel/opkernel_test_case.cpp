@@ -122,10 +122,7 @@ template<>
 void OpKernelTestUtil<DeviceType::kGPU>::BuildKernelCtx(KernelCtx* ctx) {
   if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(); }
   CudaStreamHandle* cuda_handle = Global<CudaStreamHandle>::Get();
-  ctx->device_ctx =
-      new CudaDeviceCtx(-1, cuda_handle->cuda_stream(), cuda_handle->cublas_pmh_handle(),
-                        cuda_handle->cublas_pmd_handle(), cuda_handle->cudnn_handle(),
-                        cuda_handle->eigen_gpu_device());
+  ctx->device_ctx = new CudaDeviceCtx(-1, cuda_handle);
 }
 
 template<>
