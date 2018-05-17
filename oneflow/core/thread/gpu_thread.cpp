@@ -14,6 +14,7 @@ GpuThread::GpuThread(int64_t thrd_id, int64_t dev_id, size_t buf_size) {
     {
       ThreadCtx ctx;
       ctx.buf_ptr = buf_ptr;
+      ctx.compute_cuda_stream.reset(new CudaStreamHandle);
       ctx.copy_h2d_cuda_stream.reset(new CudaStreamHandle);
       ctx.copy_d2h_cuda_stream.reset(new CudaStreamHandle);
       PollMsgChannel(ctx);

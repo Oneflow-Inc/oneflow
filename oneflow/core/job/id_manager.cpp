@@ -63,6 +63,10 @@ int64_t IDMgr::LocalWorkStreamId4TaskId(int64_t task_id) const {
   return tmp >> (63 - local_work_stream_id_bit_num_);
 }
 
+int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
+  return LocalWorkStreamId4TaskId(actor_id);
+}
+
 IDMgr::IDMgr() {
   const Resource& resource = Global<JobDesc>::Get()->resource();
   int64_t machine_num = resource.machine_size();

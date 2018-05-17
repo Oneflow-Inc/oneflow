@@ -59,6 +59,8 @@ class IDMgr final {
   //   other: start from 100
   int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
   int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
+  int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
+  bool IsIndependentLocalWorkStreamId(int64_t local_wsid) const { return local_wsid >= 100; }
   // global_work_stream_id
   // sign | machine_id | thrd_id | local_work_stream_id | 0
   //  1   |     10     |   11    |          21          | 21
