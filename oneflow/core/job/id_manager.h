@@ -49,7 +49,7 @@ class IDMgr final {
   int64_t MachineId4ActorId(int64_t actor_id) const;
   int64_t ThrdId4ActorId(int64_t actor_id) const;
 
-  // LocalWorkStreamId:
+  // local_work_stream_id:
   // for cpu:
   //   0: the actor thread
   // for gpu:
