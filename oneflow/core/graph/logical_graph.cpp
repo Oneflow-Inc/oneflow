@@ -219,7 +219,7 @@ void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2i
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
     if (fw_node == nullptr) { return; }
-    if (fw_node->HasOpWithModelOrModelTmpBlob()) {
+    if (fw_node->HasOpWithModelOrConstModelBlob()) {
       CHECK(nodes_need_bw.insert(fw_node).second);
       return;
     }
@@ -390,7 +390,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     if (is_train && fw_logical->HasOpWithForwardModelBlob()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
-    if (fw_logical->HasOpWithModelOrModelTmpBlob()) {
+    if (fw_logical->HasOpWithModelOrConstModelBlob()) {
       // MdUpdt MdSave
       NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
       if (fw_logical->shared_model_nodes() == nullptr) {

@@ -16,14 +16,14 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
     }
   }
   auto model_regst = ProduceRegst("model", 1, max_model_regst);
-  auto model_tmp_regst = ProduceRegst("model_tmp", 1, 1);
+  auto const_model_regst = ProduceRegst("const_model", 1, 1);
   ProduceRegst("data_tmp", 1, 1);
   related_init_model_task_id_ = -1;
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();
     if (IsForwardTaskType(dst_node->GetTaskType()) || IsBackwardTaskType(dst_node->GetTaskType())) {
       out_edge->AddRegst("model", model_regst);
-      out_edge->AddRegst("model_tmp", model_tmp_regst);
+      out_edge->AddRegst("const_model", const_model_regst);
       if (IsForwardTaskType(dst_node->GetTaskType()) && related_init_model_task_id_ == -1) {
         auto fw_node = static_cast<NormalForwardCompTaskNode*>(dst_node);
         fw_node->set_random_seed(random_seed_);
@@ -43,7 +43,7 @@ void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
 }
 
 bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
-  return GetProducedRegst("model")->IsLocked() && GetProducedRegst("model_tmp")->IsLocked();
+  return GetProducedRegst("model")->IsLocked() && GetProducedRegst("const_model")->IsLocked();
 }
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
