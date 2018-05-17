@@ -41,7 +41,7 @@ class ActorMsg final {
   Regst* regst() const;
   int64_t piece_id() const;
   int64_t act_id() const;
-  const void* comm_net_token() const;
+  void* comm_net_token() const;
   int64_t eord_regst_desc_id() const;
 
   // Serialize
@@ -57,7 +57,7 @@ class ActorMsg final {
  private:
   struct RegstWrapper {
     Regst* regst;
-    const void* comm_net_token;
+    void* comm_net_token;
     RegstStatus regst_status;
   };
 

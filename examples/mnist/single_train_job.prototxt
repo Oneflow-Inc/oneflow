@@ -1,7 +1,7 @@
 dlnet_filepath: "./train_net.prototxt"
 resource_filepath: "./single_resource.prototxt"
 placement_filepath: "./single_train_placement.prototxt"
-use_rdma: false
+use_rdma: true
 globalfs_conf {
   localfs_conf {
   }
@@ -21,7 +21,7 @@ train_conf {
       std: 0.1
     }
   }
-  batch_size: 60000
+  batch_size: 6000
   model_update_conf {
     learning_rate: 0.01
     naive_conf {

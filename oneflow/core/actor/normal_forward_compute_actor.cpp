@@ -5,23 +5,33 @@ namespace oneflow {
 void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   model_tmp_regst_desc_id_ = Name2SoleRegstDescId("model_tmp");
+  const_buf_regst_desc_id_ = Name2SoleRegstDescId("const_buf");
   forward_model_regst_desc_id_ = Name2SoleRegstDescId("forward_model");
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
   model_tmp_regst_ = nullptr;
+  const_buf_regst_ = nullptr;
   pre_forward_model_regst_ = nullptr;
   if (forward_model_regst_desc_id_ != -1) {
     pre_forward_model_regst_ = GetCurWriteableRegst(forward_model_regst_desc_id_);
   }
   staleness_ = -1;
+  if (const_buf_regst_desc_id_ != -1) {
+    const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
+  }
   if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
-    if (forward_model_regst_desc_id_ != -1) {
-      AsyncInitModel();
-      SendMsgToForwardModelSaveActor(0);
+    if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) {
+      AsyncInitModelAndConstBuf();
     }
+    if (forward_model_regst_desc_id_ != -1) { SendMsgToForwardModelSaveActor(0); }
+    if (const_buf_regst_desc_id_ != -1) { SendConstBufInitMsgToBwActor(); }
     OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
   } else {
-    OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndModelTmp);
+    OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndConstBuf);
+  }
+
+  if (const_buf_regst_ && !const_buf_regst_->consumers_actor_id().empty()) {
+    DecreaseActualWriteableProducedRegstDescNum(1);
   }
 }
 
@@ -62,6 +72,8 @@ void NormalForwardCompActor::Act() {
       return model_regst_;
     } else if (regst_desc_id == model_tmp_regst_desc_id_) {
       return model_tmp_regst_;
+    } else if (regst_desc_id == const_buf_regst_desc_id_) {
+      return const_buf_regst_;
     } else {
       return nullptr;
     }
@@ -92,7 +104,7 @@ void NormalForwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
   TryAsyncReturnModelTmpRegst();
 }
 
-int NormalForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
+int NormalForwardCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
   CHECK_NE(random_seed_, -1);
   Regst* regst = msg.regst();
   if (regst->regst_desc_id() == model_regst_desc_id_) {
@@ -106,7 +118,7 @@ int NormalForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
   }
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return 0; }
   if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) { return 0; }
-  AsyncInitModel();
+  AsyncInitModelAndConstBuf();
   if (model_regst_) {
     AsyncSendRegstMsgToProducer(model_regst_);
     model_regst_ = nullptr;
@@ -116,6 +128,7 @@ int NormalForwardCompActor::HandlerInitModelAndModelTmp(const ActorMsg& msg) {
     model_tmp_regst_ = nullptr;
   }
   if (forward_model_regst_desc_id_ != -1) { SendMsgToForwardModelSaveActor(0); }
+  if (const_buf_regst_desc_id_ != -1) { SendConstBufInitMsgToBwActor(); }
   OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerNormal);
   return 0;
 }
@@ -125,18 +138,19 @@ void NormalForwardCompActor::UpdateModelRegstPtr(Regst* regst) {
   model_regst_ = regst;
 }
 
-void NormalForwardCompActor::AsyncInitModel() {
+void NormalForwardCompActor::AsyncInitModelAndConstBuf() {
   for (const ExecKernel& exec_kernel : exec_kernel_vec()) {
     KernelCtx kernel_ctx = GenDefaultKernelCtx();
     std::mt19937 random_seed_gen(random_seed_);
     kernel_ctx.other = &random_seed_gen;
-    exec_kernel.kernel->InitModelAndModelTmp(
+    exec_kernel.kernel->InitModelAndConstBuf(
         kernel_ctx, parallel_ctx(), Global<SnapshotMgr>::Get()->GetReadableSnapshot(),
         [&](const std::string& bn_in_op) {
           const LogicalBlobId& lbi = exec_kernel.kernel->BnInOp2Lbi(bn_in_op);
           Blob* blob = nullptr;
           if (model_regst_) { blob = model_regst_->GetBlobByLbi(lbi); }
           if (blob == nullptr && model_tmp_regst_) { blob = model_tmp_regst_->GetBlobByLbi(lbi); }
+          if (blob == nullptr && const_buf_regst_) { blob = const_buf_regst_->GetBlobByLbi(lbi); }
           if (blob == nullptr && forward_model_regst_desc_id_ != -1) {
             blob = GetCurWriteableRegst(forward_model_regst_desc_id_)->GetBlobByLbi(lbi);
           }
@@ -176,6 +190,11 @@ void NormalForwardCompActor::SendMsgToForwardModelSaveActor(int64_t batch_id) {
     regst->set_model_version_id(batch_id);
     return regst->regst_desc_id() == forward_model_regst_desc_id_;
   });
+}
+
+void NormalForwardCompActor::SendConstBufInitMsgToBwActor() {
+  AsyncSendRegstMsgToConsumer(
+      [&](Regst* regst) { return regst->regst_desc_id() == const_buf_regst_desc_id_; });
 }
 
 REGISTER_ACTOR(TaskType::kNormalForward, NormalForwardCompActor);

@@ -9,7 +9,10 @@ namespace oneflow {
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
                          RecordTypeProto record_type, std::function<void(Regst*)> OneRegstDone) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
-  rt_regst_descs_.emplace_back(runtime_regst_desc);
+  {
+    std::unique_lock<std::mutex> lck(rt_regst_descs_mtx_);
+    rt_regst_descs_.emplace_back(runtime_regst_desc);
+  }
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
@@ -19,7 +22,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
     }
     if (lbis.size() > 0) {
       std::sort(lbis.begin(), lbis.end());
-      std::tuple<char*, const void*, std::function<void()>> allocation_result =
+      std::tuple<char*, void*, std::function<void()>> allocation_result =
           Global<MemoryAllocator>::Get()->Allocate(
               regst_desc_proto.mem_case(), runtime_regst_desc->packed_blob_desc()->TotalByteSize());
       char* cur_pointer = std::get<0>(allocation_result);

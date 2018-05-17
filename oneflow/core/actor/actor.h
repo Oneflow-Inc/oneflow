@@ -113,6 +113,11 @@ class Actor {
   Regst* GetNaiveNextReadable(int64_t regst_desc_id);
   Regst* GetNaiveSoleCurReadable();
   Regst* GetNaiveFirstCurReadable();
+  Regst* GetSoleProducedRegst(int64_t regst_desc_id);
+
+  void DecreaseActualWriteableProducedRegstDescNum(int64_t amount) {
+    actual_writeable_produced_regst_desc_num_ -= amount;
+  }
 
  private:
   bool IsReadReady();
@@ -136,6 +141,7 @@ class Actor {
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  int64_t actual_writeable_produced_regst_desc_num_;
   int64_t writeable_produced_regst_desc_cnt_;
   int64_t total_reading_cnt_;
   int64_t remaining_eord_cnt_;

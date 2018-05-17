@@ -66,7 +66,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollModelBn("weight");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     EnrollModelBn("bias");
-    EnrollModelTmpBn("bias_multiplier");
+    EnrollConstBufBn("bias_multiplier");
   }
   EnrollFwBufBn("fw_cudnn_buf");
   EnrollBwBufBn("bw_cudnn_buf");

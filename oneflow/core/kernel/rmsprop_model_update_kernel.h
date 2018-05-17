@@ -13,22 +13,19 @@ class RMSPropMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> 
   ~RMSPropMdUpdateKernel() = default;
 
  private:
-  void UpdateModel(DeviceCtx* ctx, const Blob* pre_model_blob, const Blob* model_diff_blob,
-                   int64_t next_model_vid, double learning_rate,
+  void UpdateModel(DeviceCtx* ctx, int64_t batch_size, T learning_rate, T l1, T l2,
+                   const Blob* pre_model_blob, const Blob* model_diff_blob, int64_t next_model_vid,
                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>
 class RMSPropMdUpdateKernelUtil final {
  public:
-  // alpha = (1 - decay_rate) / batch_size ^ 2
-  // mean_square = alpha * model_diff ^ 2 + decay_rate * mean_square
-  // learning_rate = learning_rate / batch_size
-  // model = pre_model - learning_rate * model_diff / sqrt(mean_square +
-  // epsilon)
-  static void UpdateModel(DeviceCtx*, const int64_t n, const T alpha, const T learning_rate,
-                          const T decay_rate, const T epsilon, const T* pre_model, T* model,
-                          T* mean_square, const T* model_diff);
+  // mean_square = (1 - decay_rate) * model_diff ^ 2 + decay_rate * mean_square
+  // model = pre_model - learning_rate * model_diff / sqrt(mean_square + epsilon)
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T decay_rate,
+                          T epsilon, T l1, T l2, const T* pre_model, T* model, T* mean_square,
+                          const T* model_diff);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(RMSProp);

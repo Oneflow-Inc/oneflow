@@ -67,13 +67,13 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
 void CopyCommNetActor::Act() {
   // readable
   auto readable_it = piece_id2regst_ctx.find(next_piece_id_);
-  const void* readable_token = readable_it->second.comm_net_token;
+  void* readable_token = readable_it->second.comm_net_token;
   Regst* readable_regst = readable_it->second.regst_raw_ptr;
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
-  const void* writeable_token = writeable_blob->comm_net_token();
+  void* writeable_token = writeable_blob->comm_net_token();
   // Async
   void* read_id =
       Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);

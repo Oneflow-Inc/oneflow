@@ -117,7 +117,7 @@ void BasicRnnKernel<device_type, T>::BackwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::InitPureModelTmpBlobs(
+void BasicRnnKernel<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   InitializerConf bias_multiplier_fill_conf;
   bias_multiplier_fill_conf.mutable_constant_conf()->set_value(1.f);

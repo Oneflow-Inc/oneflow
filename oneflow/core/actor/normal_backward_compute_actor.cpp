@@ -8,6 +8,8 @@ void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) 
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
   model_tmp_regst_desc_id_ = Name2SoleRegstDescId("model_tmp");
   model_tmp_regst_ = nullptr;
+  const_buf_regst_desc_id_ = Name2SoleRegstDescId("const_buf");
+  const_buf_regst_ = nullptr;
   staleness_ = -1;
   OF_SET_MSG_HANDLER(&NormalBackwardCompActor::HandlerNormal);
 }
@@ -21,6 +23,10 @@ void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(
   if (model_tmp_regst_desc_id_ != -1) {
     CHECK(model_tmp_regst_);
     handler(model_tmp_regst_);
+  }
+  if (const_buf_regst_desc_id_ != -1) {
+    CHECK(const_buf_regst_);
+    handler(const_buf_regst_);
   }
 }
 
@@ -37,6 +43,9 @@ void NormalBackwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Acto
   } else if (msg.regst()->regst_desc_id() == model_tmp_regst_desc_id_) {
     CHECK(model_tmp_regst_ == nullptr);
     model_tmp_regst_ = msg.regst();
+  } else if (msg.regst()->regst_desc_id() == const_buf_regst_desc_id_) {
+    CHECK(const_buf_regst_ == nullptr);
+    const_buf_regst_ = msg.regst();
   } else {
     UNIMPLEMENTED() << msg.regst()->regst_desc_id();
   }
@@ -50,6 +59,8 @@ void NormalBackwardCompActor::Act() {
       return model_regst_queue_.front();
     } else if (regst_desc_id == model_tmp_regst_desc_id_) {
       return model_tmp_regst_;
+    } else if (regst_desc_id == const_buf_regst_desc_id_) {
+      return const_buf_regst_;
     } else {
       return nullptr;
     }
@@ -75,6 +86,7 @@ bool NormalBackwardCompActor::IsCustomizedReadReady() {
     CHECK_EQ(expected_model_vid, model_regst_queue_.front()->model_version_id());
   }
   if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) { return false; }
+  if (const_buf_regst_desc_id_ != -1 && const_buf_regst_ == nullptr) { return false; }
   return true;
 }
 
@@ -86,6 +98,10 @@ void NormalBackwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
   if (model_tmp_regst_) {
     AsyncSendRegstMsgToProducer(model_tmp_regst_);
     model_tmp_regst_ = nullptr;
+  }
+  if (const_buf_regst_) {
+    AsyncSendRegstMsgToProducer(const_buf_regst_);
+    const_buf_regst_ = nullptr;
   }
 }
 

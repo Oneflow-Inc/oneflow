@@ -20,7 +20,7 @@ class Kernel {
 
   void Init(const ParallelContext*, const KernelConf&);
 
-  void InitModelAndModelTmp(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+  void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
                             const Snapshot*,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
@@ -35,8 +35,8 @@ class Kernel {
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
-  virtual void InitPureModelTmpBlobs(DeviceCtx* ctx,
-                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void InitConstBufBlobs(DeviceCtx* ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
@@ -71,10 +71,6 @@ class Kernel {
   }
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-    UNIMPLEMENTED();
-  }
-  virtual void L2Regularization(const KernelCtx& ctx,
-                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
 
@@ -145,9 +141,6 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
 
  protected:
   KernelIfWithModel() = default;
-
-  void L2Regularization(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>

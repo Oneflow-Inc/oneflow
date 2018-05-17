@@ -20,7 +20,7 @@ class BlobImpl final : public Blob {
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
       : BlobImpl(regst, blob_desc, mem_ptr, nullptr) {}
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, const void* comm_net_token)
+  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token)
       : Blob(regst, blob_desc, mem_ptr, comm_net_token) {
     CHECK_EQ(NDIMS, blob_desc_ptr()->shape().NumAxes());
     for (int32_t d = 0; d < NDIMS; ++d) { dsizes_[d] = blob_desc_ptr()->shape().At(d); }

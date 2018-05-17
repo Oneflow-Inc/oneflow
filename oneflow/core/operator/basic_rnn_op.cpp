@@ -10,7 +10,7 @@ void BasicRnnOp::VirtualInitFromOpConf() {
   EnrollModelBn("h2h_weight");
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     EnrollModelBn("bias");
-    EnrollModelTmpBn("bias_multiplier");
+    EnrollConstBufBn("bias_multiplier");
   }
 }
 
