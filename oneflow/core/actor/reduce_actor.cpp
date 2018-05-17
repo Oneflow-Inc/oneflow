@@ -29,7 +29,7 @@ void ReduceActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProduce
   };
   if (cur_used_regsts.empty()) { return; }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = reinterpret_cast<void*>(cur_piece_id);
+  kernel_ctx.other = reinterpret_cast<void*>(processed_regst_cnt_);
   AsyncLaunchKernel(kernel_ctx,
                     [cur_used_regsts](int64_t regst_desc_id) { return *cur_used_regsts.begin(); });
   processed_regst_cnt_ += cur_used_regsts.size();

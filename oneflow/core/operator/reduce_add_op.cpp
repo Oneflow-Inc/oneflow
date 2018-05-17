@@ -7,6 +7,7 @@ void ReduceAddOp::InitFromOpConf() {
   for (int32_t i = 0; i < op_conf().reduce_add_conf().in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
+  EnrollDataTmpBn("copy_buf");
   EnrollOutputBn("out", false);
 }
 
@@ -25,6 +26,7 @@ void ReduceAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> Get
   CHECK_EQ(in_num, parallel_ctx->parallel_num());
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
+  *GetBlobDesc4BnInOp(SoleDtbn()) = *first_in_blob;
   *GetBlobDesc4BnInOp(SoleObn()) = *first_in_blob;
   for (int32_t i = 1; i < in_num; ++i) {
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));

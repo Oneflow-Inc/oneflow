@@ -48,6 +48,7 @@ int32_t Blob::col_id() const { return regst_->col_id(); }
 void Blob::set_col_id(int32_t val) { regst_->set_col_id(val); }
 int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
+int64_t Blob::piece_id() { return regst_->piece_id(); }
 const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
 
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                           \
