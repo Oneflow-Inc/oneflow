@@ -28,6 +28,7 @@ class IDMgr final {
     return gpu_device_num_ + cpu_device_num_ + Global<JobDesc>::Get()->PersistenceWorkerNum();
   }
   int64_t NewLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
+  int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 

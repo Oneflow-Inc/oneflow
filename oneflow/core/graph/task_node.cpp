@@ -183,10 +183,21 @@ void TaskNode::FixRegisterNumRange() {
   }
 }
 
+int64_t TaskNode::NewLocalWorkStreamId() {
+  CHECK_EQ(local_work_stream_id_, -1);
+  local_work_stream_id_ = Global<IDMgr>::Get()->NewLocalWorkStreamId(machine_id_, thrd_id_);
+  return local_work_stream_id_;
+}
+
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, LocalWorkStreamId());
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, NewLocalWorkStreamId());
+}
+
+int64_t TaskNode::local_work_stream_id() const {
+  CHECK_NE(task_id_, -1);
+
 }
 
 void TaskNode::ClearOutOfDateConsumedRegst() {

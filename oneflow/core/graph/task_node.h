@@ -31,7 +31,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t MemZoneId() const { return Global<IDMgr>::Get()->GetMemZoneIdFromThrdId(thrd_id_); }
-  int64_t LocalWorkStreamId() const;
+  int64_t local_work_stream_id() const;
 
   // Setters
   void set_machine_id(int64_t val);
@@ -71,6 +71,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
+  
+  virtual int64_t NewLocalWorkStreamId();
 
  private:
   void ClearOutOfDateConsumedRegst();
@@ -78,7 +80,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   int64_t machine_id_;
   int64_t thrd_id_;
-  int64_t local_work_stream_id_;
   int64_t task_id_;
 
   ExecGraph exec_gph_;
