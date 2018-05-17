@@ -36,7 +36,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 
 void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
+  comm_net_device_ctx_ = new CommNetDeviceCtx(GetGlobalWorkStreamId(), actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);
 }
 
