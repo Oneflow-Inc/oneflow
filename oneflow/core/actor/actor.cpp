@@ -94,15 +94,15 @@ const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) con
   return name2regst_desc_id_.at(name);
 }
 
-void Actor::InitDeviceCtx(const ThreadCtx&) {
+void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx(GetGlobalWorkStreamId()));
+      device_ctx_.reset(new CpuDeviceCtx(GetGlobalWorkStreamId(), thread_ctx.buf_ptr));
       break;
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(GetGlobalWorkStreamId(), &cuda_handle_));
+      device_ctx_.reset(new CudaDeviceCtx(GetGlobalWorkStreamId(), thread_ctx.buf_ptr, &cuda_handle_));
       break;
     }
 #endif

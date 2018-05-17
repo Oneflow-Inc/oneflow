@@ -14,7 +14,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   ~CommNetDeviceCtx() = default;
 
   CommNetDeviceCtx(int64_t work_stream_id, void* actor_read_id)
-      : DeviceCtx(work_stream_id), actor_read_id_(actor_read_id), read_id_(nullptr) {}
+      : DeviceCtx(work_stream_id, nullptr), actor_read_id_(actor_read_id), read_id_(nullptr) {}
 
   void AddCallBack(std::function<void()> callback) const override {
     Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);

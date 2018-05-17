@@ -3,7 +3,6 @@
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/comm_network/memory_desc_manager.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
 #include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 

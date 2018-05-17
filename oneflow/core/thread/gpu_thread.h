@@ -13,7 +13,7 @@ class GpuThread final : public Thread {
   GpuThread() = delete;
   ~GpuThread() = default;
 
-  GpuThread(int64_t thrd_id, int64_t dev_id);
+  GpuThread(int64_t thrd_id, int64_t dev_id, size_t buf_size);
 
  private:
 };
