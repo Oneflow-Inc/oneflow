@@ -8,7 +8,7 @@ int64_t IDMgr::MachineID4MachineName(const std::string& machine_name) const {
   return it->second;
 }
 
-int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
+int64_t IDMgr::NewLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
   int64_t local_work_stream_id = -1;
   if (GetDeviceTypeFromThrdId(thrd_id) == DeviceType::kCPU) {
     local_work_stream_id = 0;
@@ -20,7 +20,7 @@ int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id) {
     UNIMPLEMENTED();
   }
   CHECK_GE(local_work_stream_id, 0);
-  return NewTaskId(machine_id, thrd_id, local_work_stream_id);
+  return local_work_stream_id;
 }
 
 int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {

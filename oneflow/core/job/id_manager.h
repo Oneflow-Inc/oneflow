@@ -27,7 +27,7 @@ class IDMgr final {
   int64_t CommNetThrdId() const {
     return gpu_device_num_ + cpu_device_num_ + Global<JobDesc>::Get()->PersistenceWorkerNum();
   }
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
+  int64_t NewLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
@@ -53,8 +53,9 @@ class IDMgr final {
   // for cpu:
   //   0: the actor thread
   // for gpu:
-  //   0: the copy h2d cuda stream
-  //   1: the copy d2h cuda stream
+  //   0: the comput cuda stream
+  //   1: the copy h2d cuda stream
+  //   2: the copy d2h cuda stream
   //   other: start from 100
   int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
   // global_work_stream_id
