@@ -53,7 +53,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void set_fw_node(ExecNode* val) { fw_node_ = val; }
   ExecNode* fw_node() { return fw_node_; }
 
-  uint64_t buf_size() const { return buf_size_; }
+  size_t buf_size() const { return buf_size_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
   void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
@@ -69,7 +69,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   std::shared_ptr<const Operator> op_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
   ExecNode* fw_node_;
-  uint64_t buf_size_;
+  size_t buf_size_;
 
   std::unique_ptr<OpContext> op_ctx_;
 };

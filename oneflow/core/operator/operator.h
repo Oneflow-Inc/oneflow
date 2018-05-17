@@ -135,12 +135,7 @@ class Operator {
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
-  int64_t cudnn_fw_buf_limit_byte() const {
-    return op_conf().cudnn_fw_buf_limit_mbyte() * 1024 * 1024;
-  }
-  int64_t cudnn_bw_buf_limit_byte() const {
-    return op_conf().cudnn_bw_buf_limit_mbyte() * 1024 * 1024;
-  }
+  int64_t cudnn_buf_limit_byte() const { return op_conf().cudnn_buf_limit_mbyte() * 1024 * 1024; }
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
     UNIMPLEMENTED();
