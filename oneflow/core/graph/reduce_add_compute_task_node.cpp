@@ -5,6 +5,7 @@ namespace oneflow {
 
 void ReduceAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out");
+  ProduceRegst("data_tmp");
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
 }
 
@@ -28,6 +29,7 @@ void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
     std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in_" + std::to_string(i));
     node->BindBnWithRegst(reduce_add_op->input_bns().Get(i), in_regst);
   }
+  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(reduce_add_op->BnInOp2Lbi(reduce_add_op->SoleObn()));
   node->BindBnWithRegst(reduce_add_op->SoleObn(), out_regst);

@@ -22,6 +22,8 @@ class ReduceActor final : public Actor {
 
   int64_t consumed_regst_num_;
   int64_t processed_regst_cnt_;
+  HashMap<int64_t, Regst*> regsts_in_using_;
+  HashMap<int64_t, HashSet<Regst*>> regsts_used_;
 };
 
 }  // namespace oneflow

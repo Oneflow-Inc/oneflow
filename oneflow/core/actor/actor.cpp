@@ -224,7 +224,7 @@ void Actor::ActUntilFail() {
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
     for (auto& pair : naive_readable_regst_) {
-      CHECK_EQ(pair.second.empty(), false);
+      if (pair.second.empty()) { continue; }
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
       AsyncSendRegstMsgToProducer(pair.second.front());
       pair.second.pop_front();
@@ -348,7 +348,10 @@ std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName()
 
 std::vector<int64_t> Actor::GetNaiveReadableRegstDescIdVec() {
   std::vector<int64_t> regst_desc_id_vec;
-  for (const auto& pair : naive_readable_regst_) { regst_desc_id_vec.push_back(pair.first); }
+  for (const auto& pair : naive_readable_regst_) {
+    if (pair.second.empty()) { continue; }
+    regst_desc_id_vec.push_back(pair.first);
+  }
   return regst_desc_id_vec;
 }
 

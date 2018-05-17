@@ -11,7 +11,8 @@ void ReduceGatherKernel::ForwardDataContent(
   int64_t piece_id = processed_regst_cnt / input_bns.size();
   const PbRf<int64_t>& offset = kernel_conf().reduce_gather_conf().offset();
   FOR_RANGE(int32_t, i, 0, input_bns.size()) {
-    Blob* in_blob = BnInOp2Blob(input_bns.Get(i));
+    const std::string& ibn = input_bns.Get(i);
+    Blob* in_blob = BnInOp2Blob(ibn);
     if (in_blob == nullptr || in_blob->piece_id() != piece_id) { continue; }
     size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
     AutoMemcpy(ctx.device_ctx, dst_dptr + offset.Get(i), in_blob->dptr<char>(), in_byte_size,

@@ -38,6 +38,7 @@ void ReduceGatherOp::VirtualGenKernelConf(
     reduce_gather_conf->mutable_offset()->Add(offset);
     offset += GetBlobDesc4BnInOp(input_bns().Get(i))->ByteSizeOfDataContentField();
   }
+  CHECK_EQ(offset, GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField());
 }
 
 LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
