@@ -72,7 +72,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
 
-  virtual int64_t GetLocalWorkStreamId();
+  virtual int64_t AllocateLocalWorkStreamId();
 
  private:
   void ClearOutOfDateConsumedRegst();

@@ -183,14 +183,20 @@ void TaskNode::FixRegisterNumRange() {
   }
 }
 
-int64_t TaskNode::GetLocalWorkStreamId() {
-  return Global<IDMgr>::Get()->NewLocalWorkStreamId(machine_id_, thrd_id_);
+int64_t TaskNode::AllocateLocalWorkStreamId() {
+  if (device_type() == DeviceType::kCPU) {
+    return 0;
+  } else if (device_type() == DeviceType::kGPU) {
+    return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, GetLocalWorkStreamId());
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, AllocateLocalWorkStreamId());
 }
 
 int64_t TaskNode::LocalWorkStreamId() const {

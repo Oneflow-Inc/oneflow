@@ -8,19 +8,8 @@ int64_t IDMgr::MachineID4MachineName(const std::string& machine_name) const {
   return it->second;
 }
 
-int64_t IDMgr::NewLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
-  int64_t local_work_stream_id = -1;
-  if (GetDeviceTypeFromThrdId(thrd_id) == DeviceType::kCPU) {
-    local_work_stream_id = 0;
-  } else if (GetDeviceTypeFromThrdId(thrd_id) == DeviceType::kGPU) {
-    // start from: 100
-    local_work_stream_id =
-        100 + (thread_id2num_of_streams_[GetMachineThrdId(machine_id, thrd_id)]++);
-  } else {
-    UNIMPLEMENTED();
-  }
-  CHECK_GE(local_work_stream_id, 0);
-  return local_work_stream_id;
+int64_t IDMgr::AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
+  return 100 + (thread_id2stream_id_cnt_[GetMachineThrdId(machine_id, thrd_id)]++);
 }
 
 int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
