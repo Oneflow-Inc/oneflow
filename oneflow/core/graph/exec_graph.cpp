@@ -44,7 +44,7 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
 }
 
 void ExecNode::InferBlobDescs(const ParallelContext* parallel_ctx) {
-  op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx,
+  op_->InferBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx, &buf_size_,
                         [this](OpContext* op_ctx) { op_ctx_.reset(op_ctx); });
 }
 
