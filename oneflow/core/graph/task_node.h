@@ -73,6 +73,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void FixRegisterNumRange();
 
   virtual int64_t AllocateLocalWorkStreamId();
+  virtual bool NeedIndependentWorkStream() { return false; }
 
  private:
   void ClearOutOfDateConsumedRegst();
