@@ -16,10 +16,10 @@ void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   int64_t work_stream_id = -1;
   if (op_conf.copy_hd_conf().type() == CopyHdOpConf::H2D) {
     cuda_stream = thread_ctx.copy_h2d_cuda_stream;
-    work_stream_id = GetReservedWorkStreamId(0);
+    work_stream_id = GetReservedWorkStreamId(1);
   } else if (op_conf.copy_hd_conf().type() == CopyHdOpConf::D2H) {
     cuda_stream = thread_ctx.copy_d2h_cuda_stream;
-    work_stream_id = GetReservedWorkStreamId(1);
+    work_stream_id = GetReservedWorkStreamId(2);
   } else {
     UNIMPLEMENTED();
   }

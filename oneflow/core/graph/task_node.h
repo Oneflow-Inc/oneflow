@@ -31,6 +31,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t MemZoneId() const { return Global<IDMgr>::Get()->GetMemZoneIdFromThrdId(thrd_id_); }
+  int64_t LocalWorkStreamId() const { return -1; }  // TODO
 
   // Setters
   void set_machine_id(int64_t val);
