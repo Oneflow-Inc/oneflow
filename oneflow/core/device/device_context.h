@@ -13,6 +13,7 @@ class DeviceCtx {
   virtual ~DeviceCtx() = default;
 
   void* buf_ptr() const { return buf_ptr_; }
+  size_t buf_size() const { return buf_size_; }
 
 #ifdef WITH_CUDA
   virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
@@ -25,10 +26,11 @@ class DeviceCtx {
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:
-  DeviceCtx(void* buf_ptr) : buf_ptr_(buf_ptr) {}
+  DeviceCtx(void* buf_ptr, size_t buf_size) : buf_ptr_(buf_ptr), buf_size_(buf_size) {}
 
  private:
   void* buf_ptr_;
+  size_t buf_size_;
 };
 
 }  // namespace oneflow

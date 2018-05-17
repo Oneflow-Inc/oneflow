@@ -7,6 +7,7 @@ namespace oneflow {
 
 struct ThreadCtx {
   void* buf_ptr;
+  size_t buf_size;
 #ifdef WITH_CUDA
   std::unique_ptr<CudaStreamHandle> compute_cuda_stream;
   std::unique_ptr<CudaStreamHandle> copy_h2d_cuda_stream;
