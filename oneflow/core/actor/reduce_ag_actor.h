@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_ACTOR_REDUCE_ACTOR_H_
-#define ONEFLOW_CORE_ACTOR_REDUCE_ACTOR_H_
+#ifndef ONEFLOW_CORE_ACTOR_REDUCE_AG_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_REDUCE_AG_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
 
 namespace oneflow {
 
-class ReduceActor final : public Actor {
+class ReduceAGActor final : public Actor {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceActor);
-  ReduceActor() = default;
-  ~ReduceActor() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceAGActor);
+  ReduceAGActor() = default;
+  ~ReduceAGActor() = default;
 
   void VirtualActorInit(const TaskProto&) override;
 
@@ -28,4 +28,4 @@ class ReduceActor final : public Actor {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_ACTOR_REDUCE_ACTOR_H_
+#endif  // ONEFLOW_CORE_ACTOR_REDUCE_AG_ACTOR_H_

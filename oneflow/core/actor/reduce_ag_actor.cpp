@@ -1,16 +1,16 @@
-#include "oneflow/core/actor/reduce_actor.h"
+#include "oneflow/core/actor/reduce_ag_actor.h"
 
 namespace oneflow {
 
-void ReduceActor::VirtualActorInit(const TaskProto& task_proto) {
+void ReduceAGActor::VirtualActorInit(const TaskProto& task_proto) {
   consumed_regst_num_ = task_proto.consumed_regst_desc_id().size();
   processed_regst_cnt_ = 0;
   regsts_in_using_.clear();
   regsts_used_.clear();
-  OF_SET_MSG_HANDLER(&ReduceActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&ReduceAGActor::HandlerNormal);
 }
 
-bool ReduceActor::IsReadReady() {
+bool ReduceAGActor::IsReadReady() {
   std::vector<int64_t> regst_desc_id_vec = GetNaiveReadableRegstDescIdVec();
   CHECK(regsts_in_using_.empty());
   int64_t cur_piece_id = processed_regst_cnt_ / consumed_regst_num_;
@@ -27,7 +27,7 @@ bool ReduceActor::IsReadReady() {
   return !regsts_in_using_.empty();
 }
 
-void ReduceActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
+void ReduceAGActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
   int64_t cur_piece_id = processed_regst_cnt_ / consumed_regst_num_;
   int64_t actor_id = this->actor_id();
   HashMap<int64_t, Regst*> regsts_in_using(regsts_in_using_);
@@ -65,7 +65,7 @@ void ReduceActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProduce
   regsts_in_using_.clear();
 }
 
-REGISTER_ACTOR(TaskType::kReduceGather, ReduceActor);
-REGISTER_ACTOR(TaskType::kReduceAdd, ReduceActor);
+REGISTER_ACTOR(TaskType::kReduceGather, ReduceAGActor);
+REGISTER_ACTOR(TaskType::kReduceAdd, ReduceAGActor);
 
 }  // namespace oneflow
