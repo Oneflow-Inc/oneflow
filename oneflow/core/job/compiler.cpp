@@ -72,6 +72,7 @@ Plan Compiler::DoCompile() {
     if (task_node->IsMeaningLess()) { return; }
     task_node->exec_gph().ForEachNode([&](ExecNode* exec_node) {
       if (exec_node->buf_size() == 0) { return; }
+      CHECK_EQ(task_node->LocalWorkStreamId(), 0);
       uint64_t* sz = plan.mutable_buf_info()
                          ->Mutable(task_node->machine_id())
                          ->mutable_buf_size()

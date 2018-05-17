@@ -183,17 +183,17 @@ void TaskNode::FixRegisterNumRange() {
   }
 }
 
-int64_t TaskNode::NewLocalWorkStreamId() {
+int64_t TaskNode::GetLocalWorkStreamId() {
   return Global<IDMgr>::Get()->NewLocalWorkStreamId(machine_id_, thrd_id_);
 }
 
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, NewLocalWorkStreamId());
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, GetLocalWorkStreamId());
 }
 
-int64_t TaskNode::local_work_stream_id() const {
+int64_t TaskNode::LocalWorkStreamId() const {
   CHECK_NE(task_id_, -1);
   return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
 }

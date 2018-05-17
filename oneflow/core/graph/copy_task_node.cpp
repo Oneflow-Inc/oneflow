@@ -27,7 +27,7 @@ void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Typ
   set_thrd_id(thrd_id);
 }
 
-int64_t CopyHdTaskNode::NewLocalWorkStreamId() {
+int64_t CopyHdTaskNode::GetLocalWorkStreamId() {
   if (copy_type_ == CopyHdOpConf::H2D) {
     return 1;
   } else if (copy_type_ == CopyHdOpConf::D2H) {
