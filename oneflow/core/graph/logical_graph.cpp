@@ -219,7 +219,7 @@ void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2i
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
     if (fw_node == nullptr) { return; }
-    if (fw_node->HasOpWithModelBlob()) {
+    if (fw_node->HasOpWithModelOrConstModelBlob()) {
       CHECK(nodes_need_bw.insert(fw_node).second);
       return;
     }
@@ -390,7 +390,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     if (is_train && fw_logical->HasOpWithForwardModelBlob()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
-    if (fw_logical->HasOpWithModelBlob()) {
+    if (fw_logical->HasOpWithModelOrConstModelBlob()) {
       // MdUpdt MdSave
       NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
       if (fw_logical->shared_model_nodes() == nullptr) {
@@ -409,7 +409,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       }
       Connect<LogicalNode>(md_updt_logical, NewEdge(), fw_logical);
       // Model Diff Accumulate Logical
-      if (is_train && fw_logical->HasOpWithTrainableModelBlob()) {
+      if (is_train && fw_logical->HasOpWithModelBlob()) {
         BackwardLogicalNode* bw_logical = fw_logical->bw_node();
         Connect<LogicalNode>(md_updt_logical, NewEdge(), bw_logical);
         LogicalNode* md_diff_acc_logical = nullptr;

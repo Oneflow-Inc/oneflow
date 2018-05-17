@@ -168,13 +168,13 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-bool LogicalNode::HasOpWithModelBlob() const {
+bool LogicalNode::HasOpWithModelOrConstModelBlob() const {
   return HasOpWithCondition([](const Operator* op) {
     return op->model_bns().empty() == false || op->const_model_bns().empty() == false;
   });
 }
 
-bool LogicalNode::HasOpWithTrainableModelBlob() const {
+bool LogicalNode::HasOpWithModelBlob() const {
   return HasOpWithCondition([](const Operator* op) { return op->model_bns().empty() == false; });
 }
 

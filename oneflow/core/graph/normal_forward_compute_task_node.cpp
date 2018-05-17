@@ -56,7 +56,7 @@ void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
   BuildActivationRegst();
-  BuildModelAndDataTmpAndBufRegsts();
+  BuildModel7ConstModel7DataTmp7BufRegsts();
   BuildForwardModelRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
@@ -119,7 +119,7 @@ void NormalForwardCompTaskNode::BuildActivationRegst() {
   });
 }
 
-void NormalForwardCompTaskNode::BuildModelAndDataTmpAndBufRegsts() {
+void NormalForwardCompTaskNode::BuildModel7ConstModel7DataTmp7BufRegsts() {
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> const_model_regst = GetSoleConsumedRegst("const_model");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
