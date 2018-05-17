@@ -51,6 +51,12 @@ void TaskNode::set_thrd_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
+void TaskNode::set_task_id(int64_t val) {
+  CHECK_NE(machine_id_, -1);
+  CHECK_NE(thrd_id_, -1);
+  task_id_ = val;
+}
+
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
     for (std::weak_ptr<RegstDesc> regst : pair.second) {

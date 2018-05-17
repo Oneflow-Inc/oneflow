@@ -22,9 +22,23 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 }
 
 void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Type copy_type) {
+  copy_type_ = copy_type;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
-  copy_type_ = copy_type;
+}
+
+void CopyHdTaskNode::UpdateTaskId() {
+  CHECK_NE(machine_id(), -1);
+  CHECK_NE(thrd_id(), -1);
+  int64_t local_work_stream_id = -1;
+  if (copy_type_ == CopyHdOpConf::H2D) {
+    local_work_stream_id = 0;
+  } else if (copy_type_ == CopyHdOpConf::D2H) {
+    local_work_stream_id = 1;
+  } else {
+    UNIMPLEMENTED();
+  }
+  set_task_id(Global<IDMgr>::Get()->NewTaskId(machine_id(), thrd_id(), local_work_stream_id));
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {

@@ -45,9 +45,7 @@ class Actor {
 
   // Util
   Actor() = default;
-  int64_t GetReservedWorkStreamId(int64_t reserved_id);
-  int64_t NewWorkStreamId();
-  int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
+  int64_t GetGlobalWorkStreamId() const;
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}

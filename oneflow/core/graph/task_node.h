@@ -71,8 +71,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
 
+  virtual void UpdateTaskId();
+  void set_task_id(int64_t val);
+
  private:
-  void UpdateTaskId();
   void ClearOutOfDateConsumedRegst();
 
   int64_t machine_id_;

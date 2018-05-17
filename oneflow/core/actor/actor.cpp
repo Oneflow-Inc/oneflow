@@ -72,12 +72,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   VirtualActorInit(task_proto);
 }
 
-int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
-  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(), reserved_id);
-}
-
-int64_t Actor::NewWorkStreamId() {
-  return Global<IDMgr>::Get()->NewWorkStreamId(machine_id(), thrd_id());
+int64_t Actor::GetGlobalWorkStreamId() const {
+  return Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -100,13 +96,13 @@ const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) con
 void Actor::InitDeviceCtx(const ThreadCtx&) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
+      device_ctx_.reset(new CpuDeviceCtx(GetGlobalWorkStreamId()));
       break;
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
       device_ctx_.reset(
-          new CudaDeviceCtx(NewWorkStreamId(), cuda_handle_.cuda_stream(),
+          new CudaDeviceCtx(GetGlobalWorkStreamId(), cuda_handle_.cuda_stream(),
                             cuda_handle_.cublas_pmh_handle(), cuda_handle_.cublas_pmd_handle(),
                             cuda_handle_.cudnn_handle(), cuda_handle_.eigen_gpu_device()));
       break;
