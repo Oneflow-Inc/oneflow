@@ -13,10 +13,8 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(int64_t work_stream_id, void* actor_read_id)
-      : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {
-    set_work_stream_id(work_stream_id);
-  }
+  CommNetDeviceCtx(void* actor_read_id)
+      : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id), read_id_(nullptr) {}
 
   void AddCallBack(std::function<void()> callback) const override {
     Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);
@@ -38,7 +36,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 
 void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
+  comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);
 }
 

@@ -14,6 +14,7 @@ std::tuple<char*, void*, std::function<void()>> MemoryAllocator::Allocate(Memory
       CudaCheck(cudaMallocHost(&dptr, size));
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
+      CHECK_NOTNULL(dptr);
     }
     if (mem_case.host_mem().used_by_network()) {
       comm_net_token = Global<CommNet>::Get()->RegisterMemory(dptr, size);
