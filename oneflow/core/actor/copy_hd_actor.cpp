@@ -8,6 +8,22 @@ void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&CopyHdActor::HandlerNormal);
 }
 
+void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
+  CHECK_EQ(exec_kernel_vec().size(), 1);
+  const OperatorConf& op_conf = exec_kernel_vec().begin()->kernel->op_conf();
+  CHECK(op_conf.has_copy_hd_conf());
+  const cudaStream_t* cuda_stream = nullptr;
+  if (op_conf.copy_hd_conf().type() == CopyHdOpConf::H2D) {
+    cuda_stream = thread_ctx.copy_h2d_cuda_stream;
+  } else if (op_conf.copy_hd_conf().type() == CopyHdOpConf::D2H) {
+    cuda_stream = thread_ctx.copy_d2h_cuda_stream;
+  } else {
+    UNIMPLEMENTED();
+  }
+  CHECK_NOTNULL(cuda_stream);
+  mut_device_ctx().reset(new CudaDeviceCtx(GetGlobalWorkStreamId(), cuda_stream));
+}
+
 void CopyHdActor::Act() {
   Regst* in_regst = GetNaiveSoleCurReadable();
   AsyncLaunchKernel(GenDefaultKernelCtx());
