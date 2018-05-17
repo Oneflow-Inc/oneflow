@@ -13,6 +13,7 @@ class DeviceCtx {
   virtual ~DeviceCtx() = default;
 
   int64_t work_stream_id() const { return work_stream_id_; }
+  void* buf_ptr() const { return buf_ptr_; }
 
 #ifdef WITH_CUDA
   virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
@@ -25,10 +26,12 @@ class DeviceCtx {
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:
-  DeviceCtx(int64_t work_stream_id) : work_stream_id_(work_stream_id) {}
+  DeviceCtx(int64_t work_stream_id, void* buf_ptr)
+      : work_stream_id_(work_stream_id), buf_ptr_(buf_ptr) {}
 
  private:
   int64_t work_stream_id_;
+  void* buf_ptr_;
 };
 
 }  // namespace oneflow
