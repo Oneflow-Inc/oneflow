@@ -12,7 +12,7 @@ void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   CHECK_EQ(exec_kernel_vec().size(), 1);
   const OperatorConf& op_conf = exec_kernel_vec().begin()->kernel->op_conf();
   CHECK(op_conf.has_copy_hd_conf());
-   CudaStreamHandle* cuda_stream = nullptr;
+  CudaStreamHandle* cuda_stream = nullptr;
   if (op_conf.copy_hd_conf().type() == CopyHdOpConf::H2D) {
     cuda_stream = thread_ctx.copy_h2d_cuda_stream.get();
   } else if (op_conf.copy_hd_conf().type() == CopyHdOpConf::D2H) {

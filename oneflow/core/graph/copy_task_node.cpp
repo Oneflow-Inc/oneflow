@@ -27,15 +27,14 @@ void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Typ
   set_thrd_id(thrd_id);
 }
 
-void CopyHdTaskNode::NewLocalWorkStreamId() {
+int64_t CopyHdTaskNode::NewLocalWorkStreamId() {
   if (copy_type_ == CopyHdOpConf::H2D) {
-    local_work_stream_id = 0;
+    return 1;
   } else if (copy_type_ == CopyHdOpConf::D2H) {
-    local_work_stream_id = 1;
+    return 2;
   } else {
     UNIMPLEMENTED();
   }
-  set_task_id(Global<IDMgr>::Get()->NewTaskId(machine_id(), thrd_id(), local_work_stream_id));
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {

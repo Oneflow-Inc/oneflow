@@ -184,9 +184,7 @@ void TaskNode::FixRegisterNumRange() {
 }
 
 int64_t TaskNode::NewLocalWorkStreamId() {
-  CHECK_EQ(local_work_stream_id_, -1);
-  local_work_stream_id_ = Global<IDMgr>::Get()->NewLocalWorkStreamId(machine_id_, thrd_id_);
-  return local_work_stream_id_;
+  return Global<IDMgr>::Get()->NewLocalWorkStreamId(machine_id_, thrd_id_);
 }
 
 void TaskNode::UpdateTaskId() {
@@ -197,7 +195,7 @@ void TaskNode::UpdateTaskId() {
 
 int64_t TaskNode::local_work_stream_id() const {
   CHECK_NE(task_id_, -1);
-
+  return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
 }
 
 void TaskNode::ClearOutOfDateConsumedRegst() {

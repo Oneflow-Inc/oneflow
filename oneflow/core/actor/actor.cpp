@@ -102,7 +102,8 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(new CudaDeviceCtx(GetGlobalWorkStreamId(), thread_ctx.buf_ptr, &cuda_handle_));
+      device_ctx_.reset(
+          new CudaDeviceCtx(GetGlobalWorkStreamId(), thread_ctx.buf_ptr, &cuda_handle_));
       break;
     }
 #endif
