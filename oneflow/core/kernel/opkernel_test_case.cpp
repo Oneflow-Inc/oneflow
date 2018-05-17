@@ -115,14 +115,14 @@ DEFINE_STATIC_SWITCH_FUNC(void, BlobCopy, MAKE_TWO_DEVICE_SWITCH_ENTRY,
 
 template<>
 void OpKernelTestUtil<DeviceType::kCPU>::BuildKernelCtx(KernelCtx* ctx) {
-  ctx->device_ctx = new CpuDeviceCtx(-1);
+  ctx->device_ctx = new CpuDeviceCtx(-1, nullptr);
 }
 
 template<>
 void OpKernelTestUtil<DeviceType::kGPU>::BuildKernelCtx(KernelCtx* ctx) {
   if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(); }
   CudaStreamHandle* cuda_handle = Global<CudaStreamHandle>::Get();
-  ctx->device_ctx = new CudaDeviceCtx(-1, cuda_handle);
+  ctx->device_ctx = new CudaDeviceCtx(-1, nullptr, cuda_handle);
 }
 
 template<>
