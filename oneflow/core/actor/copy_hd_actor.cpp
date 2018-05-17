@@ -21,7 +21,7 @@ void CopyHdActor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
     UNIMPLEMENTED();
   }
   CHECK_NOTNULL(cuda_stream);
-  mut_device_ctx().reset(new CudaDeviceCtx(GetGlobalWorkStreamId(), nullptr, cuda_stream));
+  mut_device_ctx().reset(new CudaDeviceCtx(nullptr, cuda_stream));
 }
 
 void CopyHdActor::Act() {

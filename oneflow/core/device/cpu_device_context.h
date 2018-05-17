@@ -11,7 +11,7 @@ class CpuDeviceCtx final : public DeviceCtx {
   CpuDeviceCtx() = delete;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(int64_t work_stream_id, void* buf_ptr) : DeviceCtx(work_stream_id, buf_ptr) {}
+  CpuDeviceCtx(void* buf_ptr) : DeviceCtx(buf_ptr) {}
 
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 

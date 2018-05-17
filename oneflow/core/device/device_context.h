@@ -12,7 +12,6 @@ class DeviceCtx {
   DeviceCtx() = delete;
   virtual ~DeviceCtx() = default;
 
-  int64_t work_stream_id() const { return work_stream_id_; }
   void* buf_ptr() const { return buf_ptr_; }
 
 #ifdef WITH_CUDA
@@ -26,11 +25,9 @@ class DeviceCtx {
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:
-  DeviceCtx(int64_t work_stream_id, void* buf_ptr)
-      : work_stream_id_(work_stream_id), buf_ptr_(buf_ptr) {}
+  DeviceCtx(void* buf_ptr) : buf_ptr_(buf_ptr) {}
 
  private:
-  int64_t work_stream_id_;
   void* buf_ptr_;
 };
 

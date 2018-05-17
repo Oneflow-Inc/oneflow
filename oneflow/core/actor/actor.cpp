@@ -97,13 +97,12 @@ const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) con
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx(GetGlobalWorkStreamId(), thread_ctx.buf_ptr));
+      device_ctx_.reset(new CpuDeviceCtx(thread_ctx.buf_ptr));
       break;
     }
 #ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(
-          new CudaDeviceCtx(GetGlobalWorkStreamId(), thread_ctx.buf_ptr, &cuda_handle_));
+      device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, &cuda_handle_));
       break;
     }
 #endif
@@ -203,7 +202,7 @@ void Actor::ActUntilFail() {
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
       act_event->set_act_id(act_id_);
-      act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      act_event->set_work_stream_id(GetGlobalWorkStreamId());
       ForEachCurReadableRegst([&](const Regst* readable_regst) {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
