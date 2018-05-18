@@ -81,7 +81,7 @@ class Actor {
   virtual void Act() { UNIMPLEMENTED(); }
   virtual bool IsCustomizedReadReady() { return true; }
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
-  virtual bool IsWriteReady();
+  bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
 
   // Async Do on device_ctx_
