@@ -109,6 +109,17 @@ __device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
   }
 }
 
+template<typename T>
+__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
+                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
+                                  const int64_t y_col_offset, const int64_t y_lda) {
+  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
+    const int64_t i = index / col_num;
+    const int64_t j = index % col_num;
+    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
+  }
+}
+
 __device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
                              const int64_t* x_strides, int64_t y_idx) {
   int64_t x_idx = 0;
@@ -199,6 +210,13 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* tem
                  size_t temp_storage_bytes) {
   CudaCheck(
       cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n, ctx->cuda_stream()));
+}
+KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                            const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
+                            const int64_t y_col_offset, const int64_t y_lda) {
+  CopyColsRegionGpu<T>
+      <<<BlocksNum4ThreadsNum(row_num * col_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          row_num, col_num, x, x_col_offset, x_lda, y, y_col_offset, y_lda);
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
