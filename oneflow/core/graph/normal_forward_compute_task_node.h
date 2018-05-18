@@ -26,7 +26,7 @@ class NormalForwardCompTaskNode final : public CompTaskNode {
   void BuildExecGphStructAndBindInRegst();
   void BuildOutRegst();
   void BuildActivationRegst();
-  void BuildModelAndTmpRegsts();
+  void BuildModel7ConstModel7DataTmp7BufRegsts();
   void BuildForwardModelRegsts();
 
   int64_t random_seed_;
