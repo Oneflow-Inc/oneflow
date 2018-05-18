@@ -4,12 +4,12 @@ namespace oneflow {
 
 void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   model_regst_desc_id_ = Name2SoleRegstDescId("model");
-  model_tmp_regst_desc_id_ = Name2SoleRegstDescId("model_tmp");
+  const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   const_buf_regst_desc_id_ = Name2SoleRegstDescId("const_buf");
   forward_model_regst_desc_id_ = Name2SoleRegstDescId("forward_model");
   random_seed_ = task_proto.random_seed();
   model_regst_ = nullptr;
-  model_tmp_regst_ = nullptr;
+  const_model_regst_ = nullptr;
   const_buf_regst_ = nullptr;
   pre_forward_model_regst_ = nullptr;
   if (forward_model_regst_desc_id_ != -1) {
@@ -19,7 +19,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   if (const_buf_regst_desc_id_ != -1) {
     const_buf_regst_ = GetSoleProducedRegst(const_buf_regst_desc_id_);
   }
-  if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && model_tmp_regst_desc_id_ == -1)) {
+  if (random_seed_ == -1 || (model_regst_desc_id_ == -1 && const_model_regst_desc_id_ == -1)) {
     if (forward_model_regst_desc_id_ != -1 || const_buf_regst_desc_id_ != -1) {
       AsyncInitModelAndConstBuf();
     }
@@ -38,16 +38,16 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 void NormalForwardCompActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) {
   if (model_regst_desc_id_ != -1) { handler(model_regst_); }
-  if (model_tmp_regst_desc_id_ != -1) { handler(model_tmp_regst_); }
+  if (const_model_regst_desc_id_ != -1) { handler(const_model_regst_); }
 }
 
 void NormalForwardCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   Regst* regst = msg.regst();
   if (regst->regst_desc_id() == model_regst_desc_id_) {
     UpdateModelRegstPtr(regst);
-  } else if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
-    CHECK(model_tmp_regst_ == nullptr);
-    model_tmp_regst_ = regst;
+  } else if (regst->regst_desc_id() == const_model_regst_desc_id_) {
+    CHECK(const_model_regst_ == nullptr);
+    const_model_regst_ = regst;
   } else {
     UNIMPLEMENTED();
   }
@@ -70,8 +70,8 @@ void NormalForwardCompActor::Act() {
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     if (regst_desc_id == model_regst_desc_id_) {
       return model_regst_;
-    } else if (regst_desc_id == model_tmp_regst_desc_id_) {
-      return model_tmp_regst_;
+    } else if (regst_desc_id == const_model_regst_desc_id_) {
+      return const_model_regst_;
     } else if (regst_desc_id == const_buf_regst_desc_id_) {
       return const_buf_regst_;
     } else {
@@ -95,13 +95,13 @@ void NormalForwardCompActor::Act() {
 
 bool NormalForwardCompActor::IsCustomizedReadReady() {
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return false; }
-  if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) { return false; }
+  if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return false; }
   return true;
 }
 
 void NormalForwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
   TryAsyncReturnModelRegst();
-  TryAsyncReturnModelTmpRegst();
+  TryAsyncReturnConstModelRegst();
 }
 
 int NormalForwardCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
@@ -111,21 +111,21 @@ int NormalForwardCompActor::HandlerInitModelAndConstBuf(const ActorMsg& msg) {
     model_regst_ = regst;
     CHECK_EQ(staleness_, -1);
     staleness_ = model_regst_->regst_desc()->register_num() - 1;
-  } else if (regst->regst_desc_id() == model_tmp_regst_desc_id_) {
-    model_tmp_regst_ = regst;
+  } else if (regst->regst_desc_id() == const_model_regst_desc_id_) {
+    const_model_regst_ = regst;
   } else {
     UNIMPLEMENTED();
   }
   if (model_regst_desc_id_ != -1 && model_regst_ == nullptr) { return 0; }
-  if (model_tmp_regst_desc_id_ != -1 && model_tmp_regst_ == nullptr) { return 0; }
+  if (const_model_regst_desc_id_ != -1 && const_model_regst_ == nullptr) { return 0; }
   AsyncInitModelAndConstBuf();
   if (model_regst_) {
     AsyncSendRegstMsgToProducer(model_regst_);
     model_regst_ = nullptr;
   }
-  if (model_tmp_regst_) {
-    AsyncSendRegstMsgToProducer(model_tmp_regst_);
-    model_tmp_regst_ = nullptr;
+  if (const_model_regst_) {
+    AsyncSendRegstMsgToProducer(const_model_regst_);
+    const_model_regst_ = nullptr;
   }
   if (forward_model_regst_desc_id_ != -1) { SendMsgToForwardModelSaveActor(0); }
   if (const_buf_regst_desc_id_ != -1) { SendConstBufInitMsgToBwActor(); }
@@ -149,7 +149,9 @@ void NormalForwardCompActor::AsyncInitModelAndConstBuf() {
           const LogicalBlobId& lbi = exec_kernel.kernel->BnInOp2Lbi(bn_in_op);
           Blob* blob = nullptr;
           if (model_regst_) { blob = model_regst_->GetBlobByLbi(lbi); }
-          if (blob == nullptr && model_tmp_regst_) { blob = model_tmp_regst_->GetBlobByLbi(lbi); }
+          if (blob == nullptr && const_model_regst_) {
+            blob = const_model_regst_->GetBlobByLbi(lbi);
+          }
           if (blob == nullptr && const_buf_regst_) { blob = const_buf_regst_->GetBlobByLbi(lbi); }
           if (blob == nullptr && forward_model_regst_desc_id_ != -1) {
             blob = GetCurWriteableRegst(forward_model_regst_desc_id_)->GetBlobByLbi(lbi);
@@ -169,10 +171,10 @@ void NormalForwardCompActor::TryAsyncReturnModelRegst() {
   if (model_regst_) { AsyncReturnModelRegst(); }
 }
 
-void NormalForwardCompActor::TryAsyncReturnModelTmpRegst() {
-  if (model_tmp_regst_) {
-    AsyncSendRegstMsgToProducer(model_tmp_regst_);
-    model_tmp_regst_ = nullptr;
+void NormalForwardCompActor::TryAsyncReturnConstModelRegst() {
+  if (const_model_regst_) {
+    AsyncSendRegstMsgToProducer(const_model_regst_);
+    const_model_regst_ = nullptr;
   }
 }
 
