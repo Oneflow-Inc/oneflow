@@ -484,7 +484,7 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
     NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
     const JobDesc* job_desc = Global<JobDesc>::Get();
     if (Global<JobDesc>::Get()->IsTrain()) {
-      *(mdupdt_conf->mutable_user_conf()) = job_desc->job_conf().train_conf().model_update_conf();
+      *(mdupdt_conf->mutable_user_conf()) = job_desc->other_conf().train_conf().model_update_conf();
     }
     mdupdt_conf->set_in_num(node->in_edges().size());
     node->mut_op_vec() = {ConstructOp(op_conf)};

@@ -6,10 +6,13 @@
 namespace oneflow {
 
 // txt file
-void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
+bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
   std::ifstream in_stream(file_path.c_str(), std::ifstream::in);
   google::protobuf::io::IstreamInputStream input(&in_stream);
-  CHECK(google::protobuf::TextFormat::Parse(&input, proto));
+  return google::protobuf::TextFormat::Parse(&input, proto);
+}
+void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto) {
+  CHECK(TryParseProtoFromTextFile(file_path, proto));
 }
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path) {
   std::ofstream out_stream(file_path.c_str(), std::ofstream::out | std::ofstream::trunc);
