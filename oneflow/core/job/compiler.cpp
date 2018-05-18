@@ -77,7 +77,7 @@ Plan Compiler::DoCompile() {
                          ->Mutable(task_node->machine_id())
                          ->mutable_buf_size()
                          ->Mutable(task_node->thrd_id());
-      *sz = std::max(*sz, exec_node->buf_size());
+      *sz = std::max<uint64_t>(*sz, exec_node->buf_size());
     });
   });
   ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
