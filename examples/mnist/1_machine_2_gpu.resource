@@ -4,7 +4,4 @@ machine {
   name: "first"
 }
 
-cpu_device_num: 4
 gpu_device_num: 2
-persistence_worker_num: 2
-comm_net_worker_num: 4

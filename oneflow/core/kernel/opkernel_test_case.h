@@ -52,7 +52,7 @@ class OpKernelTestCase {
   virtual ~OpKernelTestCase() = default;
 
   //  Setters
-  void InitJobConf(const std::function<void(JobConf*)>& Init);
+  void InitJobConf(const std::function<void(JobConf1*)>& Init);
   void set_is_train(bool is_train);
   void set_is_forward(bool is_forward) { is_forward_ = is_forward; }
   void set_default_device_type(DeviceType default_device_type) {
@@ -141,7 +141,7 @@ class OpKernelTestCase {
   std::function<void()> initiation_before_backward_;
   ParallelContext parallel_ctx_;
   KernelCtx kernel_ctx_;
-  JobConf job_conf_;
+  JobConf1 job_conf_;
   OperatorConf op_conf_;
   HashMap<std::string, Blob*> bn_in_op2blob_;
   HashMap<std::string, BlobDesc> bn_in_op2blob_desc_;
