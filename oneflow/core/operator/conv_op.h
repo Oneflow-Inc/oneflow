@@ -33,7 +33,6 @@ class CudnnConvDesc final {
 #endif  // WITH_CUDA
 
 struct ConvOpCtx : public OpContext {
-  Shape bw_col_buf_shape;
 #ifdef WITH_CUDA
   CudnnConvAlgoCtx cudnn_conv_algo_ctx;
 #endif  // WITH_CUDA
@@ -51,8 +50,6 @@ class ConvOp : public Operator {
   void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                       const ParallelContext*, size_t* buf_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
-  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                           const ParallelContext*, const OpContext*) const override;
 
   int32_t ModelSplitAxis() const override;
   int32_t MaxModelSplitNum() const override;
