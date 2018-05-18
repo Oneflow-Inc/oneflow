@@ -224,7 +224,7 @@ void Actor::ActUntilFail() {
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
     for (auto& pair : naive_readable_regst_) {
-      if (pair.second.empty()) { continue; }
+      CHECK_EQ(pair.second.empty(), false);
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
       AsyncSendRegstMsgToProducer(pair.second.front());
       pair.second.pop_front();
@@ -344,15 +344,6 @@ Regst* Actor::GetCurSoleWriteableRegst() {
 
 std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
   return {false, {}};
-}
-
-std::vector<int64_t> Actor::GetNaiveReadableRegstDescIdVec() {
-  std::vector<int64_t> regst_desc_id_vec;
-  for (const auto& pair : naive_readable_regst_) {
-    if (pair.second.empty()) { continue; }
-    regst_desc_id_vec.push_back(pair.first);
-  }
-  return regst_desc_id_vec;
 }
 
 Regst* Actor::GetNaiveCurReadable(int64_t regst_desc_id) {

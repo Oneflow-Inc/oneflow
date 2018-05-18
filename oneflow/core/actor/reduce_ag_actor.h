@@ -15,15 +15,15 @@ class ReduceAGActor final : public Actor {
 
  private:
   void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
-  bool IsReadReady() override;
+  bool IsCustomizedReadReady() override;
+  void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {true, {}};
+    return {false, {}};
   }
 
-  int64_t consumed_regst_num_;
   int64_t processed_regst_cnt_;
+  HashMap<int64_t, std::queue<Regst*>> in_regsts_;
   HashMap<int64_t, Regst*> regsts_in_using_;
-  HashMap<int64_t, HashSet<Regst*>> regsts_used_;
 };
 
 }  // namespace oneflow

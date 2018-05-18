@@ -109,7 +109,6 @@ class Actor {
 
   // Status Of Naive Consumed Registers
   virtual std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName();
-  std::vector<int64_t> GetNaiveReadableRegstDescIdVec();
   Regst* GetNaiveCurReadable(int64_t regst_desc_id);
   Regst* GetNaiveNextReadable(int64_t regst_desc_id);
   Regst* GetNaiveSoleCurReadable();
@@ -119,7 +118,7 @@ class Actor {
   virtual int64_t WritingFreeProducedRegstDescNum() const { return 0; }
 
  private:
-  virtual bool IsReadReady();
+  bool IsReadReady();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
