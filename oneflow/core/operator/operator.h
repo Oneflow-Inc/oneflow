@@ -107,7 +107,11 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                        const ParallelContext*, std::function<void(OpContext*)> EnrollOpCtx) const;
+                        const ParallelContext*, size_t* buf_size,
+                        std::function<void(OpContext*)> EnrollOpCtx) const;
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+                              const ParallelContext*, size_t* buf_size,
+                              std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                               const ParallelContext*,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
@@ -131,12 +135,7 @@ class Operator {
                      bool is_forward, const ParallelContext*, KernelConf*, const OpContext*) const;
 
  protected:
-  int64_t cudnn_fw_buf_limit_byte() const {
-    return op_conf().cudnn_fw_buf_limit_mbyte() * 1024 * 1024;
-  }
-  int64_t cudnn_bw_buf_limit_byte() const {
-    return op_conf().cudnn_bw_buf_limit_mbyte() * 1024 * 1024;
-  }
+  int64_t cudnn_buf_limit_byte() const { return op_conf().cudnn_buf_limit_mbyte() * 1024 * 1024; }
 
   virtual PbMessage* MutableCustomizedKernelConf(KernelConf*) const {
     UNIMPLEMENTED();

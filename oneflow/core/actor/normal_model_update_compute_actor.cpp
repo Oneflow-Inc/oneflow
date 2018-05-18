@@ -8,7 +8,10 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   const_model_regst_desc_id_ = Name2SoleRegstDescId("const_model");
   init_remaining_cnt_ = 0;
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
-  if (const_model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
+  if (const_model_regst_desc_id_ != -1) {
+    init_remaining_cnt_ += 1;
+    DecreaseActualWriteableProducedRegstDescNum(1);
+  }
   next_model_version_id_ = 0;
   related_save_model_actor_id_ = task_proto.related_save_model_task_id();
   related_init_model_actor_id_ = task_proto.related_init_model_task_id();
@@ -35,8 +38,6 @@ void NormalMdUpdtCompActor::Act() {
   });
   next_model_version_id_ += 1;
 }
-
-bool NormalMdUpdtCompActor::IsWriteReady() { return GetCurWriteableRegst(model_regst_desc_id_); }
 
 void NormalMdUpdtCompActor::InitRegstBySendToFw(int64_t regst_desc_id) {
   if (regst_desc_id == -1) { return; }

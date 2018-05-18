@@ -51,18 +51,11 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
-  int64_t cudnn_buf_size = 0;
-  T* cudnn_buf_dptr = nullptr;
-  if (cudnn_buf) {
-    cudnn_buf_size = cudnn_buf->shape().At(0);
-    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
-  }
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
       this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-      cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
+      device_ctx->buf_ptr(), device_ctx->buf_size(), ZeroPtr<T>::value, this->out_desc_->Get(),
       out_blob->mut_dptr<T>()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
@@ -78,19 +71,12 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
-  Blob* cudnn_buf = BnInOp2Blob("bw_cudnn_buf");
-  int64_t cudnn_buf_size = 0;
-  T* cudnn_buf_dptr = nullptr;
-  if (cudnn_buf) {
-    cudnn_buf_size = cudnn_buf->shape().At(0);
-    cudnn_buf_dptr = cudnn_buf->mut_dptr<T>();
-  }
   CudaCheck(cudnnConvolutionBackwardFilter(
       device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
       this->out_desc_->Get(), out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionBwdFilterAlgo_t>(
           this->GetConvKernelConf().cudnn_bwd_filter_algo()),
-      cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value, this->filter_desc_->Get(),
+      device_ctx->buf_ptr(), device_ctx->buf_size(), ZeroPtr<T>::value, this->filter_desc_->Get(),
       weight_diff_blob->mut_dptr<T>()));
 
   if (in_diff_blob != nullptr) {
@@ -99,7 +85,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
         weight_blob->dptr<T>(), this->out_desc_->Get(), out_diff_blob->dptr<T>(),
         this->conv_desc_->Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(this->GetConvKernelConf().cudnn_bwd_data_algo()),
-        cudnn_buf_dptr, cudnn_buf_size, ZeroPtr<T>::value, this->in_desc_->Get(),
+        device_ctx->buf_ptr(), device_ctx->buf_size(), ZeroPtr<T>::value, this->in_desc_->Get(),
         in_diff_blob->mut_dptr<T>()));
   }
 }

@@ -17,7 +17,6 @@ class NormalMdUpdtCompActor final : public CompActor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }
-  bool IsWriteReady() override;
 
   void InitRegstBySendToFw(int64_t regst_desc_id);
   int HandlerInitModelAndConstModel(const ActorMsg&);

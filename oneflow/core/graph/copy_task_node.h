@@ -34,6 +34,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
 
  private:
+  int64_t AllocateLocalWorkStreamId() override;
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 
