@@ -9,6 +9,21 @@ void ConcatKernel<device_type>::ForwardDataContent(
                                this->op_conf().concat_conf().axis());
   DataContentIterator output_it(BnInOp2Blob, &this->op_attribute().output_bns(), 0);
   CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
+  int32_t axis = this->op_conf().concat_conf().axis();
+  int64_t row_num = out_blob->shape().elem_cnt() / out_blob->shape().Count(axis);
+  Blob* out_blob;
+  int64_t output_col_offset = 0;
+  for (const auto& input_bn : this->op_attribute().input_bns()) {
+    const Blob* in_blob = BnInOp2Blob(input_bn);
+    int64_t input_col_num = in_blob->shape().Count(axis) * GetSizeOfDataType(in_blob->data_type());
+    CHECK_EQ(in_blob->shape().elem_cnt() / in_blob->shape().Count(axis), row_num);
+    CHECK_EQ(in_blob->data_type(), out_blob->data_type());
+    KernelUtil<device_type, char>::CopyToColsRegion(ctx.device_ctx,
+  row_num, in_blob->dptr<char>(), input_col_num, out_blob->mut_dptr<char>(),
+      out_blob->shape().Count(axis) * GetSizeOfDataType(out_blob->data_type()), output_col_offset);
+    output_col_offset += input_col_num;
+  }
+  CHECK_EQ(output_col_offset, out_blob->shape().Count(axis));
 }
 
 template<DeviceType device_type>
