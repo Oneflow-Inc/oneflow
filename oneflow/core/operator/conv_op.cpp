@@ -68,10 +68,6 @@ void ConvOp<NDims>::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
-  EnrollFwBufBn("fw_cudnn_buf");
-  EnrollBwBufBn("bw_cudnn_buf");
-  EnrollFwBufBn("fw_col_buf");
-  EnrollBwBufBn("bw_col_buf");
 }
 
 template<int32_t NDims>
@@ -136,13 +132,10 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
 
   if (!UseCudnn()) {
     // col_buf
-    std::vector<int64_t> col_buf_shape(2 * NDims + 1);
-    for (size_t i = 0; i != NDims + 1; ++i) { col_buf_shape[i] = weight_shape[i + 1]; }
-    for (size_t i = 0; i != NDims; ++i) {
-      col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
-    }
-    GetBlobDesc4BnInOp("fw_col_buf")->mut_shape() = Shape(col_buf_shape);
-    conv_op_ctx->bw_col_buf_shape = Shape(col_buf_shape);
+    size_t col_buf_elem_cnt = 1;
+    for (size_t i = 0; i != NDims + 1; ++i) { col_buf_elem_cnt *= weight_shape[i + 1]; }
+    for (size_t i = 0; i != NDims; ++i) { col_buf_elem_cnt *= out_shape[dhw_offset + i]; }
+    *buf_size = col_buf_elem_cnt * GetSizeOfDataType(in_blob_desc->data_type());
   }
 
 #ifdef WITH_CUDA
@@ -154,17 +147,6 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
                           conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size});
   }
 #endif  // WITH_CUDA
-}
-
-template<int32_t NDims>
-void ConvOp<NDims>::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const OpContext* op_ctx) const {
-  const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-  if (!UseCudnn()) {
-    // col_buf
-    GetBlobDesc4BnInOp("bw_col_buf")->mut_shape() = conv_op_ctx->bw_col_buf_shape;
-  }
 }
 
 template<int32_t NDims>
