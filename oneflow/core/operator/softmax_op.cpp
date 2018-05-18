@@ -7,7 +7,7 @@ void SoftmaxOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollModelTmpBn("sum_multiplier");
+  EnrollConstBufBn("sum_multiplier");
   EnrollDataTmpBn("softmax_num");
   EnrollDataTmpBn("transpose_in");
   EnrollDataTmpBn("transpose_out");
