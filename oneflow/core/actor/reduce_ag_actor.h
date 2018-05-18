@@ -11,19 +11,21 @@ class ReduceAGActor final : public Actor {
   ReduceAGActor() = default;
   ~ReduceAGActor() = default;
 
-  void VirtualActorInit(const TaskProto&) override;
-
  private:
-  void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
+  void VirtualActorInit(const TaskProto&) override;
+  void Act() override;
   bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {}};
   }
 
-  int64_t processed_regst_cnt_;
+  int64_t processed_regsts_cnt_;
+  int64_t in_regsts_eord_cnt_;
   HashMap<int64_t, std::queue<Regst*>> in_regsts_;
-  HashMap<int64_t, Regst*> regsts_in_using_;
+  HashMap<int64_t, Regst*> ready_in_regsts_;
 };
 
 }  // namespace oneflow
