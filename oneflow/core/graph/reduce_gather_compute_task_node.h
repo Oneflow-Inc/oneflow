@@ -17,6 +17,7 @@ class ReduceGatherCompTaskNode final : public CompTaskNode {
   TaskType GetTaskType() const override { return TaskType::kReduceGather; }
 
  private:
+  bool NeedIndependentWorkStream() override { return true; }
   void BuildExecGphAndRegst() override;
 };
 

@@ -29,11 +29,10 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   } else {
     OF_SET_MSG_HANDLER(&NormalForwardCompActor::HandlerInitModelAndConstBuf);
   }
-}
 
-int64_t NormalForwardCompActor::WritingFreeProducedRegstDescNum() const {
-  if (const_buf_regst_desc_id_ == -1) { return 0; }
-  return const_buf_regst_->consumers_actor_id().size() > 0 ? 1 : 0;
+  if (const_buf_regst_ && !const_buf_regst_->consumers_actor_id().empty()) {
+    DecreaseActualWriteableProducedRegstDescNum(1);
+  }
 }
 
 void NormalForwardCompActor::ForEachCurCustomizedReadableRegst(

@@ -45,9 +45,6 @@ class Actor {
 
   // Util
   Actor() = default;
-  int64_t GetReservedWorkStreamId(int64_t reserved_id);
-  int64_t NewWorkStreamId();
-  int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
@@ -115,13 +112,18 @@ class Actor {
   Regst* GetNaiveFirstCurReadable();
   Regst* GetSoleProducedRegst(int64_t regst_desc_id);
 
-  virtual int64_t WritingFreeProducedRegstDescNum() const { return 0; }
+  void DecreaseActualWriteableProducedRegstDescNum(int64_t amount) {
+    actual_writeable_produced_regst_desc_num_ -= amount;
+  }
 
  private:
   bool IsReadReady();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
+  void AsyncSendMsg(const ActorMsg&);
+  int64_t GetGlobalWorkStreamId() const;
+  int64_t GetLocalWorkStreamId() const;
 
   int64_t actor_id_;
   int64_t act_id_;
@@ -131,14 +133,13 @@ class Actor {
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
-#ifdef WITH_CUDA
-  CudaStreamHandle cuda_handle_;
-#endif
   HashSet<int64_t> eord_regst_desc_ids_;
+  CudaStreamHandle cuda_handle_;
 
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
+  int64_t actual_writeable_produced_regst_desc_num_;
   int64_t writeable_produced_regst_desc_cnt_;
   int64_t total_reading_cnt_;
   int64_t remaining_eord_cnt_;
