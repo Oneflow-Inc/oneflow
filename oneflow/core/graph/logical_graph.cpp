@@ -219,7 +219,7 @@ void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2i
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
     if (fw_node == nullptr) { return; }
-    if (fw_node->HasOpWithModelOrConstModelBlob()) {
+    if (fw_node->HasOpWithModelBlob()) {
       CHECK(nodes_need_bw.insert(fw_node).second);
       return;
     }
