@@ -3,29 +3,29 @@
 
 namespace oneflow {
 
-template<DeviceType device_type>
-void ConcatKernel<device_type>::ForwardDataContent(
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   int32_t axis = this->op_conf().concat_conf().axis();
   Blob* out_blob = BnInOp2Blob("out");
   int64_t row_num = out_blob->shape().elem_cnt() / out_blob->shape().Count(axis);
-  int64_t output_col_num = out_blob->shape().Count(axis) * GetSizeOfDataType(out_blob->data_type());
+  int64_t output_col_num = out_blob->shape().Count(axis);
   int64_t output_col_offset = 0;
   for (const auto& input_bn : this->op_attribute().input_bns()) {
     const Blob* in_blob = BnInOp2Blob(input_bn);
-    int64_t input_col_num = in_blob->shape().Count(axis) * GetSizeOfDataType(in_blob->data_type());
-    CHECK_EQ(in_blob->shape().elem_cnt() / in_blob->shape().Count(axis), row_num);
+    int64_t input_col_num = in_blob->shape().Count(axis);
+    CHECK_EQ(in_blob->shape().elem_cnt(), row_num * input_col_num);
     CHECK_EQ(in_blob->data_type(), out_blob->data_type());
-    KernelUtil<device_type, int8_t>::CopyColsRegion(
-        ctx.device_ctx, row_num, input_col_num, in_blob->dptr<int8_t>(), 0, input_col_num,
-        out_blob->mut_dptr<int8_t>(), output_col_offset, output_col_num);
+    KernelUtil<device_type, T>::CopyColsRegion(
+        ctx.device_ctx, row_num, input_col_num, in_blob->dptr<T>(), 0, input_col_num,
+        out_blob->mut_dptr<T>(), output_col_offset, output_col_num);
     output_col_offset += input_col_num;
   }
   CHECK_EQ(output_col_offset, output_col_num);
 }
 
-template<DeviceType device_type>
-void ConcatKernel<device_type>::ForwardDataId(
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   DataIdIterator input_it(BnInOp2Blob, &this->op_attribute().input_bns(),
                           this->op_conf().concat_conf().axis());
@@ -33,8 +33,8 @@ void ConcatKernel<device_type>::ForwardDataId(
   CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
-template<DeviceType device_type>
-void ConcatKernel<device_type>::ForwardColNum(
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ColNumIterator input_it(BnInOp2Blob, &this->op_attribute().input_bns(),
                           this->op_conf().concat_conf().axis());
@@ -42,8 +42,8 @@ void ConcatKernel<device_type>::ForwardColNum(
   CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
-template<DeviceType device_type>
-void ConcatKernel<device_type>::BackwardDataContent(
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   DataContentIterator input_it(BnInOp2Blob, &this->op_attribute().output_diff_bns(), 0);
   DataContentIterator output_it(BnInOp2Blob, &this->op_attribute().input_diff_bns(),
@@ -51,6 +51,6 @@ void ConcatKernel<device_type>::BackwardDataContent(
   CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
 }
 
-ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kConcatConf, ConcatKernel);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kConcatConf, ConcatKernel, ARITHMETIC_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
