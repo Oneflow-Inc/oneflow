@@ -150,8 +150,9 @@ class Actor {
   bool is_naive_readable_eord_;
 
   // Profile
-  double last_act_start_time_;
-  double act_interval_acc_;
+  std::vector<ActEvent*> act_events_;
+  ActEvent* StartRecordEvent();
+  void EndRecordEvent(ActEvent* act_event);
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

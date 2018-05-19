@@ -194,12 +194,4 @@ void CtrlServer::EraseCountHandler(CtrlCall<EraseCountRequest, EraseCountRespons
   ENQUEUE_REQUEST(EraseCount);
 }
 
-void CtrlServer::PushAvgActIntervalHandler(
-    CtrlCall<PushAvgActIntervalRequest, PushAvgActIntervalResponse>* call) {
-  Global<Profiler>::Get()->PushAvgActInterval(call->request().actor_id(),
-                                              call->request().avg_act_interval());
-  call->SendResponse();
-  ENQUEUE_REQUEST(PushAvgActInterval);
-}
-
 }  // namespace oneflow

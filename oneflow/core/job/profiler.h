@@ -12,10 +12,10 @@ class Profiler final {
   Profiler() = default;
   ~Profiler() = default;
 
-  void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
-  void PushAvgActTime(int64_t actor_id, double avg_act_time);
+  // void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
+  // void PushAvgActTime(int64_t actor_id, double avg_act_time);
 
-  void Profile(const Plan& plan);
+  void Profile(const Plan& plan, const std::string& act_event_filepath);
 
  private:
   class ActorProfileInfo {

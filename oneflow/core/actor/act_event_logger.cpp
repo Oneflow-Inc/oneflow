@@ -4,6 +4,7 @@
 
 namespace oneflow {
 
+const std::string ActEventLogger::experiment_prefix_("experiment_");
 const std::string ActEventLogger::act_event_bin_filename_("act_event.bin");
 const std::string ActEventLogger::act_event_txt_filename_("act_event.txt");
 
@@ -14,8 +15,10 @@ void ActEventLogger::PrintActEventToLogDir(const ActEvent& act_event) {
   txt_out_stream_ << act_event_txt;
 }
 
-ActEventLogger::ActEventLogger()
-    : bin_out_stream_(LocalFS(), JoinPath(LogDir(), act_event_bin_filename_)),
-      txt_out_stream_(LocalFS(), JoinPath(LogDir(), act_event_txt_filename_)) {}
+ActEventLogger::ActEventLogger(bool is_experiment)
+    : bin_out_stream_(LocalFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
+                                                        + act_event_bin_filename_)),
+      txt_out_stream_(LocalFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
+                                                        + act_event_txt_filename_)) {}
 
 }  // namespace oneflow

@@ -18,9 +18,9 @@ bool NeedModelSave(int64_t model_version_id) {
 }
 
 Actor::~Actor() {
-  if (Global<RuntimeCtx>::Get()->is_experiment_phase() == false && act_id_ >= 0) {
-    double avg_act_interval = act_interval_acc_ / (act_id_ + 1);
-    Global<CtrlClient>::Get()->PushAvgActInterval(actor_id_, avg_act_interval);
+  for (auto act_event : act_events_) {
+    Global<CtrlClient>::Get()->PushActEvent(*act_event);
+    delete act_event;
   }
 }
 
@@ -67,8 +67,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
-  last_act_start_time_ = -1.0;
-  act_interval_acc_ = 0.0;
   InitDeviceCtx(thread_ctx);
   VirtualActorInit(task_proto);
 }
@@ -195,27 +193,35 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
+ActEvent* Actor::StartRecordEvent() {
+  ActEvent* act_event;
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    act_events_.emplace_back(new ActEvent);
+    act_event = act_events_.back();
+    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
+    act_event->set_actor_id(actor_id_);
+    act_event->set_work_stream_id(GetGlobalWorkStreamId());
+    act_event->set_act_id(act_id_);
+    act_event->set_ready_time(GetCurTime());
+    ForEachCurReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      SetReadableRegstInfo(readable_regst, info);
+    });
+    device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
+  }
+  return act_event;
+}
+
+void Actor::EndRecordEvent(ActEvent* act_event) {
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
+  }
+}
+
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    ActEvent* act_event = nullptr;
-    if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
-      act_event = new ActEvent;
-      act_event->set_actor_id(actor_id_);
-      act_event->set_act_id(act_id_);
-      act_event->set_work_stream_id(GetGlobalWorkStreamId());
-      ForEachCurReadableRegst([&](const Regst* readable_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        SetReadableRegstInfo(readable_regst, info);
-      });
-      device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-    }
-    double cur_time = GetCurTime();
-    if (last_act_start_time_ > 0.0) {
-      double interval = cur_time - last_act_start_time_;
-      act_interval_acc_ += interval;
-    }
-    last_act_start_time_ = cur_time;
+    ActEvent* act_event = StartRecordEvent();
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
     for (auto& pair : naive_readable_regst_) {
@@ -225,13 +231,7 @@ void Actor::ActUntilFail() {
       pair.second.pop_front();
       if (pair.second.empty()) { naive_readable_regst_cnt_ -= 1; }
     }
-    if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
-      device_ctx_->AddCallBack([act_event]() {
-        act_event->set_stop_time(GetCurTime());
-        Global<CtrlClient>::Get()->PushActEvent(*act_event);
-        delete act_event;
-      });
-    }
+    EndRecordEvent(act_event);
   }
 }
 

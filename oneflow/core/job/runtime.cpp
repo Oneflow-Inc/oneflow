@@ -70,10 +70,10 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
 
 void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
+  Global<ActEventLogger>::New(is_experiment_phase);
   int64_t piece_num = 0;
   if (is_experiment_phase) {
     piece_num = job_desc->piece_num_of_experiment_phase();
-    Global<ActEventLogger>::New();
   } else {
     if (job_desc->IsTrain()) {
       piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();

@@ -4,20 +4,23 @@
 
 namespace oneflow {
 
-void Profiler::PushAvgActInterval(int64_t actor_id, double avg_act_interval) {
-  actor_id2profile_info_[actor_id].set_avg_act_interval(avg_act_interval);
-}
+// void Profiler::PushAvgActInterval(int64_t actor_id, double avg_act_interval) {
+//  actor_id2profile_info_[actor_id].set_avg_act_interval(avg_act_interval);
+// }
 
-void Profiler::PushAvgActTime(int64_t actor_id, double avg_act_time) {
-  actor_id2profile_info_[actor_id].set_avg_act_time(avg_act_time);
-}
+// void Profiler::PushAvgActTime(int64_t actor_id, double avg_act_time) {
+//  actor_id2profile_info_[actor_id].set_avg_act_time(avg_act_time);
+// }
 
-void Profiler::Profile(const Plan& plan) {
+void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) {
   HashMap<int64_t, TaskType> task_id2task_type;
   for (const TaskProto& task : plan.task()) {
     CHECK(task_id2task_type.emplace(task.task_id(), task.task_type()).second);
   }
   using ProfileInfoPair = std::pair<int64_t, ActorProfileInfo>;
+
+
+
   std::vector<ProfileInfoPair> profile_info_vec(actor_id2profile_info_.begin(),
                                                 actor_id2profile_info_.end());
   std::sort(profile_info_vec.begin(), profile_info_vec.end(),

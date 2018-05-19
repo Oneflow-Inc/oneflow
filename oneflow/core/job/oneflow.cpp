@@ -5,7 +5,7 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
-#include "oneflow/core/job/profiler.h"
+// #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
@@ -76,7 +76,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<IDMgr>::New();
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
+  // if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
@@ -99,7 +99,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     const AvailableMemDesc& amd = PullAvailableMemDesc();
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     Improver improver(amd);
-    plan = improver.Improve(plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    plan =
+        improver.Improve(plan, JoinPath(LogDir(), ActEventLogger::experiment_prefix_
+                                                      + ActEventLogger::act_event_bin_filename_));
     Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
@@ -110,11 +112,11 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(plan); }
+  // if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(plan); }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
+  // if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
   Global<JobDesc>::Delete();

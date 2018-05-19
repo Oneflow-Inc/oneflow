@@ -28,8 +28,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
   OF_PP_MAKE_TUPLE_SEQ(Clear)         \
   OF_PP_MAKE_TUPLE_SEQ(IncreaseCount) \
-  OF_PP_MAKE_TUPLE_SEQ(EraseCount)    \
-  OF_PP_MAKE_TUPLE_SEQ(PushAvgActInterval)
+  OF_PP_MAKE_TUPLE_SEQ(EraseCount)
 
 enum class CtrlMethod {
 #define MAKE_ENTRY(method) k##method,
