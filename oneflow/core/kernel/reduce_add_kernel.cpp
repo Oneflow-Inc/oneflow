@@ -13,7 +13,7 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
   const PbRpf<std::string>& input_bns = this->op_attribute().input_bns();
   bool is_first_add = *static_cast<int64_t*>(ctx.other) % input_bns.size() == 0;
 
-  Blob* copy_buf_blob = BnInOp2Blob(this->op_attribute().data_tmp_bns().Get(0));
+  Blob* copy_buf_blob = BnInOp2Blob("copy_buf");
   Blob* out_blob = BnInOp2Blob("out");
   int64_t elem_cnt = out_blob->shape().elem_cnt();
   FOR_RANGE(int32_t, i, 0, input_bns.size()) {

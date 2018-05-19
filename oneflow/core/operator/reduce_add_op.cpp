@@ -26,7 +26,7 @@ void ReduceAddOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> Get
   CHECK_EQ(in_num, parallel_ctx->parallel_num());
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
-  *GetBlobDesc4BnInOp(SoleDtbn()) = *first_in_blob;
+  *GetBlobDesc4BnInOp("copy_buf") = *first_in_blob;
   *GetBlobDesc4BnInOp(SoleObn()) = *first_in_blob;
   for (int32_t i = 1; i < in_num; ++i) {
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
