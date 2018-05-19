@@ -5,7 +5,7 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
-// #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
@@ -76,7 +76,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<IDMgr>::New();
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  // if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
@@ -112,11 +112,19 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
-  // if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(plan); }
+  if (machine_ctx->IsThisMachineMaster()) {
+    if (Global<JobDesc>::Get()->record_nonexperiment_level() > 0) {
+      Global<Profiler>::Get()->Profile(
+          plan,
+          JoinPath(LogDir(),
+                   ActEventLogger::experiment_prefix_ + ActEventLogger::act_event_bin_filename_),
+          JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    }
+  }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  // if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
   Global<JobDesc>::Delete();

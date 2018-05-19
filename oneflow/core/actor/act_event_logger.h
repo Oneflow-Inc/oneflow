@@ -26,6 +26,7 @@ class ActEventLogger final {
   PersistentOutStream bin_out_stream_;
   PersistentOutStream txt_out_stream_;
 };
+void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events);
 
 }  // namespace oneflow
 

@@ -1,9 +1,9 @@
 #include "oneflow/core/job/improver.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
 
@@ -35,17 +35,6 @@ uint64_t CalcRegstNum(
   regst_num = std::max(regst_num, static_cast<uint64_t>(regst_desc.min_register_num()));
   regst_num = std::min(regst_num, static_cast<uint64_t>(regst_desc.max_register_num()));
   return regst_num;
-}
-
-void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events) {
-  NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
-  int64_t act_event_size;
-  while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
-    std::vector<char> buffer(act_event_size);
-    CHECK(!in_stream.Read(buffer.data(), act_event_size));
-    act_events->emplace_back();
-    act_events->back().ParseFromArray(buffer.data(), act_event_size);
-  }
 }
 
 uint64_t CalcMemoryConsumed(

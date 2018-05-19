@@ -194,26 +194,36 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 ActEvent* Actor::StartRecordEvent() {
-  ActEvent* act_event;
   if (Global<RuntimeCtx>::Get()->need_record_event()) {
-    act_events_.emplace_back(new ActEvent);
-    act_event = act_events_.back();
+    act_events_.push_back(new ActEvent);
+    ActEvent* act_event = act_events_.back();
     act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
     act_event->set_actor_id(actor_id_);
     act_event->set_work_stream_id(GetGlobalWorkStreamId());
     act_event->set_act_id(act_id_);
     act_event->set_ready_time(GetCurTime());
-    ForEachCurReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      SetReadableRegstInfo(readable_regst, info);
-    });
-    device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
+
+    if (Global<RuntimeCtx>::Get()->is_experiment_phase()
+        || Global<JobDesc>::Get()->record_nonexperiment_level() > 1) {
+      ForEachCurReadableRegst([&](const Regst* readable_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        SetReadableRegstInfo(readable_regst, info);
+      });
+      device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
+    } else {
+      act_event->set_start_time(0);
+      act_event->set_stop_time(0);
+    }
+    return act_event;
+  } else {
+    return nullptr;
   }
-  return act_event;
 }
 
 void Actor::EndRecordEvent(ActEvent* act_event) {
-  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+  if (Global<RuntimeCtx>::Get()->is_experiment_phase()
+      || Global<JobDesc>::Get()->record_nonexperiment_level() > 1) {
+    CHECK_NOTNULL(act_event);
     device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
   }
 }
