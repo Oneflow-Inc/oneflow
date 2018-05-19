@@ -24,22 +24,6 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
   int32_t dim = kernel_conf_.dim();
   CHECK_GE(dim, 1);
   CHECK_LE(dim, 3);
-  set_pooling_desc(type, dim);
-#endif  // WITH_CUDA
-}
-
-#ifdef WITH_CUDA
-const cudnnTensorDescriptor_t& PoolingCtx::cudnn_in_tensor_desc() const { return in_desc_->Get(); }
-
-const cudnnTensorDescriptor_t& PoolingCtx::cudnn_out_tensor_desc() const {
-  return out_desc_->Get();
-}
-
-const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
-  return pooling_desc_->Get();
-}
-
-void PoolingCtx::set_pooling_desc(DataType type, int32_t dim) {
   std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
   std::vector<int> out_dim = GetStdVecFromShapeInKernelConf("out");
 
@@ -92,9 +76,23 @@ void PoolingCtx::set_pooling_desc(DataType type, int32_t dim) {
     out_stride[1] = 1;
     in_stride[0] = in_shape[2] * in_stride[2];
     out_stride[0] = out_shape[2] * out_stride[2];
+  } else {
+    UNIMPLEMENTED();
   }
   in_desc_.reset(new CudnnTensorDesc(type, ncx_dim, in_shape.data(), in_stride.data()));
   out_desc_.reset(new CudnnTensorDesc(type, ncx_dim, out_shape.data(), out_stride.data()));
+#endif  // WITH_CUDA
+}
+
+#ifdef WITH_CUDA
+const cudnnTensorDescriptor_t& PoolingCtx::cudnn_in_tensor_desc() const { return in_desc_->Get(); }
+
+const cudnnTensorDescriptor_t& PoolingCtx::cudnn_out_tensor_desc() const {
+  return out_desc_->Get();
+}
+
+const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
+  return pooling_desc_->Get();
 }
 
 #endif  // WITH_CUDA
