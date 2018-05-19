@@ -192,7 +192,11 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)>
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-        comp_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuDeviceThrdId(dev_phy_id));
+        if (comp_task_node->NeedIndependentWorkStream()) {
+          comp_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuIndependentThrdId(dev_phy_id));
+        } else {
+          comp_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuComputeThrdId(dev_phy_id));
+        }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         comp_task_node->set_thrd_id(AllocateCpuThrdId(comp_task_node));
       } else {

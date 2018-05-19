@@ -110,6 +110,15 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
+int64_t TaskNode::MemZoneId121() const {
+  const IDMgr* id_mgr = Global<IDMgr>::Get();
+  if (device_type() == DeviceType::kCPU) {
+    return id_mgr->CpuMemZoneId();
+  } else {
+    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
+  }
+}
+
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
@@ -138,7 +147,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
     mem_case->mutable_host_mem();
   } else if (device_type() == DeviceType::kGPU) {
     mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id_));
+        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
   } else {
     UNIMPLEMENTED();
   }

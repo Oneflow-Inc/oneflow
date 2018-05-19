@@ -29,12 +29,20 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Type);
+  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
+  int64_t MemZoneId121() const override {
+    if (copy_type_ == CopyHdOpConf::H2D) {
+      return TaskNode::MemZoneId121();
+    } else if (copy_type_ == CopyHdOpConf::D2H) {
+      return Global<IDMgr>::Get()->CpuMemZoneId();
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
 
  private:
-  int64_t AllocateLocalWorkStreamId() override;
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 

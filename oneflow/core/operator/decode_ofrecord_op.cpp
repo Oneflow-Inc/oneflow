@@ -10,7 +10,7 @@ void DecodeOFRecordOp::InitFromOpConf() {
   }
   if (conf.part_name_suffix_length() != -1) {
     CHECK_GE(conf.part_name_suffix_length(),
-             std::to_string(Global<JobDesc>::Get()->job_conf().data_part_num() - 1).length());
+             std::to_string(Global<JobDesc>::Get()->other_conf().data_part_num() - 1).length());
   }
 }
 

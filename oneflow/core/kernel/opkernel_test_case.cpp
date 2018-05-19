@@ -324,24 +324,21 @@ OpKernelTestCase::OpKernelTestCase()
   parallel_ctx_.set_parallel_id(0);
   parallel_ctx_.set_parallel_num(1);
   parallel_ctx_.set_policy(ParallelPolicy::kModelParallel);
-  job_conf_.set_piece_size(1);
+  job_conf_.mutable_other()->set_piece_size(1);
 }
 
-void OpKernelTestCase::InitJobConf(const std::function<void(JobConf*)>& Init) {
+void OpKernelTestCase::InitJobConf(const std::function<void(JobConf1*)>& Init) {
   Init(&job_conf_);
   UpdateGlobalJobDesc();
 }
 
 void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
-  InitJobConf([=](JobConf* job_conf) { job_conf->set_default_data_type(default_data_type); });
+  InitJobConf([=](JobConf1* job_conf) {
+    job_conf->mutable_other()->set_default_data_type(default_data_type);
+  });
 }
 
-void OpKernelTestCase::UpdateGlobalJobDesc() {
-  JobDescProto job_desc_proto;
-  *job_desc_proto.mutable_job_conf() = job_conf_;
-  if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
-  Global<JobDesc>::New(job_desc_proto);
-}
+void OpKernelTestCase::UpdateGlobalJobDesc() { TODO(); }
 
 void OpKernelTestCase::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
@@ -352,9 +349,9 @@ void OpKernelTestCase::InitBeforeRun() {
 
 void OpKernelTestCase::set_is_train(bool is_train) {
   if (is_train) {
-    job_conf_.mutable_train_conf();
+    job_conf_.mutable_other()->mutable_train_conf();
   } else {
-    job_conf_.mutable_predict_conf();
+    job_conf_.mutable_other()->mutable_predict_conf();
   }
   UpdateGlobalJobDesc();
 }

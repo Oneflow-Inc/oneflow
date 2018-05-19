@@ -92,7 +92,7 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 
 struct GlobalFSConstructor {
   GlobalFSConstructor() {
-    const GlobalFSConf& gfs_conf = Global<JobDesc>::Get()->job_conf().globalfs_conf();
+    const GlobalFSConf& gfs_conf = Global<JobDesc>::Get()->other_conf().globalfs_conf();
     if (gfs_conf.has_localfs_conf()) {
       CHECK_EQ(Global<JobDesc>::Get()->resource().machine().size(), 1);
       gfs = LocalFS();

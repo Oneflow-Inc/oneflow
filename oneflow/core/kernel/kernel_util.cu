@@ -109,6 +109,17 @@ __device__ void ComputeOffset(const int32_t num_axis, const int64_t* x_dims,
   }
 }
 
+template<typename T>
+__global__ void CopyColsRegionGpu(const int64_t row_num, const int64_t col_num, const T* x,
+                                  const int64_t x_col_offset, const int64_t x_lda, T* y,
+                                  const int64_t y_col_offset, const int64_t y_lda) {
+  CUDA_1D_KERNEL_LOOP(index, row_num * col_num) {
+    const int64_t i = index / col_num;
+    const int64_t j = index % col_num;
+    y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
+  }
+}
+
 __device__ int64_t GetXIndex(const int32_t num_axis, const int64_t* y_shape,
                              const int64_t* x_strides, int64_t y_idx) {
   int64_t x_idx = 0;
@@ -199,6 +210,13 @@ KU_IF_METHOD Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* tem
                  size_t temp_storage_bytes) {
   CudaCheck(
       cub::DeviceReduce::Sum(temp_storage, temp_storage_bytes, x, sum_ptr, n, ctx->cuda_stream()));
+}
+KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                            const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
+                            const int64_t y_col_offset, const int64_t y_lda) {
+  CopyColsRegionGpu<T>
+      <<<BlocksNum4ThreadsNum(row_num * col_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+          row_num, col_num, x, x_col_offset, x_lda, y, y_col_offset, y_lda);
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
@@ -360,11 +378,36 @@ template<>
 __device__ double gpu_atomic_add(double* address, const double val) {
   auto address_as_ull = reinterpret_cast<unsigned long long int*>(address);
   unsigned long long int old = *address_as_ull;
-  unsigned long long int assumed;
+  unsigned long long int assumed = 0;
   do {
     assumed = old;
     old = atomicCAS(address_as_ull, assumed,
                     __double_as_longlong(val + __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+
+template<>
+__device__ float gpu_atomic_max(float* address, const float val) {
+  int* address_as_i = (int*)address;
+  int old = *address_as_i;
+  int assumed = 0;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_i, assumed, __float_as_int(fmaxf(val, __int_as_float(assumed))));
+  } while (assumed != old);
+  return __int_as_float(old);
+}
+
+template<>
+__device__ double gpu_atomic_max(double* address, const double val) {
+  unsigned long long int* address_as_i = (unsigned long long int*)address;
+  unsigned long long int old = *address_as_i;
+  unsigned long long int assumed = 0;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_i, assumed,
+                    __double_as_longlong(fmaxf(val, __longlong_as_double(assumed))));
   } while (assumed != old);
   return __longlong_as_double(old);
 }

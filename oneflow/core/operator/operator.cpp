@@ -70,14 +70,6 @@ const std::string& Operator::SoleDtbn() const {
   CHECK_EQ(data_tmp_bns().size(), 1);
   return data_tmp_bns().Get(0);
 }
-const std::string& Operator::SoleFbbn() const {
-  CHECK_EQ(fw_buf_bns().size(), 1);
-  return fw_buf_bns().Get(0);
-}
-const std::string& Operator::SoleBbbn() const {
-  CHECK_EQ(bw_buf_bns().size(), 1);
-  return bw_buf_bns().Get(0);
-}
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
@@ -111,15 +103,9 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlo
   UNIMPLEMENTED() << typeid(*this).name();
 }
 
-void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
-                                   const OpContext* op_ctx) const {
-  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-}
-
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
   if (IsDecodeOp()) {
-    CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->job_conf().data_part_num())
+    CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->other_conf().data_part_num())
         << "parallel_num of data loader is not equal to the data_part_num in "
            "job.prototxt";
   }
@@ -238,14 +224,6 @@ void Operator::EnrollDataTmpBn(const std::string& dtbn) {
   *(mut_data_tmp_bns()->Add()) = dtbn;
   CHECK(mut_bn_in_op2lbi()->insert({dtbn, dtbn2lbi(dtbn)}).second);
 }
-void Operator::EnrollFwBufBn(const std::string& fbbn) {
-  *(mut_fw_buf_bns()->Add()) = fbbn;
-  CHECK(mut_bn_in_op2lbi()->insert({fbbn, fbbn2lbi(fbbn)}).second);
-}
-void Operator::EnrollBwBufBn(const std::string& bbbn) {
-  *(mut_bw_buf_bns()->Add()) = bbbn;
-  CHECK(mut_bn_in_op2lbi()->insert({bbbn, bbbn2lbi(bbbn)}).second);
-}
 void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   LogicalBlobId lbi = ibn2lbi(ibn);
   *(mut_input_bns()->Add()) = ibn;
@@ -323,20 +301,6 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   LogicalBlobId lbi;
   lbi.set_op_name(op_name());
   lbi.set_blob_name(data_tmp_bn);
-  return lbi;
-}
-
-LogicalBlobId Operator::fbbn2lbi(const std::string& fw_buf_bn) const {
-  LogicalBlobId lbi;
-  lbi.set_op_name(op_name());
-  lbi.set_blob_name(fw_buf_bn);
-  return lbi;
-}
-
-LogicalBlobId Operator::bbbn2lbi(const std::string& bw_buf_bn) const {
-  LogicalBlobId lbi;
-  lbi.set_op_name(op_name());
-  lbi.set_blob_name(bw_buf_bn);
   return lbi;
 }
 
