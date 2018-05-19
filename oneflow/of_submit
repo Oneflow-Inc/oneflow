@@ -2,7 +2,6 @@
 
 import os
 import sys
-import paramiko
 import getpass
 import google.protobuf.text_format as pbtxt
 from tempfile import NamedTemporaryFile

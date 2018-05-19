@@ -86,7 +86,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
     Connect<TaskNode>(
-        Build121BufTo(src, dst->machine_id(), dst->MemZoneId(),
+        Build121BufTo(src, dst->machine_id(), dst->MemZoneId121(),
                       [&](int64_t machine_id, int32_t mem_zone_id) {
                         return *Mut121BufTask(src, machine_id, mem_zone_id);
                       },
@@ -179,7 +179,7 @@ TaskNode* TaskGraph::Build121BufTo(
       return Build121BufTo(dst_cpu, dst_machine_id, dst_mem_zone_id, Get121BufTask, Set121BufTask);
     }
   } else {
-    if (src->MemZoneId() == dst_mem_zone_id) {
+    if (src->MemZoneId121() == dst_mem_zone_id) {
       return Set121BufTask(dst_machine_id, dst_mem_zone_id, src);
     } else {
       if (dst_mem_zone_id == cpu_mem_zone_id) {
@@ -188,9 +188,8 @@ TaskNode* TaskGraph::Build121BufTo(
         TaskNode* src_cpu =
             Build121BufTo(src, dst_machine_id, cpu_mem_zone_id, Get121BufTask, Set121BufTask);
         CopyHdTaskNode* src_h2d = NewNode<CopyHdTaskNode>();
-        src_h2d->Init(dst_machine_id,
-                      Global<IDMgr>::Get()->GetThrdIdFromGpuMemZoneId(dst_mem_zone_id),
-                      CopyHdOpConf::H2D);
+        src_h2d->Init(CopyHdOpConf::H2D, dst_machine_id,
+                      Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id));
         Connect<TaskNode>(src_cpu, NewEdge(), src_h2d);
         return Set121BufTask(dst_machine_id, dst_mem_zone_id, src_h2d);
       }
@@ -201,7 +200,7 @@ TaskNode* TaskGraph::Build121BufTo(
 TaskNode* TaskGraph::AddCopyH2DTaskIfNotCpu(TaskNode* task) {
   if (task->device_type() == DeviceType::kCPU) { return task; }
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(task->machine_id(), task->thrd_id(), CopyHdOpConf::H2D);
+  copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
   Connect<TaskNode>(copy_task, NewEdge(), task);
   return copy_task;
 }
@@ -209,7 +208,7 @@ TaskNode* TaskGraph::AddCopyH2DTaskIfNotCpu(TaskNode* task) {
 TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
   if (task->device_type() == DeviceType::kCPU) { return task; }
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
-  copy_task->Init(task->machine_id(), task->thrd_id(), CopyHdOpConf::D2H);
+  copy_task->Init(CopyHdOpConf::D2H, task->machine_id(), task->GpuPhyId());
   Connect<TaskNode>(task, NewEdge(), copy_task);
   return copy_task;
 }
