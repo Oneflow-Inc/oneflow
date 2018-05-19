@@ -21,10 +21,11 @@ class ReduceAGActor final : public Actor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {}};
   }
+  int64_t GetCurPieceId() { return processed_regsts_cnt_ / pending_in_regsts_.size(); }
 
   int64_t processed_regsts_cnt_;
   int64_t in_regsts_eord_cnt_;
-  HashMap<int64_t, std::queue<Regst*>> in_regsts_;
+  HashMap<int64_t, std::queue<Regst*>> pending_in_regsts_;
   HashMap<int64_t, Regst*> ready_in_regsts_;
 };
 
