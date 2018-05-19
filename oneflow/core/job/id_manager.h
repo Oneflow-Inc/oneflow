@@ -14,35 +14,31 @@ class IDMgr final {
 
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
-  const std::string& MachineName4MachineId(int64_t machine_id) const {
-    return machine_id2machine_name_.at(machine_id);
-  }
+  const std::string& MachineName4MachineId(int64_t machine_id) const;
 
   // Get ThrdId, TaskId, RegstDescId
-  int64_t GetGpuDeviceThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
-  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
-  int64_t GetPersistenceThrdId(int64_t offset) const {
-    return gpu_device_num_ + cpu_device_num_ + offset;
-  }
-  int64_t CommNetThrdId() const {
-    return gpu_device_num_ + cpu_device_num_ + Global<JobDesc>::Get()->PersistenceWorkerNum();
-  }
+  int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
+  int64_t GetGpuH2DThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuD2HThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuIndependentThrdId(int64_t dev_phy_id) const;
+  int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
+  int64_t GetPersistenceThrdId(int64_t offset) const;
+  int64_t CommNetThrdId() const;
+
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
-  // Get MemZoneId
+  // MemZoneId
   int64_t CpuMemZoneId() const { return Global<JobDesc>::Get()->GpuDeviceNum(); }
-  int64_t GpuMemZoneId(int64_t dev_phy_id) { return dev_phy_id; }
+  int64_t GpuMemZoneId(int64_t dev_phy_id) const { return dev_phy_id; }
+  int64_t GetGpuPhyIdFromMemZoneId(int64_t mem_zone_id) const {
+    CHECK_LT(mem_zone_id, gpu_device_num_);
+    return mem_zone_id;
+  }
 
   // GetFromThrdId
   DeviceType GetDeviceTypeFromThrdId(int64_t thrd_id) const;
-  int64_t GetGpuDevPhyIdFromThrdId(int64_t thrd_id) const;
-  int64_t GetMemZoneIdFromThrdId(int64_t thrd_id) const;
-
-  int64_t GetThrdIdFromGpuMemZoneId(int64_t mem_zone_id) {
-    CHECK_NE(mem_zone_id, CpuMemZoneId());
-    return mem_zone_id;
-  }
+  int64_t GetGpuPhyIdFromThrdId(int64_t thrd_id) const;
 
   // Runtime
   DeviceType GetDeviceTypeFromActorId(int64_t actor_id) const;
@@ -53,9 +49,7 @@ class IDMgr final {
   // for cpu:
   //   0: the actor thread
   // for gpu:
-  //   0: the compute cuda stream
-  //   1: the copy h2d cuda stream
-  //   2: the copy d2h cuda stream
+  //   0: the global cuda stream
   //   other: start from 100
   int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
   int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
