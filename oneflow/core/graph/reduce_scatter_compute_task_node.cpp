@@ -18,7 +18,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
       MemoryCase* mem_case = out_regst.get()->mut_mem_case();
       mem_case->Clear();
       mem_case->mutable_device_cuda_mem()->set_device_id(
-          Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id()));
+          Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id()));
     }
   }
 }

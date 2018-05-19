@@ -1,6 +1,3 @@
-dlnet_filepath: "./train_net.prototxt"
-resource_filepath: "./single_machine_resource.prototxt"
-placement_filepath: "./single_machine_train_placement.prototxt"
 use_rdma: false
 globalfs_conf {
   hdfs_conf {

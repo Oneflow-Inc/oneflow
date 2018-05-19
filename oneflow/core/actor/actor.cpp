@@ -97,7 +97,7 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
     case DeviceType::kGPU: {
       CudaStreamHandle* cuda_handle = nullptr;
       if (GetLocalWorkStreamId() == 0) {
-        cuda_handle = thread_ctx.compute_cuda_stream.get();
+        cuda_handle = thread_ctx.g_cuda_stream.get();
       } else {
         CHECK(Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(GetLocalWorkStreamId()));
         cuda_handle = &cuda_handle_;
