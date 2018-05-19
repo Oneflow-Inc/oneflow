@@ -219,7 +219,7 @@ void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2i
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
     if (fw_node == nullptr) { return; }
-    if (fw_node->HasOpWithModelOrModelTmpBlob()) {
+    if (fw_node->HasOpWithModelBlob()) {
       CHECK(nodes_need_bw.insert(fw_node).second);
       return;
     }
@@ -390,7 +390,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     if (is_train && fw_logical->HasOpWithForwardModelBlob()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
-    if (fw_logical->HasOpWithModelOrModelTmpBlob()) {
+    if (fw_logical->HasOpWithModelOrConstModelBlob()) {
       // MdUpdt MdSave
       NormalMdUpdtLogicalNode* md_updt_logical = nullptr;
       if (fw_logical->shared_model_nodes() == nullptr) {
@@ -484,7 +484,7 @@ void LogicalGraph::SetupNormalMdUpdtOp() {
     NormalModelUpdateOpConf* mdupdt_conf = op_conf.mutable_normal_mdupdt_conf();
     const JobDesc* job_desc = Global<JobDesc>::Get();
     if (Global<JobDesc>::Get()->IsTrain()) {
-      *(mdupdt_conf->mutable_user_conf()) = job_desc->job_conf().train_conf().model_update_conf();
+      *(mdupdt_conf->mutable_user_conf()) = job_desc->other_conf().train_conf().model_update_conf();
     }
     mdupdt_conf->set_in_num(node->in_edges().size());
     node->mut_op_vec() = {ConstructOp(op_conf)};

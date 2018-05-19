@@ -13,10 +13,8 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(int64_t work_stream_id, void* actor_read_id)
-      : DeviceCtx(), actor_read_id_(actor_read_id), read_id_(nullptr) {
-    set_work_stream_id(work_stream_id);
-  }
+  CommNetDeviceCtx(void* actor_read_id)
+      : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id), read_id_(nullptr) {}
 
   void AddCallBack(std::function<void()> callback) const override {
     Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);
@@ -38,7 +36,7 @@ void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
 
 void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
   actor_read_id_ = Global<CommNet>::Get()->NewActorReadId();
-  comm_net_device_ctx_ = new CommNetDeviceCtx(GetReservedWorkStreamId(0), actor_read_id_);
+  comm_net_device_ctx_ = new CommNetDeviceCtx(actor_read_id_);
   mut_device_ctx().reset(comm_net_device_ctx_);
 }
 
@@ -67,13 +65,13 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
 void CopyCommNetActor::Act() {
   // readable
   auto readable_it = piece_id2regst_ctx.find(next_piece_id_);
-  const void* readable_token = readable_it->second.comm_net_token;
+  void* readable_token = readable_it->second.comm_net_token;
   Regst* readable_regst = readable_it->second.regst_raw_ptr;
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
   Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
-  const void* writeable_token = writeable_blob->comm_net_token();
+  void* writeable_token = writeable_blob->comm_net_token();
   // Async
   void* read_id =
       Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);

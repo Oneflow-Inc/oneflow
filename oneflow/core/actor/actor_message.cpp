@@ -77,7 +77,7 @@ int64_t ActorMsg::act_id() const {
   return regst_wrapper_.regst_status.act_id;
 }
 
-const void* ActorMsg::comm_net_token() const {
+void* ActorMsg::comm_net_token() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.comm_net_token;
 }

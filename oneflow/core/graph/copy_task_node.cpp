@@ -22,9 +22,19 @@ void CopyTaskNode::BuildExecGphAndRegst() {
 }
 
 void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Type copy_type) {
+  copy_type_ = copy_type;
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
-  copy_type_ = copy_type;
+}
+
+int64_t CopyHdTaskNode::AllocateLocalWorkStreamId() {
+  if (copy_type_ == CopyHdOpConf::H2D) {
+    return 1;
+  } else if (copy_type_ == CopyHdOpConf::D2H) {
+    return 2;
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {

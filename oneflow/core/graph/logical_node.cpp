@@ -168,9 +168,9 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-bool LogicalNode::HasOpWithModelOrModelTmpBlob() const {
+bool LogicalNode::HasOpWithModelOrConstModelBlob() const {
   return HasOpWithCondition([](const Operator* op) {
-    return op->model_bns().empty() == false || op->model_tmp_bns().empty() == false;
+    return op->model_bns().empty() == false || op->const_model_bns().empty() == false;
   });
 }
 

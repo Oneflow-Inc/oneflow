@@ -5,11 +5,21 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename PredType, typename LabelType>
+void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::InitConstBufBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  InitializerConf sum_multiplier_initializer_conf;
+  sum_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
+  KernelUtil<device_type, PredType>::InitializeWithConf(ctx, sum_multiplier_initializer_conf, 0,
+                                                        BnInOp2Blob("sum_multiplier"));
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
 void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::
     VirtualLossForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* prediction_blob = BnInOp2Blob("prediction");
   const Blob* label_blob = BnInOp2Blob("label");
+  const Blob* sum_multiplier_blob = BnInOp2Blob("sum_multiplier");
   Blob* prob_blob = BnInOp2Blob("prob");
   Blob* loss_blob = BnInOp2Blob("loss");
   const int64_t n = prediction_blob->shape().At(0);
@@ -19,7 +29,8 @@ void SparseSoftmaxCrossEntropyLossKernel<device_type, PredType, LabelType>::
   PredType* prob = prob_blob->mut_dptr<PredType>();
   PredType* loss = loss_blob->mut_dptr<PredType>();
   // forward
-  SoftmaxComputeProb<device_type, PredType>(ctx.device_ctx, n, w, pred, loss, prob);
+  SoftmaxComputeProb<device_type, PredType>(ctx.device_ctx, n, w, pred, loss, prob,
+                                            sum_multiplier_blob->dptr<PredType>());
   SparseCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(ctx.device_ctx, n, w,
                                                                               prob, label, loss);
   // backward

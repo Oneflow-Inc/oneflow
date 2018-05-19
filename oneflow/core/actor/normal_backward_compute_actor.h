@@ -30,9 +30,11 @@ class NormalBackwardCompActor final : public CompActor {
   int64_t b121_out_regst_desc_id_;
 
   int64_t model_regst_desc_id_;
-  int64_t model_tmp_regst_desc_id_;
+  int64_t const_buf_regst_desc_id_;
+  int64_t const_model_regst_desc_id_;
   std::queue<Regst*> model_regst_queue_;
-  Regst* model_tmp_regst_;
+  Regst* const_model_regst_;
+  Regst* const_buf_regst_;
 
   int32_t staleness_;
 };

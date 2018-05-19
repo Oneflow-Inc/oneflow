@@ -20,8 +20,8 @@ class ConvKernelIf : public KernelIfWithActivation<device_type, T>,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void InitPureModelTmpBlobs(DeviceCtx*,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void InitConstBufBlobs(DeviceCtx*,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void InitModelBlobsWithRandomSeed(
       DeviceCtx*, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;

@@ -27,7 +27,7 @@ class IDMgr final {
   int64_t CommNetThrdId() const {
     return gpu_device_num_ + cpu_device_num_ + Global<JobDesc>::Get()->PersistenceWorkerNum();
   }
-  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id);
+  int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
 
   // Get MemZoneId
@@ -49,15 +49,22 @@ class IDMgr final {
   int64_t MachineId4ActorId(int64_t actor_id) const;
   int64_t ThrdId4ActorId(int64_t actor_id) const;
 
-  // reserved_id: 0-999
+  // local_work_stream_id
   // for cpu:
   //   0: the actor thread
   // for gpu:
-  //   0: the copy h2d cuda stream
-  //   1: the copy d2h cuda stream
-  int64_t GetReservedWorkStreamId(int64_t machine_id, int64_t thrd_id, int64_t reserved_id);
-  // start from: 1000
-  int64_t NewWorkStreamId(int64_t machine_id, int64_t thrd_id);
+  //   0: the compute cuda stream
+  //   1: the copy h2d cuda stream
+  //   2: the copy d2h cuda stream
+  //   other: start from 100
+  int64_t AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id);
+  int64_t LocalWorkStreamId4TaskId(int64_t task_id) const;
+  int64_t LocalWorkStreamId4ActorId(int64_t actor_id) const;
+  bool IsIndependentLocalWorkStreamId(int64_t local_wsid) const { return local_wsid >= 100; }
+  // global_work_stream_id
+  // sign | machine_id | thrd_id | local_work_stream_id | 0
+  //  1   |     10     |   11    |          21          | 21
+  int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
 
  private:
   friend class Global<IDMgr>;
@@ -67,18 +74,19 @@ class IDMgr final {
   int64_t gpu_device_num_;
   int64_t cpu_device_num_;
   int64_t regst_desc_id_count_;
-  HashMap<int64_t, int64_t> thread_id2num_of_tasks_;
-  HashMap<int64_t, int64_t> thread_id2num_of_streams_;
+  HashMap<int64_t, int64_t> machine_thrd_id2num_of_tasks_;
+  HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;
 
   //  64 bit id design:
-  //   sign | machine | thread | task
-  //    1   |   16    |   8    |  39
-  static const int64_t machine_id_bit_num_ = 16;
-  static const int64_t thread_id_bit_num_ = 8;
-  static const int64_t task_id_bit_num_ = 39;
+  //   sign | machine | thread | local_work_stream | task
+  //    1   |   10    |   11   |       21          |  21
+  static const int64_t machine_id_bit_num_ = 10;
+  static const int64_t thread_id_bit_num_ = 11;
+  static const int64_t local_work_stream_id_bit_num_ = 21;
+  static const int64_t task_id_bit_num_ = 21;
 };
 
 }  // namespace oneflow

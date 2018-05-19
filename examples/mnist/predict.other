@@ -1,6 +1,3 @@
-dlnet_filepath: "./predict_net.prototxt"
-resource_filepath: "./single_resource.prototxt"
-placement_filepath: "./single_predict_placement.prototxt"
 globalfs_conf {
   localfs_conf {
   }

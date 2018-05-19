@@ -4,16 +4,17 @@
 
 namespace oneflow {
 
-std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase mem_case,
-                                                                                std::size_t size) {
+std::tuple<char*, void*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase mem_case,
+                                                                          std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
-  const void* comm_net_token = nullptr;
+  void* comm_net_token = nullptr;
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().used_by_device()) {
       CudaCheck(cudaMallocHost(&dptr, size));
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
+      CHECK_NOTNULL(dptr);
     }
     if (mem_case.host_mem().used_by_network()) {
       comm_net_token = Global<CommNet>::Get()->RegisterMemory(dptr, size);
@@ -33,7 +34,7 @@ std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
       std::bind(&MemoryAllocator::Deallocate, this, dptr, comm_net_token, mem_case));
 }
 
-void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token, MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(char* dptr, void* comm_net_token, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().used_by_network()) {
       Global<CommNet>::Get()->UnRegisterMemory(comm_net_token);

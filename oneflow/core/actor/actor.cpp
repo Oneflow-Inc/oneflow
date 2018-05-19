@@ -60,7 +60,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
-  writeable_produced_regst_desc_cnt_ = writeable_produced_regst_.size();
+  actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
+  writeable_produced_regst_desc_cnt_ = actual_writeable_produced_regst_desc_num_;
   total_reading_cnt_ = 0;
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
@@ -70,14 +71,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   act_interval_acc_ = 0.0;
   InitDeviceCtx(thread_ctx);
   VirtualActorInit(task_proto);
-}
-
-int64_t Actor::GetReservedWorkStreamId(int64_t reserved_id) {
-  return Global<IDMgr>::Get()->GetReservedWorkStreamId(machine_id(), thrd_id(), reserved_id);
-}
-
-int64_t Actor::NewWorkStreamId() {
-  return Global<IDMgr>::Get()->NewWorkStreamId(machine_id(), thrd_id());
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -97,21 +90,23 @@ const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) con
   return name2regst_desc_id_.at(name);
 }
 
-void Actor::InitDeviceCtx(const ThreadCtx&) {
+void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx(GetReservedWorkStreamId(0)));
+      device_ctx_.reset(new CpuDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size));
       break;
     }
-#ifdef WITH_CUDA
     case DeviceType::kGPU: {
-      device_ctx_.reset(
-          new CudaDeviceCtx(NewWorkStreamId(), cuda_handle_.cuda_stream(),
-                            cuda_handle_.cublas_pmh_handle(), cuda_handle_.cublas_pmd_handle(),
-                            cuda_handle_.cudnn_handle(), cuda_handle_.eigen_gpu_device()));
+      CudaStreamHandle* cuda_handle = nullptr;
+      if (GetLocalWorkStreamId() == 0) {
+        cuda_handle = thread_ctx.compute_cuda_stream.get();
+      } else {
+        CHECK(Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(GetLocalWorkStreamId()));
+        cuda_handle = &cuda_handle_;
+      }
+      device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, cuda_handle));
       break;
     }
-#endif
     default: { UNIMPLEMENTED(); }
   }
 }
@@ -208,7 +203,7 @@ void Actor::ActUntilFail() {
       act_event = new ActEvent;
       act_event->set_actor_id(actor_id_);
       act_event->set_act_id(act_id_);
-      act_event->set_work_stream_id(device_ctx_->work_stream_id());
+      act_event->set_work_stream_id(GetGlobalWorkStreamId());
       ForEachCurReadableRegst([&](const Regst* readable_regst) {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
@@ -241,7 +236,7 @@ void Actor::ActUntilFail() {
 }
 
 bool Actor::IsWriteReady() {
-  return writeable_produced_regst_desc_cnt_ == writeable_produced_regst_.size();
+  return writeable_produced_regst_desc_cnt_ == actual_writeable_produced_regst_desc_num_;
 }
 
 void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx,
@@ -268,7 +263,6 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
 
 void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                         std::function<bool(int64_t)> IsAllowedActor) {
-  int64_t this_actor_id = actor_id_;
   for (auto& pair : writeable_produced_regst_) {
     if (pair.second.empty()) { continue; }
     Regst* regst = pair.second.front();
@@ -280,10 +274,7 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
       total_reading_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
       regst->set_act_id(act_id_);
-      device_ctx_->AddCallBack([consumer, regst, this_actor_id]() {
-        ActorMsg msg = ActorMsg::BuildRegstMsgToConsumer(this_actor_id, consumer, regst);
-        Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
-      });
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
     }
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_cnt_ -= 1; }
@@ -321,8 +312,7 @@ void Actor::AsyncSendRegstMsgToProducer(Regst* regst) {
 }
 
 void Actor::AsyncSendRegstMsgToProducer(Regst* regst, int64_t producer) {
-  ActorMsg msg = ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst);
-  device_ctx_->AddCallBack([msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); });
+  AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer, regst));
 }
 
 Regst* Actor::GetCurWriteableRegst(int64_t regst_desc_id) {
@@ -373,6 +363,13 @@ Regst* Actor::GetNaiveFirstCurReadable() {
   return naive_readable_regst_it->second.front();
 }
 
+Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
+  auto it = produced_regsts_.find(regst_desc_id);
+  CHECK(it != produced_regsts_.end());
+  CHECK_EQ(it->second.size(), 1);
+  return it->second.front().get();
+}
+
 bool Actor::IsReadReady() {
   return naive_readable_regst_.size() == naive_readable_regst_cnt_ && IsCustomizedReadReady();
 }
@@ -408,6 +405,24 @@ void Actor::AddNaiveConsumed(const RegstDescIdSet& regst_desc_ids) {
   for (int64_t regst_desc_id : regst_desc_ids.regst_desc_id()) {
     naive_readable_regst_[regst_desc_id] = {};
   }
+}
+
+void Actor::AsyncSendMsg(const ActorMsg& msg) {
+  std::function<void()> callback = [msg]() { Global<ActorMsgBus>::Get()->SendMsg(msg); };
+  if (GetGlobalWorkStreamId()
+      == Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(msg.dst_actor_id())) {
+    callback();
+  } else {
+    device_ctx_->AddCallBack(callback);
+  }
+}
+
+int64_t Actor::GetGlobalWorkStreamId() const {
+  return Global<IDMgr>::Get()->GlobalWorkStreamId4ActorId(actor_id_);
+}
+
+int64_t Actor::GetLocalWorkStreamId() const {
+  return Global<IDMgr>::Get()->LocalWorkStreamId4ActorId(actor_id_);
 }
 
 std::unique_ptr<Actor> NewActor(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {

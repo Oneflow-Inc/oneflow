@@ -3,34 +3,46 @@
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/comm_network/comm_network.h"
-#include "oneflow/core/comm_network/memory_desc_manager.h"
-#include "oneflow/core/comm_network/ibverbs/endpoint_manager.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs_qp.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
+#include <netdb.h>
+#include <arpa/inet.h>
+
 namespace oneflow {
 
-class IBVerbsCommNet final : public CommNet {
+class IBVerbsCommNet final : public CommNetIf<IBVerbsMemDesc> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IBVerbsCommNet);
-  ~IBVerbsCommNet() = default;
+  IBVerbsCommNet() = delete;
+  ~IBVerbsCommNet();
 
-  static void Init(const Plan& plan);
+  static void Init(const Plan& plan) { Global<CommNet>::SetAllocated(new IBVerbsCommNet(plan)); }
 
-  const void* RegisterMemory(void* mem_ptr, size_t byte_size) override;
-  void UnRegisterMemory(const void* token) override;
   void RegisterMemoryDone() override;
 
   void SendActorMsg(int64_t dst_machine_id, const ActorMsg& msg) override;
 
  private:
-  IBVerbsCommNet(const Plan& plan) { GenConnectionInfo(plan); }
-  void DoRead(void* read_id, int64_t src_machine_id, const void* src_token,
-              const void* dst_token) override;
+  IBVerbsMemDesc* NewMemDesc(void* ptr, size_t byte_size) override {
+    return new IBVerbsMemDesc(pd_, ptr, byte_size);
+  }
 
-  MemDescMgr<IBVerbsMemDesc> mem_desc_mgr_;
-  std::unique_ptr<EndpointManager> endpoint_manager_;
-  HashMap<uint64_t, IBVerbsMemDescProto> token2mem_desc_proto_;
+  IBVerbsCommNet(const Plan&);
+  void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) override;
+  void PollCQ();
+
+  static const int32_t max_poll_wc_num_;
+
+  std::vector<HashMap<void*, IBVerbsMemDescProto>> token2mem_desc_;
+  ibv_context* context_;
+  ibv_pd* pd_;
+  ibv_cq* cq_;
+  std::vector<IBVerbsQP*> qp_vec_;
+  std::atomic_flag poll_exit_flag_;
+  std::thread poll_thread_;
 };
 
 template<>

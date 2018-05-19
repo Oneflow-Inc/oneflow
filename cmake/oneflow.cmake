@@ -97,7 +97,12 @@ foreach(source_file ${of_all_obj_cc} ${of_main_cc} ${of_all_test_cc})
     COMMAND clang-format -i -style=file ${source_file})
 endforeach()
 
+
 # proto obj lib
+add_custom_target(make_pyproto_dir ALL
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${PROJECT_BINARY_DIR}/pyproto/oneflow/core
+  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/oneflow/__init__.py
+  COMMAND ${CMAKE_COMMAND} -E touch ${PROJECT_BINARY_DIR}/pyproto/oneflow/core/__init__.py)
 foreach(proto_name ${of_all_proto})
   file(RELATIVE_PATH proto_rel_name ${PROJECT_SOURCE_DIR} ${proto_name})
   list(APPEND of_all_rel_protos ${proto_rel_name})
@@ -109,6 +114,7 @@ RELATIVE_PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 
 oneflow_add_library(of_protoobj ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(of_protoobj ${oneflow_third_party_libs})
+add_dependencies(of_protoobj make_pyproto_dir)
 
 # cc obj lib
 include_directories(${PROJECT_SOURCE_DIR})  # TO FIND: third_party/eigen3/..

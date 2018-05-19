@@ -42,7 +42,7 @@ PersistentInStreamWithoutLocalCopy::PersistentInStreamWithoutLocalCopy(fs::FileS
   fs->NewRandomAccessFile(file_path, &file_);
   file_size_ = fs->GetFileSize(file_path);
   cur_file_pos_ = offset;
-  buffer_.resize(Global<JobDesc>::Get()->persistence_buffer_byte() + 1);
+  buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';

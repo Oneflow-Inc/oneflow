@@ -1,20 +1,24 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/job/dlnet_conf.proto";
+import "oneflow/core/job/resource.proto";
+import "oneflow/core/job/placement.proto";
 
 message TrainConf {
-  required string model_save_snapshots_path = 1;
-  required int32 num_of_batches_in_snapshot = 2;
-  optional int32 staleness = 3 [default = 0]; // -1 means ASP, 0 means BSP, > 0 means SSP
-  required int64 total_batch_num = 4;
-  optional InitializerConf default_initializer_conf = 5;
-  optional int64 piece_num_of_print_loss = 6 [default = -1];
-  required int64 batch_size = 7; // batch_size % piece_size = 0
-  optional float l1 = 8 [default = 0];
-  optional float l2 = 9 [default = 0];
-  required NormalModelUpdateOpUserConf model_update_conf = 10;
+  required int64 batch_size = 1; // batch_size % piece_size = 0
+  required int64 total_batch_num = 2;
+  required NormalModelUpdateOpUserConf model_update_conf = 3;
+  required string model_save_snapshots_path = 4;
+  required int32 num_of_batches_in_snapshot = 5;
+
+  optional InitializerConf default_initializer_conf = 100;
+  optional float l1 = 101 [default = 0];
+  optional float l2 = 102 [default = 0];
+  optional int32 staleness = 103 [default = 0]; // -1 means ASP, 0 means BSP, > 0 means SSP
+  optional int64 piece_num_of_print_loss = 104 [default = -1];
 }
 
 message PredictConf {
@@ -34,27 +38,40 @@ message GlobalFSConf {
   }
 }
 
-message JobConf {
-  required string dlnet_filepath = 1;
-  required string resource_filepath = 2;
-  required string placement_filepath = 3;
-  required GlobalFSConf globalfs_conf = 4;
-  required int64 piece_size = 5;
-  required int32 data_part_num = 6; // piece_size % data_part_num = 0
-  optional string model_load_snapshot_path = 7 [default = ""];
-  optional int32 max_data_id_length = 8 [default = 0];
-  optional bool use_rdma = 9 [default = false];
-  optional bool use_cudnn_on_gpu = 10 [default = true];
-  optional DataType default_data_type = 11 [default = kFloat]; // kFloat or kDouble
+message OtherConf {
+  required GlobalFSConf globalfs_conf = 1;
+  required int64 piece_size = 2;
+  required int32 data_part_num = 3; // piece_size % data_part_num = 0
 
-  optional int64 piece_num_of_experiment_phase = 101 [default = -1];
-  optional uint64 persistence_buffer_mbyte = 103 [default = 64];
-  optional uint64 reserved_host_mem_mbyte = 150 [default = 500];
-  optional uint64 reserved_device_mem_mbyte = 151 [default = 500];
-  optional bool save_downloaded_file_to_local_fs = 152 [default = true];
+  optional bool use_rdma = 100 [default = false];
+  optional string model_load_snapshot_path = 101 [default = ""];
+  optional int32 max_data_id_length = 102 [default = 0];
+  optional bool use_cudnn_on_gpu = 103 [default = true];
+  optional DataType default_data_type = 104 [default = kFloat]; // kFloat or kDouble
+  optional int64 piece_num_of_experiment_phase = 105 [default = -1];
+  optional uint64 persistence_buf_mbyte = 106 [default = 64];
+  optional uint64 reserved_host_mem_mbyte = 107 [default = 500];
+  optional uint64 reserved_device_mem_mbyte = 108 [default = 500];
+  optional bool save_downloaded_file_to_local_fs = 109 [default = true];
+  optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
+  optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
 
   oneof JobType {
-    TrainConf train_conf = 1000;
-    PredictConf predict_conf = 1001;
+    TrainConf train_conf = 200;
+    PredictConf predict_conf = 201;
   }
+}
+
+message JobConf1 {
+  required DLNetConf net = 1;
+  required Resource resource = 2;
+  required Placement placement = 3;
+  required OtherConf other = 4;
+}
+
+message JobConf2 {
+  required string net = 1;
+  required string resource = 2;
+  required string placement = 3;
+  required string other = 4;
 }
