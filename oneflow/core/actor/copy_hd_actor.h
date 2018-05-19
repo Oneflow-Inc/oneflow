@@ -15,7 +15,6 @@ class CopyHdActor final : public Actor {
 
  private:
   void VirtualActorInit(const TaskProto&) override;
-  void InitDeviceCtx(const ThreadCtx&) override;
   void Act() override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
