@@ -6,6 +6,8 @@
 
 namespace oneflow {
 
+class Thread;
+
 class DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(DeviceCtx);
@@ -14,6 +16,7 @@ class DeviceCtx {
 
   void* buf_ptr() const { return buf_ptr_; }
   size_t buf_size() const { return buf_size_; }
+  Thread* cur_thread() const { return cur_thread_; }
 
 #ifdef WITH_CUDA
   virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
@@ -26,11 +29,15 @@ class DeviceCtx {
   virtual void AddCallBack(std::function<void()>) const = 0;
 
  protected:
-  DeviceCtx(void* buf_ptr, size_t buf_size) : buf_ptr_(buf_ptr), buf_size_(buf_size) {}
+  DeviceCtx(void* buf_ptr, size_t buf_size, Thread* cur_thread)
+      : buf_ptr_(buf_ptr), buf_size_(buf_size), cur_thread_(cur_thread) {}
 
  private:
   void* buf_ptr_;
   size_t buf_size_;
+
+ protected:
+  Thread* cur_thread_;
 };
 
 }  // namespace oneflow

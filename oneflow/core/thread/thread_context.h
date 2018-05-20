@@ -5,9 +5,12 @@
 
 namespace oneflow {
 
+class Thread;
+
 struct ThreadCtx {
   void* buf_ptr;
   size_t buf_size;
+  Thread* cur_thread;
 #ifdef WITH_CUDA
   std::unique_ptr<CudaStreamHandle> g_cuda_stream;
 #endif

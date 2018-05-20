@@ -5,13 +5,15 @@
 
 namespace oneflow {
 
+class Thread;
 class CpuDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() = delete;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(void* buf_ptr, size_t buf_size) : DeviceCtx(buf_ptr, buf_size) {}
+  CpuDeviceCtx(void* buf_ptr, size_t buf_size, Thread* cur_thread)
+      : DeviceCtx(buf_ptr, buf_size, cur_thread) {}
 
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 

@@ -93,7 +93,8 @@ const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) con
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
-      device_ctx_.reset(new CpuDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size));
+      device_ctx_.reset(
+          new CpuDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, thread_ctx.cur_thread));
       break;
     }
     case DeviceType::kGPU: {
@@ -104,7 +105,8 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
         CHECK(Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(GetLocalWorkStreamId()));
         cuda_handle = &cuda_handle_;
       }
-      device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, cuda_handle));
+      device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size,
+                                          thread_ctx.cur_thread, cuda_handle));
       break;
     }
     default: { UNIMPLEMENTED(); }

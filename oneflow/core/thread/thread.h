@@ -18,7 +18,7 @@ class Thread {
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
-  void JoinAllActor() { actor_thread_.join(); }
+  virtual void JoinAllActor() { actor_thread_.join(); }
 
  protected:
   Thread() = default;
