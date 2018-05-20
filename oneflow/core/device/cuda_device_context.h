@@ -9,14 +9,15 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
+class Thread;
 class CudaDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
   CudaDeviceCtx() = delete;
   ~CudaDeviceCtx() = default;
 
-  CudaDeviceCtx(void* buf_ptr, size_t buf_size, CudaStreamHandle* cuda_handler)
-      : DeviceCtx(buf_ptr, buf_size), cuda_handler_(cuda_handler) {}
+  CudaDeviceCtx(void* buf_ptr, size_t buf_size, Thread* cur_thread, CudaStreamHandle* cuda_handler)
+      : DeviceCtx(buf_ptr, buf_size, cur_thread), cuda_handler_(cuda_handler) {}
 
   const cudaStream_t& cuda_stream() const { return *(cuda_handler_->cuda_stream()); }
   const cublasHandle_t& cublas_pmh_handle() const { return *(cuda_handler_->cublas_pmh_handle()); }
