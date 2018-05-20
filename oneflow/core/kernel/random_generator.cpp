@@ -5,10 +5,8 @@ namespace oneflow {
 
 RandomGenerator::RandomGenerator(int64_t seed) : mt19937_generator_(seed) {
 #ifdef WITH_CUDA
-  if (curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT)
-      != CURAND_STATUS_SUCCESS) {
-    CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, GetCurTime()));
-  }
+  CudaCheck(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
+  CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
 #endif
 }
 
