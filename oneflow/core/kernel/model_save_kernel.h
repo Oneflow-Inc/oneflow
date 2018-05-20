@@ -12,7 +12,7 @@ class ModelSaveKernel final : public KernelIf<DeviceType::kCPU> {
   ~ModelSaveKernel() = default;
 
  protected:
-  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx = nullptr) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override;
   void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 
  private:

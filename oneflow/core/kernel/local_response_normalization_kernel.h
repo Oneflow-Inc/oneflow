@@ -54,7 +54,7 @@ class LocalResponseNormalizationKernel<DeviceType::kGPU, T> final
   ~LocalResponseNormalizationKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx = nullptr) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,

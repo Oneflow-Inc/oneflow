@@ -71,7 +71,7 @@ class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kC
   ~ConvKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx = nullptr) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override;
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
@@ -101,7 +101,7 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kG
   ~ConvKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx = nullptr) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override;
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;

@@ -19,7 +19,7 @@ class BasicRnnKernel final : public RecurrentKernel<device_type, T> {
   ~BasicRnnKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx = nullptr) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override;
   const PbMessage& GetRecurrentOpConf() const override;
   bool HasInitHiddenInitializer() const override;
   void ForwardDataContent(const KernelCtx&,

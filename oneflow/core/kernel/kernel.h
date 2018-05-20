@@ -32,7 +32,7 @@ class Kernel {
 
  protected:
   Kernel() = default;
-  virtual void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx = nullptr) {}
+  virtual void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
