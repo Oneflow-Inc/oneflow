@@ -6,7 +6,8 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext*,
+                                                      const DeviceCtx* device_ctx) {
   const auto& dropout_conf = this->op_conf().dropout_conf();
   int64_t seed = GetCurTime();
   if (dropout_conf.has_seed()) { seed = dropout_conf.seed(); }

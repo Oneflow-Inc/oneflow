@@ -4,7 +4,8 @@
 
 namespace oneflow {
 
-void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx,
+                                    const DeviceCtx* device_ctx) {
   const auto& conf = op_conf().print_conf();
   const std::string& root_path = conf.print_dir();
   OF_CALL_ONCE(root_path, GlobalFS()->RecursivelyCreateDir(root_path));

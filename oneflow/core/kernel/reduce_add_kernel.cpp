@@ -3,7 +3,8 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ReduceAddKernel<device_type, T>::VirtualKernelInit(const ParallelContext* ctx) {
+void ReduceAddKernel<device_type, T>::VirtualKernelInit(const ParallelContext* ctx,
+                                                        const DeviceCtx* device_ctx) {
   parallel_id_ = ctx->parallel_id();
 }
 

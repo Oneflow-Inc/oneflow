@@ -4,7 +4,8 @@
 namespace oneflow {
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx,
+                                                        const DeviceCtx* device_ctx) {
   Shape in_shape(this->GetConvKernelConf().in());
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
