@@ -70,7 +70,6 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
 
 void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  Global<ActEventLogger>::New(is_experiment_phase);
   int64_t piece_num = 0;
   if (is_experiment_phase) {
     piece_num = job_desc->piece_num_of_experiment_phase();
@@ -82,6 +81,9 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     }
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    Global<ActEventLogger>::New(is_experiment_phase);
+  }
 #ifdef PLATFORM_POSIX
   if (job_desc->use_rdma()) {
 #ifdef WITH_RDMA
@@ -101,6 +103,7 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
 }
 
 void Runtime::DeleteAllGlobal() {
+  if (Global<RuntimeCtx>::Get()->need_record_event()) { Global<ActEventLogger>::Delete(); }
   Global<ThreadMgr>::Delete();
   Global<ActorMsgBus>::Delete();
   Global<RegstMgr>::Delete();
@@ -108,7 +111,6 @@ void Runtime::DeleteAllGlobal() {
   Global<SnapshotMgr>::Delete();
   Global<CommNet>::Delete();
   Global<RuntimeCtx>::Delete();
-  Global<ActEventLogger>::Delete();
 }
 
 }  // namespace oneflow
