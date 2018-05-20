@@ -25,9 +25,9 @@ Actor::~Actor() {
 }
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  InitDeviceCtx(thread_ctx);
-  actor_id_ = task_proto.task_id();
+  actor_id_ = task_proto.task_id();  // Other stuff depends on actor_id_
   act_id_ = -1;
+  InitDeviceCtx(thread_ctx);
   if (task_proto.has_parallel_ctx()) {
     parallel_ctx_.reset(new ParallelContext(task_proto.parallel_ctx()));
   }

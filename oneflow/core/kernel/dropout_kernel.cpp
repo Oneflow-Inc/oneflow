@@ -11,7 +11,7 @@ void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext*,
   const auto& dropout_conf = this->op_conf().dropout_conf();
   int64_t seed = GetCurTime();
   if (dropout_conf.has_seed()) { seed = dropout_conf.seed(); }
-  random_generator_.reset(new RandomGenerator(seed));
+  random_generator_.reset(new RandomGenerator(seed, device_ctx));
 }
 
 template<DeviceType device_type, typename T>

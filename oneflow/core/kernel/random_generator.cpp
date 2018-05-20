@@ -3,12 +3,14 @@
 
 namespace oneflow {
 
-RandomGenerator::RandomGenerator(int64_t seed) : mt19937_generator_(seed) {
+RandomGenerator::RandomGenerator(int64_t seed, const DeviceCtx* device_ctx)
+    : mt19937_generator_(seed) {
 #ifdef WITH_CUDA
   if (curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT)
       != CURAND_STATUS_SUCCESS) {
     CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, GetCurTime()));
   }
+  if (device_ctx) { CudaCheck(curandSetStream(curand_generator_, device_ctx->cuda_stream())); }
 #endif
 }
 
