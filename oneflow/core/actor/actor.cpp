@@ -19,6 +19,8 @@ bool NeedModelSave(int64_t model_version_id) {
 
 Actor::~Actor() {
   for (auto act_event : act_events_) {
+    act_event->set_launch_time(act_event->start_time() - act_event->ready_time());
+    act_event->set_execution_time(act_event->stop_time() - act_event->start_time());
     Global<CtrlClient>::Get()->PushActEvent(*act_event);
     delete act_event;
   }

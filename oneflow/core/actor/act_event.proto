@@ -14,5 +14,7 @@ message ActEvent {
   required double ready_time = 5;
   required double start_time = 6;
   required double stop_time = 7;
-  repeated ReadableRegstInfo readable_regst_infos = 8;
+  required double launch_time = 8;     // = start_time - ready_time
+  required double execution_time = 9;  // = stop_time - start_time
+  repeated ReadableRegstInfo readable_regst_infos = 10;
 }
