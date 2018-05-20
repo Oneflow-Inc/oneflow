@@ -4,7 +4,7 @@ namespace oneflow {
 
 #ifdef WITH_CUDA
 
-void CopyHdKernel::VirtualKernelInit(const ParallelContext*) {
+void CopyHdKernel::VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) {
   const CopyHdOpConf& copy_hd_conf = op_conf().copy_hd_conf();
 
   if (copy_hd_conf.type() == CopyHdOpConf::H2D) {

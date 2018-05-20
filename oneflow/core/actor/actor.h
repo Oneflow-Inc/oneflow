@@ -46,6 +46,7 @@ class Actor {
   // Util
   Actor() = default;
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
+  const DeviceCtx* device_ctx() const { return device_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t Name2SoleRegstDescId(const std::string& name) const;

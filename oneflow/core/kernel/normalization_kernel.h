@@ -34,7 +34,7 @@ class NormalizationKernel final : public KernelIfWithActivation<device_type, T>,
  private:
   std::unique_ptr<NormalizationCtx> normalization_ctx_;
 #ifdef WITH_CUDA
-  void VirtualKernelInit(const ParallelContext*) override {
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override {
     if (this->kernel_conf().normalization_conf().use_cudnn()) {
       normalization_ctx_.reset(new NormalizationCtx(this->kernel_conf(), GetDataType<T>::value));
     }

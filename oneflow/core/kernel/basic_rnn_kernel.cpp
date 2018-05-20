@@ -3,7 +3,8 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void BasicRnnKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+void BasicRnnKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx,
+                                                       const DeviceCtx* device_ctx) {
   ActivationType activation_type = this->op_conf().basic_rnn_conf().activation();
   if (activation_type == kTanH) {
     activation_fw_func_ = &KernelUtil<device_type, T>::TanH;

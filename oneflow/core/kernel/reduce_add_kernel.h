@@ -13,7 +13,7 @@ class ReduceAddKernel final : public KernelIf<device_type> {
   ~ReduceAddKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx* device_ctx) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   int32_t parallel_id_;
