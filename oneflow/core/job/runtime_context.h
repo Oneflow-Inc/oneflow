@@ -17,7 +17,7 @@ class RuntimeCtx final {
   int64_t total_piece_num() const { return total_piece_num_; }
   bool is_experiment_phase() const { return is_experiment_phase_; }
   bool need_record_event() const {
-    return is_experiment_phase_ || Global<JobDesc>::Get()->record_nonexperiment_level() > 0;
+    return is_experiment_phase_ || Global<JobDesc>::Get()->record_nonexperiment_event();
   }
 
   void NewCounter(const std::string& name, int64_t val);

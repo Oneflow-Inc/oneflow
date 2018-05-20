@@ -56,7 +56,7 @@ message OtherConf {
   optional uint64 rdma_mem_block_mbyte = 110 [default = 8];
   optional uint64 rdma_recv_msg_buf_mbyte = 111 [default = 6];
 
-  optional int32 record_nonexperiment_level = 113 [default = 1];  // 0: no recording, 1: light recording, 2: heavy recording
+  optional bool record_nonexperiment_event = 113 [default = true];
 
   oneof JobType {
     TrainConf train_conf = 200;

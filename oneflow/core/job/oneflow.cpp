@@ -113,12 +113,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   // Runtime
   { Runtime run(plan, false); }
   if (machine_ctx->IsThisMachineMaster()) {
-    if (Global<JobDesc>::Get()->record_nonexperiment_level() > 0) {
-      Global<Profiler>::Get()->Profile(
-          plan,
-          JoinPath(LogDir(),
-                   ActEventLogger::experiment_prefix_ + ActEventLogger::act_event_bin_filename_),
-          JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    if (Global<JobDesc>::Get()->record_nonexperiment_event()) {
+      Global<Profiler>::Get()->Profile(plan,
+                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     }
   }
   // Delete All Global

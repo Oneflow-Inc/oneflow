@@ -46,9 +46,7 @@ class JobDesc final {
   size_t rdma_mem_block_byte() const;
   size_t rdma_recv_msg_buf_byte() const;
 
-  int32_t record_nonexperiment_level() const {
-    return job_conf_.other().record_nonexperiment_level();
-  }
+  bool record_nonexperiment_event() const { return job_conf_.other().record_nonexperiment_event(); }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;

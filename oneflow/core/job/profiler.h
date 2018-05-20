@@ -12,8 +12,7 @@ class Profiler final {
   Profiler() = default;
   ~Profiler() = default;
 
-  void Profile(const Plan& plan, const std::string& experiment_act_event_filepath,
-               const std::string& act_event_filepath);
+  void Profile(const Plan& plan, const std::string& act_event_filepath);
 
  private:
   struct ActProfileInfo {
