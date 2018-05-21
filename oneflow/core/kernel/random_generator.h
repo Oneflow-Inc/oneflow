@@ -22,7 +22,7 @@ struct RandomGeneratorUtil final {
 class RandomGenerator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator(int64_t seed, const DeviceCtx* device_ctx);
+  RandomGenerator(int64_t seed, cudaStream_t cuda_stream);
   ~RandomGenerator();
 
   template<DeviceType device_type, typename T>
