@@ -15,7 +15,7 @@ class DropoutKernel final : public KernelIf<device_type> {
   ~DropoutKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
+  void VirtualKernelInit(const ParallelContext*, const DeviceCtx*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
