@@ -60,7 +60,7 @@ if __name__ == "__main__":
     PrintHelpMessage()
   oneflow_path = "./oneflow"
   workdir = os.getenv("HOME") + "/oneflow_workdir"
-  for arg in sys.argv[1:-1]:
+  for arg in sys.argv[1:]:
     if arg.startswith("--oneflow="):
       oneflow_path = arg[10:]
     elif arg.startswith("--workdir="):
