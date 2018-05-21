@@ -39,7 +39,7 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBl
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
-  *buf_size = in_blob_desc->shape().elem_cnt() * GetSizeOfDataType(in_blob_desc->data_type());
+  *buf_size = in_blob_desc->ByteSizeOfDataContentField();
 }
 
 void SoftmaxOp::VirtualGenKernelConf(

@@ -175,8 +175,8 @@ __device__ void MatrixShrinkCols(const int32_t row_num, const T* x, const int32_
 }
 
 template<typename T, T (*reduce_core_func)(const T, const T), int shrink_size = 4>
-__global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, const T* x,
-                                   T* sum_ptr, T* temp_storage, size_t temp_col_num) {
+__global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, const T* x, T* y,
+                                   T* temp_storage, size_t temp_col_num) {
   const size_t temp_lda = temp_col_num;
   MatrixShrinkCols<T, reduce_core_func>(row_num, x, col_num, col_num, temp_storage, temp_col_num,
                                         temp_lda);
@@ -188,19 +188,18 @@ __global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, c
     temp_col_num = new_temp_col_num;
     __syncthreads();
   }
-  MatrixShrinkCols<T, reduce_core_func>(row_num, temp_storage, temp_col_num, temp_lda, sum_ptr, 1,
-                                        1);
+  MatrixShrinkCols<T, reduce_core_func>(row_num, temp_storage, temp_col_num, temp_lda, y, 1, 1);
 }
 
 template<typename T, T (*reduce_core_func)(const T, const T), int shrink_size = 4>
-void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num, const T* x,
-                     T* sum_ptr, void* temp_storage, const size_t temp_storage_bytes) {
+void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
   size_t temp_col_num = std::min(temp_storage_bytes / sizeof(T) / row_num,
                                  std::max(col_num / shrink_size, static_cast<size_t>(1)));
   CHECK_GT(temp_col_num, 0);
-  MatrixRowReduceGpu<T, reduce_core_func><<<BlocksNum4ThreadsNum(row_num * temp_col_num),
-                                            kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      row_num, col_num, x, sum_ptr, static_cast<T*>(temp_storage), temp_col_num);
+  MatrixRowReduceGpu<T, reduce_core_func>
+      <<<BlocksNum4ThreadsNum(row_num * temp_col_num), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(row_num, col_num, x, y, static_cast<T*>(temp_storage), temp_col_num);
 }
 
 }  // namespace
