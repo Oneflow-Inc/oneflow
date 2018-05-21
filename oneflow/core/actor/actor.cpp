@@ -217,6 +217,9 @@ void Actor::ActUntilFail() {
     }
     last_act_start_time_ = cur_time;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
+    if (GetDeviceType() == DeviceType::kGPU) {
+      CudaCheck(cudaStreamSynchronize(device_ctx_->cuda_stream()));
+    }
     Act(&IsNaiveAllowedReturnToProducer);
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
