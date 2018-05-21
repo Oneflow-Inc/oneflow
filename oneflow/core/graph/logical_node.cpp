@@ -168,9 +168,9 @@ std::string LogicalNode::VisualStr() const {
   return ss.str();
 }
 
-bool LogicalNode::HasOpWithModelOrModelTmpBlob() const {
+bool LogicalNode::HasOpWithModelOrConstModelBlob() const {
   return HasOpWithCondition([](const Operator* op) {
-    return op->model_bns().empty() == false || op->model_tmp_bns().empty() == false;
+    return op->model_bns().empty() == false || op->const_model_bns().empty() == false;
   });
 }
 
@@ -192,7 +192,26 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)>
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-        comp_task_node->set_thrd_id(Global<IDMgr>::Get()->GetGpuDeviceThrdId(dev_phy_id));
+        const IDMgr* id_mgr = Global<IDMgr>::Get();
+        switch (comp_task_node->GetCudaWorkType()) {
+          case CudaWorkType::kCompute: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kCopyH2D: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuH2DThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kCopyD2H: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuD2HThrdId(dev_phy_id));
+            break;
+          }
+          case CudaWorkType::kMix: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
+            break;
+          }
+          default: UNIMPLEMENTED();
+        }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         comp_task_node->set_thrd_id(AllocateCpuThrdId(comp_task_node));
       } else {

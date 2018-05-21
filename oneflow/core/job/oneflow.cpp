@@ -64,15 +64,15 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name);
+  Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name) {
+Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
   // New All Global
-  Global<JobDesc>::New(job_desc);
+  Global<JobDesc>::New(job_conf_filepath);
   Global<IDMgr>::New();
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
@@ -122,8 +122,7 @@ Oneflow::Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name
 
 }  // namespace oneflow
 
-DEFINE_string(job_conf_filepath, "", "");
-DEFINE_string(job_desc_filepath, "", "");
+DEFINE_string(job_conf, "", "");
 DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
@@ -132,19 +131,7 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
-  JobDescProto job_desc;
-  if (FLAGS_job_desc_filepath != "") {
-    ParseProtoFromTextFile(FLAGS_job_desc_filepath, &job_desc);
-  } else if (FLAGS_job_conf_filepath != "") {
-    JobConf* jc = job_desc.mutable_job_conf();
-    ParseProtoFromTextFile(FLAGS_job_conf_filepath, jc);
-    ParseProtoFromTextFile(jc->dlnet_filepath(), job_desc.mutable_dlnet_conf());
-    ParseProtoFromTextFile(jc->resource_filepath(), job_desc.mutable_resource());
-    ParseProtoFromTextFile(jc->placement_filepath(), job_desc.mutable_placement());
-  } else {
-    LOG(FATAL) << "Please Set job_conf_filepath or job_desc_filepath";
-  }
-  { Oneflow flow(job_desc, FLAGS_this_machine_name); }
+  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_name); }
   CloseStdoutAndStderr();
   return 0;
 }

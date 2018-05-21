@@ -9,7 +9,6 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("activation");
   ProduceRegst("data_tmp");
   ProduceRegst("forward_model");
-  ProduceRegst("fw_buf", 1, 1);
   ProduceRegst("const_buf", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
@@ -33,7 +32,7 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
     TaskType src_task_type = src_node->GetTaskType();
     if (src_task_type == TaskType::kNormalMdUpdt) {
       ConsumeRegst("model", edge->GetRegst("model"));
-      ConsumeRegst("model_tmp", edge->GetRegst("model_tmp"));
+      ConsumeRegst("const_model", edge->GetRegst("const_model"));
     } else {
       ConsumeRegst("in", edge->GetSoleRegst());
     }
@@ -56,7 +55,7 @@ void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
   BuildExecGphStructAndBindInRegst();
   BuildOutRegst();
   BuildActivationRegst();
-  BuildModelAndTmpRegsts();
+  BuildModel7ConstModel7DataTmp7BufRegsts();
   BuildForwardModelRegsts();
   mut_exec_gph().TopoForEachNode([this](ExecNode* node) { node->InferBlobDescs(parallel_ctx()); });
 }
@@ -64,7 +63,7 @@ void NormalForwardCompTaskNode::BuildExecGphAndRegst() {
 void NormalForwardCompTaskNode::LockRegsts() {
   TaskNode::LockRegsts();
   TryLockConsumedRegst("model");
-  TryLockConsumedRegst("model_tmp");
+  TryLockConsumedRegst("const_model");
 }
 
 void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
@@ -119,19 +118,18 @@ void NormalForwardCompTaskNode::BuildActivationRegst() {
   });
 }
 
-void NormalForwardCompTaskNode::BuildModelAndTmpRegsts() {
+void NormalForwardCompTaskNode::BuildModel7ConstModel7DataTmp7BufRegsts() {
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
-  std::shared_ptr<RegstDesc> model_tmp_regst = GetSoleConsumedRegst("model_tmp");
+  std::shared_ptr<RegstDesc> const_model_regst = GetSoleConsumedRegst("const_model");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
-    node->AddBnToRegstAndBindIt(&Operator::fw_buf_bns, GetProducedRegst("fw_buf"));
     node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
-    for (const std::string& mtbn : node->op()->model_tmp_bns()) {
-      if (!model_tmp_regst->IsLocked()) {
-        const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(mtbn);
-        model_tmp_regst->AddLbi(lbi);
+    for (const std::string& cmbn : node->op()->const_model_bns()) {
+      if (!const_model_regst->IsLocked()) {
+        const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(cmbn);
+        const_model_regst->AddLbi(lbi);
       }
-      node->BindBnWithRegst(mtbn, model_tmp_regst);
+      node->BindBnWithRegst(cmbn, const_model_regst);
     }
     for (const std::string& mbn : node->op()->model_bns()) {
       if (!model_regst->IsLocked()) {

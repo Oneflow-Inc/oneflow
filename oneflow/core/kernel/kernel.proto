@@ -43,11 +43,12 @@ message SparseCrossEntropyLossKernelConf {
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
-  repeated int32 padding_before = 3;
-  repeated int32 padding_after = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-  required string data_format = 7;
+  required int32 dim = 3;
+  repeated int32 padding_before = 4;
+  repeated int32 padding_after = 5;
+  repeated int32 pool_size = 6;
+  repeated int32 strides = 7;
+  required string data_format = 8;
 }
 
 message AveragePoolingKernelConf {
@@ -112,15 +113,13 @@ message OpAttribute {
   repeated string output_bns = 5;
   repeated string output_diff_bns = 6;
   repeated string data_tmp_bns = 7;
-  repeated string fw_buf_bns = 8;
-  repeated string bw_buf_bns = 9;
 
-  repeated string model_bns = 10;
-  repeated string model_diff_bns = 11;
-  repeated string model_tmp_bns = 12;
+  repeated string model_bns = 8;
+  repeated string model_diff_bns = 9;
+  repeated string const_model_bns = 10;
   
-  repeated string forward_model_bns = 13;
-  repeated string const_buf_bns = 14;
+  repeated string forward_model_bns = 11;
+  repeated string const_buf_bns = 12;
 }
 
 message KernelConf {

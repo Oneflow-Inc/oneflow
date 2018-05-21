@@ -3,6 +3,7 @@
 
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
 
 namespace oneflow {
 
@@ -10,28 +11,25 @@ namespace oneflow {
 
 class CudaDeviceCtx final : public DeviceCtx {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
+  OF_DISALLOW_COPY_AND_MOVE(CudaDeviceCtx);
   CudaDeviceCtx() = delete;
   ~CudaDeviceCtx() = default;
 
-  CudaDeviceCtx(int64_t work_stream_id, const cudaStream_t* cuda_stream,
-                const cublasHandle_t* cublas_pmh_handle = nullptr,
-                const cublasHandle_t* cublas_pmd_handle = nullptr,
-                const cudnnHandle_t* cudnn_handle = nullptr,
-                const Eigen::GpuDevice* eigen_gpu_device = nullptr
+  CudaDeviceCtx(void* buf_ptr, size_t buf_size, CudaStreamHandle* cuda_handler)
+      : DeviceCtx(buf_ptr, buf_size), cuda_handler_(cuda_handler) {}
 
-  ) {
-    set_work_stream_id(work_stream_id);
-    set_cuda_stream(cuda_stream);
-    set_cublas_pmh_handle(cublas_pmh_handle);
-    set_cublas_pmd_handle(cublas_pmd_handle);
-    set_cudnn_handle(cudnn_handle);
-    set_eigen_gpu_device(eigen_gpu_device);
+  const cudaStream_t& cuda_stream() const { return *(cuda_handler_->cuda_stream()); }
+  const cublasHandle_t& cublas_pmh_handle() const { return *(cuda_handler_->cublas_pmh_handle()); }
+  const cublasHandle_t& cublas_pmd_handle() const { return *(cuda_handler_->cublas_pmd_handle()); }
+  const cudnnHandle_t& cudnn_handle() const { return *(cuda_handler_->cudnn_handle()); }
+  const Eigen::GpuDevice& eigen_gpu_device() const { return *(cuda_handler_->eigen_gpu_device()); }
+
+  void AddCallBack(std::function<void()> callback) const override {
+    cuda_handler_->AddCallBack(callback);
   }
 
-  void AddCallBack(std::function<void()> callback) const override;
-
  private:
+  CudaStreamHandle* cuda_handler_;
 };
 
 #endif  // WITH_CUDA

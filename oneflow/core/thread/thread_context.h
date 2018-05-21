@@ -1,22 +1,16 @@
 #ifndef ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
 #define ONEFLOW_CORE_THREAD_THREAD_CONTEXT_H_
 
-#include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
 
 namespace oneflow {
 
 struct ThreadCtx {
-  ThreadCtx()
+  void* buf_ptr;
+  size_t buf_size;
 #ifdef WITH_CUDA
-      : copy_h2d_cuda_stream(nullptr),
-        copy_d2h_cuda_stream(nullptr)
-#endif
-  {
-  }
-
-#ifdef WITH_CUDA
-  const cudaStream_t* copy_h2d_cuda_stream;
-  const cudaStream_t* copy_d2h_cuda_stream;
+  std::unique_ptr<CudaStreamHandle> g_cuda_stream;
+  Channel<CudaCBEvent>* cb_event_chan;
 #endif
 };
 

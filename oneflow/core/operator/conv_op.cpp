@@ -68,10 +68,6 @@ void ConvOp<NDims>::InitFromOpConf() {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
   }
-  EnrollFwBufBn("fw_cudnn_buf");
-  EnrollBwBufBn("bw_cudnn_buf");
-  EnrollFwBufBn("fw_col_buf");
-  EnrollBwBufBn("bw_col_buf");
 }
 
 template<int32_t NDims>
@@ -86,7 +82,7 @@ bool ConvOp<NDims>::NeedOutWhenBackward() const {
 
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx,
+                                   const ParallelContext* parallel_ctx, size_t* buf_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
@@ -136,45 +132,19 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
 
   if (!UseCudnn()) {
     // col_buf
-    std::vector<int64_t> col_buf_shape(2 * NDims + 1);
-    for (size_t i = 0; i != NDims + 1; ++i) { col_buf_shape[i] = weight_shape[i + 1]; }
-    for (size_t i = 0; i != NDims; ++i) {
-      col_buf_shape[NDims + i + 1] = out_shape[dhw_offset + i];
-    }
-    GetBlobDesc4BnInOp("fw_col_buf")->mut_shape() = Shape(col_buf_shape);
-    conv_op_ctx->bw_col_buf_shape = Shape(col_buf_shape);
+    size_t col_buf_elem_cnt = 1;
+    for (size_t i = 0; i != NDims + 1; ++i) { col_buf_elem_cnt *= weight_shape[i + 1]; }
+    for (size_t i = 0; i != NDims; ++i) { col_buf_elem_cnt *= out_shape[dhw_offset + i]; }
+    *buf_size = col_buf_elem_cnt * GetSizeOfDataType(in_blob_desc->data_type());
   }
 
 #ifdef WITH_CUDA
   if (device_type() == DeviceType::kGPU) {
     // cudnn_buf
     InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx));
-
-    int64_t fw_cudnn_buf_size = static_cast<int64_t>(conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size);
-    GetBlobDesc4BnInOp("fw_cudnn_buf")->set_data_type(DataType::kChar);
-    GetBlobDesc4BnInOp("fw_cudnn_buf")->mut_shape() = Shape({fw_cudnn_buf_size});
-  }
-#endif  // WITH_CUDA
-}
-
-template<int32_t NDims>
-void ConvOp<NDims>::InferBwBufBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, const OpContext* op_ctx) const {
-  const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-  if (!UseCudnn()) {
-    // col_buf
-    GetBlobDesc4BnInOp("bw_col_buf")->mut_shape() = conv_op_ctx->bw_col_buf_shape;
-  }
-
-#ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU) {
-    // cudnn_buf
-    int64_t bw_cudnn_buf_size =
-        static_cast<int64_t>(std::max({conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
-                                       conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size}));
-    GetBlobDesc4BnInOp("bw_cudnn_buf")->set_data_type(DataType::kChar);
-    GetBlobDesc4BnInOp("bw_cudnn_buf")->mut_shape() = Shape({bw_cudnn_buf_size});
+    *buf_size = std::max({conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size,
+                          conv_op_ctx->cudnn_conv_algo_ctx.bwd_filter_ws_size,
+                          conv_op_ctx->cudnn_conv_algo_ctx.bwd_data_ws_size});
   }
 #endif  // WITH_CUDA
 }
@@ -298,7 +268,7 @@ template<int32_t NDims>
 void ConvOp<NDims>::InferCudnnAlgo(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     CudnnConvAlgoCtx* conv_ctx) const {
-  CudaStreamHandle cuda_handle;
+  CudaStreamHandle cuda_handle(nullptr);
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
@@ -316,14 +286,14 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(*cuda_handle.cudnn_handle(), in_desc.Get(),
                                                 filter_desc.Get(), conv_desc.Get(), out_desc.Get(),
                                                 CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
-                                                cudnn_fw_buf_limit_byte(), &conv_ctx->fwd_algo));
+                                                cudnn_buf_limit_byte(), &conv_ctx->fwd_algo));
   CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithm(
       *cuda_handle.cudnn_handle(), in_desc.Get(), out_desc.Get(), conv_desc.Get(),
       filter_desc.Get(), CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
-      cudnn_bw_buf_limit_byte(), &conv_ctx->bwd_filter_algo));
+      cudnn_buf_limit_byte(), &conv_ctx->bwd_filter_algo));
   CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(), conv_desc.Get(),
-      in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT, cudnn_bw_buf_limit_byte(),
+      in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT, cudnn_buf_limit_byte(),
       &conv_ctx->bwd_data_algo));
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(), conv_desc.Get(),

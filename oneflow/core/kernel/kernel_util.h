@@ -102,6 +102,9 @@ struct CpuKernelUtilIf {
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
                   size_t temp_storage_bytes);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
+                             const int64_t y_col_offset, const int64_t y_lda);
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);
@@ -174,6 +177,9 @@ struct GpuKernelUtilIf {
                   size_t temp_storage_bytes);
   static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
                   size_t temp_storage_bytes);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
+                             const int64_t y_col_offset, const int64_t y_lda);
   static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                         const Shape& y_shape, const PbRf<int32_t>& permutation,
                         const int64_t elem_cnt, const T* x, T* y);

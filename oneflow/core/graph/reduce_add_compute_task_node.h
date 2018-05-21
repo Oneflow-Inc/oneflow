@@ -15,6 +15,7 @@ class ReduceAddCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kReduceAdd; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
 
  private:
   void BuildExecGphAndRegst() override;

@@ -110,6 +110,15 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   }
 }
 
+int64_t TaskNode::MemZoneId121() const {
+  const IDMgr* id_mgr = Global<IDMgr>::Get();
+  if (device_type() == DeviceType::kCPU) {
+    return id_mgr->CpuMemZoneId();
+  } else {
+    return id_mgr->GpuMemZoneId(id_mgr->GetGpuPhyIdFromThrdId(thrd_id_));
+  }
+}
+
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
@@ -138,7 +147,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
     mem_case->mutable_host_mem();
   } else if (device_type() == DeviceType::kGPU) {
     mem_case->mutable_device_cuda_mem()->set_device_id(
-        Global<IDMgr>::Get()->GetGpuDevPhyIdFromThrdId(thrd_id_));
+        Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_));
   } else {
     UNIMPLEMENTED();
   }
@@ -183,10 +192,31 @@ void TaskNode::FixRegisterNumRange() {
   }
 }
 
+int64_t TaskNode::AllocateLocalWorkStreamId() {
+  CHECK_NE(machine_id_, -1);
+  CHECK_NE(thrd_id_, -1);
+  if (UseIndependentWorkStream()) {
+    if (device_type() == DeviceType::kCPU) {
+      return 0;
+    } else if (device_type() == DeviceType::kGPU) {
+      return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else {
+    return 0;
+  }
+}
+
 void TaskNode::UpdateTaskId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_);
+  task_id_ = Global<IDMgr>::Get()->NewTaskId(machine_id_, thrd_id_, AllocateLocalWorkStreamId());
+}
+
+int64_t TaskNode::LocalWorkStreamId() const {
+  CHECK_NE(task_id_, -1);
+  return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
 }
 
 void TaskNode::ClearOutOfDateConsumedRegst() {

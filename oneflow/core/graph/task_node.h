@@ -30,7 +30,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
-  int64_t MemZoneId() const { return Global<IDMgr>::Get()->GetMemZoneIdFromThrdId(thrd_id_); }
+  int64_t LocalWorkStreamId() const;
+  int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
+  virtual bool UseIndependentWorkStream() const { return false; }
 
   // Setters
   void set_machine_id(int64_t val);
@@ -51,6 +53,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ToProto(TaskProto*);
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
+  virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
@@ -71,9 +74,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
 
+  int64_t AllocateLocalWorkStreamId();
+
  private:
-  void UpdateTaskId();
   void ClearOutOfDateConsumedRegst();
+  void UpdateTaskId();
 
   int64_t machine_id_;
   int64_t thrd_id_;

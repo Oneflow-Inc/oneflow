@@ -42,6 +42,7 @@ using PbMap = google::protobuf::Map<K, V>;
   auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
 
 // Prototxt <-> File
+bool TryParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void ParseProtoFromTextFile(const std::string& file_path, PbMessage* proto);
 void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 

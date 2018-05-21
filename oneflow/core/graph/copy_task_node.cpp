@@ -21,10 +21,16 @@ void CopyTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleObn(), out_regst);
 }
 
-void CopyHdTaskNode::Init(int64_t machine_id, int64_t thrd_id, CopyHdOpConf::Type copy_type) {
-  set_machine_id(machine_id);
-  set_thrd_id(thrd_id);
+void CopyHdTaskNode::Init(CopyHdOpConf::Type copy_type, int64_t machine_id, int64_t dev_phy_id) {
   copy_type_ = copy_type;
+  set_machine_id(machine_id);
+  if (copy_type == CopyHdOpConf::H2D) {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuH2DThrdId(dev_phy_id));
+  } else if (copy_type == CopyHdOpConf::D2H) {
+    set_thrd_id(Global<IDMgr>::Get()->GetGpuD2HThrdId(dev_phy_id));
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {

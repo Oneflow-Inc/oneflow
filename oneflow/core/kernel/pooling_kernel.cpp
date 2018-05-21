@@ -19,37 +19,68 @@ PoolingCtx::PoolingCtx(const PoolingKernelConf& kernel_conf
                        cudnnPoolingMode_t pooling_mode, DataType type
 #endif  // WITH_CUDA
                        )
-    : kernel_conf_(kernel_conf) {
+    : kernel_conf_(kernel_conf), pooling_mode_(pooling_mode) {
 #ifdef WITH_CUDA
-  pooling_mode_ = pooling_mode;
-  std::vector<int> padding(kernel_conf_.padding_before().size());
-  FOR_RANGE(size_t, i, 0, kernel_conf_.padding_before().size()) {
-    padding[i] =
-        std::max(kernel_conf_.padding_before().Get(i), kernel_conf_.padding_after().Get(i));
-  }
+  int32_t dim = kernel_conf_.dim();
+  CHECK_GE(dim, 1);
+  CHECK_LE(dim, 3);
   std::vector<int> in_dim = GetStdVecFromShapeInKernelConf("in");
   std::vector<int> out_dim = GetStdVecFromShapeInKernelConf("out");
-  std::vector<int> in_stride;
-  std::vector<int> out_stride;
+
+  std::vector<int> pool_size(dim);
+  std::vector<int> padding(dim);
+  std::vector<int> strides(dim);
+  FOR_RANGE(int, i, 0, dim) {
+    int32_t index_in_3d = i + 3 - dim;
+    pool_size[i] = kernel_conf_.pool_size().Get(index_in_3d);
+    padding[i] = std::max(kernel_conf_.padding_before().Get(index_in_3d),
+                          kernel_conf_.padding_after().Get(index_in_3d));
+    strides[i] = kernel_conf_.strides().Get(index_in_3d);
+  }
+  pooling_desc_.reset(
+      new CudnnPoolingDesc(pooling_mode_, dim, pool_size.data(), padding.data(), strides.data()));
+
+  int32_t ncx_dim = 2 + dim;
+  std::vector<int> in_shape(ncx_dim);
+  std::vector<int> out_shape(ncx_dim);
+  std::vector<int> in_stride(ncx_dim);
+  std::vector<int> out_stride(ncx_dim);
+
+  FOR_RANGE(size_t, i, 0, 2) {
+    in_shape[i] = in_dim[i];
+    out_shape[i] = out_dim[i];
+  }
+  FOR_RANGE(int, i, 0, dim) {
+    int32_t index_in_3d = 2 + i + 3 - dim;
+    in_shape[i + 2] = in_dim[index_in_3d];
+    out_shape[i + 2] = out_dim[index_in_3d];
+  }
 
   const std::string& data_format = kernel_conf_.data_format();
   if (data_format == "channels_first") {
-    in_stride = {in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4], in_dim[2] * in_dim[3] * in_dim[4],
-                 in_dim[3] * in_dim[4], in_dim[4], 1};
-    out_stride = {out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4],
-                  out_dim[2] * out_dim[3] * out_dim[4], out_dim[3] * out_dim[4], out_dim[4], 1};
+    in_stride[ncx_dim - 1] = 1;
+    out_stride[ncx_dim - 1] = 1;
+
+    for (int i = ncx_dim - 2; i >= 0; --i) {
+      in_stride[i] = in_stride[i + 1] * in_shape[i + 1];
+      out_stride[i] = out_stride[i + 1] * out_shape[i + 1];
+    }
   } else if (data_format == "channels_last") {
-    in_stride = {in_dim[1] * in_dim[2] * in_dim[3] * in_dim[4], 1,
-                 in_dim[1] * in_dim[3] * in_dim[4], in_dim[1] * in_dim[4], in_dim[1]};
-    out_stride = {out_dim[1] * out_dim[2] * out_dim[3] * out_dim[4], 1,
-                  out_dim[1] * out_dim[3] * out_dim[4], out_dim[1] * out_dim[4], out_dim[1]};
+    in_stride[ncx_dim - 1] = in_shape[1];
+    out_stride[ncx_dim - 1] = out_shape[1];
+    for (int i = ncx_dim - 2; i >= 2; --i) {
+      in_stride[i] = in_stride[i + 1] * in_shape[i + 1];
+      out_stride[i] = out_stride[i + 1] * out_shape[i + 1];
+    }
+    in_stride[1] = 1;
+    out_stride[1] = 1;
+    in_stride[0] = in_shape[2] * in_stride[2];
+    out_stride[0] = out_shape[2] * out_stride[2];
   } else {
     UNIMPLEMENTED();
   }
-  pooling_desc_.reset(new CudnnPoolingDesc(pooling_mode_, 3, kernel_conf_.pool_size().data(),
-                                           padding.data(), kernel_conf_.strides().data()));
-  in_desc_.reset(new CudnnTensorDesc(type, 5, in_dim.data(), in_stride.data()));
-  out_desc_.reset(new CudnnTensorDesc(type, 5, out_dim.data(), out_stride.data()));
+  in_desc_.reset(new CudnnTensorDesc(type, ncx_dim, in_shape.data(), in_stride.data()));
+  out_desc_.reset(new CudnnTensorDesc(type, ncx_dim, out_shape.data(), out_stride.data()));
 #endif  // WITH_CUDA
 }
 
@@ -63,6 +94,7 @@ const cudnnTensorDescriptor_t& PoolingCtx::cudnn_out_tensor_desc() const {
 const cudnnPoolingDescriptor_t& PoolingCtx::cudnn_pooling_desc() const {
   return pooling_desc_->Get();
 }
+
 #endif  // WITH_CUDA
 
 std::vector<int> PoolingCtx::GetStdVecFromShapeInKernelConf(const std::string& field_name) const {
