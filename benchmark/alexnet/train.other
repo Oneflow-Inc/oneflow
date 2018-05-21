@@ -4,7 +4,7 @@ globalfs_conf {
   }
 }
 data_part_num: 30
-piece_size: 240
+piece_size: 480
 model_load_snapshot_path: ""
 max_data_id_length: 0
 train_conf {
@@ -18,7 +18,7 @@ train_conf {
       std: 0.01
     }
   }
-  batch_size: 240
+  batch_size: 480
   l2: 0.0005
   model_update_conf {
     learning_rate: 0.01
