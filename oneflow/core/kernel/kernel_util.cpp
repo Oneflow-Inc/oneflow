@@ -213,6 +213,20 @@ KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t
     }
   }
 }
+KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                    void* temp_storage, const size_t temp_storage_bytes) {
+  FOR_RANGE(int64_t, i, 0, row_num) {
+    y[i] = x[i * col_num];
+    FOR_RANGE(int64_t, j, 1, col_num) { y[i] = std::max(y[i], x[i * col_num + j]); }
+  }
+}
+KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                    void* temp_storage, const size_t temp_storage_bytes) {
+  FOR_RANGE(int64_t, i, 0, row_num) {
+    y[i] = x[i * col_num];
+    FOR_RANGE(int64_t, j, 1, col_num) { y[i] += x[i * col_num + j]; }
+  }
+}
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
                        const int64_t elem_cnt, const T* x, T* y) {
