@@ -12,6 +12,12 @@ op {
       }
       encode_case {
         jpeg {
+          preprocess {
+            resize {
+              width: 227
+              height: 227
+            }
+          }
         }
       }
     }
