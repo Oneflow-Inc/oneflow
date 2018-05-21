@@ -93,6 +93,7 @@ const std::vector<int64_t>& Actor::Name2RegstDescId(const std::string& name) con
 void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
+      CHECK_EQ(GetLocalWorkStreamId(), 0);
       device_ctx_.reset(new CpuDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size));
       break;
     }
