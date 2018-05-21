@@ -221,12 +221,12 @@ KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t
     }
   }
 }
-KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
-                    void* temp_storage, const size_t temp_storage_bytes) {
+KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
+                    T* y) {
   MatrixRowReduce<T, ReduceCoreMax>(row_num, col_num, x, y);
 }
-KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
-                    void* temp_storage, const size_t temp_storage_bytes) {
+KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
+                    T* y) {
   MatrixRowReduce<T, ReduceCoreAdd>(row_num, col_num, x, y);
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
