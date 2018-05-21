@@ -157,16 +157,6 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
   }
 }
 
-template<typename T>
-__device__ T DeviceFuncAdd(const T x, const T y) {
-  return x + y;
-}
-
-template<typename T>
-__device__ T DeviceFuncMax(const T x, const T y) {
-  return x > y ? x : y;
-}
-
 template<typename T, T (*reduce_core_func)(const T, const T)>
 __device__ void MatrixShrinkCols(const int32_t num_row, const T* x, const int32_t x_num_col,
                                  const int32_t x_lda, T* y, const int32_t y_num_col,
@@ -276,11 +266,11 @@ KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t
 }
 KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                     void* temp_storage, const size_t temp_storage_bytes) {
-  MatrixRowReduce<T, DeviceFuncMax>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
+  MatrixRowReduce<T, ReduceCoreMax>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
 }
 KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
                     void* temp_storage, const size_t temp_storage_bytes) {
-  MatrixRowReduce<T, DeviceFuncAdd>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
+  MatrixRowReduce<T, ReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,

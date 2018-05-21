@@ -40,6 +40,22 @@ void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
+#if defined(__CUDACC__)
+#define OF_DEVICE_FUNC __device__
+#else
+#define OF_DEVICE_FUNC
+#endif
+
+template<typename T>
+OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
+  return x + y;
+}
+
+template<typename T>
+OF_DEVICE_FUNC T ReduceCoreMax(const T x, const T y) {
+  return x > y ? x : y;
+}
+
 // CPU, GPU, Integral, Floating
 template<DeviceType device_type, typename T, typename Derived>
 struct KernelUtilIf {
