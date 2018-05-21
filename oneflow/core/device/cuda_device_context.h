@@ -24,7 +24,9 @@ class CudaDeviceCtx final : public DeviceCtx {
   const cudnnHandle_t& cudnn_handle() const { return *(cuda_handler_->cudnn_handle()); }
   const Eigen::GpuDevice& eigen_gpu_device() const { return *(cuda_handler_->eigen_gpu_device()); }
 
-  void AddCallBack(std::function<void()> callback) const override;
+  void AddCallBack(std::function<void()> callback) const override {
+    cuda_handler_->AddCallBack(callback);
+  }
 
  private:
   CudaStreamHandle* cuda_handler_;
