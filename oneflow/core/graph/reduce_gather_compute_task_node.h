@@ -15,9 +15,9 @@ class ReduceGatherCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
 
   TaskType GetTaskType() const override { return TaskType::kReduceGather; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
 
  private:
-  bool NeedIndependentWorkStream() override { return true; }
   void BuildExecGphAndRegst() override;
 };
 
