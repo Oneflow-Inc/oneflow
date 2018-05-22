@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_GRAPH_COMPUTE_TASK_NODE_H_
 
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -13,7 +14,9 @@ class CompTaskNode : public TaskNode {
   CompTaskNode() = default;
   virtual ~CompTaskNode() = default;
 
+  virtual CudaWorkType GetCudaWorkType() const { return CudaWorkType::kCompute; }
   virtual void ToProto(TaskProto*) override;
+  bool UseIndependentWorkStream() const override { return GetCudaWorkType() == CudaWorkType::kMix; }
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }

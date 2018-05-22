@@ -1,0 +1,4 @@
+net: "./train.net"
+resource: "./1_machine_4_gpu.resource"
+placement: "./1_machine_2_gpu.placement"
+other: "./piece_size_1024.other"

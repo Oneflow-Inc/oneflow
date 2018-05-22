@@ -268,7 +268,7 @@ template<int32_t NDims>
 void ConvOp<NDims>::InferCudnnAlgo(
     std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     CudnnConvAlgoCtx* conv_ctx) const {
-  CudaStreamHandle cuda_handle;
+  CudaStreamHandle cuda_handle(nullptr);
 
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");

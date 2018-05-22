@@ -1,17 +1,23 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/imagenet/train/30"
+    data_dir: "/dataset/imagenet/train/32"
     blob {
       name: "encoded"
       data_type: kFloat
       shape {
-        dim: 224
-        dim: 224
+        dim: 227
+        dim: 227
         dim: 3
       }
       encode_case {
         jpeg {
+          preprocess {
+            resize {
+              width: 227
+              height: 227
+            }
+          }
         }
       }
     }
@@ -45,7 +51,7 @@ op {
     in: "transpose/out"
     out: "out"
     filters: 64
-    padding: "SAME"
+    padding: "VALID"
     data_format: "channels_first"
     kernel_size: 11
     kernel_size: 11
@@ -63,23 +69,23 @@ op {
   }
 }
 
-op {
-  name: "lrn1"
-  local_response_normalization_conf {
-    in: "conv1/out"
-    out: "out"
-    depth_radius: 2
-    bias: 2
-    alpha: 0.0001
-    beta: 0.75
-    data_format: "channels_first"
-  }
-}
+#op {
+#  name: "lrn1"
+#  local_response_normalization_conf {
+#    in: "conv1/out"
+#    out: "out"
+#    depth_radius: 2
+#    bias: 2
+#    alpha: 0.0001
+#    beta: 0.75
+#    data_format: "channels_first"
+#  }
+#}
 
 op {
   name: "pool1"
   max_pooling_2d_conf {
-    in: "lrn1/out"
+    in: "conv1/out"
     out: "out"
     padding: "VALID"
     data_format: "channels_first"
@@ -114,23 +120,23 @@ op {
   }
 }
 
-op {
-  name: "lrn2"
-  local_response_normalization_conf {
-    in: "conv2/out"
-    out: "out"
-    depth_radius: 2
-    bias: 2
-    alpha: 0.0001
-    beta: 0.75
-    data_format: "channels_first"
-  }
-}
+#op {
+#  name: "lrn2"
+#  local_response_normalization_conf {
+#    in: "conv2/out"
+#    out: "out"
+#    depth_radius: 2
+#    bias: 2
+#    alpha: 0.0001
+#    beta: 0.75
+#    data_format: "channels_first"
+#  }
+#}
 
 op {
   name: "pool2"
   max_pooling_2d_conf {
-    in: "lrn2/out"
+    in: "conv2/out"
     out: "out"
     padding: "VALID"
     data_format: "channels_first"
