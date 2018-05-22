@@ -1,7 +1,7 @@
 op {
   name: "decode"
   decode_ofrecord_conf {
-    data_dir: "/dataset/imagenet/train/30"
+    data_dir: "/dataset/imagenet/train/32"
     blob {
       name: "encoded"
       data_type: kFloat
@@ -12,6 +12,12 @@ op {
       }
       encode_case {
         jpeg {
+          preprocess {
+            resize {
+              width: 224
+              height: 224
+            }
+          }
         }
       }
     }
