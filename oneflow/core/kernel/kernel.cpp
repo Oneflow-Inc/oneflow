@@ -55,9 +55,7 @@ void Kernel::Backward(const KernelCtx& ctx,
 
     if (this->GetActivationType() != ActivationType::kNone) {
       CHECK_EQ(odbns.size(), 1);
-      if (bn == odbns[0]) {
-        return BnInOp2Blob("activation_buf");
-      }
+      if (bn == odbns[0]) { return BnInOp2Blob("activation_buf"); }
     }
     return BnInOp2Blob(bn);
   });
