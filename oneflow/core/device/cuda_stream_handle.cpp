@@ -49,6 +49,15 @@ const Eigen::GpuDevice* CudaStreamHandle::eigen_gpu_device() {
   return eigen_gpu_device_.get();
 }
 
+void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
+  CudaCBEvent cb_event;
+  cb_event.callback = callback;
+  CudaCheck(
+      cudaEventCreateWithFlags(&(cb_event.event), cudaEventBlockingSync | cudaEventDisableTiming));
+  CudaCheck(cudaEventRecord(cb_event.event, *cuda_stream()));
+  cb_event_chan_->Send(cb_event);
+}
+
 CudaStreamHandle::~CudaStreamHandle() {
   if (cudnn_handle_) { CudaCheck(cudnnDestroy(*cudnn_handle_)); }
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
