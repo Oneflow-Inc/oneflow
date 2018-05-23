@@ -10,7 +10,7 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
   if (this->kernel_conf().reduce_sum_conf().has_axis() == false) {
     KernelUtil<device_type, T>::Sum(
         ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-        static_cast<T*>(ctx.device_ctx->buf_ptr()), in_blob->ByteSizeOfDataContentField());
+        static_cast<T*>(ctx.device_ctx->buf_ptr()), ctx.device_ctx->buf_size());
     return;
   }
   int32_t axis = this->kernel_conf().reduce_sum_conf().axis();
