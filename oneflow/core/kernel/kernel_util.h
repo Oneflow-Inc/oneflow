@@ -367,7 +367,7 @@ class ParallelDataContentIterator final {
           bn_bottom_ = i;
           bn_zero_axis_bottom[i] = zero_axis_bottom_ - bn_zero_axis_begin[i];
         }
-        if (bn_zero_axis_begin[i] <= zero_axis_top_ && zero_axis_top_ < bn_zero_axis_end[i]) {
+        if (bn_zero_axis_begin[i] <= zero_axis_top_ - 1 && zero_axis_top_ - 1 < bn_zero_axis_end[i]) {
           bn_top_ = i + 1;
           bn_zero_axis_top[i] = zero_axis_top_ - bn_zero_axis_begin[i];
         }
