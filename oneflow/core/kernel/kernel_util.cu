@@ -157,6 +157,51 @@ __global__ void TransposeGpu(const int32_t num_axis, const Int64Array x_shape,
   }
 }
 
+template<typename T, T (*reduce_core_func)(const T, const T)>
+__device__ void MatrixShrinkCols(const int32_t row_num, const T* x, const int32_t x_col_num,
+                                 const int32_t x_lda, T* y, const int32_t y_col_num,
+                                 const int32_t y_lda) {
+  CUDA_1D_KERNEL_LOOP(index, row_num * y_col_num) {
+    const int32_t row = index / y_col_num;
+    const int32_t col = index % y_col_num;
+    const int32_t x_start = row * x_lda + col;
+    const int32_t x_end = row * x_lda + x_col_num;
+    T reduced = x[x_start];
+    for (int32_t x_index = x_start + y_col_num; x_index < x_end; x_index += y_col_num) {
+      reduced = reduce_core_func(reduced, x[x_index]);
+    }
+    y[row * y_lda + col] = reduced;
+  }
+}
+
+template<typename T, T (*reduce_core_func)(const T, const T), int shrink_size = 4>
+__global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, const T* x, T* y,
+                                   T* temp_storage, size_t temp_col_num) {
+  const size_t temp_lda = temp_col_num;
+  MatrixShrinkCols<T, reduce_core_func>(row_num, x, col_num, col_num, temp_storage, temp_col_num,
+                                        temp_lda);
+  __syncthreads();
+  while (temp_col_num > shrink_size) {
+    size_t new_temp_col_num = temp_col_num / shrink_size;
+    MatrixShrinkCols<T, reduce_core_func>(row_num, temp_storage, temp_col_num, temp_lda,
+                                          temp_storage, new_temp_col_num, temp_lda);
+    temp_col_num = new_temp_col_num;
+    __syncthreads();
+  }
+  MatrixShrinkCols<T, reduce_core_func>(row_num, temp_storage, temp_col_num, temp_lda, y, 1, 1);
+}
+
+template<typename T, T (*reduce_core_func)(const T, const T), int shrink_size = 4>
+void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+  size_t temp_col_num = std::min(temp_storage_bytes / sizeof(T) / row_num,
+                                 std::max(col_num / shrink_size, static_cast<size_t>(1)));
+  CHECK_GT(temp_col_num, 0);
+  MatrixRowReduceGpu<T, reduce_core_func>
+      <<<BlocksNum4ThreadsNum(row_num * temp_col_num), kCudaThreadsNumPerBlock, 0,
+         ctx->cuda_stream()>>>(row_num, col_num, x, y, static_cast<T*>(temp_storage), temp_col_num);
+}
+
 }  // namespace
 
 template<>
@@ -217,6 +262,14 @@ KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t
   CopyColsRegionGpu<T>
       <<<BlocksNum4ThreadsNum(row_num * col_num), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
           row_num, col_num, x, x_col_offset, x_lda, y, y_col_offset, y_lda);
+}
+KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                    void* temp_storage, const size_t temp_storage_bytes) {
+  MatrixRowReduce<T, ReduceCoreMax>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
+}
+KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                    void* temp_storage, const size_t temp_storage_bytes) {
+  MatrixRowReduce<T, ReduceCoreAdd>(ctx, row_num, col_num, x, y, temp_storage, temp_storage_bytes);
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,

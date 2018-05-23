@@ -7,7 +7,6 @@ void SoftmaxOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollConstBufBn("sum_multiplier");
   EnrollDataTmpBn("softmax_num");
   EnrollDataTmpBn("transpose_in");
   EnrollDataTmpBn("transpose_out");
@@ -17,7 +16,7 @@ void SoftmaxOp::InitFromOpConf() {
 const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
 
 void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx,
+                               const ParallelContext* parallel_ctx, size_t* buf_size,
                                std::function<void(OpContext*)> EnrollOpCtx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -40,10 +39,7 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBl
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
-
-  BlobDesc* sum_multiplier_blob_desc = GetBlobDesc4BnInOp("sum_multiplier");
-  sum_multiplier_blob_desc->mut_shape() = Shape({op_ctx->transpose_cols});
-  sum_multiplier_blob_desc->set_data_type(in_blob_desc->data_type());
+  *buf_size = in_blob_desc->ByteSizeOfDataContentField();
 }
 
 void SoftmaxOp::VirtualGenKernelConf(

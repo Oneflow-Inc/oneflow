@@ -6,14 +6,6 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-__global__ void SoftmaxForwardMaxGpu(const int64_t n, const int64_t w, const T* x, T* y) {
-  const int32_t tid = threadIdx.x;
-  if (tid < n) { y[tid] = x[tid * w]; }
-  __syncthreads();
-  CUDA_1D_KERNEL_LOOP(i, n * w) { gpu_atomic_max(y + i / w, x[i]); }
-}
-
-template<typename T>
 __global__ void SoftmaxSubGpu(const int64_t n, const int64_t w, T* matrix, const T* vector) {
   CUDA_1D_KERNEL_LOOP(i, n * w) { matrix[i] -= vector[i / w]; }
 }
@@ -27,18 +19,6 @@ __global__ void SoftmaxDivGpu(const int64_t n, const int64_t w, T* matrix, const
 
 template<typename T>
 struct SoftmaxKernelUtil<DeviceType::kGPU, T> {
-  static void ForwardMax(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* out, T* tmp) {
-    SoftmaxForwardMaxGpu<T>
-        <<<BlocksNum4ThreadsNum(n * w), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, w, out,
-                                                                                          tmp);
-  }
-
-  static void RowSum(DeviceCtx* ctx, const int64_t n, const int64_t w, const T* matrix, T* sum_vec,
-                     const T* sum_multiplier) {
-    KernelUtil<DeviceType::kGPU, T>::Gemv(ctx, CblasTrans, n, w, 1, matrix, w, sum_multiplier, 1, 0,
-                                          sum_vec, 1);
-  }
-
   static void Sub(DeviceCtx* ctx, const int64_t n, const int64_t w, T* matrix, const T* vector) {
     SoftmaxSubGpu<T>
         <<<BlocksNum4ThreadsNum(n * w), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
