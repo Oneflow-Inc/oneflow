@@ -25,7 +25,8 @@ void LossOp::VirtualGenKernelConf(
 }
 
 void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx, size_t* buf_size) const {
+                            const ParallelContext* parallel_ctx, size_t* buf_size,
+                            std::function<void(OpContext*)>) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
