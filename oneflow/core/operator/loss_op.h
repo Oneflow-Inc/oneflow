@@ -16,7 +16,7 @@ class LossOp : public Operator {
   LogicalNode* NewProperLogicalNode() override { return new LossLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx, size_t* buf_size) const;
+                      const ParallelContext* parallel_ctx, size_t* buf_size) const override;
   bool IsLossOp() const override { return true; }
 
  protected:
