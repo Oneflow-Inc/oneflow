@@ -2,9 +2,10 @@
 
 namespace oneflow {
 
-void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf) {
+void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
+                  DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit(parallel_ctx);
+  VirtualKernelInit(parallel_ctx, device_ctx);
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -197,9 +198,9 @@ void KernelIfWithActivation<device_type, T>::BackwardActivate(
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
-                                              const KernelConf& conf) {
+                                              const KernelConf& conf, DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
-  rptr->Init(parallel_ctx, conf);
+  rptr->Init(parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

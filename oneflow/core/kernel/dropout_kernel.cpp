@@ -6,11 +6,12 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext*) {
+void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx,
+                                                      DeviceCtx* device_ctx) {
   const auto& dropout_conf = this->op_conf().dropout_conf();
   int64_t seed = GetCurTime();
   if (dropout_conf.has_seed()) { seed = dropout_conf.seed(); }
-  random_generator_.reset(new RandomGenerator(seed));
+  random_generator_.reset(new RandomGenerator<device_type>(seed, device_ctx));
 }
 
 template<DeviceType device_type, typename T>
@@ -38,7 +39,7 @@ void DropoutKernel<device_type, T>::BackwardDataContent(
 template<DeviceType device_type, typename T>
 void DropoutKernel<device_type, T>::Dropout(DeviceCtx* ctx, const int64_t n, double dropout_rate,
                                             const T* x, float* random_mask, T* y) const {
-  random_generator_->Uniform<device_type, float>(n, random_mask);
+  random_generator_->Uniform(n, random_mask);
   DropoutKernelUtil<device_type, T>::MaskAndScale(ctx, n, dropout_rate, 1 / (1 - dropout_rate), x,
                                                   random_mask, y);
 }
