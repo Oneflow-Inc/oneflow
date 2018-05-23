@@ -29,7 +29,7 @@ void ConvKernelIf<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* conv_out_diff = this->GetOutDiffBlob(BnInOp2Blob);
+  const Blob* conv_out_diff = BnInOp2Blob("out_diff");
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
     BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"), BnInOp2Blob);
   }

@@ -44,6 +44,8 @@ class Kernel {
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
+  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
+
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
@@ -152,8 +154,7 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
  protected:
   KernelIfWithActivation() = default;
 
-  ActivationType GetActivationType() const;
-  const Blob* GetOutDiffBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  ActivationType GetActivationType() const override;
   void ForwardActivate(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardActivate(const KernelCtx& ctx,

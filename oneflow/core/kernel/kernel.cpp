@@ -50,7 +50,15 @@ void Kernel::Forward(const KernelCtx& ctx,
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardActivate(ctx, BnInOp2Blob);
-  BackwardDataContent(ctx, BnInOp2Blob);
+  BackwardDataContent(ctx, [BnInOp2Blob, this](const std::string& bn) -> Blob* {
+    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
+
+    if (this->GetActivationType() != ActivationType::kNone) {
+      CHECK_EQ(odbns.size(), 1);
+      if (bn == odbns[0]) { return BnInOp2Blob("activation_buf"); }
+    }
+    return BnInOp2Blob(bn);
+  });
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
@@ -130,18 +138,6 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 template<DeviceType device_type, typename T>
 ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
   return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
-}
-
-template<DeviceType device_type, typename T>
-const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->GetActivationType() != ActivationType::kNone) {
-    return BnInOp2Blob("activation_buf");
-  } else {
-    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
-    CHECK_EQ(odbns.size(), 1);
-    return BnInOp2Blob(odbns[0]);
-  }
 }
 
 template<DeviceType device_type, typename T>
