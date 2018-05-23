@@ -2,8 +2,11 @@
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 
 #include "oneflow/core/common/blas.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/common/range.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cudnn_util.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -312,6 +315,152 @@ class DataContentIterator final {
   const PbRpf<std::string>* bns_;
   int32_t bn_idx_;
   int32_t axis_;
+};
+
+class ParallelDataContentIterator final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ParallelDataContentIterator);
+  ParallelDataContentIterator() = delete;
+  ~ParallelDataContentIterator() = default;
+
+  ParallelDataContentIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                              const PbRpf<std::string>* bns, int32_t axis, int32_t thr_id,
+                              int32_t thr_num) {
+    BnInOp2Blob_ = BnInOp2Blob;
+    bns_ = bns;
+    axis_ = axis;
+    thr_id_ = thr_id;
+    thr_num_ = thr_num;
+
+    int64_t size_of_axis_zero;
+    if (0 == axis_) {
+      size_of_axis_zero = 0;
+      FOR_RANGE(size_t, i, 0, bns_->size()) {
+        size_of_axis_zero += BnInOp2Blob(bns_->Get(i))->shape().At(0);
+      }
+    } else {
+      size_of_axis_zero = BnInOp2Blob(bns_->Get(0))->shape().At(0);
+    }
+
+    BalancedSplitter balanced_splitter(size_of_axis_zero, thr_num_);
+    Range range_of_axis_zero = balanced_splitter.At(thr_id_);
+    zero_axis_bottom_ = range_of_axis_zero.begin();
+    zero_axis_top_ = range_of_axis_zero.end();
+
+    if (0 == axis_) {
+      seg_bottom_ = 0;
+      seg_top_ = 1;
+
+      std::vector<int64_t> bn_zero_axis_begin(bns_->size());
+      std::vector<int64_t> bn_zero_axis_end(bns_->size());
+      bn_zero_axis_begin[0] = 0;
+      bn_zero_axis_end[0] = BnInOp2Blob(bns_->Get(0))->shape().At(0);
+      FOR_RANGE(size_t, i, 1, bns_->size()) {
+        bn_zero_axis_begin[i] = bn_zero_axis_end[i - 1];
+        bn_zero_axis_end[i] = bn_zero_axis_begin[i] + BnInOp2Blob(bns_->Get(i))->shape().At(0);
+      }
+
+      std::vector<int64_t> bn_zero_axis_bottom = bn_zero_axis_begin;
+      std::vector<int64_t> bn_zero_axis_top = bn_zero_axis_end;
+      FOR_RANGE(size_t, i, 0, bns_->size()) {
+        if (bn_zero_axis_begin[i] <= zero_axis_bottom_ && zero_axis_bottom_ < bn_zero_axis_end[i]) {
+          bn_bottom_ = i;
+          bn_zero_axis_bottom[i] = zero_axis_bottom_ - bn_zero_axis_begin[i];
+        }
+        if (bn_zero_axis_begin[i] <= zero_axis_top_ && zero_axis_top_ < bn_zero_axis_end[i]) {
+          bn_top_ = i + 1;
+          bn_zero_axis_top[i] = zero_axis_top_ - bn_zero_axis_begin[i];
+        }
+      }
+
+      bn_offset_.resize(bns_->size(), 0);
+      bn_elem_num_.resize(bns_->size(), 0);
+      FOR_RANGE(size_t, i, bn_bottom_, bn_top_) {
+        if (i == bn_bottom_) {
+          bn_offset_[i] = bn_zero_axis_bottom[i] * BnInOp2Blob(bns_->Get(i))->shape().Count(1);
+        } else {
+          bn_offset_[i] = 0;
+        }
+        bn_elem_num_[i] = (bn_zero_axis_top[i] - bn_zero_axis_bottom[i])
+                          * BnInOp2Blob(bns_->Get(i))->shape().Count(1);
+      }
+    } else {
+      seg_bottom_ = nonzero_axis_get_seg_bottom();
+      seg_top_ = nonzero_axis_get_seg_top();
+      bn_bottom_ = nonzero_axis_get_bn_bottom();
+      bn_top_ = nonzero_axis_get_bn_top();
+
+      // TODO: refactor bn_offset_ and bn_elem_num_
+    }
+
+    seg_idx_ = seg_bottom_;
+    bn_idx_ = bn_bottom_;
+  }
+
+  std::tuple<char*, size_t> GetNext() {
+    std::tuple<char*, size_t> ret(nullptr, 0);
+    if (seg_idx_ == seg_top_) { return ret; }
+
+    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
+    if (0 == axis_) {
+      int64_t elem_num = bn_elem_num_[bn_idx_];
+      std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
+      if (blob->IsColValid()) {
+        std::get<0>(ret) =
+            blob->mut_dptr<char>() + bn_offset_[bn_idx_] * GetSizeOfDataType(blob->data_type());
+      }
+    } else {
+      // TODO: refactor bn_offset_ and bn_elem_num_
+      int64_t elem_num = blob->shape().Count(axis_);
+      std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
+      if (blob->IsColValid()) {
+        std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
+      }
+    }
+
+    bn_idx_ += 1;
+    if (bn_idx_ == bn_top_) {
+      bn_idx_ = 0;
+      seg_idx_ += 1;
+    }
+    return ret;
+  }
+
+ private:
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  const PbRpf<std::string>* bns_;
+  int32_t axis_;
+  int32_t thr_id_;
+  int32_t thr_num_;
+
+  int64_t seg_bottom_;
+  int64_t seg_top_;
+  int32_t bn_bottom_;
+  int32_t bn_top_;
+
+  int64_t seg_idx_;
+  int32_t bn_idx_;
+
+  int64_t zero_axis_bottom_;
+  int64_t zero_axis_top_;  // not included
+
+  std::vector<int64_t> bn_offset_;
+  std::vector<int64_t> bn_elem_num_;
+
+  int64_t nonzero_axis_get_seg_bottom() {
+    int64_t size_of_axis_zero = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
+    int64_t seg_num = BnInOp2Blob_(bns_->Get(0))->shape().Count(0, axis_);
+    CHECK_EQ(seg_num % size_of_axis_zero, 0);
+    return seg_num / size_of_axis_zero * zero_axis_bottom_;
+  }
+  int64_t nonzero_axis_get_seg_top() {
+    int64_t size_of_axis_zero = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
+    int64_t seg_num = BnInOp2Blob_(bns_->Get(0))->shape().Count(0, axis_);
+    CHECK_EQ(seg_num % size_of_axis_zero, 0);
+    return seg_num / size_of_axis_zero * zero_axis_top_;
+  }
+  int32_t nonzero_axis_get_bn_bottom() { return 0; }
+  int32_t nonzero_axis_get_bn_top() { return bns_->size(); }
 };
 
 class FieldIterator {
