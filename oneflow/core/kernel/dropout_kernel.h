@@ -29,7 +29,7 @@ class DropoutKernel final : public KernelIf<device_type> {
   void DropoutBackward(DeviceCtx* ctx, const int64_t n, double dropout_rate, const T* dy,
                        const float* random_mask, T* dx) const;
 
-  std::unique_ptr<RandomGenerator> random_generator_;
+  std::unique_ptr<RandomGenerator<device_type>> random_generator_;
 };
 
 template<DeviceType device_type, typename T>

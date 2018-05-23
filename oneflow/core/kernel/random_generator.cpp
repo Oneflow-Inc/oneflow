@@ -4,12 +4,13 @@
 namespace oneflow {
 
 template<typename T>
-void RandomGeneratorCpuImpl::TUniform(const int64_t elem_cnt, T* dptr) {
-  TUniform(elem_cnt, ZeroVal<T>::value, OneVal<T>::value, dptr);
+void RandomGenerator<DeviceType::kCPU>::Uniform(const int64_t elem_cnt, T* dptr) {
+  Uniform(elem_cnt, ZeroVal<T>::value, OneVal<T>::value, dptr);
 }
 
 template<typename T>
-void RandomGeneratorCpuImpl::TUniform(const int64_t elem_cnt, const T min, const T max, T* dptr) {
+void RandomGenerator<DeviceType::kCPU>::Uniform(const int64_t elem_cnt, const T min, const T max,
+                                                T* dptr) {
   CHECK_GE(elem_cnt, 0);
   CHECK(dptr);
   CHECK_LE(min, max);
@@ -18,11 +19,15 @@ void RandomGeneratorCpuImpl::TUniform(const int64_t elem_cnt, const T min, const
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(mt19937_generator_); }
 }
 
-template void RandomGeneratorCpuImpl::TUniform<float>(const int64_t elem_cnt, float* dptr);
-template void RandomGeneratorCpuImpl::TUniform<double>(const int64_t elem_cnt, double* dptr);
-template void RandomGeneratorCpuImpl::TUniform<float>(const int64_t elem_cnt, const float min,
-                                                      const float max, float* dptr);
-template void RandomGeneratorCpuImpl::TUniform<double>(const int64_t elem_cnt, const double min,
-                                                       const double max, double* dptr);
+template void RandomGenerator<DeviceType::kCPU>::Uniform<float>(const int64_t elem_cnt,
+                                                                float* dptr);
+template void RandomGenerator<DeviceType::kCPU>::Uniform<double>(const int64_t elem_cnt,
+                                                                 double* dptr);
+template void RandomGenerator<DeviceType::kCPU>::Uniform<float>(const int64_t elem_cnt,
+                                                                const float min, const float max,
+                                                                float* dptr);
+template void RandomGenerator<DeviceType::kCPU>::Uniform<double>(const int64_t elem_cnt,
+                                                                 const double min, const double max,
+                                                                 double* dptr);
 
 }  // namespace oneflow

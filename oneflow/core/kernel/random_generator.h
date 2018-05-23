@@ -8,61 +8,38 @@
 
 namespace oneflow {
 
-class RandomGenerator {
+template<DeviceType device_type>
+class RandomGenerator;
+
+template<>
+class RandomGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator() = default;
-  virtual ~RandomGenerator() {}
+  RandomGenerator(int64_t seed) : mt19937_generator_(seed) {}
+  ~RandomGenerator() {}
 
   template<typename T>
-  void Uniform(const int64_t elem_cnt, T* dptr) {
-    VUniform(elem_cnt, dptr);
-  }
-
- private:
-  virtual void VUniform(const int64_t elem_cnt, float* dptr) = 0;
-  virtual void VUniform(const int64_t elem_cnt, double* dptr) = 0;
-};
-
-template<typename Impl>
-class RandomGeneratorIf : public Impl {
- public:
-  template<class... TArgs>
-  RandomGeneratorIf(TArgs&&... args) : Impl(std::forward<TArgs>(args)...) {}
-
- private:
-  void VUniform(const int64_t elem_cnt, float* dptr) final { Impl::TUniform(elem_cnt, dptr); }
-  void VUniform(const int64_t elem_cnt, double* dptr) final { Impl::TUniform(elem_cnt, dptr); }
-};
-
-class RandomGeneratorCpuImpl : public RandomGenerator {
- public:
-  RandomGeneratorCpuImpl(int64_t seed) : mt19937_generator_(seed) {}
-
+  void Uniform(const int64_t elem_cnt, T* dptr);
   template<typename T>
-  void TUniform(const int64_t elem_cnt, T* dptr);
-  template<typename T>
-  void TUniform(const int64_t elem_cnt, const T min, const T max, T* dptr);
+  void Uniform(const int64_t elem_cnt, const T min, const T max, T* dptr);
 
  private:
   std::mt19937 mt19937_generator_;
 };
 
-using RandomGeneratorCpu = RandomGeneratorIf<RandomGeneratorCpuImpl>;
-
-class RandomGeneratorGpuImpl : public RandomGenerator {
+template<>
+class RandomGenerator<DeviceType::kGPU> final {
  public:
-  RandomGeneratorGpuImpl(int64_t seed, cudaStream_t cuda_stream);
-  ~RandomGeneratorGpuImpl();
+  OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
+  RandomGenerator(int64_t seed, cudaStream_t cuda_stream);
+  ~RandomGenerator();
 
   template<typename T>
-  void TUniform(const int64_t elem_cnt, T* dptr);
+  void Uniform(const int64_t elem_cnt, T* dptr);
 
  private:
   curandGenerator_t curand_generator_;
 };
-
-using RandomGeneratorGpu = RandomGeneratorIf<RandomGeneratorGpuImpl>;
 
 }  // namespace oneflow
 
