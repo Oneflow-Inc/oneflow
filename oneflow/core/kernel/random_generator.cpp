@@ -19,15 +19,14 @@ void RandomGenerator<DeviceType::kCPU>::Uniform(const int64_t elem_cnt, const T 
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(mt19937_generator_); }
 }
 
-template void RandomGenerator<DeviceType::kCPU>::Uniform<float>(const int64_t elem_cnt,
-                                                                float* dptr);
-template void RandomGenerator<DeviceType::kCPU>::Uniform<double>(const int64_t elem_cnt,
-                                                                 double* dptr);
-template void RandomGenerator<DeviceType::kCPU>::Uniform<float>(const int64_t elem_cnt,
-                                                                const float min, const float max,
-                                                                float* dptr);
-template void RandomGenerator<DeviceType::kCPU>::Uniform<double>(const int64_t elem_cnt,
-                                                                 const double min, const double max,
-                                                                 double* dptr);
+#define INITIATE_CPU_RANDOM_GENERATOR_UNIFORM(T, typeproto) \
+  template void RandomGenerator<DeviceType::kCPU>::Uniform<T>(const int64_t elem_cnt, T* dptr);
+
+#define INITIATE_CPU_RANDOM_GENERATOR_UNIFORM_MIN_MAX(T, typeproto)                                \
+  template void RandomGenerator<DeviceType::kCPU>::Uniform<T>(const int64_t elem_cnt, const T min, \
+                                                              const T max, T* dptr);
+
+OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_RANDOM_GENERATOR_UNIFORM, FLOATING_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_RANDOM_GENERATOR_UNIFORM_MIN_MAX, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

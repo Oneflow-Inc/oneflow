@@ -19,10 +19,10 @@ void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret)
 
 }  // namespace
 
-RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, cudaStream_t cuda_stream) {
+RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, const DeviceCtx* device_ctx) {
   CudaCheck(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
   CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
-  CudaCheck(curandSetStream(curand_generator_, cuda_stream));
+  CudaCheck(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
 }
 
 RandomGenerator<DeviceType::kGPU>::~RandomGenerator() {
@@ -34,9 +34,9 @@ void RandomGenerator<DeviceType::kGPU>::Uniform(const int64_t elem_cnt, T* dptr)
   RngUniformGpu(curand_generator_, elem_cnt, dptr);
 }
 
-template void RandomGenerator<DeviceType::kGPU>::Uniform<float>(const int64_t elem_cnt,
-                                                                float* dptr);
-template void RandomGenerator<DeviceType::kGPU>::Uniform<double>(const int64_t elem_cnt,
-                                                                 double* dptr);
+#define INITIATE_GPU_RANDOM_GENERATOR_UNIFORM(T, typeproto) \
+  template void RandomGenerator<DeviceType::kGPU>::Uniform<T>(const int64_t elem_cnt, T* dptr);
+
+OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_RANDOM_GENERATOR_UNIFORM, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -11,12 +11,7 @@ void DropoutKernel<device_type, T>::VirtualKernelInit(const ParallelContext* par
   const auto& dropout_conf = this->op_conf().dropout_conf();
   int64_t seed = GetCurTime();
   if (dropout_conf.has_seed()) { seed = dropout_conf.seed(); }
-  if (device_type == DeviceType::kGPU) {
-    CHECK_NOTNULL(device_ctx);
-    random_generator_.reset(new RandomGenerator<DeviceType::kGPU>(seed, device_ctx->cuda_stream()));
-  } else {
-    random_generator_.reset(new RandomGenerator<DeviceType::kCPU>(seed));
-  }
+  random_generator_.reset(new RandomGenerator<device_type>(seed, device_ctx));
 }
 
 template<DeviceType device_type, typename T>
