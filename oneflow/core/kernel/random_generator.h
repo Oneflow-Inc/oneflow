@@ -16,7 +16,7 @@ template<>
 class RandomGenerator<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator(int64_t seed, const DeviceCtx* device_ctx) : mt19937_generator_(seed) {}
+  RandomGenerator(int64_t seed, DeviceCtx* device_ctx) : mt19937_generator_(seed) {}
   ~RandomGenerator() {}
 
   template<typename T>
@@ -32,7 +32,7 @@ template<>
 class RandomGenerator<DeviceType::kGPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator(int64_t seed, const DeviceCtx* device_ctx);
+  RandomGenerator(int64_t seed, DeviceCtx* device_ctx);
   ~RandomGenerator();
 
   template<typename T>

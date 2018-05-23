@@ -19,7 +19,8 @@ void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret)
 
 }  // namespace
 
-RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, const DeviceCtx* device_ctx) {
+RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, DeviceCtx* device_ctx) {
+  CHECK_NOTNULL(device_ctx);
   CudaCheck(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
   CudaCheck(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
   CudaCheck(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
