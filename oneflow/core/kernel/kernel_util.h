@@ -363,11 +363,14 @@ class ParallelDataContentIterator final {
       std::vector<int64_t> bn_zero_axis_bottom = bn_zero_axis_begin;
       std::vector<int64_t> bn_zero_axis_top = bn_zero_axis_end;
       FOR_RANGE(size_t, i, 0, bns_->size()) {
+        bn_zero_axis_bottom[i] = 0;
+        bn_zero_axis_top[i] = bn_zero_axis_end[i] - bn_zero_axis_begin[i];
         if (bn_zero_axis_begin[i] <= zero_axis_bottom_ && zero_axis_bottom_ < bn_zero_axis_end[i]) {
           bn_bottom_ = i;
           bn_zero_axis_bottom[i] = zero_axis_bottom_ - bn_zero_axis_begin[i];
         }
-        if (bn_zero_axis_begin[i] <= zero_axis_top_ - 1 && zero_axis_top_ - 1 < bn_zero_axis_end[i]) {
+        if (bn_zero_axis_begin[i] <= zero_axis_top_ - 1
+            && zero_axis_top_ - 1 < bn_zero_axis_end[i]) {
           bn_top_ = i + 1;
           bn_zero_axis_top[i] = zero_axis_top_ - bn_zero_axis_begin[i];
         }
@@ -384,6 +387,7 @@ class ParallelDataContentIterator final {
         bn_elem_num_[i] = (bn_zero_axis_top[i] - bn_zero_axis_bottom[i])
                           * BnInOp2Blob(bns_->Get(i))->shape().Count(1);
       }
+
     } else {
       seg_bottom_ = nonzero_axis_get_seg_bottom();
       seg_top_ = nonzero_axis_get_seg_top();
