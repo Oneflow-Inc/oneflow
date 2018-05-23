@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/reduce_sum_op.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
@@ -24,7 +25,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> Get
     }
     if (out_dim_vec.empty()) { out_dim_vec.push_back(1); }
   } else {
-    *buf_size = in_blob->ByteSizeOfDataContentField();
+    *buf_size = GetTmpSizeForReduceSum(in_blob->data_type(), in_blob->shape().elem_cnt());
   }
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   *out_blob = *in_blob;
