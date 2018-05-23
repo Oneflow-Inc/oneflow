@@ -51,6 +51,7 @@ class RegstDesc final {
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
+  void FixRegstNumWhenProducerAndConsumersInSameStream();
 
  private:
   int64_t regst_desc_id_;

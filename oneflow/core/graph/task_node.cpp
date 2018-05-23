@@ -189,6 +189,7 @@ void TaskNode::LockRegsts() {
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
     pair.second->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
+    pair.second->FixRegstNumWhenProducerAndConsumersInSameStream();
   }
 }
 
@@ -217,6 +218,11 @@ void TaskNode::UpdateTaskId() {
 int64_t TaskNode::LocalWorkStreamId() const {
   CHECK_NE(task_id_, -1);
   return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
+}
+
+int64_t TaskNode::GlobalWorkStreamId() const {
+  CHECK_NE(task_id_, -1);
+  return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
 }
 
 void TaskNode::ClearOutOfDateConsumedRegst() {

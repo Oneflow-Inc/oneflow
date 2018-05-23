@@ -133,4 +133,11 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
   return true;
 }
 
+void RegstDesc::FixRegstNumWhenProducerAndConsumersInSameStream() {
+  for (const TaskNode* consumer : consumers_) {
+    if (consumer->GlobalWorkStreamId() != producer_->GlobalWorkStreamId()) { return; }
+  }
+  max_register_num_ = min_register_num_;
+}
+
 }  // namespace oneflow
