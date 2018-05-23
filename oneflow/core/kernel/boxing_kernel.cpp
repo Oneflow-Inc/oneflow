@@ -47,7 +47,7 @@ void ParallelConcatSplitDataContent(DeviceCtx* ctx,
                                     const PbRpf<std::string>& concat_bns, int32_t concat_axis,
                                     const PbRpf<std::string>& split_bns, int32_t split_axis) {
   int32_t proc_num = omp_get_num_procs();
-  int32_t thr_num = std::min(8, proc_num);
+  int32_t thr_num = std::min(16, proc_num);
   omp_set_num_threads(thr_num);
 #pragma omp parallel
   {
