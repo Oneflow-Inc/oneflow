@@ -10,7 +10,15 @@
 namespace oneflow {
 
 template<DeviceType device_type>
-class RandomGenerator;
+class RandomGenerator final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
+  RandomGenerator(int64_t seed, DeviceCtx* device_ctx);
+  ~RandomGenerator();
+
+  template<typename T>
+  void Uniform(const int64_t elem_cnt, T* dptr);
+};
 
 template<>
 class RandomGenerator<DeviceType::kCPU> final {
