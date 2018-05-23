@@ -175,7 +175,7 @@ __device__ void MatrixShrinkCols(const int32_t row_num, const T* x, const int32_
   }
 }
 
-template<typename T, T (*reduce_core_func)(const T, const T), int shift_size = 2>
+template<typename T, T (*reduce_core_func)(const T, const T), size_t shift_size = 2>
 __global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, const T* x, T* y,
                                    T* temp_storage, size_t temp_col_num) {
   const size_t temp_lda = temp_col_num;
@@ -192,7 +192,7 @@ __global__ void MatrixRowReduceGpu(const size_t row_num, const size_t col_num, c
   MatrixShrinkCols<T, reduce_core_func>(row_num, temp_storage, temp_col_num, temp_lda, y, 1, 1);
 }
 
-template<typename T, T (*reduce_core_func)(const T, const T), int shift_size = 2>
+template<typename T, T (*reduce_core_func)(const T, const T), size_t shift_size = 2>
 void MatrixRowReduce(DeviceCtx* ctx, const size_t row_num, const size_t col_num, const T* x, T* y,
                      void* temp_storage, const size_t temp_storage_bytes) {
   CHECK_NOTNULL(temp_storage);
