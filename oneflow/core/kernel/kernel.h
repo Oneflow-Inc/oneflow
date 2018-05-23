@@ -18,7 +18,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void Init(const ParallelContext*, const KernelConf&);
+  void Init(const ParallelContext*, const KernelConf&, const DeviceCtx*);
 
   void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
                             const Snapshot*,
@@ -31,6 +31,9 @@ class Kernel {
 
  protected:
   Kernel() = default;
+  virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, const DeviceCtx* device_ctx) {
+    VirtualKernelInit(parallel_ctx);
+  }
   virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
@@ -165,7 +168,8 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
   REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&);
+std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&,
+                                              const DeviceCtx*);
 
 }  // namespace oneflow
 

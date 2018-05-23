@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -21,7 +22,7 @@ struct RandomGeneratorUtil final {
 class RandomGenerator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RandomGenerator);
-  RandomGenerator(int64_t seed);
+  RandomGenerator(int64_t seed, cudaStream_t cuda_stream);
   ~RandomGenerator();
 
   template<DeviceType device_type, typename T>
