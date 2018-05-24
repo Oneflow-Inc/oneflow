@@ -15,7 +15,8 @@ class ReduceSumOp final : public Operator {
   const PbMessage& GetCustomizedConf() const override;
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx) const override;
+                      const ParallelContext* parallel_ctx, size_t* buf_size,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
