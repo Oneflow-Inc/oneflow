@@ -188,8 +188,18 @@ void TaskNode::LockRegsts() {
 
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
-    pair.second->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
-    pair.second->FixRegstNumWhenProducerAndConsumersInSameStream();
+    RegstDesc* produced_regst = pair.second.get();
+    produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
+    bool is_in_same_stream = true;
+    for (const TaskNode* consumer : produced_regst->consumers()) {
+      if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
+        is_in_same_stream = false;
+        break;
+      }
+    }
+    if (is_in_same_stream) {
+      produced_regst->UpdtMaxRegstNumIfNeed(produced_regst->min_register_num());
+    }
   }
 }
 
