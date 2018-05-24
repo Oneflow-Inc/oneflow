@@ -65,25 +65,29 @@ void CloseStdoutAndStderr() {
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX
   std::ifstream mem_info("/proc/meminfo");
-  if (mem_info.is_open()) {
-    std::string line;
-    while (std::getline(mem_info, line)) {
-      std::vector<std::string> tokens = Split(line, ' ');
-      if (tokens.size() == 3 && tokens[0] == "MemAvailable:" && tokens[2] == "kB") {
-        size_t mem_available = 0;
-        std::stringstream sstream(tokens[1]);
-        sstream >> mem_available;
-        CHECK(!sstream.fail());
-        return mem_available * 1024;
-      }
-    }
+  CHECK(mem_info.is_open());
+  std::string line;
+  while (std::getline(mem_info, line).good()) {
+    std::string token;
+    const char* p = line.c_str();
+    p = StrToToken(p, " ", &token);
+    if (token != "MemAvailable:") { continue; }
+    CHECK_NE(*p, '\0');
+    p = StrToToken(p, " ", &token);
+    size_t mem_available = 0;
+    std::stringstream sstream(token);
+    sstream >> mem_available;
+    CHECK(!sstream.fail());
+    CHECK_NE(*p, '\0');
+    p = StrToToken(p, " ", &token);
+    CHECK_EQ(token, "kB");
+    return mem_available * 1024;
   }
-  struct sysinfo sys_info;
-  PCHECK(sysinfo(&sys_info) == 0);
-  return sys_info.freeram;
+  LOG(FATAL) << "can't find MemAvailable in /proc/meminfo";
 #else
-  return 0;  // TODO
+// TODO
 #endif
+  return 0;
 }
 
 }  // namespace oneflow

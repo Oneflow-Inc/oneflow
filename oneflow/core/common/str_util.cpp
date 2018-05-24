@@ -5,6 +5,7 @@ namespace oneflow {
 const char* StrToToken(const char* text, const std::string& delims, std::string* token) {
   token->clear();
   while (*text != '\0' && delims.find(*text) == std::string::npos) { token->push_back(*text++); }
+  while (*text != '\0' && delims.find(*text) != std::string::npos) { text++; }
   return text;
 }
 
@@ -18,18 +19,6 @@ void Split(const std::string& text, const std::string& delims,
       token_start = i + 1;
     }
   }
-}
-
-std::vector<std::string> Split(const std::string& text, const char sep) {
-  std::vector<std::string> tokens;
-  size_t start = 0;
-  size_t end = 0;
-  while ((end = text.find(sep, start)) != std::string::npos) {
-    if (end != start) { tokens.push_back(text.substr(start, end - start)); }
-    start = end + 1;
-  }
-  if (end != start) { tokens.push_back(text.substr(start)); }
-  return tokens;
 }
 
 std::string Dirname(const std::string& path) {
