@@ -27,19 +27,32 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DataIdIterator input_it(BnInOp2Blob, &this->op_attribute().input_bns(),
-                          this->op_conf().concat_conf().axis());
-  DataIdIterator output_it(BnInOp2Blob, &this->op_attribute().output_bns(), 0);
-  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
+  ForwardField(ctx, BnInOp2Blob, [](Blob* blob) { return blob->mut_data_id(); },
+               [](Blob* blob) { return blob->data_id(); },
+               [](Blob* blob) { return blob->ByteSizeOfDataIdField(); });
 }
 
 template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ColNumIterator input_it(BnInOp2Blob, &this->op_attribute().input_bns(),
-                          this->op_conf().concat_conf().axis());
-  ColNumIterator output_it(BnInOp2Blob, &this->op_attribute().output_bns(), 0);
-  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
+  ForwardField(ctx, BnInOp2Blob,
+               [](Blob* blob) { return reinterpret_cast<char*>(blob->mut_col_num()); },
+               [](Blob* blob) { return reinterpret_cast<const char*>(blob->col_num()); },
+               [](Blob* blob) { return blob->ByteSizeOfColNumField(); });
+}
+
+template<DeviceType device_type, typename T>
+void ConcatKernel<device_type, T>::ForwardField(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    std::function<char*(Blob*)> GetOutBlobField, std::function<const char*(Blob*)> GetInBlobField,
+    std::function<size_t(Blob*)> GetFieldSize) const {
+  CHECK_GE(this->op_conf().concat_conf().axis(), 1);
+  Blob* out_blob = BnInOp2Blob("out");
+  Blob* in_0_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(0));
+  size_t out_blob_field_size = GetFieldSize(out_blob);
+  CHECK_EQ(out_blob_field_size, GetFieldSize(in_0_blob));
+  Memcpy<device_type>(ctx.device_ctx, GetOutBlobField(out_blob), GetInBlobField(in_0_blob),
+                      out_blob_field_size);
 }
 
 template<DeviceType device_type, typename T>
