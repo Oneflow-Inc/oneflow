@@ -56,8 +56,9 @@ void ParallelConcatSplitDataContent(DeviceCtx* ctx,
 #pragma omp parallel
   {
     int thr_id = omp_get_thread_num();
-    ParallelDataContentIterator concat_it(BnInOp2Blob, &concat_bns, thr_id, concat_helper);
-    ParallelDataContentIterator split_it(BnInOp2Blob, &split_bns, thr_id, split_helper);
+    ParallelDataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis, thr_id,
+                                          concat_helper);
+    ParallelDataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis, thr_id, split_helper);
     CopyFromIterToIter<DeviceType::kCPU>(ctx, concat_it, split_it);
   }
 }

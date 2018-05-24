@@ -399,6 +399,7 @@ class ParallelConcatSplitHelper {
         seg_bottom_[thr_id] = seg_num / axis_zero_total_size * thr_range_begin[thr_id];
         seg_top_[thr_id] = seg_num / axis_zero_total_size * thr_range_end[thr_id];
       }
+      // The thr_bn_offset_ and thr_bn_elem_size_ will be set in ParallelConcatSplitIterator
     }
   }
 
@@ -463,11 +464,12 @@ class ParallelDataContentIterator final {
   ~ParallelDataContentIterator() = default;
 
   ParallelDataContentIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                              const PbRpf<std::string>* bns, int32_t thr_id,
+                              const PbRpf<std::string>* bns, int32_t axis, int32_t thr_id,
                               const ParallelConcatSplitHelper& helper)
       : helper_(helper) {
     BnInOp2Blob_ = BnInOp2Blob;
     bns_ = bns;
+    axis_ = axis;
     thr_id_ = thr_id;
 
     seg_idx_ = helper_.seg_bottom(thr_id);
@@ -479,14 +481,12 @@ class ParallelDataContentIterator final {
     if (seg_idx_ == helper_.seg_top(thr_id_)) { return ret; }
 
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
-    std::get<1>(ret) = helper_.thr_bn_elem_size(thr_id_, bn_idx_);
-    if (blob->IsColValid()) {
-      std::get<0>(ret) = blob->mut_dptr<char>() + helper_.thr_bn_offset(thr_id_, bn_idx_);
-    }
+    std::get<1>(ret) = elem_size(blob);
+    if (blob->IsColValid()) { std::get<0>(ret) = blob->mut_dptr<char>() + offset(blob); }
 
     bn_idx_ += 1;
     if (bn_idx_ == helper_.bn_top(thr_id_)) {
-      bn_idx_ = 0;
+      bn_idx_ = 0;  // if axis == 0, will not come here, if axis != 0, bn_idx_ returns to 0
       seg_idx_ += 1;
     }
     return ret;
@@ -495,11 +495,27 @@ class ParallelDataContentIterator final {
  private:
   std::function<Blob*(const std::string&)> BnInOp2Blob_;
   const PbRpf<std::string>* bns_;
+  int32_t axis_;
   int32_t thr_id_;
   const ParallelConcatSplitHelper& helper_;
 
   int64_t seg_idx_;
   int64_t bn_idx_;
+
+  int64_t offset(const Blob* blob) {
+    if (0 == axis_) {
+      return helper_.thr_bn_offset(thr_id_, bn_idx_);
+    } else {
+      return seg_idx_ * elem_size(blob);
+    }
+  }
+  int64_t elem_size(const Blob* blob) {
+    if (0 == axis_) {
+      return helper_.thr_bn_elem_size(thr_id_, bn_idx_);
+    } else {
+      return blob->shape().Count(axis_) * GetSizeOfDataType(blob->data_type());
+    }
+  }
 };
 
 class FieldIterator {
