@@ -47,26 +47,26 @@ class ParallelConcatSplitHelper {
   ParallelConcatSplitHelper(std::function<Blob*(const std::string&)> BnInOp2Blob,
                             const PbRpf<std::string>* bns, int32_t axis, int32_t thr_num)
       : BnInOp2Blob_(BnInOp2Blob), bns_(bns), axis_(axis), thr_num_(thr_num) {
-    bn_num_ = bns_->size();
-    calc_axis_zero_total_size();
+    int64_t bn_num = bns_->size();
+    int64_t axis_zero_total_size = calc_axis_zero_total_size();
 
-    thr_range_begin_.resize(thr_num_);
-    thr_range_end_.resize(thr_num_);
-    BalancedSplitter balanced_splitter(axis_zero_total_size_, thr_num_);
+    std::vector<int64_t> thr_range_begin(thr_num_);
+    std::vector<int64_t> thr_range_end(thr_num_);
+    BalancedSplitter balanced_splitter(axis_zero_total_size, thr_num_);
     FOR_RANGE(size_t, thr_id, 0, thr_num_) {
-      thr_range_begin_[thr_id] = balanced_splitter.At(thr_id).begin();
-      thr_range_end_[thr_id] = balanced_splitter.At(thr_id).end();
+      thr_range_begin[thr_id] = balanced_splitter.At(thr_id).begin();
+      thr_range_end[thr_id] = balanced_splitter.At(thr_id).end();
     }
 
     if (0 == axis_) {
       seg_bottom_.resize(thr_num_, 0);
       seg_top_.resize(thr_num_, 1);
 
-      std::vector<int64_t> blob_begin(bn_num_);
-      std::vector<int64_t> blob_end(bn_num_);
+      std::vector<int64_t> blob_begin(bn_num);
+      std::vector<int64_t> blob_end(bn_num);
       blob_begin[0] = 0;
       blob_end[0] = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
-      FOR_RANGE(size_t, i, 1, bn_num_) {
+      FOR_RANGE(size_t, i, 1, bn_num) {
         blob_begin[i] = blob_end[i - 1];
         blob_end[i] = blob_begin[i] + BnInOp2Blob_(bns_->Get(i))->shape().At(0);
       }
@@ -76,20 +76,20 @@ class ParallelConcatSplitHelper {
       std::vector<std::vector<int64_t>> thr_blob_begin(thr_num_);
       std::vector<std::vector<int64_t>> thr_blob_end(thr_num_);
       FOR_RANGE(int64_t, thr_id, 0, thr_num_) {
-        thr_blob_begin[thr_id].resize(bn_num_);
-        thr_blob_end[thr_id].resize(bn_num_);
-        FOR_RANGE(int64_t, bn_id, 0, bn_num_) {
+        thr_blob_begin[thr_id].resize(bn_num);
+        thr_blob_end[thr_id].resize(bn_num);
+        FOR_RANGE(int64_t, bn_id, 0, bn_num) {
           thr_blob_begin[thr_id][bn_id] = 0;
           thr_blob_end[thr_id][bn_id] = blob_end[bn_id] - blob_begin[bn_id];
-          if (blob_begin[bn_id] <= thr_range_begin_[thr_id]
-              && thr_range_begin_[thr_id] < blob_end[bn_id]) {
+          if (blob_begin[bn_id] <= thr_range_begin[thr_id]
+              && thr_range_begin[thr_id] < blob_end[bn_id]) {
             bn_bottom_[thr_id] = bn_id;
-            thr_blob_begin[thr_id][bn_id] = thr_range_begin_[thr_id] - blob_begin[bn_id];
+            thr_blob_begin[thr_id][bn_id] = thr_range_begin[thr_id] - blob_begin[bn_id];
           }
-          if (blob_begin[bn_id] <= thr_range_end_[thr_id] - 1
-              && thr_range_end_[thr_id] - 1 < blob_end[bn_id]) {
+          if (blob_begin[bn_id] <= thr_range_end[thr_id] - 1
+              && thr_range_end[thr_id] - 1 < blob_end[bn_id]) {
             bn_top_[thr_id] = bn_id + 1;
-            thr_blob_end[thr_id][bn_id] = thr_range_end_[thr_id] - blob_begin[bn_id];
+            thr_blob_end[thr_id][bn_id] = thr_range_end[thr_id] - blob_begin[bn_id];
           }
         }
       }
@@ -97,9 +97,9 @@ class ParallelConcatSplitHelper {
       thr_bn_offset_.resize(thr_num_);
       thr_bn_elem_size_.resize(thr_num_);
       FOR_RANGE(int64_t, thr_id, 0, thr_num_) {
-        thr_bn_offset_[thr_id].resize(bn_num_, 0);
-        thr_bn_elem_size_[thr_id].resize(bn_num_, 0);
-        FOR_RANGE(int64_t, bn_id, 0, bn_num_) {
+        thr_bn_offset_[thr_id].resize(bn_num, 0);
+        thr_bn_elem_size_[thr_id].resize(bn_num, 0);
+        FOR_RANGE(int64_t, bn_id, 0, bn_num) {
           if (bn_id == bn_bottom_[thr_id]) {
             thr_bn_offset_[thr_id][bn_id] =
                 thr_blob_begin[thr_id][bn_id] * BnInOp2Blob_(bns_->Get(bn_id))->shape().Count(1);
@@ -113,18 +113,28 @@ class ParallelConcatSplitHelper {
       }
     } else {
       bn_bottom_.resize(thr_num, 0);
-      bn_top_.resize(thr_num, bn_num_);
+      bn_top_.resize(thr_num, bn_num);
 
       seg_bottom_.resize(thr_num_);
       seg_top_.resize(thr_num_);
 
       int64_t seg_num = BnInOp2Blob_(bns_->Get(0))->shape().Count(0, axis_);
-      CHECK_EQ(seg_num % axis_zero_total_size_, 0);
+      CHECK_EQ(seg_num % axis_zero_total_size, 0);
       FOR_RANGE(size_t, thr_id, 0, thr_num_) {
-        seg_bottom_[thr_id] = seg_num / axis_zero_total_size_ * thr_range_begin_[thr_id];
-        seg_top_[thr_id] = seg_num / axis_zero_total_size_ * thr_range_end_[thr_id];
+        seg_bottom_[thr_id] = seg_num / axis_zero_total_size * thr_range_begin[thr_id];
+        seg_top_[thr_id] = seg_num / axis_zero_total_size * thr_range_end[thr_id];
       }
     }
+  }
+
+ public:
+  int64_t seg_bottom(int64_t thr_id) { return seg_bottom_[thr_id]; }
+  int64_t seg_top(int64_t thr_id) { return seg_top_[thr_id]; }
+  int64_t bn_bottom(int64_t thr_id) { return bn_bottom_[thr_id]; }
+  int64_t bn_top(int64_t thr_id) { return bn_top_[thr_id]; }
+  int64_t thr_bn_offset(int64_t thr_id, int64_t bn_id) { return thr_bn_offset_[thr_id][bn_id]; }
+  int64_t thr_bn_elem_size(int64_t thr_id, int64_t bn_id) {
+    return thr_bn_elem_size_[thr_id][bn_id];
   }
 
  private:
@@ -133,11 +143,6 @@ class ParallelConcatSplitHelper {
   int32_t axis_;
   int32_t thr_num_;
 
-  int64_t bn_num_;
-  int64_t axis_zero_total_size_;
-  std::vector<int64_t> thr_range_begin_;
-  std::vector<int64_t> thr_range_end_;
-
   std::vector<int64_t> seg_bottom_;
   std::vector<int64_t> seg_top_;
   std::vector<int64_t> bn_bottom_;
@@ -145,15 +150,16 @@ class ParallelConcatSplitHelper {
   std::vector<std::vector<int64_t>> thr_bn_offset_;
   std::vector<std::vector<int64_t>> thr_bn_elem_size_;
 
-  void calc_axis_zero_total_size() {
-    axis_zero_total_size_ = 0;
+  int64_t calc_axis_zero_total_size() {
+    int64_t axis_zero_total_size = 0;
     if (0 == axis_) {
       FOR_RANGE(size_t, i, 0, bns_->size()) {
-        axis_zero_total_size_ += BnInOp2Blob_(bns_->Get(i))->shape().At(0);
+        axis_zero_total_size += BnInOp2Blob_(bns_->Get(i))->shape().At(0);
       }
     } else {
-      axis_zero_total_size_ = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
+      axis_zero_total_size = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
     }
+    return axis_zero_total_size;
   }
 };
 
