@@ -377,6 +377,7 @@ class FieldIterator {
   virtual char* GetMutPtr(Blob* blob) = 0;
   virtual size_t GetSizeOfField(Blob* blob) const = 0;
 
+ private:
   std::function<Blob*(const std::string&)> BnInOp2Blob_;
   const PbRpf<std::string>* bns_;
   int32_t bn_idx_;
