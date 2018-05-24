@@ -1,5 +1,6 @@
 #include "oneflow/core/common/util.h"
 #include <cfenv>
+#include <sstream>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
 
@@ -63,9 +64,23 @@ void CloseStdoutAndStderr() {
 
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX
+  std::ifstream mem_info("/proc/meminfo");
+  if (mem_info.is_open()) {
+    std::string line;
+    while (std::getline(mem_info, line)) {
+      std::vector<std::string> tokens = Split(line, ' ');
+      if (tokens.size() == 3 && tokens[0] == "MemAvailable:" && tokens[2] == "kB") {
+        size_t mem_available = 0;
+        std::stringstream sstream(tokens[1]);
+        sstream >> mem_available;
+        CHECK(!sstream.fail());
+        return mem_available * 1024;
+      }
+    }
+  }
   struct sysinfo sys_info;
   PCHECK(sysinfo(&sys_info) == 0);
-  return sys_info.freeram * sys_info.mem_unit;
+  return sys_info.freeram;
 #else
   return 0;  // TODO
 #endif
