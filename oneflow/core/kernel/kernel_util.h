@@ -351,6 +351,7 @@ class ParallelDataContentIterator final {
       seg_bottom_ = 0;
       seg_top_ = 1;
 
+      // calc bn_bottom_ & bn_top_
       std::vector<int64_t> bn_zero_axis_begin(bns_->size());
       std::vector<int64_t> bn_zero_axis_end(bns_->size());
       bn_zero_axis_begin[0] = 0;
@@ -376,6 +377,7 @@ class ParallelDataContentIterator final {
         }
       }
 
+      // calc bn_offset_ & bn_elem_num_
       bn_offset_.resize(bns_->size(), 0);
       bn_elem_num_.resize(bns_->size(), 0);
       FOR_RANGE(size_t, i, bn_bottom_, bn_top_) {
@@ -387,14 +389,14 @@ class ParallelDataContentIterator final {
         bn_elem_num_[i] = (bn_zero_axis_top[i] - bn_zero_axis_bottom[i])
                           * BnInOp2Blob(bns_->Get(i))->shape().Count(1);
       }
-
     } else {
-      seg_bottom_ = nonzero_axis_get_seg_bottom();
-      seg_top_ = nonzero_axis_get_seg_top();
-      bn_bottom_ = nonzero_axis_get_bn_bottom();
-      bn_top_ = nonzero_axis_get_bn_top();
+      bn_bottom_ = 0;
+      bn_top_ = bns_->size();
 
-      // TODO: refactor bn_offset_ and bn_elem_num_
+      int64_t seg_num = BnInOp2Blob_(bns_->Get(0))->shape().Count(0, axis_);
+      CHECK_EQ(seg_num % size_of_axis_zero, 0);
+      seg_bottom_ = seg_num / size_of_axis_zero * zero_axis_bottom_;
+      seg_top_ = seg_num / size_of_axis_zero * zero_axis_top_;
     }
 
     seg_idx_ = seg_bottom_;
@@ -406,21 +408,8 @@ class ParallelDataContentIterator final {
     if (seg_idx_ == seg_top_) { return ret; }
 
     Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
-    if (0 == axis_) {
-      int64_t elem_num = bn_elem_num_[bn_idx_];
-      std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-      if (blob->IsColValid()) {
-        std::get<0>(ret) =
-            blob->mut_dptr<char>() + bn_offset_[bn_idx_] * GetSizeOfDataType(blob->data_type());
-      }
-    } else {
-      // TODO: refactor bn_offset_ and bn_elem_num_
-      int64_t elem_num = blob->shape().Count(axis_);
-      std::get<1>(ret) = elem_num * GetSizeOfDataType(blob->data_type());
-      if (blob->IsColValid()) {
-        std::get<0>(ret) = blob->mut_dptr<char>() + seg_idx_ * std::get<1>(ret);
-      }
-    }
+    std::get<1>(ret) = elem_size(blob);
+    if (blob->IsColValid()) { std::get<0>(ret) = blob->mut_dptr<char>() + offset(blob); }
 
     bn_idx_ += 1;
     if (bn_idx_ == bn_top_) {
@@ -446,25 +435,26 @@ class ParallelDataContentIterator final {
   int32_t bn_idx_;
 
   int64_t zero_axis_bottom_;
-  int64_t zero_axis_top_;  // not included
+  int64_t zero_axis_top_;
 
+  // only used if axis_ == 0
   std::vector<int64_t> bn_offset_;
   std::vector<int64_t> bn_elem_num_;
 
-  int64_t nonzero_axis_get_seg_bottom() {
-    int64_t size_of_axis_zero = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
-    int64_t seg_num = BnInOp2Blob_(bns_->Get(0))->shape().Count(0, axis_);
-    CHECK_EQ(seg_num % size_of_axis_zero, 0);
-    return seg_num / size_of_axis_zero * zero_axis_bottom_;
+  int64_t offset(const Blob* blob) {
+    if (0 == axis_) {
+      return bn_offset_[bn_idx_] * GetSizeOfDataType(blob->data_type());
+    } else {
+      return seg_idx_ * elem_size(blob);
+    }
   }
-  int64_t nonzero_axis_get_seg_top() {
-    int64_t size_of_axis_zero = BnInOp2Blob_(bns_->Get(0))->shape().At(0);
-    int64_t seg_num = BnInOp2Blob_(bns_->Get(0))->shape().Count(0, axis_);
-    CHECK_EQ(seg_num % size_of_axis_zero, 0);
-    return seg_num / size_of_axis_zero * zero_axis_top_;
+  int64_t elem_size(const Blob* blob) {
+    if (0 == axis_) {
+      return bn_elem_num_[bn_idx_] * GetSizeOfDataType(blob->data_type());
+    } else {
+      return blob->shape().Count(axis_) * GetSizeOfDataType(blob->data_type());
+    }
   }
-  int32_t nonzero_axis_get_bn_bottom() { return 0; }
-  int32_t nonzero_axis_get_bn_top() { return bns_->size(); }
 };
 
 class FieldIterator {
