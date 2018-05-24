@@ -377,13 +377,15 @@ class ParallelConcatSplitHelper {
         FOR_RANGE(int64_t, bn_id, 0, bn_num) {
           if (bn_id == bn_bottom_[thr_id]) {
             thr_bn_offset_[thr_id][bn_id] =
-                thr_blob_begin[thr_id][bn_id] * BnInOp2Blob_(bns_->Get(bn_id))->shape().Count(1);
+                thr_blob_begin[thr_id][bn_id] * BnInOp2Blob_(bns_->Get(bn_id))->shape().Count(1)
+                * GetSizeOfDataType(BnInOp2Blob_(bns_->Get(0))->data_type());
           } else {
             thr_bn_offset_[thr_id][bn_id] = 0;
           }
           thr_bn_elem_size_[thr_id][bn_id] =
               (thr_blob_end[thr_id][bn_id] - thr_blob_begin[thr_id][bn_id])
-              * BnInOp2Blob(bns_->Get(bn_id))->shape().Count(1);
+              * BnInOp2Blob(bns_->Get(bn_id))->shape().Count(1)
+              * GetSizeOfDataType(BnInOp2Blob_(bns_->Get(0))->data_type());
         }
       }
     } else {
