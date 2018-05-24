@@ -29,10 +29,8 @@ class ConcatKernel final : public KernelIf<device_type> {
   void BackwardDataContent(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void ForwardField(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                    std::function<char*(Blob*)> GetOutBlobField,
-                    std::function<const char*(Blob*)> GetInBlobField,
-                    std::function<size_t(Blob*)> GetFieldSize) const;
+  void ForwardBlobField(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                        SizeOfBlobFieldMthd SizeOf, CopyBlobFieldMthd Copy) const;
 };
 
 }  // namespace oneflow
