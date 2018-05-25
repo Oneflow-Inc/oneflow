@@ -65,7 +65,7 @@ void CloseStdoutAndStderr() {
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX
   std::ifstream mem_info("/proc/meminfo");
-  CHECK(mem_info.is_open());
+  CHECK(mem_info.is_open()) << "can't open file: /proc/meminfo";
   std::string line;
   while (std::getline(mem_info, line).good()) {
     std::string token;
@@ -85,7 +85,7 @@ size_t GetAvailableCpuMemSize() {
   }
   LOG(FATAL) << "can't find MemAvailable in /proc/meminfo";
 #else
-// TODO
+  TODO();
 #endif
   return 0;
 }
