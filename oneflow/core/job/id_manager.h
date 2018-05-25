@@ -20,7 +20,7 @@ class IDMgr final {
   int64_t GetGpuComputeThrdId(int64_t dev_phy_id) const { return dev_phy_id; }
   int64_t GetGpuH2DThrdId(int64_t dev_phy_id) const;
   int64_t GetGpuD2HThrdId(int64_t dev_phy_id) const;
-  int64_t GetGpuIndependentThrdId(int64_t dev_phy_id) const;
+  int64_t GetGpuMixThrdId(int64_t dev_phy_id) const;
   int64_t GetCpuDeviceThrdId(int64_t dev_phy_id) const;
   int64_t GetPersistenceThrdId(int64_t offset) const;
   int64_t CommNetThrdId() const;
@@ -59,6 +59,7 @@ class IDMgr final {
   // sign | machine_id | thrd_id | local_work_stream_id | 0
   //  1   |     10     |   11    |          21          | 21
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
+  int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
 
  private:
   friend class Global<IDMgr>;

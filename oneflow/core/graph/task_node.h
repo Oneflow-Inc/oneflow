@@ -31,7 +31,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t LocalWorkStreamId() const;
+  int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
+  virtual bool UseIndependentWorkStream() const { return false; }
 
   // Setters
   void set_machine_id(int64_t val);
@@ -52,7 +54,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void ToProto(TaskProto*);
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
-  virtual bool NeedIndependentWorkStream() { return false; }
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
 
  protected:

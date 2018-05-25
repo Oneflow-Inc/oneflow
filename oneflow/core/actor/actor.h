@@ -134,7 +134,7 @@ class Actor {
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashSet<int64_t> eord_regst_desc_ids_;
-  CudaStreamHandle cuda_handle_;
+  std::unique_ptr<CudaStreamHandle> cuda_handle_;
 
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;

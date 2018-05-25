@@ -10,6 +10,7 @@ struct ThreadCtx {
   size_t buf_size;
 #ifdef WITH_CUDA
   std::unique_ptr<CudaStreamHandle> g_cuda_stream;
+  Channel<CudaCBEvent>* cb_event_chan;
 #endif
 };
 

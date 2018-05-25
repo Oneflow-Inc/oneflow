@@ -188,15 +188,32 @@ void TaskNode::LockRegsts() {
 
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
-    pair.second->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
+    RegstDesc* produced_regst = pair.second.get();
+    produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
+    bool is_in_same_stream = true;
+    for (const TaskNode* consumer : produced_regst->consumers()) {
+      if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
+        is_in_same_stream = false;
+        break;
+      }
+    }
+    if (is_in_same_stream) {
+      produced_regst->UpdtMaxRegstNumIfNeed(produced_regst->min_register_num());
+    }
   }
 }
 
 int64_t TaskNode::AllocateLocalWorkStreamId() {
-  if (NeedIndependentWorkStream()) {
-    CHECK_NE(machine_id_, -1);
-    CHECK_NE(thrd_id_, -1);
-    return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
+  CHECK_NE(machine_id_, -1);
+  CHECK_NE(thrd_id_, -1);
+  if (UseIndependentWorkStream()) {
+    if (device_type() == DeviceType::kCPU) {
+      return 0;
+    } else if (device_type() == DeviceType::kGPU) {
+      return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
+    } else {
+      UNIMPLEMENTED();
+    }
   } else {
     return 0;
   }
@@ -211,6 +228,11 @@ void TaskNode::UpdateTaskId() {
 int64_t TaskNode::LocalWorkStreamId() const {
   CHECK_NE(task_id_, -1);
   return Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task_id_);
+}
+
+int64_t TaskNode::GlobalWorkStreamId() const {
+  CHECK_NE(task_id_, -1);
+  return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
 }
 
 void TaskNode::ClearOutOfDateConsumedRegst() {

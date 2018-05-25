@@ -120,7 +120,7 @@ void OpKernelTestUtil<DeviceType::kCPU>::BuildKernelCtx(KernelCtx* ctx) {
 
 template<>
 void OpKernelTestUtil<DeviceType::kGPU>::BuildKernelCtx(KernelCtx* ctx) {
-  if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(); }
+  if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(nullptr); }
   CudaStreamHandle* cuda_handle = Global<CudaStreamHandle>::Get();
   ctx->device_ctx = new CudaDeviceCtx(nullptr, 0, cuda_handle);
 }
@@ -395,7 +395,7 @@ void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
     KernelConf kernel_conf;
     op->GenKernelConf(MakeGetterBnInOp2BlobDesc(), is_forward, &parallel_ctx_, &kernel_conf,
                       op_context);
-    auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
+    auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf, nullptr);
     kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);
   };

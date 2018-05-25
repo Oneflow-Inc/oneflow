@@ -15,7 +15,7 @@ int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 2 + dev_phy_id;
 }
-int64_t IDMgr::GetGpuIndependentThrdId(int64_t dev_phy_id) const {
+int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 3 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
@@ -69,8 +69,12 @@ int64_t IDMgr::AllocateLocalWorkStreamId(int64_t machine_id, int64_t thrd_id) {
   return 100 + (machine_thrd_id2stream_id_cnt_[GetMachineThrdId(machine_id, thrd_id)]++);
 }
 
+int64_t IDMgr::GlobalWorkStreamId4TaskId(int64_t task_id) const {
+  return (task_id >> task_id_bit_num_) << task_id_bit_num_;
+}
+
 int64_t IDMgr::GlobalWorkStreamId4ActorId(int64_t actor_id) const {
-  return (actor_id >> task_id_bit_num_) << task_id_bit_num_;
+  return GlobalWorkStreamId4TaskId(actor_id);
 }
 
 int64_t IDMgr::LocalWorkStreamId4TaskId(int64_t task_id) const {

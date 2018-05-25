@@ -2,9 +2,10 @@
 
 namespace oneflow {
 
-void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf) {
+void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
+                  DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit(parallel_ctx);
+  VirtualKernelInit(parallel_ctx, device_ctx);
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -50,7 +51,15 @@ void Kernel::Forward(const KernelCtx& ctx,
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardActivate(ctx, BnInOp2Blob);
-  BackwardDataContent(ctx, BnInOp2Blob);
+  BackwardDataContent(ctx, [BnInOp2Blob, this](const std::string& bn) -> Blob* {
+    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
+
+    if (this->GetActivationType() != ActivationType::kNone) {
+      CHECK_EQ(odbns.size(), 1);
+      if (bn == odbns[0]) { return BnInOp2Blob("activation_buf"); }
+    }
+    return BnInOp2Blob(bn);
+  });
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
@@ -133,18 +142,6 @@ ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const
 }
 
 template<DeviceType device_type, typename T>
-const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->GetActivationType() != ActivationType::kNone) {
-    return BnInOp2Blob("activation_buf");
-  } else {
-    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
-    CHECK_EQ(odbns.size(), 1);
-    return BnInOp2Blob(odbns[0]);
-  }
-}
-
-template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::ForwardActivate(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -201,9 +198,9 @@ void KernelIfWithActivation<device_type, T>::BackwardActivate(
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
-                                              const KernelConf& conf) {
+                                              const KernelConf& conf, DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
-  rptr->Init(parallel_ctx, conf);
+  rptr->Init(parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

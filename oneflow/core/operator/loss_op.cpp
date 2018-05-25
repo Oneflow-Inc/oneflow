@@ -25,7 +25,8 @@ void LossOp::VirtualGenKernelConf(
 }
 
 void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                            const ParallelContext* parallel_ctx) const {
+                            const ParallelContext* parallel_ctx, size_t* buf_size,
+                            std::function<void(OpContext*)>) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   CHECK_EQ(pred_blob_desc->has_data_id_field(), label_blob_desc->has_data_id_field());
@@ -45,7 +46,7 @@ void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobD
     reduction_blob_desc->set_data_type(pred_blob_desc->data_type());
     reduction_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
   }
-  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+  VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size);
 }
 
 }  // namespace oneflow

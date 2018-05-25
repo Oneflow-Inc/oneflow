@@ -14,6 +14,7 @@ CpuThread::CpuThread(int64_t thrd_id, size_t buf_size) {
       ThreadCtx ctx;
       ctx.buf_ptr = buf_ptr;
       ctx.buf_size = buf_size;
+      ctx.cb_event_chan = nullptr;
       PollMsgChannel(ctx);
     }
     if (buf_ptr) { free(buf_ptr); }
