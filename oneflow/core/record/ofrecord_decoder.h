@@ -45,6 +45,8 @@ class OFRecordDecoder : public OFRecordDecoderIf {
   void ReadDataId(DeviceCtx*, RecordBlob<OFRecord>*, Blob* out_blob) const;
   void ReadDataContent(DeviceCtx*, RecordBlob<OFRecord>*, const BlobConf&, int32_t col_id,
                        Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const;
+  void ParallelReadDataContent(DeviceCtx*, RecordBlob<OFRecord>*, const BlobConf&, int32_t col_id,
+                               Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const;
 };
 
 template<EncodeCase encode_case, typename T>

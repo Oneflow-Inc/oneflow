@@ -6,6 +6,7 @@
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/eigen_util.h"
+#include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
@@ -128,6 +129,10 @@ class RecordBlob final : public RecordBlobIf {
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {
     FOR_RANGE(int32_t, i, 0, record_num_) { Handler(records_.at(i)); }
+  }
+
+  void RangeForEachRecord(Range range, std::function<void(const RecordType&)> Handler) {
+    FOR_RANGE(int64_t, i, range.begin(), range.end()) { Handler(records_.at(i)); }
   }
 
   RecordType* mut_records(size_t i) {

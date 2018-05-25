@@ -1,6 +1,8 @@
+#include <omp.h>
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -78,7 +80,8 @@ int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
     max_col_id = ReadColNum(ctx, record_blob, blob_conf.name(), out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) { ReadDataId(ctx, record_blob, out_blob); }
-  ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  // ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  ParallelReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
   return max_col_id;
 }
 
@@ -147,6 +150,45 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
   int64_t left_row_num = out_blob->shape().At(0) - i;
   if (left_row_num > 0) {
     Memset<DeviceType::kCPU>(ctx, out_blob->mut_dptr<T>() + i * one_col_elem_num, 0,
+                             left_row_num * one_col_elem_num * sizeof(T));
+  }
+}
+
+template<EncodeCase encode_case, typename T>
+void OFRecordDecoder<encode_case, T>::ParallelReadDataContent(
+    DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const BlobConf& blob_conf, int32_t col_id,
+    Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const {
+  int64_t one_col_elem_num = out_blob->shape().Count(1);
+
+  int32_t record_num = record_blob->record_num();
+  int32_t thr_num = std::min(16, omp_get_num_procs());
+  BalancedSplitter bs(record_num, thr_num);
+  omp_set_num_threads(thr_num);
+#pragma omp parallel
+  {
+    int32_t thr_id = omp_get_thread_num();
+    int32_t idx = bs.At(thr_id).begin();
+    record_blob->RangeForEachRecord(bs.At(thr_id), [&](const OFRecord& record) {
+      if (record.feature().find(blob_conf.name()) == record.feature().end()) {
+        LOG(FATAL) << "Field " << blob_conf.name() << " not found in OfRecord";
+      }
+      const Feature& feature = record.feature().at(blob_conf.name());
+      T* out_dptr = out_blob->mut_dptr<T>() + idx * one_col_elem_num;
+      if (col_id < out_blob->col_num(idx)) {
+        ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num, NextRandomInt);
+        FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
+          DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+        }
+      } else {
+        Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
+      }
+      ++idx;
+    });
+  }
+
+  int64_t left_row_num = out_blob->shape().At(0) - record_num;
+  if (left_row_num > 0) {
+    Memset<DeviceType::kCPU>(ctx, out_blob->mut_dptr<T>() + record_num * one_col_elem_num, 0,
                              left_row_num * one_col_elem_num * sizeof(T));
   }
 }
