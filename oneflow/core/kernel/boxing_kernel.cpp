@@ -1,3 +1,4 @@
+#include <omp.h>
 #include "oneflow/core/kernel/boxing_kernel.h"
 #include <omp.h>
 #include "oneflow/core/kernel/kernel_util.h"
@@ -129,6 +130,27 @@ void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::strin
   }
 }
 
+void ParallelConcatSplitDataContent(DeviceCtx* ctx,
+                                    std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                    const PbRpf<std::string>& concat_bns, int32_t concat_axis,
+                                    const PbRpf<std::string>& split_bns, int32_t split_axis) {
+  int32_t proc_num = omp_get_num_procs();
+  int32_t thr_num = std::min(8, proc_num);
+
+  ParallelConcatSplitHelper concat_helper(BnInOp2Blob, &concat_bns, concat_axis, thr_num);
+  ParallelConcatSplitHelper split_helper(BnInOp2Blob, &split_bns, split_axis, thr_num);
+
+  omp_set_num_threads(thr_num);
+#pragma omp parallel
+  {
+    int thr_id = omp_get_thread_num();
+    ParallelDataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis, thr_id,
+                                          concat_helper);
+    ParallelDataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis, thr_id, split_helper);
+    CopyFromIterToIter<DeviceType::kCPU>(ctx, concat_it, split_it);
+  }
+}
+
 template<typename Iter>
 void ConcatSplitField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& concat_bns, int32_t concat_axis,
@@ -200,12 +222,12 @@ void BoxingKernel<T>::ForwardDataContent(
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
-                             boxing_conf.concat_box().axis(), op_attribute().output_bns(),
-                             boxing_conf.split_box().axis());
+      ParallelConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+                                     boxing_conf.concat_box().axis(), op_attribute().output_bns(),
+                                     boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
-                             boxing_conf.concat_box().axis(), obn_0_, 0);
+      ParallelConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+                                     boxing_conf.concat_box().axis(), obn_0_, 0);
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
@@ -214,8 +236,8 @@ void BoxingKernel<T>::ForwardDataContent(
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
       CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
-                             op_attribute().output_bns(), boxing_conf.split_box().axis());
+      ParallelConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
+                                     op_attribute().output_bns(), boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
