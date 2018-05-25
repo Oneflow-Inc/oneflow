@@ -1,6 +1,5 @@
 #include "oneflow/core/common/util.h"
 #include <cfenv>
-#include <sstream>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/platform.h"
 
@@ -65,7 +64,7 @@ void CloseStdoutAndStderr() {
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX
   std::ifstream mem_info("/proc/meminfo");
-  CHECK(mem_info.is_open()) << "can't open file: /proc/meminfo";
+  CHECK(mem_info.good()) << "can't open file: /proc/meminfo";
   std::string line;
   while (std::getline(mem_info, line).good()) {
     std::string token;
@@ -74,10 +73,7 @@ size_t GetAvailableCpuMemSize() {
     if (token != "MemAvailable:") { continue; }
     CHECK_NE(*p, '\0');
     p = StrToToken(p, " ", &token);
-    size_t mem_available = 0;
-    std::stringstream sstream(token);
-    sstream >> mem_available;
-    CHECK(!sstream.fail());
+    size_t mem_available = oneflow_cast<size_t>(token);
     CHECK_NE(*p, '\0');
     p = StrToToken(p, " ", &token);
     CHECK_EQ(token, "kB");
