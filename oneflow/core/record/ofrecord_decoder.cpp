@@ -161,7 +161,7 @@ void OFRecordDecoder<encode_case, T>::ParallelReadDataContent(
   int64_t one_col_elem_num = out_blob->shape().Count(1);
 
   int32_t record_num = record_blob->record_num();
-  int32_t thr_num = std::min(16, omp_get_num_procs());
+  int32_t thr_num = std::min(32, omp_get_num_procs());
   BalancedSplitter bs(record_num, thr_num);
   omp_set_num_threads(thr_num);
 #pragma omp parallel

@@ -124,7 +124,9 @@ template<typename RecordType>
 class RecordBlob final : public RecordBlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
-  RecordBlob() : records_(Global<JobDesc>::Get()->PieceSizeInOneDataPart()), record_num_(0) {}
+  RecordBlob() : records_(Global<JobDesc>::Get()->PieceSizeInOneDataPart()), record_num_(0) {
+    filled_ = false;
+  }
   ~RecordBlob() = default;
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {
@@ -143,12 +145,16 @@ class RecordBlob final : public RecordBlobIf {
   int32_t record_num() override { return record_num_; }
 
   void ReadFrom(PersistentInStream* in_stream) override {
-    record_num_ = ReadRecord<RecordType>(in_stream, &records_);
+    if (!filled_) {
+      record_num_ = ReadRecord<RecordType>(in_stream, &records_);
+      filled_ = true;
+    }
   }
 
  private:
   std::vector<RecordType> records_;
   int32_t record_num_;
+  bool filled_;
 };
 
 }  // namespace oneflow
