@@ -147,7 +147,7 @@ class RecordBlob final : public RecordBlobIf {
   void ReadFrom(PersistentInStream* in_stream) override {
     if (!filled_) {
       record_num_ = ReadRecord<RecordType>(in_stream, &records_);
-      filled_ = true;
+      // filled_ = true;
     }
   }
 
