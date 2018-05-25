@@ -4,7 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "first:cpu:30"
+    device_name: "first:cpu:32"
   }
 }
 
@@ -46,7 +46,7 @@ placement_group {
     op_name: "fc8"
   }
   parallel_conf {
-    policy: kModelParallel
+    policy: kDataParallel
     device_name: "first:gpu:0-1"
   }
 }

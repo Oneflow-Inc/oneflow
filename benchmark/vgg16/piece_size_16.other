@@ -1,23 +1,22 @@
 use_rdma: false
 globalfs_conf {
-  hdfs_conf {
-    namenode: "hdfs://192.168.1.11:9000"
+  localfs_conf {
   }
 }
-piece_size: 30
-data_part_num: 30
+piece_size: 16
+data_part_num: 16
 max_data_id_length: 0
 train_conf {
-  model_save_snapshots_path: "/zhuyi/vgg_snapshots_buf"
+  model_save_snapshots_path: "/home/zhuyi/vgg_snapshots_buf"
   num_of_batches_in_snapshot: 1000
   staleness: 0
-  total_batch_num: 200000
+  total_batch_num: 100
   default_initializer_conf {
     msra_conf {
       variance_norm: kFanOut
     }
   }
-  batch_size: 240
+  batch_size: 256
   l2: 0.0005
   model_update_conf {
     momentum_conf {
