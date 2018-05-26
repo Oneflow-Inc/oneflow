@@ -8,6 +8,7 @@ include(googletest)
 include(gflags)
 include(glog)
 include(grpc)
+include(libjpeg-turbo)
 include(opencv)
 include(eigen)
 if (BUILD_CUDA)
@@ -59,9 +60,11 @@ set(oneflow_third_party_libs
     ${CUDNN_LIBRARIES}
     ${CUDA_LIBRARIES}
     ${BLAS_LIBRARIES}
+    ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
     ${CMAKE_DL_LIBS}
 )
+message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
@@ -86,6 +89,8 @@ set(oneflow_third_party_dependencies
   grpc_copy_headers_to_destination
   grpc_copy_libs_to_destination
   cub_copy_headers_to_destination
+  libjpeg_copy_headers_to_destination
+  libjpeg_copy_libs_to_destination
   opencv_copy_headers_to_destination
   opencv_copy_libs_to_destination
   eigen
@@ -101,6 +106,7 @@ include_directories(
     ${GRPC_INCLUDE_DIR}
     ${CUDNN_INCLUDE_DIRS}
     ${CUB_INCLUDE_DIR}
+    ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
 )
