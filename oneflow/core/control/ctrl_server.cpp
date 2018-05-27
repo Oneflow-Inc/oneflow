@@ -24,6 +24,13 @@ CtrlServer::~CtrlServer() {
 }
 
 CtrlServer::CtrlServer(const std::string& server_addr) {
+  init(&CtrlServer::LoadServerHandler, &CtrlServer::BarrierHandler, &CtrlServer::TryLockHandler,
+       &CtrlServer::NotifyDoneHandler, &CtrlServer::WaitUntilDoneHandler,
+       &CtrlServer::PushKVHandler, &CtrlServer::ClearKVHandler, &CtrlServer::PullKVHandler,
+       &CtrlServer::PushActEventHandler, &CtrlServer::ClearHandler,
+       &CtrlServer::IncreaseCountHandler, &CtrlServer::EraseCountHandler,
+       &CtrlServer::PushAvgActIntervalHandler);
+
   if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
   int port = ExtractPortFromAddr(server_addr);
   grpc::ServerBuilder server_builder;
@@ -38,18 +45,8 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
 
-#define ENQUEUE_REQUEST(method)                                                          \
-  do {                                                                                   \
-    auto call = new CtrlCall<method##Request, method##Response>();                       \
-    call->set_request_handler(std::bind(&CtrlServer::method##Handler, this, call));      \
-    grpc_service_->RequestAsyncUnary(static_cast<int32_t>(CtrlMethod::k##method),        \
-                                     call->mut_server_ctx(), call->mut_request(),        \
-                                     call->mut_responder(), cq_.get(), cq_.get(), call); \
-  } while (0);
-
 void CtrlServer::HandleRpcs() {
-  OF_PP_FOR_EACH_TUPLE(ENQUEUE_REQUEST, CTRL_METHOD_SEQ);
-
+  EnqueueRequests(arr_);
   void* tag = nullptr;
   bool ok = false;
   while (true) {
@@ -64,9 +61,21 @@ void CtrlServer::HandleRpcs() {
   }
 }
 
+template<size_t I>
+void CtrlServer::EnqueueRequest() {
+  using req = typename std::tuple_element<I, RequestType>::type;
+  using res = typename std::tuple_element<I, ResponseType>::type;
+  typedef void (CtrlServer::*TMember)(CtrlCall<req, res>*);
+  auto thandler = reinterpret_cast<TMember>(arr_[I]);
+  auto call = new CtrlCall<req, res>();
+  call->set_request_handler(std::bind(thandler, this, call));
+  grpc_service_->RequestAsyncUnary(I, call->mut_server_ctx(), call->mut_request(),
+                                   call->mut_responder(), cq_.get(), cq_.get(), call);
+}
+
 void CtrlServer::LoadServerHandler(CtrlCall<LoadServerRequest, LoadServerResponse>* call) {
   call->SendResponse();
-  ENQUEUE_REQUEST(LoadServer);
+  EnqueueRequest<CtrlMethod::kLoadServer>();
 }
 
 void CtrlServer::BarrierHandler(CtrlCall<BarrierRequest, BarrierResponse>* call) {
@@ -84,7 +93,8 @@ void CtrlServer::BarrierHandler(CtrlCall<BarrierRequest, BarrierResponse>* call)
     for (CtrlCallIf* pending_call : barrier_call_it->second.first) { pending_call->SendResponse(); }
     barrier_calls_.erase(barrier_call_it);
   }
-  ENQUEUE_REQUEST(Barrier);
+
+  EnqueueRequest<CtrlMethod::kBarrier>();
 }
 
 void CtrlServer::TryLockHandler(CtrlCall<TryLockRequest, TryLockResponse>* call) {
@@ -102,7 +112,7 @@ void CtrlServer::TryLockHandler(CtrlCall<TryLockRequest, TryLockResponse>* call)
     }
   }
   call->SendResponse();
-  ENQUEUE_REQUEST(TryLock);
+  EnqueueRequest<CtrlMethod::kTryLock>();
 }
 
 void CtrlServer::NotifyDoneHandler(CtrlCall<NotifyDoneRequest, NotifyDoneResponse>* call) {
@@ -113,7 +123,7 @@ void CtrlServer::NotifyDoneHandler(CtrlCall<NotifyDoneRequest, NotifyDoneRespons
   delete waiting_calls;
   name2lock_status_it->second = nullptr;
   call->SendResponse();
-  ENQUEUE_REQUEST(NotifyDone);
+  EnqueueRequest<CtrlMethod::kNotifyDone>();
 }
 
 void CtrlServer::WaitUntilDoneHandler(CtrlCall<WaitUntilDoneRequest, WaitUntilDoneResponse>* call) {
@@ -125,7 +135,7 @@ void CtrlServer::WaitUntilDoneHandler(CtrlCall<WaitUntilDoneRequest, WaitUntilDo
   } else {
     call->SendResponse();
   }
-  ENQUEUE_REQUEST(WaitUntilDone);
+  EnqueueRequest<CtrlMethod::kWaitUntilDone>();
 }
 
 void CtrlServer::PushKVHandler(CtrlCall<PushKVRequest, PushKVResponse>* call) {
@@ -142,7 +152,7 @@ void CtrlServer::PushKVHandler(CtrlCall<PushKVRequest, PushKVResponse>* call) {
     pending_kv_calls_.erase(pending_kv_calls_it);
   }
   call->SendResponse();
-  ENQUEUE_REQUEST(PushKV);
+  EnqueueRequest<CtrlMethod::kPushKV>();
 }
 
 void CtrlServer::ClearKVHandler(CtrlCall<ClearKVRequest, ClearKVResponse>* call) {
@@ -150,7 +160,7 @@ void CtrlServer::ClearKVHandler(CtrlCall<ClearKVRequest, ClearKVResponse>* call)
   CHECK_EQ(kv_.erase(k), 1);
   CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end());
   call->SendResponse();
-  ENQUEUE_REQUEST(ClearKV);
+  EnqueueRequest<CtrlMethod::kClearKV>();
 }
 
 void CtrlServer::PullKVHandler(CtrlCall<PullKVRequest, PullKVResponse>* call) {
@@ -162,14 +172,14 @@ void CtrlServer::PullKVHandler(CtrlCall<PullKVRequest, PullKVResponse>* call) {
   } else {
     pending_kv_calls_[k].push_back(call);
   }
-  ENQUEUE_REQUEST(PullKV);
+  EnqueueRequest<CtrlMethod::kPullKV>();
 }
 
 void CtrlServer::PushActEventHandler(CtrlCall<PushActEventRequest, PushActEventResponse>* call) {
   ActEvent act_event = call->request().act_event();
   call->SendResponse();
   Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
-  ENQUEUE_REQUEST(PushActEvent);
+  EnqueueRequest<CtrlMethod::kPushActEvent>();
 }
 
 void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
@@ -177,7 +187,7 @@ void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
   kv_.clear();
   CHECK(pending_kv_calls_.empty());
   call->SendResponse();
-  ENQUEUE_REQUEST(Clear);
+  EnqueueRequest<CtrlMethod::kClear>();
 }
 
 void CtrlServer::IncreaseCountHandler(CtrlCall<IncreaseCountRequest, IncreaseCountResponse>* call) {
@@ -185,13 +195,13 @@ void CtrlServer::IncreaseCountHandler(CtrlCall<IncreaseCountRequest, IncreaseCou
   count += call->request().val();
   call->mut_response()->set_val(count);
   call->SendResponse();
-  ENQUEUE_REQUEST(IncreaseCount);
+  EnqueueRequest<CtrlMethod::kIncreaseCount>();
 }
 
 void CtrlServer::EraseCountHandler(CtrlCall<EraseCountRequest, EraseCountResponse>* call) {
   CHECK_EQ(count_.erase(call->request().key()), 1);
   call->SendResponse();
-  ENQUEUE_REQUEST(EraseCount);
+  EnqueueRequest<CtrlMethod::kEraseCount>();
 }
 
 void CtrlServer::PushAvgActIntervalHandler(
@@ -199,7 +209,7 @@ void CtrlServer::PushAvgActIntervalHandler(
   Global<Profiler>::Get()->PushAvgActInterval(call->request().actor_id(),
                                               call->request().avg_act_interval());
   call->SendResponse();
-  ENQUEUE_REQUEST(PushAvgActInterval);
+  EnqueueRequest<CtrlMethod::kPushAvgActInterval>();
 }
 
 }  // namespace oneflow
