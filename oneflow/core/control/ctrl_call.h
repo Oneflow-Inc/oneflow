@@ -32,7 +32,7 @@ class CtrlCall final : public CtrlCallIf {
   ResponseMessageType* mut_response() { return &response_; }
   grpc::ServerContext* mut_server_ctx() { return &server_ctx_; }
   grpc::ServerAsyncResponseWriter<ResponseMessageType>* mut_responder() { return &responder_; }
-  void set_request_handler(std::function<void()> val) { request_handler_ = val; }
+  void set_request_handler(std::function<void()> val) { request_handler_ = std::move(val); }
 
   void Process() override {
     switch (status_) {
