@@ -1,6 +1,8 @@
 #include "oneflow/core/kernel/boxing_kernel.h"
+#include <omp.h>
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -33,12 +35,98 @@ void CopyFromFirstToOtherBlobs(DeviceCtx* ctx, std::function<Blob*(const std::st
   FOR_RANGE(size_t, i, 1, bns.size()) { (BnInOp2Blob(bns.Get(i))->*Copy)(ctx, blob_0); }
 }
 
+class DataContentDesc final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(DataContentDesc);
+  DataContentDesc() = delete;
+  ~DataContentDesc() = default;
+
+  DataContentDesc(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                  const PbRpf<std::string>* bns, int32_t axis) {
+    BnInOp2Blob_ = BnInOp2Blob;
+    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
+    elem_sum_.assign(bns->size(), 0);
+    FOR_RANGE(size_t, i, 0, elem_sum_.size()) {
+      elem_sum_[i] = BnInOp2Blob(bns->Get(i))->shape().Count(axis);
+      if (i > 0) { elem_sum_[i] += elem_sum_[i - 1]; }
+    }
+    bns_ = bns;
+    axis_ = axis;
+  }
+
+  size_t OneElemSize() const { return GetSizeOfDataType(BnInOp2Blob_(bns_->Get(0))->data_type()); }
+
+  int64_t TotalElemNum() const { return seg_num_ * elem_sum_.back(); }
+
+  std::tuple<int64_t, char*> CalcContinuousElemNumStartFrom(int64_t idx) const {
+    std::tuple<int64_t, char*> ret(0, nullptr);
+    int64_t seg_idx = idx / elem_sum_.back();
+    int64_t idx_in_seg = idx % elem_sum_.back();
+    auto elem_sum_it = std::upper_bound(elem_sum_.begin(), elem_sum_.end(), idx_in_seg);
+    CHECK(elem_sum_it != elem_sum_.end());
+    std::get<0>(ret) = *elem_sum_it - idx_in_seg;
+    int64_t bn_idx = elem_sum_it - elem_sum_.begin();
+    int64_t idx_in_blob = idx_in_seg;
+    if (bn_idx > 0) { idx_in_blob -= elem_sum_[bn_idx - 1]; }
+    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx));
+    std::get<1>(ret) = blob->mut_dptr<char>()
+                       + (seg_idx * blob->shape().Count(axis_) + idx_in_blob)
+                             * GetSizeOfDataType(blob->data_type());
+    return ret;
+  }
+
+ private:
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  int64_t seg_num_;
+  std::vector<int64_t> elem_sum_;
+  const PbRpf<std::string>* bns_;
+  int32_t axis_;
+};
+
 void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                             const PbRpf<std::string>& concat_bns, int32_t concat_axis,
                             const PbRpf<std::string>& split_bns, int32_t split_axis) {
-  DataContentIterator concat_it(BnInOp2Blob, &concat_bns, concat_axis);
-  DataContentIterator split_it(BnInOp2Blob, &split_bns, split_axis);
-  CopyFromIterToIter<DeviceType::kCPU>(ctx, concat_it, split_it);
+  DataContentDesc in_desc(BnInOp2Blob, &concat_bns, concat_axis);
+  DataContentDesc out_desc(BnInOp2Blob, &split_bns, split_axis);
+  CHECK_EQ(in_desc.TotalElemNum(), out_desc.TotalElemNum());
+  CHECK_EQ(in_desc.OneElemSize(), out_desc.OneElemSize());
+#pragma omp parallel
+  {
+    size_t one_elem_size = in_desc.OneElemSize();
+    BalancedSplitter bs(in_desc.TotalElemNum(), omp_get_num_threads());
+    Range range = bs.At(omp_get_thread_num());
+    int64_t in_idx = range.begin();
+    int64_t in_elem_num = 0;
+    char* in_ptr = nullptr;
+    int64_t out_idx = range.begin();
+    int64_t out_elem_num = 0;
+    char* out_ptr = nullptr;
+    while (in_elem_num > 0 || out_elem_num > 0 || in_idx < range.end() || out_idx < range.end()) {
+      if (in_elem_num == 0) {
+        std::tie(in_elem_num, in_ptr) = in_desc.CalcContinuousElemNumStartFrom(in_idx);
+        in_elem_num = std::min(in_elem_num, range.end() - in_idx);
+        if (in_elem_num == 0) { break; }
+        in_idx += in_elem_num;
+      }
+      if (out_elem_num == 0) {
+        std::tie(out_elem_num, out_ptr) = out_desc.CalcContinuousElemNumStartFrom(out_idx);
+        out_elem_num = std::min(out_elem_num, range.end() - out_idx);
+        if (out_elem_num == 0) { break; }
+        out_idx += out_elem_num;
+      }
+      int64_t copy_elem_num = std::min(in_elem_num, out_elem_num);
+      size_t copy_size = copy_elem_num * one_elem_size;
+      Memcpy<DeviceType::kCPU>(ctx, out_ptr, in_ptr, copy_size);
+      in_elem_num -= copy_elem_num;
+      out_elem_num -= copy_elem_num;
+      in_ptr += copy_size;
+      out_ptr += copy_size;
+    }
+    CHECK_EQ(in_elem_num, 0);
+    CHECK_EQ(out_elem_num, 0);
+    CHECK_EQ(in_idx, range.end());
+    CHECK_EQ(out_idx, range.end());
+  }
 }
 
 template<typename Iter>

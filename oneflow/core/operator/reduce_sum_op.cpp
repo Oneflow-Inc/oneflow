@@ -1,18 +1,18 @@
 #include "oneflow/core/operator/reduce_sum_op.h"
+#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 
 void ReduceSumOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  // For Parallel
-  if (op_conf().reduce_sum_conf().has_axis() == false) { EnrollDataTmpBn("tmp"); }
 }
 
 const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
 
 void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                                 const ParallelContext*) const {
+                                 const ParallelContext*, size_t* buf_size,
+                                 std::function<void(OpContext*)>) const {
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> out_dim_vec = {1};
   if (op_conf().reduce_sum_conf().has_axis()) {
@@ -25,10 +25,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> Get
     }
     if (out_dim_vec.empty()) { out_dim_vec.push_back(1); }
   } else {
-    BlobDesc* tmp_blob = GetBlobDesc4BnInOp("tmp");
-    tmp_blob->mut_shape() = Shape(in_blob->shape().dim_vec());
-    tmp_blob->set_data_type(in_blob->data_type());
-    tmp_blob->set_has_data_id_field(false);
+    *buf_size = GetTmpSizeForReduceSum(in_blob->data_type(), in_blob->shape().elem_cnt());
   }
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   *out_blob = *in_blob;

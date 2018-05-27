@@ -141,6 +141,14 @@ void IncreaseIndex(const int64_t* shape, std::vector<int64_t>& index) {
   }
 }
 
+template<typename T, T (*reduce_core_func)(const T, const T)>
+void MatrixRowReduce(const int64_t row_num, const int64_t col_num, const T* x, T* y) {
+  FOR_RANGE(int64_t, i, 0, row_num) {
+    y[i] = x[i * col_num];
+    FOR_RANGE(int64_t, j, 1, col_num) { y[i] = reduce_core_func(y[i], x[i * col_num + j]); }
+  }
+}
+
 }  // namespace
 
 template<>
@@ -212,6 +220,14 @@ KU_IF_METHOD CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t
       y[i * y_lda + y_col_offset + j] = x[i * x_lda + x_col_offset + j];
     }
   }
+}
+KU_IF_METHOD RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
+                    T* y) {
+  MatrixRowReduce<T, ReduceCoreMax>(row_num, col_num, x, y);
+}
+KU_IF_METHOD RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
+                    T* y) {
+  MatrixRowReduce<T, ReduceCoreAdd>(row_num, col_num, x, y);
 }
 KU_IF_METHOD Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
                        const Shape& y_shape, const PbRf<int32_t>& permutation,
