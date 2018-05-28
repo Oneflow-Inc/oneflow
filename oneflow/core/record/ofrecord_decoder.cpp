@@ -1,6 +1,7 @@
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -116,9 +117,10 @@ void OFRecordDecoder<encode_case, T>::ReadDataId(DeviceCtx* ctx, RecordBlob<OFRe
     }
     i += 1;
   });
-  int64_t left_row_num = out_blob->shape().At(0) - i;
+  int64_t left_row_num = out_blob->shape().At(0) - record_blob->record_num();
   if (left_row_num > 0) {
-    Memset<DeviceType::kCPU>(ctx, out_blob->mut_data_id(i), '\0', left_row_num * max_data_id_size);
+    Memset<DeviceType::kCPU>(ctx, out_blob->mut_data_id(record_blob->record_num()), '\0',
+                             left_row_num * max_data_id_size);
   }
 }
 
@@ -127,27 +129,37 @@ void OFRecordDecoder<encode_case, T>::ReadDataContent(
     DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const BlobConf& blob_conf, int32_t col_id,
     Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const {
   int64_t one_col_elem_num = out_blob->shape().Count(1);
-  int32_t i = 0;
-  record_blob->ForEachRecord([&](const OFRecord& record) {
-    if (record.feature().find(blob_conf.name()) == record.feature().end()) {
-      LOG(FATAL) << "Field " << blob_conf.name() << " not found in OfRecord";
-    }
-    const Feature& feature = record.feature().at(blob_conf.name());
-    T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
-    if (col_id < out_blob->col_num(i)) {
-      ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num, NextRandomInt);
-      FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
-        DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+  int32_t random_seed = NextRandomInt();
+#pragma omp parallel
+  {
+    BalancedSplitter bs(record_blob->record_num(), omp_get_num_threads());
+    Range range = bs.At(omp_get_thread_num());
+    if (range.size() > 0) {
+      std::mt19937 gen(random_seed + omp_get_thread_num());
+      std::uniform_int_distribution<int32_t> distribution;
+      FOR_RANGE(int32_t, i, range.begin(), range.end()) {
+        const OFRecord& record = record_blob->GetRecord(i);
+        CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
+            << "Field " << blob_conf.name() << " not found";
+        const Feature& feature = record.feature().at(blob_conf.name());
+        T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
+        if (col_id < out_blob->col_num(i)) {
+          ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
+                     [&]() { return distribution(gen); });
+          FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
+            DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+          }
+        } else {
+          Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
+        }
       }
-    } else {
-      Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
     }
-    i += 1;
-  });
-  int64_t left_row_num = out_blob->shape().At(0) - i;
+  }
+  int64_t left_row_num = out_blob->shape().At(0) - record_blob->record_num();
   if (left_row_num > 0) {
-    Memset<DeviceType::kCPU>(ctx, out_blob->mut_dptr<T>() + i * one_col_elem_num, 0,
-                             left_row_num * one_col_elem_num * sizeof(T));
+    Memset<DeviceType::kCPU>(ctx,
+                             out_blob->mut_dptr<T>() + record_blob->record_num() * one_col_elem_num,
+                             0, left_row_num * one_col_elem_num * sizeof(T));
   }
 }
 
