@@ -14,6 +14,7 @@ void ReduceGatherKernel::ForwardDataContent(
                in_blob->mem_case(), out_blob->mem_case());
     dst_cur_dptr += in_byte_size;
   }
+  CHECK_EQ(dst_cur_dptr - out_blob->mut_dptr<char>(), out_blob->ByteSizeOfDataContentField());
 }
 
 REGISTER_KERNEL(OperatorConf::kReduceGatherConf, ReduceGatherKernel);
