@@ -199,6 +199,8 @@ void TaskNode::FixRegisterNumRange() {
     }
     if (is_in_same_stream) {
       produced_regst->UpdtMaxRegstNumIfNeed(produced_regst->min_register_num());
+    } else {
+      if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
 }
