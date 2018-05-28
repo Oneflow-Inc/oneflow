@@ -2,21 +2,33 @@
 #define ONEFLOW_CORE_PERSISTENCE_PERSISTENT_IN_STREAM_H_
 
 #include "oneflow/core/persistence/file_system.h"
+#include "oneflow/core/persistence/stream_buffer_filler.h"
 
 namespace oneflow {
 
 class PersistentInStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentInStream);
-  virtual ~PersistentInStream() = default;
+
+  PersistentInStream(fs::FileSystem* fs, const std::string& file_path_prefix_, int32_t min_id,
+                     int32_t max_id, bool cyclic, bool with_local_copy) {}
+  PersistentInStream(fs::FileSystem* fs, const std::string& file_path, uint64_t offset, bool cyclic,
+                     bool with_local_copy) {}
 
   // 0: success
   // -1: eof
-  virtual int32_t ReadLine(std::string* l) = 0;
-  virtual int32_t Read(char* s, size_t n) = 0;
+  int32_t ReadLine(std::string* l);
+  int32_t Read(char* s, size_t n);
 
- protected:
-  PersistentInStream() = default;
+ private:
+  bool IsEof() const;
+  void UpdateBuffer();
+
+  std::unique_ptr<StreamBufferFiller> stream_buffer_filler_;
+
+  std::vector<char> buffer_;
+  char* cur_buf_begin_;
+  char* cur_buf_end_;
 };
 
 }  // namespace oneflow

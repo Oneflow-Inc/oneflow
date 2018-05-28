@@ -1,5 +1,6 @@
 #include "oneflow/core/job/improver.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
+// #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
@@ -38,7 +39,7 @@ uint64_t CalcRegstNum(
 }
 
 void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events) {
-  NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
+  PersistentInStream in_stream(LocalFS(), act_event_filepath, 0, false, false);
   int64_t act_event_size;
   while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);

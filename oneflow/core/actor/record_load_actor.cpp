@@ -1,7 +1,5 @@
 #include "oneflow/core/actor/record_load_actor.h"
-#include "oneflow/core/persistence/cyclic_persistent_in_stream_with_local_copy.h"
-#include "oneflow/core/persistence/cyclic_persistent_in_stream_without_local_copy.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/record/record.pb.h"
 
@@ -11,16 +9,18 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   piece_id_ = 0;
   is_eof_ = false;
   OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
+
+  // FIXME(jiyuan): min_id, max_id
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs() && GlobalFS() != LocalFS()) {
       in_stream_.reset(
-          new CyclicPersistentInStreamWithLocalCopy(GlobalFS(), task_proto.data_path()));
+          new PersistentInStream(GlobalFS(), task_proto.data_path(), 0, 1, true, true));
     } else {
       in_stream_.reset(
-          new CyclicPersistentInStreamWithoutLocalCopy(GlobalFS(), task_proto.data_path()));
+          new PersistentInStream(GlobalFS(), task_proto.data_path(), 0, 1, true, false));
     }
   } else {
-    in_stream_.reset(new NormalPersistentInStream(GlobalFS(), task_proto.data_path()));
+    in_stream_.reset(new PersistentInStream(GlobalFS(), task_proto.data_path(), 0, false, false));
   }
 }
 

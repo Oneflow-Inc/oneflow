@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
