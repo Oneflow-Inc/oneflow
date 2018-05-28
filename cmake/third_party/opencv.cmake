@@ -32,6 +32,7 @@ endforeach()
 if (BUILD_THIRD_PARTY)
 
 ExternalProject_Add(opencv
+    DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     GIT_REPOSITORY ${OPENCV_URL}
     GIT_TAG ${OPENCV_TAG}
