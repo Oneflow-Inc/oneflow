@@ -2,9 +2,10 @@
 
 namespace oneflow {
 
-void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf) {
+void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
+                  DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
-  VirtualKernelInit(parallel_ctx);
+  VirtualKernelInit(parallel_ctx, device_ctx);
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -50,7 +51,15 @@ void Kernel::Forward(const KernelCtx& ctx,
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardActivate(ctx, BnInOp2Blob);
-  BackwardDataContent(ctx, BnInOp2Blob);
+  BackwardDataContent(ctx, [BnInOp2Blob, this](const std::string& bn) -> Blob* {
+    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
+
+    if (this->GetActivationType() != ActivationType::kNone) {
+      CHECK_EQ(odbns.size(), 1);
+      if (bn == odbns[0]) { return BnInOp2Blob("activation_buf"); }
+    }
+    return BnInOp2Blob(bn);
+  });
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
@@ -117,6 +126,10 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   if (from_bns.size() == 1) {
     const Blob* in_blob = BnInOp2Blob(from_bns[0]);
     CopyField(ctx, BnInOp2Blob, in_blob, to_bns, Copy);
+  } else if (to_bns.size() == 1) {
+    Blob* in_blob = BnInOp2Blob(from_bns[0]);
+    Blob* out_blob = BnInOp2Blob(to_bns[0]);
+    (out_blob->*Copy)(ctx, in_blob);
   } else {
     CHECK_EQ(from_bns.size(), to_bns.size());
     FOR_RANGE(size_t, i, 0, from_bns.size()) {
@@ -130,18 +143,6 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 template<DeviceType device_type, typename T>
 ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
   return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
-}
-
-template<DeviceType device_type, typename T>
-const Blob* KernelIfWithActivation<device_type, T>::GetOutDiffBlob(
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->GetActivationType() != ActivationType::kNone) {
-    return BnInOp2Blob("activation_buf");
-  } else {
-    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
-    CHECK_EQ(odbns.size(), 1);
-    return BnInOp2Blob(odbns[0]);
-  }
 }
 
 template<DeviceType device_type, typename T>
@@ -201,9 +202,9 @@ void KernelIfWithActivation<device_type, T>::BackwardActivate(
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
-                                              const KernelConf& conf) {
+                                              const KernelConf& conf, DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
-  rptr->Init(parallel_ctx, conf);
+  rptr->Init(parallel_ctx, conf, device_ctx);
   return std::unique_ptr<const Kernel>(rptr);
 }
 

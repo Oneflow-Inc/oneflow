@@ -8,7 +8,6 @@ void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("loss");
   ProduceB121Regst("out");
   ProduceRegst("data_tmp", 1, 1);
-  ProduceRegst("const_buf", 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "LossAcc") {
@@ -38,7 +37,6 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   }
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
-  loss_node->AddBnToRegstAndBindIt(&Operator::const_buf_bns, GetProducedRegst("const_buf"));
   for (const std::string& obn : loss_op->output_bns()) {
     if (!TryAddLbiToB121RegstAndBindIt(loss_node, obn, "out")) {
       data_tmp_regst->AddLbi(loss_op->BnInOp2Lbi(obn));

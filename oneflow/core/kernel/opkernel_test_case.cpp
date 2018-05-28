@@ -395,7 +395,7 @@ void OpKernelTestCase::RunKernel(Operator* op, OpContext* op_context) {
     KernelConf kernel_conf;
     op->GenKernelConf(MakeGetterBnInOp2BlobDesc(), is_forward, &parallel_ctx_, &kernel_conf,
                       op_context);
-    auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf);
+    auto kernel = ConstructKernel(&parallel_ctx_, kernel_conf, nullptr);
     kernel->Launch(kernel_ctx_, MakeGetterBnInOp2Blob());
     SwitchSyncStream(SwitchCase(default_device_type()), &kernel_ctx_);
   };

@@ -18,7 +18,7 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void Init(const ParallelContext*, const KernelConf&);
+  void Init(const ParallelContext*, const KernelConf&, DeviceCtx*);
 
   void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
                             const Snapshot*,
@@ -31,6 +31,9 @@ class Kernel {
 
  protected:
   Kernel() = default;
+  virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
+    VirtualKernelInit(parallel_ctx);
+  }
   virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
   const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
@@ -43,6 +46,8 @@ class Kernel {
   virtual void InitModelBlobsWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+
+  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
 
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -152,8 +157,7 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
  protected:
   KernelIfWithActivation() = default;
 
-  ActivationType GetActivationType() const;
-  const Blob* GetOutDiffBlob(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  ActivationType GetActivationType() const override;
   void ForwardActivate(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardActivate(const KernelCtx& ctx,
@@ -164,7 +168,8 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
   REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
 #define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
 
-std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&);
+std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&,
+                                              DeviceCtx*);
 
 }  // namespace oneflow
 

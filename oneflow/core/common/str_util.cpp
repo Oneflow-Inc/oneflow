@@ -4,6 +4,7 @@ namespace oneflow {
 
 const char* StrToToken(const char* text, const std::string& delims, std::string* token) {
   token->clear();
+  while (*text != '\0' && delims.find(*text) != std::string::npos) { text++; }
   while (*text != '\0' && delims.find(*text) == std::string::npos) { token->push_back(*text++); }
   return text;
 }

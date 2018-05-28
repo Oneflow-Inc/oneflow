@@ -59,6 +59,7 @@ class IDMgr final {
   // sign | machine_id | thrd_id | local_work_stream_id | 0
   //  1   |     10     |   11    |          21          | 21
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
+  int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
 
  private:
   friend class Global<IDMgr>;
