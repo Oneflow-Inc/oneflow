@@ -5,6 +5,50 @@ namespace oneflow {
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+  if (this->UseCudnnOnGpu()) {
+    KernelInitWithCudnn(parallel_ctx);
+  } else {
+    KernelInitWithoutCudnn(parallel_ctx);
+  }
+}
+
+template<typename T>
+void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
+    DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->UseCudnnOnGpu()) {
+    DoForwardDataContentWithCudnn(device_ctx, in_blob, weight_blob, out_blob, BnInOp2Blob);
+  } else {
+    DoForwardDataContentWithoutCudnn(device_ctx, in_blob, weight_blob, out_blob, BnInOp2Blob);
+  }
+}
+
+template<typename T>
+void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
+    DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
+    Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->UseCudnnOnGpu()) {
+    WeightBackwardWithCudnn(
+        device_ctx, out_diff_blob, in_blob, weight_diff_blob, in_diff_blob, BnInOp2Blob);
+  } else {
+    WeightBackwardWithoutCudnn(
+        device_ctx, out_diff_blob, in_blob, weight_diff_blob, in_diff_blob, BnInOp2Blob);
+  }
+}
+
+template<typename T>
+void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
+    DeviceCtx* device_ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
+    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (this->UseCudnnOnGpu()) {
+    BiasBackwardWithCudnn(device_ctx, out_diff_blob, bias_diff_blob, BnInOp2Blob);
+  } else {
+    BiasBackwardWithoutCudnn(device_ctx, out_diff_blob, bias_diff_blob, BnInOp2Blob);
+  }
+}
+
+template<typename T>
+void ConvKernel<DeviceType::kGPU, T>::KernelInitWithCudnn(const ParallelContext* parallel_ctx) {
   Shape in_shape(this->GetConvKernelConf().in());
   Shape out_shape(this->GetConvKernelConf().out());
   Shape weight_shape(this->GetConvKernelConf().weight());
@@ -48,7 +92,7 @@ void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* p
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
+void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnConvolutionForward(
@@ -67,7 +111,7 @@ void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
+void ConvKernel<DeviceType::kGPU, T>::WeightBackwardWithCudnn(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
@@ -91,7 +135,7 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
 }
 
 template<typename T>
-void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
+void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CudaCheck(cudnnConvolutionBackwardBias(device_ctx->cudnn_handle(), OnePtr<T>::value,

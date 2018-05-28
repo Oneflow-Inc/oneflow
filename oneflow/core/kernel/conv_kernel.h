@@ -102,13 +102,34 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kG
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
+  void KernelInitWithCudnn(const ParallelContext*);
+  void KernelInitWithoutCudnn(const ParallelContext*);
+
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void DoForwardDataContentWithCudnn(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
+                            Blob* out_blob,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void DoForwardDataContentWithoutCudnn(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
+                            Blob* out_blob,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
   void WeightBackward(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
                       Blob* weight_diff_blob, Blob* in_diff_blob,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void WeightBackwardWithCudnn(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+                      Blob* weight_diff_blob, Blob* in_diff_blob,
+                      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void WeightBackwardWithoutCudnn(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+                      Blob* weight_diff_blob, Blob* in_diff_blob,
+                      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackwardWithCudnn(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
+                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackwardWithoutCudnn(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
