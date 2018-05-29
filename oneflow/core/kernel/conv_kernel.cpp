@@ -3,20 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-const T* GetImgDptr(const Blob* blob, int64_t idx) {
-  return blob->dptr<T>() + blob->shape().Count(1) * idx;
-}
-
-template<typename T>
-T* GetImgMutDptr(Blob* blob, int64_t idx) {
-  return const_cast<T*>(GetImgDptr<T>(blob, idx));
-}
-
-}  // namespace
-
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {

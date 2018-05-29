@@ -23,8 +23,9 @@ void CudaCheck(T error);
 const int32_t kCudaThreadsNumPerBlock = 512;
 const int32_t kCudaMaxBlocksNum = 4096;
 
-inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
+inline int32_t BlocksNum4ThreadsNum(const int64_t n) {
+  return static_cast<int32_t>(std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
+                                       static_cast<int64_t>(kCudaMaxBlocksNum)));
 }
 
 size_t GetAvailableGpuMemSize(int dev_id);

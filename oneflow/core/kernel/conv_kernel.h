@@ -7,6 +7,20 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+const T* GetImgDptr(const Blob* blob, int64_t idx) {
+  return blob->dptr<T>() + blob->shape().Count(1) * idx;
+}
+
+template<typename T>
+T* GetImgMutDptr(Blob* blob, int64_t idx) {
+  return const_cast<T*>(GetImgDptr<T>(blob, idx));
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 class ConvKernelIf : public KernelIfWithActivation<device_type, T>,
                      public KernelIfWithModel<device_type, T> {
@@ -109,34 +123,46 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kG
                             Blob* out_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void DoForwardDataContentWithCudnn(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
-                            Blob* out_blob,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                                     Blob* out_blob,
+                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void DoForwardDataContentWithoutCudnn(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
-                            Blob* out_blob,
-                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                                        Blob* out_blob,
+                                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void WeightBackward(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
                       Blob* weight_diff_blob, Blob* in_diff_blob,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void WeightBackwardWithCudnn(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
-                      Blob* weight_diff_blob, Blob* in_diff_blob,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                               Blob* weight_diff_blob, Blob* in_diff_blob,
+                               std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void WeightBackwardWithoutCudnn(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
-                      Blob* weight_diff_blob, Blob* in_diff_blob,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                                  Blob* weight_diff_blob, Blob* in_diff_blob,
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackwardWithCudnn(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void BiasBackwardWithoutCudnn(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
-                    std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+                                std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
   std::unique_ptr<CudnnTensorDesc> out_desc_;
   std::unique_ptr<CudnnFilterDesc> filter_desc_;
   std::unique_ptr<CudnnConvDesc> conv_desc_;
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
+
+  Im2ColFunc<T> im2col_func_;
+  Col2ImFunc<T> col2im_func_;
+  GemmFunc<T> forward_func_;
+  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
+  size_t dhw_offset_;
+  const int32_t* strides_;
+  const int32_t* dilation_rate_;
+  const int32_t* padding_before_;
+  Shape in_shape_;
+  Shape out_shape_;
+  Shape weight_shape_;
 };
 
 template<typename T>
@@ -242,6 +268,30 @@ struct ConvKernelUtil final {
 
   static void DoNDWHCFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
                           ColBufWriter<T>* col_buf_writer);
+};
+
+template<typename T>
+struct ConvKernelGpuUtil final {
+ public:
+  static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+
+  static void NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+
+  static void NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
+                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before,
+                          T* in_diff_ptr);
+
+  static void NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
+                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+                          const int32_t* dilation_rate, const int32_t* padding_before,
+                          T* in_diff_ptr);
+
+ private:
 };
 
 }  // namespace oneflow
