@@ -15,6 +15,10 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 
   CommNetDeviceCtx(void* actor_read_id)
       : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id), read_id_(nullptr) {}
+  std::unique_ptr<DeviceCtx> CloneDeviceCtx() const {
+    std::unique_ptr<DeviceCtx> ret(new CommNetDeviceCtx(actor_read_id_));
+    return std::move(ret);
+  }
 
   void AddCallBack(std::function<void()> callback) const override {
     Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);

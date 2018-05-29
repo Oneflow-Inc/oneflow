@@ -23,11 +23,6 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (this_op_conf->has_use_cudnn_on_gpu() == false) {
     this_op_conf->set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
-  if (HasFieldInCustomizedConf("activation")) {
-    ActivationType activation =
-        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-    if (activation != ActivationType::kNone) { EnrollDataTmpBn("activation_buf"); }
-  }
   InitFromOpConf();
 }
 
@@ -79,9 +74,8 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetB
     ActivationType activation =
         static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
     if (activation != ActivationType::kNone && Global<JobDesc>::Get()->IsTrain()) {
-      BlobDesc* buf_blob_desc = GetBlobDesc4BnInOp("activation_buf");
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
-      *buf_blob_desc = *out_blob_desc;
+      *buf_size +=
+          RoundUp(GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField(), kCudaAlignSize);
     }
   }
 }

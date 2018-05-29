@@ -17,6 +17,10 @@ class CudaDeviceCtx final : public DeviceCtx {
 
   CudaDeviceCtx(void* buf_ptr, size_t buf_size, CudaStreamHandle* cuda_handler)
       : DeviceCtx(buf_ptr, buf_size), cuda_handler_(cuda_handler) {}
+  std::unique_ptr<DeviceCtx> CloneDeviceCtx() const {
+    std::unique_ptr<DeviceCtx> ret(new CudaDeviceCtx(buf_ptr(), buf_size(), cuda_handler_));
+    return std::move(ret);
+  }
 
   const cudaStream_t& cuda_stream() const { return *(cuda_handler_->cuda_stream()); }
   const cublasHandle_t& cublas_pmh_handle() const { return *(cuda_handler_->cublas_pmh_handle()); }
