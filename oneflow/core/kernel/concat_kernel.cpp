@@ -25,24 +25,6 @@ void ConcatKernel<device_type, T>::ForwardDataContent(
 }
 
 template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::ForwardDataId(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  DataIdIterator input_it(BnInOp2Blob, &this->op_attribute().input_bns(),
-                          this->op_conf().concat_conf().axis());
-  DataIdIterator output_it(BnInOp2Blob, &this->op_attribute().output_bns(), 0);
-  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
-}
-
-template<DeviceType device_type, typename T>
-void ConcatKernel<device_type, T>::ForwardColNum(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ColNumIterator input_it(BnInOp2Blob, &this->op_attribute().input_bns(),
-                          this->op_conf().concat_conf().axis());
-  ColNumIterator output_it(BnInOp2Blob, &this->op_attribute().output_bns(), 0);
-  CopyFromIterToIter<device_type>(ctx.device_ctx, input_it, output_it);
-}
-
-template<DeviceType device_type, typename T>
 void ConcatKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const int32_t axis = this->op_conf().concat_conf().axis();

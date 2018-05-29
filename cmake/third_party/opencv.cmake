@@ -15,7 +15,7 @@ else()
     set(OPENCV_BUILD_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/lib64)
     set(OPENCV_BUILD_3RDPARTY_LIBRARY_DIR ${OPENCV_INSTALL_DIR}/share/OpenCV/3rdparty/lib64)
     set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_highgui.a libopencv_imgcodecs.a libopencv_core.a)
-    set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a libittnotify.a liblibjasper.a liblibjpeg.a liblibpng.a liblibtiff.a liblibwebp.a)
+    set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a libittnotify.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
 endif()
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
@@ -32,6 +32,7 @@ endforeach()
 if (BUILD_THIRD_PARTY)
 
 ExternalProject_Add(opencv
+    DEPENDS libjpeg_copy_headers_to_destination libjpeg_copy_libs_to_destination
     PREFIX opencv
     GIT_REPOSITORY ${OPENCV_URL}
     GIT_TAG ${OPENCV_TAG}
@@ -59,8 +60,8 @@ ExternalProject_Add(opencv
         -DWITH_EIGEN:BOOL=OFF
         -DWITH_VFW:BOOL=OFF
         -DWITH_FFMPEG:BOOL=OFF
-	-DWITH_WEBP:BOOL=ON
-	-DBUILD_WEBP:BOOL=ON
+        -DWITH_WEBP:BOOL=ON
+        -DBUILD_WEBP:BOOL=ON
         -DWITH_GSTREAMER:BOOL=OFF
         -DWITH_GSTREAMER_0_10:BOOL=OFF
         -DWITH_GTK:BOOL=OFF
@@ -94,7 +95,10 @@ ExternalProject_Add(opencv
         -DBUILD_ZLIB:BOOL=ON
         -DBUILD_TIFF:BOOL=ON
         -DBUILD_JASPER:BOOL=ON
-        -DBUILD_JPEG:BOOL=ON
+        -DWITH_JPEG:BOOL=ON
+        -DBUILD_JPEG:BOOL=OFF
+        -DJPEG_INCLUDE_DIR:STRING=${LIBJPEG_INCLUDE_DIR}
+        -DJPEG_LIBRARY:STRING=${LIBJPEG_STATIC_LIBRARIES}
         -DBUILD_PNG:BOOL=ON
         -DBUILD_OPENEXR:BOOL=ON
         -DBUILD_TBB:BOOL=ON
