@@ -145,7 +145,7 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
 }
 
 template<typename T>
-__global__ void Im2ColNCDHWGpu(const int n, const T* im_dptr, const int channel, const int im_d,
+__global__ void NCDHWIm2ColGpu(const int n, const T* im_dptr, const int channel, const int im_d,
                                const int im_h, const int im_w, const int kernel_d,
                                const int kernel_h, const int kernel_w, const int out_d,
                                const int out_h, const int out_w, const int stride_d,
@@ -304,7 +304,7 @@ void ConvKernelGpuUtil<T>::NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr,
                                        const int32_t* dilation_rate, const int32_t* padding_before,
                                        T* col_buf_ptr) {
   int64_t col_buf_size = weight_shape.Count(1) * out_shape.Count(2);
-  Im2ColNCDHWGpu<T><<<BlocksNum4ThreadsNum(col_buf_size), kCudaThreadsNumPerBlock, 0,
+  NCDHWIm2ColGpu<T><<<BlocksNum4ThreadsNum(col_buf_size), kCudaThreadsNumPerBlock, 0,
                       device_ctx->cuda_stream()>>>(
       col_buf_size, in_dptr, weight_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
       weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2), out_shape.At(3),
