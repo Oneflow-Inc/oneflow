@@ -144,6 +144,37 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
                                          bias_diff_blob->mut_dptr<T>()));
 }
 
+__device__ void InitSharedArrays(const int im_d, const int im_h, const int im_w, const int kernel_d,
+                                 const int kernel_h, const int kernel_w, const int out_d,
+                                 const int out_h, const int out_w, const int stride_d,
+                                 const int stride_h, const int stride_w, const int dilation_d,
+                                 const int dilation_h, const int dilation_w, const int pad_d,
+                                 const int pad_h, const int pad_w, int* shared_im,
+                                 int* shared_kernel, int* shared_out, int* shared_stride,
+                                 int* shared_dilation, int* shared_pad) {
+  if (threadIdx.x == 0) {
+    shared_im[0] = im_d;
+    shared_im[1] = im_h;
+    shared_im[2] = im_w;
+    shared_kernel[0] = kernel_d;
+    shared_kernel[1] = kernel_h;
+    shared_kernel[2] = kernel_w;
+    shared_out[0] = out_d;
+    shared_out[1] = out_h;
+    shared_out[2] = out_w;
+    shared_stride[0] = stride_d;
+    shared_stride[1] = stride_h;
+    shared_stride[2] = stride_w;
+    shared_dilation[0] = dilation_d;
+    shared_dilation[1] = dilation_h;
+    shared_dilation[2] = dilation_w;
+    shared_pad[0] = pad_d;
+    shared_pad[1] = pad_h;
+    shared_pad[2] = pad_w;
+  }
+  __syncthreads();
+}
+
 template<typename T>
 __global__ void NCDHWIm2ColGpu(const int n, const T* im_dptr, const int channel, const int im_d,
                                const int im_h, const int im_w, const int kernel_d,
@@ -160,28 +191,10 @@ __global__ void NCDHWIm2ColGpu(const int n, const T* im_dptr, const int channel,
   __shared__ int shared_stride[dim_num];
   __shared__ int shared_dilation[dim_num];
   __shared__ int shared_pad[dim_num];
-
-  if (threadIdx.x == 0) {
-    shared_im[0] = im_d;
-    shared_im[1] = im_h;
-    shared_im[2] = im_w;
-    shared_kernel[0] = kernel_d;
-    shared_kernel[1] = kernel_h;
-    shared_kernel[2] = kernel_w;
-    shared_out[0] = out_d;
-    shared_out[1] = out_h;
-    shared_out[2] = out_w;
-    shared_stride[0] = stride_d;
-    shared_stride[1] = stride_h;
-    shared_stride[2] = stride_w;
-    shared_dilation[0] = dilation_rate_d;
-    shared_dilation[1] = dilation_rate_h;
-    shared_dilation[2] = dilation_rate_w;
-    shared_pad[0] = padding_before_d;
-    shared_pad[1] = padding_before_h;
-    shared_pad[2] = padding_before_w;
-  }
-  __syncthreads();
+  InitSharedArrays(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w, stride_d,
+                   stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
+                   padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
+                   shared_out, shared_stride, shared_dilation, shared_pad);
 
   int out_size = 1;
   for (int i = 0; i < dim_num; ++i) { out_size *= shared_out[i]; }
@@ -243,28 +256,10 @@ __global__ void NCDHWCol2ImGpu(const int n, const T* col_buf_dptr, const int cha
   __shared__ int shared_stride[dim_num];
   __shared__ int shared_dilation[dim_num];
   __shared__ int shared_pad[dim_num];
-
-  if (threadIdx.x == 0) {
-    shared_im[0] = im_d;
-    shared_im[1] = im_h;
-    shared_im[2] = im_w;
-    shared_kernel[0] = kernel_d;
-    shared_kernel[1] = kernel_h;
-    shared_kernel[2] = kernel_w;
-    shared_out[0] = out_d;
-    shared_out[1] = out_h;
-    shared_out[2] = out_w;
-    shared_stride[0] = stride_d;
-    shared_stride[1] = stride_h;
-    shared_stride[2] = stride_w;
-    shared_dilation[0] = dilation_rate_d;
-    shared_dilation[1] = dilation_rate_h;
-    shared_dilation[2] = dilation_rate_w;
-    shared_pad[0] = padding_before_d;
-    shared_pad[1] = padding_before_h;
-    shared_pad[2] = padding_before_w;
-  }
-  __syncthreads();
+  InitSharedArrays(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w, stride_d,
+                   stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
+                   padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
+                   shared_out, shared_stride, shared_dilation, shared_pad);
 
   int kernel_index[dim_num];
   int channel_index;
