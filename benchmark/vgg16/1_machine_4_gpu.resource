@@ -1,5 +1,5 @@
 machine {
-  addr: "192.168.1.14"
+  addr: "192.168.1.12"
   port: 7776
   name: "first"
 }
