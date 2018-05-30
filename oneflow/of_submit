@@ -55,6 +55,16 @@ def SubmitJob(job_conf, oneflow_path, workdir):
   for machine in job_conf.resource.machine:
     SubmitJobToOneMachine(machine, job_conf, oneflow_path, workdir)
 
+def FindOneflowPathInEnv():
+  for path_dir in os.getenv("PATH").split(":"):
+    try:
+      filenames = os.listdir(path_dir)
+      if "oneflow" in filenames:
+        return os.path.join(path_dir, "oneflow")
+    except os.error:
+      pass
+  return ""
+
 if __name__ == "__main__":
   if len(sys.argv) == 1:
     PrintHelpMessage()
@@ -68,7 +78,9 @@ if __name__ == "__main__":
     else:
       PrintHelpMessage()
   oneflow_path = os.path.abspath(os.path.expanduser(oneflow_path))
-  assert os.path.isfile(oneflow_path)
+  if os.path.isfile(oneflow_path) == False:
+    oneflow_path = FindOneflowPathInEnv()
+    assert os.path.isfile(oneflow_path)
   workdir = os.path.abspath(os.path.expanduser(workdir))
   job_conf_path = sys.argv[-1]
   if os.path.isfile(job_conf_path) == False:
