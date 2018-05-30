@@ -399,11 +399,13 @@ __global__ void NDHWCIm2ColGpu(const int n, const T* im_dptr, const int channel,
     // write into col_buf
     if (is_im_index_valid) {
       // calc im_offset
-      int im_offset = channel_index;
+      int im_offset = 0;
       for (int i = 0; i < dim_num; ++i) {
         im_offset *= shared_im[i];
         im_offset += im_index[i];
       }
+      im_offset *= channel;
+      im_offset += channel_index;
       col_buf_dptr[index] = im_dptr[im_offset];
     } else {
       col_buf_dptr[index] = 0;
