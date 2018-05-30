@@ -52,7 +52,9 @@ void FixCpuDeviceNum() {
     Global<CtrlClient>::Get()->PullKVT("cpu_device_num", &cpu_device_num);
   }
   OF_BARRIER();
-  Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
+  }
   CHECK_GT(cpu_device_num, 0);
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
