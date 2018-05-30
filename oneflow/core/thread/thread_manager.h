@@ -16,6 +16,9 @@ class ThreadMgr final {
 
   Thread* GetThrd(int64_t thrd_id);
 
+  static void ForEachTheadId7MemZoneId7BufSize(
+      const OneMachineBufInfo&, const std::function<void(int64_t, int64_t, size_t)>& DoEach);
+
  private:
   friend class Global<ThreadMgr>;
   ThreadMgr(const Plan& plan);
