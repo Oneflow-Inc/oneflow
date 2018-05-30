@@ -2,6 +2,6 @@ batch_size: 1024
 
 gpu num | time (one batch)
 :-------| :-------------
-1       | 541ms
-2       | 282ms
-4       | 207ms
+1       | 538ms
+2       | 285ms
+4       | 189ms

@@ -1,8 +1,8 @@
 #include "oneflow/core/kernel/boxing_kernel.h"
-#include <omp.h>
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -83,6 +83,45 @@ class DataContentDesc final {
   int32_t axis_;
 };
 
+void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
+                                const DataContentDesc& out_desc, int32_t part_id,
+                                int32_t part_num) {
+  size_t one_elem_size = in_desc.OneElemSize();
+  BalancedSplitter bs(in_desc.TotalElemNum(), part_num);
+  Range range = bs.At(part_id);
+  int64_t in_idx = range.begin();
+  int64_t in_elem_num = 0;
+  char* in_ptr = nullptr;
+  int64_t out_idx = range.begin();
+  int64_t out_elem_num = 0;
+  char* out_ptr = nullptr;
+  while (in_elem_num > 0 || out_elem_num > 0 || in_idx < range.end() || out_idx < range.end()) {
+    if (in_elem_num == 0) {
+      std::tie(in_elem_num, in_ptr) = in_desc.CalcContinuousElemNumStartFrom(in_idx);
+      in_elem_num = std::min(in_elem_num, range.end() - in_idx);
+      if (in_elem_num == 0) { break; }
+      in_idx += in_elem_num;
+    }
+    if (out_elem_num == 0) {
+      std::tie(out_elem_num, out_ptr) = out_desc.CalcContinuousElemNumStartFrom(out_idx);
+      out_elem_num = std::min(out_elem_num, range.end() - out_idx);
+      if (out_elem_num == 0) { break; }
+      out_idx += out_elem_num;
+    }
+    int64_t copy_elem_num = std::min(in_elem_num, out_elem_num);
+    size_t copy_size = copy_elem_num * one_elem_size;
+    Memcpy<DeviceType::kCPU>(ctx, out_ptr, in_ptr, copy_size);
+    in_elem_num -= copy_elem_num;
+    out_elem_num -= copy_elem_num;
+    in_ptr += copy_size;
+    out_ptr += copy_size;
+  }
+  CHECK_EQ(in_elem_num, 0);
+  CHECK_EQ(out_elem_num, 0);
+  CHECK_EQ(in_idx, range.end());
+  CHECK_EQ(out_idx, range.end());
+}
+
 void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                             const PbRpf<std::string>& concat_bns, int32_t concat_axis,
                             const PbRpf<std::string>& split_bns, int32_t split_axis) {
@@ -90,42 +129,21 @@ void ConcatSplitDataContent(DeviceCtx* ctx, std::function<Blob*(const std::strin
   DataContentDesc out_desc(BnInOp2Blob, &split_bns, split_axis);
   CHECK_EQ(in_desc.TotalElemNum(), out_desc.TotalElemNum());
   CHECK_EQ(in_desc.OneElemSize(), out_desc.OneElemSize());
-#pragma omp parallel
-  {
-    size_t one_elem_size = in_desc.OneElemSize();
-    BalancedSplitter bs(in_desc.TotalElemNum(), omp_get_num_threads());
-    Range range = bs.At(omp_get_thread_num());
-    int64_t in_idx = range.begin();
-    int64_t in_elem_num = 0;
-    char* in_ptr = nullptr;
-    int64_t out_idx = range.begin();
-    int64_t out_elem_num = 0;
-    char* out_ptr = nullptr;
-    while (in_elem_num > 0 || out_elem_num > 0 || in_idx < range.end() || out_idx < range.end()) {
-      if (in_elem_num == 0) {
-        std::tie(in_elem_num, in_ptr) = in_desc.CalcContinuousElemNumStartFrom(in_idx);
-        in_elem_num = std::min(in_elem_num, range.end() - in_idx);
-        if (in_elem_num == 0) { break; }
-        in_idx += in_elem_num;
-      }
-      if (out_elem_num == 0) {
-        std::tie(out_elem_num, out_ptr) = out_desc.CalcContinuousElemNumStartFrom(out_idx);
-        out_elem_num = std::min(out_elem_num, range.end() - out_idx);
-        if (out_elem_num == 0) { break; }
-        out_idx += out_elem_num;
-      }
-      int64_t copy_elem_num = std::min(in_elem_num, out_elem_num);
-      size_t copy_size = copy_elem_num * one_elem_size;
-      Memcpy<DeviceType::kCPU>(ctx, out_ptr, in_ptr, copy_size);
-      in_elem_num -= copy_elem_num;
-      out_elem_num -= copy_elem_num;
-      in_ptr += copy_size;
-      out_ptr += copy_size;
+  static const size_t min_byte_one_part = 128;
+  int32_t part_num = in_desc.TotalElemNum() * in_desc.OneElemSize() / min_byte_one_part;
+  part_num = std::min(part_num, Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num());
+  if (part_num >= 2) {
+    BlockingCounter bc(part_num);
+    FOR_RANGE(int32_t, part_id, 0, part_num) {
+      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+          [&ctx, &in_desc, &out_desc, part_id, &part_num, &bc]() {
+            ConcatSplitPartDataContent(ctx, in_desc, out_desc, part_id, part_num);
+            bc.Decrease();
+          });
     }
-    CHECK_EQ(in_elem_num, 0);
-    CHECK_EQ(out_elem_num, 0);
-    CHECK_EQ(in_idx, range.end());
-    CHECK_EQ(out_idx, range.end());
+    bc.WaitUntilCntEqualZero();
+  } else {
+    ConcatSplitPartDataContent(ctx, in_desc, out_desc, 0, 1);
   }
 }
 

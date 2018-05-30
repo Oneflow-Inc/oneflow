@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/decode_ofrecord_kernel.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
