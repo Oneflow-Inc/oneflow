@@ -4,7 +4,7 @@ globalfs_conf {
     namenode: "hdfs://192.168.1.11:9000"
   }
 }
-piece_size: 64
+piece_size: 128
 data_part_num: 32
 max_data_id_length: 0
 train_conf {

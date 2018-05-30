@@ -4,7 +4,7 @@ placement_group {
   }
   parallel_conf {
     policy: kDataParallel
-    device_name: "first:cpu:32"
+    device_name: "first:cpu:8"
   }
 }
 
@@ -29,22 +29,12 @@ placement_group {
     op_name: "conv5_2"
     op_name: "conv5_3"
     op_name: "pool5"
-    op_name: "softmax_loss"
-  }
-  parallel_conf {
-    policy: kDataParallel
-    device_name: "first:gpu:0-3"
-    device_name: "second:gpu:0-3"
-  }
-}
-
-placement_group {
-  op_set {
     op_name: "fc6"
     op_name: "drop6"
     op_name: "fc7"
     op_name: "drop7"
     op_name: "fc8"
+    op_name: "softmax_loss"
   }
   parallel_conf {
     policy: kDataParallel
