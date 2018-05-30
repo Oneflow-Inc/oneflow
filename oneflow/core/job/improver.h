@@ -42,9 +42,13 @@ class Improver final {
   double CalcMaxRegstDescDuration(
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs) const;
+  void InitMachineMemZoneId2BufSize(const Plan& naive_plan);
 
   AvailableMemDesc amd_;
   std::vector<int32_t> record_load_task_num_;
+  //  first dimension index: machine_id
+  //  second dimension index: mem_zone_id
+  std::vector<std::vector<size_t>> machine_mem_zone_id2buf_size_;
 };
 
 }  // namespace oneflow

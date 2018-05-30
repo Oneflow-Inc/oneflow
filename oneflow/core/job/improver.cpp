@@ -4,6 +4,7 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -181,6 +182,7 @@ uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) 
   } else {
     mem_size -= job_desc->reserved_device_mem_byte();
   }
+  mem_size -= machine_mem_zone_id2buf_size_.at(machine_id).at(memory_zone_id);
   CHECK_GT(mem_size, 0);
   return static_cast<uint64_t>(mem_size);
 }
@@ -281,6 +283,18 @@ void Improver::MemoryLimitedAllocate(const ActGraph& graph,
   }
 }
 
+void Improver::InitMachineMemZoneId2BufSize(const Plan& naive_plan) {
+  machine_mem_zone_id2buf_size_ = std::vector<std::vector<size_t>>(naive_plan.buf_info_size());
+  FOR_RANGE(int, machine_id, 0, naive_plan.buf_info_size()) {
+    const OneMachineBufInfo& buf_info = naive_plan.buf_info(machine_id);
+    machine_mem_zone_id2buf_size_[machine_id] = std::vector<size_t>(buf_info.buf_size_size());
+    ThreadMgr::ForEachTheadId7MemZoneId7BufSize(
+        buf_info, [&](int64_t thrd_id, int64_t mem_zone_id, size_t buf_size) {
+          machine_mem_zone_id2buf_size_[machine_id][mem_zone_id] += buf_size;
+        });
+  }
+}
+
 Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_filepath) {
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -288,6 +302,7 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
+  InitMachineMemZoneId2BufSize(naive_plan);
   auto act_events = of_make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
