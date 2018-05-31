@@ -16,6 +16,21 @@ namespace oneflow {
 
 namespace {
 
+#define OF_VERSION_MAJOR "0"
+#define OF_VERSION_MINOR "1"
+#define OF_VERSION_PATCH "0"
+#define OF_VERSION OF_VERSION_MAJOR "." OF_VERSION_MINOR "." OF_VERSION_PATCH
+
+std::string BuildVersionString() {
+  static const HashMap<std::string, std::string> month_word2num = {
+      {"Jan", "01"}, {"Feb", "02"}, {"Mar", "03"}, {"Apr", "04"}, {"May", "05"}, {"Jun", "06"},
+      {"Jul", "07"}, {"Aug", "08"}, {"Sep", "09"}, {"Oct", "10"}, {"Nov", "11"}, {"Dec", "12"},
+  };
+  static const std::string date_str(__DATE__);
+  return OF_VERSION " (" + date_str.substr(7) + month_word2num.at(date_str.substr(0, 3))
+         + date_str.substr(4, 2) + "." + __TIME__ + ")";
+}
+
 std::string GetAmdCtrlKey(int64_t machine_id) {
   return "AvailableMemDesc/" + std::to_string(machine_id);
 }
@@ -52,7 +67,9 @@ void FixCpuDeviceNum() {
     Global<CtrlClient>::Get()->PullKVT("cpu_device_num", &cpu_device_num);
   }
   OF_BARRIER();
-  Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
+  }
   CHECK_GT(cpu_device_num, 0);
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
@@ -128,6 +145,7 @@ DEFINE_string(this_machine_name, "", "");
 int main(int argc, char** argv) {
   using namespace oneflow;
   google::InitGoogleLogging(argv[0]);
+  gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
