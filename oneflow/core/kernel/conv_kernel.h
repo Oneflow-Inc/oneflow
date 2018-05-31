@@ -75,16 +75,13 @@ using GemmFunc = void (*)(DeviceCtx* ctx, enum CBLAS_TRANSPOSE, enum CBLAS_TRANS
                           const T beta, T* c);
 
 template<DeviceType device_type, typename T>
-class ConvKernel;
-
-template<typename T>
-class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kCPU, T> {
+class ConvKernelImplByIm2Col : public ConvKernelIf<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
-  ConvKernel() = default;
-  ~ConvKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernelImplByIm2Col);
+  ConvKernelImplByIm2Col() = default;
+  ~ConvKernelImplByIm2Col() = default;
 
- private:
+ protected:
   void VirtualKernelInit(const ParallelContext*) override;
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
@@ -94,6 +91,8 @@ class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kC
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
   GemmFunc<T> forward_func_;
@@ -107,8 +106,21 @@ class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kC
   Shape weight_shape_;
 };
 
+template<DeviceType device_type, typename T>
+class ConvKernel;
+
 template<typename T>
-class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kGPU, T> {
+class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelImplByIm2Col<DeviceType::kCPU, T> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
+
+ private:
+};
+
+template<typename T>
+class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelImplByIm2Col<DeviceType::kGPU, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
   ConvKernel() = default;
@@ -151,18 +163,6 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kG
   std::unique_ptr<CudnnFilterDesc> filter_desc_;
   std::unique_ptr<CudnnConvDesc> conv_desc_;
   std::unique_ptr<CudnnTensorDesc> bias_desc_;
-
-  Im2ColFunc<T> im2col_func_;
-  Col2ImFunc<T> col2im_func_;
-  GemmFunc<T> forward_func_;
-  enum CBLAS_TRANSPOSE is_out_diff_need_trans_;
-  size_t dhw_offset_;
-  const int32_t* strides_;
-  const int32_t* dilation_rate_;
-  const int32_t* padding_before_;
-  Shape in_shape_;
-  Shape out_shape_;
-  Shape weight_shape_;
 };
 
 template<typename T>
@@ -241,8 +241,11 @@ class ColBufUtil final {
   DHWValidFunc<T> dhw_valid_func_;
 };
 
+template<DeviceType device_type, typename T>
+class ConvKernelUtil;
+
 template<typename T>
-struct ConvKernelUtil final {
+struct ConvKernelUtil<DeviceType::kCPU, T> final {
  public:
   static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
                           const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
@@ -271,7 +274,7 @@ struct ConvKernelUtil final {
 };
 
 template<typename T>
-struct ConvKernelGpuUtil final {
+struct ConvKernelUtil<DeviceType::kGPU, T> final {
  public:
   static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
                           const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
