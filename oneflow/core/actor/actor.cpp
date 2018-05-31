@@ -334,7 +334,7 @@ Regst* Actor::GetCurSoleWriteableRegst() {
 }
 
 std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
-  return {false, {}};
+  return {false, {"delay"}};
 }
 
 Regst* Actor::GetNaiveCurReadable(int64_t regst_desc_id) {

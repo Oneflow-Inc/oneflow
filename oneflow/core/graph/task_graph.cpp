@@ -49,6 +49,22 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
+void TaskGraph::OrderTaskNodesInSameStream() {
+  HashMap<int64_t, TaskNode*> stream_id2node;
+  TopoForEachNode([&](TaskNode* node) {
+    TaskType task_type = node->GetTaskType();
+    if (task_type == TaskType::kNormalMdUpdt || task_type == TaskType::kMdDiffAcc) { return; }
+    if (node->LocalWorkStreamId() != 0) { return; }
+    auto iter = stream_id2node.find(node->GlobalWorkStreamId());
+    if (iter == stream_id2node.end()) {
+      CHECK(stream_id2node.emplace(node->GlobalWorkStreamId(), node).second);
+    } else {
+      iter->second->ProduceDelayRegstDescIfNeed(node);
+      iter->second = node;
+    }
+  });
+}
+
 #define DEFINE_BLD_SUB_TASK_GRAPH_METHOD(method_name) \
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 

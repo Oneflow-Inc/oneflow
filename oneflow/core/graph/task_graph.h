@@ -16,6 +16,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
+  void OrderTaskNodesInSameStream();
+
   const char* TypeName() const override { return "TaskGraph"; }
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();

@@ -119,6 +119,15 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
+void TaskNode::ProduceDelayRegstDescIfNeed(TaskNode* dst_node) {
+  for (auto& name2regst : produced_regsts_) {
+    const auto& consumers = name2regst.second->consumers();
+    if (consumers.find(dst_node) != consumers.end()) { return; }
+  }
+  std::shared_ptr<RegstDesc> delay_regst = ProduceRegst("delay", 1, 1);
+  dst_node->ConsumeRegst("delay", delay_regst);
+}
+
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
