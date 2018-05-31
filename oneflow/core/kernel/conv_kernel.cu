@@ -427,4 +427,8 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCCol2Im(
   template class ConvKernel<DeviceType::kGPU, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL, FLOATING_DATA_TYPE_SEQ)
 
+#define INSTANTIATE_CONV_KERNEL_UTIL(type_cpp, type_proto) \
+  template class ConvKernelUtil<DeviceType::kGPU, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CONV_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
+
 }  // namespace oneflow
