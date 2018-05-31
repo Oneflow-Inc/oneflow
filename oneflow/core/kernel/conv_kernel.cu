@@ -175,9 +175,8 @@ __device__ void InitSharedArrays(const int im_d, const int im_h, const int im_w,
   __syncthreads();
 }
 
-__device__ void Im2ColCalcKernelAndOutIndex(const int dim_num, 
-                                            const int* shared_kernel, const int* shared_out,
-                                            int* row_offset, int* col_offset,
+__device__ void Im2ColCalcKernelAndOutIndex(const int dim_num, const int* shared_kernel,
+                                            const int* shared_out, int* row_offset, int* col_offset,
                                             int* kernel_index, int* out_index) {
   for (int i = dim_num - 1; i >= 0; --i) {
     out_index[i] = *col_offset % shared_out[i];
@@ -187,16 +186,14 @@ __device__ void Im2ColCalcKernelAndOutIndex(const int dim_num,
   }
 }
 
-__device__ bool Im2ColCalcImIndex(const int dim_num,
-                                  const int* shared_dilation, const int* shared_pad, const int* shared_stride,
-                                  const int* kernel_index, const int* out_index,
-                                  int* im_index) {
+__device__ bool Im2ColCalcImIndex(const int dim_num, const int* shared_im,
+                                  const int* shared_dilation, const int* shared_pad,
+                                  const int* shared_stride, const int* kernel_index,
+                                  const int* out_index, int* im_index) {
   for (int i = 0; i < dim_num; ++i) {
     im_index[i] =
         kernel_index[i] * shared_dilation[i] - shared_pad[i] + out_index[i] * shared_stride[i];
-    if (im_index[i] < 0 || im_index[i] >= shared_im[i]) {
-      return false;
-    }
+    if (im_index[i] < 0 || im_index[i] >= shared_im[i]) { return false; }
   }
   return true;
 }
@@ -232,11 +229,11 @@ __global__ void NCDHWIm2ColGpu(const int n, const T* im_dptr, const int channel,
     // calc kernel_/out_/channel_index
     int row_offset = index / out_size;  // row_dim of col_buf: channel*kd*kh*kw
     int col_offset = index % out_size;  // col_dim of col_buf: od*oh*ow
-    Im2ColCalcKernelAndOutIndex(dim_num, shared_kernel, shared_out, 
-                                &row_offset, &col_offset, kernel_index, out_index);
+    Im2ColCalcKernelAndOutIndex(dim_num, shared_kernel, shared_out, &row_offset, &col_offset,
+                                kernel_index, out_index);
     channel_index = row_offset;
 
-    if (Im2ColCalcImIndex(dim_num, shared_dilation, shared_pad, shared_stride,
+    if (Im2ColCalcImIndex(dim_num, shared_im, shared_dilation, shared_pad, shared_stride,
                           kernel_index, out_index, im_index)) {
       // calc im_offset
       int im_offset = channel_index;
@@ -388,11 +385,11 @@ __global__ void NDHWCIm2ColGpu(const int n, const T* im_dptr, const int channel,
     int col_offset = index % out_size;  // col_dim of col_buf: od*oh*ow
     channel_index = row_offset % channel;
     row_offset /= channel;
-    Im2ColCalcKernelAndOutIndex(dim_num, shared_kernel, shared_out, 
-                                &row_offset, &col_offset, kernel_index, out_index);
+    Im2ColCalcKernelAndOutIndex(dim_num, shared_kernel, shared_out, &row_offset, &col_offset,
+                                kernel_index, out_index);
     assert(row_offset == 0);
 
-    if (Im2ColCalcImIndex(dim_num, shared_dilation, shared_pad, shared_stride,
+    if (Im2ColCalcImIndex(dim_num, shared_im, shared_dilation, shared_pad, shared_stride,
                           kernel_index, out_index, im_index)) {
       // calc im_offset
       int im_offset = 0;
