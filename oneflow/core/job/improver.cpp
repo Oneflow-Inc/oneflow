@@ -253,6 +253,7 @@ void Improver::MemoryLimitedAllocate(const ActGraph& graph,
   MakeMemZoneRegstDescs(graph.plan(), &mz_regst_descs);
   double ii = BinarySearchII(CalcBaseII(graph), PathDurations4RegstDescId, PathIIScales4RegstDescId,
                              mz_regst_descs);
+  LOG(INFO) << "ii: " << ii;
   for (const auto& task_proto : graph.plan().task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t regst_num =
