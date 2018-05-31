@@ -249,14 +249,14 @@ __global__ void NCDHWIm2ColGpu(const int n, const T* im_dptr, const int channel,
 }
 
 template<typename T>
-__global__ void NCDHWCol2ImGpu(const int n, const T* col_buf_dptr, const int channel,
-                               const int im_d, const int im_h, const int im_w, const int kernel_d,
-                               const int kernel_h, const int kernel_w, const int out_d,
-                               const int out_h, const int out_w, const int stride_d,
-                               const int stride_h, const int stride_w, const int dilation_rate_d,
-                               const int dilation_rate_h, const int dilation_rate_w,
-                               const int padding_before_d, const int padding_before_h,
-                               const int padding_before_w, T* im_diff_dptr) {
+__global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel, const int im_d,
+                          const int im_h, const int im_w, const int kernel_d, const int kernel_h,
+                          const int kernel_w, const int out_d, const int out_h, const int out_w,
+                          const int stride_d, const int stride_h, const int stride_w,
+                          const int dilation_rate_d, const int dilation_rate_h,
+                          const int dilation_rate_w, const int padding_before_d,
+                          const int padding_before_h, const int padding_before_w, T* im_diff_dptr,
+                          bool is_channel_first) {
   const int dim_num = 3;
   __shared__ int shared_im[dim_num];
   __shared__ int shared_kernel[dim_num];
@@ -278,11 +278,15 @@ __global__ void NCDHWCol2ImGpu(const int n, const T* col_buf_dptr, const int cha
   CUDA_1D_KERNEL_LOOP(index, n) {
     // calc im_/channel_index
     int im_offset = index;
+    if (is_channel_first == false) {
+      channel_index = im_offset % channel;
+      im_offset /= channel;
+    }
     for (int i = dim_num - 1; i >= 0; --i) {
       im_index[i] = im_offset % shared_im[i] + shared_pad[i];
       im_offset /= shared_im[i];
     }
-    channel_index = im_offset;
+    if (is_channel_first) { channel_index = im_offset; }
 
     // calc the out_range of this im element
     bool is_in_dim_wrong = false;
@@ -323,10 +327,15 @@ __global__ void NCDHWCol2ImGpu(const int n, const T* col_buf_dptr, const int cha
 
       // cal col_buf_offset
       if (is_skip == false) {
-        int col_buf_offset = channel_index;
+        int col_buf_offset = 0;
+        if (is_channel_first) { col_buf_offset = channel_index; }
         for (int i = 0; i < dim_num; ++i) {
           col_buf_offset *= shared_kernel[i];
           col_buf_offset += kernel_index[i];
+        }
+        if (is_channel_first == false) {
+          col_buf_offset *= channel;
+          col_buf_offset += channel_index;
         }
         for (int i = 0; i < dim_num; ++i) {
           col_buf_offset *= shared_out[i];
@@ -403,114 +412,6 @@ __global__ void NDHWCIm2ColGpu(const int n, const T* im_dptr, const int channel,
     } else {
       col_buf_dptr[index] = 0;
     }
-  }
-}
-
-template<typename T>
-__global__ void NDHWCCol2ImGpu(const int n, const T* col_buf_dptr, const int channel,
-                               const int im_d, const int im_h, const int im_w, const int kernel_d,
-                               const int kernel_h, const int kernel_w, const int out_d,
-                               const int out_h, const int out_w, const int stride_d,
-                               const int stride_h, const int stride_w, const int dilation_rate_d,
-                               const int dilation_rate_h, const int dilation_rate_w,
-                               const int padding_before_d, const int padding_before_h,
-                               const int padding_before_w, T* im_diff_dptr) {
-  const int dim_num = 3;
-  __shared__ int shared_im[dim_num];
-  __shared__ int shared_kernel[dim_num];
-  __shared__ int shared_out[dim_num];
-  __shared__ int shared_stride[dim_num];
-  __shared__ int shared_dilation[dim_num];
-  __shared__ int shared_pad[dim_num];
-  InitSharedArrays(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w, stride_d,
-                   stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
-                   padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
-                   shared_out, shared_stride, shared_dilation, shared_pad);
-
-  int kernel_index[dim_num];
-  int channel_index;
-  int im_index[dim_num];
-  int out_begin[dim_num];
-  int out_end[dim_num];
-  int out_index[dim_num];
-  CUDA_1D_KERNEL_LOOP(index, n) {
-    // calc im_/channel_index
-    int im_offset = index;
-    channel_index = im_offset % channel;
-    im_offset /= channel;
-    for (int i = dim_num - 1; i >= 0; --i) {
-      im_index[i] = im_offset % shared_im[i] + shared_pad[i];
-      im_offset /= shared_im[i];
-    }
-    assert(im_offset == 0);
-
-    // calc the out_range of this im element
-    bool is_in_dim_wrong = false;
-    for (int i = 0; i < dim_num; ++i) {
-      const int kernel_extent = shared_dilation[i] * (shared_kernel[i] - 1) + 1;
-      if (im_index[i] < kernel_extent) {
-        out_begin[i] = 0;
-      } else {
-        // original equation: ((im_index[i]-kernel_extent+1)+(stride[i]-1))/stride[i]
-        out_begin[i] = (im_index[i] - kernel_extent) / shared_stride[i] + 1;
-      }
-      out_end[i] = min(im_index[i] / shared_stride[i] + 1, shared_out[i]);
-      out_index[i] = out_begin[i];
-
-      if (out_begin[i] >= out_end[i]) {  // for those im elements not chosen by kernel
-        is_in_dim_wrong = true;
-        break;
-      }
-    }
-    if (is_in_dim_wrong) {
-      im_diff_dptr[index] = 0;
-      continue;
-    }
-
-    T val = 0;
-    while (true) {
-      bool is_skip = false;
-      // calc kernel_index
-      for (int i = 0; i < dim_num; ++i) {
-        kernel_index[i] = im_index[i] - out_index[i] * shared_stride[i];
-        if (kernel_index[i] % shared_dilation[i] == 0) {
-          kernel_index[i] /= shared_dilation[i];
-        } else {
-          is_skip = true;
-          break;
-        }
-      }
-
-      // cal col_buf_offset
-      if (is_skip == false) {
-        int col_buf_offset = 0;
-        for (int i = 0; i < dim_num; ++i) {
-          col_buf_offset *= shared_kernel[i];
-          col_buf_offset += kernel_index[i];
-        }
-        col_buf_offset *= channel;
-        col_buf_offset += channel_index;
-        for (int i = 0; i < dim_num; ++i) {
-          col_buf_offset *= shared_out[i];
-          col_buf_offset += out_index[i];
-        }
-        val += col_buf_dptr[col_buf_offset];
-      }
-
-      // iter next out_index[]
-      bool is_iter_completed = true;
-      for (int i = dim_num - 1; i >= 0; --i) {
-        if (out_index[i] == out_end[i] - 1) {
-          out_index[i] = out_begin[i];
-        } else {
-          out_index[i] += 1;
-          is_iter_completed = false;
-          break;
-        }
-      }
-      if (is_iter_completed) { break; }
-    }
-    im_diff_dptr[index] = val;
   }
 }
 
@@ -594,13 +495,13 @@ void ConvKernelGpuUtil<T>::NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf_d
                                        const int32_t* dilation_rate, const int32_t* padding_before,
                                        T* in_diff_ptr) {
   int32_t im_size = in_shape.Count(1);
-  NCDHWCol2ImGpu<T>
+  Col2ImGpu<T>
       <<<BlocksNum4ThreadsNum(im_size), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
           im_size, col_buf_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
           weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),
           out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0],
           dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1],
-          padding_before[2], in_diff_ptr);
+          padding_before[2], in_diff_ptr, true);
 }
 
 template<typename T>
@@ -625,13 +526,13 @@ void ConvKernelGpuUtil<T>::NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf_d
                                        const int32_t* dilation_rate, const int32_t* padding_before,
                                        T* in_diff_ptr) {
   int32_t im_size = in_shape.Count(1);
-  NDHWCCol2ImGpu<T>
+  Col2ImGpu<T>
       <<<BlocksNum4ThreadsNum(im_size), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
           im_size, col_buf_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
           weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),
           out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0],
           dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1],
-          padding_before[2], in_diff_ptr);
+          padding_before[2], in_diff_ptr, false);
 }
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \
