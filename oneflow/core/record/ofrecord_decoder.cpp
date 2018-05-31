@@ -2,6 +2,7 @@
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
 #include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -72,14 +73,15 @@ void DoPreprocess(const PreprocessConf& conf, T* dptr, const Shape& shape) {
 
 template<EncodeCase encode_case, typename T>
 int32_t OFRecordDecoder<encode_case, T>::DecodeOneCol(
-    DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const BlobConf& blob_conf, int32_t col_id,
-    Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const {
+    DeviceCtx* ctx, int32_t max_part_num, RecordBlob<OFRecord>* record_blob,
+    const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
+    std::function<int32_t(void)> NextRandomInt) const {
   int32_t max_col_id = 0;
   if (out_blob->has_col_num_field()) {
     max_col_id = ReadColNum(ctx, record_blob, blob_conf.name(), out_blob) - 1;
   }
   if (out_blob->has_data_id_field()) { ReadDataId(ctx, record_blob, out_blob); }
-  ReadDataContent(ctx, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
+  ReadDataContent(ctx, max_part_num, record_blob, blob_conf, col_id, out_blob, NextRandomInt);
   return max_col_id;
 }
 
@@ -126,40 +128,60 @@ void OFRecordDecoder<encode_case, T>::ReadDataId(DeviceCtx* ctx, RecordBlob<OFRe
 
 template<EncodeCase encode_case, typename T>
 void OFRecordDecoder<encode_case, T>::ReadDataContent(
-    DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const BlobConf& blob_conf, int32_t col_id,
-    Blob* out_blob, std::function<int32_t(void)> NextRandomInt) const {
+    DeviceCtx* ctx, int32_t max_part_num, RecordBlob<OFRecord>* record_blob,
+    const BlobConf& blob_conf, int32_t col_id, Blob* out_blob,
+    std::function<int32_t(void)> NextRandomInt) const {
   int64_t one_col_elem_num = out_blob->shape().Count(1);
   int32_t random_seed = NextRandomInt();
-#pragma omp parallel
-  {
-    BalancedSplitter bs(record_blob->record_num(), omp_get_num_threads());
-    Range range = bs.At(omp_get_thread_num());
-    if (range.size() > 0) {
-      std::mt19937 gen(random_seed + omp_get_thread_num());
-      std::uniform_int_distribution<int32_t> distribution;
-      FOR_RANGE(int32_t, i, range.begin(), range.end()) {
-        const OFRecord& record = record_blob->GetRecord(i);
-        CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
-            << "Field " << blob_conf.name() << " not found";
-        const Feature& feature = record.feature().at(blob_conf.name());
-        T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
-        if (col_id < out_blob->col_num(i)) {
-          ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
-                     [&]() { return distribution(gen); });
-          FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
-            DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
-          }
-        } else {
-          Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
-        }
-      }
+  int32_t part_num = std::min(record_blob->record_num(), max_part_num);
+  if (part_num >= 2) {
+    BlockingCounter bc(part_num);
+    FOR_RANGE(int32_t, part_id, 0, part_num) {
+      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+          [&ctx, &record_blob, &blob_conf, &col_id, &out_blob, &bc, part_id, &part_num,
+           &one_col_elem_num, &random_seed, this]() {
+            ReadPartDataContent(ctx, record_blob, blob_conf, col_id, out_blob, part_id, part_num,
+                                one_col_elem_num, random_seed);
+            bc.Decrease();
+          });
     }
+    bc.WaitUntilCntEqualZero();
+  } else {
+    ReadPartDataContent(ctx, record_blob, blob_conf, col_id, out_blob, 0, 1, one_col_elem_num,
+                        random_seed);
   }
   int64_t left_row_num = out_blob->shape().At(0) - record_blob->record_num();
   if (left_row_num > 0) {
     Memset<DeviceType::kCPU>(ctx,
                              out_blob->mut_dptr<T>() + record_blob->record_num() * one_col_elem_num,
                              0, left_row_num * one_col_elem_num * sizeof(T));
+  }
+}
+
+template<EncodeCase encode_case, typename T>
+void OFRecordDecoder<encode_case, T>::ReadPartDataContent(
+    DeviceCtx* ctx, RecordBlob<OFRecord>* record_blob, const BlobConf& blob_conf, int32_t col_id,
+    Blob* out_blob, int32_t part_id, int32_t part_num, int64_t one_col_elem_num,
+    int32_t random_seed) const {
+  BalancedSplitter bs(record_blob->record_num(), part_num);
+  Range range = bs.At(part_id);
+  std::mt19937 gen(random_seed + part_id);
+  std::uniform_int_distribution<int32_t> distribution;
+  FOR_RANGE(int32_t, i, range.begin(), range.end()) {
+    const OFRecord& record = record_blob->GetRecord(i);
+    CHECK(record.feature().find(blob_conf.name()) != record.feature().end())
+        << "Field " << blob_conf.name() << " not found";
+    const Feature& feature = record.feature().at(blob_conf.name());
+    T* out_dptr = out_blob->mut_dptr<T>() + i * one_col_elem_num;
+    if (col_id < out_blob->col_num(i)) {
+      ReadOneCol(ctx, feature, blob_conf, col_id, out_dptr, one_col_elem_num,
+                 [&]() { return distribution(gen); });
+      FOR_RANGE(size_t, j, 0, blob_conf.preprocess_size()) {
+        DoPreprocess<T>(blob_conf.preprocess(j), out_dptr, out_blob->shape());
+      }
+    } else {
+      Memset<DeviceType::kCPU>(ctx, out_dptr, 0, one_col_elem_num * sizeof(T));
+    }
   }
 }
 
