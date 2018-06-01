@@ -59,7 +59,7 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ClearOutOfDateConsumedRegst, _1));
-  task_gph->OrderTaskNodesInSameStream();
+  OrderTaskNodesInSameStream(task_gph.get());
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
@@ -84,6 +84,51 @@ Plan Compiler::DoCompile() {
   });
   ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
   return plan;
+}
+
+void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
+  std::list<TaskNode*> starts;
+  task_gph->ForEachNode([&](TaskNode* node) {
+    if (node->consumed_regsts().size() == 0) { starts.push_back(node); }
+  });
+  HashMap<int64_t, TaskNode*> stream_id2node;
+  std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)> ForEachInNode =
+      [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+        const auto& consumed_regsts = node->consumed_regsts();
+        for (const auto& name2regsts : consumed_regsts) {
+          for (auto& regst : name2regsts.second) {
+            const TaskNode* producer = regst.lock()->producer();
+            if (producer->GetTaskType() != TaskType::kNormalMdUpdt) {
+              handler(const_cast<TaskNode*>(producer));
+            }
+          }
+        }
+      };
+  std::function<void(TaskNode*, const std::function<void(TaskNode*)>&)> ForEachOutNode =
+      [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+        const auto& produced_regsts = node->produced_regsts();
+        for (const auto& name2regst : produced_regsts) {
+          const auto& consumers = name2regst.second->consumers();
+          for (const TaskNode* consumer : consumers) {
+            TaskType task_type = consumer->GetTaskType();
+            if (task_type != TaskType::kMdDiffAcc && task_type != TaskType::kLossAcc) {
+              handler(const_cast<TaskNode*>(consumer));
+            }
+          }
+        }
+      };
+  task_gph->TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+    if (Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(node->LocalWorkStreamId())) { return; }
+    if (node->GetTaskType() == TaskType::kRecordLoad) { return; }
+    int64_t global_stream_id = node->GlobalWorkStreamId();
+    auto iter = stream_id2node.find(global_stream_id);
+    if (iter == stream_id2node.end()) {
+      CHECK(stream_id2node.emplace(global_stream_id, node).second);
+    } else {
+      iter->second->BuildDelayRegstDescIfNeed(node);
+      iter->second = node;
+    }
+  });
 }
 
 }  // namespace oneflow

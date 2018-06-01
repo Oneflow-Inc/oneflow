@@ -356,8 +356,17 @@ Regst* Actor::GetNaiveNextReadable(int64_t regst_desc_id) {
 }
 
 Regst* Actor::GetNaiveSoleCurReadable() {
-  CHECK_EQ(naive_readable_regst_.size(), 1);
-  return GetNaiveFirstCurReadable();
+  if (naive_readable_regst_.size() == 1) {
+    return GetNaiveFirstCurReadable();
+  } else {
+    CHECK_EQ(naive_readable_regst_.size(), 2);
+    CHECK_NE(in_delay_regst_desc_id_, -1);
+    for (auto& pair : naive_readable_regst_) {
+      if (pair.first != in_delay_regst_desc_id_) { return GetNaiveCurReadable(pair.first); }
+    }
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 }
 
 Regst* Actor::GetNaiveFirstCurReadable() {

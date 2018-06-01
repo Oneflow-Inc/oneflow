@@ -116,7 +116,11 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
     *(pb_pair->mutable_lbi()) = pair.first;
     pair.second->ToProto(pb_pair->mutable_blob_desc());
   }
-  if (packed_blob_desc_) { packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc()); }
+  if (packed_blob_desc_) {
+    packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc());
+  } else {
+    GenEmptyBlobDescProto(ret->mutable_packed_blob_desc());
+  }
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);

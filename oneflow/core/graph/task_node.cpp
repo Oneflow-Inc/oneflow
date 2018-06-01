@@ -116,12 +116,14 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::ProduceDelayRegstDescIfNeed(TaskNode* dst_node) {
+void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
+  int32_t max_register_num = std::numeric_limits<int32_t>::min();
   for (auto& name2regst : produced_regsts_) {
+    max_register_num = std::max(max_register_num, name2regst.second->max_register_num());
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
-  std::shared_ptr<RegstDesc> delay_regst = ProduceRegst("out_delay", 1, 1);
+  std::shared_ptr<RegstDesc> delay_regst = ProduceRegst("out_delay", 1, max_register_num);
   dst_node->ConsumeRegst("in_delay", delay_regst);
 }
 

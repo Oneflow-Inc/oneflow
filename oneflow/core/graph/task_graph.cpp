@@ -49,50 +49,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
-void TaskGraph::OrderTaskNodesInSameStream() {
-  std::list<TaskNode*> starts;
-  ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().size() == 0) { starts.push_back(node); }
-  });
-  HashMap<int64_t, TaskNode*> stream_id2node;
-  TopoForEachNode(starts,
-                  [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-                    const auto& consumed_regsts = node->consumed_regsts();
-                    for (const auto& name2regsts : consumed_regsts) {
-                      for (auto& regst : name2regsts.second) {
-                        const TaskNode* producer = regst.lock()->producer();
-                        if (producer->GetTaskType() != TaskType::kNormalMdUpdt) {
-                          handler(const_cast<TaskNode*>(producer));
-                        }
-                      }
-                    }
-                  },
-                  [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-                    const auto& produced_regsts = node->produced_regsts();
-                    for (const auto& name2regst : produced_regsts) {
-                      const auto& consumers = name2regst.second->consumers();
-                      for (const TaskNode* consumer : consumers) {
-                        TaskType task_type = consumer->GetTaskType();
-                        if (task_type != TaskType::kMdDiffAcc && task_type != TaskType::kLossAcc) {
-                          handler(const_cast<TaskNode*>(consumer));
-                        }
-                      }
-                    }
-                  },
-                  [&](TaskNode* node) {
-                    if (node->LocalWorkStreamId() != 0) { return; }
-                    if (node->GetTaskType() == TaskType::kRecordLoad) { return; }
-                    int64_t global_stream_id = node->GlobalWorkStreamId();
-                    auto iter = stream_id2node.find(global_stream_id);
-                    if (iter == stream_id2node.end()) {
-                      CHECK(stream_id2node.emplace(global_stream_id, node).second);
-                    } else {
-                      iter->second->ProduceDelayRegstDescIfNeed(node);
-                      iter->second = node;
-                    }
-                  });
-}
-
 #define DEFINE_BLD_SUB_TASK_GRAPH_METHOD(method_name) \
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
