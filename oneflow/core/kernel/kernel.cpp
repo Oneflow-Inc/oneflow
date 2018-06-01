@@ -6,6 +6,14 @@ void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_
                   DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
   VirtualKernelInit(parallel_ctx, device_ctx);
+  if (kernel_conf_.has_activation_blob_desc()) {
+    CHECK_NE(this->GetActivationType(), ActivationType::kNone);
+    // generate activation_blob use buf_ptr
+    activation_blob_desc_.reset(new BlobDesc(Shape(kernel_conf_.activation_blob_desc().shape()),
+                                             kernel_conf_.activation_blob_desc().data_type(), false,
+                                             false, 1));
+    GenActivationBlob(&activation_blob_, device_ctx->buf_ptr(), activation_blob_desc_.get());
+  }
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -53,19 +61,16 @@ void Kernel::Backward(const KernelCtx& ctx,
   size_t byte_size_used_by_activation = 0;
   BackwardActivation(ctx, BnInOp2Blob, &byte_size_used_by_activation);
   if (byte_size_used_by_activation > 0) {
+    CHECK(kernel_conf_.has_activation_blob_desc());
+    CHECK(activation_blob_.get() != nullptr);
     CHECK_NE(this->GetActivationType(), ActivationType::kNone);
     const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(odbns.size(), 1);
-    // generate activation_blob use buf_ptr
-    Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
-    BlobDesc activation_blob_desc(out_diff_blob->shape(), out_diff_blob->data_type(), false, false,
-                                  1);
-    std::unique_ptr<Blob> activation_blob;
-    GenActivationBlob(&activation_blob, ctx.device_ctx->buf_ptr(), &activation_blob_desc);
     // generate new kernel_ctx for buf_ptr and buf_size cut by activation_blob
     std::unique_ptr<DeviceCtx> device_ctx = ctx.device_ctx->CloneDeviceCtx();
     size_t aligned_offset_byte_size = RoundUp(byte_size_used_by_activation, kCudaAlignSize);
-    device_ctx->set_buf_ptr(ctx.device_ctx->buf_ptr() + aligned_offset_byte_size);
+    device_ctx->set_buf_ptr(static_cast<void*>(static_cast<char*>(ctx.device_ctx->buf_ptr())
+                                               + aligned_offset_byte_size));
     device_ctx->set_buf_size(ctx.device_ctx->buf_size() - aligned_offset_byte_size);
     CHECK_GE(device_ctx->buf_size(), 0);
     KernelCtx new_ctx;
@@ -73,7 +78,7 @@ void Kernel::Backward(const KernelCtx& ctx,
     new_ctx.device_ctx = device_ctx.get();
 
     BackwardDataContent(new_ctx, [&](const std::string& bn) -> Blob* {
-      if (bn == odbns[0]) { return activation_blob.get(); }
+      if (bn == odbns[0]) { return activation_blob_.get(); }
       return BnInOp2Blob(bn);
     });
   } else {

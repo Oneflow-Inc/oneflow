@@ -70,13 +70,9 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetB
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
-  if (HasFieldInCustomizedConf("activation")) {
-    ActivationType activation =
-        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-    if (activation != ActivationType::kNone && Global<JobDesc>::Get()->IsTrain()) {
-      *buf_size +=
-          RoundUp(GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField(), kCudaAlignSize);
-    }
+  if (NeedDoActivation()) {
+    *buf_size +=
+        RoundUp(GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField(), kCudaAlignSize);
   }
 }
 
@@ -134,6 +130,15 @@ static bool HasBlobDescWithField(
   return false;
 }
 
+bool Operator::NeedDoActivation() const {
+  if (HasFieldInCustomizedConf("activation")) {
+    ActivationType activation =
+        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+    if (activation != ActivationType::kNone && Global<JobDesc>::Get()->IsTrain()) { return true; }
+  }
+  return false;
+}
+
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
@@ -158,6 +163,10 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
   }
   kernel_conf->set_data_type(data_type);
+
+  if (!is_forward && NeedDoActivation()) {
+    GetBlobDesc4BnInOp(SoleObn())->ToProto(kernel_conf->mutable_activation_blob_desc());
+  }
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 
