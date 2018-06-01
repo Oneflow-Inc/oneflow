@@ -108,6 +108,9 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
+  if (task_id_ == 1) { LOG(INFO) << "ToProto:" << ctrl_msg_consumers_.size(); }
+  for (auto consumer_id : ctrl_msg_consumers_) { task_proto->add_ctrl_msg_consumers(consumer_id); }
+  for (auto producer_id : ctrl_msg_producers_) { task_proto->add_ctrl_msg_producers(producer_id); }
 }
 
 int64_t TaskNode::MemZoneId121() const {

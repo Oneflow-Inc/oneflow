@@ -45,6 +45,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
+  HashMap<int64_t, int64_t> device2first_fw_node_need_bw_;
+  HashMap<int64_t, int64_t> device2first_copyh2d_node_;
 };
 
 }  // namespace oneflow

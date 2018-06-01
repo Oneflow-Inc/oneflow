@@ -53,6 +53,14 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   return msg;
 }
 
+ActorMsg ActorMsg::BuildCtrlMsg(int64_t src_actor_id, int64_t dst_actor_id) {
+  ActorMsg msg;
+  msg.src_actor_id_ = src_actor_id;
+  msg.dst_actor_id_ = dst_actor_id;
+  msg.msg_type_ = ActorMsgType::kCtrlMsg;
+  return msg;
+}
+
 int64_t ActorMsg::SrcMachineId() const {
   return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
 }

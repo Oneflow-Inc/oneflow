@@ -61,6 +61,16 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
+
+  for (const auto& consumer_id : task_proto.ctrl_msg_consumers()) {
+    ctrl_msg_consumers_.push_back(consumer_id);
+    // LOG(INFO) << "ctrl_pair:" << actor_id_ << "->" << consumer_id;
+  }
+  for (const auto& producer_id : task_proto.ctrl_msg_producers()) {
+    consumed_ctrl_msg_cnt_[producer_id] = 1;
+    // LOG(INFO) << "ctrl_pair:" << actor_id_ << "<-" << producer_id;
+  }
+
   actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   writeable_produced_regst_desc_cnt_ = actual_writeable_produced_regst_desc_num_;
   total_reading_cnt_ = 0;
@@ -162,6 +172,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
+  } else if (msg.msg_type() == ActorMsgType::kCtrlMsg) {
+    ++consumed_ctrl_msg_cnt_[msg.src_actor_id()];
+    // LOG(INFO) << "recv ctrl msg:" << actor_id_ << "<-" << msg.src_actor_id();
+    ActUntilFail();
   } else {
     UNIMPLEMENTED();
   }
@@ -198,7 +212,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady()) {
+  while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
+    for (auto& pair : consumed_ctrl_msg_cnt_) { --pair.second; }
     act_id_ += 1;
     ActEvent* act_event = nullptr;
     if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
@@ -220,6 +235,11 @@ void Actor::ActUntilFail() {
     last_act_start_time_ = cur_time;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
+    for (auto consumer_id : ctrl_msg_consumers_) {
+      ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, consumer_id);
+      Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
+      // LOG(INFO) << "send ctrl msg:" << actor_id_ << "->" << consumer_id;
+    }
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }

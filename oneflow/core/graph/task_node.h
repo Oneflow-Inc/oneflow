@@ -55,6 +55,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
+  void add_ctrl_msg_consumer(int64_t consumer_id) { ctrl_msg_consumers_.push_back(consumer_id); }
+  void add_ctrl_msg_producer(int64_t producer_id) { ctrl_msg_producers_.push_back(producer_id); }
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
@@ -88,6 +90,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
+  std::vector<int64_t> ctrl_msg_consumers_;
+  std::vector<int64_t> ctrl_msg_producers_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {

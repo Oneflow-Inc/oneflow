@@ -16,7 +16,7 @@ enum class ActorCmd {
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
 
-enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
+enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg, kCtrlMsg };
 
 OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
@@ -31,6 +31,7 @@ class ActorMsg final {
   static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer, Regst*);
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
+  static ActorMsg BuildCtrlMsg(int64_t src_actor_id, int64_t dst_actor_id);
 
   // Getters
   int64_t SrcMachineId() const;

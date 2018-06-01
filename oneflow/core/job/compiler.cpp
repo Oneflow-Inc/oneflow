@@ -58,6 +58,21 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
+  task_gph->ForEachNode([&](TaskNode* task_node) {
+    if (task_node->task_id() == 1) { task_node->add_ctrl_msg_consumer(17592186044416); }
+    if (task_node->task_id() == 4398046511105) { task_node->add_ctrl_msg_consumer(21990232555520); }
+    if (task_node->task_id() == 8796093022209) { task_node->add_ctrl_msg_consumer(26388279066624); }
+    if (task_node->task_id() == 13194139533313) {
+      task_node->add_ctrl_msg_consumer(30786325577728);
+    }
+    if (task_node->task_id() == 17592186044416) { task_node->add_ctrl_msg_producer(1); }
+    if (task_node->task_id() == 21990232555520) { task_node->add_ctrl_msg_producer(4398046511105); }
+    if (task_node->task_id() == 26388279066624) { task_node->add_ctrl_msg_producer(8796093022209); }
+    if (task_node->task_id() == 30786325577728) {
+      task_node->add_ctrl_msg_producer(13194139533313);
+    }
+  });
+
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
