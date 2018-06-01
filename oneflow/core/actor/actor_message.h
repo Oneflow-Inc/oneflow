@@ -14,11 +14,7 @@ enum class ActorCmd {
   kConstructActor
 };
 
-OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
-
 enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
-
-OF_DECLARE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
 
 class ActorMsg final {
  public:
