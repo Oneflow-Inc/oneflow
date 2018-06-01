@@ -39,6 +39,25 @@ enum class CtrlMethod {
 
 const int32_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
 
+using CtrlRequestTuple = std::tuple<
+#define MAKE_ENTRY(method) method##Request,
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ)
+#undef MAKE_ENTRY
+        void>;
+
+using CtrlResponseTuple = std::tuple<
+#define MAKE_ENTRY(method) method##Response,
+    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ)
+#undef MAKE_ENTRY
+        void>;
+
+template<CtrlMethod ctrl_method>
+using CtrlRequest =
+    typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlRequestTuple>::type;
+template<CtrlMethod ctrl_method>
+using CtrlResponse =
+    typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlResponseTuple>::type;
+
 class CtrlService final {
  public:
   class Stub final {
