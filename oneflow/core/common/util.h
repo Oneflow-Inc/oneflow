@@ -131,14 +131,12 @@ void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>:
   }
 }
 
-#define OF_DECLARE_ENUM_TO_OSTREAM_FUNC(EnumType) \
-  std::ostream& operator<<(std::ostream& out_stream, const EnumType&)
-
-#define OF_DEFINE_ENUM_TO_OSTREAM_FUNC(EnumType)                          \
-  std::ostream& operator<<(std::ostream& out_stream, const EnumType& x) { \
-    out_stream << static_cast<int>(x);                                    \
-    return out_stream;                                                    \
-  }
+template<typename T>
+typename std::enable_if<std::is_enum<T>::value, std::ostream&>::type operator<<(
+    std::ostream& out_stream, const T& x) {
+  out_stream << static_cast<int>(x);
+  return out_stream;
+}
 
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);

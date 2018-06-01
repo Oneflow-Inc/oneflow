@@ -8,8 +8,6 @@ namespace {
 const int32_t max_retry_num = 60;
 const int64_t sleep_seconds = 10;
 
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(grpc::StatusCode);
-
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
 
 #define DEFINE_CLIENT_CALL(method)                                 \
