@@ -12,7 +12,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
   for (const LbiBlobDescPair& pair : proto.lbi2blob_desc()) {
-    auto blob_desc = of_make_unique<BlobDesc>(pair.blob_desc());
+    auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
     CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
   }
   packed_blob_desc_ = BlobDesc(proto.packed_blob_desc());

@@ -24,6 +24,8 @@
 #include <utility>
 
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/common/cplusplus_14.h"
+#include "oneflow/core/common/cplusplus_17.h"
 
 DECLARE_string(log_dir);
 
@@ -97,11 +99,6 @@ using HashMap = std::unordered_map<Key, T, Hash>;
 
 template<typename Key, typename Hash = std::hash<Key>>
 using HashSet = std::unordered_set<Key, Hash>;
-
-template<typename T, typename... Args>
-std::unique_ptr<T> of_make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
 
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
