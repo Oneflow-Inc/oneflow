@@ -121,7 +121,6 @@ void TaskNode::ProduceDelayRegstDescIfNeed(TaskNode* dst_node) {
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
-  LOG(INFO) << "Build delay regst from " << task_id() << " " << dst_node->task_id();
   std::shared_ptr<RegstDesc> delay_regst = ProduceRegst("out_delay", 1, 1);
   dst_node->ConsumeRegst("in_delay", delay_regst);
 }
