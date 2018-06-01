@@ -81,10 +81,7 @@ std::string TaskNode::VisualStr() const {
   return ss.str();
 }
 
-bool TaskNode::IsMeaningLess() {
-  ClearOutOfDateConsumedRegst();
-  return produced_regsts_.empty() && consumed_regsts_.empty();
-}
+bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_type(GetTaskType());
@@ -124,8 +121,9 @@ void TaskNode::ProduceDelayRegstDescIfNeed(TaskNode* dst_node) {
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
-  std::shared_ptr<RegstDesc> delay_regst = ProduceRegst("delay", 1, 1);
-  dst_node->ConsumeRegst("delay", delay_regst);
+  LOG(INFO) << "Build delay regst from " << task_id() << " " << dst_node->task_id();
+  std::shared_ptr<RegstDesc> delay_regst = ProduceRegst("out_delay", 1, 1);
+  dst_node->ConsumeRegst("in_delay", delay_regst);
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {

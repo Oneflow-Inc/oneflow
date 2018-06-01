@@ -147,7 +147,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       if (naive_readable_regst_it != naive_readable_regst_.end()) {
         if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
         naive_readable_regst_it->second.push_back(regst);
-        NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
+        if (regst->regst_desc_id() != in_delay_regst_desc_id_) {
+          NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
+        }
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -334,7 +336,7 @@ Regst* Actor::GetCurSoleWriteableRegst() {
 }
 
 std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
-  return {false, {"delay"}};
+  return {false, {}};
 }
 
 Regst* Actor::GetNaiveCurReadable(int64_t regst_desc_id) {
@@ -399,6 +401,15 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
     for (const std::string& name : isall_or_names.second) {
       auto it = consumed_ids.find(name);
       if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
+    }
+  }
+  in_delay_regst_desc_id_ = -1;
+  auto iter = name2regst_desc_id_.find("in_delay");
+  if (iter != name2regst_desc_id_.end()) {
+    CHECK_EQ(iter->second.size(), 1);
+    in_delay_regst_desc_id_ = iter->second.front();
+    if (naive_readable_regst_.find(in_delay_regst_desc_id_) == naive_readable_regst_.end()) {
+      naive_readable_regst_[in_delay_regst_desc_id_] = {};
     }
   }
 }

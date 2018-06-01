@@ -92,7 +92,7 @@ IDMgr::IDMgr() {
   int64_t machine_num = resource.machine_size();
   CHECK_LT(machine_num, static_cast<int64_t>(1) << machine_id_bit_num_);
   gpu_device_num_ = resource.gpu_device_num();
-  cpu_device_num_ = resource.cpu_device_num();
+  cpu_device_num_ = std::thread::hardware_concurrency();
   CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   for (int64_t i = 0; i < machine_num; ++i) {
     const std::string& machine_name = resource.machine(i).name();

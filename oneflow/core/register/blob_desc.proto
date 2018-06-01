@@ -6,8 +6,8 @@ import "oneflow/core/common/data_type.proto";
 
 message BlobDescProto {
   required ShapeProto shape = 1;
-  required DataType data_type = 2;
-  required bool has_data_id_field = 4;
-  required bool has_col_num_field = 5;
-  required int32 max_col_num = 6;
+  optional DataType data_type = 2 [default = kFloat];
+  optional bool has_data_id_field = 4 [default = false];
+  optional bool has_col_num_field = 5 [default = false];
+  optional int32 max_col_num = 6 [default = 1];
 }

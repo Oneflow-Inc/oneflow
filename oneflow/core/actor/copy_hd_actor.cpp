@@ -9,7 +9,7 @@ void CopyHdActor::VirtualActorInit(const TaskProto& task_proto) {
 }
 
 void CopyHdActor::Act() {
-  Regst* in_regst = GetNaiveSoleCurReadable();
+  Regst* in_regst = GetNaiveCurReadable(Name2SoleRegstDescId("copy_in"));
   AsyncLaunchKernel(GenDefaultKernelCtx());
   AsyncSendRegstMsgToConsumer([&](Regst* out_regst) {
     out_regst->set_piece_id(in_regst->piece_id());
