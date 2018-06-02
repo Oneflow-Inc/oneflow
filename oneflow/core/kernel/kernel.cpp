@@ -8,10 +8,10 @@ void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_
   VirtualKernelInit(parallel_ctx, device_ctx);
   if (kernel_conf_.has_activation_blob_desc()) {
     CHECK_NE(this->GetActivationType(), ActivationType::kNone);
-    activation_blob_desc_.reset(new BlobDesc(Shape(kernel_conf_.activation_blob_desc().shape()),
-                                             kernel_conf_.activation_blob_desc().data_type(), false,
-                                             false, 1));
-    GenActivationBlob(&activation_blob_, device_ctx->buf_ptr(), activation_blob_desc_.get());
+    activation_blob_desc_ =
+        BlobDesc(Shape(kernel_conf_.activation_blob_desc().shape()),
+                 kernel_conf_.activation_blob_desc().data_type(), false, false, 1);
+    GenActivationBlob(&activation_blob_, device_ctx->buf_ptr(), &activation_blob_desc_);
   }
 }
 
