@@ -67,6 +67,11 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
+  in_delay_regst_desc_id_ = -1;
+  auto name2regst_desc_id_iter = name2regst_desc_id_.find("in_delay");
+  if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
+    in_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
+  }
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
@@ -411,15 +416,7 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
       auto it = consumed_ids.find(name);
       if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
     }
-  }
-  in_delay_regst_desc_id_ = -1;
-  auto iter = name2regst_desc_id_.find("in_delay");
-  if (iter != name2regst_desc_id_.end()) {
-    CHECK_EQ(iter->second.size(), 1);
-    in_delay_regst_desc_id_ = iter->second.front();
-    if (naive_readable_regst_.find(in_delay_regst_desc_id_) == naive_readable_regst_.end()) {
-      naive_readable_regst_[in_delay_regst_desc_id_] = {};
-    }
+    if (in_delay_regst_desc_id_ != -1) { naive_readable_regst_[in_delay_regst_desc_id_] = {}; }
   }
 }
 

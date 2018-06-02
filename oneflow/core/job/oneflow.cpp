@@ -72,6 +72,7 @@ void FixCpuDeviceNum() {
   }
   CHECK_GT(cpu_device_num, 0);
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
+  Global<IDMgr>::Get()->FixCpuDeviceNum();
 }
 
 }  // namespace

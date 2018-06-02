@@ -12,6 +12,9 @@ class IDMgr final {
   OF_DISALLOW_COPY_AND_MOVE(IDMgr);
   ~IDMgr() = default;
 
+  void FixCpuDeviceNum();
+  ;
+
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
   const std::string& MachineName4MachineId(int64_t machine_id) const;
