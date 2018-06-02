@@ -124,7 +124,7 @@ template<typename RecordType>
 class RecordBlob final : public RecordBlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
-  RecordBlob() : records_(Global<JobDesc>::Get()->PieceSizeInOneDataPart()), record_num_(0) {
+  RecordBlob() : records_(Global<JobDesc>::Get()->PieceSizeInOneLoader()), record_num_(0) {
     filled_ = false;
   }
   ~RecordBlob() = default;

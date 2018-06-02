@@ -10,11 +10,11 @@ StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs,
     : cur_stream_id_(0), cyclic_(cyclic), with_local_copy_(with_local_copy) {
   stream_num_ = file_paths.size();
   LOG(INFO) << "New StreamBufferFiller: ";
+  whole_file_size_ = 0;
   for (auto& file_path : file_paths) {
     LOG(INFO) << file_path;
     AddStream(fs, file_path, 0);
   }
-  whole_file_size_ = 0;
   whole_file_pos_ = 0;
 }
 
@@ -23,8 +23,8 @@ StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs, const std::string& fi
     : cur_stream_id_(0), cyclic_(cyclic), with_local_copy_(with_local_copy) {
   LOG(INFO) << "New StreamBufferFiller: " << file_path;
   stream_num_ = 1;
-  AddStream(fs, file_path, offset);
   whole_file_size_ = 0;
+  AddStream(fs, file_path, offset);
   whole_file_pos_ = offset;
 }
 
@@ -37,6 +37,8 @@ void StreamBufferFiller::AddStream(fs::FileSystem* fs, const std::string& file_p
   }
   uint64_t cur_file_size = fs->GetFileSize(file_path);
   whole_file_size_ += cur_file_size;
+  LOG(INFO) << "StreamBufferFiller";
+  LOG(INFO) << file_path << ":" << cur_file_size;
 }
 
 bool StreamBufferFiller::IsEof() const { return whole_file_pos_ == whole_file_size_; }
@@ -49,9 +51,9 @@ uint64_t StreamBufferFiller::UpdateBuffer(std::vector<char>* buffer) {
   streams_[cur_stream_id_]->Read(buffer->data(), n);
 
   if (cyclic_) {
-    AddNForCurFilePosNonCyclic(n);
-  } else {
     AddNForCurFilePosCyclic(n);
+  } else {
+    AddNForCurFilePosNonCyclic(n);
   }
   return n;
 }
@@ -67,7 +69,7 @@ void StreamBufferFiller::AddNForCurFilePosCyclic(uint64_t n) {
     streams_[cur_stream_id_]->set_cur_file_pos(0);
     ++cur_stream_id_;
     if (cur_stream_id_ == stream_num_) {
-      CHECK_EQ(whole_file_pos_, whole_file_size_);
+      CHECK_EQ(whole_file_pos_, 0);
       cur_stream_id_ = 0;
     }
   }

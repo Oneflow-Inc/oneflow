@@ -4,10 +4,17 @@
 
 namespace oneflow {
 
-int64_t JobDesc::PieceSizeInOneDataPart() const {
-  CHECK_EQ(PieceSize() % job_conf_.other().data_part_num(), 0);
-  return PieceSize() / job_conf_.other().data_part_num();
+int64_t JobDesc::PieceSizeInOneLoader() const {
+  CHECK_EQ(PieceSize() % RecordLoaderNum(), 0);
+  return PieceSize() / RecordLoaderNum();
 }
+
+int64_t JobDesc::RecordLoaderNum() const {
+  CHECK_GT(record_loader_num_, 0);
+  return record_loader_num_;
+}
+
+void JobDesc::SetRecordLoaderNum(int64_t val) { record_loader_num_ = val; }
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().piece_num_of_experiment_phase();

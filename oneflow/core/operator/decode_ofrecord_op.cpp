@@ -31,7 +31,7 @@ void DecodeOFRecordOp::InferBlobDescs(
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
-    dim_vec[0] = Global<JobDesc>::Get()->PieceSizeInOneDataPart();
+    dim_vec[0] = Global<JobDesc>::Get()->PieceSizeInOneLoader();
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());
