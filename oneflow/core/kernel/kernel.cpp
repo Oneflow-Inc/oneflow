@@ -8,7 +8,6 @@ void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_
   VirtualKernelInit(parallel_ctx, device_ctx);
   if (kernel_conf_.has_activation_blob_desc()) {
     CHECK_NE(this->GetActivationType(), ActivationType::kNone);
-    // generate activation_blob use buf_ptr
     activation_blob_desc_.reset(new BlobDesc(Shape(kernel_conf_.activation_blob_desc().shape()),
                                              kernel_conf_.activation_blob_desc().data_type(), false,
                                              false, 1));
@@ -58,28 +57,27 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  size_t byte_size_used_by_activation = 0;
-  BackwardActivation(ctx, BnInOp2Blob, &byte_size_used_by_activation);
-  if (byte_size_used_by_activation > 0) {
-    CHECK(kernel_conf_.has_activation_blob_desc());
+  size_t buf_size_used_by_activation = 0;
+  BackwardActivation(ctx, BnInOp2Blob, &buf_size_used_by_activation);
+  if (buf_size_used_by_activation > 0) {
     CHECK(activation_blob_.get() != nullptr);
-    CHECK_NE(this->GetActivationType(), ActivationType::kNone);
     const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(odbns.size(), 1);
-    // generate new kernel_ctx for buf_ptr and buf_size cut by activation_blob
-    std::unique_ptr<DeviceCtx> device_ctx = ctx.device_ctx->CloneDeviceCtx();
-    size_t aligned_offset_byte_size = RoundUp(byte_size_used_by_activation, kCudaAlignSize);
+    std::unique_ptr<DeviceCtx> device_ctx = ctx.device_ctx->Copy();
     device_ctx->set_buf_ptr(static_cast<void*>(static_cast<char*>(ctx.device_ctx->buf_ptr())
-                                               + aligned_offset_byte_size));
-    device_ctx->set_buf_size(ctx.device_ctx->buf_size() - aligned_offset_byte_size);
+                                               + buf_size_used_by_activation));
+    device_ctx->set_buf_size(ctx.device_ctx->buf_size() - buf_size_used_by_activation);
     CHECK_GE(device_ctx->buf_size(), 0);
     KernelCtx new_ctx;
     new_ctx.other = ctx.other;
     new_ctx.device_ctx = device_ctx.get();
 
     BackwardDataContent(new_ctx, [&](const std::string& bn) -> Blob* {
-      if (bn == odbns[0]) { return activation_blob_.get(); }
-      return BnInOp2Blob(bn);
+      if (bn == odbns[0]) {
+        return activation_blob_.get();
+      } else {
+        return BnInOp2Blob(bn);
+      }
     });
   } else {
     CHECK_EQ(this->GetActivationType(), ActivationType::kNone);
@@ -199,7 +197,7 @@ void KernelIfWithActivation<device_type, T>::ForwardActivation(
 template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::BackwardActivation(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    size_t* byte_size_used_by_activation) const {
+    size_t* buf_size_used_by_activation) const {
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -209,7 +207,7 @@ void KernelIfWithActivation<device_type, T>::BackwardActivation(
 
     const Blob* out_blob = BnInOp2Blob(obns[0]);
     const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
-    *byte_size_used_by_activation = out_blob->ByteSizeOfDataContentField();
+    *buf_size_used_by_activation = RoundUp(out_blob->ByteSizeOfDataContentField(), kCudaAlignSize);
     int64_t elem_cnt = out_blob->shape().elem_cnt();
 
     switch (activation) {

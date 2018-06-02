@@ -16,7 +16,7 @@ class DeviceCtx {
   size_t buf_size() const { return buf_size_; }
   void set_buf_ptr(void* buf_ptr) { buf_ptr_ = buf_ptr; }
   void set_buf_size(size_t buf_size) { buf_size_ = buf_size; }
-  virtual std::unique_ptr<DeviceCtx> CloneDeviceCtx() const = 0;
+  virtual std::unique_ptr<DeviceCtx> Copy() const = 0;
 
 #ifdef WITH_CUDA
   virtual const cudaStream_t& cuda_stream() const { UNIMPLEMENTED(); }
