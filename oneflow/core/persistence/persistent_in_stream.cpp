@@ -4,6 +4,16 @@
 
 namespace oneflow {
 
+PersistentInStream::PersistentInStream(fs::FileSystem* fs,
+                                       const std::vector<std::string>& file_paths, bool cyclic,
+                                       bool with_local_copy) {
+  stream_buffer_filler_.reset(new StreamBufferFiller(fs, file_paths, cyclic, with_local_copy));
+}
+PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
+                                       uint64_t offset, bool cyclic, bool with_local_copy) {
+  stream_buffer_filler_.reset(
+      new StreamBufferFiller(fs, file_path, offset, cyclic, with_local_copy));
+}
 int32_t PersistentInStream::ReadLine(std::string* l) {
   if (IsEof()) { return -1; }
   l->clear();

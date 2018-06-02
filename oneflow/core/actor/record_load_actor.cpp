@@ -14,13 +14,14 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs() && GlobalFS() != LocalFS()) {
       in_stream_.reset(
-          new PersistentInStream(GlobalFS(), task_proto.data_path(), 0, 1, true, true));
+          new PersistentInStream(GlobalFS(), PbRpf2StdVec(task_proto.data_path()), true, true));
     } else {
       in_stream_.reset(
-          new PersistentInStream(GlobalFS(), task_proto.data_path(), 0, 1, true, false));
+          new PersistentInStream(GlobalFS(), PbRpf2StdVec(task_proto.data_path()), true, false));
     }
   } else {
-    in_stream_.reset(new PersistentInStream(GlobalFS(), task_proto.data_path(), 0, false, false));
+    in_stream_.reset(
+        new PersistentInStream(GlobalFS(), PbRpf2StdVec(task_proto.data_path()), false, false));
   }
 }
 

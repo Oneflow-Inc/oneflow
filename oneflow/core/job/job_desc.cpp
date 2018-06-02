@@ -80,6 +80,8 @@ float JobDesc::L2() const {
   return job_conf_.other().train_conf().l2();
 }
 
+int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
+
 JobDesc::JobDesc(const std::string& job_conf_filepath) {
   if (TryParseProtoFromTextFile(job_conf_filepath, &job_conf_) == false) {
     JobConf2 job_conf;

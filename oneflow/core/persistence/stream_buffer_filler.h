@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_PERSISTENCE_STREAM_BUFFER_FILLER_H_
 
 #include <vector>
+#include <string>
 #include "oneflow/core/persistence/binary_in_stream.h"
 #include "oneflow/core/persistence/file_system.h"
 
@@ -11,8 +12,8 @@ class StreamBufferFiller {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StreamBufferFiller);
 
-  StreamBufferFiller(fs::FileSystem* fs, const std::string& file_path_prefix, int32_t min_id,
-                     int32_t max_id, bool cyclic, bool with_local_copy);
+  StreamBufferFiller(fs::FileSystem* fs, const std::vector<std::string>& file_paths, bool cyclic,
+                     bool with_local_copy);
   StreamBufferFiller(fs::FileSystem* fs, const std::string& file_path, uint64_t offset, bool cyclic,
                      bool with_local_copy);
   bool IsEof() const;

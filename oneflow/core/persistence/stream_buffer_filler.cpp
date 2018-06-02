@@ -1,34 +1,30 @@
-#include <vector>
 #include "oneflow/core/persistence/stream_buffer_filler.h"
 #include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
 
 namespace oneflow {
 
-StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs, const std::string& file_path_prefix,
-                                       int32_t min_id, int32_t max_id, bool cyclic,
+StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs,
+                                       const std::vector<std::string>& file_paths, bool cyclic,
                                        bool with_local_copy)
     : cur_stream_id_(0), cyclic_(cyclic), with_local_copy_(with_local_copy) {
-  CHECK_LE(min_id, max_id);
-  LOG(INFO) << "New StreamBufferFiller " << file_path_prefix << "-[" << min_id << "," << max_id
-            << "]";
-
-  stream_num_ = max_id - min_id + 1;
-  whole_file_size_ = 0;
-  FOR_RANGE(int32_t, part_id, min_id, max_id + 1) {
-    std::string file_path = file_path_prefix + std::to_string(part_id);
+  stream_num_ = file_paths.size();
+  LOG(INFO) << "New StreamBufferFiller: ";
+  for (auto& file_path : file_paths) {
+    LOG(INFO) << file_path;
     AddStream(fs, file_path, 0);
   }
+  whole_file_size_ = 0;
   whole_file_pos_ = 0;
 }
 
 StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs, const std::string& file_path,
                                        uint64_t offset, bool cyclic, bool with_local_copy)
     : cur_stream_id_(0), cyclic_(cyclic), with_local_copy_(with_local_copy) {
-  LOG(INFO) << "New StreamBufferFiller " << file_path;
+  LOG(INFO) << "New StreamBufferFiller: " << file_path;
   stream_num_ = 1;
-  whole_file_size_ = 0;
   AddStream(fs, file_path, offset);
+  whole_file_size_ = 0;
   whole_file_pos_ = offset;
 }
 

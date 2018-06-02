@@ -57,6 +57,7 @@ class JobDesc final {
   int64_t NumOfPiecesInBatch() const;
   float L1() const;
   float L2() const;
+  int32_t DataPartNum() const;
 
  private:
   friend class Global<JobDesc>;

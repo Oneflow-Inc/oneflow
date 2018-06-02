@@ -29,8 +29,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
     machine_name_set.insert(mchn_name);
     if (device_tag == "cpu") {
-      int64_t part_num = oneflow_cast<int64_t>(device_id_str);
-      device_id_str = "0-" + std::to_string(part_num - 1);
+      CHECK_STREQ(device_tag.c_str(), "cpu");
       CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kCPU);
       device_type_ = DeviceType::kCPU;
     } else {
