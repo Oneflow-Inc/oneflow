@@ -7,8 +7,6 @@ namespace oneflow {
 
 namespace {
 
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ibv_wc_status);
-
 std::string GenTokensMsgKey(int64_t machine_id) {
   return "IBVerbsTokensMsg/" + std::to_string(machine_id);
 }

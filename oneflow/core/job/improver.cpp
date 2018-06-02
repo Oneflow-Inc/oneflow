@@ -289,7 +289,7 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
-  auto act_events = of_make_unique<std::list<ActEvent>>();
+  auto act_events = std::make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
   PushAvgActTimeToProfiler(act_graph);

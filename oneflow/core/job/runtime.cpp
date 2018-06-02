@@ -53,7 +53,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
   LOG(INFO) << "All actor on this machine are constructed";
   OF_BARRIER();
   LOG(INFO) << "All actor on all machine are constructed";
-  Global<CommNet>::Get()->RegisterMemoryDone();
+  if (Global<CommNet>::Get()) { Global<CommNet>::Get()->RegisterMemoryDone(); }
   runtime_ctx->NewCounter("model_init_cnt", mdupdt_tasks.size());
   SendCmdMsg(mdupdt_tasks, ActorCmd::kInitModel);
   runtime_ctx->WaitUntilCntEqualZero("model_init_cnt");
@@ -82,17 +82,19 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     }
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
+  if (job_desc->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
-  if (job_desc->use_rdma()) {
+    if (job_desc->use_rdma()) {
 #ifdef WITH_RDMA
-    IBVerbsCommNet::Init(plan);
+      IBVerbsCommNet::Init(plan);
 #else
-    LOG(FATAL) << "RDMA components not found";
+      LOG(FATAL) << "RDMA components not found";
 #endif
-  } else {
-    EpollCommNet::Init(plan);
+    } else {
+      EpollCommNet::Init(plan);
+    }
+#endif
   }
-#endif
   Global<SnapshotMgr>::New(plan);
   Global<MemoryAllocator>::New();
   Global<RegstMgr>::New();

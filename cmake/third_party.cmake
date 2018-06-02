@@ -64,7 +64,7 @@ set(oneflow_third_party_libs
     ${OPENCV_STATIC_LIBRARIES}
     ${CMAKE_DL_LIBS}
 )
-#message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
+message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"

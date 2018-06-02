@@ -133,13 +133,9 @@ class RecordBlob final : public RecordBlobIf {
     FOR_RANGE(int32_t, i, 0, record_num_) { Handler(records_.at(i)); }
   }
 
-  void RangeForEachRecord(Range range, std::function<void(const RecordType&)> Handler) {
-    FOR_RANGE(int64_t, i, range.begin(), range.end()) { Handler(records_.at(i)); }
-  }
-
-  RecordType* mut_records(size_t i) {
+  const RecordType& GetRecord(size_t i) {
     CHECK_LT(i, record_num_);
-    return &(records_.at(i));
+    return records_.at(i);
   }
 
   int32_t record_num() override { return record_num_; }

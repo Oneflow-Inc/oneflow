@@ -63,7 +63,8 @@ ExternalProject_Add(libjpeg-turbo
 
 # put libjpeg-turbo includes in the directory where they are expected
 add_custom_target(libjpeg_create_header_dir
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBJPEG_INCLUDE_DIR})
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBJPEG_INCLUDE_DIR}
+    DEPENDS libjpeg-turbo)
 
 add_custom_target(libjpeg_copy_headers_to_destination
     DEPENDS libjpeg_create_header_dir)
@@ -76,7 +77,7 @@ endforeach()
 # pub libjpeg libs in the directory where they are expected
 add_custom_target(libjpeg_create_library_dir
     COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBJPEG_LIBRARY_DIR}
-    DEPENDS zlib)
+    DEPENDS libjpeg-turbo)
 
 add_custom_target(libjpeg_copy_libs_to_destination
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBJPEG_BUILD_STATIC_LIBRARIES} ${LIBJPEG_LIBRARY_DIR}
