@@ -67,10 +67,12 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
-  in_delay_regst_desc_id_ = -1;
   auto name2regst_desc_id_iter = name2regst_desc_id_.find("in_delay");
   if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
+    CHECK_EQ(name2regst_desc_id_iter->second.size(), 1);
     in_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
+  } else {
+    in_delay_regst_desc_id_ = -1;
   }
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
@@ -370,7 +372,6 @@ Regst* Actor::GetNaiveSoleCurReadable() {
       if (pair.first != in_delay_regst_desc_id_) { return GetNaiveCurReadable(pair.first); }
     }
     UNIMPLEMENTED();
-    return nullptr;
   }
 }
 

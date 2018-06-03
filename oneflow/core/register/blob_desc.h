@@ -54,7 +54,6 @@ class BlobDesc final {
 };
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
-void GenEmptyBlobDescProto(BlobDescProto* proto);
 
 }  // namespace oneflow
 

@@ -102,12 +102,4 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   return ret;
 }
 
-void GenEmptyBlobDescProto(BlobDescProto* proto) {
-  *(proto->mutable_shape()->mutable_dim()) = PbRf<int64_t>{0};
-  proto->set_data_type(DataType::kFloat);
-  proto->set_has_data_id_field(false);
-  proto->set_has_col_num_field(false);
-  proto->set_max_col_num(1);
-}
-
 }  // namespace oneflow

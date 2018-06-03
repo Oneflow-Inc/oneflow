@@ -119,7 +119,11 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   if (packed_blob_desc_) {
     packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc());
   } else {
-    GenEmptyBlobDescProto(ret->mutable_packed_blob_desc());
+    *(ret->mutable_packed_blob_desc()->mutable_shape()->mutable_dim()) = PbRf<int64_t>{0};
+    ret->mutable_packed_blob_desc()->set_data_type(DataType::kFloat);
+    ret->mutable_packed_blob_desc()->set_has_data_id_field(false);
+    ret->mutable_packed_blob_desc()->set_has_col_num_field(false);
+    ret->mutable_packed_blob_desc()->set_max_col_num(1);
   }
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
