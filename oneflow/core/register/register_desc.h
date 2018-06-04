@@ -64,7 +64,7 @@ class RegstDesc final {
   bool is_locked_;
 
   MemoryCase mem_case_;
-  bool enable_mem_shareing_;
+  bool enable_mem_sharing_;
   int32_t mem_shared_id_;
 };
 
