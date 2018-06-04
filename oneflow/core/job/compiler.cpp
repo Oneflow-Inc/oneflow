@@ -89,7 +89,9 @@ Plan Compiler::DoCompile() {
 void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
   std::list<TaskNode*> starts;
   task_gph->ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().size() == 0) { starts.push_back(node); }
+    if (node->consumed_regsts().empty() && !node->produced_regsts().empty()) {
+      starts.push_back(node);
+    }
   });
   HashMap<int64_t, TaskNode*> stream_id2node;
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
@@ -109,7 +111,8 @@ void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
       const auto& consumers = name2regst.second->consumers();
       for (const TaskNode* consumer : consumers) {
         TaskType task_type = consumer->GetTaskType();
-        if (task_type != TaskType::kMdDiffAcc && task_type != TaskType::kLossAcc) {
+        if (task_type != TaskType::kMdDiffAcc && task_type != TaskType::kNormalMdUpdt
+            && task_type != TaskType::kLossAcc) {
           handler(const_cast<TaskNode*>(consumer));
         }
       }
@@ -117,7 +120,6 @@ void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
   };
   task_gph->TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
     if (Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(node->LocalWorkStreamId())) { return; }
-    if (node->GetTaskType() == TaskType::kRecordLoad) { return; }
     int64_t global_stream_id = node->GlobalWorkStreamId();
     auto iter = stream_id2node.find(global_stream_id);
     if (iter == stream_id2node.end()) {
