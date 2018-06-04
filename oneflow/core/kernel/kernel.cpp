@@ -57,8 +57,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  size_t buf_size_used_by_activation = 0;
-  BackwardActivation(ctx, BnInOp2Blob, &buf_size_used_by_activation);
+  size_t buf_size_used_by_activation = BackwardActivation(ctx, BnInOp2Blob);
   if (buf_size_used_by_activation > 0) {
     CHECK(activation_blob_.get() != nullptr);
     const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
@@ -195,9 +194,8 @@ void KernelIfWithActivation<device_type, T>::ForwardActivation(
 }
 
 template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::BackwardActivation(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    size_t* buf_size_used_by_activation) const {
+size_t KernelIfWithActivation<device_type, T>::BackwardActivation(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -207,7 +205,6 @@ void KernelIfWithActivation<device_type, T>::BackwardActivation(
 
     const Blob* out_blob = BnInOp2Blob(obns[0]);
     const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
-    *buf_size_used_by_activation = RoundUp(out_blob->ByteSizeOfDataContentField(), kCudaAlignSize);
     int64_t elem_cnt = out_blob->shape().elem_cnt();
 
     switch (activation) {
@@ -223,7 +220,9 @@ void KernelIfWithActivation<device_type, T>::BackwardActivation(
 #undef DEFINE_ONE_CASE
       default: UNIMPLEMENTED();
     }
+    return RoundUp(out_blob->ByteSizeOfDataContentField(), kCudaAlignSize);
   }
+  return 0;
 }
 
 template<DeviceType device_type, typename T>
