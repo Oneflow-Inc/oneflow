@@ -164,7 +164,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
 
-  if (is_forward == false && NeedDoActivation() && Global<JobDesc>::Get()->IsTrain()) {
+  if (is_forward == false && NeedDoActivation()) {
     GetBlobDesc4BnInOp(SoleObn())->ToProto(kernel_conf->mutable_activation_blob_desc());
   }
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);

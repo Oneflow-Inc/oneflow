@@ -70,7 +70,7 @@ class Kernel {
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardActivation(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                  size_t* byte_size_used_by_activation) const {}
+                                  size_t* buf_size_used_by_activation) const {}
   virtual void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
                                  BlobDesc* activation_blob_desc) const {
     UNIMPLEMENTED();
@@ -169,7 +169,7 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BackwardActivation(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob,
-                          size_t* byte_size_used_by_activation) const override;
+                          size_t* buf_size_used_by_activation) const override;
   void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
                          BlobDesc* activation_blob_desc) const override;
 };
