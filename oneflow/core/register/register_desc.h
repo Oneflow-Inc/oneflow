@@ -42,7 +42,7 @@ class RegstDesc final {
   void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
   size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
 
-  // mem_case
+  // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
 
@@ -64,6 +64,8 @@ class RegstDesc final {
   bool is_locked_;
 
   MemoryCase mem_case_;
+  bool enable_mem_shareing_;
+  int32_t mem_shared_id_;
 };
 
 }  // namespace oneflow
