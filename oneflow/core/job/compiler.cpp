@@ -49,9 +49,9 @@ Plan Compiler::Compile() {
 
 Plan Compiler::DoCompile() {
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  auto logical_gph = of_make_unique<LogicalGraph>(job_desc->IsTrain());
+  auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
   int64_t total_mbn_num = logical_gph->total_mbn_num();
-  auto task_gph = of_make_unique<TaskGraph>(std::move(logical_gph));
+  auto task_gph = std::make_unique<TaskGraph>(std::move(logical_gph));
   using std::placeholders::_1;
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));

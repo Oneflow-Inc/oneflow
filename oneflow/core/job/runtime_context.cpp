@@ -4,7 +4,7 @@ namespace oneflow {
 
 void RuntimeCtx::NewCounter(const std::string& name, int64_t val) {
   LOG(INFO) << "NewCounter " << name << " " << val;
-  CHECK(counters_.emplace(name, of_make_unique<BlockingCounter>(val)).second);
+  CHECK(counters_.emplace(name, std::make_unique<BlockingCounter>(val)).second);
 }
 
 void RuntimeCtx::DecreaseCounter(const std::string& name) {

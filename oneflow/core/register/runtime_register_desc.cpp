@@ -14,7 +14,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   if (proto.regst_desc_type().has_normal_regst_desc()) {
     const NormalRegstDesc& normal_regst_desc = proto.regst_desc_type().normal_regst_desc();
     for (const LbiBlobDescPair& pair : normal_regst_desc.lbi2blob_desc()) {
-      auto blob_desc = of_make_unique<BlobDesc>(pair.blob_desc());
+      auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
     packed_blob_desc_ = BlobDesc(normal_regst_desc.packed_blob_desc());
