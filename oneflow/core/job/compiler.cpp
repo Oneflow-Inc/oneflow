@@ -89,9 +89,7 @@ Plan Compiler::DoCompile() {
 void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
   std::list<TaskNode*> starts;
   task_gph->ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().empty() && !node->produced_regsts().empty()) {
-      starts.push_back(node);
-    }
+    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
   });
   HashMap<int64_t, TaskNode*> stream_id2node;
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {

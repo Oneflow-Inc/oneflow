@@ -38,8 +38,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
                                         std::get<1>(allocation_result), device_type));
       regst->deleter_ = std::get<2>(allocation_result);
     } else {
-      switch (record_type) {
-        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
+      if (!regst_desc_proto.is_delay_regst()) {
+        switch (record_type) {
+          case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
+          case kInvalidRecord: UNIMPLEMENTED();
+        }
       }
       regst->deleter_ = []() {};
     }

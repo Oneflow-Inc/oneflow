@@ -119,6 +119,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   if (packed_blob_desc_) {
     packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc());
   } else {
+    ret->set_is_delay_regst(true);
     *(ret->mutable_packed_blob_desc()->mutable_shape()->mutable_dim()) = PbRf<int64_t>{0};
     ret->mutable_packed_blob_desc()->set_data_type(DataType::kFloat);
     ret->mutable_packed_blob_desc()->set_has_data_id_field(false);
