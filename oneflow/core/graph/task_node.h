@@ -75,10 +75,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
+  void ForEachProducedRegst(std::function<void(std::shared_ptr<RegstDesc>)> Handler);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
+  virtual void SetProducedRegstsType();
 
   int64_t AllocateLocalWorkStreamId();
 

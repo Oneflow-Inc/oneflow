@@ -38,9 +38,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(
-        pair.second, GetDeviceType(), task_proto.record_type(),
-        [this](Regst* regst) { produced_regsts_[regst->regst_desc_id()].emplace_back(regst); });
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+    });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
   }

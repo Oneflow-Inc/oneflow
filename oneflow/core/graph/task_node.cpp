@@ -90,6 +90,7 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_id(task_id_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false, parallel_ctx(),
                            task_proto->mutable_exec_sequence());
+  SetProducedRegstsType();
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -208,6 +209,20 @@ void TaskNode::FixRegisterNumRange() {
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
+}
+
+void TaskNode::SetProducedRegstsType() {
+  for (auto& pair : produced_regsts_) {
+    if (pair.first == "out_delay") {
+      pair.second->mut_regst_desc_type()->mutable_delay_regst_desc();
+    } else {
+      pair.second->mut_regst_desc_type()->mutable_normal_regst_desc();
+    }
+  }
+}
+
+void TaskNode::ForEachProducedRegst(std::function<void(std::shared_ptr<RegstDesc>)> Handler) {
+  for (auto& pair : produced_regsts_) { Handler(pair.second); }
 }
 
 int64_t TaskNode::AllocateLocalWorkStreamId() {

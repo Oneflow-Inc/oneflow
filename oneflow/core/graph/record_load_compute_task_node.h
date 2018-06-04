@@ -23,6 +23,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   bool IsPersistence() const override { return true; }
 
  private:
+  void SetProducedRegstsType() override;
 };
 
 }  // namespace oneflow
