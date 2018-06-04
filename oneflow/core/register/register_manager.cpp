@@ -39,7 +39,11 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       regst->deleter_ = std::get<2>(allocation_result);
     } else {
       switch (record_type) {
-        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
+        case kOFRecord: {
+          regst->packed_blob_.reset(new RecordBlob<OFRecord>);
+          break;
+        }
+        default: UNIMPLEMENTED();
       }
       regst->deleter_ = []() {};
     }
