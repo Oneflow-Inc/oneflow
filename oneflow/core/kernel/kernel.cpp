@@ -55,15 +55,14 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  size_t buf_size_used_by_activation = BackwardActivation(ctx, BnInOp2Blob);
-  if (buf_size_used_by_activation > 0) {
-    CHECK(activation_blob_.get() != nullptr);
+  BackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
+  if (activation_blob_.get() != nullptr) {
     const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(odbns.size(), 1);
     std::unique_ptr<DeviceCtx> device_ctx = ctx.device_ctx->Copy();
     device_ctx->set_buf_ptr(static_cast<void*>(static_cast<char*>(ctx.device_ctx->buf_ptr())
-                                               + buf_size_used_by_activation));
-    device_ctx->set_buf_size(ctx.device_ctx->buf_size() - buf_size_used_by_activation);
+                                               + activation_blob_->TotalByteSize()));
+    device_ctx->set_buf_size(ctx.device_ctx->buf_size() - activation_blob_->TotalByteSize());
     CHECK_GE(device_ctx->buf_size(), 0);
     KernelCtx new_ctx;
     new_ctx.other = ctx.other;
@@ -192,8 +191,9 @@ void KernelIfWithActivation<device_type, T>::ForwardActivation(
 }
 
 template<DeviceType device_type, typename T>
-size_t KernelIfWithActivation<device_type, T>::BackwardActivation(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+void KernelIfWithActivation<device_type, T>::BackwardActivation(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    Blob* activation_blob) const {
   ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -204,28 +204,26 @@ size_t KernelIfWithActivation<device_type, T>::BackwardActivation(
     const Blob* out_blob = BnInOp2Blob(obns[0]);
     const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
     int64_t elem_cnt = out_blob->shape().elem_cnt();
-
     switch (activation) {
-#define DEFINE_ONE_CASE(activation_type)                                       \
-  case ActivationType::k##activation_type:                                     \
-    KernelUtil<device_type, T>::activation_type##Backward(                     \
-        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(),    \
-        out_diff_blob->dptr<T>(), static_cast<T*>(ctx.device_ctx->buf_ptr())); \
-    break;
-      DEFINE_ONE_CASE(TanH)
-      DEFINE_ONE_CASE(Sigmoid)
-      DEFINE_ONE_CASE(Relu)
+#define DEFINE_ONE_CASE(activation_type)                                    \
+  case ActivationType::k##activation_type:                                  \
+    KernelUtil<device_type, T>::activation_type##Backward(                  \
+        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
+        out_diff_blob->dptr<T>(), activation_blob->mut_dptr<T>());          \
+    break
+      DEFINE_ONE_CASE(TanH);
+      DEFINE_ONE_CASE(Sigmoid);
+      DEFINE_ONE_CASE(Relu);
 #undef DEFINE_ONE_CASE
       default: UNIMPLEMENTED();
     }
-    return RoundUp(out_blob->ByteSizeOfDataContentField(), kCudaAlignSize);
   }
-  return 0;
 }
 
 template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::GenActivationBlob(
-    std::unique_ptr<Blob>* activation_blob, void* buf_ptr, BlobDesc* activation_blob_desc) const {
+    std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
+    const BlobDesc* activation_blob_desc) const {
   activation_blob->reset(
       NewBlob(nullptr, activation_blob_desc, static_cast<char*>(buf_ptr), nullptr, device_type));
 }
