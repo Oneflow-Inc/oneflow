@@ -21,7 +21,7 @@ RegstDesc::RegstDesc() {
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
-  enable_mem_shareing_ = false;
+  enable_mem_sharing_ = false;
   mem_shared_id_ = -1;
 }
 
@@ -123,7 +123,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
-  ret->set_enable_mem_shareing(enable_mem_shareing_);
+  ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
 }
 
