@@ -24,6 +24,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
 
  private:
   void SetProducedRegstsType() override;
+  std::shared_ptr<const Operator> GetRelatedDecodeOp();
 };
 
 }  // namespace oneflow
