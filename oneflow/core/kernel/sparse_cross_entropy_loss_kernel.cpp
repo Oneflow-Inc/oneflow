@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/sparse_cross_entropy_loss_kernel.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ struct SparseCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
       int64_t label = static_cast<int64_t>(labels[i]);
       CHECK_GE(label, 0);
       CHECK_LT(label, num_of_classes);
-      loss[i] = -SAFE_LOG(prediction[i * num_of_classes + label]);
+      loss[i] = -SafeLog(prediction[i * num_of_classes + label]);
     }
   }
 
@@ -48,7 +49,7 @@ struct SparseCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
                        PredType* prediction_diff) {
     for (int64_t i = 0; i < instance_num; ++i) {
       int64_t label = static_cast<int64_t>(labels[i]);
-      PredType prob = MAX_WITH_LOG_THRESHOLD(prediction[i * num_of_classes + label]);
+      PredType prob = MaxWithLogThreshold(prediction[i * num_of_classes + label]);
       prediction_diff[i * num_of_classes + label] = -1 / prob;
     }
   }
