@@ -410,6 +410,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
+  isall_or_names.second.push_back("in_delay");
   if (isall_or_names.first) {
     for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
   } else {
@@ -417,7 +418,6 @@ void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& cons
       auto it = consumed_ids.find(name);
       if (it != consumed_ids.end()) { AddNaiveConsumed(it->second); }
     }
-    if (in_delay_regst_desc_id_ != -1) { naive_readable_regst_[in_delay_regst_desc_id_] = {}; }
   }
 }
 
