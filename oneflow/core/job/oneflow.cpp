@@ -27,8 +27,10 @@ std::string BuildVersionString() {
       {"Jul", "07"}, {"Aug", "08"}, {"Sep", "09"}, {"Oct", "10"}, {"Nov", "11"}, {"Dec", "12"},
   };
   static const std::string date_str(__DATE__);
-  return OF_VERSION " (" + date_str.substr(7) + month_word2num.at(date_str.substr(0, 3))
-         + date_str.substr(4, 2) + "." + __TIME__ + ")";
+  std::string day = date_str.substr(4, 2);
+  StringReplace(&day, ' ', '0');
+  return OF_VERSION " (" + date_str.substr(7) + month_word2num.at(date_str.substr(0, 3)) + day + "."
+         + __TIME__ + ")";
 }
 
 std::string GetAmdCtrlKey(int64_t machine_id) {
