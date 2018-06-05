@@ -75,8 +75,8 @@ uint64_t CalcMemoryConsumed(
   return mem_consuming;
 }
 
-std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
-  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
+void InitRegstDescId2RegstDesc(Plan* plan,
+                               HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc) {
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
@@ -84,6 +84,11 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
       regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
     }
   }
+}
+
+std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
+  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
+  InitRegstDescId2RegstDesc(plan, regst_desc_id2regst_desc.get());
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, uint64_t num) {
     RegstDescProto* regst_desc = regst_desc_id2regst_desc->at(regst_desc_id);
     regst_desc->set_register_num(num);
@@ -92,13 +97,7 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
 
 std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
-  for (int i = 0; i < plan->task_size(); i++) {
-    TaskProto* task = plan->mutable_task(i);
-    for (auto& pair : *task->mutable_produced_regst_desc()) {
-      int64_t regst_desc_id = pair.second.regst_desc_id();
-      regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
-    }
-  }
+  InitRegstDescId2RegstDesc(plan, regst_desc_id2regst_desc.get());
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
     RegstDescProto* regst_desc = regst_desc_id2regst_desc->at(regst_desc_id);
     regst_desc->set_mem_shared_id(mem_shared_id);
@@ -197,6 +196,33 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
+HashMap<int64_t, HashSet<int64_t>> MakeRegstDescId2LifeTimeSameStreamActorIds(const ActGraph& graph,
+                                                                              const Plan& plan) {
+  TODO();
+}
+
+void ForEachComputeActorRegstDescs(
+    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  TODO();
+}
+
+std::list<int64_t> SelectSharableRegstDescIdsWithConsumer(
+    const std::list<const RegstDescProto*>& regst_descs) {
+  TODO();
+}
+
+std::list<int64_t> SelectRegstDescIdsWithoutConsumer(
+    const std::list<const RegstDescProto*>& regst_descs) {
+  TODO();
+}
+
+void ForEachColoredRegstDescsOrderByLifeTimePoset(
+    const std::list<int64_t>& regst_desc_ids,
+    const HashMap<int64_t, HashSet<int64_t>>& regst_desc_id2life_time_same_stream_actor_ids,
+    const std::function<void(const std::list<int64_t>&)>& Handler) {
+  TODO();
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -293,7 +319,19 @@ double Improver::BinarySearchII(
 void Improver::ForEachImprovedMemSharedId(
     const ActGraph& graph, const Plan& plan,
     const std::function<void(int64_t, int64_t)>& Handler) const {
-  TODO();
+  auto regst_desc_id2life_time_same_stream_actor_ids =
+      MakeRegstDescId2LifeTimeSameStreamActorIds(graph, plan);
+  ForEachComputeActorRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
+    int mem_shared_id = 0;
+    auto AllocateMemSharedId = [&](const std::list<int64_t>& regst_desc_ids) {
+      for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
+      ++mem_shared_id;
+    };
+    AllocateMemSharedId(SelectRegstDescIdsWithoutConsumer(regst_descs));
+    ForEachColoredRegstDescsOrderByLifeTimePoset(
+        SelectSharableRegstDescIdsWithConsumer(regst_descs),
+        regst_desc_id2life_time_same_stream_actor_ids, AllocateMemSharedId);
+  });
 }
 
 void Improver::ForEachImprovedRegstNum(
