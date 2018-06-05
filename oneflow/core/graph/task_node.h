@@ -68,6 +68,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
+                                          int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
@@ -75,12 +77,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
-  void ForEachProducedRegst(std::function<void(std::shared_ptr<RegstDesc>)> Handler);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
-  virtual void SetProducedRegstsType();
 
   int64_t AllocateLocalWorkStreamId();
 

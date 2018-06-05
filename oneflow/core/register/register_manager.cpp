@@ -43,7 +43,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       const RecordTypeProto& record_type = regst_desc_type.record_regst_desc().record_type();
       switch (record_type) {
         case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
-        case kInvalidRecord: UNIMPLEMENTED();
+        default: UNIMPLEMENTED();
       }
       regst->deleter_ = []() {};
     } else if (regst_desc_type.has_delay_regst_desc()) {

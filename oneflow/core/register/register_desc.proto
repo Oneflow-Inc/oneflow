@@ -35,11 +35,11 @@ message RegstDescProto {
   required int64 regst_desc_id = 1;
   required int64 producer_task_id = 2;
   repeated int64 consumer_task_id = 3;
-  required int32 min_register_num = 5;
-  required int32 max_register_num = 6;
-  required int32 register_num = 7;
-  required MemoryCase mem_case = 8;
-  required RegstDescTypeProto regst_desc_type = 9;
-  required bool enable_mem_sharing = 10;
-  required int32 mem_shared_id = 11;
+  required int32 min_register_num = 4;
+  required int32 max_register_num = 5;
+  required int32 register_num = 6;
+  required MemoryCase mem_case = 7;
+  required RegstDescTypeProto regst_desc_type = 8;
+  required bool enable_mem_sharing = 9;
+  required int32 mem_shared_id = 10;
 }

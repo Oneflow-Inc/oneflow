@@ -90,7 +90,6 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_id(task_id_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false, parallel_ctx(),
                            task_proto->mutable_exec_sequence());
-  SetProducedRegstsType();
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
   for (auto& pair : produced_regsts_) {
     RegstDescProto regst_desc_proto;
@@ -122,7 +121,10 @@ void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
-  dst_node->ConsumeRegst("in_delay", ProduceRegst("out_delay", 1, kMaxRegisterNum));
+  RegstDescTypeProto regst_desc_type;
+  regst_desc_type.mutable_delay_regst_desc();
+  dst_node->ConsumeRegst("in_delay",
+                         ProduceRegst("out_delay", 1, kMaxRegisterNum, regst_desc_type));
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
@@ -135,8 +137,17 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
                                                   int32_t max_register_num) {
+  RegstDescTypeProto regst_desc_type;
+  regst_desc_type.mutable_normal_regst_desc();
+  return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
+}
+
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+                                                  int32_t max_register_num,
+                                                  const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
+  *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   InitProducedRegstMemCase(regst.get());
@@ -207,20 +218,6 @@ void TaskNode::FixRegisterNumRange() {
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
-}
-
-void TaskNode::SetProducedRegstsType() {
-  for (auto& pair : produced_regsts_) {
-    if (pair.first == "out_delay") {
-      pair.second->mut_regst_desc_type()->mutable_delay_regst_desc();
-    } else {
-      pair.second->mut_regst_desc_type()->mutable_normal_regst_desc();
-    }
-  }
-}
-
-void TaskNode::ForEachProducedRegst(std::function<void(std::shared_ptr<RegstDesc>)> Handler) {
-  for (auto& pair : produced_regsts_) { Handler(pair.second); }
 }
 
 int64_t TaskNode::AllocateLocalWorkStreamId() {

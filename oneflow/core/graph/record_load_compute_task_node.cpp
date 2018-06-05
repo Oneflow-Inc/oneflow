@@ -5,27 +5,21 @@
 
 namespace oneflow {
 
-void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2);
-  for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
-}
-
 std::shared_ptr<const Operator> RecordLoadCompTaskNode::GetRelatedDecodeOp() {
   DecodeCompTaskNode* decode_node =
       static_cast<DecodeCompTaskNode*>((*out_edges().begin())->dst_node());
   return decode_node->logical_node()->SoleOp();
 }
 
-void RecordLoadCompTaskNode::SetProducedRegstsType() {
-  ForEachProducedRegst([this](std::shared_ptr<RegstDesc> regst_desc) {
-    RecordRegstDesc* record_regst_desc =
-        regst_desc->mut_regst_desc_type()->mutable_record_regst_desc();
-    if (GetRelatedDecodeOp()->op_conf().has_decode_ofrecord_conf()) {
-      record_regst_desc->set_record_type(RecordTypeProto::kOFRecord);
-    } else {
-      UNIMPLEMENTED();
-    }
-  });
+void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  RegstDescTypeProto regst_desc_type;
+  if (GetRelatedDecodeOp()->op_conf().has_decode_ofrecord_conf()) {
+    regst_desc_type.mutable_record_regst_desc()->set_record_type(RecordTypeProto::kOFRecord);
+  } else {
+    UNIMPLEMENTED();
+  }
+  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2, regst_desc_type);
+  for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
 }
 
 void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {

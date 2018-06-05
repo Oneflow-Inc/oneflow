@@ -23,7 +23,6 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   bool IsPersistence() const override { return true; }
 
  private:
-  void SetProducedRegstsType() override;
   std::shared_ptr<const Operator> GetRelatedDecodeOp();
 };
 
