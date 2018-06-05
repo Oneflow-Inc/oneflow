@@ -139,7 +139,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
   }
 
 #ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU) {
+  if (device_type() == DeviceType::kGPU && UseCudnnOnGpu()) {
     // cudnn_buf
     InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx));
     *buf_size = std::max({conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size,
