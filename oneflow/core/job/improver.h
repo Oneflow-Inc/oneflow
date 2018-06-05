@@ -22,7 +22,7 @@ class Improver final {
  private:
   void ForEachImprovedRegstNum(const ActGraph& graph, const Plan& plan, bool is_memory_limited,
                                const std::function<void(int64_t, uint64_t)>& Handler) const;
-  void ForEachImprovedMemSharedId(const ActGraph& graph, const Plan& plan,
+  void ForEachImprovedMemSharedId(const Plan& plan,
                                   const std::function<void(int64_t, int64_t)>& Handler) const;
 
   //  first dimension index of MemZoneRegstDescs is machine_id

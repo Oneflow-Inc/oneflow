@@ -196,27 +196,86 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-HashMap<int64_t, HashSet<int64_t>> MakeRegstDescId2LifeTimeSameStreamActorIds(const ActGraph& graph,
-                                                                              const Plan& plan) {
+HashMap<int64_t, HashSet<int64_t>> MakeRegstDescId2LifeTimeSameStreamActorIds(const Plan& plan) {
   TODO();
 }
 
-void ForEachComputeActorRegstDescs(
+void ForEachComputeStreamRegstDescs(
     const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  TODO();
+  HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
+  for (const auto& task : plan.task()) {
+    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) == 0) {
+      int64_t global_work_stream_id =
+          Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
+      for (const auto& pair : task.produced_regst_desc()) {
+        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
+      }
+    }
+  }
+  for (const auto& pair : global_work_stream_id2regst_descs) { Handler(pair.second); }
+}
+
+bool IsConsumersAndProducerAllInComputeStream(const RegstDescProto* regst_desc) {
+  HashSet<int64_t> stream_ids;
+  int64_t producer_task_id = regst_desc->producer_task_id();
+  stream_ids.insert(Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(producer_task_id));
+  for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
+    stream_ids.insert(Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(consumer_task_id));
+  }
+  return stream_ids.size() == 1
+         && Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(producer_task_id) == 0;
 }
 
 std::list<int64_t> SelectSharableRegstDescIdsWithConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
-  TODO();
+  std::list<int64_t> regst_desc_ids;
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    if (regst_desc->enable_mem_sharing() && regst_desc->register_num() == 1
+        && IsConsumersAndProducerAllInComputeStream(regst_desc)) {
+      regst_desc_ids.push_back(regst_desc->regst_desc_id());
+    }
+  }
+  return regst_desc_ids;
 }
 
-std::list<int64_t> SelectRegstDescIdsWithoutConsumer(
+std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
-  TODO();
+  std::list<const RegstDescProto*> regst_descs_without_consumer;
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    if (regst_desc->consumer_task_id_size() == 0) {
+      regst_descs_without_consumer.push_back(regst_desc);
+    }
+  }
+  return regst_descs_without_consumer;
 }
 
-void ForEachColoredRegstDescsOrderByLifeTimePoset(
+void TopoForEachColoredRegstDescsOrderBySameActorRegstDescSize(
+    const std::list<const RegstDescProto*>& regst_descs,
+    const std::function<void(const std::list<int64_t>&)>& Handler) {
+  HashMap<int64_t, std::vector<int64_t>> producer_task_id2regst_desc_ids;
+  HashMap<int64_t, size_t> regst_desc_id2regst_desc_size;
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    int64_t regst_desc_id = regst_desc->regst_desc_id();
+    producer_task_id2regst_desc_ids[regst_desc->producer_task_id()].push_back(regst_desc_id);
+    regst_desc_id2regst_desc_size[regst_desc_id] =
+        RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
+  }
+  for (auto& pair : producer_task_id2regst_desc_ids) {
+    std::sort(pair.second.begin(), pair.second.end(), [&](int64_t lhs, int64_t rhs) {
+      return regst_desc_id2regst_desc_size.at(lhs) > regst_desc_id2regst_desc_size.at(rhs);
+    });
+  }
+  for (int i = 0;; ++i) {
+    std::list<int64_t> regst_desc_ids;
+    for (const auto& pair : producer_task_id2regst_desc_ids) {
+      if (i < pair.second.size()) { regst_desc_ids.push_back(pair.second.at(i)); }
+    }
+    if (regst_desc_ids.empty()) { break; }
+    Handler(regst_desc_ids);
+  }
+}
+
+void TopoForEachColoredRegstDescsOrderByLifeTimePoset(
     const std::list<int64_t>& regst_desc_ids,
     const HashMap<int64_t, HashSet<int64_t>>& regst_desc_id2life_time_same_stream_actor_ids,
     const std::function<void(const std::list<int64_t>&)>& Handler) {
@@ -317,18 +376,18 @@ double Improver::BinarySearchII(
 }
 
 void Improver::ForEachImprovedMemSharedId(
-    const ActGraph& graph, const Plan& plan,
-    const std::function<void(int64_t, int64_t)>& Handler) const {
+    const Plan& plan, const std::function<void(int64_t, int64_t)>& Handler) const {
   auto regst_desc_id2life_time_same_stream_actor_ids =
-      MakeRegstDescId2LifeTimeSameStreamActorIds(graph, plan);
-  ForEachComputeActorRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
+      MakeRegstDescId2LifeTimeSameStreamActorIds(plan);
+  ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
     int mem_shared_id = 0;
     auto AllocateMemSharedId = [&](const std::list<int64_t>& regst_desc_ids) {
       for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
       ++mem_shared_id;
     };
-    AllocateMemSharedId(SelectRegstDescIdsWithoutConsumer(regst_descs));
-    ForEachColoredRegstDescsOrderByLifeTimePoset(
+    TopoForEachColoredRegstDescsOrderBySameActorRegstDescSize(
+        SelectRegstDescsWithoutConsumer(regst_descs), AllocateMemSharedId);
+    TopoForEachColoredRegstDescsOrderByLifeTimePoset(
         SelectSharableRegstDescIdsWithConsumer(regst_descs),
         regst_desc_id2life_time_same_stream_actor_ids, AllocateMemSharedId);
   });
@@ -370,8 +429,7 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
   ForEachImprovedRegstNum(act_graph, naive_plan, false,
                           MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
   Plan mem_shared_plan(mem_unlimited_plan);
-  ForEachImprovedMemSharedId(act_graph, mem_unlimited_plan,
-                             MakeSetterSetPlanMemSharedId(&mem_shared_plan));
+  ForEachImprovedMemSharedId(mem_unlimited_plan, MakeSetterSetPlanMemSharedId(&mem_shared_plan));
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, MakeSetterSetPlanRegstNum(&plan));
   return plan;
