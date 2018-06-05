@@ -92,13 +92,13 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<IDMgr>::New();
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
+  Global<IDMgr>::New();
   // Compile
   Plan plan;
   if (machine_ctx->IsThisMachineMaster()) {

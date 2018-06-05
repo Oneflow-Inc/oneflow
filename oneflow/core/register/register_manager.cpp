@@ -7,20 +7,22 @@
 namespace oneflow {
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
-                         RecordTypeProto record_type, std::function<void(Regst*)> OneRegstDone) {
+                         std::function<void(Regst*)> OneRegstDone) {
   const RtRegstDesc* runtime_regst_desc = new RtRegstDesc(regst_desc_proto);
   {
     std::unique_lock<std::mutex> lck(rt_regst_descs_mtx_);
     rt_regst_descs_.emplace_back(runtime_regst_desc);
   }
+  const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
   for (int64_t i = 0; i < regst_desc_proto.register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = runtime_regst_desc;
-    std::vector<LogicalBlobId> lbis;
-    for (const LbiBlobDescPair& pair : regst_desc_proto.lbi2blob_desc()) {
-      lbis.push_back(pair.lbi());
-    }
-    if (lbis.size() > 0) {
+    if (regst_desc_type.has_normal_regst_desc()) {
+      std::vector<LogicalBlobId> lbis;
+      for (const LbiBlobDescPair& pair : regst_desc_type.normal_regst_desc().lbi2blob_desc()) {
+        lbis.push_back(pair.lbi());
+      }
+      CHECK(!lbis.empty());
       std::sort(lbis.begin(), lbis.end());
       std::tuple<char*, void*, std::function<void()>> allocation_result =
           Global<MemoryAllocator>::Get()->Allocate(
@@ -37,15 +39,17 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
                                         std::get<0>(allocation_result),
                                         std::get<1>(allocation_result), device_type));
       regst->deleter_ = std::get<2>(allocation_result);
-    } else {
+    } else if (regst_desc_type.has_record_regst_desc()) {
+      const RecordTypeProto& record_type = regst_desc_type.record_regst_desc().record_type();
       switch (record_type) {
-        case kOFRecord: {
-          regst->packed_blob_.reset(new RecordBlob<OFRecord>);
-          break;
-        }
+        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
         default: UNIMPLEMENTED();
       }
       regst->deleter_ = []() {};
+    } else if (regst_desc_type.has_delay_regst_desc()) {
+      regst->deleter_ = []() {};
+    } else {
+      UNIMPLEMENTED();
     }
     OneRegstDone(regst);
   }
