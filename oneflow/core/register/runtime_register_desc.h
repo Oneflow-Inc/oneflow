@@ -21,6 +21,9 @@ class RtRegstDesc {
   int64_t register_num() const { return register_num_; }
   const MemoryCase& mem_case() const { return mem_case_; }
 
+  const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc() const {
+    return lbi2blob_desc_;
+  };
   const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
   const BlobDesc* packed_blob_desc() const { return &packed_blob_desc_; }
 

@@ -18,7 +18,7 @@ struct RegstStatus {
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
-  ~Regst() { deleter_(); }
+  ~Regst() = default;
 
   // Getters
   const RegstStatus& status() const { return status_; }
@@ -44,6 +44,8 @@ class Regst final {
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
 
+  void* comm_net_token() const { return comm_net_token_; }
+
   // Setters
   void set_piece_id(int64_t val) { status_.piece_id = val; }
   void set_model_version_id(int64_t val) { status_.model_version_id = val; }
@@ -55,9 +57,9 @@ class Regst final {
   friend class RegstMgr;
   Regst();
 
+  void* comm_net_token_;
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
-  std::function<void()> deleter_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobIf>> lbi2blob_;
   std::unique_ptr<BlobIf> packed_blob_;
 };

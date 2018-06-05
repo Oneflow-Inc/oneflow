@@ -13,17 +13,20 @@ namespace oneflow {
 class RegstMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
-  ~RegstMgr() = default;
+  RegstMgr() = delete;
+  ~RegstMgr();
 
-  void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
-                 RecordTypeProto record_type, std::function<void(Regst*)> OneRegstDone);
+  void NewRegsts(const int64_t regst_desc_id, DeviceType device_type, RecordTypeProto record_type,
+                 std::function<void(Regst*)> OneRegstDone);
 
  private:
   friend class Global<RegstMgr>;
-  RegstMgr() = default;
+  RegstMgr(const Plan& plan);
 
-  std::mutex rt_regst_descs_mtx_;
-  std::list<std::unique_ptr<const RtRegstDesc>> rt_regst_descs_;
+  HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
+  HashMap<int64_t, char*> regst_desc_id2mem_ptr_;
+  std::list<void*> comm_net_tokens_;
+  HashMap<int64_t, std::function<void()>> dev_id2deleters_;
 };
 
 }  // namespace oneflow

@@ -19,9 +19,7 @@ class BlobImpl final : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : BlobImpl(regst, blob_desc, mem_ptr, nullptr) {}
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token)
-      : Blob(regst, blob_desc, mem_ptr, comm_net_token) {
+      : Blob(regst, blob_desc, mem_ptr) {
     CHECK_EQ(NDIMS, blob_desc_ptr()->shape().NumAxes());
     for (int32_t d = 0; d < NDIMS; ++d) { dsizes_[d] = blob_desc_ptr()->shape().At(d); }
     tensor_ =
@@ -52,7 +50,7 @@ class BlobImpl final : public Blob {
   std::unique_ptr<EigenTensor<T, NDIMS>> tensor_;
   std::unique_ptr<EigenConstTensor<T, NDIMS>> const_tensor_;
   Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;
-};
+};  // namespace oneflow
 
 }  // namespace oneflow
 

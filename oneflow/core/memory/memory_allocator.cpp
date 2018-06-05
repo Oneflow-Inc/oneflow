@@ -4,8 +4,8 @@
 
 namespace oneflow {
 
-std::tuple<char*, void*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase mem_case,
-                                                                          std::size_t size) {
+std::tuple<char*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase mem_case,
+                                                                   std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
   void* comm_net_token = nullptr;
@@ -15,9 +15,6 @@ std::tuple<char*, void*, std::function<void()>> MemoryAllocator::Allocate(Memory
     } else {
       dptr = reinterpret_cast<char*>(malloc(size));
       CHECK_NOTNULL(dptr);
-    }
-    if (mem_case.host_mem().used_by_network()) {
-      comm_net_token = Global<CommNet>::Get()->RegisterMemory(dptr, size);
     }
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
@@ -29,16 +26,11 @@ std::tuple<char*, void*, std::function<void()>> MemoryAllocator::Allocate(Memory
   } else {
     UNIMPLEMENTED();
   }
-  return std::make_tuple(
-      dptr, comm_net_token,
-      std::bind(&MemoryAllocator::Deallocate, this, dptr, comm_net_token, mem_case));
+  return std::make_tuple(dptr, std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
 }
 
-void MemoryAllocator::Deallocate(char* dptr, void* comm_net_token, MemoryCase mem_case) {
+void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
   if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_network()) {
-      Global<CommNet>::Get()->UnRegisterMemory(comm_net_token);
-    }
     if (mem_case.host_mem().used_by_device()) {
       CudaCheck(cudaFreeHost(dptr));
     } else {
