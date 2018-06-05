@@ -7,28 +7,14 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int32_t NDIMS>
-struct BlobImplUtil {
-  static void DoTranspose(DeviceCtx* ctx, EigenTensor<T, NDIMS>* tensor,
-                          EigenConstTensor<T, NDIMS>* const_tensor,
-                          const PbRf<int32_t>& permutation);
-};
-
-template<typename T, int32_t NDIMS, DeviceType device_type>
+template<DeviceType device_type>
 class BlobImpl final : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
       : BlobImpl(regst, blob_desc, mem_ptr, nullptr) {}
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token)
-      : Blob(regst, blob_desc, mem_ptr, comm_net_token) {
-    CHECK_EQ(NDIMS, blob_desc_ptr()->shape().NumAxes());
-    for (int32_t d = 0; d < NDIMS; ++d) { dsizes_[d] = blob_desc_ptr()->shape().At(d); }
-    tensor_ =
-        std::make_unique<EigenTensor<T, NDIMS>>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
-    const_tensor_ = std::make_unique<EigenConstTensor<T, NDIMS>>(
-        reinterpret_cast<const T*>(memory_ptr()), dsizes_);
-  }
+      : Blob(regst, blob_desc, mem_ptr, comm_net_token) {}
   ~BlobImpl() = default;
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
@@ -49,9 +35,6 @@ class BlobImpl final : public Blob {
   }
 
  private:
-  std::unique_ptr<EigenTensor<T, NDIMS>> tensor_;
-  std::unique_ptr<EigenConstTensor<T, NDIMS>> const_tensor_;
-  Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;
 };
 
 }  // namespace oneflow
