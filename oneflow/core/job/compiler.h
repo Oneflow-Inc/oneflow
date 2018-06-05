@@ -18,6 +18,7 @@ class Compiler final {
 
  private:
   Plan DoCompile();
+  void OrderTaskNodesInSameStream(TaskGraph* task_gph);
 };
 
 }  // namespace oneflow

@@ -105,16 +105,23 @@ RegstMgr::~RegstMgr() {
   }
 }
 
-void RegstMgr::NewRegsts(const int64_t regst_desc_id, DeviceType device_type,
-                         RecordTypeProto record_type, std::function<void(Regst*)> OneRegstDone) {
+void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
+                         std::function<void(Regst*)> OneRegstDone) {
+  const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
+  const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
   const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_[regst_desc_id].get();
   char* mem_ptr = regst_desc_id2mem_ptr_[regst_desc_id];
   std::vector<LogicalBlobId> lbis;
-  for (const auto& pair : rt_regst_desc->lbi2blob_desc()) { lbis.push_back(pair.first); }
+  if (regst_desc_type.has_normal_regst_desc()) {
+    for (const LbiBlobDescPair& pair : regst_desc_type.normal_regst_desc().lbi2blob_desc()) {
+      lbis.push_back(pair.lbi());
+    }
+    CHECK(!lbis.empty());
+  }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = rt_regst_desc;
-    if (lbis.size() > 0) {
+    if (regst_desc_type.has_normal_regst_desc()) {
       std::sort(lbis.begin(), lbis.end());
       char* cur_pointer = mem_ptr;
       for (const LogicalBlobId& lbi : lbis) {
@@ -134,14 +141,16 @@ void RegstMgr::NewRegsts(const int64_t regst_desc_id, DeviceType device_type,
         comm_net_tokens_.push_back(comm_net_token);
       }
       mem_ptr += rt_regst_desc->packed_blob_desc()->TotalByteSize();
-    } else {
+    } else if (regst_desc_type.has_record_regst_desc()) {
+      const RecordTypeProto& record_type = regst_desc_type.record_regst_desc().record_type();
       switch (record_type) {
-        case kOFRecord: {
-          regst->packed_blob_.reset(new RecordBlob<OFRecord>);
-          break;
-        }
+        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
         default: UNIMPLEMENTED();
       }
+    } else if (regst_desc_type.has_delay_regst_desc()) {
+      // do nothing
+    } else {
+      UNIMPLEMENTED();
     }
     OneRegstDone(regst);
   }

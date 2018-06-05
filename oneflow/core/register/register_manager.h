@@ -16,7 +16,7 @@ class RegstMgr final {
   RegstMgr() = delete;
   ~RegstMgr();
 
-  void NewRegsts(const int64_t regst_desc_id, DeviceType device_type, RecordTypeProto record_type,
+  void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
                  std::function<void(Regst*)> OneRegstDone);
 
  private:

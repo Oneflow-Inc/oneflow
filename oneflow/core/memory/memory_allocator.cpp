@@ -8,7 +8,6 @@ std::tuple<char*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase me
                                                                    std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
-  void* comm_net_token = nullptr;
   if (mem_case.has_host_mem()) {
     if (mem_case.host_mem().used_by_device()) {
       CudaCheck(cudaMallocHost(&dptr, size));
