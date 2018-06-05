@@ -190,8 +190,8 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
     for (int64_t dev_phy_id : parallel_desc_->sorted_dev_phy_ids(machine_id)) {
       CompTaskNode* comp_task_node = NewCompTaskNode();
       comp_task_node->set_machine_id(machine_id);
+      const IDMgr* id_mgr = Global<IDMgr>::Get();
       if (parallel_desc_->device_type() == DeviceType::kGPU) {
-        const IDMgr* id_mgr = Global<IDMgr>::Get();
         switch (comp_task_node->GetCudaWorkType()) {
           case CudaWorkType::kCompute: {
             comp_task_node->set_thrd_id(id_mgr->GetGpuComputeThrdId(dev_phy_id));
@@ -212,7 +212,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Hand
           default: UNIMPLEMENTED();
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        comp_task_node->set_thrd_id(dev_phy_id);
+        comp_task_node->set_thrd_id(id_mgr->GetCpuDeviceThrdId(dev_phy_id));
       } else {
         UNIMPLEMENTED();
       }
