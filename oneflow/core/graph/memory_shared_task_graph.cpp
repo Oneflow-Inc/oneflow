@@ -3,6 +3,21 @@
 
 namespace oneflow {
 
+namespace {
+
+void AssertEnableMemSharingConsistency(const TaskProto* task_proto) {
+  HashSet<bool> is_enable_mem_sharing;
+  for (const auto& pair : task_proto->produced_regst_desc()) {
+    if (pair.second.consumer_task_id_size() > 0
+        && RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() > 0) {
+      is_enable_mem_sharing.insert(pair.second.enable_mem_sharing());
+    }
+  }
+  CHECK_LE(is_enable_mem_sharing.size(), 1);
+}
+
+}  // namespace
+
 MemSharedTaskGraph::MemSharedTaskGraph(const Plan& plan) : plan_(&plan) {
   InitNodes();
   InitEdges();
@@ -11,30 +26,21 @@ MemSharedTaskGraph::MemSharedTaskGraph(const Plan& plan) : plan_(&plan) {
 
 void MemSharedTaskGraph::InitNodes() {
   for (const auto& task : plan_->task()) {
-    HashSet<bool> is_enable_mem_sharing;
-    for (const auto& pair : task.produced_regst_desc()) {
-      if (pair.second.consumer_task_id_size() > 0
-          && RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() > 0) {
-        is_enable_mem_sharing.insert(pair.second.enable_mem_sharing());
-      }
-    }
-    CHECK_LE(is_enable_mem_sharing.size(), 1);
-    if (is_enable_mem_sharing.size() == 1 && *is_enable_mem_sharing.begin() == true) {
-      auto* mem_shared_task_node = new MemSharedTaskNode(task);
-      task_id2mem_shared_task_node_.insert({task.task_id(), mem_shared_task_node});
-      AddAllocatedNode(mem_shared_task_node);
-    }
+    auto* mem_shared_task_node = new MemSharedTaskNode(task);
+    task_id2mem_shared_task_node_.insert({task.task_id(), mem_shared_task_node});
+    AddAllocatedNode(mem_shared_task_node);
   }
 }
 
 void MemSharedTaskGraph::InitEdges() {
   for (const auto& task_id_and_mem_shared_task_node : task_id2mem_shared_task_node_) {
-    auto* producer_node = task_id_and_mem_shared_task_node.second;
+    MemSharedTaskNode* producer_node = task_id_and_mem_shared_task_node.second;
+    AssertEnableMemSharingConsistency(producer_node->task_proto());
     for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
-      for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
-        const auto& mem_shared_task_node_it = task_id2mem_shared_task_node_.find(consumer_task_id);
-        if (mem_shared_task_node_it != task_id2mem_shared_task_node_.end()) {
-          Connect(producer_node, NewEdge(), mem_shared_task_node_it->second);
+      if (pair.second.enable_mem_sharing()
+          || RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() == 0) {
+        for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
+          Connect(producer_node, NewEdge(), task_id2mem_shared_task_node_.at(consumer_task_id));
         }
       }
     }
