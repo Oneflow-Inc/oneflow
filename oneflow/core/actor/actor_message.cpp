@@ -4,9 +4,6 @@
 
 namespace oneflow {
 
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
-
 ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
                                            Regst* regst_raw_ptr) {
   ActorMsg msg;
