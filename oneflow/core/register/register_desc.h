@@ -46,6 +46,8 @@ class RegstDesc final {
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
 
+  RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
+
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
   void EraseZeroSizeBlob();
@@ -64,6 +66,7 @@ class RegstDesc final {
   bool is_locked_;
 
   MemoryCase mem_case_;
+  RegstDescTypeProto regst_desc_type_;
   bool enable_mem_sharing_;
   int32_t mem_shared_id_;
 };
