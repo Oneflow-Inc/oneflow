@@ -11,11 +11,14 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
-  for (const LbiBlobDescPair& pair : proto.lbi2blob_desc()) {
-    auto blob_desc = of_make_unique<BlobDesc>(pair.blob_desc());
-    CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
+  if (proto.regst_desc_type().has_normal_regst_desc()) {
+    const NormalRegstDesc& normal_regst_desc = proto.regst_desc_type().normal_regst_desc();
+    for (const LbiBlobDescPair& pair : normal_regst_desc.lbi2blob_desc()) {
+      auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
+      CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
+    }
+    packed_blob_desc_ = BlobDesc(normal_regst_desc.packed_blob_desc());
   }
-  packed_blob_desc_ = BlobDesc(proto.packed_blob_desc());
 }
 
 const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const {

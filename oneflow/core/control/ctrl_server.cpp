@@ -40,7 +40,7 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
 
 #define ENQUEUE_REQUEST(method)                                                          \
   do {                                                                                   \
-    auto call = new CtrlCall<method##Request, method##Response>();                       \
+    auto call = new CtrlCall<CtrlMethod::k##method>();                                   \
     call->set_request_handler(std::bind(&CtrlServer::method##Handler, this, call));      \
     grpc_service_->RequestAsyncUnary(static_cast<int32_t>(CtrlMethod::k##method),        \
                                      call->mut_server_ctx(), call->mut_request(),        \
@@ -64,12 +64,12 @@ void CtrlServer::HandleRpcs() {
   }
 }
 
-void CtrlServer::LoadServerHandler(CtrlCall<LoadServerRequest, LoadServerResponse>* call) {
+void CtrlServer::LoadServerHandler(CtrlCall<CtrlMethod::kLoadServer>* call) {
   call->SendResponse();
   ENQUEUE_REQUEST(LoadServer);
 }
 
-void CtrlServer::BarrierHandler(CtrlCall<BarrierRequest, BarrierResponse>* call) {
+void CtrlServer::BarrierHandler(CtrlCall<CtrlMethod::kBarrier>* call) {
   const std::string& barrier_name = call->request().name();
   int32_t barrier_num = call->request().num();
   auto barrier_call_it = barrier_calls_.find(barrier_name);
@@ -87,7 +87,7 @@ void CtrlServer::BarrierHandler(CtrlCall<BarrierRequest, BarrierResponse>* call)
   ENQUEUE_REQUEST(Barrier);
 }
 
-void CtrlServer::TryLockHandler(CtrlCall<TryLockRequest, TryLockResponse>* call) {
+void CtrlServer::TryLockHandler(CtrlCall<CtrlMethod::kTryLock>* call) {
   const std::string& lock_name = call->request().name();
   auto name2lock_status_it = name2lock_status_.find(lock_name);
   if (name2lock_status_it == name2lock_status_.end()) {
@@ -105,7 +105,7 @@ void CtrlServer::TryLockHandler(CtrlCall<TryLockRequest, TryLockResponse>* call)
   ENQUEUE_REQUEST(TryLock);
 }
 
-void CtrlServer::NotifyDoneHandler(CtrlCall<NotifyDoneRequest, NotifyDoneResponse>* call) {
+void CtrlServer::NotifyDoneHandler(CtrlCall<CtrlMethod::kNotifyDone>* call) {
   const std::string& lock_name = call->request().name();
   auto name2lock_status_it = name2lock_status_.find(lock_name);
   auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(name2lock_status_it->second);
@@ -116,7 +116,7 @@ void CtrlServer::NotifyDoneHandler(CtrlCall<NotifyDoneRequest, NotifyDoneRespons
   ENQUEUE_REQUEST(NotifyDone);
 }
 
-void CtrlServer::WaitUntilDoneHandler(CtrlCall<WaitUntilDoneRequest, WaitUntilDoneResponse>* call) {
+void CtrlServer::WaitUntilDoneHandler(CtrlCall<CtrlMethod::kWaitUntilDone>* call) {
   const std::string& lock_name = call->request().name();
   void* lock_status = name2lock_status_.at(lock_name);
   if (lock_status) {
@@ -128,7 +128,7 @@ void CtrlServer::WaitUntilDoneHandler(CtrlCall<WaitUntilDoneRequest, WaitUntilDo
   ENQUEUE_REQUEST(WaitUntilDone);
 }
 
-void CtrlServer::PushKVHandler(CtrlCall<PushKVRequest, PushKVResponse>* call) {
+void CtrlServer::PushKVHandler(CtrlCall<CtrlMethod::kPushKV>* call) {
   const std::string& k = call->request().key();
   const std::string& v = call->request().val();
   CHECK(kv_.emplace(k, v).second);
@@ -145,7 +145,7 @@ void CtrlServer::PushKVHandler(CtrlCall<PushKVRequest, PushKVResponse>* call) {
   ENQUEUE_REQUEST(PushKV);
 }
 
-void CtrlServer::ClearKVHandler(CtrlCall<ClearKVRequest, ClearKVResponse>* call) {
+void CtrlServer::ClearKVHandler(CtrlCall<CtrlMethod::kClearKV>* call) {
   const std::string& k = call->request().key();
   CHECK_EQ(kv_.erase(k), 1);
   CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end());
@@ -153,7 +153,7 @@ void CtrlServer::ClearKVHandler(CtrlCall<ClearKVRequest, ClearKVResponse>* call)
   ENQUEUE_REQUEST(ClearKV);
 }
 
-void CtrlServer::PullKVHandler(CtrlCall<PullKVRequest, PullKVResponse>* call) {
+void CtrlServer::PullKVHandler(CtrlCall<CtrlMethod::kPullKV>* call) {
   const std::string& k = call->request().key();
   auto kv_it = kv_.find(k);
   if (kv_it != kv_.end()) {
@@ -165,14 +165,14 @@ void CtrlServer::PullKVHandler(CtrlCall<PullKVRequest, PullKVResponse>* call) {
   ENQUEUE_REQUEST(PullKV);
 }
 
-void CtrlServer::PushActEventHandler(CtrlCall<PushActEventRequest, PushActEventResponse>* call) {
+void CtrlServer::PushActEventHandler(CtrlCall<CtrlMethod::kPushActEvent>* call) {
   ActEvent act_event = call->request().act_event();
   call->SendResponse();
   Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
   ENQUEUE_REQUEST(PushActEvent);
 }
 
-void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
+void CtrlServer::ClearHandler(CtrlCall<CtrlMethod::kClear>* call) {
   name2lock_status_.clear();
   kv_.clear();
   CHECK(pending_kv_calls_.empty());
@@ -180,7 +180,7 @@ void CtrlServer::ClearHandler(CtrlCall<ClearRequest, ClearResponse>* call) {
   ENQUEUE_REQUEST(Clear);
 }
 
-void CtrlServer::IncreaseCountHandler(CtrlCall<IncreaseCountRequest, IncreaseCountResponse>* call) {
+void CtrlServer::IncreaseCountHandler(CtrlCall<CtrlMethod::kIncreaseCount>* call) {
   int32_t& count = count_[call->request().key()];
   count += call->request().val();
   call->mut_response()->set_val(count);
@@ -188,14 +188,13 @@ void CtrlServer::IncreaseCountHandler(CtrlCall<IncreaseCountRequest, IncreaseCou
   ENQUEUE_REQUEST(IncreaseCount);
 }
 
-void CtrlServer::EraseCountHandler(CtrlCall<EraseCountRequest, EraseCountResponse>* call) {
+void CtrlServer::EraseCountHandler(CtrlCall<CtrlMethod::kEraseCount>* call) {
   CHECK_EQ(count_.erase(call->request().key()), 1);
   call->SendResponse();
   ENQUEUE_REQUEST(EraseCount);
 }
 
-void CtrlServer::PushAvgActIntervalHandler(
-    CtrlCall<PushAvgActIntervalRequest, PushAvgActIntervalResponse>* call) {
+void CtrlServer::PushAvgActIntervalHandler(CtrlCall<CtrlMethod::kPushAvgActInterval>* call) {
   Global<Profiler>::Get()->PushAvgActInterval(call->request().actor_id(),
                                               call->request().avg_act_interval());
   call->SendResponse();

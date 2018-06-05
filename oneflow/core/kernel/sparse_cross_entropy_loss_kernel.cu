@@ -2,6 +2,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel_util.cuh"
 #include "oneflow/core/kernel/sparse_cross_entropy_loss_kernel.h"
 
 namespace oneflow {
@@ -17,7 +18,7 @@ __global__ void SparseCrossEntropyLossForwardGpu(const int64_t instance_num,
     int64_t label = static_cast<int64_t>(labels[i]);
     assert(label >= 0);
     assert(label < num_of_classes);
-    loss[i] = -SAFE_LOG(prediction[i * num_of_classes + label]);
+    loss[i] = -SafeLog(prediction[i * num_of_classes + label]);
   }
 }
 
@@ -30,7 +31,7 @@ __global__ void SparseCrossEntropyLossBackwardGpu(const int64_t instance_num,
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     int64_t label = static_cast<int64_t>(labels[i]);
     PredType prob = prediction[i * num_of_classes + label];
-    prediction_diff[i * num_of_classes + label] = -1 / MAX_WITH_LOG_THRESHOLD(prob);
+    prediction_diff[i * num_of_classes + label] = -1 / MaxWithLogThreshold(prob);
   }
 }
 
