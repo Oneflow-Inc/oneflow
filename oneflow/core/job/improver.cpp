@@ -4,6 +4,7 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/graph/memory_shared_task_graph.h"
 
 namespace oneflow {
 
@@ -196,7 +197,7 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-HashMap<int64_t, HashSet<int64_t>> MakeRegstDescId2LifeTimeSameStreamActorIds(const Plan& plan) {
+HashMap<int64_t, HashSet<int64_t>> MakeRegstDescId2LifeTimeSameStreamTaskIds(const Plan& plan) {
   TODO();
 }
 
@@ -226,16 +227,16 @@ bool IsConsumersAndProducerAllInComputeStream(const RegstDescProto* regst_desc) 
          && Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(producer_task_id) == 0;
 }
 
-std::list<int64_t> SelectSharableRegstDescIdsWithConsumer(
+std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
-  std::list<int64_t> regst_desc_ids;
+  std::list<const RegstDescProto*> sharable_regst_descs_with_consumer;
   for (const RegstDescProto* regst_desc : regst_descs) {
     if (regst_desc->enable_mem_sharing() && regst_desc->register_num() == 1
         && IsConsumersAndProducerAllInComputeStream(regst_desc)) {
-      regst_desc_ids.push_back(regst_desc->regst_desc_id());
+      sharable_regst_descs_with_consumer.push_back(regst_desc);
     }
   }
-  return regst_desc_ids;
+  return sharable_regst_descs_with_consumer;
 }
 
 std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
@@ -249,7 +250,7 @@ std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
   return regst_descs_without_consumer;
 }
 
-void TopoForEachColoredRegstDescsOrderBySameActorRegstDescSize(
+void TopoForEachColoredRegstDescsOrderBySameTaskRegstDescSize(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<void(const std::list<int64_t>&)>& Handler) {
   HashMap<int64_t, std::vector<int64_t>> producer_task_id2regst_desc_ids;
@@ -276,8 +277,8 @@ void TopoForEachColoredRegstDescsOrderBySameActorRegstDescSize(
 }
 
 void TopoForEachColoredRegstDescsOrderByLifeTimePoset(
-    const std::list<int64_t>& regst_desc_ids,
-    const HashMap<int64_t, HashSet<int64_t>>& regst_desc_id2life_time_same_stream_actor_ids,
+    const std::list<const RegstDescProto*>& regst_descs,
+    const MemSharedTaskGraph& mem_shared_task_graph,
     const std::function<void(const std::list<int64_t>&)>& Handler) {
   TODO();
 }
@@ -377,19 +378,18 @@ double Improver::BinarySearchII(
 
 void Improver::ForEachImprovedMemSharedId(
     const Plan& plan, const std::function<void(int64_t, int64_t)>& Handler) const {
-  auto regst_desc_id2life_time_same_stream_actor_ids =
-      MakeRegstDescId2LifeTimeSameStreamActorIds(plan);
+  MemSharedTaskGraph mem_shared_task_graph(plan);
   ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
     int mem_shared_id = 0;
     auto AllocateMemSharedId = [&](const std::list<int64_t>& regst_desc_ids) {
       for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
       ++mem_shared_id;
     };
-    TopoForEachColoredRegstDescsOrderBySameActorRegstDescSize(
+    TopoForEachColoredRegstDescsOrderBySameTaskRegstDescSize(
         SelectRegstDescsWithoutConsumer(regst_descs), AllocateMemSharedId);
     TopoForEachColoredRegstDescsOrderByLifeTimePoset(
-        SelectSharableRegstDescIdsWithConsumer(regst_descs),
-        regst_desc_id2life_time_same_stream_actor_ids, AllocateMemSharedId);
+        SelectSharableRegstDescsWithConsumer(regst_descs), mem_shared_task_graph,
+        AllocateMemSharedId);
   });
 }
 
