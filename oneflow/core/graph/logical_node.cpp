@@ -214,10 +214,11 @@ void LogicalNode::GenSortedCompTaskNodes(
           default: UNIMPLEMENTED();
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        if (comp_task_node->IsPersistence() || comp_task_node->GetTaskType() == TaskType::kDecode) {
+        if (comp_task_node->IsPersistence()) {
           comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
         } else {
-          comp_task_node->set_thrd_id(id_mgr->GetCpuDeviceThrdId(dev_phy_id));
+          comp_task_node->set_thrd_id(
+              id_mgr->GetCpuDeviceThrdId(dev_phy_id % Global<JobDesc>::Get()->CpuDeviceNum()));
         }
       } else {
         UNIMPLEMENTED();
