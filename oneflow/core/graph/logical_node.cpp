@@ -183,8 +183,7 @@ bool LogicalNode::HasOpWithForwardModelBlob() const {
       [](const Operator* op) { return op->forward_model_bns().empty() == false; });
 }
 
-void LogicalNode::GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
-                                         std::function<void(CompTaskNode*)> Handler) const {
+void LogicalNode::GenSortedCompTaskNodes(std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
@@ -213,7 +212,7 @@ void LogicalNode::GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)>
           default: UNIMPLEMENTED();
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
-        comp_task_node->set_thrd_id(AllocateCpuThrdId(comp_task_node));
+        comp_task_node->set_thrd_id(dev_phy_id);
       } else {
         UNIMPLEMENTED();
       }
