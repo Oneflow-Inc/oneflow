@@ -25,8 +25,7 @@ class RegstMgr final {
 
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
   HashMap<int64_t, char*> regst_desc_id2mem_ptr_;
-  std::list<void*> comm_net_tokens_;
-  HashMap<int64_t, std::function<void()>> dev_id2deleters_;
+  std::list<std::function<void()>> deleters_;
 };
 
 }  // namespace oneflow

@@ -1,5 +1,4 @@
 #include "oneflow/core/register/register_manager.h"
-#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/str_util.h"
@@ -7,102 +6,89 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
+namespace std {
+
+template<>
+struct hash<oneflow::MemoryCase> {
+  size_t operator()(const oneflow::MemoryCase& val) const {
+    if (val.has_host_mem()) { return val.host_mem().used_by_device() + 1024; }
+    return val.device_cuda_mem().device_id();
+  }
+};
+
+}  // namespace std
+
 namespace oneflow {
 
 namespace {
 
-int64_t MemCase2DevMemId(const MemoryCase& mem_case) {
-  if (mem_case.has_host_mem()) {
-    if (mem_case.host_mem().used_by_device()) {
-      return Global<JobDesc>::Get()->resource().gpu_device_num() + 1;
-    } else {
-      return Global<JobDesc>::Get()->resource().gpu_device_num();
-    }
-  } else if (mem_case.has_device_cuda_mem()) {
-    return mem_case.device_cuda_mem().device_id();
-  } else {
-    UNIMPLEMENTED();
-  }
-}
+struct MemInfo {
+  int64_t mem_size;
+  int64_t mem_offset;
+  char* mem_ptr;
 
-MemoryCase DevMemId2MemCase(const int64_t dev_mem_id) {
-  int64_t gpu_device_num = Global<JobDesc>::Get()->resource().gpu_device_num();
-  MemoryCase ret;
-  if (dev_mem_id < gpu_device_num) {
-    ret.mutable_device_cuda_mem()->set_device_id(dev_mem_id);
-  } else if (dev_mem_id == gpu_device_num) {
-    ret.mutable_host_mem();
-  } else if (dev_mem_id == gpu_device_num + 1) {
-    ret.mutable_host_mem()->set_used_by_device(true);
-  } else {
-    UNIMPLEMENTED();
-  }
-  return ret;
-}
+  MemInfo() : mem_size(0), mem_offset(0), mem_ptr(nullptr) {}
+};
 
 }  // namespace
 
+inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
+  if (lhs.has_host_mem() && rhs.has_host_mem()) {
+    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
+  }
+  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
+    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
+  }
+  return false;
+}
+
 RegstMgr::RegstMgr(const Plan& plan) {
-  int64_t gpu_device_num = Global<JobDesc>::Get()->resource().gpu_device_num();
-  int64_t dev_mem_num = gpu_device_num + 2;
-  // device mem id:
-  // 0 ~ gpu_device_num - 1        each gpu device mem
-  // gpu_device_num                CPU normal mem
-  // gpu_device_num + 1            CPU mem used by device
-  std::vector<int64_t> dev_mem_id2mem_size(dev_mem_num, 0);
-  std::vector<int64_t> dev_mem_id2mem_offset(dev_mem_num, 0);
-  std::vector<char*> dev_mem_id2mem_ptr(dev_mem_num, nullptr);
+  HashMap<MemoryCase, std::unique_ptr<MemInfo>> mem_case2info;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
       const RegstDescProto& regst_desc_proto = pair.second;
       CHECK(regst_desc_id2rt_regst_desc_
                 .emplace(regst_desc_proto.regst_desc_id(),
-                         std::unique_ptr<const RtRegstDesc>(new RtRegstDesc(regst_desc_proto)))
+                         std::make_unique<const RtRegstDesc>(regst_desc_proto))
                 .second);
-      dev_mem_id2mem_size[MemCase2DevMemId(regst_desc_proto.mem_case())] +=
+      const MemoryCase& mem_case = regst_desc_proto.mem_case();
+      if (mem_case2info.find(mem_case) == mem_case2info.end()) {
+        mem_case2info.emplace(mem_case, std::make_unique<MemInfo>());
+      }
+      mem_case2info[mem_case]->mem_size +=
           (regst_desc_id2rt_regst_desc_[regst_desc_proto.regst_desc_id()]
                ->packed_blob_desc()
                ->TotalByteSize()
            * regst_desc_proto.register_num());
     }
   }
-  for (size_t i = 0; i < dev_mem_num; ++i) {
-    if (i < gpu_device_num) { CudaCheck(cudaSetDevice(i)); }
-    int32_t current_device_id;
-    CudaCheck(cudaGetDevice(&current_device_id));
+  for (const auto& pair : mem_case2info) {
+    const MemoryCase& mem_case = pair.first;
+    MemInfo* mem_info = pair.second.get();
     std::tuple<char*, std::function<void()>> allocation_result =
-        Global<MemoryAllocator>::Get()->Allocate(DevMemId2MemCase(i), dev_mem_id2mem_size[i]);
-    dev_mem_id2mem_ptr[i] = std::get<0>(allocation_result);
-    CHECK(dev_id2deleters_.emplace(i, std::get<1>(allocation_result)).second);
+        Global<MemoryAllocator>::Get()->Allocate(mem_case, mem_info->mem_size);
+    mem_info->mem_ptr = std::get<0>(allocation_result);
+    deleters_.push_back(std::get<1>(allocation_result));
   }
   for (const auto& pair : regst_desc_id2rt_regst_desc_) {
     const int64_t& regst_desc_id = pair.first;
     const RtRegstDesc* rt_regst_desc = pair.second.get();
-    const int64_t dev_mem_id = MemCase2DevMemId(rt_regst_desc->mem_case());
-    CHECK(regst_desc_id2mem_ptr_
-              .emplace(regst_desc_id,
-                       dev_mem_id2mem_ptr[dev_mem_id] + dev_mem_id2mem_offset[dev_mem_id])
+    const MemoryCase& mem_case = rt_regst_desc->mem_case();
+    MemInfo* mem_info = mem_case2info[mem_case].get();
+    CHECK(regst_desc_id2mem_ptr_.emplace(regst_desc_id, mem_info->mem_ptr + mem_info->mem_offset)
               .second);
-    dev_mem_id2mem_offset[dev_mem_id] +=
+    mem_info->mem_offset +=
         (rt_regst_desc->packed_blob_desc()->TotalByteSize() * rt_regst_desc->register_num());
-    CHECK_LE(dev_mem_id2mem_offset[dev_mem_id], dev_mem_id2mem_size[dev_mem_id]);
+    CHECK_LE(mem_info->mem_offset, mem_info->mem_size);
   }
-  for (size_t i = 0; i < dev_mem_num; ++i) {
-    CHECK_EQ(dev_mem_id2mem_offset[i], dev_mem_id2mem_size[i]);
+  for (const auto& pair : mem_case2info) {
+    CHECK_EQ(pair.second->mem_offset, pair.second->mem_size);
   }
 }
 
 RegstMgr::~RegstMgr() {
-  for (void* comm_net_token : comm_net_tokens_) {
-    Global<CommNet>::Get()->UnRegisterMemory(comm_net_token);
-  }
-  for (const auto& pair : dev_id2deleters_) {
-    if (pair.first < Global<JobDesc>::Get()->resource().gpu_device_num()) {
-      CudaCheck(cudaSetDevice(pair.first));
-    }
-    pair.second();
-  }
+  for (std::function<void()> deleter : deleters_) { deleter(); }
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
@@ -135,10 +121,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
           NewBlob(regst, rt_regst_desc->packed_blob_desc(), mem_ptr, device_type));
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
-        void* comm_net_token = Global<CommNet>::Get()->RegisterMemory(
+        regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
             mem_ptr, rt_regst_desc->packed_blob_desc()->TotalByteSize());
-        regst->comm_net_token_ = comm_net_token;
-        comm_net_tokens_.push_back(comm_net_token);
       }
       mem_ptr += rt_regst_desc->packed_blob_desc()->TotalByteSize();
     } else if (regst_desc_type.has_record_regst_desc()) {

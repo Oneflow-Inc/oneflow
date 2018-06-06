@@ -50,7 +50,7 @@ class BlobImpl final : public Blob {
   std::unique_ptr<EigenTensor<T, NDIMS>> tensor_;
   std::unique_ptr<EigenConstTensor<T, NDIMS>> const_tensor_;
   Eigen::DSizes<Eigen::DenseIndex, NDIMS> dsizes_;
-};  // namespace oneflow
+};
 
 }  // namespace oneflow
 

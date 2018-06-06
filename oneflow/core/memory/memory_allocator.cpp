@@ -17,9 +17,7 @@ std::tuple<char*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase me
     }
     memset(dptr, memset_val, size);
   } else if (mem_case.has_device_cuda_mem()) {
-    int32_t current_device_id;
-    CudaCheck(cudaGetDevice(&current_device_id));
-    CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
+    CudaCheck(cudaSetDevice(mem_case.device_cuda_mem().device_id()));
     CudaCheck(cudaMalloc(&dptr, size));
     CudaCheck(cudaMemset(dptr, memset_val, size));
   } else {
@@ -36,9 +34,7 @@ void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
       free(dptr);
     }
   } else if (mem_case.has_device_cuda_mem()) {
-    int32_t current_device_id = -1;
-    CudaCheck(cudaGetDevice(&current_device_id));
-    CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
+    CudaCheck(cudaSetDevice(mem_case.device_cuda_mem().device_id()));
     CudaCheck(cudaFree(dptr));
   } else {
     UNIMPLEMENTED();

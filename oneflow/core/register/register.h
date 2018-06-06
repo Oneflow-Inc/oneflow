@@ -18,7 +18,7 @@ struct RegstStatus {
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
-  ~Regst() = default;
+  ~Regst();
 
   // Getters
   const RegstStatus& status() const { return status_; }
