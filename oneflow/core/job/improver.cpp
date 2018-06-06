@@ -129,14 +129,79 @@ HashSet<int64_t> MemSharedTaskGraph::ComputeLifeTimeSameStreamTaskIds4RegstDescI
   };
   int64_t global_work_stream_id =
       Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(regst_desc.producer_task_id());
-  HashSet<int64_t> life_time_same_stream_task_ids;
+  HashSet<int64_t> lifetime_same_stream_task_ids;
   TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](MemSharedTaskNode* node) {
     int64_t task_id = node->task_proto()->task_id();
     if (Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id) == global_work_stream_id) {
-      life_time_same_stream_task_ids.insert(task_id);
+      lifetime_same_stream_task_ids.insert(task_id);
     }
   });
-  return life_time_same_stream_task_ids;
+  return lifetime_same_stream_task_ids;
+}
+
+class RegstLifetimePosetNode;
+
+class RegstLifetimePosetEdge final : Edge<RegstLifetimePosetNode, RegstLifetimePosetEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RegstLifetimePosetEdge);
+  RegstLifetimePosetEdge() = default;
+  ~RegstLifetimePosetEdge() = default;
+};
+
+class RegstLifetimePosetNode final : Node<RegstLifetimePosetNode, RegstLifetimePosetEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RegstLifetimePosetNode);
+  RegstLifetimePosetNode(const RegstDescProto* regst_desc,
+                         std::unique_ptr<std::list<int64_t>>&& lifetime_same_stream_actor_ids)
+      : regst_desc_(regst_desc),
+        lifetime_same_stream_actor_ids_(std::move(lifetime_same_stream_actor_ids)) {}
+  ~RegstLifetimePosetNode() = default;
+
+ private:
+  const RegstDescProto* regst_desc_;
+  std::unique_ptr<std::list<int64_t>> lifetime_same_stream_actor_ids_;
+};
+
+class RegstLifetimePosetGraph final : Graph<RegstLifetimePosetNode, RegstLifetimePosetEdge> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RegstLifetimePosetGraph);
+  RegstLifetimePosetGraph(HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
+                              regst_desc2lifetime_actor_ids);
+  ~RegstLifetimePosetGraph() = default;
+
+  void ForEachRegstDescColorIdOrderByLifetimeAsc(const std::function<void(int64_t, int64_t)>) const;
+
+ private:
+  void InitNodes(HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
+                     regst_desc2lifetime_actor_ids);
+  void InitEdges();
+  void InitRegstDesc2IntersectedRegstDescs();
+
+  HashMap<const RegstDescProto*, HashSet<const RegstDescProto*>>
+      regst_desc2intersected_regst_descs_;
+};
+
+RegstLifetimePosetGraph::RegstLifetimePosetGraph(
+    HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
+        regst_desc2lifetime_actor_ids) {
+  InitNodes(std::move(regst_desc2lifetime_actor_ids));
+  InitEdges();
+  InitRegstDesc2IntersectedRegstDescs();
+}
+
+void RegstLifetimePosetGraph::InitNodes(
+    HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
+        regst_desc2lifetime_actor_ids) {
+  TODO();
+}
+
+void RegstLifetimePosetGraph::InitEdges() { TODO(); }
+
+void RegstLifetimePosetGraph::InitRegstDesc2IntersectedRegstDescs() { TODO(); }
+
+void RegstLifetimePosetGraph::ForEachRegstDescColorIdOrderByLifetimeAsc(
+    const std::function<void(int64_t, int64_t)>) const {
+  TODO();
 }
 
 double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
@@ -324,10 +389,6 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
       return it->second;
     }
   };
-}
-
-HashMap<int64_t, HashSet<int64_t>> MakeRegstDescId2LifeTimeSameStreamTaskIds(const Plan& plan) {
-  TODO();
 }
 
 void ForEachComputeStreamRegstDescs(
