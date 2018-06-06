@@ -74,4 +74,31 @@ bool CompTaskNode::TryAddLbiToB121RegstAndBindIt(ExecNode* exec_node, const std:
   return true;
 }
 
+void CompTaskNode::ForEachSuccCompTaskNode(std::function<void(CompTaskNode*)> Handler) {
+  std::queue<TaskNode*> nodes;
+  HashSet<TaskNode*> visited_nodes;
+  for (TaskEdge* edge : out_edges()) {
+    nodes.push(edge->dst_node());
+    CHECK(visited_nodes.insert(edge->dst_node()).second);
+  }
+  std::list<CompTaskNode*> succ_comp_task_nodes;
+  while (!nodes.empty()) {
+    TaskNode* node = nodes.front();
+    nodes.pop();
+    CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(node);
+    if (comp_task_node) {
+      succ_comp_task_nodes.push_back(comp_task_node);
+    } else {
+      for (TaskEdge* edge : out_edges()) {
+        TaskNode* dst_node = edge->dst_node();
+        if (visited_nodes.find(dst_node) == visited_nodes.end()) {
+          nodes.push(dst_node);
+          CHECK(visited_nodes.insert(dst_node).second);
+        }
+      }
+    }
+  }
+  for (CompTaskNode* node : succ_comp_task_nodes) { Handler(node); }
+}
+
 }  // namespace oneflow

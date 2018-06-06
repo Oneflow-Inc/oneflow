@@ -145,6 +145,15 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   }
 }
 
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
+      Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
+    }
+  }
+}
+
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
   std::vector<CompTaskNode*> src_nodes_in_same_machine;
   FOR_RANGE(int32_t, i, 0, sorted_src_comp_tasks.size()) {
@@ -162,20 +171,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
       }
       CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());
       src_nodes_in_same_machine.clear();
-    }
-  }
-}
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGather) {
-  // TODO: share code with reduce global 2 reduce gather
-  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
-    TaskNode* src_d2h_task = AddCopyD2HTaskIfNotCpu(src_comp_task);
-    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (src_comp_task->parallel_id() == dst_comp_task->parallel_id()) {
-        Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
-      } else {
-        Connect<TaskNode>(src_d2h_task, NewEdge(), dst_comp_task);
-      }
     }
   }
 }

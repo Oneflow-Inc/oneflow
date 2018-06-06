@@ -327,12 +327,12 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
                               "ReduceLocalAdd",
                               &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
+                              "ReduceGlobalAdd",
+                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
                               "ReduceGlobalAdd",
                               &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
-                              "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGather);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
                               "ReduceGather",
                               &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);

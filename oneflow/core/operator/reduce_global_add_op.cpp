@@ -7,6 +7,7 @@ void ReduceGlobalAddOp::InitFromOpConf() {
   for (int32_t i = 0; i < op_conf().reduce_global_add_conf().in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
+  EnrollDataTmpBn("middle");
   EnrollOutputBn("out", false);
 }
 
@@ -28,6 +29,7 @@ void ReduceGlobalAddOp::InferBlobDescs(
   // TODO check in_num
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
+  *GetBlobDesc4BnInOp("middle") = *first_in_blob;
   *GetBlobDesc4BnInOp(SoleObn()) = *first_in_blob;
   for (int32_t i = 1; i < in_num; ++i) {
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));

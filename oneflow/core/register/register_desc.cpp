@@ -88,6 +88,11 @@ const BlobDesc* RegstDesc::GetBlobDesc(const LogicalBlobId& lbi) const {
   return const_cast<RegstDesc*>(this)->MutBlobDesc(lbi);
 }
 
+const BlobDesc* RegstDesc::GetSoleBlobDesc() const {
+  CHECK_EQ(lbi2blob_desc_.size(), 1);
+  return const_cast<RegstDesc*>(this)->MutBlobDesc(lbi2blob_desc_.begin()->first);
+}
+
 BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
   if (lbi.is_packed_id()) { return packed_blob_desc_.get(); }
   auto it = lbi2blob_desc_.find(lbi);

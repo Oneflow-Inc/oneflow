@@ -110,6 +110,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   }
   OF_BARRIER();
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
+  return;
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
   PushAvailableMemDescOfThisMachine();

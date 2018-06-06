@@ -450,21 +450,21 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   // Reduce Local Add
   // construct operator in task graph
-  LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
-  reduce_local_add_node->mut_parallel_desc() = src_pd;
-  // Reduce Global Add
-  LogicalNode* pred_reduce_gather_node = reduce_local_add_node;
+  LogicalNode* pred_reduce_global_node = reduce_scatter_node;
   if (src_pd->sorted_machine_ids().size() > 1) {
-    OperatorConf reduce_global_add_op_conf;
-    reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
-    reduce_global_add_op_conf.set_device_type(src_pd->device_type());
-    reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(src_pd->parallel_num());
-    LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
-    reduce_global_add_node->mut_op_vec() = {ConstructOp(reduce_global_add_op_conf)};
-    reduce_global_add_node->mut_parallel_desc() = src_pd;
-    Connect(reduce_local_add_node, NewEdge(), reduce_global_add_node);
-    pred_reduce_gather_node = reduce_global_add_node;
+    LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
+    reduce_local_add_node->mut_parallel_desc() = src_pd;
+    Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);
+    pred_reduce_global_node = reduce_local_add_node;
   }
+  // Reduce Global Add
+  OperatorConf reduce_global_add_op_conf;
+  reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
+  reduce_global_add_op_conf.set_device_type(src_pd->device_type());
+  reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(src_pd->parallel_num());
+  LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
+  reduce_global_add_node->mut_op_vec() = {ConstructOp(reduce_global_add_op_conf)};
+  reduce_global_add_node->mut_parallel_desc() = src_pd;
   // Reduce Gather
   OperatorConf reduce_gather_op_conf;
   reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
@@ -475,8 +475,8 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   reduce_gather_node->mut_parallel_desc() = src_pd;
   // Connect
   Connect(src, NewEdge(), reduce_scatter_node);
-  Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);
-  Connect(pred_reduce_gather_node, NewEdge(), reduce_gather_node);
+  Connect(pred_reduce_global_node, NewEdge(), reduce_global_add_node);
+  Connect(reduce_global_add_node, NewEdge(), reduce_gather_node);
   Connect(reduce_gather_node, NewEdge(), dst);
 }
 
