@@ -47,8 +47,8 @@ class MemSharedTaskGraph final : public Graph<MemSharedTaskNode, MemSharedTaskEd
   explicit MemSharedTaskGraph(const Plan& plan);
   ~MemSharedTaskGraph() = default;
 
-  HashSet<int64_t> ComputeLifeTimeSameStreamTaskIds4RegstDescId(
-      const RegstDescProto& regst_desc) const;
+  void ComputeLifetimeSameStreamTaskIds(const RegstDescProto* regst_desc,
+                                        HashSet<int64_t>* lifetime_same_stream_task_ids) const;
 
  private:
   void InitNodes();
@@ -108,9 +108,9 @@ bool MemSharedTaskGraph::IsAnyOneReachable(const HashSet<MemSharedTaskNode*>& no
   return false;
 }
 
-HashSet<int64_t> MemSharedTaskGraph::ComputeLifeTimeSameStreamTaskIds4RegstDescId(
-    const RegstDescProto& regst_desc) const {
-  MemSharedTaskNode* producer = task_id2mem_shared_task_node_.at(regst_desc.producer_task_id());
+void MemSharedTaskGraph::ComputeLifetimeSameStreamTaskIds(
+    const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_stream_task_ids) const {
+  MemSharedTaskNode* producer = task_id2mem_shared_task_node_.at(regst_desc->producer_task_id());
   HashSet<MemSharedTaskNode*> consumers;
   producer->ForEachNodeOnOutEdge([&](MemSharedTaskNode* node) { consumers.insert(node); });
   auto ForEachInNode = [&](MemSharedTaskNode* node,
@@ -128,15 +128,13 @@ HashSet<int64_t> MemSharedTaskGraph::ComputeLifeTimeSameStreamTaskIds4RegstDescI
     });
   };
   int64_t global_work_stream_id =
-      Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(regst_desc.producer_task_id());
-  HashSet<int64_t> lifetime_same_stream_task_ids;
+      Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(regst_desc->producer_task_id());
   TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](MemSharedTaskNode* node) {
     int64_t task_id = node->task_proto()->task_id();
     if (Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id) == global_work_stream_id) {
-      lifetime_same_stream_task_ids.insert(task_id);
+      lifetime_same_stream_task_ids->insert(task_id);
     }
   });
-  return lifetime_same_stream_task_ids;
 }
 
 class RegstLifetimePosetNode;
@@ -165,15 +163,18 @@ class RegstLifetimePosetNode final : Node<RegstLifetimePosetNode, RegstLifetimeP
 class RegstLifetimePosetGraph final : Graph<RegstLifetimePosetNode, RegstLifetimePosetEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstLifetimePosetGraph);
-  RegstLifetimePosetGraph(HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
-                              regst_desc2lifetime_actor_ids);
+  RegstLifetimePosetGraph(const std::list<const RegstDescProto*>& regst_descs,
+                          const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
+                              ComputeLifetimeSameStreamTaskIds);
   ~RegstLifetimePosetGraph() = default;
 
-  void ForEachRegstDescColorIdOrderByLifetimeAsc(const std::function<void(int64_t, int64_t)>) const;
+  void ForEachLayerwiseSameColoredRegstDescIds(
+      const std::function<void(const std::list<int64_t>&)>&) const;
 
  private:
-  void InitNodes(HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
-                     regst_desc2lifetime_actor_ids);
+  void InitNodes(const std::list<const RegstDescProto*>& regst_descs,
+                 const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
+                     ComputeLifetimeSameStreamTaskIds);
   void InitEdges();
   void InitRegstDesc2IntersectedRegstDescs();
 
@@ -182,16 +183,18 @@ class RegstLifetimePosetGraph final : Graph<RegstLifetimePosetNode, RegstLifetim
 };
 
 RegstLifetimePosetGraph::RegstLifetimePosetGraph(
-    HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
-        regst_desc2lifetime_actor_ids) {
-  InitNodes(std::move(regst_desc2lifetime_actor_ids));
+    const std::list<const RegstDescProto*>& regst_descs,
+    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
+        ComputeLifetimeSameStreamTaskIds) {
+  InitNodes(regst_descs, ComputeLifetimeSameStreamTaskIds);
   InitEdges();
   InitRegstDesc2IntersectedRegstDescs();
 }
 
 void RegstLifetimePosetGraph::InitNodes(
-    HashMap<const RegstDescProto*, std::unique_ptr<std::list<int64_t>>>&&
-        regst_desc2lifetime_actor_ids) {
+    const std::list<const RegstDescProto*>& regst_descs,
+    const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
+        ComputeLifetimeSameStreamTaskIds) {
   TODO();
 }
 
@@ -199,9 +202,81 @@ void RegstLifetimePosetGraph::InitEdges() { TODO(); }
 
 void RegstLifetimePosetGraph::InitRegstDesc2IntersectedRegstDescs() { TODO(); }
 
-void RegstLifetimePosetGraph::ForEachRegstDescColorIdOrderByLifetimeAsc(
-    const std::function<void(int64_t, int64_t)>) const {
+void RegstLifetimePosetGraph::ForEachLayerwiseSameColoredRegstDescIds(
+    const std::function<void(const std::list<int64_t>&)>&) const {
   TODO();
+}
+
+void ForEachComputeStreamRegstDescs(
+    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
+  for (const auto& task : plan.task()) {
+    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) == 0) {
+      int64_t global_work_stream_id =
+          Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
+      for (const auto& pair : task.produced_regst_desc()) {
+        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
+      }
+    }
+  }
+  for (const auto& pair : global_work_stream_id2regst_descs) { Handler(pair.second); }
+}
+
+bool IsConsumersAndProducerAllInComputeStream(const RegstDescProto* regst_desc) {
+  HashSet<int64_t> stream_ids;
+  int64_t producer_task_id = regst_desc->producer_task_id();
+  stream_ids.insert(Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(producer_task_id));
+  for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
+    stream_ids.insert(Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(consumer_task_id));
+  }
+  return stream_ids.size() == 1
+         && Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(producer_task_id) == 0;
+}
+
+std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
+    const std::list<const RegstDescProto*>& regst_descs) {
+  std::list<const RegstDescProto*> sharable_regst_descs_with_consumer;
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    if (regst_desc->enable_mem_sharing() && regst_desc->register_num() == 1
+        && IsConsumersAndProducerAllInComputeStream(regst_desc)) {
+      sharable_regst_descs_with_consumer.push_back(regst_desc);
+    }
+  }
+  return sharable_regst_descs_with_consumer;
+}
+
+std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
+    const std::list<const RegstDescProto*>& regst_descs) {
+  std::list<const RegstDescProto*> regst_descs_without_consumer;
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    if (regst_desc->consumer_task_id_size() == 0) {
+      CHECK(regst_desc->enable_mem_sharing());
+      regst_descs_without_consumer.push_back(regst_desc);
+    }
+  }
+  return regst_descs_without_consumer;
+}
+
+void ForEachImprovedMemSharedId(const Plan& plan,
+                                const std::function<void(int64_t, int64_t)>& Handler) {
+  MemSharedTaskGraph mem_shared_grph(plan);
+  auto ComputeLifetimeSameStreamTaskIds = [&](const RegstDescProto* regst_desc,
+                                              HashSet<int64_t>* lifetime_same_stream_task_ids) {
+    mem_shared_grph.ComputeLifetimeSameStreamTaskIds(regst_desc, lifetime_same_stream_task_ids);
+  };
+  ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
+    const auto& regst_descs_without_consumer = SelectRegstDescsWithoutConsumer(regst_descs);
+    const auto& sharable_with_consumer = SelectSharableRegstDescsWithConsumer(regst_descs);
+    int mem_shared_id = 0;
+    auto AllocateMemSharedId = [&](const std::list<int64_t>& regst_desc_ids) {
+      for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
+      ++mem_shared_id;
+    };
+    RegstLifetimePosetGraph(regst_descs_without_consumer, ComputeLifetimeSameStreamTaskIds)
+        .ForEachLayerwiseSameColoredRegstDescIds(AllocateMemSharedId);
+    RegstLifetimePosetGraph(sharable_with_consumer, ComputeLifetimeSameStreamTaskIds)
+        .ForEachLayerwiseSameColoredRegstDescIds(AllocateMemSharedId);
+  });
 }
 
 double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
@@ -389,105 +464,6 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
       return it->second;
     }
   };
-}
-
-void ForEachComputeStreamRegstDescs(
-    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
-  for (const auto& task : plan.task()) {
-    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) == 0) {
-      int64_t global_work_stream_id =
-          Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
-      for (const auto& pair : task.produced_regst_desc()) {
-        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
-      }
-    }
-  }
-  for (const auto& pair : global_work_stream_id2regst_descs) { Handler(pair.second); }
-}
-
-bool IsConsumersAndProducerAllInComputeStream(const RegstDescProto* regst_desc) {
-  HashSet<int64_t> stream_ids;
-  int64_t producer_task_id = regst_desc->producer_task_id();
-  stream_ids.insert(Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(producer_task_id));
-  for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
-    stream_ids.insert(Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(consumer_task_id));
-  }
-  return stream_ids.size() == 1
-         && Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(producer_task_id) == 0;
-}
-
-std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
-    const std::list<const RegstDescProto*>& regst_descs) {
-  std::list<const RegstDescProto*> sharable_regst_descs_with_consumer;
-  for (const RegstDescProto* regst_desc : regst_descs) {
-    if (regst_desc->enable_mem_sharing() && regst_desc->register_num() == 1
-        && IsConsumersAndProducerAllInComputeStream(regst_desc)) {
-      sharable_regst_descs_with_consumer.push_back(regst_desc);
-    }
-  }
-  return sharable_regst_descs_with_consumer;
-}
-
-std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
-    const std::list<const RegstDescProto*>& regst_descs) {
-  std::list<const RegstDescProto*> regst_descs_without_consumer;
-  for (const RegstDescProto* regst_desc : regst_descs) {
-    if (regst_desc->consumer_task_id_size() == 0) {
-      regst_descs_without_consumer.push_back(regst_desc);
-    }
-  }
-  return regst_descs_without_consumer;
-}
-
-void TopoForEachColoredRegstDescsOrderBySameTaskRegstDescSize(
-    const std::list<const RegstDescProto*>& regst_descs,
-    const std::function<void(const std::list<int64_t>&)>& Handler) {
-  HashMap<int64_t, std::vector<int64_t>> producer_task_id2regst_desc_ids;
-  HashMap<int64_t, size_t> regst_desc_id2regst_desc_size;
-  for (const RegstDescProto* regst_desc : regst_descs) {
-    int64_t regst_desc_id = regst_desc->regst_desc_id();
-    producer_task_id2regst_desc_ids[regst_desc->producer_task_id()].push_back(regst_desc_id);
-    regst_desc_id2regst_desc_size[regst_desc_id] =
-        RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
-  }
-  for (auto& pair : producer_task_id2regst_desc_ids) {
-    std::sort(pair.second.begin(), pair.second.end(), [&](int64_t lhs, int64_t rhs) {
-      return regst_desc_id2regst_desc_size.at(lhs) > regst_desc_id2regst_desc_size.at(rhs);
-    });
-  }
-  for (int i = 0;; ++i) {
-    std::list<int64_t> regst_desc_ids;
-    for (const auto& pair : producer_task_id2regst_desc_ids) {
-      if (i < pair.second.size()) { regst_desc_ids.push_back(pair.second.at(i)); }
-    }
-    if (regst_desc_ids.empty()) { break; }
-    Handler(regst_desc_ids);
-  }
-}
-
-void TopoForEachColoredRegstDescsOrderByLifeTimePoset(
-    const std::list<const RegstDescProto*>& regst_descs,
-    const MemSharedTaskGraph& mem_shared_task_graph,
-    const std::function<void(const std::list<int64_t>&)>& Handler) {
-  TODO();
-}
-
-void ForEachImprovedMemSharedId(const Plan& plan,
-                                const std::function<void(int64_t, int64_t)>& Handler) {
-  MemSharedTaskGraph mem_shared_task_graph(plan);
-  ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
-    int mem_shared_id = 0;
-    auto AllocateMemSharedId = [&](const std::list<int64_t>& regst_desc_ids) {
-      for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
-      ++mem_shared_id;
-    };
-    TopoForEachColoredRegstDescsOrderBySameTaskRegstDescSize(
-        SelectRegstDescsWithoutConsumer(regst_descs), AllocateMemSharedId);
-    TopoForEachColoredRegstDescsOrderByLifeTimePoset(
-        SelectSharableRegstDescsWithConsumer(regst_descs), mem_shared_task_graph,
-        AllocateMemSharedId);
-  });
 }
 
 }  // namespace
