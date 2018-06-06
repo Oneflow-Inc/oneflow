@@ -23,9 +23,10 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRecordLoad = 16;
-  kReduceAdd = 17;
-  kReduceGather = 18;
-  kReduceScatter = 19;
+  kReduceLocalAdd = 17;
+  kReduceGlobalAdd = 18;
+  kReduceGather = 19;
+  kReduceScatter = 20;
 };
 
 message RegstDescIdSet {

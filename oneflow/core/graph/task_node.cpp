@@ -283,11 +283,13 @@ void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<Reg
 }
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
-    {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"}, {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},  {kBoxing, "10"},       {kPrint, "1"},          {kReduceScatter, "2"},
-    {kReduceAdd, "2"},    {kReduceGather, "2"},
+    {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},
+    {kRecordLoad, "1"},    {kDecode, "1"},         {kLoss, "4"},
+    {kLossAcc, "5"},       {kLossPrint, "1"},      {kNormalMdUpdt, "6"},
+    {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
+    {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
+    {kReduceGather, "2"},
 };
 
 }  // namespace oneflow

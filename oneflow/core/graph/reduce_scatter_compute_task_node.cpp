@@ -6,7 +6,7 @@ namespace oneflow {
 void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    while (dst_node->GetTaskType() != TaskType::kReduceAdd) {
+    while (dst_node->GetTaskType() != TaskType::kReduceLocalAdd) {
       dst_node = dst_node->SoleOutEdge()->dst_node();
     }
     CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(dst_node);

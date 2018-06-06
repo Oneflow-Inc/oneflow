@@ -1,14 +1,14 @@
-#include "oneflow/core/graph/reduce_add_compute_task_node.h"
+#include "oneflow/core/graph/reduce_local_add_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-void ReduceAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
+void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
 }
 
-void ReduceAddCompTaskNode::ConsumeAllRegsts() {
+void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     while (src_node->GetTaskType() != TaskType::kReduceScatter) {
@@ -20,7 +20,7 @@ void ReduceAddCompTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void ReduceAddCompTaskNode::BuildExecGphAndRegst() {
+void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   std::shared_ptr<Operator> reduce_add_op = this->logical_node()->SoleOp();
   node->mut_op() = reduce_add_op;

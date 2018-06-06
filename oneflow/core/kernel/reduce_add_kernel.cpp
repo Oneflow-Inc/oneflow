@@ -31,6 +31,7 @@ void ReduceAddKernel<device_type, T>::ForwardDataContent(
   }
 }
 
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceAddConf, ReduceAddKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kReduceGlobalAddConf, ReduceAddKernel,
+                           FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
