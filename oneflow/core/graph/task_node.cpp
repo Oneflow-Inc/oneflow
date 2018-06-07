@@ -124,29 +124,34 @@ void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_delay_regst_desc();
   dst_node->ConsumeRegst("in_delay",
-                         ProduceRegst("out_delay", 1, kMaxRegisterNum, regst_desc_type));
+                         ProduceRegst("out_delay", false, 1, kMaxRegisterNum, regst_desc_type));
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
-  return ProduceRegst(name, 1, kMaxRegisterNum);
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
+                                                  bool enable_mem_sharing) {
+  return ProduceRegst(name, enable_mem_sharing, 1, kMaxRegisterNum);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                                  int32_t min_register_num,
                                                   int32_t max_register_num) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_normal_regst_desc();
-  return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
+  return ProduceRegst(name, enable_mem_sharing, min_register_num, max_register_num,
+                      regst_desc_type);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                                  int32_t min_register_num,
                                                   int32_t max_register_num,
                                                   const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
+  regst->set_enable_mem_sharing(enable_mem_sharing);
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);

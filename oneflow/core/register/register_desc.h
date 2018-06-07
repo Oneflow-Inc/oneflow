@@ -45,6 +45,7 @@ class RegstDesc final {
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
+  void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
 
@@ -68,7 +69,6 @@ class RegstDesc final {
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
   bool enable_mem_sharing_;
-  int32_t mem_shared_id_;
 };
 
 }  // namespace oneflow
