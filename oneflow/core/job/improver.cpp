@@ -36,6 +36,7 @@ class MemSharedTaskNode final : public Node<MemSharedTaskNode, MemSharedTaskEdge
   ~MemSharedTaskNode() = default;
 
   const TaskProto* task_proto() const { return task_proto_; }
+  int64_t task_id() const { return task_proto_->task_id(); }
 
  private:
   const TaskProto* task_proto_;
@@ -49,6 +50,7 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
 
   void ComputeLifetimeSameStreamActorIds(const RegstDescProto* regst_desc,
                                          HashSet<int64_t>* lifetime_same_stream_actor_ids) const;
+  void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;
 
  private:
   void InitNodes();
@@ -56,7 +58,6 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
   void InitNode2Ancestor();
   bool IsAnyNodeReachableToAncestor(const HashSet<const MemSharedTaskNode*>& nodes,
                                     const MemSharedTaskNode* ancestor) const;
-
   const Plan* plan_;
   HashMap<int64_t, MemSharedTaskNode*> task_id2mem_shared_task_node_;
   HashMap<const MemSharedTaskNode*, HashSet<const MemSharedTaskNode*>> node2ancestor_;
@@ -133,11 +134,50 @@ void MemSharedTaskGraph::ComputeLifetimeSameStreamActorIds(
   int64_t global_work_stream_id =
       Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(regst_desc->producer_task_id());
   TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](const MemSharedTaskNode* node) {
-    int64_t task_id = node->task_proto()->task_id();
-    if (Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id) == global_work_stream_id) {
-      lifetime_same_stream_actor_ids->insert(task_id);
+    if (Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(node->task_id()) == global_work_stream_id) {
+      lifetime_same_stream_actor_ids->insert(node->task_id());
     }
   });
+}
+
+void MemSharedTaskGraph::AssertThereIsOnlyOneTopoOrder(
+    const HashSet<int64_t>& same_stream_node_ids) const {
+  auto ForEachInNode = [&](const MemSharedTaskNode* node,
+                           const std::function<void(const MemSharedTaskNode*)>& Handler) {
+    node->ForEachNodeOnInEdge([&](const MemSharedTaskNode* in_node) {
+      if (same_stream_node_ids.find(in_node->task_id()) != same_stream_node_ids.end()) {
+        Handler(in_node);
+      }
+    });
+  };
+  auto ForEachOutNode = [&](const MemSharedTaskNode* node,
+                            const std::function<void(const MemSharedTaskNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](const MemSharedTaskNode* out_node) {
+      if (same_stream_node_ids.find(out_node->task_id()) != same_stream_node_ids.end()) {
+        Handler(out_node);
+      }
+    });
+  };
+  HashMap<const MemSharedTaskNode*, int> node2depth;
+  std::list<const MemSharedTaskNode*> starts;
+  for (int64_t task_id : same_stream_node_ids) {
+    int in_num = 0;
+    const MemSharedTaskNode* node = task_id2mem_shared_task_node_.at(task_id);
+    ForEachInNode(node, [&](const MemSharedTaskNode* in_node) { ++in_num; });
+    if (in_num == 0) { starts.push_back(node); }
+  }
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](const MemSharedTaskNode* node) {
+    int in_nodes_max_depth = -1;
+    ForEachInNode(node, [&](const MemSharedTaskNode* in_node) {
+      in_nodes_max_depth = std::max(in_nodes_max_depth, node2depth.at(in_node));
+    });
+    node2depth[node] = in_nodes_max_depth + 1;
+  });
+  HashMap<int, size_t> depth2same_depth_node_num;
+  for (const auto& pair : node2depth) {
+    ++depth2same_depth_node_num[pair.second];
+    CHECK_EQ(depth2same_depth_node_num.at(pair.second), 1);
+  }
 }
 
 class RegstLifetimePosetNode;
@@ -372,6 +412,7 @@ void ForEachImprovedMemSharedId(const Plan& plan,
                                                HashSet<int64_t>* lifetime_same_stream_actor_ids) {
     CHECK(regst_desc->enable_mem_sharing());
     mem_shared_grph.ComputeLifetimeSameStreamActorIds(regst_desc, lifetime_same_stream_actor_ids);
+    mem_shared_grph.AssertThereIsOnlyOneTopoOrder(*lifetime_same_stream_actor_ids);
   };
   ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
     const auto& regst_descs_without_consumer = SelectRegstDescsWithoutConsumer(regst_descs);
