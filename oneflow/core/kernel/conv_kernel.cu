@@ -201,15 +201,14 @@ __device__ void InitSharedArrays(const int dim_num, const int im_d, const int im
   __syncthreads();
 }
 
-template<typename T, int dim_num>
+template<typename T, int dim_num, bool is_channel_first>
 __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, const int im_d,
                           const int im_h, const int im_w, const int kernel_d, const int kernel_h,
                           const int kernel_w, const int out_d, const int out_h, const int out_w,
                           const int stride_d, const int stride_h, const int stride_w,
                           const int dilation_rate_d, const int dilation_rate_h,
                           const int dilation_rate_w, const int padding_before_d,
-                          const int padding_before_h, const int padding_before_w, T* col_buf_dptr,
-                          bool is_channel_first) {
+                          const int padding_before_h, const int padding_before_w, T* col_buf_dptr) {
   __shared__ int shared_im[dim_num];
   __shared__ int shared_kernel[dim_num];
   __shared__ int shared_out[dim_num];
@@ -229,7 +228,7 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
   int im_index[dim_num];
   CUDA_1D_KERNEL_LOOP(index, n) {
     // total launch channel*od*oh*ow threads,
-    // each thread responsible for a whole kernel size copy
+    // each thread is responsible for a whole kernel size copy
     // calc kernel_/out_/channel_index
     channel_index = index / out_size;
     int col_offset = index % out_size;  // col_dim of col_buf: od*oh*ow
@@ -245,10 +244,10 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
       col_buf_offset *= shared_kernel[i];
       // col_buf_offset += kernel_index[i]; commented for kernel_index[] == 0
     }
-    /* if (is_channel_first == false) { */
-    /*   col_buf_offset *= channel; */
-    /*   col_buf_offset += channel_index; */
-    /* } */
+    if (is_channel_first == false) {
+      col_buf_offset *= channel;
+      col_buf_offset += channel_index;
+    }
     col_buf_offset *= out_size;
     col_buf_offset += col_offset;
 
@@ -273,10 +272,10 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
           im_offset *= shared_im[i];
           im_offset += im_index[i];
         }
-        /* if (is_channel_first == false) { */
-        /*   im_offset *= channel; */
-        /*   im_offset += channel_index; */
-        /* } */
+        if (is_channel_first == false) {
+          im_offset *= channel;
+          im_offset += channel_index;
+        }
         col_buf_dptr[col_buf_offset] = im_dptr[im_offset];
       } else {
         col_buf_dptr[col_buf_offset] = 0;
@@ -299,15 +298,14 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
   }
 }
 
-template<typename T, int dim_num>
+template<typename T, int dim_num, bool is_channel_first>
 __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel, const int im_d,
                           const int im_h, const int im_w, const int kernel_d, const int kernel_h,
                           const int kernel_w, const int out_d, const int out_h, const int out_w,
                           const int stride_d, const int stride_h, const int stride_w,
                           const int dilation_rate_d, const int dilation_rate_h,
                           const int dilation_rate_w, const int padding_before_d,
-                          const int padding_before_h, const int padding_before_w, T* im_diff_dptr,
-                          bool is_channel_first) {
+                          const int padding_before_h, const int padding_before_w, T* im_diff_dptr) {
   __shared__ int shared_im[dim_num];
   __shared__ int shared_kernel[dim_num];
   __shared__ int shared_out[dim_num];
@@ -413,15 +411,16 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
 
 }  // namespace
 
-#define IM2COL_KERNEL_CALL(kernel_func_name, dim_num, kernel_num, src_dptr, dst_dptr,              \
-                           is_channel_first)                                                       \
-  kernel_func_name<T, dim_num><<<BlocksNum4ThreadsNum(kernel_num), kCudaThreadsNumPerBlock, 0,     \
-                                 device_ctx->cuda_stream()>>>(                                     \
-      kernel_num, src_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),        \
-      weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),                 \
-      out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0],      \
-      dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1], padding_before[2], \
-      dst_dptr, is_channel_first)
+#define IM2COL_KERNEL_CALL(kernel_func_name, dim_num, is_channel_first, kernel_num, src_dptr,     \
+                           dst_dptr)                                                              \
+  kernel_func_name<T, dim_num, is_channel_first>                                                  \
+      <<<BlocksNum4ThreadsNum(kernel_num), kCudaThreadsNumPerBlock, 0,                            \
+         device_ctx->cuda_stream()>>>(                                                            \
+          kernel_num, src_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),   \
+          weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),            \
+          out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0], \
+          dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1],               \
+          padding_before[2], dst_dptr)
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
@@ -430,9 +429,9 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
   int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
   switch (dim_num) {
-    case 1: IM2COL_KERNEL_CALL(Im2ColGpu, 1, kernels, in_dptr, col_buf_dptr, true); break;
-    case 2: IM2COL_KERNEL_CALL(Im2ColGpu, 2, kernels, in_dptr, col_buf_dptr, true); break;
-    case 3: IM2COL_KERNEL_CALL(Im2ColGpu, 3, kernels, in_dptr, col_buf_dptr, true); break;
+    case 1: IM2COL_KERNEL_CALL(Im2ColGpu, 1, true, kernels, in_dptr, col_buf_dptr); break;
+    case 2: IM2COL_KERNEL_CALL(Im2ColGpu, 2, true, kernels, in_dptr, col_buf_dptr); break;
+    case 3: IM2COL_KERNEL_CALL(Im2ColGpu, 3, true, kernels, in_dptr, col_buf_dptr); break;
     default: UNIMPLEMENTED();
   }
 }
@@ -444,9 +443,9 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCIm2Col(
     const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
   int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
   switch (dim_num) {
-    case 1: IM2COL_KERNEL_CALL(Im2ColGpu, 1, kernels, in_dptr, col_buf_dptr, false); break;
-    case 2: IM2COL_KERNEL_CALL(Im2ColGpu, 2, kernels, in_dptr, col_buf_dptr, false); break;
-    case 3: IM2COL_KERNEL_CALL(Im2ColGpu, 3, kernels, in_dptr, col_buf_dptr, false); break;
+    case 1: IM2COL_KERNEL_CALL(Im2ColGpu, 1, false, kernels, in_dptr, col_buf_dptr); break;
+    case 2: IM2COL_KERNEL_CALL(Im2ColGpu, 2, false, kernels, in_dptr, col_buf_dptr); break;
+    case 3: IM2COL_KERNEL_CALL(Im2ColGpu, 3, false, kernels, in_dptr, col_buf_dptr); break;
     default: UNIMPLEMENTED();
   }
 }
@@ -458,9 +457,9 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
     const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
   switch (dim_num) {
-    case 1: IM2COL_KERNEL_CALL(Col2ImGpu, 1, im_size, col_buf_dptr, in_diff_dptr, true); break;
-    case 2: IM2COL_KERNEL_CALL(Col2ImGpu, 2, im_size, col_buf_dptr, in_diff_dptr, true); break;
-    case 3: IM2COL_KERNEL_CALL(Col2ImGpu, 3, im_size, col_buf_dptr, in_diff_dptr, true); break;
+    case 1: IM2COL_KERNEL_CALL(Col2ImGpu, 1, true, im_size, col_buf_dptr, in_diff_dptr); break;
+    case 2: IM2COL_KERNEL_CALL(Col2ImGpu, 2, true, im_size, col_buf_dptr, in_diff_dptr); break;
+    case 3: IM2COL_KERNEL_CALL(Col2ImGpu, 3, true, im_size, col_buf_dptr, in_diff_dptr); break;
     default: UNIMPLEMENTED();
   }
 }
@@ -472,9 +471,9 @@ void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCCol2Im(
     const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
   switch (dim_num) {
-    case 1: IM2COL_KERNEL_CALL(Col2ImGpu, 1, im_size, col_buf_dptr, in_diff_dptr, false); break;
-    case 2: IM2COL_KERNEL_CALL(Col2ImGpu, 2, im_size, col_buf_dptr, in_diff_dptr, false); break;
-    case 3: IM2COL_KERNEL_CALL(Col2ImGpu, 3, im_size, col_buf_dptr, in_diff_dptr, false); break;
+    case 1: IM2COL_KERNEL_CALL(Col2ImGpu, 1, false, im_size, col_buf_dptr, in_diff_dptr); break;
+    case 2: IM2COL_KERNEL_CALL(Col2ImGpu, 2, false, im_size, col_buf_dptr, in_diff_dptr); break;
+    case 3: IM2COL_KERNEL_CALL(Col2ImGpu, 3, false, im_size, col_buf_dptr, in_diff_dptr); break;
     default: UNIMPLEMENTED();
   }
 }
