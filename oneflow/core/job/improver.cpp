@@ -184,7 +184,7 @@ class RegstLifetimePosetGraph final
   void InitNodesAndEdges(const std::list<const RegstDescProto*>& regst_descs,
                          const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
                              ComputeLifetimeSameStreamActorIds);
-  void InitRegstDesc2IntersectedRegstDescs();
+  void InitRegstLifetimePosetNode2IntersectedNodes();
   bool LifetimeContain(const RegstLifetimePosetNode* long_lifetime_node,
                        const RegstLifetimePosetNode* short_lifetime_node) const;
   void ForEachSameColoredRegstDescIds(
@@ -200,7 +200,7 @@ RegstLifetimePosetGraph::RegstLifetimePosetGraph(
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
         ComputeLifetimeSameStreamActorIds) {
   InitNodesAndEdges(regst_descs, ComputeLifetimeSameStreamActorIds);
-  InitRegstDesc2IntersectedRegstDescs();
+  InitRegstLifetimePosetNode2IntersectedNodes();
 }
 
 void RegstLifetimePosetGraph::InitNodesAndEdges(
@@ -246,7 +246,7 @@ bool RegstLifetimePosetGraph::LifetimeContain(
   return true;
 }
 
-void RegstLifetimePosetGraph::InitRegstDesc2IntersectedRegstDescs() {
+void RegstLifetimePosetGraph::InitRegstLifetimePosetNode2IntersectedNodes() {
   HashMap<int64_t, HashSet<const RegstLifetimePosetNode*>> actor_id2node;
   ForEachNode([&](const RegstLifetimePosetNode* node) {
     for (int64_t actor_id : node->lifetime_same_stream_actor_ids()) {
@@ -266,7 +266,7 @@ void RegstLifetimePosetGraph::ForEachSameColoredRegstDescIds(
     const std::function<void(const std::list<int64_t>&)>& Handler) const {
   auto ForEachIntersected = [&](const RegstLifetimePosetNode* node,
                                 const std::function<void(const RegstLifetimePosetNode*)>& Handler) {
-    for (auto* intersected_node : regst_lifetime_node2intersected_nodes_.at(node)) {
+    for (const auto* intersected_node : regst_lifetime_node2intersected_nodes_.at(node)) {
       if (layer_nodes.find(intersected_node) != layer_nodes.end()) { Handler(intersected_node); }
     }
   };
@@ -295,22 +295,22 @@ void RegstLifetimePosetGraph::ForEachSameColoredRegstDescIds(
 
 void RegstLifetimePosetGraph::ForEachLayerwiseSameColoredRegstDescIds(
     const std::function<void(const std::list<int64_t>&)>& Handler) const {
-  HashSet<const RegstLifetimePosetNode*> handled_nodes;
+  HashSet<const RegstLifetimePosetNode*> remainder_nodes;
+  ForEachNode([&](const RegstLifetimePosetNode* node) { remainder_nodes.insert(node); });
   auto GetInNodesNum = [&](const RegstLifetimePosetNode* node) -> size_t {
     size_t num = 0;
     node->ForEachNodeOnInEdge([&](const RegstLifetimePosetNode* in_node) {
-      if (handled_nodes.find(in_node) == handled_nodes.end()) { ++num; }
+      if (remainder_nodes.find(in_node) != remainder_nodes.end()) { ++num; }
     });
     return num;
   };
-  while (true) {
+  while (!remainder_nodes.empty()) {
     HashSet<const RegstLifetimePosetNode*> cur_layer_nodes;
-    ForEachNode([&](const RegstLifetimePosetNode* node) {
+    for (const RegstLifetimePosetNode* node : remainder_nodes) {
       if (GetInNodesNum(node) == 0) { cur_layer_nodes.insert(node); }
-    });
-    if (cur_layer_nodes.empty()) { break; }
+    }
     ForEachSameColoredRegstDescIds(cur_layer_nodes, Handler);
-    handled_nodes.insert(cur_layer_nodes.begin(), cur_layer_nodes.end());
+    for (const auto* node : cur_layer_nodes) { remainder_nodes.erase(node); }
   }
 }
 
