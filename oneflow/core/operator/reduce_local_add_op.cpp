@@ -29,7 +29,6 @@ void ReduceLocalAddOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t in_num = op_conf().reduce_local_add_conf().in_num();
-  // TODO check in_num = device used in this computer
   CHECK_GE(in_num, 2);
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   FOR_RANGE(int32_t, i, 1, in_num) {

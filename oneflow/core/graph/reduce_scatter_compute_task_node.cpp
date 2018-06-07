@@ -4,29 +4,16 @@
 namespace oneflow {
 
 void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  // TODO: remove redundant code
-  int64_t min_parallel_id = std::numeric_limits<int64_t>::max();
+  min_out_parallel_id_ = std::numeric_limits<int64_t>::max();
   for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
-    while (dst_node->GetTaskType() != TaskType::kReduceLocalAdd
-           && dst_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
-      dst_node = dst_node->SoleOutEdge()->dst_node();
-    }
-    CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(dst_node);
-    min_parallel_id = std::min(min_parallel_id, reduce_add_node->parallel_id());
-  }
-  for (TaskEdge* edge : out_edges()) {
-    TaskNode* dst_node = edge->dst_node();
-    while (dst_node->GetTaskType() != TaskType::kReduceLocalAdd
-           && dst_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
-      dst_node = dst_node->SoleOutEdge()->dst_node();
-    }
-    CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(dst_node);
-    std::string out_regst_name =
-        "out_" + std::to_string(reduce_add_node->parallel_id() - min_parallel_id);
+    std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
+    CHECK_EQ(comp_task_nodes.size(), 1);
+    int64_t parallel_id = comp_task_nodes.front()->parallel_id();
+    min_out_parallel_id_ = std::min(min_out_parallel_id_, parallel_id);
+    std::string out_regst_name = "out_" + std::to_string(parallel_id);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name);
     edge->AddRegst(out_regst_name, out_regst);
-    if (this->parallel_id() == reduce_add_node->parallel_id()
+    if (this->parallel_id() == comp_task_nodes.front()->parallel_id()
         && device_type() == DeviceType::kGPU) {
       MemoryCase* mem_case = out_regst.get()->mut_mem_case();
       mem_case->Clear();
@@ -50,12 +37,13 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   OperatorConf reduce_scatter_op_conf;
   reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
   reduce_scatter_op_conf.set_device_type(this->device_type());
-  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(this->produced_regsts().size());
+  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(this->out_edges().size());
   std::shared_ptr<Operator> reduce_scatter_op = ConstructOp(reduce_scatter_op_conf);
   node->mut_op() = reduce_scatter_op;
   node->BindBnWithRegst(reduce_scatter_op->SoleIbn(), GetSoleConsumedRegst("in"));
   FOR_RANGE(size_t, i, 0, reduce_scatter_op->output_bns().size()) {
-    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
+    std::shared_ptr<RegstDesc> out_regst =
+        GetProducedRegst("out_" + std::to_string(i + min_out_parallel_id_));
     const std::string& obn = reduce_scatter_op->output_bns().Get(i);
     out_regst->AddLbi(reduce_scatter_op->BnInOp2Lbi(obn));
     node->BindBnWithRegst(obn, out_regst);

@@ -445,13 +445,11 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   // Reduce Scatter
-  // construct operator in task graph
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
-  // Reduce Local Add
-  // construct operator in task graph
   LogicalNode* pred_reduce_global_node = reduce_scatter_node;
   if (src_pd->sorted_machine_ids().size() > 1) {
+    // Reduce Local Add
     LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
     reduce_local_add_node->mut_parallel_desc() = src_pd;
     Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);

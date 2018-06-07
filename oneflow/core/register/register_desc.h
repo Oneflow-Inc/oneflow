@@ -38,7 +38,6 @@ class RegstDesc final {
   void CopyBlobDescWithoutAddLbi(const RegstDesc*);
   BlobDesc* AddLbi(const LogicalBlobId&);
   const BlobDesc* GetBlobDesc(const LogicalBlobId& lbi) const;
-  const BlobDesc* GetSoleBlobDesc() const;
   BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
   void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
   size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
