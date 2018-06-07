@@ -1,5 +1,4 @@
 #include "oneflow/core/control/ctrl_service.h"
-#include <grpc++/impl/codegen/client_unary_call.h>
 
 namespace oneflow {
 
@@ -11,23 +10,23 @@ const char* g_method_name[] = {
 
 const char* GetMethodName(CtrlMethod method) { return g_method_name[static_cast<int32_t>(method)]; }
 
+template<size_t method_index>
+const grpc::RpcMethod BuildOneRpcMethod(std::shared_ptr<grpc::ChannelInterface> channel) {
+  return grpc::RpcMethod(GetMethodName(static_cast<CtrlMethod>(method_index)),
+                         grpc::RpcMethod::NORMAL_RPC, channel);
+}
+
+template<size_t... method_indices>
+std::array<const grpc::RpcMethod, kCtrlMethodNum> BuildRpcMethods(
+    std::index_sequence<method_indices...>, std::shared_ptr<grpc::ChannelInterface> channel) {
+  return {BuildOneRpcMethod<method_indices>(channel)...};
+}
+
 }  // namespace
 
 CtrlService::Stub::Stub(std::shared_ptr<grpc::ChannelInterface> channel)
-    :
-#define INIT_RPC_METHOD_OBJ(method) \
-  rpcmethod_##method##_(GetMethodName(CtrlMethod::k##method), grpc::RpcMethod::NORMAL_RPC, channel),
-      OF_PP_FOR_EACH_TUPLE(INIT_RPC_METHOD_OBJ, CTRL_METHOD_SEQ) channel_(channel) {
-}
-
-#define DEFINE_STUB_METHOD(method)                                                                \
-  grpc::Status CtrlService::Stub::method(                                                         \
-      grpc::ClientContext* context, const method##Request& request, method##Response* response) { \
-    return grpc::BlockingUnaryCall(channel_.get(), rpcmethod_##method##_, context, request,       \
-                                   response);                                                     \
-  }
-
-OF_PP_FOR_EACH_TUPLE(DEFINE_STUB_METHOD, CTRL_METHOD_SEQ)
+    : rpcmethods_(BuildRpcMethods(std::make_index_sequence<kCtrlMethodNum>{}, channel)),
+      channel_(channel) {}
 
 std::unique_ptr<CtrlService::Stub> CtrlService::NewStub(const std::string& addr) {
   return std::make_unique<Stub>(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));

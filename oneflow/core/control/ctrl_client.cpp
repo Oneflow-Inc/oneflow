@@ -10,25 +10,24 @@ const int64_t sleep_seconds = 10;
 
 #define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
 
-#define DEFINE_CLIENT_CALL(method)                                 \
-  class method##ClientCall final {                                 \
-   public:                                                         \
-    OF_DISALLOW_COPY_AND_MOVE(method##ClientCall);                 \
-    method##ClientCall() = default;                                \
-    ~method##ClientCall() = default;                               \
-    method##Request* mut_request() { return &request_; }           \
-    const method##Response& response() const { return response_; } \
-    void operator()(CtrlService::Stub* stub) {                     \
-      grpc::ClientContext client_ctx;                              \
-      GRPC_CHECK(stub->method(&client_ctx, request_, &response_)); \
-    }                                                              \
-                                                                   \
-   private:                                                        \
-    method##Request request_;                                      \
-    method##Response response_;                                    \
-  };
+template<CtrlMethod ctrl_method>
+class ClientCall final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ClientCall);
+  ClientCall() = default;
+  ~ClientCall() = default;
 
-OF_PP_FOR_EACH_TUPLE(DEFINE_CLIENT_CALL, CTRL_METHOD_SEQ);
+  CtrlRequest<ctrl_method>* mut_request() { return &request_; }
+  const CtrlResponse<ctrl_method>& response() const { return response_; }
+  void operator()(CtrlService::Stub* stub) {
+    grpc::ClientContext client_ctx;
+    GRPC_CHECK(stub->CallMethod<ctrl_method>(&client_ctx, request_, &response_));
+  }
+
+ private:
+  CtrlRequest<ctrl_method> request_;
+  CtrlResponse<ctrl_method> response_;
+};
 
 }  // namespace
 
@@ -46,7 +45,7 @@ void CtrlClient::Barrier(const std::string& barrier_name) {
 }
 
 void CtrlClient::Barrier(const std::string& barrier_name, int32_t barrier_num) {
-  BarrierClientCall call;
+  ClientCall<CtrlMethod::kBarrier> call;
   call.mut_request()->set_name(barrier_name);
   call.mut_request()->set_num(barrier_num);
   call(GetMasterStub());
@@ -57,7 +56,7 @@ TryLockResult CtrlClient::TryLock(const std::string& name) {
     std::unique_lock<std::mutex> lck(done_names_mtx_);
     if (done_names_.find(name) != done_names_.end()) { return TryLockResult::kDone; }
   }
-  TryLockClientCall call;
+  ClientCall<CtrlMethod::kTryLock> call;
   call.mut_request()->set_name(name);
   call(GetResponsibleStub(name));
   if (call.response().result() == TryLockResult::kDone) {
@@ -68,19 +67,19 @@ TryLockResult CtrlClient::TryLock(const std::string& name) {
 }
 
 void CtrlClient::NotifyDone(const std::string& name) {
-  NotifyDoneClientCall call;
+  ClientCall<CtrlMethod::kNotifyDone> call;
   call.mut_request()->set_name(name);
   call(GetResponsibleStub(name));
 }
 
 void CtrlClient::WaitUntilDone(const std::string& name) {
-  WaitUntilDoneClientCall call;
+  ClientCall<CtrlMethod::kWaitUntilDone> call;
   call.mut_request()->set_name(name);
   call(GetResponsibleStub(name));
 }
 
 void CtrlClient::PushKV(const std::string& k, std::function<void(std::string*)> VSetter) {
-  PushKVClientCall call;
+  ClientCall<CtrlMethod::kPushKV> call;
   call.mut_request()->set_key(k);
   VSetter(call.mut_request()->mutable_val());
   call(GetResponsibleStub(k));
@@ -95,13 +94,13 @@ void CtrlClient::PushKV(const std::string& k, const PbMessage& msg) {
 }
 
 void CtrlClient::ClearKV(const std::string& k) {
-  ClearKVClientCall call;
+  ClientCall<CtrlMethod::kClearKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
 }
 
 void CtrlClient::PullKV(const std::string& k, std::function<void(const std::string&)> VGetter) {
-  PullKVClientCall call;
+  ClientCall<CtrlMethod::kPullKV> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
   VGetter(call.response().val());
@@ -116,20 +115,20 @@ void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
 }
 
 void CtrlClient::PushActEvent(const ActEvent& act_event) {
-  PushActEventClientCall call;
+  ClientCall<CtrlMethod::kPushActEvent> call;
   *(call.mut_request()->mutable_act_event()) = act_event;
   call(GetMasterStub());
 }
 
 void CtrlClient::Clear() {
-  ClearClientCall call;
+  ClientCall<CtrlMethod::kClear> call;
   call(GetThisStub());
   std::unique_lock<std::mutex> lck(done_names_mtx_);
   done_names_.clear();
 }
 
 int32_t CtrlClient::IncreaseCount(const std::string& k, int32_t v) {
-  IncreaseCountClientCall call;
+  ClientCall<CtrlMethod::kIncreaseCount> call;
   call.mut_request()->set_key(k);
   call.mut_request()->set_val(v);
   call(GetResponsibleStub(k));
@@ -137,13 +136,13 @@ int32_t CtrlClient::IncreaseCount(const std::string& k, int32_t v) {
 }
 
 void CtrlClient::EraseCount(const std::string& k) {
-  EraseCountClientCall call;
+  ClientCall<CtrlMethod::kEraseCount> call;
   call.mut_request()->set_key(k);
   call(GetResponsibleStub(k));
 }
 
 void CtrlClient::PushAvgActInterval(int64_t actor_id, double avg_act_interval) {
-  PushAvgActIntervalClientCall call;
+  ClientCall<CtrlMethod::kPushAvgActInterval> call;
   call.mut_request()->set_actor_id(actor_id);
   call.mut_request()->set_avg_act_interval(avg_act_interval);
   call(GetMasterStub());
@@ -169,7 +168,7 @@ CtrlClient::CtrlClient() {
       }
       for (size_t i = 0; i < stubs_.size(); ++i) {
         grpc::ClientContext client_ctx;
-        GRPC_CHECK(stubs_[i]->LoadServer(&client_ctx, request, &response))
+        GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
       }
       std::this_thread::sleep_for(std::chrono::seconds(sleep_second_dis(gen)));
@@ -183,7 +182,7 @@ void CtrlClient::LoadServer(const std::string& server_addr, CtrlService::Stub* s
     grpc::ClientContext client_ctx;
     LoadServerRequest request;
     LoadServerResponse response;
-    grpc::Status st = stub->LoadServer(&client_ctx, request, &response);
+    grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
       LOG(INFO) << "LoadServer " << server_addr << " Successful at " << retry_idx << " times";
       break;
