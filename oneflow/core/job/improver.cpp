@@ -47,8 +47,8 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
   explicit MemSharedTaskGraph(const Plan& plan);
   ~MemSharedTaskGraph() = default;
 
-  void ComputeLifetimeSameStreamTaskIds(const RegstDescProto* regst_desc,
-                                        HashSet<int64_t>* lifetime_same_stream_task_ids) const;
+  void ComputeLifetimeSameStreamActorIds(const RegstDescProto* regst_desc,
+                                         HashSet<int64_t>* lifetime_same_stream_actor_ids) const;
 
  private:
   void InitNodes();
@@ -108,8 +108,8 @@ bool MemSharedTaskGraph::IsAnyOneReachable(const HashSet<const MemSharedTaskNode
   return false;
 }
 
-void MemSharedTaskGraph::ComputeLifetimeSameStreamTaskIds(
-    const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_stream_task_ids) const {
+void MemSharedTaskGraph::ComputeLifetimeSameStreamActorIds(
+    const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_stream_actor_ids) const {
   const auto* producer = task_id2mem_shared_task_node_.at(regst_desc->producer_task_id());
   HashSet<const MemSharedTaskNode*> consumers;
   for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
@@ -134,7 +134,7 @@ void MemSharedTaskGraph::ComputeLifetimeSameStreamTaskIds(
   TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](const MemSharedTaskNode* node) {
     int64_t task_id = node->task_proto()->task_id();
     if (Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id) == global_work_stream_id) {
-      lifetime_same_stream_task_ids->insert(task_id);
+      lifetime_same_stream_actor_ids->insert(task_id);
     }
   });
 }
@@ -173,7 +173,7 @@ class RegstLifetimePosetGraph final
   OF_DISALLOW_COPY_AND_MOVE(RegstLifetimePosetGraph);
   RegstLifetimePosetGraph(const std::list<const RegstDescProto*>& regst_descs,
                           const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
-                              ComputeLifetimeSameStreamTaskIds);
+                              ComputeLifetimeSameStreamActorIds);
   ~RegstLifetimePosetGraph() = default;
 
   void ForEachLayerwiseSameColoredRegstDescIds(
@@ -182,7 +182,7 @@ class RegstLifetimePosetGraph final
  private:
   void InitNodesAndEdges(const std::list<const RegstDescProto*>& regst_descs,
                          const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
-                             ComputeLifetimeSameStreamTaskIds);
+                             ComputeLifetimeSameStreamActorIds);
   void InitRegstDesc2IntersectedRegstDescs();
   bool LifetimeContain(const RegstLifetimePosetNode* long_lifetime_node,
                        const RegstLifetimePosetNode* short_lifetime_node) const;
@@ -197,20 +197,20 @@ class RegstLifetimePosetGraph final
 RegstLifetimePosetGraph::RegstLifetimePosetGraph(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
-        ComputeLifetimeSameStreamTaskIds) {
-  InitNodesAndEdges(regst_descs, ComputeLifetimeSameStreamTaskIds);
+        ComputeLifetimeSameStreamActorIds) {
+  InitNodesAndEdges(regst_descs, ComputeLifetimeSameStreamActorIds);
   InitRegstDesc2IntersectedRegstDescs();
 }
 
 void RegstLifetimePosetGraph::InitNodesAndEdges(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
-        ComputeLifetimeSameStreamTaskIds) {
+        ComputeLifetimeSameStreamActorIds) {
   // init nodes
   std::list<RegstLifetimePosetNode*> nodes;
   for (const RegstDescProto* regst_desc : regst_descs) {
     auto lifetime_same_stream_actor_ids = std::make_unique<HashSet<int64_t>>();
-    ComputeLifetimeSameStreamTaskIds(regst_desc, lifetime_same_stream_actor_ids.get());
+    ComputeLifetimeSameStreamActorIds(regst_desc, lifetime_same_stream_actor_ids.get());
     auto* node = new RegstLifetimePosetNode(regst_desc, std::move(lifetime_same_stream_actor_ids));
     AddAllocatedNode(node);
     nodes.push_back(node);
@@ -365,10 +365,10 @@ std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
 void ForEachImprovedMemSharedId(const Plan& plan,
                                 const std::function<void(int64_t, int64_t)>& Handler) {
   MemSharedTaskGraph mem_shared_grph(plan);
-  auto ComputeLifetimeSameStreamTaskIds = [&](const RegstDescProto* regst_desc,
-                                              HashSet<int64_t>* lifetime_same_stream_task_ids) {
+  auto ComputeLifetimeSameStreamActorIds = [&](const RegstDescProto* regst_desc,
+                                               HashSet<int64_t>* lifetime_same_stream_actor_ids) {
     CHECK(regst_desc->enable_mem_sharing());
-    mem_shared_grph.ComputeLifetimeSameStreamTaskIds(regst_desc, lifetime_same_stream_task_ids);
+    mem_shared_grph.ComputeLifetimeSameStreamActorIds(regst_desc, lifetime_same_stream_actor_ids);
   };
   ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
     const auto& regst_descs_without_consumer = SelectRegstDescsWithoutConsumer(regst_descs);
@@ -378,9 +378,9 @@ void ForEachImprovedMemSharedId(const Plan& plan,
       for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
       ++mem_shared_id;
     };
-    RegstLifetimePosetGraph(regst_descs_without_consumer, ComputeLifetimeSameStreamTaskIds)
+    RegstLifetimePosetGraph(regst_descs_without_consumer, ComputeLifetimeSameStreamActorIds)
         .ForEachLayerwiseSameColoredRegstDescIds(AllocateMemSharedId);
-    RegstLifetimePosetGraph(sharable_with_consumer, ComputeLifetimeSameStreamTaskIds)
+    RegstLifetimePosetGraph(sharable_with_consumer, ComputeLifetimeSameStreamActorIds)
         .ForEachLayerwiseSameColoredRegstDescIds(AllocateMemSharedId);
   });
 }
