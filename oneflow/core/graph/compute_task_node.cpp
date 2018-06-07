@@ -24,6 +24,33 @@ const LogicalNode* LogicalNodeOnEdge(TaskEdge* edge, TaskNode* (TaskEdge::*GetNo
   return nullptr;
 }
 
+std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(TaskEdge* edge,
+                                                  TaskNode* (TaskEdge::*GetNode)() const,
+                                                  const HashSet<TaskEdge*>& (TaskNode::*GetEdges)()
+                                                      const) {
+  std::queue<TaskNode*> nodes;
+  HashSet<TaskNode*> visited_nodes;
+  nodes.push((edge->*GetNode)());
+  CHECK(visited_nodes.emplace((edge->*GetNode)()).second);
+  std::vector<CompTaskNode*> comp_task_nodes;
+  while (!nodes.empty()) {
+    TaskNode* node = nodes.front();
+    nodes.pop();
+    CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(node);
+    if (comp_task_node) {
+      comp_task_nodes.push_back(comp_task_node);
+    } else {
+      for (TaskEdge* out_edge : (node->*GetEdges)()) {
+        if (visited_nodes.find(out_edge->dst_node()) == visited_nodes.end()) {
+          nodes.push((out_edge->*GetNode)());
+          CHECK(visited_nodes.emplace((out_edge->*GetNode)()).second);
+        }
+      }
+    }
+  }
+  return comp_task_nodes;
+}
+
 }  // namespace
 
 void CompTaskNode::ToProto(TaskProto* task_proto) {
@@ -102,27 +129,11 @@ void CompTaskNode::ForEachSuccCompTaskNode(std::function<void(CompTaskNode*)> Ha
 }
 
 std::vector<CompTaskNode*> CompTaskNode::GetSuccCompTaskNodesOnEdge(TaskEdge* edge) {
-  std::queue<TaskNode*> nodes;
-  HashSet<TaskNode*> visited_nodes;
-  nodes.push(edge->dst_node());
-  CHECK(visited_nodes.emplace(edge->dst_node()).second);
-  std::vector<CompTaskNode*> succ_comp_task_nodes;
-  while (!nodes.empty()) {
-    TaskNode* node = nodes.front();
-    nodes.pop();
-    CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(node);
-    if (comp_task_node) {
-      succ_comp_task_nodes.push_back(comp_task_node);
-    } else {
-      for (TaskEdge* out_edge : node->out_edges()) {
-        if (visited_nodes.find(out_edge->dst_node()) == visited_nodes.end()) {
-          nodes.push(out_edge->dst_node());
-          CHECK(visited_nodes.emplace(out_edge->dst_node()).second);
-        }
-      }
-    }
-  }
-  return succ_comp_task_nodes;
+  return GetCompTaskNodesOnEdge(edge, &TaskEdge::dst_node, &TaskNode::out_edges);
+}
+
+std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* edge) {
+  return GetCompTaskNodesOnEdge(edge, &TaskEdge::src_node, &TaskNode::in_edges);
 }
 
 }  // namespace oneflow

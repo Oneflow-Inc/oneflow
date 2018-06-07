@@ -6,17 +6,15 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class ReduceAddKernel final : public KernelIf<device_type> {
+class ReduceGlobalAddKernel final : public KernelIf<device_type> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ReduceAddKernel);
-  ReduceAddKernel() = default;
-  ~ReduceAddKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAddKernel);
+  ReduceGlobalAddKernel() = default;
+  ~ReduceGlobalAddKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  int32_t parallel_id_;
 };
 
 }  // namespace oneflow

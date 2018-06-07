@@ -143,9 +143,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
       }
     }
   }
-  for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-    LOG(INFO) << dst_comp_task->in_edges().size();
-  }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
@@ -170,9 +167,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
         if (splitter.At(splitter_idx).end() == dst_comp_task->parallel_ctx()->parallel_id()) {
           ++splitter_idx;
         }
-        LOG(INFO) << "connect "
-                  << src_nodes_in_same_machine[splitter_idx]->parallel_ctx()->parallel_id()
-                  << " to " << dst_comp_task->parallel_ctx()->parallel_id();
         ConnectWithCopyCommNetIfNeed(src_nodes_in_same_machine[splitter_idx], dst_comp_task);
       }
       CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());

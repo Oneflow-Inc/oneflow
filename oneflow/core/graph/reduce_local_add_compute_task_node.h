@@ -21,6 +21,7 @@ class ReduceLocalAddCompTaskNode final : public CompTaskNode {
   void BuildExecGphAndRegst() override;
   void InitProducedRegstMemCase(MemoryCase*) override;
 
+  int64_t min_in_parallel_id_;
   int64_t min_out_parallel_id_;
 };
 

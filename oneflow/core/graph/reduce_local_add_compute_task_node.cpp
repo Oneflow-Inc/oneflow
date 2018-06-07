@@ -29,9 +29,14 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
   int32_t in_regst_idx = 0;
+  min_in_parallel_id_ = std::numeric_limits<int64_t>::max();
   for (TaskEdge* edge : in_edges()) {
     ConsumeRegst("in_" + std::to_string(in_regst_idx), edge->GetSoleRegst());
     ++in_regst_idx;
+    std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
+    CHECK_EQ(pred_comp_task_nodes.size(), 1);
+    min_in_parallel_id_ =
+        std::min(min_in_parallel_id_, pred_comp_task_nodes.front()->parallel_ctx()->parallel_id());
   }
 }
 
@@ -48,7 +53,8 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   ReduceLocalAddOpConf* mut_local_add_conf = reduce_local_add_conf.mutable_reduce_local_add_conf();
   mut_local_add_conf->set_in_num(consumed_regsts().size());
   mut_local_add_conf->set_out_num(out_edges().size());
-  mut_local_add_conf->set_first_parallel_id(min_out_parallel_id_);
+  mut_local_add_conf->set_min_in_parallel_id(min_in_parallel_id_);
+  mut_local_add_conf->set_min_out_parallel_id(min_out_parallel_id_);
   TaskNode* pred_task_node = (*in_edges().begin())->src_node();
   while (pred_task_node->GetTaskType() != TaskType::kReduceScatter) {
     pred_task_node = pred_task_node->SoleInEdge()->src_node();

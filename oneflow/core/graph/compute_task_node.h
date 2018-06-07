@@ -36,6 +36,7 @@ class CompTaskNode : public TaskNode {
                                      const std::string& b121_name);
   void ForEachSuccCompTaskNode(std::function<void(CompTaskNode*)> Handler);
   std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge);
+  std::vector<CompTaskNode*> GetPredCompTaskNodesOnEdge(TaskEdge* edge);
 
  private:
   ParallelContext parallel_ctx_;

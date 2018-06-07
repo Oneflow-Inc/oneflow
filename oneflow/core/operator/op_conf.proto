@@ -542,8 +542,9 @@ message ReduceScatterOpConf {
 message ReduceLocalAddOpConf {
   required int32 in_num = 1;
   required int32 out_num = 2;
-  required int32 first_parallel_id = 3;
-  required int64 model_elem_cnt = 4; 
+  required int32 min_in_parallel_id = 3;
+  required int32 min_out_parallel_id = 4;
+  required int64 model_elem_cnt = 5; 
 };
 
 message ReduceGlobalAddOpConf {
