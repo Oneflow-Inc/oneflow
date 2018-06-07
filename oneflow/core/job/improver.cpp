@@ -451,8 +451,8 @@ uint64_t CalcMemoryConsumed(
   return mem_consuming;
 }
 
-void InitRegstDescId2RegstDesc(Plan* plan,
-                               HashMap<int64_t, RegstDescProto*>* regst_desc_id2regst_desc) {
+std::shared_ptr<HashMap<int64_t, RegstDescProto*>> MakeRegstDescId2RegstDesc(Plan* plan) {
+  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task = plan->mutable_task(i);
     for (auto& pair : *task->mutable_produced_regst_desc()) {
@@ -460,23 +460,20 @@ void InitRegstDescId2RegstDesc(Plan* plan,
       regst_desc_id2regst_desc->insert({regst_desc_id, &pair.second});
     }
   }
+  return regst_desc_id2regst_desc;
 }
 
 std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
-  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
-  InitRegstDescId2RegstDesc(plan, regst_desc_id2regst_desc.get());
+  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, uint64_t num) {
-    RegstDescProto* regst_desc = regst_desc_id2regst_desc->at(regst_desc_id);
-    regst_desc->set_register_num(num);
+    regst_desc_id2regst_desc->at(regst_desc_id)->set_register_num(num);
   };
 }
 
 std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
-  auto regst_desc_id2regst_desc = std::make_shared<HashMap<int64_t, RegstDescProto*>>();
-  InitRegstDescId2RegstDesc(plan, regst_desc_id2regst_desc.get());
+  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
-    RegstDescProto* regst_desc = regst_desc_id2regst_desc->at(regst_desc_id);
-    regst_desc->set_mem_shared_id(mem_shared_id);
+    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
   };
 }
 
