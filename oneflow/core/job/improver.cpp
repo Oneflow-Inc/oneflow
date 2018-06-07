@@ -223,10 +223,12 @@ void RegstLifetimePosetGraph::InitNodesAndEdges(
   }
   for (RegstLifetimePosetNode* src : nodes) {
     for (RegstLifetimePosetNode* dst : nodes) {
-      if (src == dst) { break; }
-      if (LifetimeContain(dst, src)
-          && (!LifetimeContain(src, dst) || node2size.at(src) > node2size.at(dst))) {
-        Connect(src, NewEdge(), dst);
+      if (src == dst) { return; }
+      if (LifetimeContain(dst, src)) {
+        if (!LifetimeContain(src, dst) || node2size.at(src) > node2size.at(dst)
+            || (node2size.at(src) == node2size.at(dst) && src < dst)) {
+          Connect(src, NewEdge(), dst);
+        }
       }
     }
   }
