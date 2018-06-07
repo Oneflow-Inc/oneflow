@@ -146,6 +146,8 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
                                          bias_diff_blob->mut_dptr<T>()));
 }
 
+namespace {
+
 __device__ void InitSharedArrays(const int im_d, const int im_h, const int im_w, const int kernel_d,
                                  const int kernel_h, const int kernel_w, const int out_d,
                                  const int out_h, const int out_w, const int stride_d,
@@ -363,6 +365,8 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
     im_diff_dptr[index] = val;
   }
 }
+
+}  // namespace
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
