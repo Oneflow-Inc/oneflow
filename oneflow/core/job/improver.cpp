@@ -686,7 +686,9 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_filepath) {
+Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+                       const std::string& act_event_filepath) {
+  amd_ = amd;
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
     if (task_proto.task_type() == TaskType::kRecordLoad) {
@@ -704,6 +706,12 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
   ForEachImprovedMemSharedId(mem_unlimited_plan, MakeSetterSetPlanMemSharedId(&mem_shared_plan));
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, MakeSetterSetPlanRegstNum(&plan));
+  return plan;
+}
+
+Plan Improver::ImproveMemSharedIdOnly(const Plan& naive_plan) const {
+  Plan plan(naive_plan);
+  ForEachImprovedMemSharedId(naive_plan, MakeSetterSetPlanMemSharedId(&plan));
   return plan;
 }
 

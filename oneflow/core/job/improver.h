@@ -12,12 +12,12 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
-  Improver() = delete;
+  Improver() = default;
   ~Improver() = default;
 
-  explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
-
-  Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
+  Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+               const std::string& act_event_filepath);
+  Plan ImproveMemSharedIdOnly(const Plan& naive_plan) const;
 
  private:
   void ForEachImprovedRegstNum(const ActGraph& graph, const Plan& plan, bool is_memory_limited,
