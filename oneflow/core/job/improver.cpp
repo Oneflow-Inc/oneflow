@@ -41,7 +41,7 @@ class MemSharedTaskNode final : public Node<MemSharedTaskNode, MemSharedTaskEdge
   const TaskProto* task_proto_;
 };
 
-class MemSharedTaskGraph final : public Graph<MemSharedTaskNode, MemSharedTaskEdge> {
+class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemSharedTaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemSharedTaskGraph);
   explicit MemSharedTaskGraph(const Plan& plan);
@@ -54,7 +54,7 @@ class MemSharedTaskGraph final : public Graph<MemSharedTaskNode, MemSharedTaskEd
   void InitNodes();
   void InitEdges();
   void InitNode2Ancestor();
-  bool IsAnyOneReachable(const HashSet<MemSharedTaskNode*>& nodes,
+  bool IsAnyOneReachable(const HashSet<const MemSharedTaskNode*>& nodes,
                          const MemSharedTaskNode* ancestor) const;
 
   const Plan* plan_;
@@ -70,7 +70,7 @@ MemSharedTaskGraph::MemSharedTaskGraph(const Plan& plan) : plan_(&plan) {
 
 void MemSharedTaskGraph::InitNodes() {
   for (const auto& task : plan_->task()) {
-    auto* mem_shared_task_node = new MemSharedTaskNode(task);
+    MemSharedTaskNode* mem_shared_task_node = new MemSharedTaskNode(task);
     task_id2mem_shared_task_node_.insert({task.task_id(), mem_shared_task_node});
     AddAllocatedNode(mem_shared_task_node);
   }
@@ -92,15 +92,15 @@ void MemSharedTaskGraph::InitEdges() {
 }
 
 void MemSharedTaskGraph::InitNode2Ancestor() {
-  TopoForEachNode([&](MemSharedTaskNode* node) {
-    node->ForEachNodeOnInEdge([&](MemSharedTaskNode* prev) {
+  TopoForEachNode([&](const MemSharedTaskNode* node) {
+    node->ForEachNodeOnInEdge([&](const MemSharedTaskNode* prev) {
       node2ancestor_[node].insert(prev);
       node2ancestor_[node].insert(node2ancestor_[prev].begin(), node2ancestor_[prev].end());
     });
   });
 }
 
-bool MemSharedTaskGraph::IsAnyOneReachable(const HashSet<MemSharedTaskNode*>& nodes,
+bool MemSharedTaskGraph::IsAnyOneReachable(const HashSet<const MemSharedTaskNode*>& nodes,
                                            const MemSharedTaskNode* ancestor) const {
   for (const MemSharedTaskNode* node : nodes) {
     if (node2ancestor_.at(node).find(ancestor) != node2ancestor_.at(node).end()) { return true; }
@@ -110,20 +110,20 @@ bool MemSharedTaskGraph::IsAnyOneReachable(const HashSet<MemSharedTaskNode*>& no
 
 void MemSharedTaskGraph::ComputeLifetimeSameStreamTaskIds(
     const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_stream_task_ids) const {
-  MemSharedTaskNode* producer = task_id2mem_shared_task_node_.at(regst_desc->producer_task_id());
-  HashSet<MemSharedTaskNode*> consumers;
+  const auto* producer = task_id2mem_shared_task_node_.at(regst_desc->producer_task_id());
+  HashSet<const MemSharedTaskNode*> consumers;
   for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
     consumers.insert(task_id2mem_shared_task_node_.at(consumer_task_id));
   }
-  auto ForEachInNode = [&](MemSharedTaskNode* node,
-                           const std::function<void(MemSharedTaskNode*)>& Handler) {
-    node->ForEachNodeOnInEdge([&](MemSharedTaskNode* prev) {
+  auto ForEachInNode = [&](const MemSharedTaskNode* node,
+                           const std::function<void(const MemSharedTaskNode*)>& Handler) {
+    node->ForEachNodeOnInEdge([&](const MemSharedTaskNode* prev) {
       if (prev == producer || IsAnyOneReachable({prev}, producer)) { Handler(prev); }
     });
   };
-  auto ForEachOutNode = [&](MemSharedTaskNode* node,
-                            const std::function<void(MemSharedTaskNode*)>& Handler) {
-    node->ForEachNodeOnOutEdge([&](MemSharedTaskNode* next) {
+  auto ForEachOutNode = [&](const MemSharedTaskNode* node,
+                            const std::function<void(const MemSharedTaskNode*)>& Handler) {
+    node->ForEachNodeOnOutEdge([&](const MemSharedTaskNode* next) {
       if (consumers.find(next) != consumers.end() || IsAnyOneReachable(consumers, next)) {
         Handler(next);
       }
@@ -131,7 +131,7 @@ void MemSharedTaskGraph::ComputeLifetimeSameStreamTaskIds(
   };
   int64_t global_work_stream_id =
       Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(regst_desc->producer_task_id());
-  TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](MemSharedTaskNode* node) {
+  TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](const MemSharedTaskNode* node) {
     int64_t task_id = node->task_proto()->task_id();
     if (Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id) == global_work_stream_id) {
       lifetime_same_stream_task_ids->insert(task_id);
@@ -167,7 +167,8 @@ class RegstLifetimePosetNode final : public Node<RegstLifetimePosetNode, RegstLi
   std::unique_ptr<HashSet<int64_t>> lifetime_same_stream_actor_ids_;
 };
 
-class RegstLifetimePosetGraph final : public Graph<RegstLifetimePosetNode, RegstLifetimePosetEdge> {
+class RegstLifetimePosetGraph final
+    : public Graph<const RegstLifetimePosetNode, RegstLifetimePosetEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstLifetimePosetGraph);
   RegstLifetimePosetGraph(const std::list<const RegstDescProto*>& regst_descs,
@@ -179,18 +180,17 @@ class RegstLifetimePosetGraph final : public Graph<RegstLifetimePosetNode, Regst
       const std::function<void(const std::list<int64_t>&)>&) const;
 
  private:
-  void InitNodes(const std::list<const RegstDescProto*>& regst_descs,
-                 const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
-                     ComputeLifetimeSameStreamTaskIds);
-  void InitEdges();
+  void InitNodesAndEdges(const std::list<const RegstDescProto*>& regst_descs,
+                         const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
+                             ComputeLifetimeSameStreamTaskIds);
   void InitRegstDesc2IntersectedRegstDescs();
   bool LifetimeContain(const RegstLifetimePosetNode* long_lifetime_node,
                        const RegstLifetimePosetNode* short_lifetime_node) const;
   void ForEachSameColoredRegstDescIds(
-      const HashSet<RegstLifetimePosetNode*>& layer_nodes,
+      const HashSet<const RegstLifetimePosetNode*>& layer_nodes,
       const std::function<void(const std::list<int64_t>&)>& Handler) const;
 
-  HashMap<RegstLifetimePosetNode*, HashSet<RegstLifetimePosetNode*>>
+  HashMap<const RegstLifetimePosetNode*, HashSet<const RegstLifetimePosetNode*>>
       regst_lifetime_node2intersected_nodes_;
 };
 
@@ -198,20 +198,36 @@ RegstLifetimePosetGraph::RegstLifetimePosetGraph(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
         ComputeLifetimeSameStreamTaskIds) {
-  InitNodes(regst_descs, ComputeLifetimeSameStreamTaskIds);
-  InitEdges();
+  InitNodesAndEdges(regst_descs, ComputeLifetimeSameStreamTaskIds);
   InitRegstDesc2IntersectedRegstDescs();
 }
 
-void RegstLifetimePosetGraph::InitNodes(
+void RegstLifetimePosetGraph::InitNodesAndEdges(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*, HashSet<int64_t>*)>&
         ComputeLifetimeSameStreamTaskIds) {
+  // init nodes
+  std::list<RegstLifetimePosetNode*> nodes;
   for (const RegstDescProto* regst_desc : regst_descs) {
     auto lifetime_same_stream_actor_ids = std::make_unique<HashSet<int64_t>>();
     ComputeLifetimeSameStreamTaskIds(regst_desc, lifetime_same_stream_actor_ids.get());
     auto* node = new RegstLifetimePosetNode(regst_desc, std::move(lifetime_same_stream_actor_ids));
     AddAllocatedNode(node);
+    nodes.push_back(node);
+  }
+  // init edges
+  HashMap<const RegstLifetimePosetNode*, size_t> node2size;
+  for (const auto* node : nodes) {
+    node2size[node] = RtRegstDesc(node->regst_desc()).packed_blob_desc()->TotalByteSize();
+  }
+  for (RegstLifetimePosetNode* src : nodes) {
+    for (RegstLifetimePosetNode* dst : nodes) {
+      if (src == dst) { break; }
+      if (LifetimeContain(dst, src)
+          && (!LifetimeContain(src, dst) || node2size.at(src) > node2size.at(dst))) {
+        Connect(src, NewEdge(), dst);
+      }
+    }
   }
 }
 
@@ -227,31 +243,15 @@ bool RegstLifetimePosetGraph::LifetimeContain(
   return true;
 }
 
-void RegstLifetimePosetGraph::InitEdges() {
-  HashMap<const RegstLifetimePosetNode*, size_t> node2size;
-  ForEachNode([&](RegstLifetimePosetNode* node) {
-    node2size[node] = RtRegstDesc(node->regst_desc()).packed_blob_desc()->TotalByteSize();
-  });
-  ForEachNode([&](RegstLifetimePosetNode* src) {
-    ForEachNode([&](RegstLifetimePosetNode* dst) {
-      if (src == dst) { return; }
-      if (LifetimeContain(dst, src)
-          && (!LifetimeContain(src, dst) || node2size.at(src) > node2size.at(dst))) {
-        Connect(src, NewEdge(), dst);
-      }
-    });
-  });
-}
-
 void RegstLifetimePosetGraph::InitRegstDesc2IntersectedRegstDescs() {
-  HashMap<int64_t, HashSet<RegstLifetimePosetNode*>> actor_id2node;
-  ForEachNode([&](RegstLifetimePosetNode* node) {
+  HashMap<int64_t, HashSet<const RegstLifetimePosetNode*>> actor_id2node;
+  ForEachNode([&](const RegstLifetimePosetNode* node) {
     for (int64_t actor_id : node->lifetime_same_stream_actor_ids()) {
       actor_id2node[actor_id].insert(node);
     }
   });
   for (const auto& pair : actor_id2node) {
-    for (RegstLifetimePosetNode* node : pair.second) {
+    for (const RegstLifetimePosetNode* node : pair.second) {
       regst_lifetime_node2intersected_nodes_[node].insert(pair.second.begin(), pair.second.end());
     }
   }
@@ -259,25 +259,25 @@ void RegstLifetimePosetGraph::InitRegstDesc2IntersectedRegstDescs() {
 }
 
 void RegstLifetimePosetGraph::ForEachSameColoredRegstDescIds(
-    const HashSet<RegstLifetimePosetNode*>& layer_nodes,
+    const HashSet<const RegstLifetimePosetNode*>& layer_nodes,
     const std::function<void(const std::list<int64_t>&)>& Handler) const {
-  auto ForEachIntersected = [&](RegstLifetimePosetNode* node,
-                                const std::function<void(RegstLifetimePosetNode*)>& Handler) {
+  auto ForEachIntersected = [&](const RegstLifetimePosetNode* node,
+                                const std::function<void(const RegstLifetimePosetNode*)>& Handler) {
     for (auto* intersected_node : regst_lifetime_node2intersected_nodes_.at(node)) {
       if (layer_nodes.find(intersected_node) != layer_nodes.end()) { Handler(intersected_node); }
     }
   };
-  HashMap<RegstLifetimePosetNode*, std::set<int32_t>> node2excluded_color_ids;
-  HashMap<RegstLifetimePosetNode*, int32_t> node2color_id;
-  for (RegstLifetimePosetNode* start : layer_nodes) {
+  HashMap<const RegstLifetimePosetNode*, std::set<int32_t>> node2excluded_color_ids;
+  HashMap<const RegstLifetimePosetNode*, int32_t> node2color_id;
+  for (const RegstLifetimePosetNode* start : layer_nodes) {
     if (node2color_id.find(start) != node2color_id.end()) { continue; }
-    BfsForEachNode({start}, ForEachIntersected, [&](RegstLifetimePosetNode* node) {
+    BfsForEachNode({start}, ForEachIntersected, [&](const RegstLifetimePosetNode* node) {
       if (node2color_id.find(node) != node2color_id.end()) { return; }
       int32_t color_id = 0;
       const auto& excluded_color_ids = node2excluded_color_ids.at(node);
       for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
       node2color_id[node] = color_id;
-      ForEachIntersected(node, [&](RegstLifetimePosetNode* intersected) {
+      ForEachIntersected(node, [&](const RegstLifetimePosetNode* intersected) {
         if (node2color_id.find(intersected) != node2color_id.end()) { return; }
         node2excluded_color_ids[intersected].insert(color_id);
       });
@@ -301,8 +301,8 @@ void RegstLifetimePosetGraph::ForEachLayerwiseSameColoredRegstDescIds(
     return num;
   };
   while (true) {
-    HashSet<RegstLifetimePosetNode*> cur_layer_nodes;
-    ForEachNode([&](RegstLifetimePosetNode* node) {
+    HashSet<const RegstLifetimePosetNode*> cur_layer_nodes;
+    ForEachNode([&](const RegstLifetimePosetNode* node) {
       if (GetInNodesNum(node) == 0) { cur_layer_nodes.insert(node); }
     });
     if (cur_layer_nodes.empty()) { break; }
