@@ -26,11 +26,11 @@ namespace oneflow {
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
     return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
-  }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
+  } else if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
     return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
+  } else {
+    return false;
   }
-  return false;
 }
 
 RegstMgr::RegstMgr(const Plan& plan) {
@@ -44,14 +44,9 @@ RegstMgr::RegstMgr(const Plan& plan) {
                 .emplace(regst_desc_proto.regst_desc_id(),
                          std::make_unique<const RtRegstDesc>(regst_desc_proto))
                 .second);
-      const MemoryCase& mem_case = regst_desc_proto.mem_case();
-      if (mem_case2mem_size.find(mem_case) == mem_case2mem_size.end()) {
-        mem_case2mem_size.emplace(mem_case, 0);
-      }
-      mem_case2mem_size[mem_case] += (regst_desc_id2rt_regst_desc_[regst_desc_proto.regst_desc_id()]
-                                          ->packed_blob_desc()
-                                          ->TotalByteSize()
-                                      * regst_desc_proto.register_num());
+      mem_case2mem_size[regst_desc_proto.mem_case()] +=
+          regst_desc_id2rt_regst_desc_.at(regst_desc_proto.regst_desc_id())
+              ->TotalByteSize4AllRegst();
     }
   }
   for (const auto& pair : mem_case2mem_size) {
@@ -62,12 +57,10 @@ RegstMgr::RegstMgr(const Plan& plan) {
     deleters_.push_back(std::get<1>(allocation_result));
   }
   for (const auto& pair : regst_desc_id2rt_regst_desc_) {
-    const int64_t& regst_desc_id = pair.first;
     const RtRegstDesc* rt_regst_desc = pair.second.get();
     const MemoryCase& mem_case = rt_regst_desc->mem_case();
-    CHECK(regst_desc_id2mem_ptr_.emplace(regst_desc_id, mem_case2mem_ptr[mem_case]).second);
-    mem_case2mem_ptr[mem_case] +=
-        (rt_regst_desc->packed_blob_desc()->TotalByteSize() * rt_regst_desc->register_num());
+    CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
+    mem_case2mem_ptr.at(mem_case) += rt_regst_desc->TotalByteSize4AllRegst();
   }
 }
 
@@ -79,8 +72,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
                          std::function<void(Regst*)> OneRegstDone) {
   const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
   const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
-  const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_[regst_desc_id].get();
-  char* mem_ptr = regst_desc_id2mem_ptr_[regst_desc_id];
+  const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
+  char* mem_ptr = regst_desc_id2mem_ptr_.at(regst_desc_id);
   std::vector<LogicalBlobId> lbis;
   if (regst_desc_type.has_normal_regst_desc()) {
     for (const LbiBlobDescPair& pair : regst_desc_type.normal_regst_desc().lbi2blob_desc()) {
