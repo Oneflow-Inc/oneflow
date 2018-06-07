@@ -430,7 +430,7 @@ uint64_t CalcMemoryConsumed(
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     double ii) {
   uint64_t mem_consuming = 0;
-  HashMap<int64_t, std::list<uint64_t>> mem_shared_id2regst_desc_mem_bytes;
+  HashMap<int64_t, uint64_t> mem_shared_id2max_regst_desc_mem_bytes;
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
@@ -440,14 +440,11 @@ uint64_t CalcMemoryConsumed(
     } else {
       CHECK(!regst_desc->enable_mem_sharing());
       CHECK_EQ(regst_num, 1);
-      mem_shared_id2regst_desc_mem_bytes[regst_desc->mem_shared_id()].push_back(total_byte_size);
+      auto& max_bytes = mem_shared_id2max_regst_desc_mem_bytes[regst_desc->mem_shared_id()];
+      max_bytes = std::max(max_bytes, total_byte_size);
     }
   }
-  for (const auto& pair : mem_shared_id2regst_desc_mem_bytes) {
-    uint64_t share_mem_size = 0;
-    for (uint64_t bytes : pair.second) { share_mem_size = std::max(share_mem_size, bytes); }
-    mem_consuming += share_mem_size;
-  }
+  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) { mem_consuming += pair.second; }
   return mem_consuming;
 }
 
