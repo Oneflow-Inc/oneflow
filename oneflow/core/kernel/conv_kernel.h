@@ -58,16 +58,18 @@ class ConvKernelIf : public KernelIfWithActivation<device_type, T>,
 };
 
 template<typename T>
-using Im2ColFunc = void (*)(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                            const Shape& weight_shape, const Shape& out_shape,
-                            const int32_t* strides, const int32_t* dilation_rate,
-                            const int32_t* padding_before, T* col_buf);
+using Im2ColFunc = void (*)(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                            const Shape& in_shape, const Shape& weight_shape,
+                            const Shape& out_shape, const int32_t* strides,
+                            const int32_t* dilation_rate, const int32_t* padding_before,
+                            T* col_buf);
 
 template<typename T>
-using Col2ImFunc = void (*)(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                            const Shape& weight_shape, const Shape& out_shape,
-                            const int32_t* strides, const int32_t* dilation_rate,
-                            const int32_t* padding_before, T* in_diff_ptr);
+using Col2ImFunc = void (*)(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                            const Shape& in_shape, const Shape& weight_shape,
+                            const Shape& out_shape, const int32_t* strides,
+                            const int32_t* dilation_rate, const int32_t* padding_before,
+                            T* in_diff_ptr);
 
 template<typename T>
 using GemmFunc = void (*)(DeviceCtx* ctx, enum CBLAS_TRANSPOSE, enum CBLAS_TRANSPOSE, const int m,
@@ -238,23 +240,25 @@ class ConvKernelUtil;
 template<typename T>
 struct ConvKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+  static void NCDHWIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
 
-  static void NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+  static void NDHWCIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
 
-  static void NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before,
-                          T* in_diff_ptr);
+  static void NCDHWCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 
-  static void NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before,
-                          T* in_diff_ptr);
+  static void NDHWCCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 
  private:
   static void DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
@@ -267,23 +271,25 @@ struct ConvKernelUtil<DeviceType::kCPU, T> final {
 template<typename T>
 struct ConvKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+  static void NCDHWIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
 
-  static void NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+  static void NDHWCIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
 
-  static void NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before,
-                          T* in_diff_ptr);
+  static void NCDHWCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 
-  static void NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before,
-                          T* in_diff_ptr);
+  static void NDHWCCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 
  private:
 };

@@ -148,38 +148,60 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
 
 namespace {
 
-__device__ void InitSharedArrays(const int im_d, const int im_h, const int im_w, const int kernel_d,
-                                 const int kernel_h, const int kernel_w, const int out_d,
-                                 const int out_h, const int out_w, const int stride_d,
-                                 const int stride_h, const int stride_w, const int dilation_d,
-                                 const int dilation_h, const int dilation_w, const int pad_d,
-                                 const int pad_h, const int pad_w, int* shared_im,
+__device__ void InitSharedArrays(const int dim_num, const int im_d, const int im_h, const int im_w,
+                                 const int kernel_d, const int kernel_h, const int kernel_w,
+                                 const int out_d, const int out_h, const int out_w,
+                                 const int stride_d, const int stride_h, const int stride_w,
+                                 const int dilation_d, const int dilation_h, const int dilation_w,
+                                 const int pad_d, const int pad_h, const int pad_w, int* shared_im,
                                  int* shared_kernel, int* shared_out, int* shared_stride,
                                  int* shared_dilation, int* shared_pad) {
   if (threadIdx.x == 0) {
-    shared_im[0] = im_d;
-    shared_im[1] = im_h;
-    shared_im[2] = im_w;
-    shared_kernel[0] = kernel_d;
-    shared_kernel[1] = kernel_h;
-    shared_kernel[2] = kernel_w;
-    shared_out[0] = out_d;
-    shared_out[1] = out_h;
-    shared_out[2] = out_w;
-    shared_stride[0] = stride_d;
-    shared_stride[1] = stride_h;
-    shared_stride[2] = stride_w;
-    shared_dilation[0] = dilation_d;
-    shared_dilation[1] = dilation_h;
-    shared_dilation[2] = dilation_w;
-    shared_pad[0] = pad_d;
-    shared_pad[1] = pad_h;
-    shared_pad[2] = pad_w;
+    if (dim_num == 3) {
+      shared_im[0] = im_d;
+      shared_im[1] = im_h;
+      shared_im[2] = im_w;
+      shared_kernel[0] = kernel_d;
+      shared_kernel[1] = kernel_h;
+      shared_kernel[2] = kernel_w;
+      shared_out[0] = out_d;
+      shared_out[1] = out_h;
+      shared_out[2] = out_w;
+      shared_stride[0] = stride_d;
+      shared_stride[1] = stride_h;
+      shared_stride[2] = stride_w;
+      shared_dilation[0] = dilation_d;
+      shared_dilation[1] = dilation_h;
+      shared_dilation[2] = dilation_w;
+      shared_pad[0] = pad_d;
+      shared_pad[1] = pad_h;
+      shared_pad[2] = pad_w;
+    } else if (dim_num == 2) {
+      shared_im[0] = im_h;
+      shared_im[1] = im_w;
+      shared_kernel[0] = kernel_h;
+      shared_kernel[1] = kernel_w;
+      shared_out[0] = out_h;
+      shared_out[1] = out_w;
+      shared_stride[0] = stride_h;
+      shared_stride[1] = stride_w;
+      shared_dilation[0] = dilation_h;
+      shared_dilation[1] = dilation_w;
+      shared_pad[0] = pad_h;
+      shared_pad[1] = pad_w;
+    } else if (dim_num == 1) {
+      shared_im[0] = im_w;
+      shared_kernel[0] = kernel_w;
+      shared_out[0] = out_w;
+      shared_stride[0] = stride_w;
+      shared_dilation[0] = dilation_w;
+      shared_pad[0] = pad_w;
+    }
   }
   __syncthreads();
 }
 
-template<typename T>
+template<typename T, int dim_num>
 __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, const int im_d,
                           const int im_h, const int im_w, const int kernel_d, const int kernel_h,
                           const int kernel_w, const int out_d, const int out_h, const int out_w,
@@ -188,15 +210,14 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
                           const int dilation_rate_w, const int padding_before_d,
                           const int padding_before_h, const int padding_before_w, T* col_buf_dptr,
                           bool is_channel_first) {
-  const int dim_num = 3;
   __shared__ int shared_im[dim_num];
   __shared__ int shared_kernel[dim_num];
   __shared__ int shared_out[dim_num];
   __shared__ int shared_stride[dim_num];
   __shared__ int shared_dilation[dim_num];
   __shared__ int shared_pad[dim_num];
-  InitSharedArrays(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w, stride_d,
-                   stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
+  InitSharedArrays(dim_num, im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w,
+                   stride_d, stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
                    padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
                    shared_out, shared_stride, shared_dilation, shared_pad);
 
@@ -207,53 +228,78 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
   int channel_index;
   int im_index[dim_num];
   CUDA_1D_KERNEL_LOOP(index, n) {
+    // total launch channel*od*oh*ow threads,
+    // each thread responsible for a whole kernel size copy
     // calc kernel_/out_/channel_index
-    int row_offset = index / out_size;  // row_dim of col_buf: channel*kd*kh*kw
+    channel_index = index / out_size;
     int col_offset = index % out_size;  // col_dim of col_buf: od*oh*ow
-    if (is_channel_first == false) {
-      channel_index = row_offset % channel;
-      row_offset /= channel;
-    }
     for (int i = dim_num - 1; i >= 0; --i) {
       out_index[i] = col_offset % shared_out[i];
       col_offset /= shared_out[i];
-      kernel_index[i] = row_offset % shared_kernel[i];
-      row_offset /= shared_kernel[i];
-    }
-    if (is_channel_first) { channel_index = row_offset; }
-
-    // calc im_index
-    bool is_im_index_valid = true;
-    for (int i = 0; i < dim_num; ++i) {
-      im_index[i] =
-          kernel_index[i] * shared_dilation[i] - shared_pad[i] + out_index[i] * shared_stride[i];
-      if (im_index[i] < 0 || im_index[i] >= shared_im[i]) {
-        is_im_index_valid = false;
-        break;
-      }
+      kernel_index[i] = 0;
     }
 
-    // write into col_buf
-    if (is_im_index_valid) {
-      // calc im_offset
-      int im_offset = 0;
-      if (is_channel_first) { im_offset = channel_index; }
+    int col_buf_offset = 0;
+    if (is_channel_first) { col_buf_offset = channel_index; }
+    for (int i = 0; i < 3; ++i) {
+      col_buf_offset *= shared_kernel[i];
+      // col_buf_offset += kernel_index[i]; commented for kernel_index[] == 0
+    }
+    /* if (is_channel_first == false) { */
+    /*   col_buf_offset *= channel; */
+    /*   col_buf_offset += channel_index; */
+    /* } */
+    col_buf_offset *= out_size;
+    col_buf_offset += col_offset;
+
+    while (true) {
+      // calc im_index
+      bool is_im_index_valid = true;
       for (int i = 0; i < dim_num; ++i) {
-        im_offset *= shared_im[i];
-        im_offset += im_index[i];
+        im_index[i] =
+            kernel_index[i] * shared_dilation[i] - shared_pad[i] + out_index[i] * shared_stride[i];
+        if (im_index[i] < 0 || im_index[i] >= shared_im[i]) {
+          is_im_index_valid = false;
+          break;
+        }
       }
-      if (is_channel_first == false) {
-        im_offset *= channel;
-        im_offset += channel_index;
+
+      // write into col_buf
+      if (is_im_index_valid) {
+        // calc im_offset
+        int im_offset = 0;
+        if (is_channel_first) { im_offset = channel_index; }
+        for (int i = 0; i < dim_num; ++i) {
+          im_offset *= shared_im[i];
+          im_offset += im_index[i];
+        }
+        /* if (is_channel_first == false) { */
+        /*   im_offset *= channel; */
+        /*   im_offset += channel_index; */
+        /* } */
+        col_buf_dptr[col_buf_offset] = im_dptr[im_offset];
+      } else {
+        col_buf_dptr[col_buf_offset] = 0;
       }
-      col_buf_dptr[index] = im_dptr[im_offset];
-    } else {
-      col_buf_dptr[index] = 0;
+      col_buf_offset += out_size;
+
+      // loop over all kernel index
+      bool is_loop_completed = true;
+      for (int i = dim_num - 1; i >= 0; --i) {
+        if (kernel_index[i] == shared_kernel[i] - 1) {
+          kernel_index[i] = 0;
+        } else {
+          kernel_index[i] += 1;
+          is_loop_completed = false;
+          break;
+        }
+      }
+      if (is_loop_completed) { break; }
     }
   }
 }
 
-template<typename T>
+template<typename T, int dim_num>
 __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel, const int im_d,
                           const int im_h, const int im_w, const int kernel_d, const int kernel_h,
                           const int kernel_w, const int out_d, const int out_h, const int out_w,
@@ -262,15 +308,14 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
                           const int dilation_rate_w, const int padding_before_d,
                           const int padding_before_h, const int padding_before_w, T* im_diff_dptr,
                           bool is_channel_first) {
-  const int dim_num = 3;
   __shared__ int shared_im[dim_num];
   __shared__ int shared_kernel[dim_num];
   __shared__ int shared_out[dim_num];
   __shared__ int shared_stride[dim_num];
   __shared__ int shared_dilation[dim_num];
   __shared__ int shared_pad[dim_num];
-  InitSharedArrays(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w, stride_d,
-                   stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
+  InitSharedArrays(dim_num, im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w,
+                   stride_d, stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
                    padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
                    shared_out, shared_stride, shared_dilation, shared_pad);
 
@@ -368,63 +413,70 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
 
 }  // namespace
 
-template<typename T>
-void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
-    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* col_buf_ptr) {
-  int32_t col_buf_size = weight_shape.Count(1) * out_shape.Count(2);
-  Im2ColGpu<T><<<BlocksNum4ThreadsNum(col_buf_size), kCudaThreadsNumPerBlock, 0,
-                 device_ctx->cuda_stream()>>>(
-      col_buf_size, in_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
-      weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2), out_shape.At(3),
-      out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0], dilation_rate[1],
-      dilation_rate[2], padding_before[0], padding_before[1], padding_before[2], col_buf_ptr, true);
-}
+#define IM2COL_KERNEL_CALL(kernel_func_name, dim_num, kernel_num, src_dptr, dst_dptr,              \
+                           is_channel_first)                                                       \
+  kernel_func_name<T, dim_num><<<BlocksNum4ThreadsNum(kernel_num), kCudaThreadsNumPerBlock, 0,     \
+                                 device_ctx->cuda_stream()>>>(                                     \
+      kernel_num, src_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),        \
+      weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),                 \
+      out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0],      \
+      dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1], padding_before[2], \
+      dst_dptr, is_channel_first)
 
 template<typename T>
-void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
-    DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* in_diff_ptr) {
-  int32_t im_size = in_shape.Count(1);
-  Col2ImGpu<T>
-      <<<BlocksNum4ThreadsNum(im_size), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-          im_size, col_buf_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
-          weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),
-          out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0],
-          dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1],
-          padding_before[2], in_diff_ptr, true);
+void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWIm2Col(
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
+  int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
+  switch (dim_num) {
+    case 1: IM2COL_KERNEL_CALL(Im2ColGpu, 1, kernels, in_dptr, col_buf_dptr, true); break;
+    case 2: IM2COL_KERNEL_CALL(Im2ColGpu, 2, kernels, in_dptr, col_buf_dptr, true); break;
+    case 3: IM2COL_KERNEL_CALL(Im2ColGpu, 3, kernels, in_dptr, col_buf_dptr, true); break;
+    default: UNIMPLEMENTED();
+  }
 }
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCIm2Col(
-    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* col_buf_ptr) {
-  int32_t col_buf_size = weight_shape.Count(1) * out_shape.Count(2);
-  Im2ColGpu<T><<<BlocksNum4ThreadsNum(col_buf_size), kCudaThreadsNumPerBlock, 0,
-                 device_ctx->cuda_stream()>>>(
-      col_buf_size, in_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
-      weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2), out_shape.At(3),
-      out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0], dilation_rate[1],
-      dilation_rate[2], padding_before[0], padding_before[1], padding_before[2], col_buf_ptr,
-      false);
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_dptr) {
+  int32_t kernels = weight_shape.At(1) * out_shape.Count(2);
+  switch (dim_num) {
+    case 1: IM2COL_KERNEL_CALL(Im2ColGpu, 1, kernels, in_dptr, col_buf_dptr, false); break;
+    case 2: IM2COL_KERNEL_CALL(Im2ColGpu, 2, kernels, in_dptr, col_buf_dptr, false); break;
+    case 3: IM2COL_KERNEL_CALL(Im2ColGpu, 3, kernels, in_dptr, col_buf_dptr, false); break;
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
+void ConvKernelUtil<DeviceType::kGPU, T>::NCDHWCol2Im(
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
+  int32_t im_size = in_shape.Count(1);
+  switch (dim_num) {
+    case 1: IM2COL_KERNEL_CALL(Col2ImGpu, 1, im_size, col_buf_dptr, in_diff_dptr, true); break;
+    case 2: IM2COL_KERNEL_CALL(Col2ImGpu, 2, im_size, col_buf_dptr, in_diff_dptr, true); break;
+    case 3: IM2COL_KERNEL_CALL(Col2ImGpu, 3, im_size, col_buf_dptr, in_diff_dptr, true); break;
+    default: UNIMPLEMENTED();
+  }
 }
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kGPU, T>::NDHWCCol2Im(
-    DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* in_diff_ptr) {
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_dptr) {
   int32_t im_size = in_shape.Count(1);
-  Col2ImGpu<T>
-      <<<BlocksNum4ThreadsNum(im_size), kCudaThreadsNumPerBlock, 0, device_ctx->cuda_stream()>>>(
-          im_size, col_buf_dptr, in_shape.At(1), in_shape.At(2), in_shape.At(3), in_shape.At(4),
-          weight_shape.At(2), weight_shape.At(3), weight_shape.At(4), out_shape.At(2),
-          out_shape.At(3), out_shape.At(4), strides[0], strides[1], strides[2], dilation_rate[0],
-          dilation_rate[1], dilation_rate[2], padding_before[0], padding_before[1],
-          padding_before[2], in_diff_ptr, false);
+  switch (dim_num) {
+    case 1: IM2COL_KERNEL_CALL(Col2ImGpu, 1, im_size, col_buf_dptr, in_diff_dptr, false); break;
+    case 2: IM2COL_KERNEL_CALL(Col2ImGpu, 2, im_size, col_buf_dptr, in_diff_dptr, false); break;
+    case 3: IM2COL_KERNEL_CALL(Col2ImGpu, 3, im_size, col_buf_dptr, in_diff_dptr, false); break;
+    default: UNIMPLEMENTED();
+  }
 }
 
 #define INSTANTIATE_CONV_KERNEL(type_cpp, type_proto) \

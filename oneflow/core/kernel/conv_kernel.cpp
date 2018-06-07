@@ -115,8 +115,9 @@ void ConvKernelImplByIm2Col<device_type, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   FOR_RANGE(int64_t, i, 0, in_shape_.At(0)) {
-    im2col_func_(device_ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_, out_shape_,
-                 strides_, dilation_rate_, padding_before_, static_cast<T*>(device_ctx->buf_ptr()));
+    im2col_func_(this->OpKernelDim(), device_ctx, GetImgDptr<T>(in_blob, i), in_shape_,
+                 weight_shape_, out_shape_, strides_, dilation_rate_, padding_before_,
+                 static_cast<T*>(device_ctx->buf_ptr()));
 
     // col_buf is device_ctx->buf_ptr()
     // channels first: out = weight * col_buf
@@ -156,8 +157,9 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
                         in_diff_blob->ByteSizeOfDataContentField());
   }
   FOR_RANGE(int64_t, i, 0, out_shape_.At(0)) {
-    im2col_func_(ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_, out_shape_, strides_,
-                 dilation_rate_, padding_before_, static_cast<T*>(ctx->buf_ptr()));
+    im2col_func_(this->OpKernelDim(), ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_,
+                 out_shape_, strides_, dilation_rate_, padding_before_,
+                 static_cast<T*>(ctx->buf_ptr()));
 
     // channels first:  weight' += out[i]' * col_buf(T)
     // channels last :  weight' += out[i]'(T) * col_buf(T)
@@ -181,8 +183,9 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
           static_cast<T>(0), static_cast<T*>(ctx->buf_ptr()));
 
       // in' = col2im(col_buf')
-      col2im_func_(ctx, static_cast<const T*>(ctx->buf_ptr()), in_shape_, weight_shape_, out_shape_,
-                   strides_, dilation_rate_, padding_before_, GetImgMutDptr<T>(in_diff_blob, i));
+      col2im_func_(this->OpKernelDim(), ctx, static_cast<const T*>(ctx->buf_ptr()), in_shape_,
+                   weight_shape_, out_shape_, strides_, dilation_rate_, padding_before_,
+                   GetImgMutDptr<T>(in_diff_blob, i));
     }
   }
 }
@@ -367,9 +370,9 @@ void ConvKernelUtil<DeviceType::kCPU, T>::DoNCDWHFunc(const Shape& weight_shape,
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kCPU, T>::NCDHWIm2Col(
-    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* col_buf_ptr) {
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
   Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(3),
                                  in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
@@ -378,9 +381,9 @@ void ConvKernelUtil<DeviceType::kCPU, T>::NCDHWIm2Col(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kCPU, T>::NCDHWCol2Im(
-    DeviceCtx* device_ctx, const T* col_buf_ptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* in_diff_ptr) {
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_ptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
   Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(3),
                                  in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
@@ -404,9 +407,9 @@ void ConvKernelUtil<DeviceType::kCPU, T>::DoNDWHCFunc(const Shape& weight_shape,
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCIm2Col(
-    DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* col_buf_ptr) {
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
   Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(2),
                                  in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
@@ -416,9 +419,9 @@ void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCIm2Col(
 
 template<typename T>
 void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCCol2Im(
-    DeviceCtx* device_ctx, const T* col_buf_ptr, const Shape& in_shape, const Shape& weight_shape,
-    const Shape& out_shape, const int32_t* strides, const int32_t* dilation_rate,
-    const int32_t* padding_before, T* in_diff_ptr) {
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_ptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
   Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(2),
                                  in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
