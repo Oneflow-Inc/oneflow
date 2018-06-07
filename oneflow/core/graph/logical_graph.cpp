@@ -461,7 +461,12 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   OperatorConf reduce_global_add_op_conf;
   reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
   reduce_global_add_op_conf.set_device_type(src_pd->device_type());
-  reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(src_pd->parallel_num());
+  if (src_pd->sorted_machine_ids().size() > 1) {
+    reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(
+        src_pd->sorted_machine_ids().size());
+  } else {
+    reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(src_pd->parallel_num());
+  }
   LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
   reduce_global_add_node->mut_op_vec() = {ConstructOp(reduce_global_add_op_conf)};
   reduce_global_add_node->mut_parallel_desc() = src_pd;

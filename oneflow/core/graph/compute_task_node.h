@@ -35,6 +35,7 @@ class CompTaskNode : public TaskNode {
   bool TryAddLbiToB121RegstAndBindIt(ExecNode*, const std::string& bn,
                                      const std::string& b121_name);
   void ForEachSuccCompTaskNode(std::function<void(CompTaskNode*)> Handler);
+  std::vector<CompTaskNode*> GetSuccCompTaskNodesOnEdge(TaskEdge* edge);
 
  private:
   ParallelContext parallel_ctx_;

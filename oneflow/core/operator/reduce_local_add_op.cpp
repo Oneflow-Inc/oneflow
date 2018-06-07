@@ -9,9 +9,8 @@ void ReduceLocalAddOp::InitFromOpConf() {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
   EnrollDataTmpBn("middle");
-  int32_t first_parallel_id = op_conf().reduce_local_add_conf().first_parallel_id();
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
-    EnrollOutputBn("out_" + std::to_string(first_parallel_id + i), false);
+    EnrollOutputBn("out_" + std::to_string(i), false);
   }
 }
 

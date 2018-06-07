@@ -12,8 +12,8 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
            && dst_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
       dst_node = dst_node->SoleOutEdge()->dst_node();
     }
-    CompTaskNode* reduce_local_add_node = static_cast<CompTaskNode*>(dst_node);
-    min_parallel_id = std::min(min_parallel_id, reduce_local_add_node->parallel_id());
+    CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(dst_node);
+    min_parallel_id = std::min(min_parallel_id, reduce_add_node->parallel_id());
   }
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
@@ -21,12 +21,12 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
            && dst_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
       dst_node = dst_node->SoleOutEdge()->dst_node();
     }
-    CompTaskNode* reduce_local_add_node = static_cast<CompTaskNode*>(dst_node);
+    CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(dst_node);
     std::string out_regst_name =
-        "out_" + std::to_string(reduce_local_add_node->parallel_id() - min_parallel_id);
+        "out_" + std::to_string(reduce_add_node->parallel_id() - min_parallel_id);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name);
     edge->AddRegst(out_regst_name, out_regst);
-    if (this->parallel_id() == reduce_local_add_node->parallel_id()
+    if (this->parallel_id() == reduce_add_node->parallel_id()
         && device_type() == DeviceType::kGPU) {
       MemoryCase* mem_case = out_regst.get()->mut_mem_case();
       mem_case->Clear();

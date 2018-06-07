@@ -11,7 +11,6 @@ void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     TaskNode* src_node = edge->src_node();
     while (src_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
-      LOG(INFO) << src_node->GetTaskType();
       src_node = src_node->SoleInEdge()->src_node();
     }
     CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(src_node);
