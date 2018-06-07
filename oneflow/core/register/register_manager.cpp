@@ -11,26 +11,17 @@ namespace std {
 template<>
 struct hash<oneflow::MemoryCase> {
   size_t operator()(const oneflow::MemoryCase& val) const {
-    if (val.has_host_mem()) { return val.host_mem().used_by_device() + 1024; }
-    return val.device_cuda_mem().device_id();
+    if (val.has_host_mem()) {
+      return val.host_mem().used_by_device() + 1024;
+    } else {
+      return val.device_cuda_mem().device_id();
+    }
   }
 };
 
 }  // namespace std
 
 namespace oneflow {
-
-namespace {
-
-struct MemInfo {
-  int64_t mem_size;
-  int64_t mem_offset;
-  char* mem_ptr;
-
-  MemInfo() : mem_size(0), mem_offset(0), mem_ptr(nullptr) {}
-};
-
-}  // namespace
 
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   if (lhs.has_host_mem() && rhs.has_host_mem()) {
@@ -43,7 +34,8 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
 }
 
 RegstMgr::RegstMgr(const Plan& plan) {
-  HashMap<MemoryCase, std::unique_ptr<MemInfo>> mem_case2info;
+  HashMap<MemoryCase, char*> mem_case2mem_ptr;
+  HashMap<MemoryCase, size_t> mem_case2mem_size;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     for (const auto& pair : task.produced_regst_desc()) {
@@ -53,37 +45,29 @@ RegstMgr::RegstMgr(const Plan& plan) {
                          std::make_unique<const RtRegstDesc>(regst_desc_proto))
                 .second);
       const MemoryCase& mem_case = regst_desc_proto.mem_case();
-      if (mem_case2info.find(mem_case) == mem_case2info.end()) {
-        mem_case2info.emplace(mem_case, std::make_unique<MemInfo>());
+      if (mem_case2mem_size.find(mem_case) == mem_case2mem_size.end()) {
+        mem_case2mem_size.emplace(mem_case, 0);
       }
-      mem_case2info[mem_case]->mem_size +=
-          (regst_desc_id2rt_regst_desc_[regst_desc_proto.regst_desc_id()]
-               ->packed_blob_desc()
-               ->TotalByteSize()
-           * regst_desc_proto.register_num());
+      mem_case2mem_size[mem_case] += (regst_desc_id2rt_regst_desc_[regst_desc_proto.regst_desc_id()]
+                                          ->packed_blob_desc()
+                                          ->TotalByteSize()
+                                      * regst_desc_proto.register_num());
     }
   }
-  for (const auto& pair : mem_case2info) {
+  for (const auto& pair : mem_case2mem_size) {
     const MemoryCase& mem_case = pair.first;
-    MemInfo* mem_info = pair.second.get();
     std::tuple<char*, std::function<void()>> allocation_result =
-        Global<MemoryAllocator>::Get()->Allocate(mem_case, mem_info->mem_size);
-    mem_info->mem_ptr = std::get<0>(allocation_result);
+        Global<MemoryAllocator>::Get()->Allocate(mem_case, pair.second);
+    CHECK(mem_case2mem_ptr.emplace(mem_case, std::get<0>(allocation_result)).second);
     deleters_.push_back(std::get<1>(allocation_result));
   }
   for (const auto& pair : regst_desc_id2rt_regst_desc_) {
     const int64_t& regst_desc_id = pair.first;
     const RtRegstDesc* rt_regst_desc = pair.second.get();
     const MemoryCase& mem_case = rt_regst_desc->mem_case();
-    MemInfo* mem_info = mem_case2info[mem_case].get();
-    CHECK(regst_desc_id2mem_ptr_.emplace(regst_desc_id, mem_info->mem_ptr + mem_info->mem_offset)
-              .second);
-    mem_info->mem_offset +=
+    CHECK(regst_desc_id2mem_ptr_.emplace(regst_desc_id, mem_case2mem_ptr[mem_case]).second);
+    mem_case2mem_ptr[mem_case] +=
         (rt_regst_desc->packed_blob_desc()->TotalByteSize() * rt_regst_desc->register_num());
-    CHECK_LE(mem_info->mem_offset, mem_info->mem_size);
-  }
-  for (const auto& pair : mem_case2info) {
-    CHECK_EQ(pair.second->mem_offset, pair.second->mem_size);
   }
 }
 
