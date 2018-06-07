@@ -9,17 +9,6 @@ namespace oneflow {
 
 namespace {
 
-void AssertEnableMemSharingConsistency(const TaskProto* task_proto) {
-  HashSet<bool> is_enable_mem_sharing;
-  for (const auto& pair : task_proto->produced_regst_desc()) {
-    if (pair.second.consumer_task_id_size() > 0
-        && RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() > 0) {
-      is_enable_mem_sharing.insert(pair.second.enable_mem_sharing());
-    }
-  }
-  CHECK_LE(is_enable_mem_sharing.size(), 1);
-}
-
 class MemSharedTaskNode;
 
 class MemSharedTaskEdge final : public Edge<MemSharedTaskNode, MemSharedTaskEdge> {
@@ -50,7 +39,6 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
 
   void ComputeLifetimeSameStreamActorIds(const RegstDescProto* regst_desc,
                                          HashSet<int64_t>* lifetime_same_stream_actor_ids) const;
-  void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;
 
  private:
   void InitNodes();
@@ -58,6 +46,8 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
   void InitNode2Ancestor();
   bool IsAnyNodeReachableToAncestor(const HashSet<const MemSharedTaskNode*>& nodes,
                                     const MemSharedTaskNode* ancestor) const;
+  void AssertEnableMemSharingConsistency(const TaskProto* task_proto) const;
+  void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;
   const Plan* plan_;
   HashMap<int64_t, MemSharedTaskNode*> task_id2mem_shared_task_node_;
   HashMap<const MemSharedTaskNode*, HashSet<const MemSharedTaskNode*>> node2ancestor_;
@@ -90,6 +80,17 @@ void MemSharedTaskGraph::InitEdges() {
       }
     }
   }
+}
+
+void MemSharedTaskGraph::AssertEnableMemSharingConsistency(const TaskProto* task_proto) const {
+  HashSet<bool> is_enable_mem_sharing;
+  for (const auto& pair : task_proto->produced_regst_desc()) {
+    if (pair.second.consumer_task_id_size() > 0
+        && RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() > 0) {
+      is_enable_mem_sharing.insert(pair.second.enable_mem_sharing());
+    }
+  }
+  CHECK_LE(is_enable_mem_sharing.size(), 1);
 }
 
 void MemSharedTaskGraph::InitNode2Ancestor() {
@@ -138,6 +139,7 @@ void MemSharedTaskGraph::ComputeLifetimeSameStreamActorIds(
       lifetime_same_stream_actor_ids->insert(node->task_id());
     }
   });
+  AssertThereIsOnlyOneTopoOrder(*lifetime_same_stream_actor_ids);
 }
 
 void MemSharedTaskGraph::AssertThereIsOnlyOneTopoOrder(
@@ -412,7 +414,6 @@ void ForEachImprovedMemSharedId(const Plan& plan,
                                                HashSet<int64_t>* lifetime_same_stream_actor_ids) {
     CHECK(regst_desc->enable_mem_sharing());
     mem_shared_grph.ComputeLifetimeSameStreamActorIds(regst_desc, lifetime_same_stream_actor_ids);
-    mem_shared_grph.AssertThereIsOnlyOneTopoOrder(*lifetime_same_stream_actor_ids);
   };
   ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
     const auto& regst_descs_without_consumer = SelectRegstDescsWithoutConsumer(regst_descs);
