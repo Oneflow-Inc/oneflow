@@ -54,8 +54,8 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
   void InitNodes();
   void InitEdges();
   void InitNode2Ancestor();
-  bool IsAnyOneReachable(const HashSet<const MemSharedTaskNode*>& nodes,
-                         const MemSharedTaskNode* ancestor) const;
+  bool IsAnyNodeReachableToAncestor(const HashSet<const MemSharedTaskNode*>& nodes,
+                                    const MemSharedTaskNode* ancestor) const;
 
   const Plan* plan_;
   HashMap<int64_t, MemSharedTaskNode*> task_id2mem_shared_task_node_;
@@ -100,8 +100,8 @@ void MemSharedTaskGraph::InitNode2Ancestor() {
   });
 }
 
-bool MemSharedTaskGraph::IsAnyOneReachable(const HashSet<const MemSharedTaskNode*>& nodes,
-                                           const MemSharedTaskNode* ancestor) const {
+bool MemSharedTaskGraph::IsAnyNodeReachableToAncestor(
+    const HashSet<const MemSharedTaskNode*>& nodes, const MemSharedTaskNode* ancestor) const {
   for (const MemSharedTaskNode* node : nodes) {
     if (node2ancestor_.at(node).find(ancestor) != node2ancestor_.at(node).end()) { return true; }
   }
@@ -118,13 +118,14 @@ void MemSharedTaskGraph::ComputeLifetimeSameStreamActorIds(
   auto ForEachInNode = [&](const MemSharedTaskNode* node,
                            const std::function<void(const MemSharedTaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](const MemSharedTaskNode* prev) {
-      if (prev == producer || IsAnyOneReachable({prev}, producer)) { Handler(prev); }
+      if (prev == producer || IsAnyNodeReachableToAncestor({prev}, producer)) { Handler(prev); }
     });
   };
   auto ForEachOutNode = [&](const MemSharedTaskNode* node,
                             const std::function<void(const MemSharedTaskNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](const MemSharedTaskNode* next) {
-      if (consumers.find(next) != consumers.end() || IsAnyOneReachable(consumers, next)) {
+      if (consumers.find(next) != consumers.end()
+          || IsAnyNodeReachableToAncestor(consumers, next)) {
         Handler(next);
       }
     });
