@@ -148,12 +148,13 @@ void ConvKernel<DeviceType::kGPU, T>::BiasBackwardWithCudnn(
 
 namespace {
 
-__device__ void InitSharedArrays(const int dim_num, const int im_d, const int im_h, const int im_w,
-                                 const int kernel_d, const int kernel_h, const int kernel_w,
-                                 const int out_d, const int out_h, const int out_w,
-                                 const int stride_d, const int stride_h, const int stride_w,
-                                 const int dilation_d, const int dilation_h, const int dilation_w,
-                                 const int pad_d, const int pad_h, const int pad_w, int* shared_im,
+template<int dim_num>
+__device__ void InitSharedArrays(const int im_d, const int im_h, const int im_w, const int kernel_d,
+                                 const int kernel_h, const int kernel_w, const int out_d,
+                                 const int out_h, const int out_w, const int stride_d,
+                                 const int stride_h, const int stride_w, const int dilation_d,
+                                 const int dilation_h, const int dilation_w, const int pad_d,
+                                 const int pad_h, const int pad_w, int* shared_im,
                                  int* shared_kernel, int* shared_out, int* shared_stride,
                                  int* shared_dilation, int* shared_pad) {
   if (threadIdx.x == 0) {
@@ -215,10 +216,11 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
   __shared__ int shared_stride[dim_num];
   __shared__ int shared_dilation[dim_num];
   __shared__ int shared_pad[dim_num];
-  InitSharedArrays(dim_num, im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w,
-                   stride_d, stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
-                   padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
-                   shared_out, shared_stride, shared_dilation, shared_pad);
+  InitSharedArrays<dim_num>(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w,
+                            stride_d, stride_h, stride_w, dilation_rate_d, dilation_rate_h,
+                            dilation_rate_w, padding_before_d, padding_before_h, padding_before_w,
+                            shared_im, shared_kernel, shared_out, shared_stride, shared_dilation,
+                            shared_pad);
 
   int out_size = 1;
   for (int i = 0; i < dim_num; ++i) { out_size *= shared_out[i]; }
@@ -312,10 +314,11 @@ __global__ void Col2ImGpu(const int n, const T* col_buf_dptr, const int channel,
   __shared__ int shared_stride[dim_num];
   __shared__ int shared_dilation[dim_num];
   __shared__ int shared_pad[dim_num];
-  InitSharedArrays(dim_num, im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w,
-                   stride_d, stride_h, stride_w, dilation_rate_d, dilation_rate_h, dilation_rate_w,
-                   padding_before_d, padding_before_h, padding_before_w, shared_im, shared_kernel,
-                   shared_out, shared_stride, shared_dilation, shared_pad);
+  InitSharedArrays<dim_num>(im_d, im_h, im_w, kernel_d, kernel_h, kernel_w, out_d, out_h, out_w,
+                            stride_d, stride_h, stride_w, dilation_rate_d, dilation_rate_h,
+                            dilation_rate_w, padding_before_d, padding_before_h, padding_before_w,
+                            shared_im, shared_kernel, shared_out, shared_stride, shared_dilation,
+                            shared_pad);
 
   int kernel_index[dim_num];
   int channel_index;
