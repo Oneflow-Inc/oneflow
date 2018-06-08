@@ -16,7 +16,7 @@ class NaiveActor final : public Actor {
   }
 
  private:
-  void Act() override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }

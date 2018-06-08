@@ -15,13 +15,15 @@ void BoxingActor::NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>& r
   }
 }
 
-void BoxingActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
+void BoxingActor::Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer,
+                      std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
   int64_t piece_id = GetNaiveFirstCurReadable()->piece_id();
   AsyncLaunchKernel(GenDefaultKernelCtx());
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+  *IsRegstAllowedSendActWiseMsgToConsumer = [piece_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     return regst->col_id() <= regst->max_col_id();
-  });
+  };
+  AsyncSendRegstMsgToConsumer(*IsRegstAllowedSendActWiseMsgToConsumer);
   int32_t cur_max_cid = 0;
   int32_t cur_max_maxcid = 0;
   ForEachCurReadableRegst([&](const Regst* regst) {

@@ -53,7 +53,8 @@ void NormalForwardCompActor::NormalProcessCustomizedReadableRegstMsg(const Actor
   }
 }
 
-void NormalForwardCompActor::Act() {
+void NormalForwardCompActor::Act(
+    std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) {
   int64_t model_version_id = -1;
   if (model_regst_) { model_version_id = model_regst_->model_version_id(); }
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -78,11 +79,12 @@ void NormalForwardCompActor::Act() {
       return nullptr;
     }
   });
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+  *IsRegstAllowedSendActWiseMsgToConsumer = [this, piece_id, model_version_id](Regst* regst) {
     regst->set_piece_id(piece_id);
     regst->set_model_version_id(model_version_id);
     return regst->regst_desc_id() != forward_model_regst_desc_id_;
-  });
+  };
+  AsyncSendRegstMsgToConsumer(*IsRegstAllowedSendActWiseMsgToConsumer);
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (model_regst_) {
       int64_t last_piece_id = GetLastPieceIdForModelVersionId(staleness_, model_version_id);

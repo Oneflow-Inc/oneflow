@@ -26,7 +26,7 @@ class CopyCommNetActor final : public Actor {
   void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
   bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
-  void Act() override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) override;
   bool IsCustomizedReadReady() override;
   bool IsCustomizedReadAlwaysUnReadyFromNow() override;
   void AsyncReturnAllCustomizedReadableRegst() override;

@@ -15,7 +15,7 @@ class NormalForwardCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
-  void Act() override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) override;
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {

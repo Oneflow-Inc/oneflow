@@ -234,8 +234,22 @@ void Actor::ActUntilFail() {
       act_interval_acc_ += interval;
     }
     last_act_start_time_ = cur_time;
+    std::function<bool(Regst*)> IsRegstAllowedSendActWiseMsgToConsumer = [](Regst*) {
+      return true;
+    };
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
-    Act(&IsNaiveAllowedReturnToProducer);
+    Act(&IsRegstAllowedSendActWiseMsgToConsumer, &IsNaiveAllowedReturnToProducer);
+    if (out_delay_regst_desc_id_ != -1) {
+      AsyncSendRegstMsgToAllConsumer(
+          [&](Regst* regst) {
+            if (regst->regst_desc_id() == out_delay_regst_desc_id_) {
+              IsRegstAllowedSendActWiseMsgToConsumer(regst);
+              return true;
+            }
+            return false;
+          },
+          [&](int64_t) { return true; });
+    }
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
@@ -279,8 +293,8 @@ void Actor::AsyncLaunchKernel(const KernelCtx& kernel_ctx) {
   });
 }
 
-void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
-                                        std::function<bool(int64_t)> IsAllowedActor) {
+void Actor::AsyncSendRegstMsgToAllConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                           std::function<bool(int64_t)> IsAllowedActor) {
   for (auto& pair : writeable_produced_regst_) {
     if (pair.second.empty()) { continue; }
     Regst* regst = pair.second.front();
@@ -297,6 +311,17 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
     if (pair.second.empty()) { writeable_produced_regst_desc_cnt_ -= 1; }
   }
+}
+
+void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                        std::function<bool(int64_t)> IsAllowedActor) {
+  auto RegstPreProcessExcludeDelayRegst = RegstPreProcess;
+  if (out_delay_regst_desc_id_ != -1) {
+    RegstPreProcessExcludeDelayRegst = [&](Regst* regst) {
+      return regst->regst_desc_id() != out_delay_regst_desc_id_ && RegstPreProcess(regst);
+    };
+  }
+  AsyncSendRegstMsgToAllConsumer(RegstPreProcessExcludeDelayRegst, IsAllowedActor);
 }
 
 void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess) {

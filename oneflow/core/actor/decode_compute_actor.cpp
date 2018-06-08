@@ -10,18 +10,23 @@ void DecodeCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&DecodeCompActor::HandlerNormal);
 }
 
-void DecodeCompActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
+void DecodeCompActor::Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer,
+                          std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
   if (decode_status_.in_regst_ == nullptr) { decode_status_.in_regst_ = GetNaiveSoleCurReadable(); }
   CHECK_LE(decode_status_.cur_col_id_, decode_status_.max_col_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
   kernel_ctx.other = &decode_status_;
   AsyncLaunchKernel(kernel_ctx);
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(decode_status_.in_regst_->piece_id());
-    regst->set_col_id(decode_status_.cur_col_id_);
-    regst->set_max_col_id(decode_status_.max_col_id_);
+  int64_t piece_id = decode_status_.in_regst_->piece_id();
+  int64_t cur_col_id = decode_status_.cur_col_id_;
+  int64_t max_col_id = decode_status_.max_col_id_;
+  *IsRegstAllowedSendActWiseMsgToConsumer = [piece_id, cur_col_id, max_col_id](Regst* regst) {
+    regst->set_piece_id(piece_id);
+    regst->set_col_id(cur_col_id);
+    regst->set_max_col_id(max_col_id);
     return true;
-  });
+  };
+  AsyncSendRegstMsgToConsumer(*IsRegstAllowedSendActWiseMsgToConsumer);
   if (decode_status_.cur_col_id_ == decode_status_.max_col_id_) {
     decode_status_.in_regst_ = nullptr;
     decode_status_.cur_col_id_ = 0;

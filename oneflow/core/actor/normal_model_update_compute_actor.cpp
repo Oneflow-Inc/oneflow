@@ -19,7 +19,8 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstModel);
 }
 
-void NormalMdUpdtCompActor::Act() {
+void NormalMdUpdtCompActor::Act(
+    std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) {
   Regst* cur_model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   cur_model_regst->set_model_version_id(next_model_version_id_);
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -29,10 +30,12 @@ void NormalMdUpdtCompActor::Act() {
   pre_model_regst_ = cur_model_regst;
   AsyncLaunchKernel(kernel_ctx);
   const JobDesc* job_desc = Global<JobDesc>::Get();
-  auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
+  *IsRegstAllowedSendActWiseMsgToConsumer = [cur_model_regst](Regst* regst) {
+    return regst == cur_model_regst;
+  };
   bool need_save_model = NeedModelSave(next_model_version_id_ - 1);
   bool need_send_model = next_model_version_id_ < job_desc->TotalBatchNum();
-  AsyncSendRegstMsgToConsumer(RegstPreProcess, [&](int64_t actor_id) {
+  AsyncSendRegstMsgToConsumer(*IsRegstAllowedSendActWiseMsgToConsumer, [&](int64_t actor_id) {
     return (need_save_model && actor_id == related_save_model_actor_id_)
            || (need_send_model && actor_id != related_save_model_actor_id_);
   });
