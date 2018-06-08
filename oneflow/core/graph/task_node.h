@@ -28,6 +28,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
   std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
+  const HashMap<std::string, std::shared_ptr<RegstDesc>>& produced_regsts() {
+    return produced_regsts_;
+  }
+  const HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>& consumed_regsts() {
+    return consumed_regsts_;
+  }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t LocalWorkStreamId() const;
@@ -46,6 +52,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
   virtual void EraseEmptyProducedRegst();
+  void ClearOutOfDateConsumedRegst();
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
@@ -55,20 +62,20 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
+  void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
+                                          int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
-  const HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>& consumed_regsts() {
-    return consumed_regsts_;
-  }
   void TryLockConsumedRegst(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
@@ -78,7 +85,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t AllocateLocalWorkStreamId();
 
  private:
-  void ClearOutOfDateConsumedRegst();
   void UpdateTaskId();
 
   int64_t machine_id_;

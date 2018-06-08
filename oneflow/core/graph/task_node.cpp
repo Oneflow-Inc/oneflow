@@ -81,10 +81,7 @@ std::string TaskNode::VisualStr() const {
   return ss.str();
 }
 
-bool TaskNode::IsMeaningLess() {
-  ClearOutOfDateConsumedRegst();
-  return produced_regsts_.empty() && consumed_regsts_.empty();
-}
+bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_type(GetTaskType());
@@ -119,6 +116,17 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
+void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
+  for (auto& name2regst : produced_regsts_) {
+    const auto& consumers = name2regst.second->consumers();
+    if (consumers.find(dst_node) != consumers.end()) { return; }
+  }
+  RegstDescTypeProto regst_desc_type;
+  regst_desc_type.mutable_delay_regst_desc();
+  dst_node->ConsumeRegst("in_delay",
+                         ProduceRegst("out_delay", 1, kMaxRegisterNum, regst_desc_type));
+}
+
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
@@ -129,8 +137,17 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
                                                   int32_t max_register_num) {
+  RegstDescTypeProto regst_desc_type;
+  regst_desc_type.mutable_normal_regst_desc();
+  return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
+}
+
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+                                                  int32_t max_register_num,
+                                                  const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
+  *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   InitProducedRegstMemCase(regst.get());

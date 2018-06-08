@@ -2,15 +2,6 @@
 
 namespace oneflow {
 
-int64_t IDMgr::MachineID4MachineName(const std::string& machine_name) const {
-  auto it = machine_name2machine_id_.find(machine_name);
-  CHECK(it != machine_name2machine_id_.end()) << "Undefined machine name: " << machine_name;
-  return it->second;
-}
-const std::string& IDMgr::MachineName4MachineId(int64_t machine_id) const {
-  return machine_id2machine_name_.at(machine_id);
-}
-
 int64_t IDMgr::GetGpuH2DThrdId(int64_t dev_phy_id) const { return gpu_device_num_ + dev_phy_id; }
 int64_t IDMgr::GetGpuD2HThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 2 + dev_phy_id;
@@ -89,16 +80,10 @@ int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
 
 IDMgr::IDMgr() {
   const Resource& resource = Global<JobDesc>::Get()->resource();
-  int64_t machine_num = resource.machine_size();
-  CHECK_LT(machine_num, static_cast<int64_t>(1) << machine_id_bit_num_);
+  CHECK_LT(resource.machine_size(), static_cast<int64_t>(1) << machine_id_bit_num_);
   gpu_device_num_ = resource.gpu_device_num();
   cpu_device_num_ = resource.cpu_device_num();
   CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
-  for (int64_t i = 0; i < machine_num; ++i) {
-    const std::string& machine_name = resource.machine(i).name();
-    CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
-    CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
-  }
   regst_desc_id_count_ = 0;
 }
 
