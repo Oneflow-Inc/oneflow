@@ -7,6 +7,8 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* middle_blob = BnInOp2Blob("middle");
   Blob* out_blob = BnInOp2Blob("out");
+  Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), 0,
+                      out_blob->ByteSizeOfDataContentField());
   int64_t elem_cnt = out_blob->shape().elem_cnt();
   for (const std::string& input_bn : this->op_attribute().input_bns()) {
     Blob* in_blob = BnInOp2Blob(input_bn);
