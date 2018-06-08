@@ -11,15 +11,15 @@ template<DeviceType device_type, typename T>
 void ReduceLocalAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const PbRpf<std::string>& input_bns = this->op_attribute().input_bns();
-  Blob* same_parallel_in_blob = BnInOp2Blob(
-      input_bns.Get(parallel_id_ - this->op_conf().reduce_local_add_conf().min_in_parallel_id()));
+  int64_t min_in_parallel_id = this->op_conf().reduce_local_add_conf().min_in_parallel_id();
+  Blob* same_parallel_in_blob = BnInOp2Blob(input_bns.Get(parallel_id_ - min_in_parallel_id));
   Blob* middle_blob = BnInOp2Blob("middle");
   Memcpy<device_type>(ctx.device_ctx, middle_blob->mut_dptr<char>(),
                       same_parallel_in_blob->dptr<char>(),
                       middle_blob->ByteSizeOfDataContentField());
   int64_t elem_cnt = same_parallel_in_blob->shape().elem_cnt();
   FOR_RANGE(int32_t, i, 0, input_bns.size()) {
-    if (i == parallel_id_) { continue; }
+    if (i + min_in_parallel_id == parallel_id_) { continue; }
     Blob* in_blob = BnInOp2Blob(input_bns.Get(i));
     Blob* src_blob = in_blob;
     if (in_blob->mem_case().has_host_mem() && middle_blob->mem_case().has_device_cuda_mem()) {
