@@ -179,11 +179,23 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   CHECK_GE(sorted_src_comp_tasks.size(), 2);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     TaskNode* src_d2h_task = AddCopyD2HTaskIfNotCpu(src_comp_task);
+    HashMap<int64_t, TaskNode*> machine_id2comm_net_node;
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->parallel_id() == dst_comp_task->parallel_id()) {
         Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
       } else {
-        ConnectWithCopyCommNetIfNeed(src_d2h_task, dst_comp_task);
+        if (src_d2h_task->machine_id() == dst_comp_task->machine_id()) {
+          Connect<TaskNode>(src_d2h_task, NewEdge(), dst_comp_task);
+        } else {
+          auto iter = machine_id2comm_net_node.find(dst_comp_task->machine_id());
+          if (iter == machine_id2comm_net_node.end()) {
+            TaskNode* comm_net_node = AddCopyCommNetTask(src_d2h_task, dst_comp_task);
+            CHECK(machine_id2comm_net_node.emplace(dst_comp_task->machine_id(), comm_net_node)
+                      .second);
+          } else {
+            Connect<TaskNode>(iter->second, NewEdge(), dst_comp_task);
+          }
+        }
       }
     }
   }
@@ -247,12 +259,13 @@ TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
   return copy_task;
 }
 
-void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
+TaskNode* TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
   copy_comm_net_task->Init(dst->machine_id());
   Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
   Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
+  return copy_comm_net_task;
 }
 
 void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
