@@ -24,13 +24,9 @@ struct hash<oneflow::MemoryCase> {
 namespace oneflow {
 
 inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
-  } else if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
-  } else {
-    return false;
-  }
+  PbMd message_diff;
+  message_diff.IgnoreField(GetPbFdFromPbMessage(lhs.host_mem(), "used_by_network"));
+  return message_diff.Compare(lhs, rhs);
 }
 
 RegstMgr::RegstMgr(const Plan& plan) {
