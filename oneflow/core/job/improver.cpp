@@ -46,7 +46,6 @@ class MemSharedTaskGraph final : public Graph<const MemSharedTaskNode, MemShared
   void InitNode2Ancestor();
   bool IsAnyNodeReachableToAncestor(const HashSet<const MemSharedTaskNode*>& nodes,
                                     const MemSharedTaskNode* ancestor) const;
-  void AssertEnableMemSharingConsistency(const TaskProto* task_proto) const;
   void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;
   const Plan* plan_;
   HashMap<int64_t, MemSharedTaskNode*> task_id2mem_shared_task_node_;
@@ -70,7 +69,6 @@ void MemSharedTaskGraph::InitNodes() {
 void MemSharedTaskGraph::InitEdges() {
   for (const auto& task_id_and_mem_shared_task_node : task_id2mem_shared_task_node_) {
     MemSharedTaskNode* producer_node = task_id_and_mem_shared_task_node.second;
-    AssertEnableMemSharingConsistency(producer_node->task_proto());
     for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
       if (pair.second.enable_mem_sharing()
           || RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() == 0) {
@@ -80,17 +78,6 @@ void MemSharedTaskGraph::InitEdges() {
       }
     }
   }
-}
-
-void MemSharedTaskGraph::AssertEnableMemSharingConsistency(const TaskProto* task_proto) const {
-  HashSet<bool> is_enable_mem_sharing;
-  for (const auto& pair : task_proto->produced_regst_desc()) {
-    if (pair.second.consumer_task_id_size() > 0
-        && RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() > 0) {
-      is_enable_mem_sharing.insert(pair.second.enable_mem_sharing());
-    }
-  }
-  CHECK_LE(is_enable_mem_sharing.size(), 1);
 }
 
 void MemSharedTaskGraph::InitNode2Ancestor() {
@@ -395,12 +382,11 @@ std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
   return sharable_regst_descs_with_consumer;
 }
 
-std::list<const RegstDescProto*> SelectRegstDescsWithoutConsumer(
+std::list<const RegstDescProto*> SelectSharableRegstDescsWithoutConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
   std::list<const RegstDescProto*> regst_descs_without_consumer;
   for (const RegstDescProto* regst_desc : regst_descs) {
-    if (regst_desc->consumer_task_id_size() == 0) {
-      CHECK(regst_desc->enable_mem_sharing());
+    if (regst_desc->consumer_task_id_size() == 0 && regst_desc->enable_mem_sharing()) {
       regst_descs_without_consumer.push_back(regst_desc);
     }
   }
@@ -416,14 +402,14 @@ void ForEachImprovedMemSharedId(const Plan& plan,
     mem_shared_grph.ComputeLifetimeSameStreamActorIds(regst_desc, lifetime_same_stream_actor_ids);
   };
   ForEachComputeStreamRegstDescs(plan, [&](const std::list<const RegstDescProto*>& regst_descs) {
-    const auto& regst_descs_without_consumer = SelectRegstDescsWithoutConsumer(regst_descs);
+    const auto& sharable_without_consumer = SelectSharableRegstDescsWithoutConsumer(regst_descs);
     const auto& sharable_with_consumer = SelectSharableRegstDescsWithConsumer(regst_descs);
     int mem_shared_id = 0;
     auto AllocateMemSharedId = [&](const std::list<int64_t>& regst_desc_ids) {
       for (int64_t regst_desc_id : regst_desc_ids) { Handler(regst_desc_id, mem_shared_id); }
       ++mem_shared_id;
     };
-    RegstLifetimePosetGraph(regst_descs_without_consumer, ComputeLifetimeSameStreamActorIds)
+    RegstLifetimePosetGraph(sharable_without_consumer, ComputeLifetimeSameStreamActorIds)
         .ForEachLayerwiseSameColoredRegstDescIds(AllocateMemSharedId);
     RegstLifetimePosetGraph(sharable_with_consumer, ComputeLifetimeSameStreamActorIds)
         .ForEachLayerwiseSameColoredRegstDescIds(AllocateMemSharedId);
