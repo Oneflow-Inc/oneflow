@@ -74,6 +74,13 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   } else {
     in_delay_regst_desc_id_ = -1;
   }
+  name2regst_desc_id_iter = name2regst_desc_id_.find("out_delay");
+  if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
+    CHECK_EQ(name2regst_desc_id_iter->second.size(), 1);
+    out_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
+  } else {
+    out_delay_regst_desc_id_ = -1;
+  }
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
@@ -338,8 +345,16 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 }
 
 Regst* Actor::GetCurSoleWriteableRegst() {
-  CHECK_EQ(writeable_produced_regst_.size(), 1);
-  return writeable_produced_regst_.begin()->second.front();
+  if (writeable_produced_regst_.size() == 1) {
+    return writeable_produced_regst_.begin()->second.front();
+  } else {
+    CHECK_EQ(writeable_produced_regst_.size(), 2);
+    CHECK_NE(out_delay_regst_desc_id_, -1);
+    for (auto& pair : writeable_produced_regst_) {
+      if (pair.first != out_delay_regst_desc_id_) { return pair.second.front(); }
+    }
+    UNIMPLEMENTED();
+  }
 }
 
 std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
