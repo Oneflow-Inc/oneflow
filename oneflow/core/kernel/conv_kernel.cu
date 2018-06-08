@@ -251,7 +251,7 @@ __global__ void Im2ColGpu(const int n, const T* im_dptr, const int channel, cons
       col_buf_offset += channel_index;
     }
     col_buf_offset *= out_size;
-    col_buf_offset += col_offset;
+    col_buf_offset += index % out_size;
 
     while (true) {
       // calc im_index
