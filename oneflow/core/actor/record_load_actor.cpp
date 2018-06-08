@@ -10,7 +10,11 @@ namespace oneflow {
 void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
   piece_id_ = 0;
   is_eof_ = false;
-  OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
+  if (task_proto.consumed_regst_desc_id_size() == 0) {
+    OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerWaitToStart);
+  } else {
+    OF_SET_MSG_HANDLER(&RecordLoadActor::HandlerNormal);
+  }
   if (Global<JobDesc>::Get()->IsTrain()) {
     if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs() && GlobalFS() != LocalFS()) {
       in_stream_.reset(
