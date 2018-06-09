@@ -19,7 +19,7 @@ class CtrlServer final {
   void HandleRpcs();
 
 #define DECLARE_CTRL_METHOD_HANDLE(method) \
-  void method##Handler(CtrlCall<method##Request, method##Response>* call);
+  void method##Handler(CtrlCall<CtrlMethod::k##method>* call);
 
   OF_PP_FOR_EACH_TUPLE(DECLARE_CTRL_METHOD_HANDLE, CTRL_METHOD_SEQ);
 
@@ -35,7 +35,7 @@ class CtrlServer final {
   HashMap<std::string, void*> name2lock_status_;
   // PushKV, ClearKV, PullKV
   HashMap<std::string, std::string> kv_;
-  HashMap<std::string, std::list<CtrlCall<PullKVRequest, PullKVResponse>*>> pending_kv_calls_;
+  HashMap<std::string, std::list<CtrlCall<CtrlMethod::kPullKV>*>> pending_kv_calls_;
   // IncreaseCount, EraseCount
   HashMap<std::string, int32_t> count_;
 };

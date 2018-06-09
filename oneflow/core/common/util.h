@@ -24,6 +24,8 @@
 #include <utility>
 
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/common/cplusplus_14.h"
+#include "oneflow/core/common/cplusplus_17.h"
 
 DECLARE_string(log_dir);
 
@@ -98,11 +100,6 @@ using HashMap = std::unordered_map<Key, T, Hash>;
 template<typename Key, typename Hash = std::hash<Key>>
 using HashSet = std::unordered_set<Key, Hash>;
 
-template<typename T, typename... Args>
-std::unique_ptr<T> of_make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
   std::sort(vec->begin(), vec->end());
@@ -131,14 +128,12 @@ void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>:
   }
 }
 
-#define OF_DECLARE_ENUM_TO_OSTREAM_FUNC(EnumType) \
-  std::ostream& operator<<(std::ostream& out_stream, const EnumType&)
-
-#define OF_DEFINE_ENUM_TO_OSTREAM_FUNC(EnumType)                          \
-  std::ostream& operator<<(std::ostream& out_stream, const EnumType& x) { \
-    out_stream << static_cast<int>(x);                                    \
-    return out_stream;                                                    \
-  }
+template<typename T>
+typename std::enable_if<std::is_enum<T>::value, std::ostream&>::type operator<<(
+    std::ostream& out_stream, const T& x) {
+  out_stream << static_cast<int>(x);
+  return out_stream;
+}
 
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);
@@ -147,13 +142,6 @@ inline uint32_t NewRandomSeed() {
   static std::mt19937 gen{std::random_device{}()};
   return gen();
 }
-
-// Work around the following issue on Windows
-// https://stackoverflow.com/questions/33218522/cuda-host-device-variables
-// const float LOG_THRESHOLD = 1e-20;
-#define LOG_THRESHOLD (1e-20)
-#define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
-#define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
 #if defined(WITH_CUDA)
 #define DEVICE_TYPE_SEQ                  \

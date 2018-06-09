@@ -41,7 +41,7 @@ TEST(Snapshot, write_and_read) {
   // read
   {
     auto read_stream_ptr =
-        of_make_unique<NormalPersistentInStream>(GlobalFS(), JoinPath(snapshot_root_path, key));
+        std::make_unique<NormalPersistentInStream>(GlobalFS(), JoinPath(snapshot_root_path, key));
     std::string content;
     read_stream_ptr->ReadLine(&content);
     ASSERT_EQ(content, "ab");

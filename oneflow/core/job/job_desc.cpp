@@ -4,6 +4,15 @@
 
 namespace oneflow {
 
+int64_t JobDesc::MachineID4MachineName(const std::string& machine_name) const {
+  auto it = machine_name2machine_id_.find(machine_name);
+  CHECK(it != machine_name2machine_id_.end()) << "Undefined machine name: " << machine_name;
+  return it->second;
+}
+const std::string& JobDesc::MachineName4MachineId(int64_t machine_id) const {
+  return machine_id2machine_name_.at(machine_id);
+}
+
 int64_t JobDesc::PieceSizeInOneDataPart() const {
   CHECK_EQ(PieceSize() % job_conf_.other().data_part_num(), 0);
   return PieceSize() / job_conf_.other().data_part_num();
@@ -112,6 +121,12 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.resource().gpu_device_num(), 0);
 #endif
+  int64_t machine_num = job_conf_.resource().machine_size();
+  for (int64_t i = 0; i < machine_num; ++i) {
+    const std::string& machine_name = job_conf_.resource().machine(i).name();
+    CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
+    CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
+  }
 }
 
 void JobDesc::SplitDecodeOps() {

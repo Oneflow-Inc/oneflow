@@ -5,21 +5,26 @@
 
 namespace oneflow {
 
+std::shared_ptr<const Operator> RecordLoadCompTaskNode::GetRelatedDecodeOp() {
+  DecodeCompTaskNode* decode_node =
+      static_cast<DecodeCompTaskNode*>((*out_edges().begin())->dst_node());
+  return decode_node->logical_node()->SoleOp();
+}
+
 void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2);
+  RegstDescTypeProto regst_desc_type;
+  if (GetRelatedDecodeOp()->op_conf().has_decode_ofrecord_conf()) {
+    regst_desc_type.mutable_record_regst_desc()->set_record_type(RecordTypeProto::kOFRecord);
+  } else {
+    UNIMPLEMENTED();
+  }
+  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2, regst_desc_type);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
 }
 
 void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
-  DecodeCompTaskNode* decode_node =
-      static_cast<DecodeCompTaskNode*>((*out_edges().begin())->dst_node());
-  std::shared_ptr<const Operator> decode_op = decode_node->logical_node()->SoleOp();
-  if (decode_op->op_conf().has_decode_ofrecord_conf()) {
-    task_proto->set_record_type(RecordTypeProto::kOFRecord);
-  } else {
-    UNIMPLEMENTED();
-  }
+  std::shared_ptr<const Operator> decode_op = GetRelatedDecodeOp();
   std::string data_dir = decode_op->GetValFromCustomizedConf<std::string>("data_dir");
   std::string part_name_prefix =
       decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");

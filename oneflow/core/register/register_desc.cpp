@@ -21,6 +21,8 @@ RegstDesc::RegstDesc() {
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
+  enable_mem_sharing_ = false;
+  mem_shared_id_ = -1;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -111,16 +113,27 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
-  for (const auto& pair : lbi2blob_desc_) {
-    LbiBlobDescPair* pb_pair = ret->mutable_lbi2blob_desc()->Add();
-    *(pb_pair->mutable_lbi()) = pair.first;
-    pair.second->ToProto(pb_pair->mutable_blob_desc());
+  *(ret->mutable_regst_desc_type()) = regst_desc_type_;
+  if (regst_desc_type_.has_normal_regst_desc()) {
+    NormalRegstDesc* normal_regst_desc_proto =
+        ret->mutable_regst_desc_type()->mutable_normal_regst_desc();
+    packed_blob_desc_->ToProto(normal_regst_desc_proto->mutable_packed_blob_desc());
+    for (const auto& pair : lbi2blob_desc_) {
+      LbiBlobDescPair* pb_pair = normal_regst_desc_proto->mutable_lbi2blob_desc()->Add();
+      *(pb_pair->mutable_lbi()) = pair.first;
+      pair.second->ToProto(pb_pair->mutable_blob_desc());
+    }
+  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_delay_regst_desc()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
   }
-  packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc());
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
+  ret->set_enable_mem_sharing(enable_mem_sharing_);
+  ret->set_mem_shared_id(mem_shared_id_);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

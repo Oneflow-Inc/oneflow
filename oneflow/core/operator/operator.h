@@ -32,6 +32,7 @@ class Operator {
 
   virtual bool NeedExtraInDiffMemWhenBackward() const { return true; }
   virtual bool NeedOutWhenBackward() const { return true; }
+  bool NeedDoActivation() const;
 
   virtual LogicalNode* NewProperLogicalNode();
 

@@ -12,6 +12,9 @@ class CpuDeviceCtx final : public DeviceCtx {
   ~CpuDeviceCtx() = default;
 
   CpuDeviceCtx(void* buf_ptr, size_t buf_size) : DeviceCtx(buf_ptr, buf_size) {}
+  std::unique_ptr<DeviceCtx> Copy() const {
+    return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx(buf_ptr(), buf_size()));
+  }
 
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 

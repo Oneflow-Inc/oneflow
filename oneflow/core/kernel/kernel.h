@@ -53,8 +53,8 @@ class Kernel {
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void ForwardActivate(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardActivation(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -68,8 +68,13 @@ class Kernel {
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void BackwardActivate(const KernelCtx& ctx,
-                                std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void BackwardActivation(const KernelCtx& ctx,
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                  Blob* activation_blob) const {}
+  virtual void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
+                                 const BlobDesc* activation_blob_desc) const {
+    UNIMPLEMENTED();
+  };
   virtual void BackwardDataId(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -104,6 +109,8 @@ class Kernel {
  private:
   bool HasModelBns() const;
   KernelConf kernel_conf_;
+  std::unique_ptr<Blob> activation_blob_;
+  BlobDesc activation_blob_desc_;
 };
 
 template<DeviceType device_type>
@@ -158,10 +165,13 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
   KernelIfWithActivation() = default;
 
   ActivationType GetActivationType() const override;
-  void ForwardActivate(const KernelCtx& ctx,
-                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardActivate(const KernelCtx& ctx,
-                        std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardActivation(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardActivation(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob,
+                          Blob* activation_blob) const override;
+  void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
+                         const BlobDesc* activation_blob_desc) const override;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \

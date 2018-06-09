@@ -38,6 +38,7 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
     threads_.push_back(new CpuThread(thrd_id++, 0));
   }
   threads_.push_back(new CpuThread(thrd_id++, 0));  // comm_net
+  compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
 
 }  // namespace oneflow
