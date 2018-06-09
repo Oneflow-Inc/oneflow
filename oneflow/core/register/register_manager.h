@@ -21,7 +21,7 @@ class RegstMgr final {
 
  private:
   friend class Global<RegstMgr>;
-  RegstMgr(const Plan& plan);
+  explicit RegstMgr(const Plan& plan);
 
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
   HashMap<int64_t, char*> regst_desc_id2mem_ptr_;
