@@ -24,7 +24,7 @@ void BoxingActor::Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProduce
   });
   int32_t cur_max_cid = 0;
   int32_t cur_max_maxcid = 0;
-  ForEachCurReadableRegst([&](const Regst* regst) {
+  ForEachCurNaiveReadableRegst([&](const Regst* regst) {
     cur_max_cid = std::max(cur_max_cid, regst->col_id());
     cur_max_maxcid = std::max(cur_max_maxcid, regst->max_col_id());
   });
