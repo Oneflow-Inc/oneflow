@@ -140,7 +140,6 @@ void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
 
 void Actor::ForEachCurReadableRegst(std::function<void(const Regst*)> func) {
   for (const auto& pair : naive_readable_regst_) {
-    if (pair.first == in_delay_regst_desc_id_) { continue; }
     if (pair.second.empty() == false) { func(pair.second.front()); }
   }
   ForEachCurCustomizedReadableRegst(func);
