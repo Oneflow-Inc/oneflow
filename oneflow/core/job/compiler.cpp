@@ -104,7 +104,7 @@ void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
     }
   };
   std::set<TaskType> sink_nodes = {TaskType::kMdDiffAcc, TaskType::kLossAcc,
-                                   TaskType::kNormalMdUpdt};
+                                   TaskType::kReduceScatter, TaskType::kNormalMdUpdt};
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     const auto& produced_regsts = node->produced_regsts();
     if (sink_nodes.find(node->GetTaskType()) != sink_nodes.end()) { return; }
