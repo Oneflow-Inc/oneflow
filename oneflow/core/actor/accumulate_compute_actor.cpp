@@ -38,17 +38,21 @@ void AccumulateCompActor::Act() {
     AsyncLaunchKernel(kernel_ctx);
   }
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    if (regst == out_regst) { return false; }
-    regst->set_piece_id(in_regst->piece_id());
-    return true;
+    if (regst->regst_desc_id() == out_delay_regst_desc_id()) {
+      regst->set_piece_id(in_regst->piece_id());
+      return true;
+    }
+    return false;
   });
 
   if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
   if (acc_cnt_ == max_acc_cnt_) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-      if (regst != out_regst) { return false; }
-      regst->set_piece_id(next_piece_id_);
-      return true;
+      if (regst == out_regst) {
+        regst->set_piece_id(next_piece_id_);
+        return true;
+      }
+      return false;
     });
     acc_cnt_ = 0;
     next_piece_id_ += 1;
