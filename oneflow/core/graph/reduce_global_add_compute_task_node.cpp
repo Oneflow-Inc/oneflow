@@ -10,22 +10,32 @@ void ReduceGlobalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
-  int32_t in_regst_idx = 0;
   for (TaskEdge* edge : in_edges()) {
-    ConsumeRegst("in_" + std::to_string(in_regst_idx), edge->GetSoleRegst());
-    ++in_regst_idx;
+    std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
+    CHECK_EQ(pred_comp_task_nodes.size(), 1);
+    int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
+    ConsumeRegst("in_" + std::to_string(parallel_id), edge->GetSoleRegst());
+    in_parallel_ids_.Add(parallel_id);
   }
 }
 
 void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
-  std::shared_ptr<Operator> reduce_global_add_op = this->logical_node()->SoleOp();
+  OperatorConf reduce_global_add_op_conf;
+  reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
+  reduce_global_add_op_conf.set_device_type(this->device_type());
+  *reduce_global_add_op_conf.mutable_reduce_global_add_conf()->mutable_in_parallel_ids() =
+      in_parallel_ids_;
+  std::shared_ptr<Operator> reduce_global_add_op = ConstructOp(reduce_global_add_op_conf);
   node->mut_op() = reduce_global_add_op;
-  FOR_RANGE(size_t, i, 0, reduce_global_add_op->input_bns().size()) {
-    std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in_" + std::to_string(i));
-    node->BindBnWithRegst(reduce_global_add_op->input_bns().Get(i), in_regst);
+  for (const std::string& input_bn : reduce_global_add_op->input_bns()) {
+    std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(input_bn);
+    node->BindBnWithRegst(input_bn, in_regst);
   }
-  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+  if (std::find(in_parallel_ids_.begin(), in_parallel_ids_.end(), this->parallel_id())
+      == in_parallel_ids_.end()) {
+    node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
+  }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(reduce_global_add_op->BnInOp2Lbi(reduce_global_add_op->SoleObn()));
   node->BindBnWithRegst(reduce_global_add_op->SoleObn(), out_regst);

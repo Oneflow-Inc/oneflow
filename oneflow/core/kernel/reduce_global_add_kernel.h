@@ -15,6 +15,9 @@ class ReduceGlobalAddKernel final : public KernelIf<device_type> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
+  void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) override;
+
+  int64_t parallel_id_;
 };
 
 }  // namespace oneflow

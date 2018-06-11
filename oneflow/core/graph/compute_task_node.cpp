@@ -41,7 +41,7 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(TaskEdge* edge,
       comp_task_nodes.push_back(comp_task_node);
     } else {
       for (TaskEdge* task_edge : (node->*GetEdges)()) {
-        if (visited_nodes.find(task_edge->dst_node()) == visited_nodes.end()) {
+        if (visited_nodes.find((task_edge->*GetNode)()) == visited_nodes.end()) {
           nodes.push((task_edge->*GetNode)());
           CHECK(visited_nodes.emplace((task_edge->*GetNode)()).second);
         }
