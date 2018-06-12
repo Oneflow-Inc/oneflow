@@ -118,11 +118,15 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::BuildCtrlDependencyIfNeed(TaskNode* dst_node) {
+void TaskNode::BuildCtrlDependencyForOrdering(TaskNode* dst_node) {
   for (auto& name2regst : produced_regsts_) {
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
+  AddCtrlDependency(dst_node);
+}
+
+void TaskNode::AddCtrlDependency(TaskNode* dst_node) {
   this->add_ctrl_msg_consumer(dst_node->task_id());
   dst_node->add_ctrl_msg_producer(this->task_id());
 }
