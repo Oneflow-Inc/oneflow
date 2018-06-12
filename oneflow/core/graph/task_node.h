@@ -64,7 +64,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void add_ctrl_msg_consumer(int64_t consumer_id) { ctrl_msg_consumers_.push_back(consumer_id); }
   void add_ctrl_msg_producer(int64_t producer_id) { ctrl_msg_producers_.push_back(producer_id); }
-  void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
+  void BuildCtrlDependencyIfNeed(TaskNode* dst_node);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
