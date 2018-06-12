@@ -71,8 +71,7 @@ void CopyCommNetActor::Act() {
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
-  Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
-  void* writeable_token = writeable_blob->comm_net_token();
+  void* writeable_token = GetCurSoleWriteableRegst()->comm_net_token();
   // Async
   void* read_id =
       Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
