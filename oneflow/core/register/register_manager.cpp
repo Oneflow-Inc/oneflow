@@ -46,11 +46,10 @@ RegstMgr::RegstMgr(const Plan& plan) {
     }
   }
   for (const auto& pair : mem_case2mem_size) {
-    const MemoryCase& mem_case = pair.first;
-    std::tuple<char*, std::function<void()>> allocation_result =
-        Global<MemoryAllocator>::Get()->Allocate(mem_case, pair.second);
-    CHECK(mem_case2mem_ptr.emplace(mem_case, std::get<0>(allocation_result)).second);
-    deleters_.push_back(std::get<1>(allocation_result));
+    CHECK(
+        mem_case2mem_ptr
+            .emplace(pair.first, Global<MemoryAllocator>::Get()->Allocate(pair.first, pair.second))
+            .second);
   }
   for (const auto& pair : regst_desc_id2rt_regst_desc_) {
     const RtRegstDesc* rt_regst_desc = pair.second.get();
@@ -58,10 +57,6 @@ RegstMgr::RegstMgr(const Plan& plan) {
     CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
     mem_case2mem_ptr.at(mem_case) += rt_regst_desc->TotalByteSize4AllRegst();
   }
-}
-
-RegstMgr::~RegstMgr() {
-  for (std::function<void()> deleter : deleters_) { deleter(); }
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,

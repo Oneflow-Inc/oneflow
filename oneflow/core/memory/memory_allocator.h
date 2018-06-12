@@ -9,13 +9,17 @@ namespace oneflow {
 class MemoryAllocator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MemoryAllocator);
-  ~MemoryAllocator() = default;
+  ~MemoryAllocator();
 
-  std::tuple<char*, std::function<void()>> Allocate(MemoryCase mem_case, std::size_t size);
+  char* Allocate(MemoryCase mem_case, std::size_t size);
 
  private:
+  friend class Global<MemoryAllocator>;
+
   MemoryAllocator() = default;
   void Deallocate(char* dptr, MemoryCase mem_case);
+
+  std::list<std::function<void()>> deleters_;
 };
 
 }  // namespace oneflow

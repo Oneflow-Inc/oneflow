@@ -4,8 +4,11 @@
 
 namespace oneflow {
 
-std::tuple<char*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase mem_case,
-                                                                   std::size_t size) {
+MemoryAllocator::~MemoryAllocator() {
+  for (std::function<void()> deleter : deleters_) { deleter(); }
+}
+
+char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   const int memset_val = 0;
   char* dptr = nullptr;
   if (mem_case.has_host_mem()) {
@@ -23,7 +26,8 @@ std::tuple<char*, std::function<void()>> MemoryAllocator::Allocate(MemoryCase me
   } else {
     UNIMPLEMENTED();
   }
-  return std::make_tuple(dptr, std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
+  deleters_.push_back(std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
+  return dptr;
 }
 
 void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {

@@ -14,18 +14,18 @@ class RegstMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
   RegstMgr() = delete;
-  ~RegstMgr();
+  ~RegstMgr() = default;
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
                  std::function<void(Regst*)> OneRegstDone);
 
  private:
   friend class Global<RegstMgr>;
+
   explicit RegstMgr(const Plan& plan);
 
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
   HashMap<int64_t, char*> regst_desc_id2mem_ptr_;
-  std::list<std::function<void()>> deleters_;
 };
 
 }  // namespace oneflow
