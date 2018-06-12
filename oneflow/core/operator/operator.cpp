@@ -41,10 +41,6 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   }
 }
 
-bool Operator::UseCudnn() const {
-  return device_type() == DeviceType::kGPU && op_conf().use_cudnn_on_gpu();
-}
-
 const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns().size(), 1);
   return input_bns().Get(0);
