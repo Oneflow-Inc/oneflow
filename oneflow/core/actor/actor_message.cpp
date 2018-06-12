@@ -94,4 +94,9 @@ int64_t ActorMsg::eord_regst_desc_id() const {
   return eord_regst_desc_id_;
 }
 
+CtrlMsgType ActorMsg::ctrl_msg_type() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kCtrlMsg);
+  return ctrl_msg_type_;
+}
+
 }  // namespace oneflow

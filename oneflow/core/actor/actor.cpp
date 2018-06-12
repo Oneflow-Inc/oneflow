@@ -226,7 +226,7 @@ void Actor::ActUntilFail() {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
-      // FIXME: add ctrl dependency
+      // FIXME: add ctrl dependency to act graph
       device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     double cur_time = GetCurTime();
@@ -412,9 +412,36 @@ bool Actor::IsCtrlReady() {
   return produced_ctrl_ready() && consumed_ctrl_ready();
 }
 
-void Actor::ProcessCtrlMsg(const ActorMsg& msg) {}
+void Actor::ProcessCtrlMsg(const ActorMsg& msg) {
+  if (msg.ctrl_msg_type() == CtrlMsgType::kRequest) {
+    auto consumed_ctrl_it = consumed_ctrl_cnt_.find(msg.src_actor_id());
+    CHECK(consumed_ctrl_it != consumed_ctrl_cnt_.end());
+    CHECK_EQ(consumed_ctrl_it->second, 0);
+    ++consumed_ctrl_it->second;
+  } else if (msg.ctrl_msg_type() == CtrlMsgType::kAck) {
+    auto produced_ctrl_it = produced_ctrl_cnt_.find(msg.src_actor_id());
+    CHECK(produced_ctrl_it != produced_ctrl_cnt_.end());
+    CHECK_EQ(produced_ctrl_it->second, 0);
+    ++produced_ctrl_it->second;
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
-void Actor::AsyncSendCtrlMsg() {}
+void Actor::AsyncSendCtrlMsg() {
+  for (const auto& pair : consumed_ctrl_cnt_) {
+    ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, pair.first, CtrlMsgType::kAck);
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    --consumed_ctrl_cnt_[pair.first];
+    CHECK_EQ(consumed_ctrl_cnt_[pair.first], 0);
+  }
+  for (const auto& pair : produced_ctrl_cnt_) {
+    ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, pair.first, CtrlMsgType::kRequest);
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    --produced_ctrl_cnt_[pair.first];
+    CHECK_EQ(produced_ctrl_cnt_[pair.first], 0);
+  }
+}
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
