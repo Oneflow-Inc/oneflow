@@ -26,6 +26,8 @@ class CtrlCall final : public CtrlCallIf {
   CtrlCall() : status_(Status::kBeforeHandleRequest), responder_(&server_ctx_) {}
   ~CtrlCall() = default;
 
+  static constexpr const size_t value = (size_t)ctrl_method;
+
   const CtrlRequest<ctrl_method>& request() const { return request_; }
   CtrlRequest<ctrl_method>* mut_request() { return &request_; }
   CtrlResponse<ctrl_method>* mut_response() { return &response_; }
