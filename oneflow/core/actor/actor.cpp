@@ -63,12 +63,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
 
   for (const auto& consumer_id : task_proto.ctrl_msg_consumers()) {
-    ctrl_msg_consumers_.push_back(consumer_id);
-    // LOG(INFO) << "ctrl_pair:" << actor_id_ << "->" << consumer_id;
+    produced_ctrl_cnt_[consumer_id] = 1;
   }
   for (const auto& producer_id : task_proto.ctrl_msg_producers()) {
-    consumed_ctrl_msg_cnt_[producer_id] = 1;
-    // LOG(INFO) << "ctrl_pair:" << actor_id_ << "<-" << producer_id;
+    consumed_ctrl_cnt_[producer_id] = 0;
   }
 
   actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
@@ -188,8 +186,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCtrlMsg) {
-    ++consumed_ctrl_msg_cnt_[msg.src_actor_id()];
-    // LOG(INFO) << "recv ctrl msg:" << actor_id_ << "<-" << msg.src_actor_id();
+    ProcessCtrlMsg(msg);
     ActUntilFail();
   } else {
     UNIMPLEMENTED();
@@ -216,6 +213,8 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) { AsyncSendRegstMsgToProducer(msg.regst()); }
+  } else if (msg.msg_type() == ActorMsgType::kCtrlMsg) {
+    ProcessCtrlMsg(msg);
   } else {
     UNIMPLEMENTED();
   }
@@ -228,7 +227,6 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
-    for (auto& pair : consumed_ctrl_msg_cnt_) { --pair.second; }
     act_id_ += 1;
     ActEvent* act_event = nullptr;
     if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
@@ -254,11 +252,7 @@ void Actor::ActUntilFail() {
     last_act_start_time_ = cur_time;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
-    for (auto consumer_id : ctrl_msg_consumers_) {
-      ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, consumer_id);
-      Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
-      // LOG(INFO) << "send ctrl msg:" << actor_id_ << "->" << consumer_id;
-    }
+    AsyncSendCtrlMsg();
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
@@ -430,6 +424,28 @@ Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
 bool Actor::IsReadReady() {
   return naive_readable_regst_.size() == naive_readable_regst_cnt_ && IsCustomizedReadReady();
 }
+
+bool Actor::IsCtrlReady() {
+  auto produced_ctrl_ready = [&]() {
+    if (produced_ctrl_cnt_.empty()) return true;
+    for (const auto& pair : produced_ctrl_cnt_) {
+      if (pair.second == 0) return false;
+    }
+    return true;
+  };
+  auto consumed_ctrl_ready = [&]() {
+    if (consumed_ctrl_cnt_.empty()) return true;
+    for (const auto& pair : consumed_ctrl_cnt_) {
+      if (pair.second == 0) return false;
+    }
+    return true;
+  };
+  return produced_ctrl_ready() && consumed_ctrl_ready();
+}
+
+void Actor::ProcessCtrlMsg(const ActorMsg& msg) {}
+
+void Actor::AsyncSendCtrlMsg() {}
 
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);

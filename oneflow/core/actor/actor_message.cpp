@@ -50,10 +50,12 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   return msg;
 }
 
-ActorMsg ActorMsg::BuildCtrlMsg(int64_t src_actor_id, int64_t dst_actor_id) {
+ActorMsg ActorMsg::BuildCtrlMsg(int64_t src_actor_id, int64_t dst_actor_id,
+                                CtrlMsgType ctrl_msg_type) {
   ActorMsg msg;
   msg.src_actor_id_ = src_actor_id;
   msg.dst_actor_id_ = dst_actor_id;
+  msg.ctrl_msg_type_ = ctrl_msg_type;
   msg.msg_type_ = ActorMsgType::kCtrlMsg;
   return msg;
 }

@@ -118,14 +118,9 @@ class Actor {
 
  private:
   bool IsReadReady();
-  bool IsCtrlReady() {
-    // if (!acted_) return true;
-    if (consumed_ctrl_msg_cnt_.size() == 0) return true;
-    for (auto& pair : consumed_ctrl_msg_cnt_) {
-      if (pair.second == 0) return false;
-    }
-    return true;
-  }
+  bool IsCtrlReady();
+  void ProcessCtrlMsg(const ActorMsg& msg);
+  void AsyncSendCtrlMsg();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
@@ -163,8 +158,8 @@ class Actor {
   double last_act_start_time_;
   double act_interval_acc_;
 
-  std::vector<int64_t> ctrl_msg_consumers_;
-  HashMap<int64_t, int64_t> consumed_ctrl_msg_cnt_;
+  HashMap<int64_t, int64_t> produced_ctrl_cnt_;
+  HashMap<int64_t, int64_t> consumed_ctrl_cnt_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
