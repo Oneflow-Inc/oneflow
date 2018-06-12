@@ -25,7 +25,6 @@
 
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/cplusplus_14.h"
-#include "oneflow/core/common/cplusplus_17.h"
 
 DECLARE_string(log_dir);
 
