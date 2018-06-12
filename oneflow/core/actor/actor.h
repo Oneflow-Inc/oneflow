@@ -163,7 +163,6 @@ class Actor {
 
   std::vector<int64_t> ctrl_msg_consumers_;
   HashMap<int64_t, int64_t> consumed_ctrl_msg_cnt_;
-  bool acted_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

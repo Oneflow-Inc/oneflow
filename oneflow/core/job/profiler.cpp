@@ -27,12 +27,7 @@ void Profiler::Profile(const Plan& plan) {
   PersistentOutStream out_stream(LocalFS(), JoinPath(LogDir(), "oneflow.profile"));
   double mdupdt_act_interval = 0.0;
   int32_t mdupdt_task_num = 0;
-  int32_t act_num = profile_info_vec.size();
-  int32_t act_id = 10;
-  if (act_num > 20) { act_num -= 10; }
-  // for (const ProfileInfoPair& pair : profile_info_vec) {
-  for (; act_id < act_num; ++act_id) {
-    auto& pair = profile_info_vec[act_id];
+  for (const ProfileInfoPair& pair : profile_info_vec) {
     if (task_id2task_type.at(pair.first) == TaskType::kNormalMdUpdt) {
       mdupdt_task_num += 1;
       mdupdt_act_interval += pair.second.avg_act_interval();
