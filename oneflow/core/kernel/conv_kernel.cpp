@@ -3,20 +3,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-const T* GetImgDptr(const Blob* blob, int64_t idx) {
-  return blob->dptr<T>() + blob->shape().Count(1) * idx;
-}
-
-template<typename T>
-T* GetImgMutDptr(Blob* blob, int64_t idx) {
-  return const_cast<T*>(GetImgDptr<T>(blob, idx));
-}
-
-}  // namespace
-
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -40,7 +26,7 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && !this->UseCudnn()) {
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && !this->UseCudnnOnGpu()) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
@@ -98,20 +84,21 @@ const int32_t ConvKernelIf<device_type, T>::OpKernelDim() const {
   return this->GetConvKernelConf().dim();
 }
 
-template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+template<DeviceType device_type, typename T>
+void ConvKernelImplByIm2Col<device_type, T>::VirtualKernelInit(
+    const ParallelContext* parallel_ctx) {
   const std::string& data_format =
       this->template GetValFromCustomizedOpConf<std::string>("data_format");
   if (data_format == "channels_first") {
-    im2col_func_ = ConvKernelUtil<T>::NCDHWIm2Col;
-    col2im_func_ = ConvKernelUtil<T>::NCDHWCol2Im;
-    forward_func_ = KernelUtil<DeviceType::kCPU, T>::OFGemm;
+    im2col_func_ = ConvKernelUtil<device_type, T>::NCDHWIm2Col;
+    col2im_func_ = ConvKernelUtil<device_type, T>::NCDHWCol2Im;
+    forward_func_ = KernelUtil<device_type, T>::OFGemm;
     dhw_offset_ = 2;
     is_out_diff_need_trans_ = CblasNoTrans;
   } else {
-    im2col_func_ = ConvKernelUtil<T>::NDHWCIm2Col;
-    col2im_func_ = ConvKernelUtil<T>::NDHWCCol2Im;
-    forward_func_ = KernelUtil<DeviceType::kCPU, T>::OFGemmTrans;
+    im2col_func_ = ConvKernelUtil<device_type, T>::NDHWCIm2Col;
+    col2im_func_ = ConvKernelUtil<device_type, T>::NDHWCCol2Im;
+    forward_func_ = KernelUtil<device_type, T>::OFGemmTrans;
     dhw_offset_ = 1;
     is_out_diff_need_trans_ = CblasTrans;
   }
@@ -123,13 +110,14 @@ void ConvKernel<DeviceType::kCPU, T>::VirtualKernelInit(const ParallelContext* p
   padding_before_ = this->GetConvKernelConf().pad_small_side().data();
 }
 
-template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::DoForwardDataContent(
+template<DeviceType device_type, typename T>
+void ConvKernelImplByIm2Col<device_type, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   FOR_RANGE(int64_t, i, 0, in_shape_.At(0)) {
-    im2col_func_(device_ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_, out_shape_,
-                 strides_, dilation_rate_, padding_before_, static_cast<T*>(device_ctx->buf_ptr()));
+    im2col_func_(this->OpKernelDim(), device_ctx, GetImgDptr<T>(in_blob, i), in_shape_,
+                 weight_shape_, out_shape_, strides_, dilation_rate_, padding_before_,
+                 static_cast<T*>(device_ctx->buf_ptr()));
 
     // col_buf is device_ctx->buf_ptr()
     // channels first: out = weight * col_buf
@@ -157,24 +145,25 @@ void ConvKernel<DeviceType::kCPU, T>::DoForwardDataContent(
   }
 }
 
-template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
+template<DeviceType device_type, typename T>
+void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
     DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
-  Memset<DeviceType::kCPU>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
-                           weight_diff_blob->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
+                      weight_diff_blob->ByteSizeOfDataContentField());
   if (in_diff_blob != nullptr) {
-    Memset<DeviceType::kCPU>(ctx, in_diff_blob->mut_dptr<T>(), 0,
-                             in_diff_blob->ByteSizeOfDataContentField());
+    Memset<device_type>(ctx, in_diff_blob->mut_dptr<T>(), 0,
+                        in_diff_blob->ByteSizeOfDataContentField());
   }
   FOR_RANGE(int64_t, i, 0, out_shape_.At(0)) {
-    im2col_func_(ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_, out_shape_, strides_,
-                 dilation_rate_, padding_before_, static_cast<T*>(ctx->buf_ptr()));
+    im2col_func_(this->OpKernelDim(), ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_,
+                 out_shape_, strides_, dilation_rate_, padding_before_,
+                 static_cast<T*>(ctx->buf_ptr()));
 
     // channels first:  weight' += out[i]' * col_buf(T)
     // channels last :  weight' += out[i]'(T) * col_buf(T)
-    KernelUtil<DeviceType::kCPU, T>::OFGemm(
+    KernelUtil<device_type, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasTrans,
         weight_shape_.At(0),                             //  filter
         weight_shape_.Count(1),                          //  ci * kd * kh * kw
@@ -185,7 +174,7 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
     if (in_diff_blob != nullptr) {
       // channels first:  col_buf' = weight(T) * out[i]'
       // channels last :  col_buf' = weight(T) * out[i]'(T)
-      KernelUtil<DeviceType::kCPU, T>::OFGemm(
+      KernelUtil<device_type, T>::OFGemm(
           ctx, CblasTrans, is_out_diff_need_trans_,
           weight_shape_.Count(1),                          //  ci * kd * kh * kw
           out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  //  od * oh * ow
@@ -194,24 +183,25 @@ void ConvKernel<DeviceType::kCPU, T>::WeightBackward(
           static_cast<T>(0), static_cast<T*>(ctx->buf_ptr()));
 
       // in' = col2im(col_buf')
-      col2im_func_(ctx, static_cast<const T*>(ctx->buf_ptr()), in_shape_, weight_shape_, out_shape_,
-                   strides_, dilation_rate_, padding_before_, GetImgMutDptr<T>(in_diff_blob, i));
+      col2im_func_(this->OpKernelDim(), ctx, static_cast<const T*>(ctx->buf_ptr()), in_shape_,
+                   weight_shape_, out_shape_, strides_, dilation_rate_, padding_before_,
+                   GetImgMutDptr<T>(in_diff_blob, i));
     }
   }
 }
 
-template<typename T>
-void ConvKernel<DeviceType::kCPU, T>::BiasBackward(
+template<DeviceType device_type, typename T>
+void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
     DeviceCtx* ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-  Memset<DeviceType::kCPU>(ctx, bias_diff_blob->mut_dptr<T>(), 0,
-                           bias_diff_blob->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx, bias_diff_blob->mut_dptr<T>(), 0,
+                      bias_diff_blob->ByteSizeOfDataContentField());
 
   FOR_RANGE(int64_t, i, 0, out_shape_.At(0)) {
     // channels first:  bias' += out' * bias_mul
     // channels last:   bias' += out'(T) * bias_mul
-    KernelUtil<DeviceType::kCPU, T>::OFGemm(
+    KernelUtil<device_type, T>::OFGemm(
         ctx, is_out_diff_need_trans_, CblasNoTrans,
         weight_shape_.At(0),                             //  filter
         1,                                               //  1
@@ -364,8 +354,9 @@ void ColBufUtil<T>::operator()(ColBufWriter<T>* col_buf_writer, int64_t c, int64
 }
 
 template<typename T>
-void ConvKernelUtil<T>::DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& col_buf_util,
-                                    ColBufWriter<T>* col_buf_writer) {
+void ConvKernelUtil<DeviceType::kCPU, T>::DoNCDWHFunc(const Shape& weight_shape,
+                                                      ColBufUtil<T>& col_buf_util,
+                                                      ColBufWriter<T>* col_buf_writer) {
   for (int64_t c = 0; c != weight_shape.At(1); col_buf_writer->NextImCSize(), ++c) {
     for (int64_t kd = 0; kd != weight_shape.At(2); ++kd) {
       for (int64_t kh = 0; kh != weight_shape.At(3); ++kh) {
@@ -378,10 +369,10 @@ void ConvKernelUtil<T>::DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& co
 }
 
 template<typename T>
-void ConvKernelUtil<T>::NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                                    const Shape& weight_shape, const Shape& out_shape,
-                                    const int32_t* strides, const int32_t* dilation_rate,
-                                    const int32_t* padding_before, T* col_buf_ptr) {
+void ConvKernelUtil<DeviceType::kCPU, T>::NCDHWIm2Col(
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
   Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(3),
                                  in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
@@ -389,11 +380,10 @@ void ConvKernelUtil<T>::NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, con
 }
 
 template<typename T>
-void ConvKernelUtil<T>::NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf_ptr,
-                                    const Shape& in_shape, const Shape& weight_shape,
-                                    const Shape& out_shape, const int32_t* strides,
-                                    const int32_t* dilation_rate, const int32_t* padding_before,
-                                    T* in_diff_ptr) {
+void ConvKernelUtil<DeviceType::kCPU, T>::NCDHWCol2Im(
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_ptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 2, strides, dilation_rate, padding_before);
   Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(3),
                                  in_shape.Count(4), 1, out_shape.Count(3), out_shape.Count(4), 1);
@@ -401,8 +391,9 @@ void ConvKernelUtil<T>::NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf_ptr,
 }
 
 template<typename T>
-void ConvKernelUtil<T>::DoNDWHCFunc(const Shape& weight_shape, ColBufUtil<T>& col_buf_util,
-                                    ColBufWriter<T>* col_buf_writer) {
+void ConvKernelUtil<DeviceType::kCPU, T>::DoNDWHCFunc(const Shape& weight_shape,
+                                                      ColBufUtil<T>& col_buf_util,
+                                                      ColBufWriter<T>* col_buf_writer) {
   for (int64_t kd = 0; kd != weight_shape.At(1); ++kd) {
     for (int64_t kh = 0; kh != weight_shape.At(2); ++kh) {
       for (int64_t kw = 0; kw != weight_shape.At(3); ++kw) {
@@ -415,10 +406,10 @@ void ConvKernelUtil<T>::DoNDWHCFunc(const Shape& weight_shape, ColBufUtil<T>& co
 }
 
 template<typename T>
-void ConvKernelUtil<T>::NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                                    const Shape& weight_shape, const Shape& out_shape,
-                                    const int32_t* strides, const int32_t* dilation_rate,
-                                    const int32_t* padding_before, T* col_buf_ptr) {
+void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCIm2Col(
+    const int dim_num, DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
   Im2ColWriter<T> col_buf_writer(in_dptr, col_buf_ptr, in_shape.Count(2), in_shape.Count(2),
                                  in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
@@ -427,11 +418,10 @@ void ConvKernelUtil<T>::NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr, con
 }
 
 template<typename T>
-void ConvKernelUtil<T>::NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf_ptr,
-                                    const Shape& in_shape, const Shape& weight_shape,
-                                    const Shape& out_shape, const int32_t* strides,
-                                    const int32_t* dilation_rate, const int32_t* padding_before,
-                                    T* in_diff_ptr) {
+void ConvKernelUtil<DeviceType::kCPU, T>::NDHWCCol2Im(
+    const int dim_num, DeviceCtx* device_ctx, const T* col_buf_ptr, const Shape& in_shape,
+    const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
+    const int32_t* dilation_rate, const int32_t* padding_before, T* in_diff_ptr) {
   ColBufUtil<T> col_buf_util(in_shape, out_shape, 1, strides, dilation_rate, padding_before);
   Col2ImWriter<T> col_buf_writer(col_buf_ptr, in_diff_ptr, in_shape.Count(2), in_shape.Count(2),
                                  in_shape.Count(3), in_shape.Count(4), out_shape.Count(2, 4),
