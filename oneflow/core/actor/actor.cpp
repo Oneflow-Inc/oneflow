@@ -75,20 +75,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
-  auto name2regst_desc_id_iter = name2regst_desc_id_.find("in_delay");
-  if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
-    CHECK_EQ(name2regst_desc_id_iter->second.size(), 1);
-    in_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
-  } else {
-    in_delay_regst_desc_id_ = -1;
-  }
-  name2regst_desc_id_iter = name2regst_desc_id_.find("out_delay");
-  if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
-    CHECK_EQ(name2regst_desc_id_iter->second.size(), 1);
-    out_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
-  } else {
-    out_delay_regst_desc_id_ = -1;
-  }
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
@@ -168,9 +154,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       if (naive_readable_regst_it != naive_readable_regst_.end()) {
         if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
         naive_readable_regst_it->second.push_back(regst);
-        if (regst->regst_desc_id() != in_delay_regst_desc_id_) {
-          NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
-        }
+        NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
       } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
         // do nothing
       } else {
@@ -242,6 +226,7 @@ void Actor::ActUntilFail() {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
+      // FIXME: add ctrl dependency
       device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     double cur_time = GetCurTime();
@@ -362,16 +347,8 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 }
 
 Regst* Actor::GetCurSoleWriteableRegst() {
-  if (writeable_produced_regst_.size() == 1) {
-    return writeable_produced_regst_.begin()->second.front();
-  } else {
-    CHECK_EQ(writeable_produced_regst_.size(), 2);
-    CHECK_NE(out_delay_regst_desc_id_, -1);
-    for (auto& pair : writeable_produced_regst_) {
-      if (pair.first != out_delay_regst_desc_id_) { return pair.second.front(); }
-    }
-    UNIMPLEMENTED();
-  }
+  CHECK_EQ(writeable_produced_regst_.size(), 1);
+  return writeable_produced_regst_.begin()->second.front();
 }
 
 std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
@@ -395,16 +372,8 @@ Regst* Actor::GetNaiveNextReadable(int64_t regst_desc_id) {
 }
 
 Regst* Actor::GetNaiveSoleCurReadable() {
-  if (naive_readable_regst_.size() == 1) {
-    return GetNaiveFirstCurReadable();
-  } else {
-    CHECK_EQ(naive_readable_regst_.size(), 2);
-    CHECK_NE(in_delay_regst_desc_id_, -1);
-    for (auto& pair : naive_readable_regst_) {
-      if (pair.first != in_delay_regst_desc_id_) { return GetNaiveCurReadable(pair.first); }
-    }
-    UNIMPLEMENTED();
-  }
+  CHECK_EQ(naive_readable_regst_.size(), 1);
+  return GetNaiveFirstCurReadable();
 }
 
 Regst* Actor::GetNaiveFirstCurReadable() {
@@ -464,7 +433,6 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
-  isall_or_names.second.push_back("in_delay");
   if (isall_or_names.first) {
     for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
   } else {

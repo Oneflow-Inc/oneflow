@@ -151,8 +151,6 @@ class Actor {
   HashMap<int64_t, std::deque<Regst*>> naive_readable_regst_;
   size_t naive_readable_regst_cnt_;
   bool is_naive_readable_eord_;
-  int64_t in_delay_regst_desc_id_;
-  int64_t out_delay_regst_desc_id_;
 
   // Profile
   double last_act_start_time_;
