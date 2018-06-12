@@ -57,6 +57,7 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
   void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
+  void ForEachCurConsumedCtrl(std::function<void(int64_t)>);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -83,6 +84,7 @@ class Actor {
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
+  void AsyncReturnAllConsumedCtrlMsg();
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
@@ -158,6 +160,7 @@ class Actor {
 
   HashMap<int64_t, int64_t> produced_ctrl_cnt_;
   HashMap<int64_t, int64_t> consumed_ctrl_cnt_;
+  int64_t total_consumed_ctrl_cnt_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

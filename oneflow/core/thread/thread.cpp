@@ -31,8 +31,7 @@ void Thread::PollMsgChannel(const ThreadCtx& thread_ctx) {
     }
     int64_t actor_id = msg.dst_actor_id();
     auto actor_it = id2actor_ptr_.find(actor_id);
-    // CHECK(actor_it != id2actor_ptr_.end());
-    if (actor_it == id2actor_ptr_.end()) continue;
+    CHECK(actor_it != id2actor_ptr_.end());
     int process_msg_ret = actor_it->second->ProcessMsg(msg);
     if (process_msg_ret == 1) {
       LOG(INFO) << "thread " << thrd_id_ << " deconstruct actor " << actor_id;

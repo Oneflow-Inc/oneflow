@@ -72,6 +72,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   writeable_produced_regst_desc_cnt_ = actual_writeable_produced_regst_desc_num_;
   total_reading_cnt_ = 0;
+  total_consumed_ctrl_cnt_ = 0;
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
@@ -138,6 +139,12 @@ void Actor::ForEachCurNaiveReadableRegst(std::function<void(const Regst*)> func)
   }
 }
 
+void Actor::ForEachCurConsumedCtrl(std::function<void(int64_t)> func) {
+  for (const auto& pair : consumed_ctrl_cnt_) {
+    if (pair.second) { func(pair.first); }
+  }
+}
+
 int Actor::HandlerNormal(const ActorMsg& msg) {
   if (msg.msg_type() == ActorMsgType::kEordMsg) {
     remaining_eord_cnt_ -= 1;
@@ -178,9 +185,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   if ((is_naive_readable_eord_ && naive_readable_regst_cnt_ == 0)
       || IsCustomizedReadAlwaysUnReadyFromNow()) {
     CHECK_EQ(naive_readable_regst_cnt_, 0);
+    AsyncReturnAllConsumedCtrlMsg();
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_consumed_ctrl_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
       return 1;
     } else {
@@ -202,7 +210,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_consumed_ctrl_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
   }
@@ -226,7 +234,11 @@ void Actor::ActUntilFail() {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
-      // FIXME: add ctrl dependency to act graph
+      ForEachCurConsumedCtrl([&](int64_t actor_id) {
+        // FIXME: add ctrl dependency to act graph
+        // info->set_regst_desc_id(actor_id);
+        // info->set_act_id(act_id_);
+      });
       device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     double cur_time = GetCurTime();
@@ -423,6 +435,7 @@ void Actor::ProcessCtrlMsg(const ActorMsg& msg) {
     CHECK(produced_ctrl_it != produced_ctrl_cnt_.end());
     CHECK_EQ(produced_ctrl_it->second, 0);
     ++produced_ctrl_it->second;
+    --total_consumed_ctrl_cnt_;
   } else {
     UNIMPLEMENTED();
   }
@@ -440,6 +453,17 @@ void Actor::AsyncSendCtrlMsg() {
     Global<ActorMsgBus>::Get()->SendMsg(msg);
     --produced_ctrl_cnt_[pair.first];
     CHECK_EQ(produced_ctrl_cnt_[pair.first], 0);
+    ++total_consumed_ctrl_cnt_;
+  }
+}
+
+void Actor::AsyncReturnAllConsumedCtrlMsg() {
+  for (const auto& pair : consumed_ctrl_cnt_) {
+    if (pair.second == 0) continue;
+    ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, pair.first, CtrlMsgType::kAck);
+    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    --consumed_ctrl_cnt_[pair.first];
+    CHECK_EQ(consumed_ctrl_cnt_[pair.first], 0);
   }
 }
 
