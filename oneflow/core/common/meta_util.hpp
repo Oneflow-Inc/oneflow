@@ -1,7 +1,3 @@
-//
-// Created by root on 6/12/18.
-//
-
 #ifndef ONEFLOW_META_UTIL_HPP
 #define ONEFLOW_META_UTIL_HPP
 
