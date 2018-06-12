@@ -30,20 +30,29 @@ inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
 }
 
 RegstMgr::RegstMgr(const Plan& plan) {
-  HashMap<MemoryCase, char*> mem_case2mem_ptr;
-  HashMap<MemoryCase, size_t> mem_case2mem_size;
+  std::list<const RegstDescProto*> regst_protos;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
-    for (const auto& pair : task.produced_regst_desc()) {
-      const RegstDescProto& regst_desc_proto = pair.second;
-      CHECK(regst_desc_id2rt_regst_desc_
-                .emplace(regst_desc_proto.regst_desc_id(),
-                         std::make_unique<const RtRegstDesc>(regst_desc_proto))
-                .second);
-      mem_case2mem_size[regst_desc_proto.mem_case()] +=
-          regst_desc_id2rt_regst_desc_.at(regst_desc_proto.regst_desc_id())
-              ->TotalByteSize4AllRegst();
-    }
+    for (const auto& pair : task.produced_regst_desc()) { regst_protos.push_back(&pair.second); }
+  }
+  InitFromRegstProtoList(regst_protos);
+}
+
+RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
+  InitFromRegstProtoList(regst_protos);
+}
+
+void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
+  HashMap<MemoryCase, char*> mem_case2mem_ptr;
+  HashMap<MemoryCase, size_t> mem_case2mem_size;
+  for (const RegstDescProto* regst_desc_proto : regst_protos) {
+    CHECK(regst_desc_id2rt_regst_desc_
+              .emplace(regst_desc_proto->regst_desc_id(),
+                       std::make_unique<const RtRegstDesc>(*regst_desc_proto))
+              .second);
+    mem_case2mem_size[regst_desc_proto->mem_case()] +=
+        regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
+            ->TotalByteSize4AllRegst();
   }
   for (const auto& pair : mem_case2mem_size) {
     CHECK(
