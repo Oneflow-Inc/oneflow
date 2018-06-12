@@ -23,8 +23,7 @@
 #include <unordered_set>
 #include <utility>
 
-#include "oneflow/core/common/cplusplus_14.h"
-#include "oneflow/core/common/cplusplus_17.h"
+#include "oneflow/core/common/meta_util.hpp"
 
 DECLARE_string(log_dir);
 
