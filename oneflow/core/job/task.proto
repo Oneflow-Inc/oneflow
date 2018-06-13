@@ -29,13 +29,13 @@ enum TaskType {
 };
 
 enum PathType {
-  kInvalid = 0;
-  kDataPreprocess = 1;
-  kDataForward = 2;
-  kDataBackward = 3;
-  kMdUpdt = 4;
-  kMdSave = 5;
-  kPrint = 6;
+  kInvalidPath = 0;
+  kDataPreprocessPath = 1;
+  kDataForwardPath = 2;
+  kDataBackwardPath = 3;
+  kMdUpdtPath = 4;
+  kMdSavePath = 5;
+  kPrintPath = 6;
 }
 
 message RegstDescIdSet {

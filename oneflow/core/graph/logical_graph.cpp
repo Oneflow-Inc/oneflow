@@ -16,6 +16,7 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildModelStruct(is_train);
   BuildRecordLoadStruct();
   if (is_train) { ConnectFwToBw(); }
+  FixDecodeAndMdDiffAccPathType();
   ToDotWithAutoFilePath();
 }
 
@@ -29,6 +30,28 @@ void LogicalGraph::ForEachLogicalNode(std::function<void(LogicalNodeType*)> func
   for (LogicalNodeType* valid_node : valid_nodes) { func(valid_node); }
 }
 
+void LogicalGraph::SetPathTypeForNewNodes(PathType path_type) {
+  ForEachNode([&](LogicalNode* node) {
+    if (node->GetPathType() == kInvalidPath) { node->SetPathType(path_type); }
+  });
+}
+
+void LogicalGraph::FixDecodeAndMdDiffAccPathType() {
+  ForEachNode([&](LogicalNode* node) {
+    CHECK_NE(node->GetPathType(), kInvalidPath);
+    auto decode_node = dynamic_cast<DecodeLogicalNode*>(node);
+    if (decode_node) {
+      CHECK_EQ(node->GetPathType(), kDataForwardPath);
+      node->SetPathType(kDataPreprocessPath);
+    }
+    auto md_diff_acc_node = dynamic_cast<MdDiffAccLogicalNode*>(node);
+    if (md_diff_acc_node) {
+      CHECK_EQ(node->GetPathType(), kMdUpdtPath);
+      node->SetPathType(kDataBackwardPath);
+    }
+  });
+}
+
 void LogicalGraph::BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(edge2ibn, &op_name2nodes);
@@ -39,6 +62,7 @@ void LogicalGraph::BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
     total_mbn_num_ +=
         node->SoleOp()->model_bns().size() + node->SoleOp()->forward_model_bns().size();
   });
+  SetPathTypeForNewNodes(kDataForwardPath);
 }
 
 void LogicalGraph::NaiveBuildFwStruct(
@@ -212,6 +236,7 @@ void LogicalGraph::SetMainModelParallel() {
 void LogicalGraph::BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   NaiveBuildBwStruct(edge2ibn);
   AddBackwardClone(*edge2ibn);
+  SetPathTypeForNewNodes(kDataBackwardPath);
 }
 
 void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
@@ -382,6 +407,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     loss_print_logical->mut_parallel_desc().reset(new ParallelDesc(loss_print_pr_conf));
     Connect<LogicalNode>(loss_acc_logical, NewEdge(), loss_print_logical);
   });
+  SetPathTypeForNewNodes(kPrintPath);
 }
 
 void LogicalGraph::BuildModelStruct(bool is_train) {
@@ -437,6 +463,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     }
   });
   SetupNormalMdUpdtOp();
+  SetPathTypeForNewNodes(kMdUpdtPath);
 }
 
 void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
@@ -507,6 +534,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   md_save_pr_desc->set_device_type(DeviceType::kCPU);
   md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);
   Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
+  SetPathTypeForNewNodes(kMdSavePath);
   return md_save_logical;
 }
 
@@ -560,6 +588,7 @@ void LogicalGraph::BuildRecordLoadStruct() {
       }
     }
   }
+  SetPathTypeForNewNodes(kDataPreprocessPath);
 }
 
 void LogicalGraph::ConnectFwToBw() {

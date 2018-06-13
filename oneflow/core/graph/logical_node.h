@@ -57,7 +57,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   PathType GetPathType() const { return path_type_; }
 
  protected:
-  LogicalNode() : main_model_parallel_(nullptr) {}
+  LogicalNode() : main_model_parallel_(nullptr), path_type_(kInvalidPath) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 

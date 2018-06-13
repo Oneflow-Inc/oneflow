@@ -66,6 +66,9 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void BuildRecordLoadStruct();
   void ConnectFwToBw();
 
+  void SetPathTypeForNewNodes(PathType path_type);
+  void FixDecodeAndMdDiffAccPathType();
+
   int64_t total_mbn_num_;
 };
 
