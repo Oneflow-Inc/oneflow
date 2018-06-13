@@ -429,6 +429,11 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   }
   auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
   if (consumed_it != consumed_ctrl_regst_.end()) {
+    auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(regst_desc_id);
+    if (producer_it == consumed_ctrl_regst_desc_id2producer_.end()) {
+      CHECK(
+          consumed_ctrl_regst_desc_id2producer_.insert({regst_desc_id, msg.src_actor_id()}).second);
+    }
     consumed_it->second.push_back(msg.regst());
     return 0;
   }
@@ -439,7 +444,9 @@ void Actor::AsyncSendCtrlRegst() {
   for (auto& pair : consumed_ctrl_regst_) {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
-    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+    auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(pair.first);
+    CHECK(producer_it != consumed_ctrl_regst_desc_id2producer_.end());
+    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_it->second, regst));
     pair.second.pop_front();
   }
   for (auto& pair : produced_ctrl_regst_) {
@@ -457,7 +464,9 @@ void Actor::AsyncReturnAllConsumedCtrlRegst() {
   for (auto& pair : consumed_ctrl_regst_) {
     if (pair.second.empty()) continue;
     Regst* regst = pair.second.front();
-    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+    auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(pair.first);
+    CHECK(producer_it != consumed_ctrl_regst_desc_id2producer_.end());
+    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, producer_it->second, regst));
     pair.second.pop_front();
   }
 }
