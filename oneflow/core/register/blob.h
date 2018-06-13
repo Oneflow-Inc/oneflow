@@ -5,7 +5,6 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/common/eigen_util.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
