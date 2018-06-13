@@ -77,7 +77,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
-  VirtualActorInit(task_proto);
+  TaskProto mut_task_proto = task_proto;
+  mut_task_proto.mutable_produced_regst_desc()->erase("out_ctrl");
+  mut_task_proto.mutable_consumed_regst_desc_id()->erase("in_ctrl");
+  VirtualActorInit(mut_task_proto);
 }
 
 DeviceType Actor::GetDeviceType() const {
