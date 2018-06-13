@@ -10,6 +10,7 @@
 #include <grpc++/impl/codegen/status.h>
 #include <grpc++/impl/codegen/stub_options.h>
 #include <grpc++/impl/codegen/sync_stream.h>
+#include <grpc++/impl/codegen/client_unary_call.h>
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/control/control.pb.h"
@@ -31,50 +32,49 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(EraseCount)    \
   OF_PP_MAKE_TUPLE_SEQ(PushAvgActInterval)
 
-enum class CtrlMethod {
-#define MAKE_ENTRY(method) k##method,
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ)
-#undef MAKE_ENTRY
-};
+#define CatRequest(method) method##Request,
+#define CatReqponse(method) method##Response,
+#define CatEnum(method) k##method,
+#define CatName(method) "/oneflow.CtrlService/" OF_PP_STRINGIZE(method),
 
-const int32_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
+#define MAKE_META_DATA()                                                                       \
+  enum class CtrlMethod { OF_PP_FOR_EACH_TUPLE(CatEnum, CTRL_METHOD_SEQ) };                    \
+  static const char* g_method_name[] = {OF_PP_FOR_EACH_TUPLE(CatName, CTRL_METHOD_SEQ)};       \
+  using CtrlRequestTuple = std::tuple<OF_PP_FOR_EACH_TUPLE(CatRequest, CTRL_METHOD_SEQ) void>; \
+  using CtrlResponseTuple = std::tuple<OF_PP_FOR_EACH_TUPLE(CatReqponse, CTRL_METHOD_SEQ) void>;
 
-using CtrlRequestTuple = std::tuple<
-#define MAKE_ENTRY(method) method##Request,
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ)
-#undef MAKE_ENTRY
-        void>;
+MAKE_META_DATA()
 
-using CtrlResponseTuple = std::tuple<
-#define MAKE_ENTRY(method) method##Response,
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ)
-#undef MAKE_ENTRY
-        void>;
+constexpr const size_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
 
 template<CtrlMethod ctrl_method>
 using CtrlRequest =
     typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlRequestTuple>::type;
+
 template<CtrlMethod ctrl_method>
 using CtrlResponse =
     typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlResponseTuple>::type;
+
+inline const char* GetMethodName(CtrlMethod method) {
+  return g_method_name[static_cast<int32_t>(method)];
+}
 
 class CtrlService final {
  public:
   class Stub final {
    public:
     Stub(std::shared_ptr<grpc::ChannelInterface> channel);
-#define DECLARE_STUB_METHOD(method)                                                 \
-  grpc::Status method(grpc::ClientContext* context, const method##Request& request, \
-                      method##Response* response);
 
-    OF_PP_FOR_EACH_TUPLE(DECLARE_STUB_METHOD, CTRL_METHOD_SEQ);
-
-#undef DECLARE_STUB_METHOD
+    template<CtrlMethod ctrl_method>
+    grpc::Status CallMethod(grpc::ClientContext* context, const CtrlRequest<ctrl_method>& request,
+                            CtrlResponse<ctrl_method>* response) {
+      return grpc::BlockingUnaryCall(channel_.get(),
+                                     rpcmethods_.at(static_cast<size_t>(ctrl_method)), context,
+                                     request, response);
+    }
 
    private:
-#define DECLARE_RPC_METHOD(method) const grpc::RpcMethod rpcmethod_##method##_;
-    OF_PP_FOR_EACH_TUPLE(DECLARE_RPC_METHOD, CTRL_METHOD_SEQ);
-#undef DECLARE_RPC_METHOD
+    std::array<const grpc::RpcMethod, kCtrlMethodNum> rpcmethods_;
 
     std::shared_ptr<grpc::ChannelInterface> channel_;
   };

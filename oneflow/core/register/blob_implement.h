@@ -11,10 +11,7 @@ template<DeviceType device_type>
 class BlobImpl final : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : BlobImpl(regst, blob_desc, mem_ptr, nullptr) {}
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token)
-      : Blob(regst, blob_desc, mem_ptr, comm_net_token) {}
+  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) : Blob(regst, blob_desc, mem_ptr) {}
   ~BlobImpl() = default;
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {

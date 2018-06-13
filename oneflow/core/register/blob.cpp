@@ -7,7 +7,7 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token) {
+Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) {
   mem_ptr_ = mem_ptr;
   if (blob_desc->has_data_id_field()) {
     data_id_ptr_ = mem_ptr;
@@ -22,7 +22,6 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_ne
   }
   dptr_ = offset + RoundUp(blob_desc->ByteSizeOfColNumField(), kCudaAlignSize);
   blob_desc_ = blob_desc;
-  comm_net_token_ = comm_net_token;
   regst_ = regst;
 }
 
@@ -52,17 +51,18 @@ const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case
 
 #define MAKE_BLOB_ENTRY(device_type)                           \
   {device_type,                 \
-   [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token) { \
+   [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) { \
      return new BlobImpl<device_type>(       \
-         regst, blob_desc, mem_ptr, comm_net_token);                                  \
+         regst, blob_desc, mem_ptr);                                  \
    }},
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token,
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
               DeviceType device_type) {
   static const HashMap<int32_t, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc,
-                                                        char* mem_ptr, void* comm_net_token)>>
+                                                        char* mem_ptr)>>
       creators = {OF_PP_SEQ_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(device_type)(regst, blob_desc, mem_ptr, comm_net_token);
+  return creators.at(device_type)(regst, blob_desc, mem_ptr);
+
 }
 
 }  // namespace oneflow
