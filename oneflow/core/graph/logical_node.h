@@ -52,6 +52,10 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
+  // path type
+  void SetPathType(PathType path_type) { path_type_ = path_type; }
+  PathType GetPathType() const { return path_type_; }
+
  protected:
   LogicalNode() : main_model_parallel_(nullptr) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
@@ -68,6 +72,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   HashSet<LogicalBlobId> lbi_boxing_;
   HashSet<LogicalBlobId> lbi_121_;
+  PathType path_type_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \

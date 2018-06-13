@@ -28,6 +28,16 @@ enum TaskType {
   kReduceScatter = 19;
 };
 
+enum PathType {
+  kInvalid = 0;
+  kDataPreprocess = 1;
+  kDataForward = 2;
+  kDataBackward = 3;
+  kMdUpdt = 4;
+  kMdSave = 5;
+  kPrint = 6;
+}
+
 message RegstDescIdSet {
   repeated int64 regst_desc_id = 1;
 }
