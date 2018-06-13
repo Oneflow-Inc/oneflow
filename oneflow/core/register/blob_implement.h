@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_REGISTER_BLOB_IMPLEMENT_H_
 #define ONEFLOW_CORE_REGISTER_BLOB_IMPLEMENT_H_
 
-#include "oneflow/core/common/eigen_util.h"
 #include "oneflow/core/register/blob.h"
 #include "oneflow/core/kernel/kernel_util.h"
 
@@ -11,7 +10,8 @@ template<DeviceType device_type>
 class BlobImpl final : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) : Blob(regst, blob_desc, mem_ptr) {}
+  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
+      : Blob(regst, blob_desc, mem_ptr) {}
   ~BlobImpl() = default;
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {

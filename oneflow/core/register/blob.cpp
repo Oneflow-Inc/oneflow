@@ -49,20 +49,16 @@ int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
 
-#define MAKE_BLOB_ENTRY(device_type)                           \
-  {device_type,                 \
-   [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) { \
-     return new BlobImpl<device_type>(       \
-         regst, blob_desc, mem_ptr);                                  \
+#define MAKE_BLOB_ENTRY(device_type)                                                               \
+  {static_cast<int32_t>(device_type), [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) { \
+     return new BlobImpl<device_type>(regst, blob_desc, mem_ptr);                                  \
    }},
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-              DeviceType device_type) {
-  static const HashMap<int32_t, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc,
-                                                        char* mem_ptr)>>
-      creators = {OF_PP_SEQ_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, DEVICE_TYPE_SEQ)};
-  return creators.at(device_type)(regst, blob_desc, mem_ptr);
-
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type) {
+  static const HashMap<
+      int32_t, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc, char* mem_ptr)>>
+      creators = {OF_PP_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, DEVICE_TYPE_SEQ)};
+  return creators.at(static_cast<int32_t>(device_type))(regst, blob_desc, mem_ptr);
 }
 
 }  // namespace oneflow
