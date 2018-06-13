@@ -229,10 +229,11 @@ void Actor::ActUntilFail() {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
-      ForEachCurConsumedCtrlRegst([&](const Regst* consumed_ctrl_regst) {
+      for (const auto& pair : consumed_ctrl_regst_) {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        SetReadableRegstInfo(consumed_ctrl_regst, info);
-      });
+        info->set_regst_desc_id(pair.first);
+        info->set_act_id(act_id_);
+      }
       device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     double cur_time = GetCurTime();
@@ -458,12 +459,6 @@ void Actor::AsyncReturnAllConsumedCtrlRegst() {
     Regst* regst = pair.second.front();
     AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     pair.second.pop_front();
-  }
-}
-
-void Actor::ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)> func) {
-  for (const auto& pair : consumed_ctrl_regst_) {
-    if (!pair.second.empty()) { func(pair.second.front()); }
   }
 }
 
