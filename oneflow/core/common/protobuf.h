@@ -145,7 +145,7 @@ inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 
 inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   PbMd message_diff;
-  return message_diff.Compare(lhs, rhs);
+  return message_diff.Equivalent(lhs, rhs);
 }
 
 // Persistent
