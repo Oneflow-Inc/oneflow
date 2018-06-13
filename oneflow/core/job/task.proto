@@ -36,6 +36,7 @@ enum PathType {
   kMdUpdtPath = 4;
   kMdSavePath = 5;
   kPrintPath = 6;
+  kBoundaryPath = 100;
 }
 
 message RegstDescIdSet {

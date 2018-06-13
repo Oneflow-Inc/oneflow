@@ -37,6 +37,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
+          comp_task_node->SetPathType(logical_node->GetPathType());
         });
   });
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
@@ -48,6 +49,18 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     &logical2sorted_out_box, Mut121BufTask, AllocateCpuThrdIdEvenly);
   });
   ToDotWithAutoFilePath();
+}
+
+void TaskGraph::SetPathTypeForNewNodes(const LogicalNode* src_logical,
+                                       const LogicalNode* dst_logical) {
+  ForEachNode([&](TaskNode* node) {
+    if (node->GetPathType() != kInvalidPath) return;
+    if (src_logical->GetPathType() == dst_logical->GetPathType()) {
+      node->SetPathType(src_logical->GetPathType());
+    } else {
+      node->SetPathType(kBoundaryPath);
+    }
+  });
 }
 
 #define DEFINE_BLD_SUB_TASK_GRAPH_METHOD(method_name) \
@@ -79,6 +92,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
       }
     }
   }
+  SetPathTypeForNewNodes(src_logical, dst_logical);
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
@@ -102,6 +116,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
                       }),
         NewEdge(), dst);
   }
+  SetPathTypeForNewNodes(src_logical, dst_logical);
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
@@ -132,6 +147,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
   CHECK_NOTNULL(selected_src_comp_task);
   BldSubTskGphByOneToOne(nullptr, nullptr, {selected_src_comp_task}, sorted_dst_comp_tasks, nullptr,
                          nullptr, Mut121BufTask, AllocateCpuThrdIdEvenly);
+  SetPathTypeForNewNodes(src_logical, dst_logical);
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
@@ -140,6 +156,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
       ConnectWithCopyCommNetIfNeed(src_comp_task, dst_comp_task);
     }
   }
+  SetPathTypeForNewNodes(src_logical, dst_logical);
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
@@ -154,6 +171,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
       }
     }
   }
+  SetPathTypeForNewNodes(src_logical, dst_logical);
 }
 
 TaskNode* TaskGraph::Build121BufTo(

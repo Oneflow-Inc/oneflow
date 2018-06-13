@@ -12,7 +12,7 @@ bool IsBackwardTaskType(TaskType tt) {
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
-TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
+TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1), path_type_(kInvalidPath) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);

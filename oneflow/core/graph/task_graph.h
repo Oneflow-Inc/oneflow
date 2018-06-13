@@ -44,6 +44,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
+  void SetPathTypeForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
+
   std::unique_ptr<const LogicalGraph> logical_gph_;
 };
 

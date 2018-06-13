@@ -64,6 +64,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
 
+  // Path type
+  void SetPathType(PathType path_type) { path_type_ = path_type; }
+  PathType GetPathType() const { return path_type_; }
+
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
@@ -90,6 +94,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id_;
   int64_t thrd_id_;
   int64_t task_id_;
+  PathType path_type_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
