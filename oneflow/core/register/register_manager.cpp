@@ -84,6 +84,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
     regst->regst_desc_ = rt_regst_desc;
+    regst->set_regst_desc_id(rt_regst_desc->regst_desc_id());
     if (regst_desc_type.has_normal_regst_desc()) {
       std::sort(lbis.begin(), lbis.end());
       char* cur_pointer = mem_ptr;

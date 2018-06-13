@@ -38,8 +38,13 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
-      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this, pair](Regst* regst) {
+      if (!pair.second.regst_desc_type().has_ctrl_regst_desc()) {
+        produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+      } else {
+        produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
+        CHECK_EQ(pair.first, "out_ctrl");
+      }
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
@@ -50,8 +55,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
       regst_desc_id_vec.push_back(regst_desc_id);
+      if (pair.first == "in_ctrl") { consumed_ctrl_regst_.insert({regst_desc_id, {}}); }
     }
-    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
+    if (pair.first != "in_ctrl") { remaining_eord_cnt_ += pair.second.regst_desc_id_size(); }
   }
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -64,23 +70,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   writeable_produced_regst_desc_cnt_ = actual_writeable_produced_regst_desc_num_;
   total_reading_cnt_ = 0;
+  total_consumed_ctrl_cnt_ = 0;
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
-  auto name2regst_desc_id_iter = name2regst_desc_id_.find("in_delay");
-  if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
-    CHECK_EQ(name2regst_desc_id_iter->second.size(), 1);
-    in_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
-  } else {
-    in_delay_regst_desc_id_ = -1;
-  }
-  name2regst_desc_id_iter = name2regst_desc_id_.find("out_delay");
-  if (name2regst_desc_id_iter != name2regst_desc_id_.end()) {
-    CHECK_EQ(name2regst_desc_id_iter->second.size(), 1);
-    out_delay_regst_desc_id_ = name2regst_desc_id_iter->second.front();
-  } else {
-    out_delay_regst_desc_id_ = -1;
-  }
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
@@ -154,26 +147,28 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessCustomizedEordMsg(msg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
-      Regst* regst = msg.regst();
-      auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
-      if (naive_readable_regst_it != naive_readable_regst_.end()) {
-        if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
-        naive_readable_regst_it->second.push_back(regst);
-        if (regst->regst_desc_id() != in_delay_regst_desc_id_) {
-          NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
-        }
-      } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
-        // do nothing
-      } else {
-        NormalProcessCustomizedReadableRegstMsg(msg);
-      }
+    if (ProcessCtrlRegstMsg(msg) == 0) {
+      ActUntilFail();
     } else {
-      if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
-        CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+      if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
+        Regst* regst = msg.regst();
+        auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
+        if (naive_readable_regst_it != naive_readable_regst_.end()) {
+          if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
+          naive_readable_regst_it->second.push_back(regst);
+          NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
+        } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
+          // do nothing
+        } else {
+          NormalProcessCustomizedReadableRegstMsg(msg);
+        }
+      } else {
+        if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
+          CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+        }
       }
+      ActUntilFail();
     }
-    ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
@@ -183,9 +178,10 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   if ((is_naive_readable_eord_ && naive_readable_regst_cnt_ == 0)
       || IsCustomizedReadAlwaysUnReadyFromNow()) {
     CHECK_EQ(naive_readable_regst_cnt_, 0);
+    AsyncReturnAllConsumedCtrlRegst();
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_consumed_ctrl_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
       return 1;
     } else {
@@ -201,11 +197,15 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     CHECK_GE(remaining_eord_cnt_, 1);
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) { AsyncSendRegstMsgToProducer(msg.regst()); }
+    if (ProcessCtrlRegstMsg(msg) != 0) {
+      if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
+        AsyncSendRegstMsgToProducer(msg.regst());
+      }
+    }
   } else {
     UNIMPLEMENTED();
   }
-  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0) {
+  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_consumed_ctrl_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
   }
@@ -213,7 +213,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 }
 
 void Actor::ActUntilFail() {
-  while (IsReadReady() && IsWriteReady()) {
+  while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
     act_id_ += 1;
     ActEvent* act_event = nullptr;
     if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
@@ -229,6 +229,10 @@ void Actor::ActUntilFail() {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
+      ForEachCurConsumedCtrlRegst([&](const Regst* consumed_ctrl_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        SetReadableRegstInfo(consumed_ctrl_regst, info);
+      });
       device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
     }
     double cur_time = GetCurTime();
@@ -239,6 +243,7 @@ void Actor::ActUntilFail() {
     last_act_start_time_ = cur_time;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
+    AsyncSendCtrlRegst();
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
@@ -348,16 +353,8 @@ Regst* Actor::GetCurWriteableRegst(const std::string& name) {
 }
 
 Regst* Actor::GetCurSoleWriteableRegst() {
-  if (writeable_produced_regst_.size() == 1) {
-    return writeable_produced_regst_.begin()->second.front();
-  } else {
-    CHECK_EQ(writeable_produced_regst_.size(), 2);
-    CHECK_NE(out_delay_regst_desc_id_, -1);
-    for (auto& pair : writeable_produced_regst_) {
-      if (pair.first != out_delay_regst_desc_id_) { return pair.second.front(); }
-    }
-    UNIMPLEMENTED();
-  }
+  CHECK_EQ(writeable_produced_regst_.size(), 1);
+  return writeable_produced_regst_.begin()->second.front();
 }
 
 std::pair<bool, std::vector<std::string>> Actor::GetNaiveConsumedRegstDescName() {
@@ -381,16 +378,8 @@ Regst* Actor::GetNaiveNextReadable(int64_t regst_desc_id) {
 }
 
 Regst* Actor::GetNaiveSoleCurReadable() {
-  if (naive_readable_regst_.size() == 1) {
-    return GetNaiveFirstCurReadable();
-  } else {
-    CHECK_EQ(naive_readable_regst_.size(), 2);
-    CHECK_NE(in_delay_regst_desc_id_, -1);
-    for (auto& pair : naive_readable_regst_) {
-      if (pair.first != in_delay_regst_desc_id_) { return GetNaiveCurReadable(pair.first); }
-    }
-    UNIMPLEMENTED();
-  }
+  CHECK_EQ(naive_readable_regst_.size(), 1);
+  return GetNaiveFirstCurReadable();
 }
 
 Regst* Actor::GetNaiveFirstCurReadable() {
@@ -411,6 +400,73 @@ bool Actor::IsReadReady() {
   return naive_readable_regst_.size() == naive_readable_regst_cnt_ && IsCustomizedReadReady();
 }
 
+bool Actor::IsCtrlReady() {
+  auto produced_ctrl_ready = [&]() {
+    if (produced_ctrl_regst_.empty()) return true;
+    for (const auto& pair : produced_ctrl_regst_) {
+      if (pair.second.empty()) return false;
+    }
+    return true;
+  };
+  auto consumed_ctrl_ready = [&]() {
+    if (consumed_ctrl_regst_.empty()) return true;
+    for (const auto& pair : consumed_ctrl_regst_) {
+      if (pair.second.empty()) return false;
+    }
+    return true;
+  };
+  return produced_ctrl_ready() && consumed_ctrl_ready();
+}
+
+int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
+  int64_t regst_desc_id = msg.regst_desc_id();
+  auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
+  if (produced_it != produced_ctrl_regst_.end()) {
+    produced_it->second.push_back(msg.regst());
+    --total_consumed_ctrl_cnt_;
+    return 0;
+  }
+  auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
+  if (consumed_it != consumed_ctrl_regst_.end()) {
+    consumed_it->second.push_back(msg.regst());
+    return 0;
+  }
+  return -1;
+}
+
+void Actor::AsyncSendCtrlRegst() {
+  for (auto& pair : consumed_ctrl_regst_) {
+    CHECK(!pair.second.empty());
+    Regst* regst = pair.second.front();
+    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+    pair.second.pop_front();
+  }
+  for (auto& pair : produced_ctrl_regst_) {
+    CHECK(!pair.second.empty());
+    Regst* regst = pair.second.front();
+    CHECK_EQ(regst->consumers_actor_id().size(), 1);
+    AsyncSendMsg(
+        ActorMsg::BuildRegstMsgToConsumer(actor_id_, regst->consumers_actor_id()[0], regst));
+    ++total_consumed_ctrl_cnt_;
+    pair.second.pop_front();
+  }
+}
+
+void Actor::AsyncReturnAllConsumedCtrlRegst() {
+  for (auto& pair : consumed_ctrl_regst_) {
+    if (pair.second.empty()) continue;
+    Regst* regst = pair.second.front();
+    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+    pair.second.pop_front();
+  }
+}
+
+void Actor::ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)> func) {
+  for (const auto& pair : consumed_ctrl_regst_) {
+    if (!pair.second.empty()) { func(pair.second.front()); }
+  }
+}
+
 int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   auto reading_cnt_it = produced_regst2reading_cnt_.find(regst);
   if (reading_cnt_it == produced_regst2reading_cnt_.end()) { return -1; }
@@ -428,7 +484,6 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
 
 void Actor::TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids) {
   std::pair<bool, std::vector<std::string>> isall_or_names = GetNaiveConsumedRegstDescName();
-  isall_or_names.second.push_back("in_delay");
   if (isall_or_names.first) {
     for (const auto& pair : consumed_ids) { AddNaiveConsumed(pair.second); }
   } else {
