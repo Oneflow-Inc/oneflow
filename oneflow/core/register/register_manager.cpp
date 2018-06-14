@@ -49,7 +49,6 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
-
   HashMap<int64_t, int32_t> regst_desc_id2mem_shared_id;
   HashMap<int32_t, char*> mem_shared_id2mem_ptr;
   HashMap<int32_t, size_t> mem_shared_id2mem_size;
@@ -68,30 +67,15 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
       mem_case2mem_size[regst_desc_proto->mem_case()] +=
           regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
               ->TotalByteSize4AllRegst();
-    }
-
-    else {
-      if (mem_shared_id2mem_size.count(regst_desc_proto->mem_shared_id()) > 0) {
-        if (mem_shared_id2mem_size[regst_desc_proto->mem_shared_id()]
-            < regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
-                  ->TotalByteSize4AllRegst()) {
-          mem_shared_id2mem_size[regst_desc_proto->mem_shared_id()] =
-              regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
-                  ->TotalByteSize4AllRegst();
-        }
-      }
-
-      else {
-        CHECK(mem_shared_id2mem_size
-                  .emplace(regst_desc_proto->mem_shared_id(),
-                           regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
-                               ->TotalByteSize4AllRegst())
-                  .second);
-
+    } else {
+      size_t& size = mem_shared_id2mem_size[regst_desc_proto->mem_shared_id()];
+      if (size == 0) {
         CHECK(mem_shared_id2mem_case
                   .emplace(regst_desc_proto->mem_shared_id(), regst_desc_proto->mem_case())
                   .second);
       }
+      size = std::max(size, regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
+                                ->TotalByteSize4AllRegst());
     }
   }
 
@@ -113,15 +97,14 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     if (regst_desc_id2mem_shared_id[pair.first] == -1) {
       CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
       mem_case2mem_ptr.at(mem_case) += rt_regst_desc->TotalByteSize4AllRegst();
-    }
-
-    else {
+    } else {
       if (mem_shared_id2mem_ptr.count(regst_desc_id2mem_shared_id[pair.first]) > 0) {
         CHECK(
             regst_desc_id2mem_ptr_
                 .emplace(pair.first, mem_shared_id2mem_ptr[regst_desc_id2mem_shared_id[pair.first]])
                 .second);
       } else {
+        CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
         CHECK(mem_shared_id2mem_ptr
                   .emplace(regst_desc_id2mem_shared_id[pair.first], mem_case2mem_ptr.at(mem_case))
                   .second);
