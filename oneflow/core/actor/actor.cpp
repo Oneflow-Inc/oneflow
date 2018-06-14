@@ -61,7 +61,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   for (const auto& pair : task_proto.consumed_ctrl_regst_desc_id()) {
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-      consumed_ctrl_regst_.insert({regst_desc_id, {}});
+      CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
     }
   }
   msg_handler_ = nullptr;
@@ -153,27 +153,25 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
     if (ProcessCtrlRegstMsg(msg) == 0) {
-      ActUntilFail();
-    } else {
-      if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
-        Regst* regst = msg.regst();
-        auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
-        if (naive_readable_regst_it != naive_readable_regst_.end()) {
-          if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
-          naive_readable_regst_it->second.push_back(regst);
-          NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
-        } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
-          // do nothing
-        } else {
-          NormalProcessCustomizedReadableRegstMsg(msg);
-        }
+      // do nothing
+    } else if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
+      Regst* regst = msg.regst();
+      auto naive_readable_regst_it = naive_readable_regst_.find(regst->regst_desc_id());
+      if (naive_readable_regst_it != naive_readable_regst_.end()) {
+        if (naive_readable_regst_it->second.empty()) { naive_readable_regst_cnt_ += 1; }
+        naive_readable_regst_it->second.push_back(regst);
+        NormalProcessNaiveReadableRegstMsg(naive_readable_regst_it->second);
+      } else if (TryUpdtStateAsProducedRegst(regst) == 0) {
+        // do nothing
       } else {
-        if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
-          CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
-        }
+        NormalProcessCustomizedReadableRegstMsg(msg);
       }
-      ActUntilFail();
+    } else {
+      if (NormalTryProcessReadableMsgFromOtherMachine(msg) == false) {
+        CHECK_EQ(TryUpdtStateAsProducedRegst(msg.regst()), 0);
+      }
     }
+    ActUntilFail();
   } else if (msg.msg_type() == ActorMsgType::kCmdMsg) {
     CHECK_EQ(msg.actor_cmd(), ActorCmd::kStart);
     ActUntilFail();
@@ -426,7 +424,11 @@ bool Actor::IsCtrlReady() {
 }
 
 int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
-  int64_t regst_desc_id = msg.regst_desc_id();
+  if (Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id())
+      != Global<MachineCtx>::Get()->this_machine_id())
+    return -1;
+
+  int64_t regst_desc_id = msg.regst()->regst_desc_id();
   auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
   if (produced_it != produced_ctrl_regst_.end()) {
     CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
@@ -447,6 +449,8 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
     if (producer_it == consumed_ctrl_regst_desc_id2producer_.end()) {
       CHECK(
           consumed_ctrl_regst_desc_id2producer_.insert({regst_desc_id, msg.src_actor_id()}).second);
+    } else {
+      CHECK_EQ(producer_it->second, msg.src_actor_id());
     }
     consumed_it->second.push_back(msg.regst());
     return 0;
