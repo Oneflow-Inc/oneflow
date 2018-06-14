@@ -89,6 +89,14 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
   VirtualActorInit(mut_task_proto);
+  if (actor_id_ == 9077567998918657) {
+    CHECK(produced_ctrl_regst_.empty());
+    CHECK(consumed_ctrl_regst_.empty());
+  }
+  if (actor_id_ == 562949953421312) {
+    CHECK(!produced_ctrl_regst_.empty());
+    CHECK(consumed_ctrl_regst_.empty());
+  }
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -434,12 +442,20 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   int64_t regst_desc_id = msg.regst_desc_id();
   auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
   if (produced_it != produced_ctrl_regst_.end()) {
+    CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
+             Global<MachineCtx>::Get()->this_machine_id())
+        << "cross_machine_ctrl:" << msg.src_actor_id() << ":" << actor_id_
+        << ",regst_desc_id:" << msg.regst_desc_id();
     produced_it->second.push_back(msg.regst());
     --total_consumed_ctrl_cnt_;
     return 0;
   }
   auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
   if (consumed_it != consumed_ctrl_regst_.end()) {
+    CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
+             Global<MachineCtx>::Get()->this_machine_id())
+        << "cross_machine_ctrl:" << msg.src_actor_id() << ":" << actor_id_
+        << ",regst_desc_id:" << msg.regst_desc_id();
     auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(regst_desc_id);
     if (producer_it == consumed_ctrl_regst_desc_id2producer_.end()) {
       CHECK(
