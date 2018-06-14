@@ -70,10 +70,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                                           int32_t max_register_num);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num, const RegstDescTypeProto&);
+  std::shared_ptr<RegstDesc> ProduceCtrlRegst(const std::string& name, int32_t min_register_num,
+                                              int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
   void ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc>);
+  void ConsumeCtrlRegst(const std::string& name, std::shared_ptr<RegstDesc>);
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
@@ -94,6 +97,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
+
+  HashMap<std::string, std::shared_ptr<RegstDesc>> produced_ctrl_regsts_;
+  HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_ctrl_regsts_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
