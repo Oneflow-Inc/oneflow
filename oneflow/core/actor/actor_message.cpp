@@ -50,6 +50,16 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
   return msg;
 }
 
+ActorMsg ActorMsg::BuildCtrlMsg(int64_t src_actor_id, int64_t dst_actor_id,
+                                CtrlMsgType ctrl_msg_type) {
+  ActorMsg msg;
+  msg.src_actor_id_ = src_actor_id;
+  msg.dst_actor_id_ = dst_actor_id;
+  msg.ctrl_msg_type_ = ctrl_msg_type;
+  msg.msg_type_ = ActorMsgType::kCtrlMsg;
+  return msg;
+}
+
 int64_t ActorMsg::SrcMachineId() const {
   return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
 }
@@ -82,6 +92,11 @@ void* ActorMsg::comm_net_token() const {
 int64_t ActorMsg::eord_regst_desc_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kEordMsg);
   return eord_regst_desc_id_;
+}
+
+CtrlMsgType ActorMsg::ctrl_msg_type() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kCtrlMsg);
+  return ctrl_msg_type_;
 }
 
 }  // namespace oneflow

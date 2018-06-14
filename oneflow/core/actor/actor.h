@@ -57,6 +57,7 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
   void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
+  void ForEachCurConsumedCtrl(std::function<void(int64_t)>);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -83,6 +84,7 @@ class Actor {
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
+  void AsyncReturnAllConsumedCtrlMsg();
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
@@ -118,6 +120,9 @@ class Actor {
 
  private:
   bool IsReadReady();
+  bool IsCtrlReady();
+  void ProcessCtrlMsg(const ActorMsg& msg);
+  void AsyncSendCtrlMsg();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
@@ -148,12 +153,14 @@ class Actor {
   HashMap<int64_t, std::deque<Regst*>> naive_readable_regst_;
   size_t naive_readable_regst_cnt_;
   bool is_naive_readable_eord_;
-  int64_t in_delay_regst_desc_id_;
-  int64_t out_delay_regst_desc_id_;
 
   // Profile
   double last_act_start_time_;
   double act_interval_acc_;
+
+  HashMap<int64_t, int64_t> produced_ctrl_cnt_;
+  HashMap<int64_t, int64_t> consumed_ctrl_cnt_;
+  int64_t total_consumed_ctrl_cnt_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

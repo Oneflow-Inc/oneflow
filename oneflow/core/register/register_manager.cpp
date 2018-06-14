@@ -112,8 +112,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
         case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
         default: UNIMPLEMENTED();
       }
-    } else if (regst_desc_type.has_delay_regst_desc()) {
-      // do nothing
     } else {
       UNIMPLEMENTED();
     }

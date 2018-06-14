@@ -105,6 +105,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
+  for (auto consumer_id : ctrl_msg_consumers_) { task_proto->add_ctrl_msg_consumers(consumer_id); }
+  for (auto producer_id : ctrl_msg_producers_) { task_proto->add_ctrl_msg_producers(producer_id); }
 }
 
 int64_t TaskNode::MemZoneId121() const {
@@ -116,15 +118,17 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
+void TaskNode::BuildCtrlDependencyForOrdering(TaskNode* dst_node) {
   for (auto& name2regst : produced_regsts_) {
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
-  RegstDescTypeProto regst_desc_type;
-  regst_desc_type.mutable_delay_regst_desc();
-  dst_node->ConsumeRegst("in_delay",
-                         ProduceRegst("out_delay", 1, kMaxRegisterNum, regst_desc_type));
+  AddCtrlDependency(dst_node);
+}
+
+void TaskNode::AddCtrlDependency(TaskNode* dst_node) {
+  this->add_ctrl_msg_consumer(dst_node->task_id());
+  dst_node->add_ctrl_msg_producer(this->task_id());
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {

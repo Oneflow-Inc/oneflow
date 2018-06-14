@@ -14,7 +14,9 @@ enum class ActorCmd {
   kConstructActor
 };
 
-enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg };
+enum class CtrlMsgType { kRequest = 0, kAck };
+
+enum class ActorMsgType { kRegstMsg = 0, kEordMsg, kCmdMsg, kCtrlMsg };
 
 class ActorMsg final {
  public:
@@ -27,6 +29,8 @@ class ActorMsg final {
   static ActorMsg BuildRegstMsgToProducer(int64_t consumer, int64_t producer, Regst*);
   static ActorMsg BuildEordMsg(int64_t consumer, int64_t regst_desc_id);
   static ActorMsg BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd);
+  static ActorMsg BuildCtrlMsg(int64_t src_actor_id, int64_t dst_actor_id,
+                               CtrlMsgType ctrl_msg_type);
 
   // Getters
   int64_t SrcMachineId() const;
@@ -39,6 +43,7 @@ class ActorMsg final {
   int64_t act_id() const;
   void* comm_net_token() const;
   int64_t eord_regst_desc_id() const;
+  CtrlMsgType ctrl_msg_type() const;
 
   // Serialize
   template<typename StreamT>
@@ -64,6 +69,7 @@ class ActorMsg final {
     ActorCmd actor_cmd_;
     RegstWrapper regst_wrapper_;
     int64_t eord_regst_desc_id_;
+    CtrlMsgType ctrl_msg_type_;
   };
 };
 
