@@ -91,14 +91,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   VirtualActorInit(mut_task_proto);
   CHECK(produced_ctrl_regst_.empty());
   CHECK(consumed_ctrl_regst_.empty());
-  if (actor_id_ == 9077567998918657) {
-    CHECK(produced_ctrl_regst_.empty());
-    CHECK(consumed_ctrl_regst_.empty());
-  }
-  if (actor_id_ == 562949953421312) {
-    CHECK(!produced_ctrl_regst_.empty());
-    CHECK(consumed_ctrl_regst_.empty());
-  }
 }
 
 DeviceType Actor::GetDeviceType() const {
