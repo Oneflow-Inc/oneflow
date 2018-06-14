@@ -155,7 +155,6 @@ class Actor {
 
   HashMap<int64_t, std::deque<Regst*>> produced_ctrl_regst_;
   HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
-  HashMap<int64_t, int64_t> consumed_ctrl_regst_desc_id2producer_;
   int64_t total_consumed_ctrl_cnt_;
 
   // Profile
