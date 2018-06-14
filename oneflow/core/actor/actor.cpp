@@ -39,31 +39,36 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(
-        pair.second, GetDeviceType(), [this, pair, &mut_task_proto](Regst* regst) {
-          if (!pair.second.regst_desc_type().has_ctrl_regst_desc()) {
-            produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-          } else {
+    // FIXME: what if multiple out_ctrl
+    if (pair.first == "out_ctrl") {
+      mut_task_proto.mutable_produced_regst_desc()->erase("out_ctrl");
+      Global<RegstMgr>::Get()->NewRegsts(
+          pair.second, GetDeviceType(), [this, &mut_task_proto](Regst* regst) {
             produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
-            CHECK_EQ(pair.first, "out_ctrl");
-            mut_task_proto.mutable_produced_regst_desc()->erase("out_ctrl");
-          }
-        });
-    int64_t regst_desc_id = pair.second.regst_desc_id();
-    CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
+          });
+    } else {
+      Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+        produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+      });
+      int64_t regst_desc_id = pair.second.regst_desc_id();
+      CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
+    }
   }
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
-    std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
-    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-      regst_desc_id_vec.push_back(regst_desc_id);
-      if (pair.first == "in_ctrl") {
+    if (pair.first == "in_ctrl") {
+      mut_task_proto.mutable_consumed_regst_desc_id()->erase("in_ctrl");
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         consumed_ctrl_regst_.insert({regst_desc_id, {}});
-        mut_task_proto.mutable_consumed_regst_desc_id()->erase("in_ctrl");
       }
+    } else {
+      std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        regst_desc_id_vec.push_back(regst_desc_id);
+      }
+      remaining_eord_cnt_ += pair.second.regst_desc_id_size();
     }
-    if (pair.first != "in_ctrl") { remaining_eord_cnt_ += pair.second.regst_desc_id_size(); }
   }
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -80,7 +85,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
-  TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
+  TakeOverNaiveConsumed(mut_task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
   VirtualActorInit(mut_task_proto);
