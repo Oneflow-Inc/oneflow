@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("data_tmp", 1, 1);
+  ProduceRegst("data_tmp", true, 1, 1);
   ProduceB121Regst("out");
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedB121Regst(edge, "out"); }
 }
