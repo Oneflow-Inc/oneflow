@@ -46,6 +46,7 @@ class RegstDesc final {
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
   void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
+  bool enable_mem_sharing() { return enable_mem_sharing_; }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
 
