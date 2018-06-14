@@ -69,7 +69,7 @@ void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->NumOfLbi() == 0;
+        return it->second->regst_desc_type().has_normal_regst_desc() && it->second->NumOfLbi() == 0;
       });
 }
 
@@ -122,9 +122,8 @@ void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
     if (consumers.find(dst_node) != consumers.end()) { return; }
   }
   RegstDescTypeProto regst_desc_type;
-  regst_desc_type.mutable_delay_regst_desc();
-  dst_node->ConsumeRegst("in_delay",
-                         ProduceRegst("out_delay", 1, kMaxRegisterNum, regst_desc_type));
+  regst_desc_type.mutable_ctrl_regst_desc();
+  dst_node->ConsumeRegst("in_ctrl", ProduceRegst("out_ctrl", 1, kMaxRegisterNum, regst_desc_type));
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {

@@ -64,6 +64,15 @@ Regst* ActorMsg::regst() const {
   return regst_wrapper_.regst;
 }
 
+int64_t ActorMsg::regst_desc_id() const {
+  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_)
+      == Global<MachineCtx>::Get()->this_machine_id()) {
+    return regst_wrapper_.regst->regst_desc_id();
+  } else {
+    return regst_wrapper_.regst_status.regst_desc_id;
+  }
+}
+
 int64_t ActorMsg::piece_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.regst_status.piece_id;
