@@ -444,13 +444,15 @@ void Actor::ProcessCtrlMsg(const ActorMsg& msg) {
 void Actor::AsyncSendCtrlMsg() {
   for (const auto& pair : consumed_ctrl_cnt_) {
     ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, pair.first, CtrlMsgType::kAck);
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    // Global<ActorMsgBus>::Get()->SendMsg(msg);
+    AsyncSendMsg(msg);
     --consumed_ctrl_cnt_[pair.first];
     CHECK_EQ(consumed_ctrl_cnt_[pair.first], 0);
   }
   for (const auto& pair : produced_ctrl_cnt_) {
     ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, pair.first, CtrlMsgType::kRequest);
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    // Global<ActorMsgBus>::Get()->SendMsg(msg);
+    AsyncSendMsg(msg);
     --produced_ctrl_cnt_[pair.first];
     CHECK_EQ(produced_ctrl_cnt_[pair.first], 0);
     ++total_consumed_ctrl_cnt_;
@@ -461,7 +463,8 @@ void Actor::AsyncReturnAllConsumedCtrlMsg() {
   for (const auto& pair : consumed_ctrl_cnt_) {
     if (pair.second == 0) continue;
     ActorMsg msg = ActorMsg::BuildCtrlMsg(actor_id_, pair.first, CtrlMsgType::kAck);
-    Global<ActorMsgBus>::Get()->SendMsg(msg);
+    // Global<ActorMsgBus>::Get()->SendMsg(msg);
+    AsyncSendMsg(msg);
     --consumed_ctrl_cnt_[pair.first];
     CHECK_EQ(consumed_ctrl_cnt_[pair.first], 0);
   }
