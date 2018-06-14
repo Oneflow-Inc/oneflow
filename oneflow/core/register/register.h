@@ -51,7 +51,10 @@ class Regst final {
   void* comm_net_token() const { return comm_net_token_; }
 
   // Setters
-  void set_regst_desc_id(int64_t val) { status_.regst_desc_id = val; }
+  void set_regst_desc_id(int64_t val) {
+    CHECK_EQ(status_.regst_desc_id, -1);
+    status_.regst_desc_id = val;
+  }
   void set_piece_id(int64_t val) { status_.piece_id = val; }
   void set_model_version_id(int64_t val) { status_.model_version_id = val; }
   void set_act_id(int64_t val) { status_.act_id = val; }
