@@ -56,7 +56,7 @@ class Actor {
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>);
+  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -149,6 +149,7 @@ class Actor {
   size_t naive_readable_regst_cnt_;
   bool is_naive_readable_eord_;
   int64_t in_delay_regst_desc_id_;
+  int64_t out_delay_regst_desc_id_;
 
   // Profile
   double last_act_start_time_;

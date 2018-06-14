@@ -110,7 +110,7 @@ void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
       for (const TaskNode* consumer : consumers) {
         TaskType task_type = consumer->GetTaskType();
         if (task_type != TaskType::kMdDiffAcc && task_type != TaskType::kNormalMdUpdt
-            && task_type != TaskType::kLossAcc) {
+            && task_type != TaskType::kLossAcc && task_type != TaskType::kMdSave) {
           handler(const_cast<TaskNode*>(consumer));
         }
       }

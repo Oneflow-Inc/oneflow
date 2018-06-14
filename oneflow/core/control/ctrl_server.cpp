@@ -24,6 +24,8 @@ CtrlServer::~CtrlServer() {
 }
 
 CtrlServer::CtrlServer(const std::string& server_addr) {
+  Init();
+
   if (FLAGS_grpc_use_no_signal) { grpc_use_signal(-1); }
   int port = ExtractPortFromAddr(server_addr);
   grpc::ServerBuilder server_builder;
@@ -38,17 +40,8 @@ CtrlServer::CtrlServer(const std::string& server_addr) {
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }
 
-#define ENQUEUE_REQUEST(method)                                                          \
-  do {                                                                                   \
-    auto call = new CtrlCall<CtrlMethod::k##method>();                                   \
-    call->set_request_handler(std::bind(&CtrlServer::method##Handler, this, call));      \
-    grpc_service_->RequestAsyncUnary(static_cast<int32_t>(CtrlMethod::k##method),        \
-                                     call->mut_server_ctx(), call->mut_request(),        \
-                                     call->mut_responder(), cq_.get(), cq_.get(), call); \
-  } while (0);
-
 void CtrlServer::HandleRpcs() {
-  OF_PP_FOR_EACH_TUPLE(ENQUEUE_REQUEST, CTRL_METHOD_SEQ);
+  EnqueueRequests();
 
   void* tag = nullptr;
   bool ok = false;
@@ -64,141 +57,147 @@ void CtrlServer::HandleRpcs() {
   }
 }
 
-void CtrlServer::LoadServerHandler(CtrlCall<CtrlMethod::kLoadServer>* call) {
-  call->SendResponse();
-  ENQUEUE_REQUEST(LoadServer);
-}
+void CtrlServer::Init() {
+  Add([this](CtrlCall<CtrlMethod::kLoadServer>* call) {
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kLoadServer>();
+  });
 
-void CtrlServer::BarrierHandler(CtrlCall<CtrlMethod::kBarrier>* call) {
-  const std::string& barrier_name = call->request().name();
-  int32_t barrier_num = call->request().num();
-  auto barrier_call_it = barrier_calls_.find(barrier_name);
-  if (barrier_call_it == barrier_calls_.end()) {
-    barrier_call_it =
-        barrier_calls_.emplace(barrier_name, std::make_pair(std::list<CtrlCallIf*>{}, barrier_num))
-            .first;
-  }
-  CHECK_EQ(barrier_num, barrier_call_it->second.second);
-  barrier_call_it->second.first.push_back(call);
-  if (barrier_call_it->second.first.size() == barrier_call_it->second.second) {
-    for (CtrlCallIf* pending_call : barrier_call_it->second.first) { pending_call->SendResponse(); }
-    barrier_calls_.erase(barrier_call_it);
-  }
-  ENQUEUE_REQUEST(Barrier);
-}
+  Add([this](CtrlCall<CtrlMethod::kBarrier>* call) {
+    const std::string& barrier_name = call->request().name();
+    int32_t barrier_num = call->request().num();
+    auto barrier_call_it = barrier_calls_.find(barrier_name);
+    if (barrier_call_it == barrier_calls_.end()) {
+      barrier_call_it =
+          barrier_calls_
+              .emplace(barrier_name, std::make_pair(std::list<CtrlCallIf*>{}, barrier_num))
+              .first;
+    }
+    CHECK_EQ(barrier_num, barrier_call_it->second.second);
+    barrier_call_it->second.first.push_back(call);
+    if (barrier_call_it->second.first.size() == barrier_call_it->second.second) {
+      for (CtrlCallIf* pending_call : barrier_call_it->second.first) {
+        pending_call->SendResponse();
+      }
+      barrier_calls_.erase(barrier_call_it);
+    }
 
-void CtrlServer::TryLockHandler(CtrlCall<CtrlMethod::kTryLock>* call) {
-  const std::string& lock_name = call->request().name();
-  auto name2lock_status_it = name2lock_status_.find(lock_name);
-  if (name2lock_status_it == name2lock_status_.end()) {
-    call->mut_response()->set_result(TryLockResult::kLocked);
-    auto waiting_until_done_calls = new std::list<CtrlCallIf*>;
-    CHECK(name2lock_status_.emplace(lock_name, waiting_until_done_calls).second);
-  } else {
-    if (name2lock_status_it->second) {
-      call->mut_response()->set_result(TryLockResult::kDoing);
+    EnqueueRequest<CtrlMethod::kBarrier>();
+  });
+
+  Add([this](CtrlCall<CtrlMethod::kTryLock>* call) {
+    const std::string& lock_name = call->request().name();
+    auto name2lock_status_it = name2lock_status_.find(lock_name);
+    if (name2lock_status_it == name2lock_status_.end()) {
+      call->mut_response()->set_result(TryLockResult::kLocked);
+      auto waiting_until_done_calls = new std::list<CtrlCallIf*>;
+      CHECK(name2lock_status_.emplace(lock_name, waiting_until_done_calls).second);
     } else {
-      call->mut_response()->set_result(TryLockResult::kDone);
+      if (name2lock_status_it->second) {
+        call->mut_response()->set_result(TryLockResult::kDoing);
+      } else {
+        call->mut_response()->set_result(TryLockResult::kDone);
+      }
     }
-  }
-  call->SendResponse();
-  ENQUEUE_REQUEST(TryLock);
-}
-
-void CtrlServer::NotifyDoneHandler(CtrlCall<CtrlMethod::kNotifyDone>* call) {
-  const std::string& lock_name = call->request().name();
-  auto name2lock_status_it = name2lock_status_.find(lock_name);
-  auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(name2lock_status_it->second);
-  for (CtrlCallIf* waiting_call : *waiting_calls) { waiting_call->SendResponse(); }
-  delete waiting_calls;
-  name2lock_status_it->second = nullptr;
-  call->SendResponse();
-  ENQUEUE_REQUEST(NotifyDone);
-}
-
-void CtrlServer::WaitUntilDoneHandler(CtrlCall<CtrlMethod::kWaitUntilDone>* call) {
-  const std::string& lock_name = call->request().name();
-  void* lock_status = name2lock_status_.at(lock_name);
-  if (lock_status) {
-    auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(lock_status);
-    waiting_calls->push_back(call);
-  } else {
     call->SendResponse();
-  }
-  ENQUEUE_REQUEST(WaitUntilDone);
-}
+    EnqueueRequest<CtrlMethod::kTryLock>();
+  });
 
-void CtrlServer::PushKVHandler(CtrlCall<CtrlMethod::kPushKV>* call) {
-  const std::string& k = call->request().key();
-  const std::string& v = call->request().val();
-  CHECK(kv_.emplace(k, v).second);
+  Add([this](CtrlCall<CtrlMethod::kNotifyDone>* call) {
+    const std::string& lock_name = call->request().name();
+    auto name2lock_status_it = name2lock_status_.find(lock_name);
+    auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(name2lock_status_it->second);
+    for (CtrlCallIf* waiting_call : *waiting_calls) { waiting_call->SendResponse(); }
+    delete waiting_calls;
+    name2lock_status_it->second = nullptr;
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kNotifyDone>();
+  });
 
-  auto pending_kv_calls_it = pending_kv_calls_.find(k);
-  if (pending_kv_calls_it != pending_kv_calls_.end()) {
-    for (auto pending_call : pending_kv_calls_it->second) {
-      pending_call->mut_response()->set_val(v);
-      pending_call->SendResponse();
+  Add([this](CtrlCall<CtrlMethod::kWaitUntilDone>* call) {
+    const std::string& lock_name = call->request().name();
+    void* lock_status = name2lock_status_.at(lock_name);
+    if (lock_status) {
+      auto waiting_calls = static_cast<std::list<CtrlCallIf*>*>(lock_status);
+      waiting_calls->push_back(call);
+    } else {
+      call->SendResponse();
     }
-    pending_kv_calls_.erase(pending_kv_calls_it);
-  }
-  call->SendResponse();
-  ENQUEUE_REQUEST(PushKV);
-}
+    EnqueueRequest<CtrlMethod::kWaitUntilDone>();
+  });
 
-void CtrlServer::ClearKVHandler(CtrlCall<CtrlMethod::kClearKV>* call) {
-  const std::string& k = call->request().key();
-  CHECK_EQ(kv_.erase(k), 1);
-  CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end());
-  call->SendResponse();
-  ENQUEUE_REQUEST(ClearKV);
-}
+  Add([this](CtrlCall<CtrlMethod::kPushKV>* call) {
+    const std::string& k = call->request().key();
+    const std::string& v = call->request().val();
+    CHECK(kv_.emplace(k, v).second);
 
-void CtrlServer::PullKVHandler(CtrlCall<CtrlMethod::kPullKV>* call) {
-  const std::string& k = call->request().key();
-  auto kv_it = kv_.find(k);
-  if (kv_it != kv_.end()) {
-    call->mut_response()->set_val(kv_it->second);
+    auto pending_kv_calls_it = pending_kv_calls_.find(k);
+    if (pending_kv_calls_it != pending_kv_calls_.end()) {
+      for (auto pending_call : pending_kv_calls_it->second) {
+        pending_call->mut_response()->set_val(v);
+        pending_call->SendResponse();
+      }
+      pending_kv_calls_.erase(pending_kv_calls_it);
+    }
     call->SendResponse();
-  } else {
-    pending_kv_calls_[k].push_back(call);
-  }
-  ENQUEUE_REQUEST(PullKV);
-}
+    EnqueueRequest<CtrlMethod::kPushKV>();
+  });
 
-void CtrlServer::PushActEventHandler(CtrlCall<CtrlMethod::kPushActEvent>* call) {
-  ActEvent act_event = call->request().act_event();
-  call->SendResponse();
-  Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
-  ENQUEUE_REQUEST(PushActEvent);
-}
+  Add([this](CtrlCall<CtrlMethod::kClearKV>* call) {
+    const std::string& k = call->request().key();
+    CHECK_EQ(kv_.erase(k), 1);
+    CHECK(pending_kv_calls_.find(k) == pending_kv_calls_.end());
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kClearKV>();
+  });
 
-void CtrlServer::ClearHandler(CtrlCall<CtrlMethod::kClear>* call) {
-  name2lock_status_.clear();
-  kv_.clear();
-  CHECK(pending_kv_calls_.empty());
-  call->SendResponse();
-  ENQUEUE_REQUEST(Clear);
-}
+  Add([this](CtrlCall<CtrlMethod::kPullKV>* call) {
+    const std::string& k = call->request().key();
+    auto kv_it = kv_.find(k);
+    if (kv_it != kv_.end()) {
+      call->mut_response()->set_val(kv_it->second);
+      call->SendResponse();
+    } else {
+      pending_kv_calls_[k].push_back(call);
+    }
+    EnqueueRequest<CtrlMethod::kPullKV>();
+  });
 
-void CtrlServer::IncreaseCountHandler(CtrlCall<CtrlMethod::kIncreaseCount>* call) {
-  int32_t& count = count_[call->request().key()];
-  count += call->request().val();
-  call->mut_response()->set_val(count);
-  call->SendResponse();
-  ENQUEUE_REQUEST(IncreaseCount);
-}
+  Add([this](CtrlCall<CtrlMethod::kPushActEvent>* call) {
+    ActEvent act_event = call->request().act_event();
+    call->SendResponse();
+    Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
+    EnqueueRequest<CtrlMethod::kPushActEvent>();
+  });
 
-void CtrlServer::EraseCountHandler(CtrlCall<CtrlMethod::kEraseCount>* call) {
-  CHECK_EQ(count_.erase(call->request().key()), 1);
-  call->SendResponse();
-  ENQUEUE_REQUEST(EraseCount);
-}
+  Add([this](CtrlCall<CtrlMethod::kClear>* call) {
+    name2lock_status_.clear();
+    kv_.clear();
+    CHECK(pending_kv_calls_.empty());
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kClear>();
+  });
 
-void CtrlServer::PushAvgActIntervalHandler(CtrlCall<CtrlMethod::kPushAvgActInterval>* call) {
-  Global<Profiler>::Get()->PushAvgActInterval(call->request().actor_id(),
-                                              call->request().avg_act_interval());
-  call->SendResponse();
-  ENQUEUE_REQUEST(PushAvgActInterval);
+  Add([this](CtrlCall<CtrlMethod::kIncreaseCount>* call) {
+    int32_t& count = count_[call->request().key()];
+    count += call->request().val();
+    call->mut_response()->set_val(count);
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kIncreaseCount>();
+  });
+
+  Add([this](CtrlCall<CtrlMethod::kEraseCount>* call) {
+    CHECK_EQ(count_.erase(call->request().key()), 1);
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kEraseCount>();
+  });
+
+  Add([this](CtrlCall<CtrlMethod::kPushAvgActInterval>* call) {
+    Global<Profiler>::Get()->PushAvgActInterval(call->request().actor_id(),
+                                                call->request().avg_act_interval());
+    call->SendResponse();
+    EnqueueRequest<CtrlMethod::kPushAvgActInterval>();
+  });
 }
 
 }  // namespace oneflow
