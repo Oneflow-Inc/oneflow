@@ -101,11 +101,11 @@ bool CompTaskNode::TryAddLbiToB121RegstAndBindIt(ExecNode* exec_node, const std:
   return true;
 }
 
-std::vector<CompTaskNode*> CompTaskNode::GetSuccCompTaskNodesOnEdge(TaskEdge* edge) {
+std::vector<CompTaskNode*> CompTaskNode::GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const {
   return GetCompTaskNodesOnEdge(edge, &TaskEdge::dst_node, &TaskNode::out_edges);
 }
 
-std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* edge) {
+std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* edge) const {
   return GetCompTaskNodesOnEdge(edge, &TaskEdge::src_node, &TaskNode::in_edges);
 }
 
