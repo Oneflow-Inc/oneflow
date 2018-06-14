@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("loss", true);
+  ProduceRegst("loss", false);
   ProduceB121Regst("out");
   ProduceRegst("data_tmp", true, 1, 1);
   for (TaskEdge* edge : out_edges()) {
