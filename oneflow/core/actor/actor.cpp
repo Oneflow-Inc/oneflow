@@ -25,7 +25,6 @@ Actor::~Actor() {
 }
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  TaskProto mut_task_proto = task_proto;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -40,34 +39,31 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
     // FIXME: what if multiple out_ctrl
-    if (pair.first == "out_ctrl") {
-      mut_task_proto.mutable_produced_regst_desc()->erase("out_ctrl");
-      Global<RegstMgr>::Get()->NewRegsts(
-          pair.second, GetDeviceType(), [this, &mut_task_proto](Regst* regst) {
-            produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
-          });
-    } else {
-      Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
-        produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-      });
-      int64_t regst_desc_id = pair.second.regst_desc_id();
-      CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-    }
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+    });
+    int64_t regst_desc_id = pair.second.regst_desc_id();
+    CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
+  }
+  for (const auto& pair : task_proto.produced_ctrl_regst_desc()) {
+    // FIXME: what if multiple out_ctrl
+    Global<RegstMgr>::Get()->NewRegsts(
+        pair.second, GetDeviceType(), [this, &task_proto](Regst* regst) {
+          produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
+        });
   }
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    if (pair.first == "in_ctrl") {
-      mut_task_proto.mutable_consumed_regst_desc_id()->erase("in_ctrl");
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        consumed_ctrl_regst_.insert({regst_desc_id, {}});
-      }
-    } else {
-      CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
-      std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        regst_desc_id_vec.push_back(regst_desc_id);
-      }
-      remaining_eord_cnt_ += pair.second.regst_desc_id_size();
+    CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
+    std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      regst_desc_id_vec.push_back(regst_desc_id);
+    }
+    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
+  }
+  for (const auto& pair : task_proto.consumed_ctrl_regst_desc_id()) {
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      consumed_ctrl_regst_.insert({regst_desc_id, {}});
     }
   }
   msg_handler_ = nullptr;
@@ -85,12 +81,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
-  TakeOverNaiveConsumed(mut_task_proto.consumed_regst_desc_id());
+  TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
   VirtualActorInit(mut_task_proto);
-  CHECK(produced_ctrl_regst_.empty());
-  CHECK(consumed_ctrl_regst_.empty());
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -429,7 +423,7 @@ bool Actor::IsCtrlReady() {
     }
     return true;
   };
-  CHECK(produced_ctrl_ready() && consumed_ctrl_ready());
+  // CHECK(produced_ctrl_ready() && consumed_ctrl_ready());
   return produced_ctrl_ready() && consumed_ctrl_ready();
 }
 
@@ -437,7 +431,7 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   int64_t regst_desc_id = msg.regst_desc_id();
   auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
   if (produced_it != produced_ctrl_regst_.end()) {
-    CHECK(false);
+    // CHECK(false);
     CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
              Global<MachineCtx>::Get()->this_machine_id())
         << "cross_machine_ctrl:" << msg.src_actor_id() << ":" << actor_id_
@@ -448,7 +442,7 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   }
   auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
   if (consumed_it != consumed_ctrl_regst_.end()) {
-    CHECK(false);
+    // CHECK(false);
     CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
              Global<MachineCtx>::Get()->this_machine_id())
         << "cross_machine_ctrl:" << msg.src_actor_id() << ":" << actor_id_
@@ -466,7 +460,7 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
 
 void Actor::AsyncSendCtrlRegst() {
   for (auto& pair : consumed_ctrl_regst_) {
-    CHECK(false);
+    // CHECK(false);
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(pair.first);
@@ -475,7 +469,7 @@ void Actor::AsyncSendCtrlRegst() {
     pair.second.pop_front();
   }
   for (auto& pair : produced_ctrl_regst_) {
-    CHECK(false);
+    // CHECK(false);
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     CHECK_EQ(regst->consumers_actor_id().size(), 1);
@@ -488,7 +482,7 @@ void Actor::AsyncSendCtrlRegst() {
 
 void Actor::AsyncReturnAllConsumedCtrlRegst() {
   for (auto& pair : consumed_ctrl_regst_) {
-    CHECK(false);
+    // CHECK(false);
     if (pair.second.empty()) continue;
     Regst* regst = pair.second.front();
     auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(pair.first);
