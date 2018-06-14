@@ -38,7 +38,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    // FIXME: what if multiple out_ctrl
     Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
       produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
@@ -47,10 +46,9 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   for (const auto& pair : task_proto.produced_ctrl_regst_desc()) {
     // FIXME: what if multiple out_ctrl
-    Global<RegstMgr>::Get()->NewRegsts(
-        pair.second, GetDeviceType(), [this, &task_proto](Regst* regst) {
-          produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
-        });
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+      produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
+    });
   }
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
@@ -84,7 +82,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
-  VirtualActorInit(mut_task_proto);
+  VirtualActorInit(task_proto);
 }
 
 DeviceType Actor::GetDeviceType() const {
@@ -431,7 +429,6 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   int64_t regst_desc_id = msg.regst_desc_id();
   auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
   if (produced_it != produced_ctrl_regst_.end()) {
-    // CHECK(false);
     CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
              Global<MachineCtx>::Get()->this_machine_id())
         << "cross_machine_ctrl:" << msg.src_actor_id() << ":" << actor_id_
@@ -442,7 +439,6 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   }
   auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
   if (consumed_it != consumed_ctrl_regst_.end()) {
-    // CHECK(false);
     CHECK_EQ(Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id()),
              Global<MachineCtx>::Get()->this_machine_id())
         << "cross_machine_ctrl:" << msg.src_actor_id() << ":" << actor_id_
@@ -460,7 +456,6 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
 
 void Actor::AsyncSendCtrlRegst() {
   for (auto& pair : consumed_ctrl_regst_) {
-    // CHECK(false);
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(pair.first);
@@ -469,7 +464,6 @@ void Actor::AsyncSendCtrlRegst() {
     pair.second.pop_front();
   }
   for (auto& pair : produced_ctrl_regst_) {
-    // CHECK(false);
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     CHECK_EQ(regst->consumers_actor_id().size(), 1);
@@ -482,7 +476,6 @@ void Actor::AsyncSendCtrlRegst() {
 
 void Actor::AsyncReturnAllConsumedCtrlRegst() {
   for (auto& pair : consumed_ctrl_regst_) {
-    // CHECK(false);
     if (pair.second.empty()) continue;
     Regst* regst = pair.second.front();
     auto producer_it = consumed_ctrl_regst_desc_id2producer_.find(pair.first);
