@@ -56,13 +56,13 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
     if (pair.first == "in_ctrl") {
       mut_task_proto.mutable_consumed_regst_desc_id()->erase("in_ctrl");
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         consumed_ctrl_regst_.insert({regst_desc_id, {}});
       }
     } else {
+      CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
       std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         regst_desc_id_vec.push_back(regst_desc_id);
