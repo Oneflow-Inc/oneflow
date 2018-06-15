@@ -448,6 +448,7 @@ void Actor::AsyncSendCtrlRegst() {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     CHECK_EQ(regst->consumers_actor_id().size(), 1);
+    regst->set_act_id(act_id_);
     AsyncSendMsg(
         ActorMsg::BuildRegstMsgToConsumer(actor_id_, regst->consumers_actor_id()[0], regst));
     ++total_consumed_ctrl_cnt_;
