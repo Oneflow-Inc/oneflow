@@ -47,24 +47,24 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 }
 
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
-  std::list<const RegstDescProto*> UnsharedRegsts;
-  std::list<const RegstDescProto*> SharedRegsts;
+  std::list<const RegstDescProto*> unshared_regsts;
+  std::list<const RegstDescProto*> shared_regsts;
   for (const RegstDescProto* regst_desc_proto : regst_protos) {
     CHECK(regst_desc_id2rt_regst_desc_
               .emplace(regst_desc_proto->regst_desc_id(),
                        std::make_unique<const RtRegstDesc>(*regst_desc_proto))
               .second);
     if (regst_desc_proto->mem_shared_id() == -1) {
-      UnsharedRegsts.emplace_back(regst_desc_proto);
+      unshared_regsts.push_back(regst_desc_proto);
     } else {
-      SharedRegsts.emplace_back(regst_desc_proto);
+      shared_regsts.push_back(regst_desc_proto);
     }
   }
-  InitFromUnsharedRegstProtoList(UnsharedRegsts);
-  InitFromSharedRegstProtoList(SharedRegsts);
+  InitSharedFromRegstProtoList(shared_regsts);
+  InitUnsharedFromRegstProtoList(unshared_regsts);
 }
 
-void RegstMgr::InitFromSharedRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
+void RegstMgr::InitSharedFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
   HashMap<int32_t, char*> mem_shared_id2mem_ptr;
@@ -104,7 +104,7 @@ void RegstMgr::InitFromSharedRegstProtoList(const std::list<const RegstDescProto
   }
 }
 
-void RegstMgr::InitFromUnsharedRegstProtoList(
+void RegstMgr::InitUnsharedFromRegstProtoList(
     const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
@@ -119,10 +119,13 @@ void RegstMgr::InitFromUnsharedRegstProtoList(
             .emplace(pair.first, Global<MemoryAllocator>::Get()->Allocate(pair.first, pair.second))
             .second);
   }
-  for (const auto& pair : regst_desc_id2rt_regst_desc_) {
-    const RtRegstDesc* rt_regst_desc = pair.second.get();
+  for (const RegstDescProto* regst_desc_proto : regst_protos) {
+    const RtRegstDesc* rt_regst_desc =
+        regst_desc_id2rt_regst_desc_[regst_desc_proto->regst_desc_id()].get();
     const MemoryCase& mem_case = rt_regst_desc->mem_case();
-    CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
+    CHECK(regst_desc_id2mem_ptr_
+              .emplace(regst_desc_proto->regst_desc_id(), mem_case2mem_ptr.at(mem_case))
+              .second);
     mem_case2mem_ptr.at(mem_case) += rt_regst_desc->TotalByteSize4AllRegst();
   }
 }
