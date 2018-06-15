@@ -130,7 +130,7 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
+void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   for (auto& name2regst : produced_regsts_) {
     const auto& consumers = name2regst.second->consumers();
     if (consumers.find(dst_node) != consumers.end()) { return; }

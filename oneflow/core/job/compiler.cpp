@@ -124,7 +124,7 @@ void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
       CHECK(stream_id2node.emplace(global_stream_id, node).second);
     } else {
       if (iter->second->GetTaskType() == TaskType::kCopyCommNet) {
-        iter->second->BuildDelayRegstDescIfNeed(node);
+        iter->second->BuildCtrlRegstDescIfNeed(node);
       }
       iter->second = node;
     }

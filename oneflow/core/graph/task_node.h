@@ -62,7 +62,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
-  void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
+  void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
