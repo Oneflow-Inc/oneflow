@@ -58,6 +58,7 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t peer_machine_id) {
 }
 
 namespace {
+
 HashMap<int64_t, HashMap<int64_t, int64_t>>* GetConnection2LocalStreamIdMap() {
   // this_machine_id -> {peer_machine_id, local_work_stream_id}
   static HashMap<int64_t, HashMap<int64_t, int64_t>> connection2stream_id;
@@ -77,6 +78,7 @@ void InsertLocalStreamId4Connection(int64_t this_machine_id, int64_t peer_machin
   auto& dict = *GetConnection2LocalStreamIdMap();
   dict[this_machine_id][peer_machine_id] = dict[this_machine_id].size();
 }
+
 }  // namespace
 
 int64_t CopyCommNetTaskNode::AllocateLocalWorkStreamId() {
