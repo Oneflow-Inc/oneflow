@@ -71,12 +71,13 @@ void RegstMgr::InitFromSharedRegstProtoList(const std::list<const RegstDescProto
   HashMap<int32_t, size_t> mem_shared_id2mem_size;
   HashMap<int32_t, MemoryCase> mem_shared_id2mem_case;
   for (const RegstDescProto* regst_desc_proto : regst_protos) {
-    size_t& size = mem_shared_id2mem_size[regst_desc_proto->mem_shared_id()];
-    if (size == 0) {
+    if (mem_shared_id2mem_case.find(regst_desc_proto->mem_shared_id())
+        == mem_shared_id2mem_case.end()) {
       CHECK(mem_shared_id2mem_case
                 .emplace(regst_desc_proto->mem_shared_id(), regst_desc_proto->mem_case())
                 .second);
     }
+    size_t& size = mem_shared_id2mem_size[regst_desc_proto->mem_shared_id()];
     size = std::max(size, regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
                               ->TotalByteSize4AllRegst());
   }
