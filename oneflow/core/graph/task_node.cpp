@@ -137,8 +137,10 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   }
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
-  dst_node->ConsumeCtrlRegst("in_ctrl",
-                             ProduceCtrlRegst("out_ctrl", 1, kMaxRegisterNum, regst_desc_type));
+  auto regst = NewUnnamedProducedRegst(1, kMaxRegisterNum, regst_desc_type);
+  std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
+  CHECK(produced_ctrl_regsts_.emplace(name, regst).second);
+  dst_node->ConsumeCtrlRegst("in_ctrl", regst);
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
@@ -156,30 +158,22 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32
   return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
-                                                  int32_t max_register_num,
-                                                  const RegstDescTypeProto& regst_desc_type) {
+std::shared_ptr<RegstDesc> TaskNode::NewUnnamedProducedRegst(
+    int32_t min_register_num, int32_t max_register_num, const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   InitProducedRegstMemCase(regst.get());
-  CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceCtrlRegst(const std::string& name,
-                                                      int32_t min_register_num,
-                                                      int32_t max_register_num,
-                                                      const RegstDescTypeProto& regst_desc_type) {
-  auto regst = std::make_shared<RegstDesc>();
-  regst->set_producer(this);
-  *(regst->mut_regst_desc_type()) = regst_desc_type;
-  regst->UpdtMinRegstNumIfNeed(min_register_num);
-  regst->UpdtMaxRegstNumIfNeed(max_register_num);
-  InitProducedRegstMemCase(regst.get());
-  CHECK(produced_ctrl_regsts_.emplace(name, regst).second);
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+                                                  int32_t max_register_num,
+                                                  const RegstDescTypeProto& regst_desc_type) {
+  auto regst = NewUnnamedProducedRegst(min_register_num, max_register_num, regst_desc_type);
+  CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
 

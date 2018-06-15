@@ -45,7 +45,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
   }
   for (const auto& pair : task_proto.produced_ctrl_regst_desc()) {
-    // FIXME: what if multiple out_ctrl
     Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
       produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
     });
