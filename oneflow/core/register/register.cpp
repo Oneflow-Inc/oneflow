@@ -1,5 +1,6 @@
 #include "oneflow/core/register/register.h"
 #include "oneflow/core/job/keyword.h"
+#include "oneflow/core/comm_network/comm_network.h"
 
 namespace oneflow {
 
@@ -14,6 +15,11 @@ Regst::Regst() {
   status_.col_id = 0;
   status_.max_col_id = 0;
   regst_desc_ = nullptr;
+  comm_net_token_ = nullptr;
+}
+
+Regst::~Regst() {
+  if (comm_net_token_ != nullptr) { Global<CommNet>::Get()->UnRegisterMemory(comm_net_token_); }
 }
 
 Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {

@@ -7,8 +7,10 @@
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/map.h>
 #include <google/protobuf/message.h>
+#include <google/protobuf/util/message_differencer.h>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -22,6 +24,8 @@ template<typename T1, typename T2>
 using PbMapPair = google::protobuf::MapPair<T1, T2>;
 template<typename K, typename V>
 using PbMap = google::protobuf::Map<K, V>;
+using PbFd = google::protobuf::FieldDescriptor;
+using PbMd = google::protobuf::util::MessageDifferencer;
 
 #define PROTOBUF_BASIC_DATA_TYPE_SEQ        \
   OF_PP_MAKE_TUPLE_SEQ(std::string, String) \
@@ -34,7 +38,7 @@ using PbMap = google::protobuf::Map<K, V>;
 
 #define PROTOBUF_GET_FIELDDESC(msg, field_name)                            \
   auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
-  auto fd = const_cast<google::protobuf::FieldDescriptor*>(d->FindFieldByName(field_name));
+  auto fd = const_cast<PbFd*>(d->FindFieldByName(field_name));
 
 #define PROTOBUF_REFLECTION(msg, field_name) \
   PROTOBUF_GET_FIELDDESC(msg, field_name)    \
@@ -50,6 +54,8 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
+
+const PbFd* GetPbFdFromPbMessage(const PbMessage&, const std::string& field_name);
 
 template<typename T>
 T GetValFromPbMessage(const PbMessage&, const std::string& field_name);
@@ -128,10 +134,37 @@ const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_n
   }
 }
 
+inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
+  if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
+  if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
+  if (lhs.b121_id() != rhs.b121_id()) { return lhs.b121_id() < rhs.b121_id(); }
+  if (lhs.clone_id() != rhs.clone_id()) { return lhs.clone_id() < rhs.clone_id(); }
+  if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
+  return false;
+}
+
+inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
+  PbMd message_diff;
+  return message_diff.Equivalent(lhs, rhs);
+}
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 
 }  // namespace oneflow
+
+namespace std {
+
+template<>
+struct hash<oneflow::LogicalBlobId> {
+  size_t operator()(const oneflow::LogicalBlobId& lbi) const {
+    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.b121_id())
+                                    + std::to_string(lbi.clone_id())
+                                    + std::to_string(lbi.is_packed_id()));
+  }
+};
+
+}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_PROTOBUF_H_

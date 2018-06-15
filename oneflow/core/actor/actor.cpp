@@ -138,11 +138,10 @@ void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
   info->set_act_id(regst->act_id());
 }
 
-void Actor::ForEachCurReadableRegst(std::function<void(const Regst*)> func) {
+void Actor::ForEachCurNaiveReadableRegst(std::function<void(const Regst*)> func) {
   for (const auto& pair : naive_readable_regst_) {
     if (pair.second.empty() == false) { func(pair.second.front()); }
   }
-  ForEachCurCustomizedReadableRegst(func);
 }
 
 int Actor::HandlerNormal(const ActorMsg& msg) {
@@ -222,7 +221,11 @@ void Actor::ActUntilFail() {
       act_event->set_actor_id(actor_id_);
       act_event->set_act_id(act_id_);
       act_event->set_work_stream_id(GetGlobalWorkStreamId());
-      ForEachCurReadableRegst([&](const Regst* readable_regst) {
+      ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        Actor::SetReadableRegstInfo(readable_regst, info);
+      });
+      ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
         ReadableRegstInfo* info = act_event->add_readable_regst_infos();
         SetReadableRegstInfo(readable_regst, info);
       });
