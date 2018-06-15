@@ -85,7 +85,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
 
-  int64_t AllocateLocalWorkStreamId();
+  virtual int64_t AllocateLocalWorkStreamId();
 
  private:
   void UpdateTaskId();
