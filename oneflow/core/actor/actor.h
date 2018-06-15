@@ -57,6 +57,7 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
   void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
+  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
