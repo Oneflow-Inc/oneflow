@@ -419,16 +419,11 @@ bool Actor::IsCtrlReady() {
     }
     return true;
   };
-  // CHECK(produced_ctrl_ready() && consumed_ctrl_ready());
   return produced_ctrl_ready() && consumed_ctrl_ready();
 }
 
 int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
-  if (Global<IDMgr>::Get()->MachineId4ActorId(msg.src_actor_id())
-      != Global<MachineCtx>::Get()->this_machine_id())
-    return -1;
-
-  int64_t regst_desc_id = msg.regst()->regst_desc_id();
+  int64_t regst_desc_id = msg.regst_desc_id();
   auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
   if (produced_it != produced_ctrl_regst_.end()) {
     produced_it->second.push_back(msg.regst());
