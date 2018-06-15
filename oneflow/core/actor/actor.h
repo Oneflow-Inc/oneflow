@@ -122,6 +122,7 @@ class Actor {
   bool IsReadReady();
   bool IsCtrlReady();
   int ProcessCtrlRegstMsg(const ActorMsg& msg);
+  void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
   void AsyncSendCtrlRegst();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
@@ -152,11 +153,13 @@ class Actor {
   // Status Of Naive Consumed Registers
   HashMap<int64_t, std::deque<Regst*>> naive_readable_regst_;
   size_t naive_readable_regst_cnt_;
-  bool is_naive_readable_eord_;
+  bool is_naive_readable_and_ctrl_eord_;
 
-  HashMap<int64_t, std::deque<Regst*>> produced_ctrl_regst_;
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
   HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
-  int64_t total_consumed_ctrl_cnt_;
+  int64_t total_reading_ctrl_cnt_;
+  int64_t consumed_ctrl_regst_cnt_;
 
   // Profile
   double last_act_start_time_;

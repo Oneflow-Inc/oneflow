@@ -63,6 +63,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
       CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
     }
+    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
   }
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -72,13 +73,19 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
       produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
+  for (const auto& pair : produced_ctrl_regst_) {
+    for (const auto& regst : pair.second) {
+      writeable_produced_ctrl_regst_[regst->regst_desc_id()].push_back(regst.get());
+    }
+  }
   actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
   writeable_produced_regst_desc_cnt_ = actual_writeable_produced_regst_desc_num_;
   total_reading_cnt_ = 0;
-  total_consumed_ctrl_cnt_ = 0;
+  total_reading_ctrl_cnt_ = 0;
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
-  is_naive_readable_eord_ = false;
+  consumed_ctrl_regst_cnt_ = 0;
+  is_naive_readable_and_ctrl_eord_ = false;
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
@@ -147,7 +154,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     remaining_eord_cnt_ -= 1;
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
     if (naive_readable_regst_.find(msg.eord_regst_desc_id()) != naive_readable_regst_.end()) {
-      is_naive_readable_eord_ = true;
+      is_naive_readable_and_ctrl_eord_ = true;
     } else {
       NormalProcessCustomizedEordMsg(msg);
     }
@@ -178,13 +185,14 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  if ((is_naive_readable_eord_ && naive_readable_regst_cnt_ == 0)
-      || IsCustomizedReadAlwaysUnReadyFromNow()) {
+  if (((is_naive_readable_and_ctrl_eord_ && naive_readable_regst_cnt_ == 0)
+       || IsCustomizedReadAlwaysUnReadyFromNow())
+      && consumed_ctrl_regst_cnt_ == 0) {
     CHECK_EQ(naive_readable_regst_cnt_, 0);
-    AsyncReturnAllConsumedCtrlRegst();
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
-    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_consumed_ctrl_cnt_ == 0) {
+    AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
+    if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_reading_ctrl_cnt_ == 0) {
       OF_SET_MSG_HANDLER(nullptr);
       return 1;
     } else {
@@ -208,7 +216,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_consumed_ctrl_cnt_ == 0) {
+  if (remaining_eord_cnt_ == 0 && total_reading_cnt_ == 0 && total_reading_ctrl_cnt_ == 0) {
     msg_handler_ = nullptr;
     return 1;
   }
@@ -405,8 +413,8 @@ bool Actor::IsReadReady() {
 
 bool Actor::IsCtrlReady() {
   auto produced_ctrl_ready = [&]() {
-    if (produced_ctrl_regst_.empty()) return true;
-    for (const auto& pair : produced_ctrl_regst_) {
+    if (writeable_produced_ctrl_regst_.empty()) return true;
+    for (const auto& pair : writeable_produced_ctrl_regst_) {
       if (pair.second.empty()) return false;
     }
     return true;
@@ -423,14 +431,15 @@ bool Actor::IsCtrlReady() {
 
 int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   int64_t regst_desc_id = msg.regst_desc_id();
-  auto produced_it = produced_ctrl_regst_.find(regst_desc_id);
-  if (produced_it != produced_ctrl_regst_.end()) {
+  auto produced_it = writeable_produced_ctrl_regst_.find(regst_desc_id);
+  if (produced_it != writeable_produced_ctrl_regst_.end()) {
     produced_it->second.push_back(msg.regst());
-    --total_consumed_ctrl_cnt_;
+    --total_reading_ctrl_cnt_;
     return 0;
   }
   auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
   if (consumed_it != consumed_ctrl_regst_.end()) {
+    if (consumed_it->second.empty()) { consumed_ctrl_regst_cnt_ += 1; }
     consumed_it->second.push_back(msg.regst());
     return 0;
   }
@@ -443,25 +452,29 @@ void Actor::AsyncSendCtrlRegst() {
     Regst* regst = pair.second.front();
     AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
     pair.second.pop_front();
+    if (pair.second.empty()) { consumed_ctrl_regst_cnt_ -= 1; }
   }
-  for (auto& pair : produced_ctrl_regst_) {
+  for (auto& pair : writeable_produced_ctrl_regst_) {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     CHECK_EQ(regst->consumers_actor_id().size(), 1);
     regst->set_act_id(act_id_);
     AsyncSendMsg(
         ActorMsg::BuildRegstMsgToConsumer(actor_id_, regst->consumers_actor_id()[0], regst));
-    ++total_consumed_ctrl_cnt_;
+    ++total_reading_ctrl_cnt_;
     pair.second.pop_front();
   }
 }
 
-void Actor::AsyncReturnAllConsumedCtrlRegst() {
-  for (auto& pair : consumed_ctrl_regst_) {
-    if (pair.second.empty()) continue;
-    Regst* regst = pair.second.front();
-    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
-    pair.second.pop_front();
+void Actor::AsyncSendEORDMsgForAllProducedCtrlRegstDesc() {
+  for (auto& pair : produced_ctrl_regst_) {
+    const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
+    device_ctx_->AddCallBack([regst_desc]() {
+      for (int64_t consumer : regst_desc->consumers_actor_id()) {
+        ActorMsg msg = ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
+        Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
+      }
+    });
   }
 }
 
