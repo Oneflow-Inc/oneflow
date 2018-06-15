@@ -134,6 +134,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   *(ret->mutable_mem_case()) = mem_case_;
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(mem_shared_id_);
+  ret->set_is_head_when_sharing_mem(false);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
