@@ -169,7 +169,7 @@ TaskNode* TaskGraph::Build121BufTo(
       TaskNode* src_cpu =
           Build121BufTo(src, src->machine_id(), cpu_mem_zone_id, Get121BufTask, Set121BufTask);
       CopyCommNetTaskNode* copy_comm_net = NewNode<CopyCommNetTaskNode>();
-      copy_comm_net->Init(dst_machine_id);
+      copy_comm_net->Init(dst_machine_id, src_cpu->machine_id());
       Connect<TaskNode>(src_cpu, NewEdge(), copy_comm_net);
       return Set121BufTask(dst_machine_id, dst_mem_zone_id, copy_comm_net);
     } else {
@@ -215,7 +215,7 @@ TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
 void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst->machine_id());
+  copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
   Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
   Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
 }
