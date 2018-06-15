@@ -170,11 +170,94 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-std::function<void(const std::list<int64_t>&)> MakeSetterAddCtrlRegst(Plan* plan) { TODO(); }
+std::function<void(const std::vector<int64_t>&)> MakeSetterAddCtrlRegst(Plan* plan) {
+  return [=](const std::vector<int64_t>& shared_mem_task_ids) {
+    auto GetFindTaskProtoMthd = [](int64_t task_id) {
+      return [=](const TaskProto& task_proto) { return task_proto.task_id() == task_id; };
+    };
+    int64_t header_task_id = shared_mem_task_ids.front();
+    int64_t sink_task_id = shared_mem_task_ids.back();
+    auto header_task_proto_it =
+        std::find_if(plan->mutable_task()->begin(), plan->mutable_task()->end(),
+                     GetFindTaskProtoMthd(header_task_id));
+    CHECK(header_task_proto_it != plan->mutable_task()->end());
+    auto sink_task_proto_it =
+        std::find_if(plan->mutable_task()->begin(), plan->mutable_task()->end(),
+                     GetFindTaskProtoMthd(sink_task_id));
+    CHECK(sink_task_proto_it != plan->mutable_task()->end());
+    for (auto& header_pair : *header_task_proto_it->mutable_produced_regst_desc()) {
+      for (auto& sink_pair : *sink_task_proto_it->mutable_produced_regst_desc()) {
+        if (header_pair.second.mem_sharing_info().mem_shared_id()
+            == sink_pair.second.mem_sharing_info().mem_shared_id()) {
+          for (int64_t consumer : sink_pair.second.consumer_task_id()) {
+            RegstDescProto ctrl_regst_proto;
+            int64_t ctrl_regst_desc_id = Global<IDMgr>::Get()->NewRegstDescId();
+            ctrl_regst_proto.set_regst_desc_id(ctrl_regst_desc_id);
+            ctrl_regst_proto.set_producer_task_id(header_task_id);
+            ctrl_regst_proto.add_consumer_task_id(consumer);
+            ctrl_regst_proto.set_min_register_num(1);
+            ctrl_regst_proto.set_max_register_num(1);
+            ctrl_regst_proto.set_register_num(1);
+            ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
+            if (Global<IDMgr>::Get()->GetDeviceTypeFromActorId(header_task_id)
+                == DeviceType::kCPU) {
+              ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
+            } else if (Global<IDMgr>::Get()->GetDeviceTypeFromActorId(header_task_id)
+                       == DeviceType::kGPU) {
+              ctrl_regst_proto.mutable_mem_case()->mutable_device_cuda_mem()->set_device_id(
+                  Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(header_task_proto_it->thrd_id()));
+            } else {
+              UNIMPLEMENTED();
+            }
+            std::string ctrl_regst_name = "shared_mem_regst_guard_" + std::to_string(header_task_id)
+                                          + "_to_" + std::to_string(consumer);
+            CHECK(header_task_proto_it->mutable_produced_regst_desc()
+                      ->insert({ctrl_regst_name, ctrl_regst_proto})
+                      .second);
+            auto dst_task_proto_it =
+                std::find_if(plan->mutable_task()->begin(), plan->mutable_task()->end(),
+                             GetFindTaskProtoMthd(consumer));
+            CHECK(dst_task_proto_it != plan->mutable_task()->end());
+            RegstDescIdSet dst_regst_desc_id_set;
+            dst_regst_desc_id_set.add_regst_desc_id(ctrl_regst_desc_id);
+            CHECK(dst_task_proto_it->mutable_consumed_regst_desc_id()
+                      ->insert({ctrl_regst_name, dst_regst_desc_id_set})
+                      .second);
+          }
+        }
+      }
+    }
+  };
+}
 
 void ForEachMemSharingCriticalSection(
-    const Plan& plan, const std::function<void(const std::list<int64_t>&)>& Handler) {
-  TODO();
+    const Plan& plan, const std::function<void(const std::vector<int64_t>&)>& Handler) {
+  HashMap<int32_t, std::vector<std::pair<int64_t, int32_t>>> mem_sharing_id2task_ids;
+  for (int i = 0; i < plan.task_size(); i++) {
+    for (const auto& pair : plan.task(i).produced_regst_desc()) {
+      if (pair.second.has_mem_sharing_info()) {
+        int64_t regst_desc_id = pair.second.regst_desc_id();
+        int32_t mem_sharing_id = pair.second.mem_sharing_info().mem_shared_id();
+        int32_t mem_sharing_order = pair.second.mem_sharing_info().used_order_value();
+        CHECK_GE(regst_desc_id, 0);
+        CHECK_GE(mem_sharing_order, 0);
+        mem_sharing_id2task_ids[mem_sharing_id].push_back({regst_desc_id, mem_sharing_order});
+      }
+    }
+  }
+  for (auto& pair : mem_sharing_id2task_ids) {
+    std::sort(pair.second.begin(), pair.second.end(),
+              [](const std::pair<int64_t, int32_t>& lhs, const std::pair<int64_t, int32_t>& rhs) {
+                CHECK_NE(lhs.second, rhs.second);
+                return lhs.second < rhs.second;
+              });
+    std::vector<int64_t> task_ids;
+    std::transform(pair.second.begin(), pair.second.end(), task_ids.begin(),
+                   [](const std::pair<int64_t, int32_t>& regst_desc_id2mem_sharing_order) {
+                     return regst_desc_id2mem_sharing_order.first;
+                   });
+    Handler(task_ids);
+  }
 }
 
 }  // namespace
