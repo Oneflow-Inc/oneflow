@@ -55,6 +55,7 @@ void TaskGraph::SetPathTypeForNewNodes(const LogicalNode* src_logical,
                                        const LogicalNode* dst_logical) {
   ForEachNode([&](TaskNode* node) {
     if (node->GetPathType() != kInvalidPath) return;
+    if (src_logical == nullptr || dst_logical == nullptr) return;
     if (src_logical->GetPathType() == dst_logical->GetPathType()) {
       node->SetPathType(src_logical->GetPathType());
     } else {
