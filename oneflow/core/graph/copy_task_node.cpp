@@ -51,7 +51,6 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-// CopyCommNetTaskNode::HashMap<int64_t, HashMap<int64_t, int64_t>> connection2stream_id_;
 void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t peer_machine_id) {
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
@@ -59,6 +58,7 @@ void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t peer_machine_id) {
 }
 
 HashMap<int64_t, HashMap<int64_t, int64_t>>& CopyCommNetTaskNode::GetConnectionMap() {
+  // this_machine_id -> {peer_machine_id, local_work_stream_id}
   static HashMap<int64_t, HashMap<int64_t, int64_t>> connection_map;
   return connection_map;
 }

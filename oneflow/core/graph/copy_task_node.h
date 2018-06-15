@@ -65,7 +65,6 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
   void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
   HashMap<int64_t, HashMap<int64_t, int64_t>>& GetConnectionMap();
-  // static HashMap<int64_t, HashMap<int64_t, int64_t>> connection2stream_id_;
   int64_t peer_machine_id_;
 };
 
