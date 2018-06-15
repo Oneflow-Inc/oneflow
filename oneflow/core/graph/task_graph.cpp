@@ -67,7 +67,6 @@ void TaskGraph::SetPathTypeForNewNodes(const LogicalNode* src_logical,
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
-  std::vector<TaskNode*> sorted_out_box_tmp;
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
@@ -75,7 +74,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   }
   sorted_out_box = &(logical2sorted_out_box->at(src_logical));
 
-  std::vector<TaskNode*> sorted_in_box_tmp;
   std::vector<TaskNode*>* sorted_in_box = nullptr;
   if (logical2sorted_in_box->find(dst_logical) == logical2sorted_in_box->end()) {
     BuildInBoxing(dst_logical, sorted_dst_comp_tasks, &((*logical2sorted_in_box)[dst_logical]),
@@ -189,7 +187,7 @@ TaskNode* TaskGraph::Build121BufTo(
       TaskNode* src_cpu =
           Build121BufTo(src, src->machine_id(), cpu_mem_zone_id, Get121BufTask, Set121BufTask);
       CopyCommNetTaskNode* copy_comm_net = NewNode<CopyCommNetTaskNode>();
-      copy_comm_net->Init(dst_machine_id);
+      copy_comm_net->Init(dst_machine_id, src_cpu->machine_id());
       Connect<TaskNode>(src_cpu, NewEdge(), copy_comm_net);
       return Set121BufTask(dst_machine_id, dst_mem_zone_id, copy_comm_net);
     } else {
@@ -235,7 +233,7 @@ TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
 void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst->machine_id());
+  copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
   Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
   Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
 }
