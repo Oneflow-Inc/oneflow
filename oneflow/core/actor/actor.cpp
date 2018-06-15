@@ -85,7 +85,8 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_regst_.clear();
   naive_readable_regst_cnt_ = 0;
   consumed_ctrl_regst_cnt_ = 0;
-  is_naive_readable_and_ctrl_eord_ = false;
+  is_naive_readable_eord_ = false;
+  is_consumed_ctrl_eord_ = false;
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
@@ -154,7 +155,9 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     remaining_eord_cnt_ -= 1;
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
     if (naive_readable_regst_.find(msg.eord_regst_desc_id()) != naive_readable_regst_.end()) {
-      is_naive_readable_and_ctrl_eord_ = true;
+      is_naive_readable_eord_ = true;
+    } else if (consumed_ctrl_regst_.find(msg.eord_regst_desc_id()) != consumed_ctrl_regst_.end()) {
+      is_consumed_ctrl_eord_ = true;
     } else {
       NormalProcessCustomizedEordMsg(msg);
     }
@@ -185,10 +188,12 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  if (((is_naive_readable_and_ctrl_eord_ && naive_readable_regst_cnt_ == 0)
+  if (((is_naive_readable_eord_ && naive_readable_regst_cnt_ == 0)
        || IsCustomizedReadAlwaysUnReadyFromNow())
-      && consumed_ctrl_regst_cnt_ == 0) {
+      && ((is_consumed_ctrl_eord_ && consumed_ctrl_regst_cnt_ == 0)
+          || consumed_ctrl_regst_.size() == 0)) {
     CHECK_EQ(naive_readable_regst_cnt_, 0);
+    CHECK_EQ(consumed_ctrl_regst_cnt_, 0);
     AsyncReturnAllCustomizedReadableRegst();
     AsyncSendEORDMsgForAllProducedRegstDesc();
     AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
