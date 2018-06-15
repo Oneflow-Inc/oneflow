@@ -57,12 +57,16 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
-  void Init(int64_t machine_id);
+  void Init(int64_t machine_id, int64_t src_machine_id);
+  int64_t AllocateLocalWorkStreamId() override;
 
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
   void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
+  HashMap<int64_t, HashMap<int64_t, int64_t>>& GetConnectionMap();
+  // static HashMap<int64_t, HashMap<int64_t, int64_t>> connection2stream_id_;
+  int64_t peer_machine_id_;
 };
 
 }  // namespace oneflow

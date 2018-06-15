@@ -51,9 +51,37 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-void CopyCommNetTaskNode::Init(int64_t machine_id) {
+// CopyCommNetTaskNode::HashMap<int64_t, HashMap<int64_t, int64_t>> connection2stream_id_;
+void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t peer_machine_id) {
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
+  peer_machine_id_ = peer_machine_id;
+}
+
+HashMap<int64_t, HashMap<int64_t, int64_t>>& CopyCommNetTaskNode::GetConnectionMap() {
+  static HashMap<int64_t, HashMap<int64_t, int64_t>> connection_map;
+  return connection_map;
+}
+
+int64_t CopyCommNetTaskNode::AllocateLocalWorkStreamId() {
+  auto& connection_map = GetConnectionMap();
+  auto cur_map_it = connection_map.find(machine_id());
+  if (cur_map_it == connection_map.end()) {
+    int64_t local_work_stream_id = 0;
+    HashMap<int64_t, int64_t> peer_stream_map;
+    CHECK(peer_stream_map.insert({peer_machine_id_, local_work_stream_id}).second);
+    CHECK(connection_map.insert({machine_id(), peer_stream_map}).second);
+    return local_work_stream_id;
+  } else {
+    auto peer_stream_it = cur_map_it->second.find(peer_machine_id_);
+    if (peer_stream_it == cur_map_it->second.end()) {
+      int64_t local_work_stream_id = cur_map_it->second.size();
+      CHECK(cur_map_it->second.insert({peer_machine_id_, local_work_stream_id}).second);
+      return local_work_stream_id;
+    } else {
+      return peer_stream_it->second;
+    }
+  }
 }
 
 void CopyCommNetTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
