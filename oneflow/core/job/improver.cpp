@@ -182,8 +182,8 @@ std::function<void(const std::vector<int64_t>&)> MakeSetterAddCtrlRegst(Plan* pl
     int64_t second_task_id = shared_mem_task_ids[1];
     int64_t last_task_id = shared_mem_task_ids.back();
     TaskProto* header_task_proto = task_id2task_proto[first_task_id];
-    int64_t shared_regst_desc_id = -1;
     CHECK_NOTNULL(header_task_proto);
+    int64_t shared_regst_desc_id = -1;
     for (const auto& pair : header_task_proto->produced_regst_desc()) {
       for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
         if (second_task_id == consumer_task_id) {
@@ -193,42 +193,43 @@ std::function<void(const std::vector<int64_t>&)> MakeSetterAddCtrlRegst(Plan* pl
     }
     TaskProto* last_task_proto = task_id2task_proto[last_task_id];
     CHECK_NOTNULL(last_task_proto);
+    int64_t one_consumer = -1;
     for (const auto& pair : last_task_proto->produced_regst_desc()) {
       if (pair.second.regst_desc_id() == shared_regst_desc_id) {
         CHECK_GT(pair.second.consumer_task_id_size(), 0);
-        int64_t one_consumer = pair.second.consumer_task_id(0);
-        int64_t ctrl_regst_desc_id = Global<IDMgr>::Get()->NewRegstDescId();
-        RegstDescProto ctrl_regst_proto;
-        ctrl_regst_proto.set_regst_desc_id(ctrl_regst_desc_id);
-        ctrl_regst_proto.set_producer_task_id(first_task_id);
-        ctrl_regst_proto.add_consumer_task_id(one_consumer);
-        ctrl_regst_proto.set_min_register_num(1);
-        ctrl_regst_proto.set_max_register_num(1);
-        ctrl_regst_proto.set_register_num(1);
-        ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
-        if (Global<IDMgr>::Get()->GetDeviceTypeFromActorId(first_task_id) == DeviceType::kCPU) {
-          ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
-        } else if (Global<IDMgr>::Get()->GetDeviceTypeFromActorId(first_task_id)
-                   == DeviceType::kGPU) {
-          ctrl_regst_proto.mutable_mem_case()->mutable_device_cuda_mem()->set_device_id(
-              Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(header_task_proto->thrd_id()));
-        } else {
-          UNIMPLEMENTED();
-        }
-        std::string ctrl_regst_name = "shared_mem_regst_guard_" + std::to_string(first_task_id)
-                                      + "_to_" + std::to_string(one_consumer);
-        CHECK(header_task_proto->mutable_produced_regst_desc()
-                  ->insert({ctrl_regst_name, ctrl_regst_proto})
-                  .second);
-        TaskProto* sink_task_proto = task_id2task_proto[one_consumer];
-        CHECK_NOTNULL(sink_task_proto);
-        RegstDescIdSet sink_regst_desc_id_set;
-        sink_regst_desc_id_set.add_regst_desc_id(ctrl_regst_desc_id);
-        CHECK(sink_task_proto->mutable_consumed_regst_desc_id()
-                  ->insert({ctrl_regst_name, sink_regst_desc_id_set})
-                  .second);
+        one_consumer = pair.second.consumer_task_id(0);
       }
     }
+    CHECK_GE(one_consumer, 0);
+    RegstDescProto ctrl_regst_proto;
+    int64_t ctrl_regst_desc_id = Global<IDMgr>::Get()->NewRegstDescId();
+    ctrl_regst_proto.set_regst_desc_id(ctrl_regst_desc_id);
+    ctrl_regst_proto.set_producer_task_id(first_task_id);
+    ctrl_regst_proto.add_consumer_task_id(one_consumer);
+    ctrl_regst_proto.set_min_register_num(1);
+    ctrl_regst_proto.set_max_register_num(1);
+    ctrl_regst_proto.set_register_num(1);
+    ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
+    if (Global<IDMgr>::Get()->GetDeviceTypeFromActorId(first_task_id) == DeviceType::kCPU) {
+      ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
+    } else if (Global<IDMgr>::Get()->GetDeviceTypeFromActorId(first_task_id) == DeviceType::kGPU) {
+      ctrl_regst_proto.mutable_mem_case()->mutable_device_cuda_mem()->set_device_id(
+          Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(header_task_proto->thrd_id()));
+    } else {
+      UNIMPLEMENTED();
+    }
+    std::string ctrl_regst_name = "shared_mem_regst_guard_" + std::to_string(first_task_id) + "_to_"
+                                  + std::to_string(one_consumer);
+    CHECK(header_task_proto->mutable_produced_regst_desc()
+              ->insert({ctrl_regst_name, ctrl_regst_proto})
+              .second);
+    TaskProto* sink_task_proto = task_id2task_proto[one_consumer];
+    CHECK_NOTNULL(sink_task_proto);
+    RegstDescIdSet sink_regst_desc_id_set;
+    sink_regst_desc_id_set.add_regst_desc_id(ctrl_regst_desc_id);
+    CHECK(sink_task_proto->mutable_consumed_regst_desc_id()
+              ->insert({ctrl_regst_name, sink_regst_desc_id_set})
+              .second);
   };
 }
 
