@@ -106,7 +106,15 @@ void TaskGraph::AddMutexCtrlEdgeInSameChain() {
 }
 
 void TaskGraph::CollectAncestorsForEachTaskNode() {
-  // TODO
+  UncyclicTopoForEachNode([&](TaskNode* node) {
+    node->mut_ancestors().clear();
+    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+      if (node_on_in_edge->GetTaskType() != TaskType::kNormalMdUpdt) {
+        node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
+                                     node_on_in_edge->ancestors().end());
+      }
+    });
+  });
 }
 
 void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) {

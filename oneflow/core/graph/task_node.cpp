@@ -119,11 +119,7 @@ int64_t TaskNode::MemZoneId121() const {
 }
 
 void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
-  // for (auto& name2regst : produced_regsts_) {
-  //  const auto& consumers = name2regst.second->consumers();
-  //  if (consumers.find(dst_node) != consumers.end()) { return; }
-  // }
-  const auto& dst_ancestors = dst_node->Ancestors();
+  const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_delay_regst_desc();
