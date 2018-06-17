@@ -114,25 +114,17 @@ void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> hand
   ForEachNode([&](TaskNode* node) {
     if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
   });
-  // TODO: may be simplified by using in_edges and out_edges
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    const auto& consumed_regsts = node->consumed_regsts();
-    for (const auto& name2regsts : consumed_regsts) {
-      for (auto& regst : name2regsts.second) {
-        const TaskNode* producer = regst.lock()->producer();
-        if (producer->GetTaskType() != TaskType::kNormalMdUpdt) {
-          handler(const_cast<TaskNode*>(producer));
-        }
+    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+      if (node_on_in_edge->GetTaskType() != TaskType::kNormalMdUpdt) {
+        handler(const_cast<TaskNode*>(node_on_in_edge));
       }
-    }
+    });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     if (node->GetTaskType() != TaskType::kNormalMdUpdt) {
-      const auto& produced_regsts = node->produced_regsts();
-      for (const auto& name2regst : produced_regsts) {
-        const auto& consumers = name2regst.second->consumers();
-        for (const TaskNode* consumer : consumers) { handler(const_cast<TaskNode*>(consumer)); }
-      }
+      node->ForEachNodeOnOutEdge(
+          [&](TaskNode* node_on_out_edge) { handler(const_cast<TaskNode*>(node_on_out_edge)); });
     }
   };
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
