@@ -65,8 +65,8 @@ bool TryMerge(
   HashMap<std::pair<int64_t, int64_t>, ChainIt, pair_hash> stream_path2last_chain;
   bool merge_happened = false;
   for (auto cur_chain_it = chain_list->begin(); cur_chain_it != chain_list->end();) {
-    auto stream_path_it =
-        stream_path2last_chain.find({cur_chain_it->stream_id, cur_chain_it->path_id});
+    std::pair<int64_t, int64_t> stream_path_id = {cur_chain_it->stream_id, cur_chain_it->path_id};
+    auto stream_path_it = stream_path2last_chain.find(stream_path_id);
     if (stream_path_it == stream_path2last_chain.end()) {
       CHECK(stream_path2last_chain
                 .insert({{cur_chain_it->stream_id, cur_chain_it->path_id}, cur_chain_it})
@@ -78,6 +78,7 @@ bool TryMerge(
         cur_chain_it = chain_list->erase(cur_chain_it);
         merge_happened = true;
       } else {
+        stream_path2last_chain[stream_path_id] = cur_chain_it;
         ++cur_chain_it;
       }
     }
@@ -171,10 +172,10 @@ void TaskGraph::FindChainsInSameStream() {
   InitChains(*this, &chain_list, &task2chain_it);
   MergeChains(&chain_list, &task2chain_it);
 
-  for(auto& chain : chain_list) {
+  for (auto& chain : chain_list) {
     int64_t chain_id =
-          Global<IDMgr>::Get()->AllocateChainId(chain_nodes.front()->GlobalWorkStreamId());
-    for (auto task_node : chain.nodes()) {
+        Global<IDMgr>::Get()->AllocateChainId(chain.nodes.front()->GlobalWorkStreamId());
+    for (auto task_node : chain.nodes) {
       task_node->set_chain_id(chain_id);
       CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
     }
