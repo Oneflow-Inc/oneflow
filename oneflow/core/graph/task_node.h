@@ -24,6 +24,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id() const { return machine_id_; }
   int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
+  int64_t chain_id() const { return chain_id_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -34,6 +35,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>& consumed_regsts() {
     return consumed_regsts_;
   }
+  const HashSet<const TaskNode*> Ancestors() const { return ancestors_; }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t LocalWorkStreamId() const;
@@ -44,6 +46,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Setters
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
+  void set_chain_id(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -95,10 +98,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t thrd_id_;
   int64_t task_id_;
   PathType path_type_;
+  int64_t chain_id_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
+
+  HashSet<const TaskNode*> ancestors_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {

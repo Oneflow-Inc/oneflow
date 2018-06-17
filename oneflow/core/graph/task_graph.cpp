@@ -1,6 +1,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/graph/chain_graph.h"
 
 namespace oneflow {
 
@@ -50,6 +51,86 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     SetPathTypeForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   ToDotWithAutoFilePath();
+}
+
+void TaskGraph::CollectTaskNodesInSameType() {
+  std::map<PathType, HashSet<TaskNode*>> path_type2task_nodes;
+  std::map<int64_t, HashSet<TaskNode*>> stream_id2task_nodes;
+  ForEachNode([&](TaskNode* node) {
+    CHECK(path_type2task_nodes[node->GetPathType()].insert(node).second);
+    CHECK(stream_id2task_nodes[node->GlobalWorkStreamId()].insert(node).second);
+  });
+  LOG(INFO) << "path_type2task_nodes";
+  for (const auto& pair : path_type2task_nodes) {
+    LOG(INFO) << pair.first << ":" << pair.second.size();
+  }
+  LOG(INFO) << "stream_id2task_nodes";
+  for (const auto& pair : stream_id2task_nodes) {
+    LOG(INFO) << pair.first << ":" << pair.second.size();
+  }
+}
+
+void TaskGraph::FindChainsInSameStream() {
+  HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
+
+  CollectAncestorsForEachTaskNode();
+  ChainGraph chain_gph(*this);
+  chain_gph.ForEachNode([&](ChainNode* chain_node) {
+    const auto& task_nodes = chain_node->task_nodes();
+    CHECK(!task_nodes.empty());
+    int64_t chain_id =
+        Global<IDMgr>::Get()->AllocateChainId((*task_nodes.begin())->GlobalWorkStreamId());
+    for (auto task_node : task_nodes) {
+      task_node->set_chain_id(chain_id);
+      CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
+    }
+  });
+}
+
+void TaskGraph::AddOrderCtrlEdgeInSameChain() {
+  std::list<TaskNode*> starts;
+  ForEachNode([&](TaskNode* node) {
+    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
+  });
+  HashMap<int64_t, TaskNode*> chain_id2node;
+  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    const auto& consumed_regsts = node->consumed_regsts();
+    for (const auto& name2regsts : consumed_regsts) {
+      for (auto& regst : name2regsts.second) {
+        const TaskNode* producer = regst.lock()->producer();
+        if (producer->GetTaskType() != TaskType::kNormalMdUpdt) {
+          handler(const_cast<TaskNode*>(producer));
+        }
+      }
+    }
+  };
+  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    if (node->GetTaskType() != TaskType::kNormalMdUpdt) {
+      const auto& produced_regsts = node->produced_regsts();
+      for (const auto& name2regst : produced_regsts) {
+        const auto& consumers = name2regst.second->consumers();
+        for (const TaskNode* consumer : consumers) { handler(const_cast<TaskNode*>(consumer)); }
+      }
+    }
+  };
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
+    int64_t chain_id = node->chain_id();
+    auto iter = chain_id2node.find(chain_id);
+    if (iter == chain_id2node.end()) {
+      CHECK(chain_id2node.emplace(chain_id, node).second);
+    } else {
+      iter->second->BuildDelayRegstDescIfNeed(node);
+      iter->second = node;
+    }
+  });
+}
+
+void TaskGraph::AddMutexCtrlEdgeInSameChain() {
+  // TODO
+}
+
+void TaskGraph::CollectAncestorsForEachTaskNode() {
+  // TODO
 }
 
 void TaskGraph::SetPathTypeForNewNodes(const LogicalNode* src_logical,

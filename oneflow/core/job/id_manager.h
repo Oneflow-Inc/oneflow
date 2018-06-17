@@ -56,6 +56,7 @@ class IDMgr final {
   //  1   |     10     |   11    |          21          | 21
   int64_t GlobalWorkStreamId4ActorId(int64_t actor_id) const;
   int64_t GlobalWorkStreamId4TaskId(int64_t task_id) const;
+  int64_t AllocateChainId(int64_t global_work_stream_id);
 
  private:
   friend class Global<IDMgr>;
@@ -67,6 +68,7 @@ class IDMgr final {
   int64_t regst_desc_id_count_;
   HashMap<int64_t, int64_t> machine_thrd_id2num_of_tasks_;
   HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
+  HashMap<int64_t, int64_t> stream_id2chain_cnt_;
 
   //  64 bit id design:
   //   sign | machine | thread | local_work_stream | task

@@ -78,6 +78,10 @@ int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
   return LocalWorkStreamId4TaskId(actor_id);
 }
 
+int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
+  return stream_id2chain_cnt_[global_work_stream_id]++;
+}
+
 IDMgr::IDMgr() {
   const Resource& resource = Global<JobDesc>::Get()->resource();
   CHECK_LT(resource.machine_size(), static_cast<int64_t>(1) << machine_id_bit_num_);

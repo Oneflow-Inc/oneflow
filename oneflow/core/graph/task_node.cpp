@@ -51,6 +51,8 @@ void TaskNode::set_thrd_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
+void TaskNode::set_chain_id(int64_t val) { chain_id_ = val; }
+
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
     for (std::weak_ptr<RegstDesc> regst : pair.second) {
@@ -117,10 +119,12 @@ int64_t TaskNode::MemZoneId121() const {
 }
 
 void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
-  for (auto& name2regst : produced_regsts_) {
-    const auto& consumers = name2regst.second->consumers();
-    if (consumers.find(dst_node) != consumers.end()) { return; }
-  }
+  // for (auto& name2regst : produced_regsts_) {
+  //  const auto& consumers = name2regst.second->consumers();
+  //  if (consumers.find(dst_node) != consumers.end()) { return; }
+  // }
+  const auto& dst_ancestors = dst_node->Ancestors();
+  if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_delay_regst_desc();
   dst_node->ConsumeRegst("in_delay",

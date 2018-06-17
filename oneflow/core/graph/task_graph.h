@@ -17,6 +17,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
+  void CollectTaskNodesInSameType();
+  void FindChainsInSameStream();
+  void AddOrderCtrlEdgeInSameChain();
+  void AddMutexCtrlEdgeInSameChain();
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
@@ -45,6 +49,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetPathTypeForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
+  void CollectAncestorsForEachTaskNode();
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
 };
