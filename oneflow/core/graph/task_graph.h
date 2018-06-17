@@ -21,6 +21,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void FindChainsInSameStream();
   void AddOrderCtrlEdgeInSameChain();
   void AddMutexCtrlEdgeInSameChain();
+  void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 

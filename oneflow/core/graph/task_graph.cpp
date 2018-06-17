@@ -105,6 +105,10 @@ void TaskGraph::AddMutexCtrlEdgeInSameChain() {
   // TODO
 }
 
+void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
+  // TODO
+} 
+
 void TaskGraph::CollectAncestorsForEachTaskNode() {
   UncyclicTopoForEachNode([&](TaskNode* node) {
     node->mut_ancestors().clear();
