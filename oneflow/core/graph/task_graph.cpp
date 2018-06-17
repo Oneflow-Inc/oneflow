@@ -88,11 +88,33 @@ void TaskGraph::FindChainsInSameStream() {
 }
 
 void TaskGraph::AddOrderCtrlEdgeInSameChain() {
+  HashMap<int64_t, TaskNode*> chain_id2node;
+  UncyclicTopoForEachNode([&](TaskNode* node) {
+    int64_t chain_id = node->chain_id();
+    auto iter = chain_id2node.find(chain_id);
+    if (iter == chain_id2node.end()) {
+      CHECK(chain_id2node.emplace(chain_id, node).second);
+    } else {
+      iter->second->BuildDelayRegstDescIfNeed(node);
+      iter->second = node;
+    }
+  });
+}
+
+void TaskGraph::AddMutexCtrlEdgeInSameChain() {
+  // TODO
+}
+
+void TaskGraph::CollectAncestorsForEachTaskNode() {
+  // TODO
+}
+
+void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
     if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
   });
-  HashMap<int64_t, TaskNode*> chain_id2node;
+  // TODO: may be simplified by using in_edges and out_edges
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     const auto& consumed_regsts = node->consumed_regsts();
     for (const auto& name2regsts : consumed_regsts) {
@@ -113,24 +135,7 @@ void TaskGraph::AddOrderCtrlEdgeInSameChain() {
       }
     }
   };
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
-    int64_t chain_id = node->chain_id();
-    auto iter = chain_id2node.find(chain_id);
-    if (iter == chain_id2node.end()) {
-      CHECK(chain_id2node.emplace(chain_id, node).second);
-    } else {
-      iter->second->BuildDelayRegstDescIfNeed(node);
-      iter->second = node;
-    }
-  });
-}
-
-void TaskGraph::AddMutexCtrlEdgeInSameChain() {
-  // TODO
-}
-
-void TaskGraph::CollectAncestorsForEachTaskNode() {
-  // TODO
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
 void TaskGraph::SetPathTypeForNewNodes(const LogicalNode* src_logical,

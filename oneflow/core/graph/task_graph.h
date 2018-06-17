@@ -50,6 +50,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   void SetPathTypeForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void CollectAncestorsForEachTaskNode();
+  void UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
 };
