@@ -39,46 +39,57 @@ void InitChains(const TaskGraph& task_graph, std::list<Chain>* chain_list,
   }
 }
 
-bool DoMergeWithConnect(ChainIt lhs, ChainIt rhs, Task2ChainItMap* task2chain_it) {
-  if (lhs->ancestors_and_this != rhs->ancestors) return false;
-  for (TaskNode* node : rhs->nodes) {
-    lhs->nodes.push_back(node);
-    lhs->ancestors_and_this.insert(node);
-    task2chain_it->at(node) = rhs;
+bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
+  for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
+    ChainIt lhs = *chains_it;
+    if (lhs->ancestors_and_this == rhs->ancestors) {
+      for (TaskNode* node : rhs->nodes) {
+        lhs->nodes.push_back(node);
+        lhs->ancestors_and_this.insert(node);
+        task2chain_it->at(node) = rhs;
+      }
+      return true;
+    }
   }
-  return true;
+  return false;
 }
 
-bool DoMergeWithoutConnect(ChainIt lhs, ChainIt rhs, Task2ChainItMap* task2chain_it) {
-  if (lhs->ancestors != rhs->ancestors) return false;
-  for (TaskNode* node : rhs->nodes) {
-    lhs->nodes.push_back(node);
-    lhs->ancestors_and_this.insert(node);
-    task2chain_it->at(node) = lhs;
+bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
+                           Task2ChainItMap* task2chain_it) {
+  for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
+    ChainIt lhs = *chains_it;
+    if (lhs->ancestors == rhs->ancestors) {
+      for (TaskNode* node : rhs->nodes) {
+        lhs->nodes.push_back(node);
+        lhs->ancestors_and_this.insert(node);
+        task2chain_it->at(node) = lhs;
+      }
+      return true;
+    }
   }
-  return true;
+  return false;
 }
 
 bool TryMerge(
     std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it,
-    std::function<bool(ChainIt last_it, ChainIt cur_it, Task2ChainItMap* task2chain_it)> DoMerge) {
-  HashMap<std::pair<int64_t, int64_t>, ChainIt, pair_hash> stream_path2last_chain;
+    std::function<bool(std::list<ChainIt>& chains, ChainIt cur_it, Task2ChainItMap* task2chain_it)>
+        DoMerge) {
+  HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>, pair_hash> stream_path2chains;
   bool merge_happened = false;
   for (auto cur_chain_it = chain_list->begin(); cur_chain_it != chain_list->end();) {
     std::pair<int64_t, int64_t> stream_path_id = {cur_chain_it->stream_id, cur_chain_it->path_id};
-    auto stream_path_it = stream_path2last_chain.find(stream_path_id);
-    if (stream_path_it == stream_path2last_chain.end()) {
-      CHECK(stream_path2last_chain
-                .insert({{cur_chain_it->stream_id, cur_chain_it->path_id}, cur_chain_it})
+    auto stream_path_it = stream_path2chains.find(stream_path_id);
+    if (stream_path_it == stream_path2chains.end()) {
+      CHECK(stream_path2chains
+                .insert({{cur_chain_it->stream_id, cur_chain_it->path_id}, {cur_chain_it}})
                 .second);
       ++cur_chain_it;
     } else {
-      ChainIt last_chain_it = stream_path_it->second;
-      if (DoMerge(last_chain_it, cur_chain_it, task2chain_it)) {
+      if (DoMerge(stream_path_it->second, cur_chain_it, task2chain_it)) {
         cur_chain_it = chain_list->erase(cur_chain_it);
         merge_happened = true;
       } else {
-        stream_path2last_chain[stream_path_id] = cur_chain_it;
+        stream_path2chains[stream_path_id].push_back(cur_chain_it);
         ++cur_chain_it;
       }
     }
