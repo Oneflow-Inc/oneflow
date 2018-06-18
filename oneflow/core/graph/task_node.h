@@ -37,6 +37,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   }
   const HashSet<TaskNode*> ancestors() const { return ancestors_; }
   HashSet<TaskNode*>& mut_ancestors() { return ancestors_; }
+  const HashSet<TaskNode*> descendants() const { return descendants_; }
+  HashSet<TaskNode*>& mut_descendants() { return descendants_; }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t LocalWorkStreamId() const;
@@ -106,6 +108,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
 
   HashSet<TaskNode*> ancestors_;
+  HashSet<TaskNode*> descendants_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {

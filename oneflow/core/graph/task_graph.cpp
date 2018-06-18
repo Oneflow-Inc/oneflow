@@ -13,6 +13,10 @@ struct Chain {
   HashSet<TaskNode*> ancestors;
   // ancestors_and_this = nodes + ancestors
   HashSet<TaskNode*> ancestors_and_this;
+  // descendants of the nodes in this chain
+  HashSet<TaskNode*> descendants;
+  // descendants_and_this = nodes + descendants
+  HashSet<TaskNode*> descendants_and_this;
   int64_t stream_id;
   int64_t path_id;
 };
@@ -36,16 +40,24 @@ void InitChains(const TaskGraph& task_graph, std::list<Chain>* chain_list,
     cur_chain.ancestors_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
     cur_chain.ancestors.insert(task_node->ancestors().begin(), task_node->ancestors().end());
     cur_chain.ancestors_and_this.insert(cur_chain.ancestors.begin(), cur_chain.ancestors.end());
+    cur_chain.descendants.clear();
+    cur_chain.descendants_and_this.clear();
+    cur_chain.descendants_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
+    cur_chain.descendants.insert(task_node->descendants().begin(), task_node->descendants().end());
+    cur_chain.descendants_and_this.insert(cur_chain.descendants.begin(),
+                                          cur_chain.descendants.end());
   }
 }
 
 bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (lhs->ancestors_and_this == rhs->ancestors) {
+    if (lhs->ancestors_and_this == rhs->ancestors
+        && lhs->descendants == rhs->descendants_and_this) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
+        lhs->descendants.erase(node);
         task2chain_it->at(node) = rhs;
       }
       return true;
@@ -58,10 +70,11 @@ bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
                            Task2ChainItMap* task2chain_it) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (lhs->ancestors == rhs->ancestors) {
+    if (lhs->ancestors == rhs->ancestors && lhs->descendants == rhs->descendants) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
+        lhs->descendants_and_this.insert(node);
         task2chain_it->at(node) = lhs;
       }
       return true;
@@ -176,7 +189,7 @@ void TaskGraph::OrderAllTaskNodes() {
 void TaskGraph::FindChainsInSameStream() {
   HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
   OrderAllTaskNodes();
-  CollectAncestorsForEachTaskNode();
+  CollectAncestorsAndDescendantsForEachNode();
 
   std::list<Chain> chain_list;
   Task2ChainItMap task2chain_it;
@@ -195,7 +208,7 @@ void TaskGraph::FindChainsInSameStream() {
 
 void TaskGraph::AddOrderCtrlEdgeInSameChain() {
   HashMap<int64_t, TaskNode*> chain_id2node;
-  UncyclicTopoForEachNode([&](TaskNode* node) {
+  for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
     auto iter = chain_id2node.find(chain_id);
     if (iter == chain_id2node.end()) {
@@ -204,7 +217,7 @@ void TaskGraph::AddOrderCtrlEdgeInSameChain() {
       iter->second->BuildDelayRegstDescIfNeed(node);
       iter->second = node;
     }
-  });
+  }
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() {
@@ -215,14 +228,23 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   // TODO
 }
 
-void TaskGraph::CollectAncestorsForEachTaskNode() {
+void TaskGraph::CollectAncestorsAndDescendantsForEachNode() {
   for (TaskNode* task_node : ordered_task_nodes_) {
     task_node->mut_ancestors().clear();
     task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (node_on_in_edge->GetTaskType() != TaskType::kNormalMdUpdt) {
-        task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
-                                          node_on_in_edge->ancestors().end());
-      }
+      if (node_on_in_edge->GetTaskType() == TaskType::kNormalMdUpdt) return;
+      task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
+                                        node_on_in_edge->ancestors().end());
+
+    });
+  }
+  for (auto rit = ordered_task_nodes_.rbegin(); rit != ordered_task_nodes_.rend(); ++rit) {
+    auto task_node = *rit;
+    task_node->mut_descendants().clear();
+    if (task_node->GetTaskType() == TaskType::kNormalMdUpdt) continue;
+    task_node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      task_node->mut_descendants().insert(node_on_out_edge->descendants().begin(),
+                                          node_on_out_edge->descendants().end());
     });
   }
 }

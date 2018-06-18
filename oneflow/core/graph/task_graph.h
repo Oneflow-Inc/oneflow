@@ -53,7 +53,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetPathTypeForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void CollectAncestorsForEachTaskNode();
+  void CollectAncestorsAndDescendantsForEachNode();
   void UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
