@@ -64,7 +64,7 @@ void TaskGraph::CollectTaskNodesInSameType() {
 }
 
 void TaskGraph::FindChainsInSameStream() {
-  CollectAncestorsAndDescendantsForEachNode();
+  CollectAncestorsForEachNode();
 
   ChainGraph chain_gph(*this);
 
@@ -116,7 +116,7 @@ bool CycleEdge(TaskNode* src, TaskNode* dst) {
              || dst->GetTaskType() == TaskType::kNormalBackward);
 }
 
-void TaskGraph::CollectAncestorsAndDescendantsForEachNode() {
+void TaskGraph::CollectAncestorsForEachNode() {
   std::vector<TaskNode*> ordered_nodes;
   UncyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
   for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
@@ -128,16 +128,6 @@ void TaskGraph::CollectAncestorsAndDescendantsForEachNode() {
                                         node_on_in_edge->ancestors().end());
       task_node->mut_ancestors().insert(node_on_in_edge);
 
-    });
-  }
-  for (auto rit = ordered_nodes.rbegin(); rit != ordered_nodes.rend(); ++rit) {
-    TaskNode* task_node = *rit;
-    task_node->mut_descendants().clear();
-    task_node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (CycleEdge(task_node, node_on_out_edge)) return;
-      task_node->mut_descendants().insert(node_on_out_edge->descendants().begin(),
-                                          node_on_out_edge->descendants().end());
-      task_node->mut_descendants().insert(node_on_out_edge);
     });
   }
 }

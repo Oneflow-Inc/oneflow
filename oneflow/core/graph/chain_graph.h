@@ -15,10 +15,6 @@ struct Chain {
   HashSet<TaskNode*> ancestors;
   // ancestors_and_this = nodes + ancestors
   HashSet<TaskNode*> ancestors_and_this;
-  // descendants of the nodes in this chain
-  HashSet<TaskNode*> descendants;
-  // descendants_and_this = nodes + descendants
-  HashSet<TaskNode*> descendants_and_this;
   int64_t stream_id;
   int64_t area_id;
   ChainNode* chain_node;

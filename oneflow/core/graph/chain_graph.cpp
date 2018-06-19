@@ -16,18 +16,12 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
     Chain& cur_chain = chain_list->back();
     cur_chain.ancestors.clear();
     cur_chain.ancestors_and_this.clear();
-    cur_chain.descendants.clear();
-    cur_chain.descendants_and_this.clear();
     cur_chain.nodes = {task_node};
     cur_chain.area_id = task_node->area_id();
     cur_chain.stream_id = task_node->GlobalWorkStreamId();
     cur_chain.ancestors_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
     cur_chain.ancestors.insert(task_node->ancestors().begin(), task_node->ancestors().end());
     cur_chain.ancestors_and_this.insert(cur_chain.ancestors.begin(), cur_chain.ancestors.end());
-    cur_chain.descendants_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
-    cur_chain.descendants.insert(task_node->descendants().begin(), task_node->descendants().end());
-    cur_chain.descendants_and_this.insert(cur_chain.descendants.begin(),
-                                          cur_chain.descendants.end());
   }
 }
 
@@ -52,7 +46,6 @@ bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
-        lhs->descendants.erase(node);
         task2chain_it->at(node) = lhs;
       }
       return true;
@@ -69,7 +62,6 @@ bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
-        lhs->descendants_and_this.insert(node);
         task2chain_it->at(node) = lhs;
       }
       return true;
