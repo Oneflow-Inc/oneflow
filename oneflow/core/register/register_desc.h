@@ -67,7 +67,6 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
-  bool enable_mem_sharing_;
   MemSharingInfo mem_sharing_info_;
 };
 

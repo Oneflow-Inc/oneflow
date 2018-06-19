@@ -75,7 +75,7 @@ void MemSharedTaskGraph::InitEdges() {
   for (const auto& task_id_and_mem_shared_task_node : task_id2mem_shared_task_node_) {
     MemSharedTaskNode* producer_node = task_id_and_mem_shared_task_node.second;
     for (const auto& pair : producer_node->task_proto()->produced_regst_desc()) {
-      if (pair.second.has_mem_sharing_info()
+      if (pair.second.mem_sharing_info().enable_mem_sharing()
           || RtRegstDesc(pair.second).packed_blob_desc()->TotalByteSize() == 0) {
         for (int64_t consumer_task_id : pair.second.consumer_task_id()) {
           Connect(producer_node, NewEdge(), task_id2mem_shared_task_node_.at(consumer_task_id));
@@ -433,8 +433,8 @@ std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
   std::list<const RegstDescProto*> sharable_regst_descs_with_consumer;
   for (const RegstDescProto* regst_desc : regst_descs) {
-    if (regst_desc->consumer_task_id_size() > 0 && regst_desc->has_mem_sharing_info()
-        && regst_desc->register_num() == 1
+    if (regst_desc->consumer_task_id_size() > 0
+        && regst_desc->mem_sharing_info().enable_mem_sharing() && regst_desc->register_num() == 1
         && IsConsumersAndProducerAllInComputeStream(regst_desc)) {
       sharable_regst_descs_with_consumer.push_back(regst_desc);
     }
@@ -446,7 +446,8 @@ std::list<const RegstDescProto*> SelectSharableRegstDescsWithoutConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
   std::list<const RegstDescProto*> regst_descs_without_consumer;
   for (const RegstDescProto* regst_desc : regst_descs) {
-    if (regst_desc->consumer_task_id_size() == 0 && regst_desc->has_mem_sharing_info()) {
+    if (regst_desc->consumer_task_id_size() == 0
+        && regst_desc->mem_sharing_info().enable_mem_sharing()) {
       regst_descs_without_consumer.push_back(regst_desc);
     }
   }
@@ -458,7 +459,7 @@ void ForEachImprovedMemSharingInfo(
   MemSharedTaskGraph mem_shared_graph(plan);
   auto ComputeLifetimeSameStreamActorIds = [&](const RegstDescProto* regst_desc,
                                                HashSet<int64_t>* ret_actor_ids) {
-    CHECK(regst_desc->has_mem_sharing_info());
+    CHECK(regst_desc->mem_sharing_info().enable_mem_sharing());
     mem_shared_graph.ComputeLifetimeSameStreamActorIds(regst_desc, ret_actor_ids);
   };
   int32_t mem_shared_id = 0;
@@ -540,8 +541,7 @@ uint64_t CalcMemoryConsumed(
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
-    if (!regst_desc->has_mem_sharing_info()
-        || regst_desc->mem_sharing_info().mem_shared_id() == -1) {
+    if (regst_desc->mem_sharing_info().mem_shared_id() == -1) {
       mem_consuming += regst_num * total_byte_size;
     } else {
       CHECK_EQ(regst_num, 1);
