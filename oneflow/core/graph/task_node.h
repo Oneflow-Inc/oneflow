@@ -94,6 +94,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id_;
   int64_t area_id_;
   int64_t chain_id_;
+  int64_t order_in_chain_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
