@@ -170,38 +170,31 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-int64_t FindOrCreateProducedRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto,
-                                      const std::string& regst_desc_name) {
-  auto produced_regst_desc = src_task_proto->mutable_produced_regst_desc();
-  if (produced_regst_desc->find(regst_desc_name) != produced_regst_desc->end()) {
-    return produced_regst_desc->at(regst_desc_name).regst_desc_id();
+RegstDescProto* FindOrCreateProducedRegstDesc(TaskProto* task_proto,
+                                              const std::string& regst_desc_name) {
+  auto produced_regst_desc = task_proto->mutable_produced_regst_desc();
+  if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
+    RegstDescProto ctrl_regst_proto;
+    ctrl_regst_proto.set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
+    ctrl_regst_proto.set_producer_task_id(task_proto->task_id());
+    ctrl_regst_proto.set_min_register_num(1);
+    ctrl_regst_proto.set_max_register_num(1);
+    ctrl_regst_proto.set_register_num(1);
+    ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
+    ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
+    CHECK(produced_regst_desc->insert({regst_desc_name, ctrl_regst_proto}).second);
   }
-
-  RegstDescProto ctrl_regst_proto;
-  int64_t ctrl_regst_desc_id = Global<IDMgr>::Get()->NewRegstDescId();
-  ctrl_regst_proto.set_regst_desc_id(ctrl_regst_desc_id);
-  ctrl_regst_proto.set_producer_task_id(src_task_proto->task_id());
-  ctrl_regst_proto.add_consumer_task_id(dst_task_proto->task_id());
-  ctrl_regst_proto.set_min_register_num(1);
-  ctrl_regst_proto.set_max_register_num(1);
-  ctrl_regst_proto.set_register_num(1);
-  ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
-  ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
-  CHECK(produced_regst_desc->insert({"out_ctrl_shared_mem_safe_guard", ctrl_regst_proto}).second);
-  return ctrl_regst_desc_id;
+  return &produced_regst_desc->at(regst_desc_name);
 }
 
-void AddOrCreateConsumedRegstDescId(TaskProto* src_task_proto, TaskProto* dst_task_proto,
-                                    const std::string& regst_desc_name,
+void AddOrCreateConsumedRegstDescId(TaskProto* task_proto, const std::string& regst_desc_name,
                                     int64_t ctrl_regst_desc_id) {
-  auto consumed_regst_desc_id_sets = dst_task_proto->mutable_consumed_regst_desc_id();
-  if (consumed_regst_desc_id_sets->find(regst_desc_name) != consumed_regst_desc_id_sets->end()) {
-    consumed_regst_desc_id_sets->at(regst_desc_name).add_regst_desc_id(ctrl_regst_desc_id);
-  } else {
+  auto consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
+  if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
     RegstDescIdSet ctrl_regst_desc_id_set;
-    ctrl_regst_desc_id_set.add_regst_desc_id(ctrl_regst_desc_id);
     CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, ctrl_regst_desc_id_set}).second);
   }
+  consumed_regst_desc_id_sets->at(regst_desc_name).add_regst_desc_id(ctrl_regst_desc_id);
 }
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(Plan* plan) {
@@ -220,10 +213,10 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     CHECK(sink_task_it != task_id2task_proto->end());
     TaskProto* header_task_proto = header_task_it->second;
     TaskProto* sink_task_proto = sink_task_it->second;
-    int64_t ctrl_regst_desc_id = FindOrCreateProducedRegstDesc(header_task_proto, sink_task_proto,
-                                                               "out_ctrl_shared_mem_safe_guard");
-    AddOrCreateConsumedRegstDescId(header_task_proto, sink_task_proto, "in_ctrl",
-                                   ctrl_regst_desc_id);
+    RegstDescProto* ctrl_regst_desc =
+        FindOrCreateProducedRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
+    ctrl_regst_desc->add_consumer_task_id(sink_task_proto->task_id());
+    AddOrCreateConsumedRegstDescId(sink_task_proto, "in_ctrl", ctrl_regst_desc->regst_desc_id());
   };
 }
 
@@ -233,6 +226,7 @@ void ForEachMemSharingCriticalSection(
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
   for (int i = 0; i < plan.task_size(); i++) {
     for (const auto& regst_it : plan.task(i).produced_regst_desc()) {
+      auto regst_desc_proto = regst_it.second;
       if (regst_it.second.has_mem_sharing_info()) {
         int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
         if (mem_sharing_id >= 0 && regst_it.second.consumer_task_id_size() > 0) {
