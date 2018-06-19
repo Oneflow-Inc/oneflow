@@ -41,6 +41,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
     if (StartsWith(pair.first, "out_ctrl")) {
+      mut_task_proto.mutable_produced_regst_desc()->erase(pair.first);
       Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
         produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
       });
@@ -55,6 +56,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     if (pair.first == "in_ctrl") {
+      mut_task_proto.mutable_consumed_regst_desc_id()->erase(pair.first);
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
       }
