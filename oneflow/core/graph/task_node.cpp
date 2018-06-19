@@ -57,7 +57,20 @@ void TaskNode::set_thrd_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
-void TaskNode::set_chain_id(int64_t val) { chain_id_ = val; }
+void TaskNode::set_area_id(int64_t val) {
+  CHECK_EQ(area_id_, -1);
+  area_id_ = val;
+}
+
+void TaskNode::set_chain_id(int64_t val) {
+  CHECK_EQ(chain_id_, -1);
+  chain_id_ = val;
+}
+
+void TaskNode::set_order_in_chain(int64_t val) {
+  CHECK_EQ(order_in_chain_, -1);
+  order_in_chain_ = val;
+}
 
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {

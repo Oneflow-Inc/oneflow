@@ -28,15 +28,14 @@ enum TaskType {
   kReduceScatter = 19;
 };
 
-enum PathType {
-  kInvalidPath = 0;
-  kDataPreprocessPath = 1;
-  kDataForwardPath = 2;
-  kDataBackwardPath = 3;
-  kMdUpdtPath = 4;
-  kMdSavePath = 5;
-  kPrintPath = 6;
-  kBoundaryPath = 100;
+enum AreaType {
+  kInvalidArea = 0;
+  kDataPreprocessArea = 1;
+  kDataProcessArea = 2;
+  kMdUpdtArea = 3;
+  kMdSaveArea = 4;
+  kPrintArea = 5;
+  kBoundaryArea = 6;
 }
 
 message RegstDescIdSet {

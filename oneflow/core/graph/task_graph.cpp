@@ -18,7 +18,7 @@ struct Chain {
   // descendants_and_this = nodes + descendants
   HashSet<TaskNode*> descendants_and_this;
   int64_t stream_id;
-  int64_t path_id;
+  int64_t area_id;
 };
 
 using ChainIt = std::list<Chain>::iterator;
@@ -33,7 +33,7 @@ void InitChains(const TaskGraph& task_graph, std::list<Chain>* chain_list,
     task2chain_it->insert({task_node, --chain_list->end()});
     Chain& cur_chain = chain_list->back();
     cur_chain.nodes = {task_node};
-    cur_chain.path_id = static_cast<int64_t>(task_node->GetPathType());
+    cur_chain.area_id = task_node->area_id();
     cur_chain.stream_id = task_node->GlobalWorkStreamId();
     cur_chain.ancestors.clear();
     cur_chain.ancestors_and_this.clear();
@@ -87,22 +87,22 @@ bool TryMerge(
     std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it,
     std::function<bool(std::list<ChainIt>& chains, ChainIt cur_it, Task2ChainItMap* task2chain_it)>
         DoMerge) {
-  HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>, pair_hash> stream_path2chains;
+  HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>, pair_hash> stream_area2chains;
   bool merge_happened = false;
   for (auto cur_chain_it = chain_list->begin(); cur_chain_it != chain_list->end();) {
-    std::pair<int64_t, int64_t> stream_path_id = {cur_chain_it->stream_id, cur_chain_it->path_id};
-    auto stream_path_it = stream_path2chains.find(stream_path_id);
-    if (stream_path_it == stream_path2chains.end()) {
-      CHECK(stream_path2chains
-                .insert({{cur_chain_it->stream_id, cur_chain_it->path_id}, {cur_chain_it}})
+    std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
+    auto stream_area_it = stream_area2chains.find(stream_area_id);
+    if (stream_area_it == stream_area2chains.end()) {
+      CHECK(stream_area2chains
+                .insert({{cur_chain_it->stream_id, cur_chain_it->area_id}, {cur_chain_it}})
                 .second);
       ++cur_chain_it;
     } else {
-      if (DoMerge(stream_path_it->second, cur_chain_it, task2chain_it)) {
+      if (DoMerge(stream_area_it->second, cur_chain_it, task2chain_it)) {
         cur_chain_it = chain_list->erase(cur_chain_it);
         merge_happened = true;
       } else {
-        stream_path2chains[stream_path_id].push_back(cur_chain_it);
+        stream_area2chains[stream_area_id].push_back(cur_chain_it);
         ++cur_chain_it;
       }
     }
@@ -150,7 +150,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-          comp_task_node->SetPathType(logical_node->GetPathType());
+          comp_task_node->SetAreaType(logical_node->GetAreaType());
         });
   });
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
@@ -160,16 +160,16 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     logical2sorted_comp_tasks.at(logical_edge->src_node()),
                     logical2sorted_comp_tasks.at(logical_edge->dst_node()), &logical2sorted_in_box,
                     &logical2sorted_out_box, Mut121BufTask, AllocateCpuThrdIdEvenly);
-    SetPathTypeForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
+    SetAreaTypeForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   ToDotWithAutoFilePath();
 }
 
 void TaskGraph::CollectTaskNodesInSameType() {
-  std::map<PathType, HashSet<TaskNode*>> path_type2task_nodes;
+  std::map<AreaType, HashSet<TaskNode*>> path_type2task_nodes;
   std::map<int64_t, HashSet<TaskNode*>> stream_id2task_nodes;
   ForEachNode([&](TaskNode* node) {
-    CHECK(path_type2task_nodes[node->GetPathType()].insert(node).second);
+    CHECK(path_type2task_nodes[node->GetAreaType()].insert(node).second);
     CHECK(stream_id2task_nodes[node->GlobalWorkStreamId()].insert(node).second);
   });
   // LOG(INFO) << "path_type2task_nodes";
@@ -270,15 +270,15 @@ void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> hand
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
-void TaskGraph::SetPathTypeForNewNodes(const LogicalNode* src_logical,
+void TaskGraph::SetAreaTypeForNewNodes(const LogicalNode* src_logical,
                                        const LogicalNode* dst_logical) {
   CHECK(src_logical != nullptr && dst_logical != nullptr);
   ForEachNode([&](TaskNode* node) {
-    if (node->GetPathType() != kInvalidPath) return;
-    if (src_logical->GetPathType() == dst_logical->GetPathType()) {
-      node->SetPathType(src_logical->GetPathType());
+    if (node->GetAreaType() != kInvalidArea) return;
+    if (src_logical->GetAreaType() == dst_logical->GetAreaType()) {
+      node->SetAreaType(src_logical->GetAreaType());
     } else {
-      node->SetPathType(kBoundaryPath);
+      node->SetAreaType(kBoundaryArea);
     }
   });
 }

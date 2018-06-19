@@ -51,7 +51,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Setters
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
+  void set_area_id(int64_t val);
   void set_chain_id(int64_t val);
+  void set_order_in_chain(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -72,9 +74,13 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
 
-  // Path type
-  void SetPathType(PathType path_type) { path_type_ = path_type; }
-  PathType GetPathType() const { return path_type_; }
+  // Area type
+  void SetAreaType(AreaType area_type) {
+    CHECK_EQ(area_type_, kInvalidArea);
+    area_type_ = area_type;
+    set_area_id(static_cast<int64_t>(area_type_));
+  }
+  AreaType GetAreaType() const { return area_type_; }
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
@@ -105,7 +111,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t area_id_;
   int64_t chain_id_;
   int64_t order_in_chain_;
-  PathType path_type_;
+  AreaType area_type_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
