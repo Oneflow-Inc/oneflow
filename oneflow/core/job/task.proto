@@ -38,9 +38,11 @@ message TaskProto {
   required int64 machine_id = 2;
   required int64 thrd_id = 3;
   required int64 task_id = 4;
-  required ExecSequence exec_sequence = 5;
-  map<string, RegstDescProto> produced_regst_desc = 6;
-  map<string, RegstDescIdSet> consumed_regst_desc_id = 7;
+  required int64 area_id = 5;
+  required int64 chain_id = 6;
+  required ExecSequence exec_sequence = 7;
+  map<string, RegstDescProto> produced_regst_desc = 8;
+  map<string, RegstDescIdSet> consumed_regst_desc_id = 9;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask
