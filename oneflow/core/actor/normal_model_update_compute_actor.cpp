@@ -28,6 +28,14 @@ void NormalMdUpdtCompActor::Act() {
   kernel_ctx.other = &other_val;
   pre_model_regst_ = cur_model_regst;
   AsyncLaunchKernel(kernel_ctx);
+  int64_t in_piece_id = GetNaiveFirstCurReadable()->piece_id();
+  AsyncSendRegstMsgToConsumer([this, in_piece_id](Regst* regst) {
+    if (regst->regst_desc_id() == out_delay_regst_desc_id()) {
+      regst->set_piece_id(in_piece_id);
+      return true;
+    }
+    return false;
+  });
   const JobDesc* job_desc = Global<JobDesc>::Get();
   auto RegstPreProcess = [&](Regst* regst) { return regst == cur_model_regst; };
   bool need_save_model = NeedModelSave(next_model_version_id_ - 1);

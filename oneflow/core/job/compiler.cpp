@@ -103,17 +103,15 @@ void Compiler::OrderTaskNodesInSameStream(TaskGraph* task_gph) {
       }
     }
   };
+  std::set<TaskType> sink_nodes = {TaskType::kMdDiffAcc, TaskType::kLossAcc,
+                                   TaskType::kReduceScatter, TaskType::kNormalMdUpdt};
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     const auto& produced_regsts = node->produced_regsts();
+    if (sink_nodes.find(node->GetTaskType()) != sink_nodes.end()) { return; }
     for (const auto& name2regst : produced_regsts) {
       const auto& consumers = name2regst.second->consumers();
-      for (const TaskNode* consumer : consumers) {
-        TaskType task_type = consumer->GetTaskType();
-        if (task_type != TaskType::kMdDiffAcc && task_type != TaskType::kNormalMdUpdt
-            && task_type != TaskType::kLossAcc && task_type != TaskType::kMdSave) {
-          handler(const_cast<TaskNode*>(consumer));
-        }
-      }
+      if (name2regst.first == "forward_model") { continue; }
+      for (const TaskNode* consumer : consumers) { handler(const_cast<TaskNode*>(consumer)); }
     }
   };
   task_gph->TopoForEachNode(starts, ForEachInNode, ForEachOutNode, [&](TaskNode* node) {
