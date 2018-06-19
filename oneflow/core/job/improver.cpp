@@ -216,12 +216,12 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
       ctrl_regst_desc->add_consumer_task_id(sink_task_id);
 
       int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
-      RegstDescIdSet* ctrl_regst_desc_id_set =
+      RegstDescIdSet* consumed_ctrl_regst_descs =
           FindOrCreateConsumedCtrlRegstDescIdSet(sink_task_proto, "in_ctrl");
-      CHECK(std::find(ctrl_regst_desc_id_set->regst_desc_id().begin(),
-                      ctrl_regst_desc_id_set->regst_desc_id().end(), ctrl_regst_desc_id)
-            == ctrl_regst_desc_id_set->regst_desc_id().end());
-      ctrl_regst_desc_id_set->add_regst_desc_id(ctrl_regst_desc_id);
+      CHECK(std::find(consumed_ctrl_regst_descs->regst_desc_id().begin(),
+                      consumed_ctrl_regst_descs->regst_desc_id().end(), ctrl_regst_desc_id)
+            == consumed_ctrl_regst_descs->regst_desc_id().end());
+      consumed_ctrl_regst_descs->add_regst_desc_id(ctrl_regst_desc_id);
     }
   };
 }
@@ -242,10 +242,10 @@ void ForEachMemSharingCriticalSection(
   for (auto& pair : mem_sharing_id2regst_descs) {
     std::sort(pair.second.begin(), pair.second.end(),
               [](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-                CHECK_NE(lhs->mem_sharing_info().used_order_value(),
-                         rhs->mem_sharing_info().used_order_value());
-                return lhs->mem_sharing_info().used_order_value()
-                       < rhs->mem_sharing_info().used_order_value();
+                int32_t lhs_mem_sharing_order = lhs->mem_sharing_info().used_order_value();
+                int32_t rhs_mem_sharing_order = rhs->mem_sharing_info().used_order_value();
+                CHECK_NE(lhs_mem_sharing_order, rhs_mem_sharing_order);
+                return lhs_mem_sharing_order < rhs_mem_sharing_order;
               });
     Handler(pair.second);
   }
