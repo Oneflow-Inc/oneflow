@@ -80,9 +80,7 @@ bool TryMerge(
     std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
     auto stream_area_it = stream_area2chains.find(stream_area_id);
     if (stream_area_it == stream_area2chains.end()) {
-      CHECK(stream_area2chains
-                .insert({{cur_chain_it->stream_id, cur_chain_it->area_id}, {cur_chain_it}})
-                .second);
+      CHECK(stream_area2chains.insert({stream_area_id, {cur_chain_it}}).second);
       ++cur_chain_it;
     } else {
       if (DoMerge(stream_area_it->second, cur_chain_it, task2chain_it)) {
@@ -95,7 +93,7 @@ bool TryMerge(
     }
   }
   return merge_happened;
-}
+}  // namespace
 
 void MergeChains(std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it) {
   while (TryMerge(chain_list, task2chain_it, DoMergeWithConnect)
@@ -134,14 +132,14 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
       }
       auto src_chain_node = ChainNode4TaskNode(src_task_node);
       if (cur_chain_node == src_chain_node) continue;
-      bool connected = false;
+      bool already_connected = false;
       for (auto& out_edge : src_chain_node->out_edges()) {
         if (out_edge->dst_node() == cur_chain_node) {
-          connected = true;
+          already_connected = true;
           break;
         }
       }
-      if (connected) continue;
+      if (already_connected) continue;
       Connect(src_chain_node, NewEdge(), cur_chain_node);
     }
   }
