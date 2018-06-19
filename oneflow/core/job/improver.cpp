@@ -199,11 +199,18 @@ void AddOrCreateConsumedRegstDescId(TaskProto* task_proto, const std::string& re
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(Plan* plan) {
   auto task_id2task_proto = std::make_shared<HashMap<int64_t, TaskProto*>>();
+  auto task2succ_task_ids = std::make_shared<HashMap<TaskProto*, HashSet<int64_t>>>();
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task_proto = plan->mutable_task(i);
     CHECK(task_id2task_proto->insert({task_proto->task_id(), task_proto}).second);
+    for (const auto& regst_desc_it : task_proto->produced_regst_desc()) {
+      for (int64_t consumer_id : regst_desc_it.second.consumer_task_id()) {
+        (*task2succ_task_ids)[task_proto].insert(consumer_id);
+      }
+    }
   }
-  return [task_id2task_proto](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
+  return [task_id2task_proto,
+          task2succ_task_ids](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.at(0)->producer_task_id();
     int64_t sink_task_id = shared_mem_regsts.back()->consumer_task_id(0);
@@ -213,10 +220,15 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     CHECK(sink_task_it != task_id2task_proto->end());
     TaskProto* header_task_proto = header_task_it->second;
     TaskProto* sink_task_proto = sink_task_it->second;
-    RegstDescProto* ctrl_regst_desc =
-        FindOrCreateProducedRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
-    ctrl_regst_desc->add_consumer_task_id(sink_task_proto->task_id());
-    AddOrCreateConsumedRegstDescId(sink_task_proto, "in_ctrl", ctrl_regst_desc->regst_desc_id());
+    auto header_task_succ_tasks_it = task2succ_task_ids->find(header_task_proto);
+    CHECK(header_task_succ_tasks_it != task2succ_task_ids->end());
+    if (header_task_succ_tasks_it->second.find(sink_task_id)
+        == header_task_succ_tasks_it->second.end()) {
+      RegstDescProto* ctrl_regst_desc =
+          FindOrCreateProducedRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
+      ctrl_regst_desc->add_consumer_task_id(sink_task_proto->task_id());
+      AddOrCreateConsumedRegstDescId(sink_task_proto, "in_ctrl", ctrl_regst_desc->regst_desc_id());
+    }
   };
 }
 
