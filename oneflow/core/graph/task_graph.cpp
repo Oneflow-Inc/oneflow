@@ -58,7 +58,7 @@ bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
         lhs->descendants.erase(node);
-        task2chain_it->at(node) = rhs;
+        task2chain_it->at(node) = lhs;
       }
       return true;
     }
@@ -229,7 +229,8 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
 }
 
 void TaskGraph::CollectAncestorsAndDescendantsForEachNode() {
-  for (TaskNode* task_node : ordered_task_nodes_) {
+  for (auto it = ordered_task_nodes_.begin(); it != ordered_task_nodes_.end(); ++it) {
+    TaskNode* task_node = *it;
     task_node->mut_ancestors().clear();
     task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
       if (node_on_in_edge->GetTaskType() == TaskType::kNormalMdUpdt) return;
@@ -239,7 +240,7 @@ void TaskGraph::CollectAncestorsAndDescendantsForEachNode() {
     });
   }
   for (auto rit = ordered_task_nodes_.rbegin(); rit != ordered_task_nodes_.rend(); ++rit) {
-    auto task_node = *rit;
+    TaskNode* task_node = *rit;
     task_node->mut_descendants().clear();
     if (task_node->GetTaskType() == TaskType::kNormalMdUpdt) continue;
     task_node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
