@@ -210,17 +210,18 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
     RegstDescProto* ctrl_regst_desc =
         FindOrCreateProducedCtrlRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
-    if (!std::find(ctrl_regst_desc->consumer_task_id().begin(),
-                   ctrl_regst_desc->consumer_task_id().end(), sink_task_id)) {
+    if (std::find(ctrl_regst_desc->consumer_task_id().begin(),
+                  ctrl_regst_desc->consumer_task_id().end(), sink_task_id)
+        == ctrl_regst_desc->consumer_task_id().end()) {
       ctrl_regst_desc->add_consumer_task_id(sink_task_id);
 
       int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
       RegstDescIdSet* ctrl_regst_desc_id_set =
           FindOrCreateConsumedCtrlRegstDescIdSet(sink_task_proto, "in_ctrl");
-      if (!std::find(ctrl_regst_desc_id_set->regst_desc_id().begin(),
-                     ctrl_regst_desc_id_set->regst_desc_id().end(), ctrl_regst_desc_id)) {
-        ctrl_regst_desc_id_set->add_regst_desc_id(ctrl_regst_desc_id);
-      }
+      CHECK(std::find(ctrl_regst_desc_id_set->regst_desc_id().begin(),
+                      ctrl_regst_desc_id_set->regst_desc_id().end(), ctrl_regst_desc_id)
+            == ctrl_regst_desc_id_set->regst_desc_id().end());
+      ctrl_regst_desc_id_set->add_regst_desc_id(ctrl_regst_desc_id);
     }
   };
 }
@@ -231,19 +232,18 @@ void ForEachMemSharingCriticalSection(
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
   for (const auto& task : plan.task()) {
     for (const auto& regst_it : task.produced_regst_desc()) {
-      if (regst_it.second.mem_sharing_info().enable_mem_sharing()) {
-        int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
-        int32_t mem_sharing_order = regst_it.second.mem_sharing_info().used_order_value();
-        if (mem_sharing_id >= 0 && mem_sharing_order >= 0
-            && regst_it.second.consumer_task_id_size() > 0) {
-          mem_sharing_id2regst_descs[mem_sharing_id].push_back(&regst_it.second);
-        }
+      int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
+      if (mem_sharing_id != -1 && regst_it.second.consumer_task_id_size() > 0) {
+        CHECK(regst_it.second.mem_sharing_info().used_order_value() != -1);
+        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&regst_it.second);
       }
     }
   }
   for (auto& pair : mem_sharing_id2regst_descs) {
     std::sort(pair.second.begin(), pair.second.end(),
               [](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+                CHECK_NE(lhs->mem_sharing_info().used_order_value(),
+                         rhs->mem_sharing_info().used_order_value());
                 return lhs->mem_sharing_info().used_order_value()
                        < rhs->mem_sharing_info().used_order_value();
               });
