@@ -170,23 +170,15 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-void BuildCtrlRegstBetweenTaskProto(Plan* plan, int64_t header_task_id, int64_t sink_task_id) {
-  CHECK_NE(header_task_id, sink_task_id);
-  TaskProto* header_task_proto = nullptr;
-  TaskProto* sink_task_proto = nullptr;
-  for (int i = 0; i < plan->task_size(); i++) {
-    TaskProto* task_proto = plan->mutable_task(i);
-    if (task_proto->task_id() == header_task_id) { header_task_proto = task_proto; }
-    if (task_proto->task_id() == sink_task_id) { sink_task_proto = task_proto; }
-  }
-  CHECK_NOTNULL(header_task_proto);
-  CHECK_NOTNULL(sink_task_proto);
+void BuildSharedMemGuardCtrlRegst(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
+  CHECK_NOTNULL(src_task_proto);
+  CHECK_NOTNULL(dst_task_proto);
 
   RegstDescProto ctrl_regst_proto;
   int64_t ctrl_regst_desc_id = Global<IDMgr>::Get()->NewRegstDescId();
   ctrl_regst_proto.set_regst_desc_id(ctrl_regst_desc_id);
-  ctrl_regst_proto.set_producer_task_id(header_task_id);
-  ctrl_regst_proto.add_consumer_task_id(sink_task_id);
+  ctrl_regst_proto.set_producer_task_id(src_task_proto->task_id());
+  ctrl_regst_proto.add_consumer_task_id(dst_task_proto->task_id());
   ctrl_regst_proto.set_min_register_num(1);
   ctrl_regst_proto.set_max_register_num(1);
   ctrl_regst_proto.set_register_num(1);
@@ -195,23 +187,34 @@ void BuildCtrlRegstBetweenTaskProto(Plan* plan, int64_t header_task_id, int64_t 
 
   std::string ctrl_regst_name = "shared_mem_regst_guard_" + std::to_string(header_task_id) + "_to_"
                                 + std::to_string(sink_task_id);
-  CHECK(header_task_proto->mutable_produced_regst_desc()
+  CHECK(src_task_proto->mutable_produced_regst_desc()
             ->insert({ctrl_regst_name, ctrl_regst_proto})
             .second);
 
-  RegstDescIdSet sink_regst_desc_id_set;
-  sink_regst_desc_id_set.add_regst_desc_id(ctrl_regst_desc_id);
-  CHECK(sink_task_proto->mutable_consumed_regst_desc_id()
-            ->insert({ctrl_regst_name, sink_regst_desc_id_set})
+  RegstDescIdSet dst_regst_desc_id_set;
+  dst_regst_desc_id_set.add_regst_desc_id(ctrl_regst_desc_id);
+  CHECK(dst_task_proto->mutable_consumed_regst_desc_id()
+            ->insert({"in_ctrl", dst_regst_desc_id_set})
             .second);
 }
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(Plan* plan) {
-  return [plan](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
-    if (shared_mem_regsts.size() < 2) { return; }
+  auto task_id2task_proto = std::make_unique<HashMap<int64_t, TaskProto*>>();
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task_proto = plan->mutable_task(i);
+    CHECK(task_id2task_proto->insert({task_proto->task_id(), task_proto}).second);
+  }
+  return [task_proto_map_ptr = std::move(task_id2task_proto)](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
+    if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.at(0)->producer_task_id();
     int64_t sink_task_id = shared_mem_regsts.back()->consumer_task_id(0);
-    BuildCtrlRegstBetweenTaskProto(plan, header_task_id, sink_task_id);
+    auto header_task_it = task_proto_map_ptr->find(header_task_id);
+    auto sink_task_it = task_proto_map_ptr->find(sink_task_id);
+    CHECK(header_task_it != task_proto_map_ptr->end());
+    CHECK(sink_task_it != task_proto_map_ptr->end());
+    TaskProto* header_task_proto = header_task_it->second;
+    TaskProto* sink_task_proto = sink_task_it->second;
+    BuildSharedMemGuardCtrlRegst(header_task_proto, sink_task_proto);
   };
 }
 
@@ -223,8 +226,9 @@ void ForEachMemSharingCriticalSection(
     for (const auto& regst_it : plan.task(i).produced_regst_desc()) {
       if (regst_it.second.has_mem_sharing_info()) {
         int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
-        CHECK_GE(mem_sharing_id, 0);
-        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&regst_it.second);
+        if (mem_sharing_id >= 0 && regst_it.second.consumer_task_id_size() > 0) {
+          mem_sharing_id2regst_descs[mem_sharing_id].push_back(&regst_it.second);
+        }
       }
     }
   }
