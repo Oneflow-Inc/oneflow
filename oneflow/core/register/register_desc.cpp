@@ -146,20 +146,19 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
   return true;
 }
 
-RegstDescProto InitCtrlRegstDesc(int64_t produced_task_id) {
-  RegstDescProto ctrl_regst_proto;
-  ctrl_regst_proto.set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
-  ctrl_regst_proto.set_producer_task_id(produced_task_id);
-  ctrl_regst_proto.set_min_register_num(1);
-  ctrl_regst_proto.set_max_register_num(1);
-  ctrl_regst_proto.set_register_num(1);
-  ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
-  ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
-  MemSharingProto* mem_sharing_info = ctrl_regst_proto.mutable_mem_sharing_info();
+void InitCtrlRegstDesc(int64_t produced_task_id, RegstDescProto* ctrl_regst_proto) {
+  CHECK_NOTNULL(ctrl_regst_proto);
+  ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
+  ctrl_regst_proto->set_producer_task_id(produced_task_id);
+  ctrl_regst_proto->set_min_register_num(1);
+  ctrl_regst_proto->set_max_register_num(1);
+  ctrl_regst_proto->set_register_num(1);
+  ctrl_regst_proto->mutable_regst_desc_type()->mutable_delay_regst_desc();
+  ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
+  MemSharingProto* mem_sharing_info = ctrl_regst_proto->mutable_mem_sharing_info();
   mem_sharing_info->set_enable_mem_sharing(false);
   mem_sharing_info->set_mem_shared_id(-1);
   mem_sharing_info->set_used_order_value(-1);
-  return ctrl_regst_proto;
 }
 
 }  // namespace oneflow

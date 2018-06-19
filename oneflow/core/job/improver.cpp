@@ -175,8 +175,9 @@ RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
                                                   const std::string& regst_desc_name) {
   auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
   if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
-    CHECK(produced_regst_desc->insert({regst_desc_name, InitCtrlRegstDesc(task_proto->task_id())})
-              .second);
+    RegstDescProto ctrl_regst_desc;
+    InitCtrlRegstDesc(task_proto->task_id(), &ctrl_regst_desc);
+    CHECK(produced_regst_desc->insert({regst_desc_name, ctrl_regst_desc}).second);
   }
   return &produced_regst_desc->at(regst_desc_name);
 }
@@ -190,14 +191,14 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
   return &consumed_regst_desc_id_sets->at(regst_desc_name);
 }
 
-void TryConnectWithCtrlRegstDesc(TaskProto* header_task_proto, TaskProto* sink_task_proto) {
+void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* header_task_proto,
+                                             TaskProto* sink_task_proto) {
   RegstDescProto* ctrl_regst_desc =
       FindOrCreateProducedCtrlRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
   if (std::find(ctrl_regst_desc->consumer_task_id().begin(),
                 ctrl_regst_desc->consumer_task_id().end(), sink_task_proto->task_id())
       == ctrl_regst_desc->consumer_task_id().end()) {
     ctrl_regst_desc->add_consumer_task_id(sink_task_proto->task_id());
-
     int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
     RegstDescIdSet* consumed_ctrl_regst_desc_ids =
         FindOrCreateConsumedCtrlRegstDescIdSet(sink_task_proto, "in_ctrl");
@@ -212,7 +213,7 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
   auto task_id2task_proto = std::make_shared<HashMap<int64_t, TaskProto*>>();
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task_proto = plan->mutable_task(i);
-    CHECK(task_id2task_proto->insert({task_proto->task_id(), task_proto}).second);
+    CHECK(task_id2task_proto->emplace(task_proto->task_id(), task_proto).second);
   }
   return [task_id2task_proto](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
@@ -220,7 +221,7 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
     for (int64_t sink_task_id : shared_mem_regsts.back()->consumer_task_id()) {
       TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
-      TryConnectWithCtrlRegstDesc(header_task_proto, sink_task_proto);
+      TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
     }
   };
 }
