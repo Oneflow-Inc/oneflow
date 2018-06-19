@@ -31,11 +31,12 @@ enum TaskType {
 enum AreaType {
   kInvalidArea = 0;
   kDataPreprocessArea = 1;
-  kDataProcessArea = 2;
-  kMdUpdtArea = 3;
-  kMdSaveArea = 4;
-  kPrintArea = 5;
-  kBoundaryArea = 6;
+  kDataForwardArea = 2;
+  kDataBackwardArea = 3;
+  kMdUpdtArea = 4;
+  kMdSaveArea = 5;
+  kPrintArea = 6;
+  kBoundaryArea = 7;
 }
 
 message RegstDescIdSet {

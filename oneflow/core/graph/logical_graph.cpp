@@ -41,13 +41,13 @@ void LogicalGraph::FixDecodeAndMdDiffAccAreaType() {
     CHECK_NE(node->GetAreaType(), kInvalidArea);
     auto decode_node = dynamic_cast<DecodeLogicalNode*>(node);
     if (decode_node) {
-      CHECK_EQ(node->GetAreaType(), kDataProcessArea);
+      CHECK_EQ(node->GetAreaType(), kDataForwardArea);
       node->SetAreaType(kDataPreprocessArea);
     }
     auto md_diff_acc_node = dynamic_cast<MdDiffAccLogicalNode*>(node);
     if (md_diff_acc_node) {
       CHECK_EQ(node->GetAreaType(), kMdUpdtArea);
-      node->SetAreaType(kDataProcessArea);
+      node->SetAreaType(kDataBackwardArea);
     }
   });
 }
@@ -62,7 +62,7 @@ void LogicalGraph::BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
     total_mbn_num_ +=
         node->SoleOp()->model_bns().size() + node->SoleOp()->forward_model_bns().size();
   });
-  SetAreaTypeForNewNodes(kDataProcessArea);
+  SetAreaTypeForNewNodes(kDataForwardArea);
 }
 
 void LogicalGraph::NaiveBuildFwStruct(
@@ -236,7 +236,7 @@ void LogicalGraph::SetMainModelParallel() {
 void LogicalGraph::BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   NaiveBuildBwStruct(edge2ibn);
   AddBackwardClone(*edge2ibn);
-  SetAreaTypeForNewNodes(kDataProcessArea);
+  SetAreaTypeForNewNodes(kDataBackwardArea);
 }
 
 void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {

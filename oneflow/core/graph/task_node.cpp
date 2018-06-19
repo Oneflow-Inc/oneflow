@@ -16,9 +16,10 @@ TaskNode::TaskNode()
     : machine_id_(-1),
       thrd_id_(-1),
       task_id_(-1),
-      area_id_(-1),
+      area_id_(0),
       chain_id_(-1),
-      order_in_graph_(-1) {}
+      order_in_graph_(-1),
+      area_type_(kInvalidArea) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -58,7 +59,7 @@ void TaskNode::set_thrd_id(int64_t val) {
 }
 
 void TaskNode::set_area_id(int64_t val) {
-  CHECK_EQ(area_id_, -1);
+  CHECK_EQ(area_id_, 0);
   area_id_ = val;
 }
 

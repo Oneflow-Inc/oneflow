@@ -1,121 +1,10 @@
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
-
-namespace {
-struct Chain {
-  // nodes belong to this chain
-  std::vector<TaskNode*> nodes;
-  // ancestors of the nodes in this chain
-  HashSet<TaskNode*> ancestors;
-  // ancestors_and_this = nodes + ancestors
-  HashSet<TaskNode*> ancestors_and_this;
-  // descendants of the nodes in this chain
-  HashSet<TaskNode*> descendants;
-  // descendants_and_this = nodes + descendants
-  HashSet<TaskNode*> descendants_and_this;
-  int64_t stream_id;
-  int64_t area_id;
-};
-
-using ChainIt = std::list<Chain>::iterator;
-using Task2ChainItMap = HashMap<const TaskNode*, ChainIt>;
-
-void InitChains(const TaskGraph& task_graph, std::list<Chain>* chain_list,
-                Task2ChainItMap* task2chain_it) {
-  chain_list->clear();
-  task2chain_it->clear();
-  for (const auto& task_node : task_graph.ordered_task_nodes()) {
-    chain_list->emplace_back();
-    task2chain_it->insert({task_node, --chain_list->end()});
-    Chain& cur_chain = chain_list->back();
-    cur_chain.nodes = {task_node};
-    cur_chain.area_id = task_node->area_id();
-    cur_chain.stream_id = task_node->GlobalWorkStreamId();
-    cur_chain.ancestors.clear();
-    cur_chain.ancestors_and_this.clear();
-    cur_chain.ancestors_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
-    cur_chain.ancestors.insert(task_node->ancestors().begin(), task_node->ancestors().end());
-    cur_chain.ancestors_and_this.insert(cur_chain.ancestors.begin(), cur_chain.ancestors.end());
-    cur_chain.descendants.clear();
-    cur_chain.descendants_and_this.clear();
-    cur_chain.descendants_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
-    cur_chain.descendants.insert(task_node->descendants().begin(), task_node->descendants().end());
-    cur_chain.descendants_and_this.insert(cur_chain.descendants.begin(),
-                                          cur_chain.descendants.end());
-  }
-}
-
-bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
-  for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
-    ChainIt lhs = *chains_it;
-    if (lhs->ancestors_and_this == rhs->ancestors
-        && lhs->descendants == rhs->descendants_and_this) {
-      for (TaskNode* node : rhs->nodes) {
-        lhs->nodes.push_back(node);
-        lhs->ancestors_and_this.insert(node);
-        lhs->descendants.erase(node);
-        task2chain_it->at(node) = lhs;
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
-bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
-                           Task2ChainItMap* task2chain_it) {
-  for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
-    ChainIt lhs = *chains_it;
-    if (lhs->ancestors == rhs->ancestors && lhs->descendants == rhs->descendants) {
-      for (TaskNode* node : rhs->nodes) {
-        lhs->nodes.push_back(node);
-        lhs->ancestors_and_this.insert(node);
-        lhs->descendants_and_this.insert(node);
-        task2chain_it->at(node) = lhs;
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
-bool TryMerge(
-    std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it,
-    std::function<bool(std::list<ChainIt>& chains, ChainIt cur_it, Task2ChainItMap* task2chain_it)>
-        DoMerge) {
-  HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>, pair_hash> stream_area2chains;
-  bool merge_happened = false;
-  for (auto cur_chain_it = chain_list->begin(); cur_chain_it != chain_list->end();) {
-    std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
-    auto stream_area_it = stream_area2chains.find(stream_area_id);
-    if (stream_area_it == stream_area2chains.end()) {
-      CHECK(stream_area2chains
-                .insert({{cur_chain_it->stream_id, cur_chain_it->area_id}, {cur_chain_it}})
-                .second);
-      ++cur_chain_it;
-    } else {
-      if (DoMerge(stream_area_it->second, cur_chain_it, task2chain_it)) {
-        cur_chain_it = chain_list->erase(cur_chain_it);
-        merge_happened = true;
-      } else {
-        stream_area2chains[stream_area_id].push_back(cur_chain_it);
-        ++cur_chain_it;
-      }
-    }
-  }
-  return merge_happened;
-}
-
-void MergeChains(std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it) {
-  while (TryMerge(chain_list, task2chain_it, DoMergeWithConnect)
-         || TryMerge(chain_list, task2chain_it, DoMergeWithoutConnect)) {}
-}
-
-}  // namespace
 
 TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   logical_gph_ = std::move(logical_gph);
@@ -172,41 +61,33 @@ void TaskGraph::CollectTaskNodesInSameType() {
     CHECK(path_type2task_nodes[node->GetAreaType()].insert(node).second);
     CHECK(stream_id2task_nodes[node->GlobalWorkStreamId()].insert(node).second);
   });
-  // LOG(INFO) << "path_type2task_nodes";
-  for (const auto& pair : path_type2task_nodes) {
-    LOG(INFO) << pair.first << ":" << pair.second.size();
-  }
-  // LOG(INFO) << "stream_id2task_nodes";
-  for (const auto& pair : stream_id2task_nodes) {
-    LOG(INFO) << pair.first << ":" << pair.second.size();
-  }
-}
-
-void TaskGraph::OrderAllTaskNodes() {
-  UncyclicTopoForEachNode([this](TaskNode* node) { ordered_task_nodes_.emplace_back(node); });
 }
 
 void TaskGraph::FindChainsInSameStream() {
-  HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
-  OrderAllTaskNodes();
   CollectAncestorsAndDescendantsForEachNode();
 
-  std::list<Chain> chain_list;
-  Task2ChainItMap task2chain_it;
-  InitChains(*this, &chain_list, &task2chain_it);
-  MergeChains(&chain_list, &task2chain_it);
+  ChainGraph chain_gph(*this);
 
-  for (auto& chain : chain_list) {
-    int64_t chain_id =
-        Global<IDMgr>::Get()->AllocateChainId(chain.nodes.front()->GlobalWorkStreamId());
-    for (auto task_node : chain.nodes) {
-      task_node->set_chain_id(chain_id);
-      CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
+  /*
+    std::list<Chain> chain_list;
+    Task2ChainItMap task2chain_it;
+    InitChains(ordered_nodes, &chain_list, &task2chain_it);
+    MergeChains(&chain_list, &task2chain_it);
+
+    HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
+    for (auto& chain : chain_list) {
+      int64_t chain_id =
+          Global<IDMgr>::Get()->AllocateChainId(chain.nodes.front()->GlobalWorkStreamId());
+      for (auto task_node : chain.nodes) {
+        task_node->set_chain_id(chain_id);
+        CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
+      }
     }
-  }
+  */
 }
 
 void TaskGraph::AddOrderCtrlEdgeInSameChain() {
+  /*
   HashMap<int64_t, TaskNode*> chain_id2node;
   for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
@@ -218,6 +99,7 @@ void TaskGraph::AddOrderCtrlEdgeInSameChain() {
       iter->second = node;
     }
   }
+  */
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() {
@@ -228,45 +110,54 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   // TODO
 }
 
+bool CycleEdge(TaskNode* src, TaskNode* dst) {
+  return src->GetTaskType() == TaskType::kNormalMdUpdt
+         && (dst->GetTaskType() == TaskType::kNormalForward
+             || dst->GetTaskType() == TaskType::kNormalBackward);
+}
+
 void TaskGraph::CollectAncestorsAndDescendantsForEachNode() {
-  for (auto it = ordered_task_nodes_.begin(); it != ordered_task_nodes_.end(); ++it) {
+  std::vector<TaskNode*> ordered_nodes;
+  UncyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
+  for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
     TaskNode* task_node = *it;
     task_node->mut_ancestors().clear();
     task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (node_on_in_edge->GetTaskType() == TaskType::kNormalMdUpdt) return;
+      if (CycleEdge(node_on_in_edge, task_node)) return;
       task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
                                         node_on_in_edge->ancestors().end());
+      task_node->mut_ancestors().insert(node_on_in_edge);
 
     });
   }
-  for (auto rit = ordered_task_nodes_.rbegin(); rit != ordered_task_nodes_.rend(); ++rit) {
+  for (auto rit = ordered_nodes.rbegin(); rit != ordered_nodes.rend(); ++rit) {
     TaskNode* task_node = *rit;
     task_node->mut_descendants().clear();
-    if (task_node->GetTaskType() == TaskType::kNormalMdUpdt) continue;
     task_node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      if (CycleEdge(task_node, node_on_out_edge)) return;
       task_node->mut_descendants().insert(node_on_out_edge->descendants().begin(),
                                           node_on_out_edge->descendants().end());
+      task_node->mut_descendants().insert(node_on_out_edge);
     });
   }
 }
 
-void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) {
+void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
     if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
   });
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (node_on_in_edge->GetTaskType() != TaskType::kNormalMdUpdt) {
-        handler(const_cast<TaskNode*>(node_on_in_edge));
-      }
+      if (CycleEdge(node_on_in_edge, node)) return;
+      handler(const_cast<TaskNode*>(node_on_in_edge));
     });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    if (node->GetTaskType() != TaskType::kNormalMdUpdt) {
-      node->ForEachNodeOnOutEdge(
-          [&](TaskNode* node_on_out_edge) { handler(const_cast<TaskNode*>(node_on_out_edge)); });
-    }
+    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      if (CycleEdge(node, node_on_out_edge)) return;
+      handler(const_cast<TaskNode*>(node_on_out_edge));
+    });
   };
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
