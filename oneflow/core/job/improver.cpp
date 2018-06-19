@@ -170,9 +170,9 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-RegstDescProto* FindOrCreateProducedRegstDesc(TaskProto* task_proto,
-                                              const std::string& regst_desc_name) {
-  auto produced_regst_desc = task_proto->mutable_produced_regst_desc();
+RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
+                                                  const std::string& regst_desc_name) {
+  auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
   if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
     RegstDescProto ctrl_regst_proto;
     ctrl_regst_proto.set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
@@ -187,47 +187,40 @@ RegstDescProto* FindOrCreateProducedRegstDesc(TaskProto* task_proto,
   return &produced_regst_desc->at(regst_desc_name);
 }
 
-void AddOrCreateConsumedRegstDescId(TaskProto* task_proto, const std::string& regst_desc_name,
-                                    int64_t ctrl_regst_desc_id) {
-  auto consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name) {
+  auto* consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
   if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
-    RegstDescIdSet ctrl_regst_desc_id_set;
-    CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, ctrl_regst_desc_id_set}).second);
+    CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
   }
-  consumed_regst_desc_id_sets->at(regst_desc_name).add_regst_desc_id(ctrl_regst_desc_id);
+  return &consumed_regst_desc_id_sets->at(regst_desc_name);
 }
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(Plan* plan) {
   auto task_id2task_proto = std::make_shared<HashMap<int64_t, TaskProto*>>();
-  auto task2succ_task_ids = std::make_shared<HashMap<TaskProto*, HashSet<int64_t>>>();
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task_proto = plan->mutable_task(i);
     CHECK(task_id2task_proto->insert({task_proto->task_id(), task_proto}).second);
-    for (const auto& regst_desc_it : task_proto->produced_regst_desc()) {
-      for (int64_t consumer_id : regst_desc_it.second.consumer_task_id()) {
-        (*task2succ_task_ids)[task_proto].insert(consumer_id);
-      }
-    }
   }
-  return [task_id2task_proto,
-          task2succ_task_ids](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
+  return [task_id2task_proto](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.at(0)->producer_task_id();
     int64_t sink_task_id = shared_mem_regsts.back()->consumer_task_id(0);
-    auto header_task_it = task_id2task_proto->find(header_task_id);
-    auto sink_task_it = task_id2task_proto->find(sink_task_id);
-    CHECK(header_task_it != task_id2task_proto->end());
-    CHECK(sink_task_it != task_id2task_proto->end());
-    TaskProto* header_task_proto = header_task_it->second;
-    TaskProto* sink_task_proto = sink_task_it->second;
-    auto header_task_succ_tasks_it = task2succ_task_ids->find(header_task_proto);
-    CHECK(header_task_succ_tasks_it != task2succ_task_ids->end());
-    if (header_task_succ_tasks_it->second.find(sink_task_id)
-        == header_task_succ_tasks_it->second.end()) {
-      RegstDescProto* ctrl_regst_desc =
-          FindOrCreateProducedRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
-      ctrl_regst_desc->add_consumer_task_id(sink_task_proto->task_id());
-      AddOrCreateConsumedRegstDescId(sink_task_proto, "in_ctrl", ctrl_regst_desc->regst_desc_id());
+    TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
+    TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
+    RegstDescProto* ctrl_regst_desc =
+        FindOrCreateProducedCtrlRegstDesc(header_task_proto, "out_ctrl_shared_mem_safe_guard");
+    if (!std::find(ctrl_regst_desc->consumer_task_id().begin(),
+                   ctrl_regst_desc->consumer_task_id().end(), sink_task_id)) {
+      ctrl_regst_desc->add_consumer_task_id(sink_task_id);
+
+      int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
+      RegstDescIdSet* ctrl_regst_desc_id_set =
+          FindOrCreateConsumedCtrlRegstDescIdSet(sink_task_proto, "in_ctrl");
+      if (!std::find(ctrl_regst_desc_id_set->regst_desc_id().begin(),
+                     ctrl_regst_desc_id_set->regst_desc_id().end(), ctrl_regst_desc_id)) {
+        ctrl_regst_desc_id_set->add_regst_desc_id(ctrl_regst_desc_id);
+      }
     }
   };
 }
@@ -236,8 +229,8 @@ void ForEachMemSharingCriticalSection(
     const Plan& plan,
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
-  for (int i = 0; i < plan.task_size(); i++) {
-    for (const auto& regst_it : plan.task(i).produced_regst_desc()) {
+  for (const auto& task : plan.task()) {
+    for (const auto& regst_it : task.produced_regst_desc()) {
       if (regst_it.second.mem_sharing_info().enable_mem_sharing()) {
         int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
         int32_t mem_sharing_order = regst_it.second.mem_sharing_info().used_order_value();
