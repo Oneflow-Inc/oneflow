@@ -238,10 +238,11 @@ void ForEachMemSharingCriticalSection(
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
   for (int i = 0; i < plan.task_size(); i++) {
     for (const auto& regst_it : plan.task(i).produced_regst_desc()) {
-      auto regst_desc_proto = regst_it.second;
-      if (regst_it.second.has_mem_sharing_info()) {
+      if (regst_it.second.mem_sharing_info().enable_mem_sharing()) {
         int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
-        if (mem_sharing_id >= 0 && regst_it.second.consumer_task_id_size() > 0) {
+        int32_t mem_sharing_order = regst_it.second.mem_sharing_info().used_order_value();
+        if (mem_sharing_id >= 0 && mem_sharing_order >= 0
+            && regst_it.second.consumer_task_id_size() > 0) {
           mem_sharing_id2regst_descs[mem_sharing_id].push_back(&regst_it.second);
         }
       }
