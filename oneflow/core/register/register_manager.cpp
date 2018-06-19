@@ -38,9 +38,6 @@ RegstMgr::RegstMgr(const Plan& plan) {
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     for (const auto& pair : task.produced_regst_desc()) { regst_protos.push_back(&pair.second); }
-    for (const auto& pair : task.produced_ctrl_regst_desc()) {
-      regst_protos.push_back(&pair.second);
-    }
   }
   InitFromRegstProtoList(regst_protos);
 }

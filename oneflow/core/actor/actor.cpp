@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
@@ -25,6 +26,7 @@ Actor::~Actor() {
 }
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
+  TaskProto mut_task_proto = task_proto;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -38,31 +40,33 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
-      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-    });
-    int64_t regst_desc_id = pair.second.regst_desc_id();
-    CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
-  }
-  for (const auto& pair : task_proto.produced_ctrl_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
-      produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
-    });
+    if (StartsWith(pair.first, "out_ctrl")) {
+      Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+        produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
+      });
+    } else {
+      Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+        produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+      });
+      int64_t regst_desc_id = pair.second.regst_desc_id();
+      CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
+    }
   }
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
-    std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
-    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-      regst_desc_id_vec.push_back(regst_desc_id);
+    if (pair.first == "in_ctrl") {
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
+      }
+      remaining_eord_cnt_ += pair.second.regst_desc_id_size();
+    } else {
+      CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
+      std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
+      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+        regst_desc_id_vec.push_back(regst_desc_id);
+      }
+      remaining_eord_cnt_ += pair.second.regst_desc_id_size();
     }
-    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
-  }
-  for (const auto& pair : task_proto.consumed_ctrl_regst_desc_id()) {
-    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-      CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
-    }
-    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
   }
   msg_handler_ = nullptr;
   eord_regst_desc_ids_.clear();
@@ -86,10 +90,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   consumed_ctrl_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
   is_consumed_ctrl_eord_ = false;
-  TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
+  TakeOverNaiveConsumed(mut_task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
-  VirtualActorInit(task_proto);
+  VirtualActorInit(mut_task_proto);
 }
 
 DeviceType Actor::GetDeviceType() const {

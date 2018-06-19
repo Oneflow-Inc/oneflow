@@ -105,20 +105,6 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
-  auto produced_ctrl_regst_proto = task_proto->mutable_produced_ctrl_regst_desc();
-  for (auto& pair : produced_ctrl_regsts_) {
-    RegstDescProto regst_desc_proto;
-    pair.second->ToProto(&regst_desc_proto);
-    CHECK(produced_ctrl_regst_proto->insert({pair.first, regst_desc_proto}).second);
-  }
-  auto consumed_ctrl_regst_proto = task_proto->mutable_consumed_ctrl_regst_desc_id();
-  for (const auto& pair : consumed_ctrl_regsts_) {
-    RegstDescIdSet regst_desc_ids;
-    for (std::weak_ptr<RegstDesc> regst : pair.second) {
-      regst_desc_ids.add_regst_desc_id(regst.lock()->regst_desc_id());
-    }
-    CHECK(consumed_ctrl_regst_proto->insert({pair.first, regst_desc_ids}).second);
-  }
 }
 
 int64_t TaskNode::MemZoneId121() const {
@@ -139,8 +125,8 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewUnnamedProducedRegst(1, kMaxRegisterNum, regst_desc_type);
   std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
-  CHECK(produced_ctrl_regsts_.emplace(name, regst).second);
-  dst_node->ConsumeCtrlRegst("in_ctrl", regst);
+  CHECK(produced_regsts_.emplace(name, regst).second);
+  dst_node->ConsumeRegst("in_ctrl", regst);
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
@@ -201,11 +187,6 @@ void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
 void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
   regst->AddConsumer(this);
   consumed_regsts_[name].push_back(regst);
-}
-
-void TaskNode::ConsumeCtrlRegst(const std::string& name, std::shared_ptr<RegstDesc> regst) {
-  regst->AddConsumer(this);
-  consumed_ctrl_regsts_[name].push_back(regst);
 }
 
 bool TaskNode::IsAllConsumedRegstLocked() {

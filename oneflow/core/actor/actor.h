@@ -84,7 +84,6 @@ class Actor {
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
-  void AsyncReturnAllConsumedCtrlRegst();
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);

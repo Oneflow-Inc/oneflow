@@ -21,6 +21,12 @@ void Split(const std::string& text, const std::string& delims,
   }
 }
 
+bool StartsWith(const std::string& text, const std::string& prefix) {
+  return prefix.empty()
+         || (text.size() >= prefix.size()
+             && memcmp(text.data(), prefix.data(), prefix.size()) == 0);
+}
+
 std::string Dirname(const std::string& path) {
   size_t found = path.rfind('/');
   if (found == std::string::npos) { return ""; }
