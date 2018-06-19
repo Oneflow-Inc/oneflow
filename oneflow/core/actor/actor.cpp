@@ -1,5 +1,4 @@
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
@@ -40,7 +39,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     exec_kernel_vec_.push_back(std::move(ek));
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
-    if (StartsWith(pair.first, "out_ctrl")) {
+    if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
       mut_task_proto.mutable_produced_regst_desc()->erase(pair.first);
       Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
         produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
