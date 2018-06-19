@@ -82,7 +82,7 @@ void RegstMgr::InitSharedFromRegstProtoList(const std::list<const RegstDescProto
                               ->TotalByteSize4AllRegst());
   }
   for (const auto& pair : mem_shared_id2mem_size) {
-    mem_case2mem_size[mem_shared_id2mem_case[pair.first]] += pair.second;
+    mem_case2mem_size.at(mem_shared_id2mem_case.at(pair.first)) += pair.second;
   }
   for (const auto& pair : mem_case2mem_size) {
     CHECK(
@@ -92,14 +92,14 @@ void RegstMgr::InitSharedFromRegstProtoList(const std::list<const RegstDescProto
   }
   for (const auto& pair : mem_shared_id2mem_size) {
     CHECK(mem_shared_id2mem_ptr
-              .emplace(pair.first, mem_case2mem_ptr[mem_shared_id2mem_case[pair.first]])
+              .emplace(pair.first, mem_case2mem_ptr.at(mem_shared_id2mem_case.at(pair.first)))
               .second);
-    mem_case2mem_ptr[mem_shared_id2mem_case[pair.first]] += pair.second;
+    mem_case2mem_ptr.at(mem_shared_id2mem_case.at(pair.first)) += pair.second;
   }
   for (const RegstDescProto* regst_desc_proto : regst_protos) {
     CHECK(regst_desc_id2mem_ptr_
               .emplace(regst_desc_proto->regst_desc_id(),
-                       mem_shared_id2mem_ptr[regst_desc_proto->mem_shared_id()])
+                       mem_shared_id2mem_ptr.at(regst_desc_proto->mem_shared_id()))
               .second);
   }
 }
@@ -121,7 +121,7 @@ void RegstMgr::InitUnsharedFromRegstProtoList(
   }
   for (const RegstDescProto* regst_desc_proto : regst_protos) {
     const RtRegstDesc* rt_regst_desc =
-        regst_desc_id2rt_regst_desc_[regst_desc_proto->regst_desc_id()].get();
+        regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id()).get();
     const MemoryCase& mem_case = rt_regst_desc->mem_case();
     CHECK(regst_desc_id2mem_ptr_
               .emplace(regst_desc_proto->regst_desc_id(), mem_case2mem_ptr.at(mem_case))
