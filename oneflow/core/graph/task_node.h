@@ -26,7 +26,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id() const { return task_id_; }
   int64_t area_id() const { return area_id_; }
   int64_t chain_id() const { return chain_id_; }
-  int64_t order_in_chain() const { return order_in_chain_; }
+  int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -53,7 +53,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void set_thrd_id(int64_t val);
   void set_area_id(int64_t val);
   void set_chain_id(int64_t val);
-  void set_order_in_chain(int64_t val);
+  void set_order_in_graph(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -110,7 +110,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t task_id_;
   int64_t area_id_;
   int64_t chain_id_;
-  int64_t order_in_chain_;
+  int64_t order_in_graph_;
   AreaType area_type_;
 
   ExecGraph exec_gph_;

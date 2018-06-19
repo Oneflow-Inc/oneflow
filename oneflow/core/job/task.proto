@@ -45,7 +45,7 @@ message RegstDescIdSet {
 message TaskSetInfo {
   required int64 area_id = 1;
   required int64 chain_id = 4;
-  required int64 order_in_chain = 5;
+  required int64 order_in_graph = 5;
 }
 
 message TaskProto {
