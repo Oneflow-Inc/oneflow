@@ -185,8 +185,9 @@ void BuildSharedMemGuardCtrlRegst(TaskProto* src_task_proto, TaskProto* dst_task
   ctrl_regst_proto.mutable_regst_desc_type()->mutable_delay_regst_desc();
   ctrl_regst_proto.mutable_mem_case()->mutable_host_mem();
 
-  std::string ctrl_regst_name = "shared_mem_regst_guard_" + std::to_string(header_task_id) + "_to_"
-                                + std::to_string(sink_task_id);
+  std::string ctrl_regst_name = "shared_mem_regst_guard_"
+                                + std::to_string(src_task_proto->task_id()) + "_to_"
+                                + std::to_string(dst_task_proto->task_id());
   CHECK(src_task_proto->mutable_produced_regst_desc()
             ->insert({ctrl_regst_name, ctrl_regst_proto})
             .second);
@@ -199,19 +200,19 @@ void BuildSharedMemGuardCtrlRegst(TaskProto* src_task_proto, TaskProto* dst_task
 }
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(Plan* plan) {
-  auto task_id2task_proto = std::make_unique<HashMap<int64_t, TaskProto*>>();
+  auto task_id2task_proto = std::make_shared<HashMap<int64_t, TaskProto*>>();
   for (int i = 0; i < plan->task_size(); i++) {
     TaskProto* task_proto = plan->mutable_task(i);
     CHECK(task_id2task_proto->insert({task_proto->task_id(), task_proto}).second);
   }
-  return [task_proto_map_ptr = std::move(task_id2task_proto)](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
+  return [task_id2task_proto](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.at(0)->producer_task_id();
     int64_t sink_task_id = shared_mem_regsts.back()->consumer_task_id(0);
-    auto header_task_it = task_proto_map_ptr->find(header_task_id);
-    auto sink_task_it = task_proto_map_ptr->find(sink_task_id);
-    CHECK(header_task_it != task_proto_map_ptr->end());
-    CHECK(sink_task_it != task_proto_map_ptr->end());
+    auto header_task_it = task_id2task_proto->find(header_task_id);
+    auto sink_task_it = task_id2task_proto->find(sink_task_id);
+    CHECK(header_task_it != task_id2task_proto->end());
+    CHECK(sink_task_it != task_id2task_proto->end());
     TaskProto* header_task_proto = header_task_it->second;
     TaskProto* sink_task_proto = sink_task_it->second;
     BuildSharedMemGuardCtrlRegst(header_task_proto, sink_task_proto);
