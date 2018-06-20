@@ -231,11 +231,11 @@ void ForEachMemSharingCriticalSection(
     const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
   HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
   for (const auto& task : plan.task()) {
-    for (const auto& regst_it : task.produced_regst_desc()) {
-      int32_t mem_sharing_id = regst_it.second.mem_sharing_info().mem_shared_id();
-      if (mem_sharing_id != -1 && regst_it.second.consumer_task_id_size() > 0) {
-        CHECK(regst_it.second.mem_sharing_info().used_order_value() != -1);
-        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&regst_it.second);
+    for (const auto& pair : task.produced_regst_desc()) {
+      int32_t mem_sharing_id = pair.second.mem_sharing_info().mem_shared_id();
+      if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
+        CHECK(pair.second.mem_sharing_info().used_order_value() != -1);
+        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
       }
     }
   }
