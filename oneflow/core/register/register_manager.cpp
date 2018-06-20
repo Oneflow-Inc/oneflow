@@ -67,17 +67,14 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
             });
   auto ForEachRegstDesc7IsLastWhenShareSameMem =
       [&](const std::function<void(const RegstDescProto*, bool)>& Handler) {
-        for (int64_t i = 0; i < sorted_regst_protos.size(); ++i) {
+        for (int64_t i = 0; i < sorted_regst_protos.size() - 1; ++i) {
           const RegstDescProto* regst_desc = sorted_regst_protos.at(i);
-          if (i == sorted_regst_protos.size() - 1) {
-            Handler(regst_desc, true);
-            break;
-          }
           int32_t current_mem_shared_id = regst_desc->mem_shared_id();
           int32_t next_mem_shared_id = sorted_regst_protos.at(i + 1)->mem_shared_id();
           Handler(regst_desc,
                   current_mem_shared_id == -1 || (current_mem_shared_id != next_mem_shared_id));
         }
+        Handler(sorted_regst_protos.back(), true);
       };
   ForEachRegstDesc7IsLastWhenShareSameMem(
       [&](const RegstDescProto* regst_desc, bool is_last_when_share_same_mem) {
