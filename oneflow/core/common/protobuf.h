@@ -134,6 +134,14 @@ const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_n
   }
 }
 
+// If value exist in RepeatedField
+template<typename T>
+bool IsInRepeatedField(const google::protobuf::RepeatedField<T>& repeated_field, const T& value) {
+  return std::find(repeated_field.begin(), repeated_field.end(), value) != repeated_field.end();
+}
+
+// LBI compare operator
+
 inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
   if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }

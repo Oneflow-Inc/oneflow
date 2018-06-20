@@ -172,20 +172,16 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto,
-                                             TaskProto* dst_task_proto) {
+void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
   RegstDescProto* ctrl_regst_desc =
       FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
-  if (std::find(ctrl_regst_desc->consumer_task_id().begin(),
-                ctrl_regst_desc->consumer_task_id().end(), dst_task_proto->task_id())
-      == ctrl_regst_desc->consumer_task_id().end()) {
-    ctrl_regst_desc->add_consumer_task_id(dst_task_proto->task_id());
+  int64_t dst_task_id = dst_task_proto->task_id();
+  if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
+    ctrl_regst_desc->add_consumer_task_id(dst_task_id);
     int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
     RegstDescIdSet* consumed_ctrl_regst_desc_ids =
         FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
-    CHECK(std::find(consumed_ctrl_regst_desc_ids->regst_desc_id().begin(),
-                    consumed_ctrl_regst_desc_ids->regst_desc_id().end(), ctrl_regst_desc_id)
-          == consumed_ctrl_regst_desc_ids->regst_desc_id().end());
+    CHECK(!IsInRepeatedField(consumed_ctrl_regst_desc_ids->regst_desc_id(), ctrl_regst_desc_id));
     consumed_ctrl_regst_desc_ids->add_regst_desc_id(ctrl_regst_desc_id);
   }
 }
