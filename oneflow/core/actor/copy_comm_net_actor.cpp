@@ -63,7 +63,7 @@ bool CopyCommNetActor::NormalTryProcessReadableMsgFromOtherMachine(const ActorMs
   return true;
 }
 
-void CopyCommNetActor::Act() {
+void CopyCommNetActor::Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) {
   // readable
   auto readable_it = piece_id2regst_ctx.find(next_piece_id_);
   void* readable_token = readable_it->second.comm_net_token;
@@ -76,10 +76,12 @@ void CopyCommNetActor::Act() {
   void* read_id =
       Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
   comm_net_device_ctx_->set_read_id(read_id);
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(next_piece_id_);
+  int64_t next_piece_id = next_piece_id_;
+  *IsRegstAllowedSendActWiseMsgToConsumer = [next_piece_id](Regst* regst) {
+    regst->set_piece_id(next_piece_id);
     return true;
-  });
+  };
+  AsyncSendRegstMsgToConsumer(*IsRegstAllowedSendActWiseMsgToConsumer);
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
   comm_net_device_ctx_->set_read_id(nullptr);
   Global<CommNet>::Get()->AddReadCallBackDone(read_id);

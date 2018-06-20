@@ -77,7 +77,11 @@ class Actor {
 
   // Act
   void ActUntilFail();
-  virtual void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) { Act(); }
+  virtual void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer,
+                   std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) {
+    Act(IsRegstAllowedSendActWiseMsgToConsumer);
+  }
+  virtual void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) { Act(); }
   virtual void Act() { UNIMPLEMENTED(); }
   virtual bool IsCustomizedReadReady() { return true; }
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
@@ -87,6 +91,8 @@ class Actor {
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
   void AsyncLaunchKernel(const KernelCtx&);
+  void AsyncSendRegstMsgToAllConsumer(std::function<bool(Regst*)> RegstPreProcess,
+                                      std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);

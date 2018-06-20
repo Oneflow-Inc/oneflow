@@ -13,7 +13,7 @@ class NormalMdUpdtCompActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void Act() override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }

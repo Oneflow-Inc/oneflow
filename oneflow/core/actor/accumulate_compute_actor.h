@@ -15,7 +15,7 @@ class AccumulateCompActor : public CompActor {
   void Init(const TaskProto&, int32_t max_acc_cnt, ColIdOrder order);
 
  private:
-  void Act() override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }

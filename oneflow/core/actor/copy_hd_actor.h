@@ -15,7 +15,7 @@ class CopyHdActor final : public Actor {
 
  private:
   void VirtualActorInit(const TaskProto&) override;
-  void Act() override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }

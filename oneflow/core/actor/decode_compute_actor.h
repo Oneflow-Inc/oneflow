@@ -14,7 +14,8 @@ class DecodeCompActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
+  void Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer,
+           std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }

@@ -25,7 +25,7 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
   next_piece_id_ = 0;
 }
 
-void AccumulateCompActor::Act() {
+void AccumulateCompActor::Act(std::function<bool(Regst*)>* IsRegstAllowedSendActWiseMsgToConsumer) {
   Regst* in_regst = GetNaiveSoleCurReadable();
   Regst* out_regst = GetCurSoleWriteableRegst();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -37,6 +37,10 @@ void AccumulateCompActor::Act() {
   } else {
     AsyncLaunchKernel(kernel_ctx);
   }
+  *IsRegstAllowedSendActWiseMsgToConsumer = [in_regst](Regst* regst) {
+    regst->set_piece_id(in_regst->piece_id());
+    return true;
+  };
   if (IsLastRegstInPieceWithOrder(in_regst, order_)) { acc_cnt_ += 1; }
   if (acc_cnt_ == max_acc_cnt_) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
