@@ -135,9 +135,11 @@ const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_n
 }
 
 // If value exist in RepeatedField
-template<typename T>
-bool IsInRepeatedField(const PbRf<T>& repeated_field, const T& value) {
-  return std::find(repeated_field.begin(), repeated_field.end(), value) != repeated_field.end();
+template<typename Repeated, typename T,
+         typename = decltype((*std::declval<const Repeated&>().cbegin())
+                             == std::declval<const T&>())>
+bool IsInRepeatedField(const Repeated& repeated_field, const T& value) {
+  return std::find(repeated_field.cbegin(), repeated_field.cend(), value) != repeated_field.cend();
 }
 
 // LBI compare operator
