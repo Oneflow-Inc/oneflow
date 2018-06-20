@@ -1,5 +1,6 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
@@ -171,26 +172,6 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
-                                                  const std::string& regst_desc_name) {
-  auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
-  if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
-    RegstDescProto ctrl_regst_desc;
-    InitCtrlRegstDesc(task_proto->task_id(), &ctrl_regst_desc);
-    CHECK(produced_regst_desc->insert({regst_desc_name, ctrl_regst_desc}).second);
-  }
-  return &produced_regst_desc->at(regst_desc_name);
-}
-
-RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
-                                                       const std::string& regst_desc_name) {
-  auto* consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
-  if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
-    CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
-  }
-  return &consumed_regst_desc_id_sets->at(regst_desc_name);
-}
-
 void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* header_task_proto,
                                              TaskProto* sink_task_proto) {
   RegstDescProto* ctrl_regst_desc =
@@ -234,7 +215,7 @@ void ForEachMemSharingCriticalSection(
     for (const auto& pair : task.produced_regst_desc()) {
       int32_t mem_sharing_id = pair.second.mem_sharing_info().mem_shared_id();
       if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
-        CHECK(pair.second.mem_sharing_info().used_order_value() != -1);
+        CHECK_NE(pair.second.mem_sharing_info().used_order_value(), -1);
         mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
       }
     }
