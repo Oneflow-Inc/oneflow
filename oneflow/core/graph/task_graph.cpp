@@ -67,27 +67,23 @@ void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();
 
   ChainGraph chain_gph(*this);
-
-  /*
-    std::list<Chain> chain_list;
-    Task2ChainItMap task2chain_it;
-    InitChains(ordered_nodes, &chain_list, &task2chain_it);
-    MergeChains(&chain_list, &task2chain_it);
-
-    HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
-    for (auto& chain : chain_list) {
-      int64_t chain_id =
-          Global<IDMgr>::Get()->AllocateChainId(chain.nodes.front()->GlobalWorkStreamId());
-      for (auto task_node : chain.nodes) {
-        task_node->set_chain_id(chain_id);
-        CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
-      }
+  const auto& ordered_chain_nodes = chain_gph.ordered_chain_nodes();
+  int64_t order_in_graph = 0;
+  HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
+  for (auto& chain_node : ordered_chain_nodes) {
+    auto& ordered_in_chain = chain_node->chain_it()->nodes;
+    int64_t chain_id = chain_node->chain_id();
+    for (auto& task_node : ordered_in_chain) {
+      task_node->set_chain_id(chain_id);
+      task_node->set_order_in_graph(order_in_graph);
+      CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
+      ordered_task_nodes_.emplace_back(task_node);
+      ++order_in_graph;
     }
-  */
+  }
 }
 
 void TaskGraph::AddOrderCtrlEdgeInSameChain() {
-  /*
   HashMap<int64_t, TaskNode*> chain_id2node;
   for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
@@ -99,7 +95,6 @@ void TaskGraph::AddOrderCtrlEdgeInSameChain() {
       iter->second = node;
     }
   }
-  */
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() {
