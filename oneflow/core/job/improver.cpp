@@ -215,6 +215,7 @@ void ForEachMemSharingCriticalSection(
     for (const auto& pair : task.produced_regst_desc()) {
       int32_t mem_sharing_id = pair.second.mem_sharing_info().mem_shared_id();
       if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
+        CHECK(pair.second.mem_sharing_info().enable_mem_sharing());
         CHECK_NE(pair.second.mem_sharing_info().used_order_value(), -1);
         mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
       }
