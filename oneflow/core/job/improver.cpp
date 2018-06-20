@@ -194,7 +194,7 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
   }
   return [task_id2task_proto](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
-    int64_t header_task_id = shared_mem_regsts.at(0)->producer_task_id();
+    int64_t header_task_id = shared_mem_regsts.front()->producer_task_id();
     TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
     for (int64_t sink_task_id : shared_mem_regsts.back()->consumer_task_id()) {
       TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);

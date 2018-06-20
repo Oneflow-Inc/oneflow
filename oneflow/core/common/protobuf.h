@@ -136,7 +136,7 @@ const T* GetMsgPtrFromPbMessage(const PbMessage& msg, const std::string& field_n
 
 // If value exist in RepeatedField
 template<typename T>
-bool IsInRepeatedField(const google::protobuf::RepeatedField<T>& repeated_field, const T& value) {
+bool IsInRepeatedField(const PbRf<T>& repeated_field, const T& value) {
   return std::find(repeated_field.begin(), repeated_field.end(), value) != repeated_field.end();
 }
 
