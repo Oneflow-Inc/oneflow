@@ -160,7 +160,7 @@ void TaskGraph::Build121Path(
   CHECK_NE(src, dst);
   TaskNode* last_node = src;
   while (last_node->machine_id() != dst->machine_id()
-         && last_node->MemZoneId121() != dst->MemZoneId121()) {
+         || last_node->MemZoneId121() != dst->MemZoneId121()) {
     last_node = Build121Step(last_node, dst, Get121BufTask, Set121BufTask, allow_share_path);
   }
   Connect<TaskNode>(last_node, NewEdge(), dst);
@@ -208,48 +208,6 @@ TaskNode* TaskGraph::Build121Step(
   }
   if (allow_share_path) { Set121BufTask(last_node->machine_id(), last_mem_zone_id, last_node); }
   return last_node;
-}
-
-TaskNode* TaskGraph::Build121BufTo(
-    TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask) {
-  {
-    TaskNode* done = Get121BufTask(dst_machine_id, dst_mem_zone_id);
-    if (done) { return done; }
-  }
-  int32_t cpu_mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
-
-  if (src->machine_id() != dst_machine_id) {
-    if (dst_mem_zone_id == cpu_mem_zone_id) {
-      TaskNode* src_cpu =
-          Build121BufTo(src, src->machine_id(), cpu_mem_zone_id, Get121BufTask, Set121BufTask);
-      CopyCommNetTaskNode* copy_comm_net = NewNode<CopyCommNetTaskNode>();
-      copy_comm_net->Init(dst_machine_id, src_cpu->machine_id());
-      Connect<TaskNode>(src_cpu, NewEdge(), copy_comm_net);
-      return Set121BufTask(dst_machine_id, dst_mem_zone_id, copy_comm_net);
-    } else {
-      TaskNode* dst_cpu =
-          Build121BufTo(src, dst_machine_id, cpu_mem_zone_id, Get121BufTask, Set121BufTask);
-      return Build121BufTo(dst_cpu, dst_machine_id, dst_mem_zone_id, Get121BufTask, Set121BufTask);
-    }
-  } else {
-    if (src->MemZoneId121() == dst_mem_zone_id) {
-      return Set121BufTask(dst_machine_id, dst_mem_zone_id, src);
-    } else {
-      if (dst_mem_zone_id == cpu_mem_zone_id) {
-        return Set121BufTask(dst_machine_id, dst_mem_zone_id, AddCopyD2HTaskIfNotCpu(src));
-      } else {
-        TaskNode* src_cpu =
-            Build121BufTo(src, dst_machine_id, cpu_mem_zone_id, Get121BufTask, Set121BufTask);
-        CopyHdTaskNode* src_h2d = NewNode<CopyHdTaskNode>();
-        src_h2d->Init(CopyHdOpConf::H2D, dst_machine_id,
-                      Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id));
-        Connect<TaskNode>(src_cpu, NewEdge(), src_h2d);
-        return Set121BufTask(dst_machine_id, dst_mem_zone_id, src_h2d);
-      }
-    }
-  }
 }
 
 TaskNode* TaskGraph::AddCopyH2DTaskIfNotCpu(TaskNode* task) {
