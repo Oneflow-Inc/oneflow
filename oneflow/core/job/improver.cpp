@@ -194,11 +194,11 @@ void CollectTailRegstConsumerTaskIds(const std::vector<const RegstDescProto*>& s
   }
 }
 
-void CollectSinkTaskIds(const HashSet<int64_t>& naive_sink_task_ids,
+void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
                         const std::function<bool(int64_t, int64_t)>& IsReachable,
-                        HashSet<int64_t>* sink_task_ids) {
-  auto IsReachableToAnyOherTask = [IsReachable](int64_t src_task_id,
-                                                const HashSet<int64_t>& whole_task_ids) -> bool {
+                        std::list<int64_t>* sink_task_ids) {
+  auto IsReachableToAnyOherTask = [&IsReachable](int64_t src_task_id,
+                                                 const HashSet<int64_t>& whole_task_ids) -> bool {
     for (int64_t dst_task_id : whole_task_ids) {
       if (src_task_id == dst_task_id) { continue; }
       if (IsReachable(src_task_id, dst_task_id)) { return true; }
@@ -206,10 +206,8 @@ void CollectSinkTaskIds(const HashSet<int64_t>& naive_sink_task_ids,
     return false;
   };
   sink_task_ids->clear();
-  for (int64_t src_task_id : naive_sink_task_ids) {
-    if (!IsReachableToAnyOherTask(src_task_id, naive_sink_task_ids)) {
-      sink_task_ids->insert(src_task_id);
-    }
+  for (int64_t src_task_id : task_ids) {
+    if (!IsReachableToAnyOherTask(src_task_id, task_ids)) { sink_task_ids->push_back(src_task_id); }
   }
 }
 
@@ -225,10 +223,10 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.front()->producer_task_id();
     TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
-    HashSet<int64_t> naive_sink_task_ids;
-    CollectTailRegstConsumerTaskIds(shared_mem_regsts, &naive_sink_task_ids);
-    HashSet<int64_t> sink_task_ids;
-    CollectSinkTaskIds(naive_sink_task_ids, IsReachable, &sink_task_ids);
+    HashSet<int64_t> tail_regsts_consumer_task_ids;
+    CollectTailRegstConsumerTaskIds(shared_mem_regsts, &tail_regsts_consumer_task_ids);
+    std::list<int64_t> sink_task_ids;
+    CollectSinkTaskIds(tail_regsts_consumer_task_ids, IsReachable, &sink_task_ids);
     for (int64_t sink_task_id : sink_task_ids) {
       TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
       TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
