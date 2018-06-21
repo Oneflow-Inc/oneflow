@@ -47,7 +47,7 @@ void PlanTaskGraph::InitNode2Ancestor() {
 bool PlanTaskGraph::IsAnyNodeReachableToAncestor(const HashSet<const PlanTaskNode*>& nodes,
                                                  const PlanTaskNode* ancestor) const {
   for (const PlanTaskNode* node : nodes) {
-    if (node2ancestors_.at(node).find(ancestor) != node2ancestors_.at(node).end()) { return true; }
+    if (IsReachableToAncestor(node, ancestor)) { return true; }
   }
   return false;
 }
@@ -66,16 +66,14 @@ void PlanTaskGraph::SortByProducerTaskTopoOrder(
     CHECK(producer_node2regst_desc.emplace(producer, regst_desc).second);
   }
   auto IsSourceNode = [&](const PlanTaskNode* node) {
-    const auto& ancestors = node2ancestors_.at(node);
     for (const auto& pair : producer_node2regst_desc) {
-      if (ancestors.find(pair.first) != ancestors.end()) { return false; }
+      if (IsReachableToAncestor(node, pair.first)) { return false; }
     }
     return true;
   };
   auto IsSinkNode = [&](const PlanTaskNode* node) {
     for (const auto& pair : producer_node2regst_desc) {
-      const auto& ancestors = node2ancestors_.at(pair.first);
-      if (ancestors.find(node) != ancestors.end()) { return false; }
+      if (IsReachableToAncestor(pair.first, node)) { return false; }
     }
     return true;
   };
@@ -107,15 +105,6 @@ void PlanTaskGraph::SortByProducerTaskTopoOrder(
                   [&](const PlanTaskNode* node) { Handler(producer_node2regst_desc.at(node)); });
 }
 
-void PlanTaskGraph::ComputeLifetimeSameStreamActorIds(
-    const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_stream_actor_ids) const {
-  int64_t stream_id =
-      Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(regst_desc->producer_task_id());
-  ComputeLifetimeActorIds(regst_desc, lifetime_same_stream_actor_ids, [&](int64_t task_id) {
-    return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id) == stream_id;
-  });
-}
-
 void PlanTaskGraph::ComputeLifetimeSameChainActorIds(
     const RegstDescProto* regst_desc, HashSet<int64_t>* lifetime_same_chain_actor_ids) const {
   int64_t chain_id = task_id2plan_task_node_.at(regst_desc->producer_task_id())->chain_id();
@@ -130,7 +119,7 @@ void PlanTaskGraph::ComputeLifetimeActorIds(const RegstDescProto* regst_desc,
   const auto* producer = task_id2plan_task_node_.at(regst_desc->producer_task_id());
   HashSet<const PlanTaskNode*> consumers;
   for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
-    consumers.insert(task_id2plan_task_node_.at(consumer_task_id));
+    CHECK(consumers.emplace(task_id2plan_task_node_.at(consumer_task_id)).second);
   }
   auto ForEachInNode = [&](const PlanTaskNode* node,
                            const std::function<void(const PlanTaskNode*)>& Handler) {
@@ -148,31 +137,26 @@ void PlanTaskGraph::ComputeLifetimeActorIds(const RegstDescProto* regst_desc,
     });
   };
   TopoForEachNode({producer}, ForEachInNode, ForEachOutNode, [&](const PlanTaskNode* node) {
-    if (IsAllowed(node->task_id())) { lifetime_actor_ids->insert(node->task_id()); }
+    if (IsAllowed(node->task_id())) { CHECK(lifetime_actor_ids->emplace(node->task_id()).second); }
   });
 }
 
-void PlanTaskGraph::AssertThereIsOnlyOneTopoOrder(
-    const HashSet<int64_t>& same_stream_node_ids) const {
+void PlanTaskGraph::AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& task_ids) const {
   auto ForEachInNode = [&](const PlanTaskNode* node,
                            const std::function<void(const PlanTaskNode*)>& Handler) {
     node->ForEachNodeOnInEdge([&](const PlanTaskNode* in_node) {
-      if (same_stream_node_ids.find(in_node->task_id()) != same_stream_node_ids.end()) {
-        Handler(in_node);
-      }
+      if (task_ids.find(in_node->task_id()) != task_ids.end()) { Handler(in_node); }
     });
   };
   auto ForEachOutNode = [&](const PlanTaskNode* node,
                             const std::function<void(const PlanTaskNode*)>& Handler) {
     node->ForEachNodeOnOutEdge([&](const PlanTaskNode* out_node) {
-      if (same_stream_node_ids.find(out_node->task_id()) != same_stream_node_ids.end()) {
-        Handler(out_node);
-      }
+      if (task_ids.find(out_node->task_id()) != task_ids.end()) { Handler(out_node); }
     });
   };
   HashMap<const PlanTaskNode*, int> node2depth;
   std::list<const PlanTaskNode*> starts;
-  for (int64_t task_id : same_stream_node_ids) {
+  for (int64_t task_id : task_ids) {
     int in_num = 0;
     const PlanTaskNode* node = task_id2plan_task_node_.at(task_id);
     ForEachInNode(node, [&](const PlanTaskNode* in_node) { ++in_num; });

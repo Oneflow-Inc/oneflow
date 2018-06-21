@@ -23,19 +23,22 @@ void RegstLifetimePosetGraph::InitNodesAndEdges(
     nodes.push_back(node);
   }
   // init edges
-  HashMap<const RegstLifetimePosetNode*, size_t> node2size;
+  HashMap<const RegstLifetimePosetNode*, size_t> node2regst_size;
   for (const auto* node : nodes) {
-    node2size[node] = RtRegstDesc(node->regst_desc()).packed_blob_desc()->TotalByteSize();
+    node2regst_size[node] = RtRegstDesc(node->regst_desc()).packed_blob_desc()->TotalByteSize();
   }
+  auto HasPartialOrder = [&](const RegstLifetimePosetNode* src, const RegstLifetimePosetNode* dst) {
+    if (src == dst) { return false; }
+    if (LifetimeContain(dst, src)) {
+      if (!LifetimeContain(src, dst)) { return true; }
+      if (node2regst_size.at(src) < node2regst_size.at(dst)) { return true; }
+      if (node2regst_size.at(src) == node2regst_size.at(dst)) { return src < dst; }
+    }
+    return false;
+  };
   for (RegstLifetimePosetNode* src : nodes) {
     for (RegstLifetimePosetNode* dst : nodes) {
-      if (src == dst) { return; }
-      if (LifetimeContain(dst, src)) {
-        if (!LifetimeContain(src, dst) || node2size.at(src) > node2size.at(dst)
-            || (node2size.at(src) == node2size.at(dst) && src < dst)) {
-          Connect(src, NewEdge(), dst);
-        }
-      }
+      if (HasPartialOrder(src, dst)) { Connect(src, NewEdge(), dst); }
     }
   }
 }
@@ -53,11 +56,11 @@ bool RegstLifetimePosetGraph::LifetimeContain(
 }
 
 void RegstLifetimePosetGraph::InitRegstLifetimePosetNode2IntersectedNodes() {
-  HashMap<int64_t, HashSet<const RegstLifetimePosetNode*>> actor_id2node;
+  HashMap<int64_t, HashSet<const RegstLifetimePosetNode*>> actor_id2nodes;
   ForEachNode([&](const RegstLifetimePosetNode* node) {
-    for (int64_t actor_id : node->lifetime_actor_ids()) { actor_id2node[actor_id].insert(node); }
+    for (int64_t actor_id : node->lifetime_actor_ids()) { actor_id2nodes[actor_id].insert(node); }
   });
-  for (const auto& pair : actor_id2node) {
+  for (const auto& pair : actor_id2nodes) {
     for (const RegstLifetimePosetNode* node : pair.second) {
       regst_lifetime_node2intersected_nodes_[node].insert(pair.second.begin(), pair.second.end());
     }
@@ -101,17 +104,17 @@ void RegstLifetimePosetGraph::ForEachLayerwiseSameColoredRegstDescs(
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) const {
   HashSet<const RegstLifetimePosetNode*> remainder_nodes;
   ForEachNode([&](const RegstLifetimePosetNode* node) { remainder_nodes.insert(node); });
-  auto GetInNodesNum = [&](const RegstLifetimePosetNode* node) -> size_t {
+  auto IsSinkNode = [&](const RegstLifetimePosetNode* node) -> bool {
     size_t num = 0;
-    node->ForEachNodeOnInEdge([&](const RegstLifetimePosetNode* in_node) {
-      if (remainder_nodes.find(in_node) != remainder_nodes.end()) { ++num; }
+    node->ForEachNodeOnOutEdge([&](const RegstLifetimePosetNode* out_node) {
+      if (remainder_nodes.find(out_node) != remainder_nodes.end()) { ++num; }
     });
-    return num;
+    return num == 0;
   };
   while (!remainder_nodes.empty()) {
     HashSet<const RegstLifetimePosetNode*> cur_layer_nodes;
     for (const RegstLifetimePosetNode* node : remainder_nodes) {
-      if (GetInNodesNum(node) == 0) { cur_layer_nodes.insert(node); }
+      if (IsSinkNode(node)) { cur_layer_nodes.insert(node); }
     }
     ForEachSameColoredRegstDescs(cur_layer_nodes, Handler);
     for (const auto* node : cur_layer_nodes) { remainder_nodes.erase(node); }
