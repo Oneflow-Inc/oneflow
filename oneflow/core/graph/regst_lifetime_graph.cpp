@@ -24,16 +24,22 @@ void RegstLifetimeGraph::InitNodes(
 }
 
 void RegstLifetimeGraph::InitEdges(const std::list<RegstLifetimeNode*>& nodes) {
-  HashMap<int64_t, HashSet<RegstLifetimeNode*>> task_id2nodes;
+  HashMap<int64_t, HashSet<RegstLifetimeNode*>> task_id2intersected_nodes;
   for (RegstLifetimeNode* node : nodes) {
-    for (int64_t task_id : node->lifetime_actor_ids()) { task_id2nodes[task_id].insert(node); }
+    for (int64_t task_id : node->lifetime_actor_ids()) {
+			task_id2intersected_nodes[task_id].insert(node);
+		}
   }
-  for (const auto& pair : task_id2nodes) {
+  HashMap<RegstLifetimeNode*, HashSet<RegstLifetimeNode*>> src_node2dst_nodes;
+  for (const auto& pair : task_id2intersected_nodes) {
     for (RegstLifetimeNode* src_node : pair.second) {
       for (RegstLifetimeNode* dst_node : pair.second) {
-        if (src_node < dst_node) { Connect(src_node, NewEdge(), dst_node); }
+        if (src_node < dst_node) { src_node2dst_nodes[src_node].emplace(dst_node); }
       }
     }
+  }
+  for (const auto& pair : src_node2dst_nodes) {
+    for (RegstLifetimeNode* dst_node : pair.second) { Connect(pair.first, NewEdge(), dst_node); }
   }
 }
 
