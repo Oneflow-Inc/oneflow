@@ -42,7 +42,8 @@ class Improver final {
   double CalcMaxRegstDescDuration(
       const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs) const;
-  Plan AddCtrlRegstForMemSharingCriticalSection(const Plan&) const;
+  Plan AddCtrlRegstForMemSharingCriticalSection(
+      const Plan&, const std::function<bool(int64_t, int64_t)>& IsReachable) const;
 
   AvailableMemDesc amd_;
   std::vector<int32_t> record_load_task_num_;

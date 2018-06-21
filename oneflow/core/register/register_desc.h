@@ -8,6 +8,8 @@ namespace oneflow {
 
 const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
+void InitCtrlRegstDesc(int64_t produced_task_id, RegstDescProto* ctrl_regst_proto);
+
 class TaskNode;
 
 class RegstDesc final {
