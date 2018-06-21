@@ -52,7 +52,7 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto* regst_desc,
   return stream_ids.size() == 1;
 }
 
-std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
+std::list<const RegstDescProto*> SelectSharableWithConsumer(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<int64_t(int64_t)>& ChainId4TaskId) {
   std::list<const RegstDescProto*> sharable_regst_descs_with_consumer;
@@ -66,7 +66,7 @@ std::list<const RegstDescProto*> SelectSharableRegstDescsWithConsumer(
   return sharable_regst_descs_with_consumer;
 }
 
-std::list<const RegstDescProto*> SelectSharableRegstDescsWithoutConsumer(
+std::list<const RegstDescProto*> SelectSharableWithoutConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
   std::list<const RegstDescProto*> regst_descs_without_consumer;
   for (const RegstDescProto* regst_desc : regst_descs) {
@@ -81,10 +81,9 @@ std::list<const RegstDescProto*> SelectSharableRegstDescsWithoutConsumer(
 void ForEachImprovedMemSharingInfo(
     const Plan& plan, const PlanTaskGraph& plan_task_graph,
     const std::function<void(int64_t, const MemSharingInfo&)>& Handler) {
-  auto ComputeLifetimeSameStreamActorIds = [&](const RegstDescProto* regst_desc,
-                                               HashSet<int64_t>* ret_actor_ids) {
+  auto GetProducerTaskId = [&](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->mem_sharing_info().enable_mem_sharing());
-    plan_task_graph.ComputeLifetimeSameStreamActorIds(regst_desc, ret_actor_ids);
+    ret_actor_ids->insert(regst_desc->producer_task_id());
   };
   int32_t mem_shared_id = 0;
   MemSharingInfo mem_sharing_info;
@@ -99,8 +98,7 @@ void ForEachImprovedMemSharingInfo(
     ++mem_shared_id;
   };
   ForEachComputeStreamRegstDescs(plan, [&](const RegstDescProtoList& regst_descs) {
-    RegstLifetimePosetGraph(SelectSharableRegstDescsWithoutConsumer(regst_descs),
-                            ComputeLifetimeSameStreamActorIds)
+    RegstLifetimePosetGraph(SelectSharableWithoutConsumer(regst_descs), GetProducerTaskId)
         .ForEachLayerwiseSameColoredRegstDescs(HandleMemSharingInfo);
   });
   auto ChainId4TaskId = [&](int64_t task_id) {
@@ -114,7 +112,7 @@ void ForEachImprovedMemSharingInfo(
       plan_task_graph.ComputeLifetimeSameChainActorIds(regst_desc, ret_actor_ids);
       same_chain_actor_ids.insert(ret_actor_ids->begin(), ret_actor_ids->end());
     };
-    RegstLifetimePosetGraph(SelectSharableRegstDescsWithConsumer(regst_descs, ChainId4TaskId),
+    RegstLifetimePosetGraph(SelectSharableWithConsumer(regst_descs, ChainId4TaskId),
                             ComputeLifetimeSameChainActorIds)
         .ForEachLayerwiseSameColoredRegstDescs(HandleMemSharingInfo);
     plan_task_graph.AssertThereIsOnlyOneTopoOrder(same_chain_actor_ids);
