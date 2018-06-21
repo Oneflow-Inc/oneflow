@@ -104,17 +104,17 @@ void RegstLifetimePosetGraph::ForEachLayerwiseSameColoredRegstDescs(
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) const {
   HashSet<const RegstLifetimePosetNode*> remainder_nodes;
   ForEachNode([&](const RegstLifetimePosetNode* node) { remainder_nodes.insert(node); });
-  auto IsSinkNode = [&](const RegstLifetimePosetNode* node) -> bool {
+  auto IsSourceNode = [&](const RegstLifetimePosetNode* node) -> bool {
     size_t num = 0;
-    node->ForEachNodeOnOutEdge([&](const RegstLifetimePosetNode* out_node) {
-      if (remainder_nodes.find(out_node) != remainder_nodes.end()) { ++num; }
+    node->ForEachNodeOnInEdge([&](const RegstLifetimePosetNode* in_node) {
+      if (remainder_nodes.find(in_node) != remainder_nodes.end()) { ++num; }
     });
     return num == 0;
   };
   while (!remainder_nodes.empty()) {
     HashSet<const RegstLifetimePosetNode*> cur_layer_nodes;
     for (const RegstLifetimePosetNode* node : remainder_nodes) {
-      if (IsSinkNode(node)) { cur_layer_nodes.insert(node); }
+      if (IsSourceNode(node)) { cur_layer_nodes.insert(node); }
     }
     ForEachSameColoredRegstDescs(cur_layer_nodes, Handler);
     for (const auto* node : cur_layer_nodes) { remainder_nodes.erase(node); }
