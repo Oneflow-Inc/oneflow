@@ -5,66 +5,11 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/profiler.h"
 #include "oneflow/core/graph/plan_task_graph.h"
-#include "oneflow/core/graph/regst_lifetime_poset_graph.h"
+#include "oneflow/core/graph/regst_lifetime_graph.h"
 
 namespace oneflow {
 
 namespace {
-
-void ForEachComputeStreamRegstDescs(
-    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
-  for (const auto& task : plan.task()) {
-    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) == 0) {
-      int64_t global_work_stream_id =
-          Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
-      for (const auto& pair : task.produced_regst_desc()) {
-        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
-      }
-    }
-  }
-  for (const auto& pair : global_work_stream_id2regst_descs) { Handler(pair.second); }
-}
-
-void ForEachNonSoleChainRegstDescs(
-    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  HashMap<int64_t, std::list<const TaskProto*>> chain_id2task_proto;
-  for (const TaskProto& task : plan.task()) {
-    chain_id2task_proto[task.task_set_info().chain_id()].push_back(&task);
-  }
-  for (const auto& chain_tasks_pair : chain_id2task_proto) {
-    if (chain_tasks_pair.second.size() == 1) { continue; }
-    std::list<const RegstDescProto*> regst_descs;
-    for (const TaskProto* task : chain_tasks_pair.second) {
-      for (const auto& pair : task->produced_regst_desc()) { regst_descs.push_back(&pair.second); }
-    }
-    Handler(regst_descs);
-  }
-}
-
-bool IsConsumersAndProducerInSameChain(const RegstDescProto* regst_desc,
-                                       const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  HashSet<int64_t> stream_ids;
-  stream_ids.insert(ChainId4TaskId(regst_desc->producer_task_id()));
-  for (int64_t consumer_task_id : regst_desc->consumer_task_id()) {
-    stream_ids.insert(ChainId4TaskId(consumer_task_id));
-  }
-  return stream_ids.size() == 1;
-}
-
-std::list<const RegstDescProto*> SelectSharableWithConsumer(
-    const std::list<const RegstDescProto*>& regst_descs,
-    const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  std::list<const RegstDescProto*> sharable_regst_descs_with_consumer;
-  for (const RegstDescProto* regst_desc : regst_descs) {
-    if (regst_desc->consumer_task_id_size() > 0
-        && regst_desc->mem_sharing_info().enable_mem_sharing() && regst_desc->register_num() == 1
-        && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId)) {
-      sharable_regst_descs_with_consumer.push_back(regst_desc);
-    }
-  }
-  return sharable_regst_descs_with_consumer;
-}
 
 std::list<const RegstDescProto*> SelectSharableWithoutConsumer(
     const std::list<const RegstDescProto*>& regst_descs) {
@@ -78,10 +23,70 @@ std::list<const RegstDescProto*> SelectSharableWithoutConsumer(
   return regst_descs_without_consumer;
 }
 
+bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
+  return regst_desc.consumer_task_id_size() == 0
+         && regst_desc.mem_sharing_info().enable_mem_sharing();
+}
+
+bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
+                                       const std::function<int64_t(int64_t)>& ChainId4TaskId) {
+  HashSet<int64_t> stream_ids;
+  stream_ids.insert(ChainId4TaskId(regst_desc.producer_task_id()));
+  for (int64_t consumer_task_id : regst_desc.consumer_task_id()) {
+    stream_ids.insert(ChainId4TaskId(consumer_task_id));
+  }
+  return stream_ids.size() == 1;
+}
+
+bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
+                                 const std::function<int64_t(int64_t)>& ChainId4TaskId) {
+  return regst_desc.consumer_task_id_size() > 0
+         && regst_desc.mem_sharing_info().enable_mem_sharing() && regst_desc.register_num() == 1
+         && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
+}
+
+void ForEachSharableStreamRegstDescs(
+    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
+  for (const auto& task : plan.task()) {
+    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) != 0) { continue; }
+    int64_t global_work_stream_id = Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
+    for (const auto& pair : task.produced_regst_desc()) {
+      if (IsSharableRegstWithoutConsumer(pair.second)) {
+        global_work_stream_id2regst_descs[global_work_stream_id].push_back(&pair.second);
+      }
+    }
+  }
+  for (const auto& pair : global_work_stream_id2regst_descs) {
+    if (pair.second.size() > 1) { Handler(pair.second); }
+  }
+}
+
+void ForEachSharableChainRegstDescs(
+    const Plan& plan, const std::function<int64_t(int64_t)>& ChainId4TaskId,
+    const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  HashMap<int64_t, std::list<const TaskProto*>> chain_id2task_proto;
+  for (const TaskProto& task : plan.task()) {
+    chain_id2task_proto[task.task_set_info().chain_id()].push_back(&task);
+  }
+  for (const auto& chain_tasks_pair : chain_id2task_proto) {
+    if (chain_tasks_pair.second.size() == 1) { continue; }
+    std::list<const RegstDescProto*> regst_descs;
+    for (const TaskProto* task : chain_tasks_pair.second) {
+      for (const auto& pair : task->produced_regst_desc()) {
+        if (IsSharableRegstWithConsumer(pair.second, ChainId4TaskId)) {
+          regst_descs.push_back(&pair.second);
+        }
+      }
+    }
+    if (regst_descs.size() > 1) { Handler(regst_descs); }
+  }
+}
+
 void ForEachImprovedMemSharingInfo(
     const Plan& plan, const PlanTaskGraph& plan_task_graph,
     const std::function<void(int64_t, const MemSharingInfo&)>& Handler) {
-  auto GetProducerTaskId = [&](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
+  auto GetProducerTaskId = [](const RegstDescProto* regst_desc, HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->mem_sharing_info().enable_mem_sharing());
     ret_actor_ids->insert(regst_desc->producer_task_id());
   };
@@ -97,14 +102,14 @@ void ForEachImprovedMemSharingInfo(
     });
     ++mem_shared_id;
   };
-  ForEachComputeStreamRegstDescs(plan, [&](const RegstDescProtoList& regst_descs) {
-    RegstLifetimePosetGraph(SelectSharableWithoutConsumer(regst_descs), GetProducerTaskId)
-        .ForEachLayerwiseSameColoredRegstDescs(HandleMemSharingInfo);
+  ForEachSharableStreamRegstDescs(plan, [&](const RegstDescProtoList& regst_descs) {
+    RegstLifetimeGraph(regst_descs, GetProducerTaskId)
+        .ForEachSameColoredRegstDescs(HandleMemSharingInfo);
   });
   auto ChainId4TaskId = [&](int64_t task_id) {
     return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
-  ForEachNonSoleChainRegstDescs(plan, [&](const RegstDescProtoList& regst_descs) {
+  ForEachSharableChainRegstDescs(plan, ChainId4TaskId, [&](const RegstDescProtoList& regst_descs) {
     HashSet<int64_t> same_chain_actor_ids;
     auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
                                                 HashSet<int64_t>* ret_actor_ids) {
@@ -112,9 +117,8 @@ void ForEachImprovedMemSharingInfo(
       plan_task_graph.ComputeLifetimeSameChainActorIds(regst_desc, ret_actor_ids);
       same_chain_actor_ids.insert(ret_actor_ids->begin(), ret_actor_ids->end());
     };
-    RegstLifetimePosetGraph(SelectSharableWithConsumer(regst_descs, ChainId4TaskId),
-                            ComputeLifetimeSameChainActorIds)
-        .ForEachLayerwiseSameColoredRegstDescs(HandleMemSharingInfo);
+    RegstLifetimeGraph(regst_descs, ComputeLifetimeSameChainActorIds)
+        .ForEachSameColoredRegstDescs(HandleMemSharingInfo);
     plan_task_graph.AssertThereIsOnlyOneTopoOrder(same_chain_actor_ids);
   });
 }
