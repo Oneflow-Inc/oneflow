@@ -186,29 +186,29 @@ void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProt
   }
 }
 
-void CollectSharedMemRegstSinkTasks(const std::vector<const RegstDescProto*>& shared_mem_regsts,
-                                    HashSet<int64_t>& task_ids) {
+void CollectTailRegstConsumerTaskIds(const std::vector<const RegstDescProto*>& shared_mem_regsts,
+                                     HashSet<int64_t>* task_ids) {
   for (const RegstDescProto* regst_proto : shared_mem_regsts) {
     if (regst_proto == shared_mem_regsts.front()) { continue; }
-    for (int64_t consumer_id : regst_proto->consumer_task_id()) { task_ids.insert(consumer_id); }
+    for (int64_t consumer_id : regst_proto->consumer_task_id()) { task_ids->insert(consumer_id); }
   }
 }
 
-void RemoveInnerReachableSinkTasks(HashSet<int64_t>& naive_sink_task_ids,
-                                   const std::function<bool(int64_t, int64_t)>& IsReachable) {
-  for (auto src_it = naive_sink_task_ids.begin(); src_it != naive_sink_task_ids.end();) {
-    bool need_remove = false;
-    for (int64_t dst_task_id : naive_sink_task_ids) {
-      if (*src_it == dst_task_id) { continue; }
-      if (IsReachable(*src_it, dst_task_id)) {
-        need_remove = true;
-        break;
-      }
+void CollectSinkTaskIds(const HashSet<int64_t>& naive_sink_task_ids,
+                        const std::function<bool(int64_t, int64_t)>& IsReachable,
+                        HashSet<int64_t>* sink_task_ids) {
+  auto IsReachableToAnyOherTask = [IsReachable](int64_t src_task_id,
+                                                const HashSet<int64_t>& whole_task_ids) -> bool {
+    for (int64_t dst_task_id : whole_task_ids) {
+      if (src_task_id == dst_task_id) { continue; }
+      if (IsReachable(src_task_id, dst_task_id)) { return true; }
     }
-    if (need_remove) {
-      src_it = naive_sink_task_ids.erase(src_it);
-    } else {
-      ++src_it;
+    return false;
+  };
+  sink_task_ids->clear();
+  for (int64_t src_task_id : naive_sink_task_ids) {
+    if (!IsReachableToAnyOherTask(src_task_id, naive_sink_task_ids)) {
+      sink_task_ids->insert(src_task_id);
     }
   }
 }
@@ -225,9 +225,10 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.front()->producer_task_id();
     TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
+    HashSet<int64_t> naive_sink_task_ids;
+    CollectTailRegstConsumerTaskIds(shared_mem_regsts, &naive_sink_task_ids);
     HashSet<int64_t> sink_task_ids;
-    CollectSharedMemRegstSinkTasks(shared_mem_regsts, sink_task_ids);
-    RemoveInnerReachableSinkTasks(sink_task_ids, IsReachable);
+    CollectSinkTaskIds(naive_sink_task_ids, IsReachable, &sink_task_ids);
     for (int64_t sink_task_id : sink_task_ids) {
       TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
       TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
