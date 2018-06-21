@@ -175,28 +175,22 @@ TaskNode* TaskGraph::Build121Step(
   int32_t last_mem_zone_id = -1;
   TaskNode* last_node = nullptr;
   if (cur_node->MemZoneId121() != cpu_mem_zone_id) {
-    // Move data to CPU of cur machine
     last_mem_zone_id = cpu_mem_zone_id;
     if (!allow_share_path || !(last_node = Get121BufTask(cur_machine_id, last_mem_zone_id))) {
-      TaskNode* copy_task = AddCopyD2HTaskFrom(cur_node);
-      Connect<TaskNode>(cur_node, NewEdge(), copy_task);
-      last_node = copy_task;
+      last_node = AddCopyD2HTaskFrom(cur_node);
+      Connect<TaskNode>(cur_node, NewEdge(), last_node);
     }
   } else if (cur_machine_id == dst_machine_id) {
-    // Move data to GPU
     last_mem_zone_id = dst->MemZoneId121();
     if (!allow_share_path || !(last_node = Get121BufTask(cur_machine_id, last_mem_zone_id))) {
-      TaskNode* copy_task = AddCopyH2DTaskTo(dst);
-      Connect<TaskNode>(cur_node, NewEdge(), copy_task);
-      last_node = copy_task;
+      last_node = AddCopyH2DTaskTo(dst);
+      Connect<TaskNode>(cur_node, NewEdge(), last_node);
     }
   } else if (cur_machine_id != dst_machine_id) {
-    // Move data to other machine
     last_mem_zone_id = cpu_mem_zone_id;
     if (!allow_share_path || !(last_node = Get121BufTask(dst_machine_id, cpu_mem_zone_id))) {
-      TaskNode* copy_comm_net = AddCopyCommNetTaskBetween(cur_node, dst);
-      Connect<TaskNode>(cur_node, NewEdge(), copy_comm_net);
-      last_node = copy_comm_net;
+      last_node = AddCopyCommNetTaskBetween(cur_node, dst);
+      Connect<TaskNode>(cur_node, NewEdge(), last_node);
     }
   } else {
     UNIMPLEMENTED();
