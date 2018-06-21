@@ -31,6 +31,16 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
       TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask);
+  void Build121Path(
+      TaskNode* src, TaskNode* dst,
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+      bool allow_share_path);
+  TaskNode* Build121Step(
+      TaskNode* cur_node, TaskNode* dst,
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+      bool allow_share_path);
   TaskNode* AddCopyH2DTaskIfNotCpu(TaskNode*);
   TaskNode* AddCopyD2HTaskIfNotCpu(TaskNode*);
   void AddCopyCommNetTask(TaskNode* src, TaskNode* dst);

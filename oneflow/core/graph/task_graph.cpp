@@ -84,21 +84,19 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    Connect<TaskNode>(
-        Build121BufTo(src, dst->machine_id(), dst->MemZoneId121(),
-                      [&](int64_t machine_id, int32_t mem_zone_id) {
-                        return *Mut121BufTask(src, machine_id, mem_zone_id);
-                      },
-                      [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
-                        TaskNode** cur_val = Mut121BufTask(src, machine_id, mem_zone_id);
-                        if (*cur_val == nullptr) {
-                          *cur_val = new_val;
-                        } else {
-                          CHECK_EQ(*cur_val, new_val);
-                        }
-                        return new_val;
-                      }),
-        NewEdge(), dst);
+    auto Get121BufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
+      return *Mut121BufTask(src, machine_id, mem_zone_id);
+    };
+    auto Set121BufTask = [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
+      TaskNode** cur_val = Mut121BufTask(src, machine_id, mem_zone_id);
+      if (*cur_val == nullptr) {
+        *cur_val = new_val;
+      } else {
+        CHECK_EQ(*cur_val, new_val);
+      }
+      return new_val;
+    };
+    Build121Path(src, dst, Get121BufTask, Set121BufTask, true);
   }
 }
 
@@ -152,6 +150,64 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
       }
     }
   }
+}
+
+void TaskGraph::Build121Path(
+    TaskNode* src, TaskNode* dst,
+    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
+    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+    bool allow_share_path) {
+  CHECK_NE(src, dst);
+  TaskNode* last_node = src;
+  while (last_node->machine_id() != dst->machine_id()
+         && last_node->MemZoneId121() != dst->MemZoneId121()) {
+    last_node = Build121Step(last_node, dst, Get121BufTask, Set121BufTask, allow_share_path);
+  }
+  Connect<TaskNode>(last_node, NewEdge(), dst);
+}
+
+TaskNode* TaskGraph::Build121Step(
+    TaskNode* cur_node, TaskNode* dst,
+    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
+    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+    bool allow_share_path) {
+  int32_t cpu_mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
+  int64_t cur_machine_id = cur_node->machine_id();
+  int64_t dst_machine_id = dst->machine_id();
+  int32_t last_mem_zone_id = -1;
+  TaskNode* last_node = nullptr;
+  if (cur_node->MemZoneId121() != cpu_mem_zone_id) {
+    // Move data to CPU of cur machine
+    last_mem_zone_id = cpu_mem_zone_id;
+    if (!allow_share_path || !(last_node = Get121BufTask(cur_machine_id, last_mem_zone_id))) {
+      CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
+      copy_task->Init(CopyHdOpConf::D2H, cur_machine_id, cur_node->GpuPhyId());
+      Connect<TaskNode>(cur_node, NewEdge(), copy_task);
+      last_node = copy_task;
+    }
+  } else if (cur_machine_id == dst_machine_id) {
+    // Move data to GPU
+    last_mem_zone_id = dst->MemZoneId121();
+    if (!allow_share_path || !(last_node = Get121BufTask(cur_machine_id, last_mem_zone_id))) {
+      CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
+      copy_task->Init(CopyHdOpConf::H2D, cur_machine_id, dst->GpuPhyId());
+      Connect<TaskNode>(cur_node, NewEdge(), copy_task);
+      last_node = copy_task;
+    }
+  } else if (cur_machine_id != dst_machine_id) {
+    // Move data to other machine
+    last_mem_zone_id = cpu_mem_zone_id;
+    if (!allow_share_path || !(last_node = Get121BufTask(dst_machine_id, cpu_mem_zone_id))) {
+      CopyCommNetTaskNode* copy_comm_net = NewNode<CopyCommNetTaskNode>();
+      copy_comm_net->Init(dst_machine_id, cur_machine_id);
+      Connect<TaskNode>(cur_node, NewEdge(), copy_comm_net);
+      last_node = copy_comm_net;
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+  if (allow_share_path) { Set121BufTask(last_node->machine_id(), last_mem_zone_id, last_node); }
+  return last_node;
 }
 
 TaskNode* TaskGraph::Build121BufTo(
