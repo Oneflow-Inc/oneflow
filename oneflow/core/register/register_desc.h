@@ -69,7 +69,7 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
-  MemSharingProto mem_sharing_info_;
+  MemSharingInfo mem_sharing_info_;
 };
 
 }  // namespace oneflow

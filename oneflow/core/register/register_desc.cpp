@@ -155,7 +155,7 @@ void InitCtrlRegstDesc(int64_t produced_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_register_num(1);
   ctrl_regst_proto->mutable_regst_desc_type()->mutable_delay_regst_desc();
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
-  MemSharingProto* mem_sharing_info = ctrl_regst_proto->mutable_mem_sharing_info();
+  MemSharingInfo* mem_sharing_info = ctrl_regst_proto->mutable_mem_sharing_info();
   mem_sharing_info->set_enable_mem_sharing(false);
   mem_sharing_info->set_mem_shared_id(-1);
   mem_sharing_info->set_used_order_value(-1);
