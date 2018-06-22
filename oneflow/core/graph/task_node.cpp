@@ -300,6 +300,26 @@ void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<Reg
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 
+RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
+                                                  const std::string& regst_desc_name) {
+  auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
+  if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
+    RegstDescProto ctrl_regst_desc;
+    InitCtrlRegstDesc(task_proto->task_id(), &ctrl_regst_desc);
+    CHECK(produced_regst_desc->insert({regst_desc_name, ctrl_regst_desc}).second);
+  }
+  return &produced_regst_desc->at(regst_desc_name);
+}
+
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name) {
+  auto* consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
+  if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
+    CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
+  }
+  return &consumed_regst_desc_id_sets->at(regst_desc_name);
+}
+
 std::map<TaskType, std::string> task_type2color = {
     {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
     {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
