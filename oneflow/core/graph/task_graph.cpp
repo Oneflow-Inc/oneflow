@@ -39,7 +39,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-          comp_task_node->SetAreaType(logical_node->GetAreaType());
+          comp_task_node->set_area_id(logical_node->area_id());
         });
   });
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
@@ -49,7 +49,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     logical2sorted_comp_tasks.at(logical_edge->src_node()),
                     logical2sorted_comp_tasks.at(logical_edge->dst_node()), &logical2sorted_in_box,
                     &logical2sorted_out_box, Mut121BufTask, AllocateCpuThrdIdEvenly);
-    SetAreaTypeForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
+    SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   ToDotWithAutoFilePath();
 }
@@ -130,15 +130,15 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
-void TaskGraph::SetAreaTypeForNewNodes(const LogicalNode* src_logical,
-                                       const LogicalNode* dst_logical) {
+void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
+                                     const LogicalNode* dst_logical) {
   CHECK(src_logical != nullptr && dst_logical != nullptr);
   ForEachNode([&](TaskNode* node) {
-    if (node->GetAreaType() != kInvalidArea) return;
-    if (src_logical->GetAreaType() == dst_logical->GetAreaType()) {
-      node->SetAreaType(src_logical->GetAreaType());
+    if (node->area_id() != static_cast<int64_t>(kInvalidArea)) return;
+    if (src_logical->area_id() == dst_logical->area_id()) {
+      node->set_area_id(src_logical->area_id());
     } else {
-      node->SetAreaType(kBoundaryArea);
+      node->set_area_id(static_cast<int64_t>(kBoundaryArea));
     }
   });
 }

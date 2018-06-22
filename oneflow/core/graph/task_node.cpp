@@ -18,8 +18,7 @@ TaskNode::TaskNode()
       task_id_(-1),
       area_id_(0),
       chain_id_(-1),
-      order_in_graph_(-1),
-      area_type_(kInvalidArea) {}
+      order_in_graph_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);

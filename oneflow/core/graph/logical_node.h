@@ -52,12 +52,14 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
-  // path type
-  void SetAreaType(AreaType area_type) { area_type_ = area_type; }
-  AreaType GetAreaType() const { return area_type_; }
+  void set_area_id(int64_t val) {
+    CHECK_NE(val, 0);
+    area_id_ = val;
+  }
+  int64_t area_id() const { return area_id_; }
 
  protected:
-  LogicalNode() : main_model_parallel_(nullptr), area_type_(kInvalidArea) {}
+  LogicalNode() : main_model_parallel_(nullptr), area_id_(0) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
@@ -72,7 +74,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   HashSet<LogicalBlobId> lbi_boxing_;
   HashSet<LogicalBlobId> lbi_121_;
-  AreaType area_type_;
+  int64_t area_id_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \

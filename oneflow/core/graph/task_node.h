@@ -72,14 +72,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
 
-  // Area type
-  void SetAreaType(AreaType area_type) {
-    CHECK_EQ(area_type_, kInvalidArea);
-    area_type_ = area_type;
-    set_area_id(static_cast<int64_t>(area_type_));
-  }
-  AreaType GetAreaType() const { return area_type_; }
-
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
@@ -111,7 +103,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t area_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;
-  AreaType area_type_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;

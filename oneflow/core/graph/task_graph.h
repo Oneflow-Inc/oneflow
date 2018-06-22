@@ -48,7 +48,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
-  void SetAreaTypeForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
+  void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void CollectAncestorsForEachNode();
   void FindChainsInSameStream();
 
