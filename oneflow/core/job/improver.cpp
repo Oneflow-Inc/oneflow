@@ -1,9 +1,9 @@
 #include "oneflow/core/job/improver.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
 
@@ -35,17 +35,6 @@ uint64_t CalcRegstNum(
   regst_num = std::max(regst_num, static_cast<uint64_t>(regst_desc.min_register_num()));
   regst_num = std::min(regst_num, static_cast<uint64_t>(regst_desc.max_register_num()));
   return regst_num;
-}
-
-void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events) {
-  NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
-  int64_t act_event_size;
-  while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
-    std::vector<char> buffer(act_event_size);
-    CHECK(!in_stream.Read(buffer.data(), act_event_size));
-    act_events->emplace_back();
-    act_events->back().ParseFromArray(buffer.data(), act_event_size);
-  }
 }
 
 uint64_t CalcMemoryConsumed(
@@ -139,13 +128,6 @@ double CalcBaseII(const ActGraph& act_graph) {
 double IIScale4Actor(TaskType task_type, double default_ii_scale) {
   if (task_type == TaskType::kMdSave) { return NumOfPiecesInSnapshot(); }
   return default_ii_scale;
-}
-
-void PushAvgActTimeToProfiler(const ActGraph& act_graph) {
-  for (const auto& pair : act_graph.actor_id2total_act_time()) {
-    double act_time = pair.second / act_graph.actor_id2act_cnt().at(pair.first);
-    Global<Profiler>::Get()->PushAvgActTime(pair.first, act_time);
-  }
 }
 
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
@@ -304,7 +286,6 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
   auto act_events = std::make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
-  PushAvgActTimeToProfiler(act_graph);
   Plan plan(naive_plan);
   MemoryLimitedAllocate(act_graph, MakeSetterSetPlanRegstNum(&plan));
   return plan;
