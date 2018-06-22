@@ -17,6 +17,10 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
+  void AddOrderingCtrlEdgeInSameChain();
+  void AddMutexCtrlEdgeInSameChain();
+  void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
+  void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
@@ -50,8 +54,14 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
+  void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
+  void CollectAncestorsForEachNode();
+  void FindChainsInSameStream();
+
   std::unique_ptr<const LogicalGraph> logical_gph_;
+  std::vector<TaskNode*> ordered_task_nodes_;
 };
+bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow
 

@@ -28,6 +28,17 @@ enum TaskType {
   kReduceScatter = 19;
 };
 
+enum AreaType {
+  kInvalidArea = 0;
+  kDataPreprocessArea = 1;
+  kDataForwardArea = 2;
+  kDataBackwardArea = 3;
+  kMdUpdtArea = 4;
+  kMdSaveArea = 5;
+  kPrintArea = 6;
+  kBoundaryArea = 7;
+}
+
 message RegstDescIdSet {
   repeated int64 regst_desc_id = 1;
 }
