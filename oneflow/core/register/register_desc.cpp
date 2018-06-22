@@ -124,7 +124,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
-  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_delay_regst_desc()) {
+  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
     UNIMPLEMENTED();

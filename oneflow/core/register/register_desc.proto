@@ -20,14 +20,14 @@ message RecordRegstDesc {
   required RecordTypeProto record_type = 1;
 }
 
-message DelayRegstDesc {
+message CtrlRegstDesc {
 }
 
 message RegstDescTypeProto {
   oneof type {
     NormalRegstDesc normal_regst_desc = 1;
     RecordRegstDesc record_regst_desc = 2;
-    DelayRegstDesc delay_regst_desc = 3;
+    CtrlRegstDesc ctrl_regst_desc = 3;
   }
 }
 
