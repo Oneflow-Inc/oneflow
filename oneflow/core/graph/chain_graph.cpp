@@ -12,7 +12,7 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
   task2chain_it->clear();
   for (const auto& task_node : ordered_nodes) {
     chain_list->emplace_back();
-    task2chain_it->insert({task_node, chain_list->begin()});
+    task2chain_it->insert({task_node, --chain_list->end()});
     Chain& cur_chain = chain_list->back();
     cur_chain.ancestors.clear();
     cur_chain.ancestors_and_this.clear();
