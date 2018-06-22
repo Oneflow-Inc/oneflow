@@ -16,7 +16,3 @@ message ActEvent {
   required double stop_time = 7;
   repeated ReadableRegstInfo readable_regst_infos = 10;
 }
-
-message ActEvents {
-  repeated ActEvent act_events = 1;
-}

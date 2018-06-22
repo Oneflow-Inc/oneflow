@@ -114,9 +114,9 @@ void CtrlClient::PullKV(const std::string& k, PbMessage* msg) {
   PullKV(k, [&](const std::string& i) { msg->ParseFromString(i); });
 }
 
-void CtrlClient::PushActEvents(const ActEvents& act_events) {
-  ClientCall<CtrlMethod::kPushActEvents> call;
-  *(call.mut_request()->mutable_act_events()) = act_events;
+void CtrlClient::PushActEvent(const ActEvent& act_event) {
+  ClientCall<CtrlMethod::kPushActEvent> call;
+  *(call.mut_request()->mutable_act_event()) = act_event;
   call(GetMasterStub());
 }
 

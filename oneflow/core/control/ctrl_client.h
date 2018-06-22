@@ -38,7 +38,7 @@ class CtrlClient final {
     *v = oneflow_cast<T>(v_str);
   }
 
-  void PushActEvents(const ActEvents&);
+  void PushActEvent(const ActEvent&);
   void Clear();
 
   int32_t IncreaseCount(const std::string& k, int32_t v);

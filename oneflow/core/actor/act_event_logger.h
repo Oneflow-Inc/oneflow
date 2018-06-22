@@ -13,7 +13,7 @@ class ActEventLogger final {
   OF_DISALLOW_COPY_AND_MOVE(ActEventLogger);
   ~ActEventLogger() = default;
 
-  void PrintActEventsToLogDir(const ActEvents&);
+  void PrintActEventToLogDir(const ActEvent&);
 
   static const std::string experiment_prefix_;
   static const std::string act_event_bin_filename_;

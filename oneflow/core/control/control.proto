@@ -68,11 +68,11 @@ message PullKVResponse {
   required bytes val = 1;
 }
 
-message PushActEventsRequest {
-  required ActEvents act_events = 1;
+message PushActEventRequest {
+  required ActEvent act_event = 1;
 }
 
-message PushActEventsResponse {
+message PushActEventResponse {
 }
 
 message ClearRequest {

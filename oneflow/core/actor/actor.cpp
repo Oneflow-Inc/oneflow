@@ -19,8 +19,8 @@ bool NeedModelSave(int64_t model_version_id) {
 
 ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor) {
   if (Global<RuntimeCtx>::Get()->need_record_event()) {
-    act_event_id_ = actor_->act_events_.act_events_size();
-    ActEvent* act_event = actor_->act_events_.add_act_events();
+    actor->act_events_.emplace_back();
+    ActEvent* act_event = &(actor_->act_events_.back());
     act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
     act_event->set_actor_id(actor_->actor_id());
     act_event->set_work_stream_id(actor_->GetGlobalWorkStreamId());
@@ -40,16 +40,18 @@ ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor) {
 
 ScopedActEventRecorder::~ScopedActEventRecorder() {
   if (Global<RuntimeCtx>::Get()->need_record_event()) {
-    ActEvent* act_event = actor_->act_events_.mutable_act_events(act_event_id_);
+    ActEvent* act_event = &(actor_->act_events_.back());
     actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
   }
 }
 
 Actor::~Actor() {
   if (Global<RuntimeCtx>::Get()->need_record_event()) {
-    Global<CtrlClient>::Get()->PushActEvents(act_events_);
+    for (const auto& act_event : act_events_) {
+      Global<CtrlClient>::Get()->PushActEvent(act_event);
+    }
   } else {
-    CHECK_EQ(act_events_.act_events_size(), 0);
+    CHECK_EQ(act_events_.size(), 0);
   }
 }
 

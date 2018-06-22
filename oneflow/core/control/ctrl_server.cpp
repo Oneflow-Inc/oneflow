@@ -163,11 +163,11 @@ void CtrlServer::Init() {
     EnqueueRequest<CtrlMethod::kPullKV>();
   });
 
-  Add([this](CtrlCall<CtrlMethod::kPushActEvents>* call) {
-    ActEvents act_events = call->request().act_events();
+  Add([this](CtrlCall<CtrlMethod::kPushActEvent>* call) {
+    ActEvent act_event = call->request().act_event();
     call->SendResponse();
-    Global<ActEventLogger>::Get()->PrintActEventsToLogDir(act_events);
-    EnqueueRequest<CtrlMethod::kPushActEvents>();
+    Global<ActEventLogger>::Get()->PrintActEventToLogDir(act_event);
+    EnqueueRequest<CtrlMethod::kPushActEvent>();
   });
 
   Add([this](CtrlCall<CtrlMethod::kClear>* call) {

@@ -155,7 +155,7 @@ class Actor {
   int64_t out_delay_regst_desc_id_;
 
   // Profile
-  ActEvents act_events_;
+  std::vector<ActEvent> act_events_;
 };
 
 class ScopedActEventRecorder {
@@ -166,7 +166,6 @@ class ScopedActEventRecorder {
 
  private:
   Actor* actor_;
-  int64_t act_event_id_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
