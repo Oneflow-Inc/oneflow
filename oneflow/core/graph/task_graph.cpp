@@ -249,12 +249,12 @@ void TaskGraph::Build121Path(
     std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
     bool allow_share_path) {
   CHECK_NE(src, dst);
-  TaskNode* last_node = src;
-  while (last_node->machine_id() != dst->machine_id()
-         || last_node->MemZoneId121() != dst->MemZoneId121()) {
-    last_node = Build121Step(last_node, dst, Get121BufTask, Set121BufTask, allow_share_path);
+  TaskNode* cur_node = src;
+  while (cur_node->machine_id() != dst->machine_id()
+         || cur_node->MemZoneId121() != dst->MemZoneId121()) {
+    cur_node = Build121Step(cur_node, dst, Get121BufTask, Set121BufTask, allow_share_path);
   }
-  Connect<TaskNode>(last_node, NewEdge(), dst);
+  Connect<TaskNode>(cur_node, NewEdge(), dst);
 }
 
 TaskNode* TaskGraph::Build121Step(
@@ -263,33 +263,33 @@ TaskNode* TaskGraph::Build121Step(
     std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
     bool allow_share_path) {
   int32_t cpu_mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
-  int32_t last_mem_zone_id = -1;
-  TaskNode* last_node = nullptr;
+  int32_t next_mem_zone_id = -1;
+  TaskNode* next_node = nullptr;
   if (cur_node->MemZoneId121() != cpu_mem_zone_id) {
-    last_mem_zone_id = cpu_mem_zone_id;
+    next_mem_zone_id = cpu_mem_zone_id;
     if (!allow_share_path
-        || !(last_node = Get121BufTask(cur_node->machine_id(), last_mem_zone_id))) {
-      last_node = AddCopyD2HTaskFrom(cur_node);
-      Connect<TaskNode>(cur_node, NewEdge(), last_node);
+        || !(next_node = Get121BufTask(cur_node->machine_id(), next_mem_zone_id))) {
+      next_node = AddCopyD2HTaskFrom(cur_node);
+      Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else if (cur_node->machine_id() == dst->machine_id()) {
-    last_mem_zone_id = dst->MemZoneId121();
+    next_mem_zone_id = dst->MemZoneId121();
     if (!allow_share_path
-        || !(last_node = Get121BufTask(cur_node->machine_id(), last_mem_zone_id))) {
-      last_node = AddCopyH2DTaskTo(dst);
-      Connect<TaskNode>(cur_node, NewEdge(), last_node);
+        || !(next_node = Get121BufTask(cur_node->machine_id(), next_mem_zone_id))) {
+      next_node = AddCopyH2DTaskTo(dst);
+      Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else if (cur_node->machine_id() != dst->machine_id()) {
-    last_mem_zone_id = cpu_mem_zone_id;
-    if (!allow_share_path || !(last_node = Get121BufTask(dst->machine_id(), last_mem_zone_id))) {
-      last_node = AddCopyCommNetTaskBetween(cur_node, dst);
-      Connect<TaskNode>(cur_node, NewEdge(), last_node);
+    next_mem_zone_id = cpu_mem_zone_id;
+    if (!allow_share_path || !(next_node = Get121BufTask(dst->machine_id(), next_mem_zone_id))) {
+      next_node = AddCopyCommNetTaskBetween(cur_node, dst);
+      Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else {
     UNIMPLEMENTED();
   }
-  if (allow_share_path) { Set121BufTask(last_node->machine_id(), last_mem_zone_id, last_node); }
-  return last_node;
+  if (allow_share_path) { Set121BufTask(next_node->machine_id(), next_mem_zone_id, next_node); }
+  return next_node;
 }
 
 TaskNode* TaskGraph::AddCopyH2DTaskTo(TaskNode* task) {
