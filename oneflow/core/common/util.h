@@ -27,6 +27,17 @@
 
 DECLARE_string(log_dir);
 
+namespace std {
+template<typename T0, typename T1>
+struct hash<std::pair<T0, T1>> {
+  std::size_t operator()(const std::pair<T0, T1>& p) const {
+    auto h0 = std::hash<T0>{}(p.first);
+    auto h1 = std::hash<T1>{}(p.second);
+    return h0 ^ h1;
+  }
+};
+}  // namespace std
+
 namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
