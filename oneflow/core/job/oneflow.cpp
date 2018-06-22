@@ -132,7 +132,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   // Runtime
   { Runtime run(plan, false); }
   if (machine_ctx->IsThisMachineMaster()) {
-    if (Global<JobDesc>::Get()->record_nonexperiment_event()) {
+    if (Global<JobDesc>::Get()->record_act_event()) {
       Global<Profiler>::Get()->Profile(plan,
                                        JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     }

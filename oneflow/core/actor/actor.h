@@ -21,6 +21,8 @@ bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool NeedModelSave(int64_t model_version_id);
 
+class RecordActEvent;
+
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
@@ -117,6 +119,7 @@ class Actor {
   }
 
  private:
+  friend class ScopedActEventRecorder;
   bool IsReadReady();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
@@ -152,9 +155,18 @@ class Actor {
   int64_t out_delay_regst_desc_id_;
 
   // Profile
-  std::vector<ActEvent*> act_events_;
-  ActEvent* StartRecordEvent();
-  void EndRecordEvent(ActEvent* act_event);
+  ActEvents act_events_;
+};
+
+class ScopedActEventRecorder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
+  explicit ScopedActEventRecorder(Actor* actor);
+  ~ScopedActEventRecorder();
+
+ private:
+  Actor* actor_;
+  int64_t act_event_id_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

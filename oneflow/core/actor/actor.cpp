@@ -17,13 +17,39 @@ bool NeedModelSave(int64_t model_version_id) {
          || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
 }
 
+ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor) {
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    act_event_id_ = actor_->act_events_.act_events_size();
+    ActEvent* act_event = actor_->act_events_.add_act_events();
+    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
+    act_event->set_actor_id(actor_->actor_id());
+    act_event->set_work_stream_id(actor_->GetGlobalWorkStreamId());
+    act_event->set_act_id(actor_->act_id_);
+    act_event->set_ready_time(GetCurTime());
+    actor_->ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      (actor_->Actor::SetReadableRegstInfo)(readable_regst, info);
+    });
+    actor_->ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      actor_->SetReadableRegstInfo(readable_regst, info);
+    });
+    actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
+  }
+}
+
+ScopedActEventRecorder::~ScopedActEventRecorder() {
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    ActEvent* act_event = actor_->act_events_.mutable_act_events(act_event_id_);
+    actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
+  }
+}
+
 Actor::~Actor() {
-  if (!Global<RuntimeCtx>::Get()->need_record_event()) { CHECK(act_events_.empty()); }
-  for (auto act_event : act_events_) {
-    act_event->set_launch_time(act_event->start_time() - act_event->ready_time());
-    act_event->set_execution_time(act_event->stop_time() - act_event->start_time());
-    Global<CtrlClient>::Get()->PushActEvent(*act_event);
-    delete act_event;
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    Global<CtrlClient>::Get()->PushActEvents(act_events_);
+  } else {
+    CHECK_EQ(act_events_.act_events_size(), 0);
   }
 }
 
@@ -213,41 +239,10 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-ActEvent* Actor::StartRecordEvent() {
-  if (Global<RuntimeCtx>::Get()->need_record_event()) {
-    act_events_.push_back(new ActEvent);
-    ActEvent* act_event = act_events_.back();
-    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
-    act_event->set_actor_id(actor_id_);
-    act_event->set_work_stream_id(GetGlobalWorkStreamId());
-    act_event->set_act_id(act_id_);
-    act_event->set_ready_time(GetCurTime());
-    ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      Actor::SetReadableRegstInfo(readable_regst, info);
-    });
-    ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      SetReadableRegstInfo(readable_regst, info);
-    });
-    device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-    return act_event;
-  } else {
-    return nullptr;
-  }
-}
-
-void Actor::EndRecordEvent(ActEvent* act_event) {
-  if (Global<RuntimeCtx>::Get()->need_record_event()) {
-    CHECK_NOTNULL(act_event);
-    device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
-  }
-}
-
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    ActEvent* act_event = StartRecordEvent();
+    ScopedActEventRecorder scope_recorder(this);
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
     for (auto& pair : naive_readable_regst_) {
@@ -257,7 +252,6 @@ void Actor::ActUntilFail() {
       pair.second.pop_front();
       if (pair.second.empty()) { naive_readable_regst_cnt_ -= 1; }
     }
-    EndRecordEvent(act_event);
   }
 }
 

@@ -40,16 +40,15 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
     CHECK(task_id2task_type.emplace(task.task_id(), task.task_type()).second);
   }
 
-  auto act_events = std::make_unique<std::list<ActEvent>>();
-  ParseActEvents(act_event_filepath, act_events.get());
+  std::list<ActEvent> act_events;
+  ParseActEvents(act_event_filepath, &act_events);
 
   HashMap<int64_t, std::vector<ActTimeInfo>> actor_id2act_time_info;
-  for (auto& act_event : *act_events.get()) {
+  for (auto& act_event : act_events) {
     int64_t actor_id = act_event.actor_id();
     ActTimeInfo act_time_info(
         {act_event.ready_time(), act_event.start_time(), act_event.stop_time()});
-    std::vector<ActTimeInfo>& act_time_infos = actor_id2act_time_info[actor_id];
-    act_time_infos.emplace_back(act_time_info);
+    actor_id2act_time_info[actor_id].emplace_back(act_time_info);
   }
 
   using ProfileInfoPair = std::pair<int64_t, ActorProfileInfo>;
@@ -67,21 +66,18 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
     double acc_act_time = 0;
     double last_ready_time = -1;
     double acc_act_interval = 0;
-    for (auto& act_time_info : act_time_infos) {
+    for (const auto& act_time_info : act_time_infos) {
       acc_act_time += (act_time_info.stop_time - act_time_info.start_time);
-      if (last_ready_time < 0) {
-        last_ready_time = act_time_info.ready_time;
-      } else {
+      if (last_ready_time >= 0) {
         acc_act_interval += (act_time_info.ready_time - last_ready_time);
-        last_ready_time = act_time_info.ready_time;
       }
+      last_ready_time = act_time_info.ready_time;
     }
     profile_info_pair.second.set_act_num(act_num);
     profile_info_pair.second.set_avg_act_time(acc_act_time / act_num);
-    if (act_num > 1) {
-      profile_info_pair.second.set_avg_act_interval(acc_act_interval / (act_num - 1));
-      profile_info_vec.emplace_back(profile_info_pair);
-    }
+    profile_info_pair.second.set_avg_act_interval(act_num > 1 ? acc_act_interval / (act_num - 1)
+                                                              : 0);
+    profile_info_vec.emplace_back(profile_info_pair);
   }
 
   std::sort(profile_info_vec.begin(), profile_info_vec.end(),

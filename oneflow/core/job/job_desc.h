@@ -45,7 +45,7 @@ class JobDesc final {
   bool save_downloaded_file_to_local_fs() const;
   size_t rdma_mem_block_byte() const;
   size_t rdma_recv_msg_buf_byte() const;
-  bool record_nonexperiment_event() const { return job_conf_.other().record_nonexperiment_event(); }
+  bool record_act_event() const { return job_conf_.other().record_act_event(); }
 
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
