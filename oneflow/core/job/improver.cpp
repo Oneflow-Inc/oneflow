@@ -381,13 +381,6 @@ void ForEachMemSharingCriticalSection(
 
 }  // namespace
 
-Plan Improver::AddCtrlRegstForMemSharingCriticalSection(
-    const Plan& plan, const std::function<bool(int64_t, int64_t)>& IsReachable) const {
-  Plan ret(plan);
-  ForEachMemSharingCriticalSection(plan, MakeSetterAddCtrlRegst(&ret, IsReachable));
-  return ret;
-}
-
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
   JobDesc* job_desc = Global<JobDesc>::Get();
