@@ -38,21 +38,18 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     ek.bn_in_op2regst_desc_id = PbMap2HashMap(node.bn_in_op2regst_desc_id());
     exec_kernel_vec_.push_back(std::move(ek));
   }
+  remaining_eord_cnt_ = 0;
+  msg_handler_ = nullptr;
+  eord_regst_desc_ids_.clear();
+  // ctrl regst
   for (const auto& pair : task_proto.produced_regst_desc()) {
     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
       non_ctrl_task_proto.mutable_produced_regst_desc()->erase(pair.first);
       Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
         produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
       });
-    } else {
-      Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
-        produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
-      });
-      int64_t regst_desc_id = pair.second.regst_desc_id();
-      CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
     }
   }
-  remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     if (pair.first == "in_ctrl") {
       non_ctrl_task_proto.mutable_consumed_regst_desc_id()->erase(pair.first);
@@ -60,26 +57,34 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
         CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
       }
       remaining_eord_cnt_ += pair.second.regst_desc_id_size();
-    } else {
-      CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
-      std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
-      for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
-        regst_desc_id_vec.push_back(regst_desc_id);
-      }
-      remaining_eord_cnt_ += pair.second.regst_desc_id_size();
-    }
-  }
-  msg_handler_ = nullptr;
-  eord_regst_desc_ids_.clear();
-  for (const auto& pair : produced_regsts_) {
-    for (const auto& regst : pair.second) {
-      writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
-      produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
   for (const auto& pair : produced_ctrl_regst_) {
     for (const auto& regst : pair.second) {
       writeable_produced_ctrl_regst_[regst->regst_desc_id()].push_back(regst.get());
+    }
+  }
+
+  // non ctrl regst
+  for (const auto& pair : non_ctrl_task_proto.produced_regst_desc()) {
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+      produced_regsts_[regst->regst_desc_id()].emplace_back(regst);
+    });
+    int64_t regst_desc_id = pair.second.regst_desc_id();
+    CHECK(name2regst_desc_id_.insert({pair.first, {regst_desc_id}}).second);
+  }
+  for (const auto& pair : non_ctrl_task_proto.consumed_regst_desc_id()) {
+    CHECK(name2regst_desc_id_.find(pair.first) == name2regst_desc_id_.end());
+    std::vector<int64_t>& regst_desc_id_vec = name2regst_desc_id_[pair.first];
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      regst_desc_id_vec.push_back(regst_desc_id);
+    }
+    remaining_eord_cnt_ += pair.second.regst_desc_id_size();
+  }
+  for (const auto& pair : produced_regsts_) {
+    for (const auto& regst : pair.second) {
+      writeable_produced_regst_[regst->regst_desc_id()].push_back(regst.get());
+      produced_regst2reading_cnt_[regst.get()] = 0;
     }
   }
   actual_writeable_produced_regst_desc_num_ = writeable_produced_regst_.size();
@@ -166,7 +171,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
       NormalProcessCustomizedEordMsg(msg);
     }
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (ProcessCtrlRegstMsg(msg) == 0) {
+    if (ProcessWriteableCtrlRegstMsg(msg) == 0 || ProcessReadableCtrlRegstMsg(msg) == 0) {
       // do nothing
     } else if (msg.SrcMachineId() == Global<MachineCtx>::Get()->this_machine_id()) {
       Regst* regst = msg.regst();
@@ -217,7 +222,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     CHECK_GE(remaining_eord_cnt_, 1);
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (ProcessCtrlRegstMsg(msg) != 0) {
+    if (ProcessWriteableCtrlRegstMsg(msg) != 0 && ProcessReadableCtrlRegstMsg(msg) != 0) {
       if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
         AsyncSendRegstMsgToProducer(msg.regst());
       }
@@ -263,7 +268,7 @@ void Actor::ActUntilFail() {
     last_act_start_time_ = cur_time;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
-    AsyncSendCtrlRegst();
+    AsyncSendCtrlRegstMsg();
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
       if (IsNaiveAllowedReturnToProducer(pair.second.front()) == false) { continue; }
@@ -422,23 +427,23 @@ bool Actor::IsReadReady() {
 
 bool Actor::IsCtrlReady() {
   auto produced_ctrl_ready = [&]() {
-    if (writeable_produced_ctrl_regst_.empty()) return true;
+    if (writeable_produced_ctrl_regst_.empty()) { return true; }
     for (const auto& pair : writeable_produced_ctrl_regst_) {
-      if (pair.second.empty()) return false;
+      if (pair.second.empty()) { return false; }
     }
     return true;
   };
   auto consumed_ctrl_ready = [&]() {
-    if (consumed_ctrl_regst_.empty()) return true;
+    if (consumed_ctrl_regst_.empty()) { return true; }
     for (const auto& pair : consumed_ctrl_regst_) {
-      if (pair.second.empty()) return false;
+      if (pair.second.empty()) { return false; }
     }
     return true;
   };
   return produced_ctrl_ready() && consumed_ctrl_ready();
 }
 
-int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
+int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
   int64_t regst_desc_id = msg.regst_desc_id();
   auto produced_it = writeable_produced_ctrl_regst_.find(regst_desc_id);
   if (produced_it != writeable_produced_ctrl_regst_.end()) {
@@ -446,6 +451,11 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
     --total_reading_ctrl_cnt_;
     return 0;
   }
+  return -1;
+}
+
+int Actor::ProcessReadableCtrlRegstMsg(const ActorMsg& msg) {
+  int64_t regst_desc_id = msg.regst_desc_id();
   auto consumed_it = consumed_ctrl_regst_.find(regst_desc_id);
   if (consumed_it != consumed_ctrl_regst_.end()) {
     if (consumed_it->second.empty()) { consumed_ctrl_regst_cnt_ += 1; }
@@ -455,7 +465,7 @@ int Actor::ProcessCtrlRegstMsg(const ActorMsg& msg) {
   return -1;
 }
 
-void Actor::AsyncSendCtrlRegst() {
+void Actor::AsyncSendCtrlRegstMsg() {
   for (auto& pair : consumed_ctrl_regst_) {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();

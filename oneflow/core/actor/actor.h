@@ -120,9 +120,10 @@ class Actor {
  private:
   bool IsReadReady();
   bool IsCtrlReady();
-  int ProcessCtrlRegstMsg(const ActorMsg& msg);
+  int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
+  int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
   void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
-  void AsyncSendCtrlRegst();
+  void AsyncSendCtrlRegstMsg();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);

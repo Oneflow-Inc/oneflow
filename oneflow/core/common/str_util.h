@@ -18,8 +18,6 @@ const char* StrToToken(const char* text, const std::string& delims, std::string*
 void Split(const std::string& text, const std::string& delims,
            std::function<void(std::string&&)> Func);
 
-bool StartsWith(const std::string& text, const std::string& prefix);
-
 template<typename T>
 void SplitAndParseAs(const std::string& text, const std::string& delims,
                      std::function<void(T&&)> Func) {
