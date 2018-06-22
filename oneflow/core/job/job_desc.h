@@ -45,8 +45,11 @@ class JobDesc final {
   bool save_downloaded_file_to_local_fs() const;
   size_t rdma_mem_block_byte() const;
   size_t rdma_recv_msg_buf_byte() const;
-
   bool record_nonexperiment_event() const { return job_conf_.other().record_nonexperiment_event(); }
+
+  // machine_name <-> machine_id
+  int64_t MachineID4MachineName(const std::string& machine_name) const;
+  const std::string& MachineName4MachineId(int64_t machine_id) const;
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -66,6 +69,9 @@ class JobDesc final {
   void SplitDecodeOps();
 
   JobConf1 job_conf_;
+
+  HashMap<std::string, int64_t> machine_name2machine_id_;
+  HashMap<int64_t, std::string> machine_id2machine_name_;
 };
 
 }  // namespace oneflow

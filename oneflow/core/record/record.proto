@@ -2,7 +2,8 @@ syntax = "proto2";
 package oneflow;
 
 enum RecordTypeProto {
-  kOFRecord = 0;
+  kInvalidRecord = 0;
+  kOFRecord = 1;
 }
 
 message BytesList {

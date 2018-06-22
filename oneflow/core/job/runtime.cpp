@@ -99,7 +99,7 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   }
   Global<SnapshotMgr>::New(plan);
   Global<MemoryAllocator>::New();
-  Global<RegstMgr>::New();
+  Global<RegstMgr>::New(plan);
   Global<ActorMsgBus>::New();
   Global<ThreadMgr>::New(plan);
 }

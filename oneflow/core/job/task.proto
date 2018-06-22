@@ -1,7 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/record/record.proto";
 import "oneflow/core/graph/exec_sequence.proto";
 import "oneflow/core/register/register_desc.proto";
 import "oneflow/core/job/placement.proto";
@@ -33,20 +32,26 @@ message RegstDescIdSet {
   repeated int64 regst_desc_id = 1;
 }
 
+message TaskSetInfo {
+  required int64 area_id = 1;
+  required int64 chain_id = 4;
+  required int64 order_in_graph = 5;
+}
+
 message TaskProto {
   // common
   required TaskType task_type = 1;
   required int64 machine_id = 2;
   required int64 thrd_id = 3;
   required int64 task_id = 4;
-  required ExecSequence exec_sequence = 5;
-  map<string, RegstDescProto> produced_regst_desc = 6;
-  map<string, RegstDescIdSet> consumed_regst_desc_id = 7;
+  required TaskSetInfo task_set_info = 5;
+  required ExecSequence exec_sequence = 6;
+  map<string, RegstDescProto> produced_regst_desc = 7;
+  map<string, RegstDescIdSet> consumed_regst_desc_id = 8;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask
   optional int64 related_save_model_task_id = 1002 [default = -1];
   optional int64 related_init_model_task_id = 1003 [default = -1];
   optional string data_path = 1004;
-  optional RecordTypeProto record_type = 1005;
 };

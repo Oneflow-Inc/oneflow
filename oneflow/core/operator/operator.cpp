@@ -23,11 +23,6 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   if (this_op_conf->has_use_cudnn_on_gpu() == false) {
     this_op_conf->set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
-  if (HasFieldInCustomizedConf("activation")) {
-    ActivationType activation =
-        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-    if (activation != ActivationType::kNone) { EnrollDataTmpBn("activation_buf"); }
-  }
   InitFromOpConf();
 }
 
@@ -44,10 +39,6 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   } else {
     return &(it->second);
   }
-}
-
-bool Operator::UseCudnn() const {
-  return device_type() == DeviceType::kGPU && op_conf().use_cudnn_on_gpu();
 }
 
 const std::string& Operator::SoleIbn() const {
@@ -75,14 +66,9 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetB
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
-  if (HasFieldInCustomizedConf("activation")) {
-    ActivationType activation =
-        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-    if (activation != ActivationType::kNone && Global<JobDesc>::Get()->IsTrain()) {
-      BlobDesc* buf_blob_desc = GetBlobDesc4BnInOp("activation_buf");
-      BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
-      *buf_blob_desc = *out_blob_desc;
-    }
+  if (NeedDoActivation() && Global<JobDesc>::Get()->IsTrain()) {
+    *buf_size +=
+        RoundUp(GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField(), kCudaAlignSize);
   }
 }
 
@@ -140,6 +126,15 @@ static bool HasBlobDescWithField(
   return false;
 }
 
+bool Operator::NeedDoActivation() const {
+  if (HasFieldInCustomizedConf("activation")
+      && static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
+             != ActivationType::kNone) {
+    return true;
+  }
+  return false;
+}
+
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
@@ -164,6 +159,13 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
   }
   kernel_conf->set_data_type(data_type);
+
+  if (is_forward == false && NeedDoActivation()) {
+    const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
+    BlobDesc activation_blob_desc(out_blob_desc->shape(), out_blob_desc->data_type(), false, false,
+                                  1);
+    activation_blob_desc.ToProto(kernel_conf->mutable_activation_blob_desc());
+  }
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 

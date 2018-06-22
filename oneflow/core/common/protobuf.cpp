@@ -25,6 +25,12 @@ bool HasFieldInPbMessage(const PbMessage& msg, const std::string& field_name) {
   return fd != nullptr;
 }
 
+const PbFd* GetPbFdFromPbMessage(const PbMessage& msg, const std::string& field_name) {
+  PROTOBUF_GET_FIELDDESC(msg, field_name);
+  CHECK_NOTNULL(fd);
+  return fd;
+}
+
 #define DEFINE_GET_VAL_FROM_PBMESSAGE(cpp_type, pb_type_name)                                   \
   template<>                                                                                    \
   cpp_type GetValFromPbMessage<cpp_type>(const PbMessage& msg, const std::string& field_name) { \

@@ -18,13 +18,13 @@ std::unique_ptr<PersistentOutStream> Snapshot::GetOutStream(const LogicalBlobId&
                                                             int32_t part_id) {
   // op_name_dir
   std::string op_name_dir = JoinPath(root_path_, lbi.op_name());
-  OF_CALL_ONCE(op_name_dir, GlobalFS()->CreateDir(op_name_dir));
+  OfCallOnce(op_name_dir, GlobalFS(), &fs::FileSystem::CreateDir);
   // bn_in_op_tmp_dir
   std::string bn_in_op_tmp_dir = JoinPath(op_name_dir, lbi.blob_name() + "_tmp4a58");
-  OF_CALL_ONCE(bn_in_op_tmp_dir, GlobalFS()->CreateDir(bn_in_op_tmp_dir));
+  OfCallOnce(bn_in_op_tmp_dir, GlobalFS(), &fs::FileSystem::CreateDir);
   // part_file
   std::string part_file = JoinPath(bn_in_op_tmp_dir, "part_" + std::to_string(part_id));
-  return of_make_unique<PersistentOutStream>(GlobalFS(), part_file);
+  return std::make_unique<PersistentOutStream>(GlobalFS(), part_file);
 }
 
 void Snapshot::OnePartDone(const LogicalBlobId& lbi, int32_t part_id, int32_t part_num) {

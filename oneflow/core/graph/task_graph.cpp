@@ -19,7 +19,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
   std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
-  auto AllocateCpuThrdId = [&](const TaskNode* task_node) {
+  auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
     int64_t ret = -1;
     if (task_node->IsPersistence() == false) {
       int64_t& offset = cpu_device_offset.at(task_node->machine_id());
@@ -33,10 +33,11 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     return ret;
   };
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
-    logical_node->GenSortedCompTaskNodes(AllocateCpuThrdId, [&](CompTaskNode* comp_task_node) {
-      AddAllocatedNode(comp_task_node);
-      logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-    });
+    logical_node->GenSortedCompTaskNodes(
+        AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
+          AddAllocatedNode(comp_task_node);
+          logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
+        });
   });
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
@@ -44,7 +45,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     (this->*method)(logical_edge->src_node(), logical_edge->dst_node(),
                     logical2sorted_comp_tasks.at(logical_edge->src_node()),
                     logical2sorted_comp_tasks.at(logical_edge->dst_node()), &logical2sorted_in_box,
-                    &logical2sorted_out_box, Mut121BufTask, AllocateCpuThrdId);
+                    &logical2sorted_out_box, Mut121BufTask, AllocateCpuThrdIdEvenly);
   });
   ToDotWithAutoFilePath();
 }
@@ -53,19 +54,17 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
-  std::vector<TaskNode*> sorted_out_box_tmp;
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
-                   AllocateCpuThrdId);
+                   AllocateCpuThrdIdEvenly);
   }
   sorted_out_box = &(logical2sorted_out_box->at(src_logical));
 
-  std::vector<TaskNode*> sorted_in_box_tmp;
   std::vector<TaskNode*>* sorted_in_box = nullptr;
   if (logical2sorted_in_box->find(dst_logical) == logical2sorted_in_box->end()) {
     BuildInBoxing(dst_logical, sorted_dst_comp_tasks, &((*logical2sorted_in_box)[dst_logical]),
-                  AllocateCpuThrdId);
+                  AllocateCpuThrdIdEvenly);
   }
   sorted_in_box = &(logical2sorted_in_box->at(dst_logical));
 
@@ -130,7 +129,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
   }
   CHECK_NOTNULL(selected_src_comp_task);
   BldSubTskGphByOneToOne(nullptr, nullptr, {selected_src_comp_task}, sorted_dst_comp_tasks, nullptr,
-                         nullptr, Mut121BufTask, AllocateCpuThrdId);
+                         nullptr, Mut121BufTask, AllocateCpuThrdIdEvenly);
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
@@ -170,7 +169,7 @@ TaskNode* TaskGraph::Build121BufTo(
       TaskNode* src_cpu =
           Build121BufTo(src, src->machine_id(), cpu_mem_zone_id, Get121BufTask, Set121BufTask);
       CopyCommNetTaskNode* copy_comm_net = NewNode<CopyCommNetTaskNode>();
-      copy_comm_net->Init(dst_machine_id);
+      copy_comm_net->Init(dst_machine_id, src_cpu->machine_id());
       Connect<TaskNode>(src_cpu, NewEdge(), copy_comm_net);
       return Set121BufTask(dst_machine_id, dst_mem_zone_id, copy_comm_net);
     } else {
@@ -216,7 +215,7 @@ TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
 void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
-  copy_comm_net_task->Init(dst->machine_id());
+  copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
   Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
   Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
 }
@@ -224,7 +223,7 @@ void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
 void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
                                const std::vector<CompTaskNode*>& sorted_comp_tasks,
                                std::vector<TaskNode*>* sorted_out_box,
-                               std::function<int64_t(const TaskNode*)> AllocateCpuThrdId) {
+                               std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = AddCopyD2HTaskIfNotCpu(comp_task);
@@ -233,7 +232,7 @@ void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
   for (const auto& pair : machine_id2bound_task) {
     OutBoxingTaskNode* boxing_task = NewNode<OutBoxingTaskNode>();
     boxing_task->set_machine_id(pair.second.front()->machine_id());
-    boxing_task->set_thrd_id(AllocateCpuThrdId(boxing_task));
+    boxing_task->set_thrd_id(AllocateCpuThrdIdEvenly(boxing_task));
     for (TaskNode* task : pair.second) { Connect<TaskNode>(task, NewEdge(), boxing_task); }
     sorted_out_box->push_back(boxing_task);
   }
@@ -242,7 +241,7 @@ void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
 void TaskGraph::BuildInBoxing(const LogicalNode* logical,
                               const std::vector<CompTaskNode*>& sorted_comp_tasks,
                               std::vector<TaskNode*>* sorted_in_box,
-                              std::function<int64_t(const TaskNode*)> AllocateCpuThrdId) {
+                              std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = AddCopyH2DTaskIfNotCpu(comp_task);
@@ -251,7 +250,7 @@ void TaskGraph::BuildInBoxing(const LogicalNode* logical,
   for (const auto& pair : machine_id2bound_task) {
     InBoxingTaskNode* boxing_task = NewNode<InBoxingTaskNode>();
     boxing_task->set_machine_id(pair.second.front()->machine_id());
-    boxing_task->set_thrd_id(AllocateCpuThrdId(boxing_task));
+    boxing_task->set_thrd_id(AllocateCpuThrdIdEvenly(boxing_task));
     for (TaskNode* task : pair.second) { Connect<TaskNode>(boxing_task, NewEdge(), task); }
     sorted_in_box->push_back(boxing_task);
   }

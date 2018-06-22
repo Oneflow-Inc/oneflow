@@ -15,6 +15,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
 
   CommNetDeviceCtx(void* actor_read_id)
       : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id), read_id_(nullptr) {}
+  std::unique_ptr<DeviceCtx> Copy() const { UNIMPLEMENTED(); }
 
   void AddCallBack(std::function<void()> callback) const override {
     Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);
@@ -70,8 +71,7 @@ void CopyCommNetActor::Act() {
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
-  Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
-  void* writeable_token = writeable_blob->comm_net_token();
+  void* writeable_token = GetCurSoleWriteableRegst()->comm_net_token();
   // Async
   void* read_id =
       Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);

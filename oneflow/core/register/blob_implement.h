@@ -19,14 +19,12 @@ class BlobImpl final : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : BlobImpl(regst, blob_desc, mem_ptr, nullptr) {}
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token)
-      : Blob(regst, blob_desc, mem_ptr, comm_net_token) {
+      : Blob(regst, blob_desc, mem_ptr) {
     CHECK_EQ(NDIMS, blob_desc_ptr()->shape().NumAxes());
     for (int32_t d = 0; d < NDIMS; ++d) { dsizes_[d] = blob_desc_ptr()->shape().At(d); }
     tensor_ =
-        of_make_unique<EigenTensor<T, NDIMS>>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
-    const_tensor_ = of_make_unique<EigenConstTensor<T, NDIMS>>(
+        std::make_unique<EigenTensor<T, NDIMS>>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
+    const_tensor_ = std::make_unique<EigenConstTensor<T, NDIMS>>(
         reinterpret_cast<const T*>(memory_ptr()), dsizes_);
   }
   ~BlobImpl() = default;

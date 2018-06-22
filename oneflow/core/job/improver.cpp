@@ -152,7 +152,20 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
+std::function<void(const std::list<int64_t>&)> MakeSetterAddCtrlRegst(Plan* plan) { TODO(); }
+
+void ForEachMemSharingCriticalSection(
+    const Plan& plan, const std::function<void(const std::list<int64_t>&)>& Handler) {
+  TODO();
+}
+
 }  // namespace
+
+Plan Improver::AddCtrlRegstForMemSharingCriticalSection(const Plan& plan) const {
+  Plan ret(plan);
+  ForEachMemSharingCriticalSection(plan, MakeSetterAddCtrlRegst(&ret));
+  return ret;
+}
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
@@ -270,7 +283,7 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
-  auto act_events = of_make_unique<std::list<ActEvent>>();
+  auto act_events = std::make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
   Plan plan(naive_plan);
