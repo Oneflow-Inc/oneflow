@@ -478,9 +478,12 @@ void Actor::AsyncSendCtrlRegstMsg() {
 void Actor::AsyncSendEORDMsgForAllProducedCtrlRegstDesc() {
   for (auto& pair : produced_ctrl_regst_) {
     CHECK(!pair.second.empty());
-    auto& regst = pair.second.front();
+    Regst* regst = pair.second.front().get();
     CHECK_EQ(regst->consumers_actor_id().size(), 1);
-    AsyncSendMsg(ActorMsg::BuildEordMsg(regst->consumers_actor_id()[0], regst->regst_desc_id()));
+    device_ctx_->AddCallBack([regst]() {
+      Global<ActorMsgBus>::Get()->SendMsg(
+          ActorMsg::BuildEordMsg(regst->consumers_actor_id()[0], regst->regst_desc_id()));
+    });
   }
 }
 
