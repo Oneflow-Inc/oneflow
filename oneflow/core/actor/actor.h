@@ -21,8 +21,6 @@ bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool NeedModelSave(int64_t model_version_id);
 
-class RecordActEvent;
-
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
@@ -155,7 +153,7 @@ class Actor {
   int64_t out_delay_regst_desc_id_;
 
   // Profile
-  std::vector<ActEvent> act_events_;
+  std::vector<ActEvent*> act_events_;
 };
 
 class ScopedActEventRecorder {
