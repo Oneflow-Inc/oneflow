@@ -25,7 +25,7 @@ Actor::~Actor() {
 }
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
-  TaskProto mut_task_proto = task_proto;
+  TaskProto non_ctrl_task_proto = task_proto;
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -40,7 +40,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   }
   for (const auto& pair : task_proto.produced_regst_desc()) {
     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
-      mut_task_proto.mutable_produced_regst_desc()->erase(pair.first);
+      non_ctrl_task_proto.mutable_produced_regst_desc()->erase(pair.first);
       Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
         produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
       });
@@ -55,7 +55,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   remaining_eord_cnt_ = 0;
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     if (pair.first == "in_ctrl") {
-      mut_task_proto.mutable_consumed_regst_desc_id()->erase(pair.first);
+      non_ctrl_task_proto.mutable_consumed_regst_desc_id()->erase(pair.first);
       for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
         CHECK(consumed_ctrl_regst_.insert({regst_desc_id, {}}).second);
       }
@@ -91,10 +91,10 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   consumed_ctrl_regst_cnt_ = 0;
   is_naive_readable_eord_ = false;
   is_consumed_ctrl_eord_ = false;
-  TakeOverNaiveConsumed(mut_task_proto.consumed_regst_desc_id());
+  TakeOverNaiveConsumed(non_ctrl_task_proto.consumed_regst_desc_id());
   last_act_start_time_ = -1.0;
   act_interval_acc_ = 0.0;
-  VirtualActorInit(mut_task_proto);
+  VirtualActorInit(non_ctrl_task_proto);
 }
 
 DeviceType Actor::GetDeviceType() const {
