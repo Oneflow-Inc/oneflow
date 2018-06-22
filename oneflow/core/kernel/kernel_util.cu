@@ -242,7 +242,7 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
   char* host_raw_dptr = nullptr;                                    \
   CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
   std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(NewBlob(nullptr, &blob_desc, host_raw_dptr, nullptr, DeviceType::kGPU));
+  host_blob.reset(NewBlob(nullptr, &blob_desc, host_raw_dptr, DeviceType::kGPU));
 
 // asynchronous copy to device
 #define AFTER_CPU_INITIALIZE()                                                          \

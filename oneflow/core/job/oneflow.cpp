@@ -27,8 +27,10 @@ std::string BuildVersionString() {
       {"Jul", "07"}, {"Aug", "08"}, {"Sep", "09"}, {"Oct", "10"}, {"Nov", "11"}, {"Dec", "12"},
   };
   static const std::string date_str(__DATE__);
-  return OF_VERSION " (" + date_str.substr(7) + month_word2num.at(date_str.substr(0, 3))
-         + date_str.substr(4, 2) + "." + __TIME__ + ")";
+  std::string day = date_str.substr(4, 2);
+  StringReplace(&day, ' ', '0');
+  return OF_VERSION " (" + date_str.substr(7) + month_word2num.at(date_str.substr(0, 3)) + day + "."
+         + __TIME__ + ")";
 }
 
 std::string GetAmdCtrlKey(int64_t machine_id) {
@@ -90,13 +92,13 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<IDMgr>::New();
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
+  Global<IDMgr>::New();
   // Compile
   Plan plan;
   if (machine_ctx->IsThisMachineMaster()) {
@@ -116,7 +118,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     const AvailableMemDesc& amd = PullAvailableMemDesc();
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     Improver improver(amd);
-    plan = improver.Improve(plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    plan =
+        improver.Improve(plan, JoinPath(LogDir(), ActEventLogger::experiment_prefix_
+                                                      + ActEventLogger::act_event_bin_filename_));
     Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
@@ -127,7 +131,12 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(plan); }
+  if (machine_ctx->IsThisMachineMaster()) {
+    if (Global<JobDesc>::Get()->record_act_event()) {
+      Global<Profiler>::Get()->Profile(plan,
+                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    }
+  }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();

@@ -8,6 +8,7 @@
 namespace oneflow {
 
 struct RegstStatus {
+  int64_t regst_desc_id;
   int64_t piece_id;
   int64_t model_version_id;
   int64_t act_id;
@@ -18,7 +19,7 @@ struct RegstStatus {
 class Regst final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Regst);
-  ~Regst() { deleter_(); }
+  ~Regst();
 
   // Getters
   const RegstStatus& status() const { return status_; }
@@ -27,8 +28,11 @@ class Regst final {
   int64_t act_id() const { return status_.act_id; }
   int32_t col_id() const { return status_.col_id; }
   int32_t max_col_id() const { return status_.max_col_id; }
+  int64_t regst_desc_id() const {
+    CHECK_NE(status_.regst_desc_id, -1);
+    return status_.regst_desc_id;
+  }
 
-  int64_t regst_desc_id() const { return regst_desc_->regst_desc_id(); }
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
   const RtRegstDesc* regst_desc() const { return regst_desc_; }
@@ -44,7 +48,15 @@ class Regst final {
 
   bool IsMaxCol() const { return col_id() == max_col_id(); }
 
+  void* comm_net_token() const { return comm_net_token_; }
+
   // Setters
+  void set_regst_desc(const RtRegstDesc* regst_desc) {
+    CHECK(regst_desc_ == nullptr);
+    regst_desc_ = regst_desc;
+    status_.regst_desc_id = regst_desc_->regst_desc_id();
+  }
+
   void set_piece_id(int64_t val) { status_.piece_id = val; }
   void set_model_version_id(int64_t val) { status_.model_version_id = val; }
   void set_act_id(int64_t val) { status_.act_id = val; }
@@ -55,9 +67,9 @@ class Regst final {
   friend class RegstMgr;
   Regst();
 
+  void* comm_net_token_;
   RegstStatus status_;
   const RtRegstDesc* regst_desc_;
-  std::function<void()> deleter_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobIf>> lbi2blob_;
   std::unique_ptr<BlobIf> packed_blob_;
 };

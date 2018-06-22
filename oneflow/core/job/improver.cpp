@@ -4,6 +4,7 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/actor/act_event_logger.h"
 
 namespace oneflow {
 
@@ -35,17 +36,6 @@ uint64_t CalcRegstNum(
   regst_num = std::max(regst_num, static_cast<uint64_t>(regst_desc.min_register_num()));
   regst_num = std::min(regst_num, static_cast<uint64_t>(regst_desc.max_register_num()));
   return regst_num;
-}
-
-void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events) {
-  PersistentInStream in_stream(LocalFS(), act_event_filepath, 0, false, false);
-  int64_t act_event_size;
-  while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
-    std::vector<char> buffer(act_event_size);
-    CHECK(!in_stream.Read(buffer.data(), act_event_size));
-    act_events->emplace_back();
-    act_events->back().ParseFromArray(buffer.data(), act_event_size);
-  }
 }
 
 uint64_t CalcMemoryConsumed(
@@ -141,13 +131,6 @@ double IIScale4Actor(TaskType task_type, double default_ii_scale) {
   return default_ii_scale;
 }
 
-void PushAvgActTimeToProfiler(const ActGraph& act_graph) {
-  for (const auto& pair : act_graph.actor_id2total_act_time()) {
-    double act_time = pair.second / act_graph.actor_id2act_cnt().at(pair.first);
-    Global<Profiler>::Get()->PushAvgActTime(pair.first, act_time);
-  }
-}
-
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
     const ActGraph& graph) {
   std::shared_ptr<HashMap<int64_t, HashMap<int64_t, double>>> regst_desc_id2consumer_id2ii_scale(
@@ -170,7 +153,20 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
+std::function<void(const std::list<int64_t>&)> MakeSetterAddCtrlRegst(Plan* plan) { TODO(); }
+
+void ForEachMemSharingCriticalSection(
+    const Plan& plan, const std::function<void(const std::list<int64_t>&)>& Handler) {
+  TODO();
+}
+
 }  // namespace
+
+Plan Improver::AddCtrlRegstForMemSharingCriticalSection(const Plan& plan) const {
+  Plan ret(plan);
+  ForEachMemSharingCriticalSection(plan, MakeSetterAddCtrlRegst(&ret));
+  return ret;
+}
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
   int64_t mem_size = amd_.machine_amd(machine_id).zone_size(memory_zone_id);
@@ -291,7 +287,6 @@ Plan Improver::Improve(const Plan& naive_plan, const std::string& act_event_file
   auto act_events = std::make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
-  PushAvgActTimeToProfiler(act_graph);
   Plan plan(naive_plan);
   MemoryLimitedAllocate(act_graph, MakeSetterSetPlanRegstNum(&plan));
   return plan;

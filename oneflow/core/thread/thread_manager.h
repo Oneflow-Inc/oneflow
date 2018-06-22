@@ -21,7 +21,7 @@ class ThreadMgr final {
 
  private:
   friend class Global<ThreadMgr>;
-  ThreadMgr(const Plan& plan);
+  explicit ThreadMgr(const Plan& plan);
 
   std::vector<Thread*> threads_;
   std::unique_ptr<ThreadPool> compute_thread_pool_;

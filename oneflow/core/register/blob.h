@@ -56,8 +56,6 @@ class Blob : public BlobIf {
     return static_cast<T*>(dptr_);
   }
 
-  void* comm_net_token() const { return comm_net_token_; }
-
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
@@ -83,9 +81,7 @@ class Blob : public BlobIf {
   const MemoryCase& mem_case() const;
 
  protected:
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : Blob(regst, blob_desc, mem_ptr, nullptr) {}
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr);
 
  private:
   template<typename T>
@@ -100,13 +96,11 @@ class Blob : public BlobIf {
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;
-  void* comm_net_token_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
 };
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, void* comm_net_token,
-              DeviceType device_type);
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);
 
 class RecordBlobIf : public BlobIf {
  public:

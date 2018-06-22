@@ -37,7 +37,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
       CHECK(device_type_ == DeviceType::kInvalidDevice || device_type_ == DeviceType::kGPU);
       device_type_ = DeviceType::kGPU;
     }
-    int64_t machine_id = Global<IDMgr>::Get()->MachineID4MachineName(mchn_name);
+    int64_t machine_id = Global<JobDesc>::Get()->MachineID4MachineName(mchn_name);
     sorted_machine_ids_.push_back(machine_id);
     int64_t minus_pos = device_id_str.find("-");
     if (minus_pos == std::string::npos) {

@@ -43,7 +43,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   bool HasOpWithModelOrConstModelBlob() const;
   bool HasOpWithModelBlob() const;
   bool HasOpWithForwardModelBlob() const;
-  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdId,
+  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
                               std::function<void(CompTaskNode*)>) const;
 
   // model split
@@ -52,8 +52,14 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
+  void set_area_id(int64_t val) {
+    CHECK_NE(val, 0);
+    area_id_ = val;
+  }
+  int64_t area_id() const { return area_id_; }
+
  protected:
-  LogicalNode() : main_model_parallel_(nullptr) {}
+  LogicalNode() : main_model_parallel_(nullptr), area_id_(0) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
@@ -68,6 +74,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   HashSet<LogicalBlobId> lbi_boxing_;
   HashSet<LogicalBlobId> lbi_121_;
+  int64_t area_id_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -78,7 +85,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
    std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
        Mut121BufTask,                                                                     \
-   std::function<int64_t(const TaskNode*)> AllocateCpuThrdId)
+   std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
 
 class TaskGraph;
 using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();

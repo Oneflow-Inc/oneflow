@@ -12,7 +12,13 @@ bool IsBackwardTaskType(TaskType tt) {
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
-TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
+TaskNode::TaskNode()
+    : machine_id_(-1),
+      thrd_id_(-1),
+      task_id_(-1),
+      area_id_(0),
+      chain_id_(-1),
+      order_in_graph_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -51,6 +57,21 @@ void TaskNode::set_thrd_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
+void TaskNode::set_area_id(int64_t val) {
+  CHECK_EQ(area_id_, 0);
+  area_id_ = val;
+}
+
+void TaskNode::set_chain_id(int64_t val) {
+  CHECK_EQ(chain_id_, -1);
+  chain_id_ = val;
+}
+
+void TaskNode::set_order_in_graph(int64_t val) {
+  CHECK_EQ(order_in_graph_, -1);
+  order_in_graph_ = val;
+}
+
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
     for (std::weak_ptr<RegstDesc> regst : pair.second) {
@@ -69,7 +90,7 @@ void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->NumOfLbi() == 0;
+        return it->second->regst_desc_type().has_normal_regst_desc() && it->second->NumOfLbi() == 0;
       });
 }
 
@@ -81,16 +102,16 @@ std::string TaskNode::VisualStr() const {
   return ss.str();
 }
 
-bool TaskNode::IsMeaningLess() {
-  ClearOutOfDateConsumedRegst();
-  return produced_regsts_.empty() && consumed_regsts_.empty();
-}
+bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
+  task_proto->mutable_task_set_info()->set_area_id(area_id_);
+  task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
+  task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false, parallel_ctx(),
                            task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
@@ -119,6 +140,17 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
+void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
+  const auto& dst_ancestors = dst_node->ancestors();
+  if (dst_ancestors.find(this) != dst_ancestors.end()) return;
+  RegstDescTypeProto regst_desc_type;
+  regst_desc_type.mutable_ctrl_regst_desc();
+  auto regst = NewProducedRegst(1, kMaxRegisterNum, regst_desc_type);
+  std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
+  CHECK(produced_regsts_.emplace(name, regst).second);
+  dst_node->ConsumeRegst("in_ctrl", regst);
+}
+
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
@@ -129,11 +161,27 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
 
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
                                                   int32_t max_register_num) {
+  RegstDescTypeProto regst_desc_type;
+  regst_desc_type.mutable_normal_regst_desc();
+  return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
+}
+
+std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(int32_t min_register_num,
+                                                      int32_t max_register_num,
+                                                      const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
+  *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   InitProducedRegstMemCase(regst.get());
+  return regst;
+}
+
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+                                                  int32_t max_register_num,
+                                                  const RegstDescTypeProto& regst_desc_type) {
+  auto regst = NewProducedRegst(min_register_num, max_register_num, regst_desc_type);
   CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
@@ -190,16 +238,14 @@ void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
     RegstDesc* produced_regst = pair.second.get();
     produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
-    bool is_in_same_stream = true;
+    bool in_same_stream = true;
     for (const TaskNode* consumer : produced_regst->consumers()) {
       if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
-        is_in_same_stream = false;
+        in_same_stream = false;
         break;
       }
     }
-    if (is_in_same_stream) {
-      produced_regst->UpdtMaxRegstNumIfNeed(produced_regst->min_register_num());
-    } else {
+    if (in_same_stream == false) {  // TODO: delete this hack
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
