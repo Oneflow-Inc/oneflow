@@ -55,6 +55,7 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
+    if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
   auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
     return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
