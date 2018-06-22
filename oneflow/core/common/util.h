@@ -27,6 +27,17 @@
 
 DECLARE_string(log_dir);
 
+namespace std {
+template<typename T0, typename T1>
+struct hash<std::pair<T0, T1>> {
+  std::size_t operator()(const std::pair<T0, T1>& p) const {
+    auto h0 = std::hash<T0>{}(p.first);
+    auto h1 = std::hash<T1>{}(p.second);
+    return h0 ^ h1;
+  }
+};
+}  // namespace std
+
 namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
@@ -86,16 +97,6 @@ class Global final {
   };                                                                \
   OF_PP_CAT(CommandT, __LINE__) OF_PP_CAT(g_command_var, __LINE__); \
   }
-
-// Only for pairs of std::hash-able types for simplicity.
-struct pair_hash {
-  template<class T1, class T2>
-  std::size_t operator()(const std::pair<T1, T2>& p) const {
-    auto h1 = std::hash<T1>{}(p.first);
-    auto h2 = std::hash<T2>{}(p.second);
-    return h1 ^ h2;
-  }
-};
 
 template<typename T>
 bool operator==(const std::weak_ptr<T>& lhs, const std::weak_ptr<T>& rhs) {

@@ -54,15 +54,6 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
-void TaskGraph::CollectTaskNodesInSameType() {
-  std::map<AreaType, HashSet<TaskNode*>> path_type2task_nodes;
-  std::map<int64_t, HashSet<TaskNode*>> stream_id2task_nodes;
-  ForEachNode([&](TaskNode* node) {
-    CHECK(path_type2task_nodes[node->GetAreaType()].insert(node).second);
-    CHECK(stream_id2task_nodes[node->GlobalWorkStreamId()].insert(node).second);
-  });
-}
-
 void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();
 
@@ -83,7 +74,9 @@ void TaskGraph::FindChainsInSameStream() {
   }
 }
 
-void TaskGraph::AddOrderCtrlEdgeInSameChain() {
+void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
+  FindChainsInSameStream();
+
   HashMap<int64_t, TaskNode*> chain_id2node;
   for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
@@ -97,28 +90,18 @@ void TaskGraph::AddOrderCtrlEdgeInSameChain() {
   }
 }
 
-void TaskGraph::AddMutexCtrlEdgeInSameChain() {
-  // TODO
-}
+void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
 
-void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
-  // TODO
-}
-
-bool CycleEdge(TaskNode* src, TaskNode* dst) {
-  return src->GetTaskType() == TaskType::kNormalMdUpdt
-         && (dst->GetTaskType() == TaskType::kNormalForward
-             || dst->GetTaskType() == TaskType::kNormalBackward);
-}
+void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() { UNIMPLEMENTED(); }
 
 void TaskGraph::CollectAncestorsForEachNode() {
   std::vector<TaskNode*> ordered_nodes;
-  UncyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
+  AcyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
   for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
     TaskNode* task_node = *it;
     task_node->mut_ancestors().clear();
     task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (CycleEdge(node_on_in_edge, task_node)) return;
+      if (IsBackEdge(node_on_in_edge, task_node)) return;
       task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
                                         node_on_in_edge->ancestors().end());
       task_node->mut_ancestors().insert(node_on_in_edge);
@@ -127,20 +110,20 @@ void TaskGraph::CollectAncestorsForEachNode() {
   }
 }
 
-void TaskGraph::UncyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
+void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
     if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
   });
   auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (CycleEdge(node_on_in_edge, node)) return;
+      if (IsBackEdge(node_on_in_edge, node)) return;
       handler(const_cast<TaskNode*>(node_on_in_edge));
     });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (CycleEdge(node, node_on_out_edge)) return;
+      if (IsBackEdge(node, node_on_out_edge)) return;
       handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
@@ -372,6 +355,12 @@ void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
   } else {
     AddCopyCommNetTask(src, dst);
   }
+}
+
+bool IsBackEdge(TaskNode* src, TaskNode* dst) {
+  return src->GetTaskType() == TaskType::kNormalMdUpdt
+         && (dst->GetTaskType() == TaskType::kNormalForward
+             || dst->GetTaskType() == TaskType::kNormalBackward);
 }
 
 }  // namespace oneflow

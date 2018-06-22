@@ -12,7 +12,7 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
   task2chain_it->clear();
   for (const auto& task_node : ordered_nodes) {
     chain_list->emplace_back();
-    task2chain_it->insert({task_node, --chain_list->end()});
+    task2chain_it->insert({task_node, chain_list->begin()});
     Chain& cur_chain = chain_list->back();
     cur_chain.ancestors.clear();
     cur_chain.ancestors_and_this.clear();
@@ -25,14 +25,14 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
   }
 }
 
-bool BeConnected(ChainIt src_chain_it, ChainIt dst_chain_it, Task2ChainItMap* task2chain_it) {
+bool IsConnected(ChainIt src_chain_it, ChainIt dst_chain_it, const Task2ChainItMap& task2chain) {
   for (auto& dst_task_node : dst_chain_it->nodes) {
     for (auto& in_edge : dst_task_node->in_edges()) {
       auto src_task_node = in_edge->src_node();
-      if (CycleEdge(src_task_node, dst_task_node)) continue;
-      auto src_chain_it_it = task2chain_it->find(src_task_node);
-      if (src_chain_it_it != task2chain_it->end()) {
-        if (src_chain_it == src_chain_it_it->second) return true;
+      if (IsBackEdge(src_task_node, dst_task_node)) { continue; }
+      auto src_chain_it_it = task2chain.find(src_task_node);
+      if (src_chain_it_it != task2chain.end()) {
+        if (src_chain_it == src_chain_it_it->second) { return true; }
       }
     }
   }
@@ -42,7 +42,7 @@ bool BeConnected(ChainIt src_chain_it, ChainIt dst_chain_it, Task2ChainItMap* ta
 bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (BeConnected(lhs, rhs, task2chain_it) && lhs->ancestors_and_this == rhs->ancestors) {
+    if (IsConnected(lhs, rhs, *task2chain_it) && lhs->ancestors_and_this == rhs->ancestors) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
@@ -58,7 +58,7 @@ bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
                            Task2ChainItMap* task2chain_it) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (!BeConnected(lhs, rhs, task2chain_it) && lhs->ancestors == rhs->ancestors) {
+    if (!IsConnected(lhs, rhs, *task2chain_it) && lhs->ancestors == rhs->ancestors) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
@@ -74,7 +74,7 @@ bool TryMerge(
     std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it,
     std::function<bool(std::list<ChainIt>& chains, ChainIt cur_it, Task2ChainItMap* task2chain_it)>
         DoMerge) {
-  HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>, pair_hash> stream_area2chains;
+  HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>> stream_area2chains;
   bool merge_happened = false;
   for (auto cur_chain_it = chain_list->begin(); cur_chain_it != chain_list->end();) {
     std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
@@ -89,7 +89,7 @@ bool TryMerge(
     }
   }
   return merge_happened;
-}  // namespace
+}
 
 void MergeChains(std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it) {
   while (TryMerge(chain_list, task2chain_it, DoMergeWithConnect)
@@ -109,7 +109,7 @@ std::string ChainNode::VisualStr() const {
 
 ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   std::vector<TaskNode*> ordered_task_nodes;
-  task_gph.UncyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
+  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
 
   InitChains(ordered_task_nodes, &chain_list_, &task_node2chain_it_);
   MergeChains(&chain_list_, &task_node2chain_it_);
