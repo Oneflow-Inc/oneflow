@@ -70,7 +70,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
-  void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
+  void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
 
   // Area type
   void SetAreaType(AreaType area_type) {
@@ -86,6 +86,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                                           int32_t max_register_num);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num, const RegstDescTypeProto&);
+  std::shared_ptr<RegstDesc> NewProducedRegst(int32_t min_register_num, int32_t max_register_num,
+                                              const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);

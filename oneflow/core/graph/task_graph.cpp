@@ -91,7 +91,7 @@ void TaskGraph::AddOrderCtrlEdgeInSameChain() {
     if (iter == chain_id2node.end()) {
       CHECK(chain_id2node.emplace(chain_id, node).second);
     } else {
-      iter->second->BuildDelayRegstDescIfNeed(node);
+      iter->second->BuildCtrlRegstDescIfNeed(node);
       iter->second = node;
     }
   }
