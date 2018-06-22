@@ -124,7 +124,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
-  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_delay_regst_desc()) {
+  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
     UNIMPLEMENTED();
@@ -153,7 +153,7 @@ void InitCtrlRegstDesc(int64_t produced_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_min_register_num(1);
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);
-  ctrl_regst_proto->mutable_regst_desc_type()->mutable_delay_regst_desc();
+  ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
   MemSharingInfo* mem_sharing_info = ctrl_regst_proto->mutable_mem_sharing_info();
   mem_sharing_info->set_enable_mem_sharing(false);

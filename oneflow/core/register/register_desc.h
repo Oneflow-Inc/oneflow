@@ -49,6 +49,7 @@ class RegstDesc final {
   MemoryCase* mut_mem_case() { return &mem_case_; }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
+  const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }

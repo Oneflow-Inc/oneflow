@@ -36,8 +36,6 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   explicit PlanTaskGraph(const Plan& plan);
   ~PlanTaskGraph() = default;
 
-  void ComputeLifetimeSameStreamActorIds(const RegstDescProto* regst_desc,
-                                         HashSet<int64_t>* lifetime_same_stream_actor_ids) const;
   void ComputeLifetimeSameChainActorIds(const RegstDescProto* regst_desc,
                                         HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
   void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;

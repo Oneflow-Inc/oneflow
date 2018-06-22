@@ -121,7 +121,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     const AvailableMemDesc& amd = PullAvailableMemDesc();
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     plan = Improver().Improve(amd, naive_plan,
-                              JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+                              JoinPath(LogDir(), ActEventLogger::experiment_prefix_
+                                                     + ActEventLogger::act_event_bin_filename_));
     Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
@@ -132,7 +133,12 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   // Runtime
   { Runtime run(plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Get()->Profile(plan); }
+  if (machine_ctx->IsThisMachineMaster()) {
+    if (Global<JobDesc>::Get()->record_act_event()) {
+      Global<Profiler>::Get()->Profile(plan,
+                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    }
+  }
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();

@@ -15,16 +15,18 @@ class ActEventLogger final {
 
   void PrintActEventToLogDir(const ActEvent&);
 
+  static const std::string experiment_prefix_;
   static const std::string act_event_bin_filename_;
   static const std::string act_event_txt_filename_;
 
  private:
   friend class Global<ActEventLogger>;
-  ActEventLogger();
+  ActEventLogger(bool is_experiment_phase);
 
   PersistentOutStream bin_out_stream_;
   PersistentOutStream txt_out_stream_;
 };
+void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events);
 
 }  // namespace oneflow
 
