@@ -117,6 +117,7 @@ class Actor {
   }
 
  private:
+  friend class ScopedActEventRecorder;
   bool IsReadReady();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
@@ -152,8 +153,17 @@ class Actor {
   int64_t out_delay_regst_desc_id_;
 
   // Profile
-  double last_act_start_time_;
-  double act_interval_acc_;
+  std::vector<ActEvent*> act_events_;
+};
+
+class ScopedActEventRecorder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
+  explicit ScopedActEventRecorder(Actor* actor);
+  ~ScopedActEventRecorder();
+
+ private:
+  Actor* actor_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

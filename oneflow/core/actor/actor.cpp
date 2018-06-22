@@ -17,10 +17,42 @@ bool NeedModelSave(int64_t model_version_id) {
          || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
 }
 
+ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor) {
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    ActEvent* act_event = new ActEvent();
+    actor->act_events_.emplace_back(act_event);
+    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
+    act_event->set_actor_id(actor_->actor_id());
+    act_event->set_work_stream_id(actor_->GetGlobalWorkStreamId());
+    act_event->set_act_id(actor_->act_id_);
+    act_event->set_ready_time(GetCurTime());
+    actor_->ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      (actor_->Actor::SetReadableRegstInfo)(readable_regst, info);
+    });
+    actor_->ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      actor_->SetReadableRegstInfo(readable_regst, info);
+    });
+    actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
+  }
+}
+
+ScopedActEventRecorder::~ScopedActEventRecorder() {
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    ActEvent* act_event = actor_->act_events_.back();
+    actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
+  }
+}
+
 Actor::~Actor() {
-  if (Global<RuntimeCtx>::Get()->is_experiment_phase() == false && act_id_ >= 0) {
-    double avg_act_interval = act_interval_acc_ / (act_id_ + 1);
-    Global<CtrlClient>::Get()->PushAvgActInterval(actor_id_, avg_act_interval);
+  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+    for (const auto& act_event : act_events_) {
+      Global<CtrlClient>::Get()->PushActEvent(*act_event);
+      delete act_event;
+    }
+  } else {
+    CHECK_EQ(act_events_.size(), 0);
   }
 }
 
@@ -82,8 +114,6 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
     out_delay_regst_desc_id_ = -1;
   }
   TakeOverNaiveConsumed(task_proto.consumed_regst_desc_id());
-  last_act_start_time_ = -1.0;
-  act_interval_acc_ = 0.0;
   VirtualActorInit(task_proto);
 }
 
@@ -215,28 +245,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady()) {
     act_id_ += 1;
-    ActEvent* act_event = nullptr;
-    if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
-      act_event = new ActEvent;
-      act_event->set_actor_id(actor_id_);
-      act_event->set_act_id(act_id_);
-      act_event->set_work_stream_id(GetGlobalWorkStreamId());
-      ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        Actor::SetReadableRegstInfo(readable_regst, info);
-      });
-      ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        SetReadableRegstInfo(readable_regst, info);
-      });
-      device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-    }
-    double cur_time = GetCurTime();
-    if (last_act_start_time_ > 0.0) {
-      double interval = cur_time - last_act_start_time_;
-      act_interval_acc_ += interval;
-    }
-    last_act_start_time_ = cur_time;
+    ScopedActEventRecorder scope_recorder(this);
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     Act(&IsNaiveAllowedReturnToProducer);
     for (auto& pair : naive_readable_regst_) {
@@ -245,13 +254,6 @@ void Actor::ActUntilFail() {
       AsyncSendRegstMsgToProducer(pair.second.front());
       pair.second.pop_front();
       if (pair.second.empty()) { naive_readable_regst_cnt_ -= 1; }
-    }
-    if (Global<RuntimeCtx>::Get()->is_experiment_phase()) {
-      device_ctx_->AddCallBack([act_event]() {
-        act_event->set_stop_time(GetCurTime());
-        Global<CtrlClient>::Get()->PushActEvent(*act_event);
-        delete act_event;
-      });
     }
   }
 }

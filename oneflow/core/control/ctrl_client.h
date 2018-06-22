@@ -45,8 +45,6 @@ class CtrlClient final {
   int32_t IncreaseCount(const std::string& k) { return IncreaseCount(k, 1); }
   void EraseCount(const std::string& k);
 
-  void PushAvgActInterval(int64_t actor_id, double avg_act_interval);
-
  private:
   friend class Global<CtrlClient>;
   CtrlClient();
