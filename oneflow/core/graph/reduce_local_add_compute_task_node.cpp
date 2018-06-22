@@ -34,9 +34,16 @@ void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
   }
 }
 
-void ReduceLocalAddCompTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  mem_case->mutable_host_mem();
-  if (device_type() == DeviceType::kGPU) { mem_case->mutable_host_mem()->set_used_by_device(true); }
+void ReduceLocalAddCompTaskNode::InitProducedRegstMemCase(RegstDesc* regst_desc) {
+  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  if (data_tmp_regst && regst_desc->regst_desc_id() == data_tmp_regst->regst_desc_id()) {
+    TaskNode::InitProducedRegstMemCase(regst_desc->mut_mem_case());
+  } else {
+    regst_desc->mut_mem_case()->mutable_host_mem();
+    if (device_type() == DeviceType::kGPU) {
+      regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device(true);
+    }
+  }
 }
 
 void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
