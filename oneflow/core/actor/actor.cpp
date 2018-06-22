@@ -477,13 +477,10 @@ void Actor::AsyncSendCtrlRegstMsg() {
 
 void Actor::AsyncSendEORDMsgForAllProducedCtrlRegstDesc() {
   for (auto& pair : produced_ctrl_regst_) {
-    const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
-    device_ctx_->AddCallBack([regst_desc]() {
-      for (int64_t consumer : regst_desc->consumers_actor_id()) {
-        ActorMsg msg = ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id());
-        Global<ActorMsgBus>::Get()->SendMsg(std::move(msg));
-      }
-    });
+    CHECK(!pair.second.empty());
+    auto& regst = pair.second.front();
+    CHECK_EQ(regst->consumers_actor_id().size(), 1);
+    AsyncSendMsg(ActorMsg::BuildEordMsg(regst->consumers_actor_id()[0], regst->regst_desc_id()));
   }
 }
 
