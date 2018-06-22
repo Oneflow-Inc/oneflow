@@ -118,6 +118,7 @@ class Actor {
   }
 
  private:
+  friend class ScopedActEventRecorder;
   bool IsReadReady();
   bool IsCtrlReady();
   int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
@@ -164,8 +165,17 @@ class Actor {
   bool is_consumed_ctrl_eord_;
 
   // Profile
-  double last_act_start_time_;
-  double act_interval_acc_;
+  std::vector<ActEvent*> act_events_;
+};
+
+class ScopedActEventRecorder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
+  explicit ScopedActEventRecorder(Actor* actor);
+  ~ScopedActEventRecorder();
+
+ private:
+  Actor* actor_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

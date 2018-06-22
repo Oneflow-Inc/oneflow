@@ -32,8 +32,9 @@ message RegstDescTypeProto {
 }
 
 message MemSharingProto {
-  required int32 mem_shared_id = 1;
-  required int32 used_order_value = 2;
+  required bool enable_mem_sharing = 1;
+  required int32 mem_shared_id = 2;
+  required int32 used_order_value = 3;
 }
 
 message RegstDescProto {
@@ -45,5 +46,5 @@ message RegstDescProto {
   required int32 register_num = 6;
   required MemoryCase mem_case = 7;
   required RegstDescTypeProto regst_desc_type = 8;
-  optional MemSharingProto mem_sharing_info = 9;
+  required MemSharingProto mem_sharing_info = 9;
 }
