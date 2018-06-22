@@ -76,6 +76,7 @@ class Blob : public BlobIf {
   void set_col_id(int32_t val);
   int32_t max_col_id() const;
   void set_max_col_id(int32_t val);
+  int64_t piece_id() const;
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
 
