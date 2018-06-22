@@ -57,6 +57,7 @@ class Actor {
   virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
   virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
   void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
+  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>);
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -119,6 +120,11 @@ class Actor {
  private:
   friend class ScopedActEventRecorder;
   bool IsReadReady();
+  bool IsCtrlReady();
+  int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
+  int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
+  void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
+  void AsyncSendCtrlRegstMsg();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
@@ -149,8 +155,14 @@ class Actor {
   HashMap<int64_t, std::deque<Regst*>> naive_readable_regst_;
   size_t naive_readable_regst_cnt_;
   bool is_naive_readable_eord_;
-  int64_t in_delay_regst_desc_id_;
-  int64_t out_delay_regst_desc_id_;
+
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
+  int64_t total_reading_ctrl_cnt_;
+  int64_t readable_ctrl_regst_desc_cnt_;
+  int64_t writeable_ctrl_regst_desc_cnt_;
+  bool is_consumed_ctrl_eord_;
 
   // Profile
   std::vector<ActEvent*> act_events_;
