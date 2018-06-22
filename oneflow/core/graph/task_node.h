@@ -70,9 +70,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                                           int32_t max_register_num);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num, const RegstDescTypeProto&);
-  std::shared_ptr<RegstDesc> NewUnnamedProducedRegst(int32_t min_register_num,
-                                                     int32_t max_register_num,
-                                                     const RegstDescTypeProto&);
+  std::shared_ptr<RegstDesc> NewProducedRegst(int32_t min_register_num, int32_t max_register_num,
+                                              const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
