@@ -223,7 +223,7 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
     CHECK_GE(remaining_eord_cnt_, 1);
     remaining_eord_cnt_ -= 1;
   } else if (msg.msg_type() == ActorMsgType::kRegstMsg) {
-    if (ProcessWriteableCtrlRegstMsg(msg) != 0 && ProcessReadableCtrlRegstMsg(msg) != 0) {
+    if (ProcessWriteableCtrlRegstMsg(msg) != 0) {
       if (TryUpdtStateAsProducedRegst(msg.regst()) != 0) {
         AsyncSendRegstMsgToProducer(msg.regst());
       }
