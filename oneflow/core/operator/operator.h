@@ -47,7 +47,8 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const { return op_attribute_.op_conf().device_type(); }
-  bool UseCudnn() const;
+  bool UseCudnn() const { return device_type() == DeviceType::kGPU && UseCudnnOnGpu(); }
+  bool UseCudnnOnGpu() const { return op_conf().use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 

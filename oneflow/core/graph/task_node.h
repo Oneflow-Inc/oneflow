@@ -24,6 +24,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id() const { return machine_id_; }
   int64_t thrd_id() const { return thrd_id_; }
   int64_t task_id() const { return task_id_; }
+  int64_t area_id() const { return area_id_; }
+  int64_t chain_id() const { return chain_id_; }
+  int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -34,6 +37,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   const HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>& consumed_regsts() {
     return consumed_regsts_;
   }
+  const HashSet<TaskNode*> ancestors() const { return ancestors_; }
+  HashSet<TaskNode*>& mut_ancestors() { return ancestors_; }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t LocalWorkStreamId() const;
@@ -44,6 +49,9 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Setters
   void set_machine_id(int64_t val);
   void set_thrd_id(int64_t val);
+  void set_area_id(int64_t val);
+  void set_chain_id(int64_t val);
+  void set_order_in_graph(int64_t val);
 
   // Build
   virtual void ProduceAllRegstsAndBindEdges() = 0;
@@ -62,7 +70,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual bool IsPersistence() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual int64_t MemZoneId121() const;  // TODO: there is bug for reduce task node
-  void BuildDelayRegstDescIfNeed(TaskNode* dst_node);
+  void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
 
  protected:
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
@@ -70,6 +78,8 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
                                           int32_t max_register_num);
   std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
                                           int32_t max_register_num, const RegstDescTypeProto&);
+  std::shared_ptr<RegstDesc> NewProducedRegst(int32_t min_register_num, int32_t max_register_num,
+                                              const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
@@ -82,7 +92,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   virtual void LockRegsts();
   virtual void FixRegisterNumRange();
 
-  int64_t AllocateLocalWorkStreamId();
+  virtual int64_t AllocateLocalWorkStreamId();
 
  private:
   void UpdateTaskId();
@@ -90,10 +100,15 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t machine_id_;
   int64_t thrd_id_;
   int64_t task_id_;
+  int64_t area_id_;
+  int64_t chain_id_;
+  int64_t order_in_graph_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
   HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
+
+  HashSet<TaskNode*> ancestors_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
