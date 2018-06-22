@@ -188,7 +188,7 @@ TaskNode* TaskGraph::Build121Step(
     }
   } else {
     last_mem_zone_id = cpu_mem_zone_id;
-    if (!allow_share_path || !(last_node = Get121BufTask(dst->machine_id(), cpu_mem_zone_id))) {
+    if (!allow_share_path || !(last_node = Get121BufTask(dst->machine_id(), last_mem_zone_id))) {
       last_node = AddCopyCommNetTaskBetween(cur_node, dst);
       Connect<TaskNode>(cur_node, NewEdge(), last_node);
     }
