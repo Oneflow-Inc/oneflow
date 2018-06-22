@@ -87,13 +87,12 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
 void ForEachSameColoredChainRegstDescWithConsumer(
     const PlanTaskGraph& graph, const Plan& plan,
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
-  std::list<HashSet<int64_t>> same_chain_actor_ids_list;
   auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
                                               HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->mem_sharing_info().enable_mem_sharing());
+    ret_actor_ids->clear();
     graph.ComputeLifetimeSameChainActorIds(regst_desc, ret_actor_ids);
-    same_chain_actor_ids_list.push_back(HashSet<int64_t>());
-    same_chain_actor_ids_list.back().insert(ret_actor_ids->begin(), ret_actor_ids->end());
+    graph.AssertThereIsOnlyOneTopoOrder(*ret_actor_ids);
   };
   auto ChainId4TaskId = [&](int64_t task_id) {
     return graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
@@ -103,9 +102,6 @@ void ForEachSameColoredChainRegstDescWithConsumer(
         RegstLifetimeGraph(regst_descs, ComputeLifetimeSameChainActorIds)
             .ForEachSameColoredRegstDescs(Handler);
       });
-  for (const auto& same_chain_actor_ids : same_chain_actor_ids_list) {
-    graph.AssertThereIsOnlyOneTopoOrder(same_chain_actor_ids);
-  }
 }
 
 void ForEachImprovedMemSharingInfo(
