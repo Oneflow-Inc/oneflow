@@ -16,7 +16,7 @@ TaskNode::TaskNode()
     : machine_id_(-1),
       thrd_id_(-1),
       task_id_(-1),
-      area_id_(-1),
+      area_id_(0),
       chain_id_(-1),
       order_in_graph_(-1) {}
 
@@ -55,6 +55,21 @@ void TaskNode::set_thrd_id(int64_t val) {
   CHECK_EQ(thrd_id_, -1);
   thrd_id_ = val;
   if (machine_id_ != -1) { UpdateTaskId(); }
+}
+
+void TaskNode::set_area_id(int64_t val) {
+  CHECK_EQ(area_id_, 0);
+  area_id_ = val;
+}
+
+void TaskNode::set_chain_id(int64_t val) {
+  CHECK_EQ(chain_id_, -1);
+  chain_id_ = val;
+}
+
+void TaskNode::set_order_in_graph(int64_t val) {
+  CHECK_EQ(order_in_graph_, -1);
+  order_in_graph_ = val;
 }
 
 void TaskNode::PinConsumedRegst() {
@@ -126,10 +141,8 @@ int64_t TaskNode::MemZoneId121() const {
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  for (auto& name2regst : produced_regsts_) {
-    const auto& consumers = name2regst.second->consumers();
-    if (consumers.find(dst_node) != consumers.end()) { return; }
-  }
+  const auto& dst_ancestors = dst_node->ancestors();
+  if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewProducedRegst(1, kMaxRegisterNum, regst_desc_type);
