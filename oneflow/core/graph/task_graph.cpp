@@ -279,12 +279,14 @@ TaskNode* TaskGraph::Build121Step(
       last_node = AddCopyH2DTaskTo(dst);
       Connect<TaskNode>(cur_node, NewEdge(), last_node);
     }
-  } else {
+  } else if (cur_node->machine_id() != dst->machine_id()) {
     last_mem_zone_id = cpu_mem_zone_id;
     if (!allow_share_path || !(last_node = Get121BufTask(dst->machine_id(), last_mem_zone_id))) {
       last_node = AddCopyCommNetTaskBetween(cur_node, dst);
       Connect<TaskNode>(cur_node, NewEdge(), last_node);
     }
+  } else {
+    UNIMPLEMENTED();
   }
   if (allow_share_path) { Set121BufTask(last_node->machine_id(), last_mem_zone_id, last_node); }
   return last_node;
