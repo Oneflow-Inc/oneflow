@@ -55,23 +55,28 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
-    if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
+    if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
+      CHECK_EQ(regst_desc->register_num(), 1);
+    }
   }
   auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
     return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
   };
-  std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
-            [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-              return (lhs->mem_shared_id() < rhs->mem_shared_id())
-                     || (lhs->mem_shared_id() == rhs->mem_shared_id()
-                         && GetRegstSize(lhs) < GetRegstSize(rhs));
-            });
+  std::sort(
+      sorted_regst_protos.begin(), sorted_regst_protos.end(),
+      [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+        return (lhs->mem_sharing_info().mem_shared_id() < rhs->mem_sharing_info().mem_shared_id())
+               || (lhs->mem_sharing_info().mem_shared_id()
+                       == rhs->mem_sharing_info().mem_shared_id()
+                   && GetRegstSize(lhs) < GetRegstSize(rhs));
+      });
   auto ForEachRegstDesc7IsLastWhenShareSameMem =
       [&](const std::function<void(const RegstDescProto*, bool)>& Handler) {
         for (int64_t i = 0; i < sorted_regst_protos.size() - 1; ++i) {
           const RegstDescProto* regst_desc = sorted_regst_protos.at(i);
-          int32_t current_mem_shared_id = regst_desc->mem_shared_id();
-          int32_t next_mem_shared_id = sorted_regst_protos.at(i + 1)->mem_shared_id();
+          int32_t current_mem_shared_id = regst_desc->mem_sharing_info().mem_shared_id();
+          int32_t next_mem_shared_id =
+              sorted_regst_protos.at(i + 1)->mem_sharing_info().mem_shared_id();
           Handler(regst_desc,
                   current_mem_shared_id == -1 || (current_mem_shared_id != next_mem_shared_id));
         }
