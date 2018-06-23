@@ -52,9 +52,9 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
-  void set_area_id(int64_t val) {
+  void set_area_id(AreaType val) {
     CHECK_NE(val, 0);
-    area_id_ = val;
+    area_id_ = static_cast<int64_t>(val);
   }
   int64_t area_id() const { return area_id_; }
 
