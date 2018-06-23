@@ -206,6 +206,8 @@ DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceAddLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 
+void SetAreaType(LogicalNode* node);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_LOGICAL_NODE_H_

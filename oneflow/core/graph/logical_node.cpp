@@ -401,4 +401,38 @@ void NormalMdUpdtLogicalNode::FixCompTaskNode(CompTaskNode* node) const {
   }
 }
 
+void SetAreaType(LogicalNode* node) {
+  if (dynamic_cast<ForwardLogicalNode*>(node)) {
+    node->set_area_id(kDataForwardArea);
+  } else if (dynamic_cast<LossLogicalNode*>(node)) {
+    node->set_area_id(kDataForwardArea);
+  } else if (dynamic_cast<LossAccLogicalNode*>(node)) {
+    node->set_area_id(kDataForwardArea);
+  } else if (dynamic_cast<BackwardLogicalNode*>(node)) {
+    node->set_area_id(kDataBackwardArea);
+  } else if (dynamic_cast<MdDiffAccLogicalNode*>(node)) {
+    node->set_area_id(kDataBackwardArea);
+  } else if (dynamic_cast<RecordLoadLogicalNode*>(node)) {
+    node->set_area_id(kDataPreprocessArea);
+  } else if (dynamic_cast<DecodeLogicalNode*>(node)) {
+    node->set_area_id(kDataPreprocessArea);
+  } else if (dynamic_cast<PrintLogicalNode*>(node)) {
+    node->set_area_id(kPrintArea);
+  } else if (dynamic_cast<LossPrintLogicalNode*>(node)) {
+    node->set_area_id(kPrintArea);
+  } else if (dynamic_cast<MdSaveLogicalNode*>(node)) {
+    node->set_area_id(kMdSaveArea);
+  } else if (dynamic_cast<NormalMdUpdtLogicalNode*>(node)) {
+    node->set_area_id(kMdUpdtArea);
+  } else if (dynamic_cast<ReduceScatterLogicalNode*>(node)) {
+    node->set_area_id(kMdUpdtArea);
+  } else if (dynamic_cast<ReduceAddLogicalNode*>(node)) {
+    node->set_area_id(kMdUpdtArea);
+  } else if (dynamic_cast<ReduceGatherLogicalNode*>(node)) {
+    node->set_area_id(kMdUpdtArea);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 }  // namespace oneflow

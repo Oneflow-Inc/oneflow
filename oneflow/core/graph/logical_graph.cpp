@@ -16,7 +16,7 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildModelStruct(is_train);
   BuildRecordLoadStruct();
   if (is_train) { ConnectFwToBw(); }
-  ForEachNode([&](LogicalNode* node) { SetAreaType(node); });
+  ForEachNode([](LogicalNode* node) { SetAreaType(node); });
   ToDotWithAutoFilePath();
 }
 
@@ -568,40 +568,6 @@ void LogicalGraph::ConnectFwToBw() {
     if (bw_node->fw_node() == nullptr) { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
-}
-
-void LogicalGraph::SetAreaType(LogicalNode* node) {
-  if (dynamic_cast<ForwardLogicalNode*>(node)) {
-    node->set_area_id(kDataForwardArea);
-  } else if (dynamic_cast<LossLogicalNode*>(node)) {
-    node->set_area_id(kDataForwardArea);
-  } else if (dynamic_cast<LossAccLogicalNode*>(node)) {
-    node->set_area_id(kDataForwardArea);
-  } else if (dynamic_cast<BackwardLogicalNode*>(node)) {
-    node->set_area_id(kDataBackwardArea);
-  } else if (dynamic_cast<MdDiffAccLogicalNode*>(node)) {
-    node->set_area_id(kDataBackwardArea);
-  } else if (dynamic_cast<RecordLoadLogicalNode*>(node)) {
-    node->set_area_id(kDataPreprocessArea);
-  } else if (dynamic_cast<DecodeLogicalNode*>(node)) {
-    node->set_area_id(kDataPreprocessArea);
-  } else if (dynamic_cast<PrintLogicalNode*>(node)) {
-    node->set_area_id(kPrintArea);
-  } else if (dynamic_cast<LossPrintLogicalNode*>(node)) {
-    node->set_area_id(kPrintArea);
-  } else if (dynamic_cast<MdSaveLogicalNode*>(node)) {
-    node->set_area_id(kMdSaveArea);
-  } else if (dynamic_cast<NormalMdUpdtLogicalNode*>(node)) {
-    node->set_area_id(kMdUpdtArea);
-  } else if (dynamic_cast<ReduceScatterLogicalNode*>(node)) {
-    node->set_area_id(kMdUpdtArea);
-  } else if (dynamic_cast<ReduceAddLogicalNode*>(node)) {
-    node->set_area_id(kMdUpdtArea);
-  } else if (dynamic_cast<ReduceGatherLogicalNode*>(node)) {
-    node->set_area_id(kMdUpdtArea);
-  } else {
-    UNIMPLEMENTED();
-  }
 }
 
 }  // namespace oneflow
