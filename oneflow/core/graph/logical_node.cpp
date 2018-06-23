@@ -363,26 +363,27 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 
-#define LOGICAL_TYPE_SEQ                \
-  OF_PP_MAKE_TUPLE_SEQ(NormalForward)   \
-  OF_PP_MAKE_TUPLE_SEQ(NormalBackward)  \
-  OF_PP_MAKE_TUPLE_SEQ(RecordLoad)      \
-  OF_PP_MAKE_TUPLE_SEQ(Decode)          \
-  OF_PP_MAKE_TUPLE_SEQ(Loss)            \
-  OF_PP_MAKE_TUPLE_SEQ(LossAcc)         \
-  OF_PP_MAKE_TUPLE_SEQ(LossPrint)       \
-  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt)    \
-  OF_PP_MAKE_TUPLE_SEQ(MdSave)          \
-  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc)       \
-  OF_PP_MAKE_TUPLE_SEQ(Print)           \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter)   \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd)  \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd) \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather)
+#define LOGICAL_TYPE_SEQ                                  \
+  OF_PP_MAKE_TUPLE_SEQ(NormalForward, kDataForwardArea)   \
+  OF_PP_MAKE_TUPLE_SEQ(NormalBackward, kDataBackwardArea) \
+  OF_PP_MAKE_TUPLE_SEQ(RecordLoad, kDataPreprocessArea)   \
+  OF_PP_MAKE_TUPLE_SEQ(Decode, kDataPreprocessArea)       \
+  OF_PP_MAKE_TUPLE_SEQ(Loss, kDataForwardArea)            \
+  OF_PP_MAKE_TUPLE_SEQ(LossAcc, kDataForwardArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(LossPrint, kPrintArea)             \
+  OF_PP_MAKE_TUPLE_SEQ(NormalMdUpdt, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(MdSave, kMdSaveArea)               \
+  OF_PP_MAKE_TUPLE_SEQ(MdDiffAcc, kDataBackwardArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(Print, kPrintArea)                 \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)       \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)
 
-#define DEFINE_VIRTUAL_METHOD(x)                              \
-  std::string x##LogicalNode::TypeName() const { return #x; } \
-  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; }
+#define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
+  std::string x##LogicalNode::TypeName() const { return #x; }                           \
+  CompTaskNode* x##LogicalNode::NewCompTaskNode() const { return new x##CompTaskNode; } \
+  int64_t x##LogicalNode::GetAreaId() const { return area_type; }
 OF_PP_FOR_EACH_TUPLE(DEFINE_VIRTUAL_METHOD, LOGICAL_TYPE_SEQ);
 
 BackwardLogicalNode* ForwardLogicalNode::NewBackwardNode() {

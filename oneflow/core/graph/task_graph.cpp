@@ -40,7 +40,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-          comp_task_node->set_area_id(logical_node->area_id());
+          comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
@@ -136,8 +136,8 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   CHECK(src_logical != nullptr && dst_logical != nullptr);
   ForEachNode([&](TaskNode* node) {
     if (node->area_id() != static_cast<int64_t>(kInvalidArea)) return;
-    if (src_logical->area_id() == dst_logical->area_id()) {
-      node->set_area_id(src_logical->area_id());
+    if (src_logical->GetAreaId() == dst_logical->GetAreaId()) {
+      node->set_area_id(src_logical->GetAreaId());
     } else {
       node->set_area_id(static_cast<int64_t>(kBoundaryArea));
     }

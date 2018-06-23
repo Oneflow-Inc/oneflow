@@ -49,27 +49,60 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
-  for (const RegstDescProto* regst_desc_proto : regst_protos) {
-    CHECK(regst_desc_id2rt_regst_desc_
-              .emplace(regst_desc_proto->regst_desc_id(),
-                       std::make_unique<const RtRegstDesc>(*regst_desc_proto))
-              .second);
-    mem_case2mem_size[regst_desc_proto->mem_case()] +=
-        regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
-            ->TotalByteSize4AllRegst();
+  std::vector<const RegstDescProto*> sorted_regst_protos(regst_protos.begin(), regst_protos.end());
+  for (const RegstDescProto* regst_desc : regst_protos) {
+    CHECK(
+        regst_desc_id2rt_regst_desc_
+            .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
+            .second);
+    if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
+      CHECK_EQ(regst_desc->register_num(), 1);
+    }
   }
+  auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
+    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
+  };
+  std::sort(
+      sorted_regst_protos.begin(), sorted_regst_protos.end(),
+      [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+        return (lhs->mem_sharing_info().mem_shared_id() < rhs->mem_sharing_info().mem_shared_id())
+               || (lhs->mem_sharing_info().mem_shared_id()
+                       == rhs->mem_sharing_info().mem_shared_id()
+                   && GetRegstSize(lhs) < GetRegstSize(rhs));
+      });
+  auto ForEachRegstDesc7IsLastWhenShareSameMem =
+      [&](const std::function<void(const RegstDescProto*, bool)>& Handler) {
+        for (int64_t i = 0; i < sorted_regst_protos.size() - 1; ++i) {
+          const RegstDescProto* regst_desc = sorted_regst_protos.at(i);
+          int32_t current_mem_shared_id = regst_desc->mem_sharing_info().mem_shared_id();
+          int32_t next_mem_shared_id =
+              sorted_regst_protos.at(i + 1)->mem_sharing_info().mem_shared_id();
+          Handler(regst_desc,
+                  current_mem_shared_id == -1 || (current_mem_shared_id != next_mem_shared_id));
+        }
+        Handler(sorted_regst_protos.back(), true);
+      };
+  ForEachRegstDesc7IsLastWhenShareSameMem(
+      [&](const RegstDescProto* regst_desc, bool is_last_when_share_same_mem) {
+        if (is_last_when_share_same_mem) {
+          mem_case2mem_size[regst_desc->mem_case()] += GetRegstSize(regst_desc);
+        }
+      });
   for (const auto& pair : mem_case2mem_size) {
     CHECK(
         mem_case2mem_ptr
             .emplace(pair.first, Global<MemoryAllocator>::Get()->Allocate(pair.first, pair.second))
             .second);
   }
-  for (const auto& pair : regst_desc_id2rt_regst_desc_) {
-    const RtRegstDesc* rt_regst_desc = pair.second.get();
-    const MemoryCase& mem_case = rt_regst_desc->mem_case();
-    CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
-    mem_case2mem_ptr.at(mem_case) += rt_regst_desc->TotalByteSize4AllRegst();
-  }
+  ForEachRegstDesc7IsLastWhenShareSameMem(
+      [&](const RegstDescProto* regst_desc, bool is_last_when_share_same_mem) {
+        CHECK(regst_desc_id2mem_ptr_
+                  .emplace(regst_desc->regst_desc_id(), mem_case2mem_ptr.at(regst_desc->mem_case()))
+                  .second);
+        if (is_last_when_share_same_mem) {
+          mem_case2mem_ptr.at(regst_desc->mem_case()) += GetRegstSize(regst_desc);
+        }
+      });
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
