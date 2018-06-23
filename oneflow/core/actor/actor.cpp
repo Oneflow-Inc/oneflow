@@ -18,7 +18,7 @@ bool NeedModelSave(int64_t model_version_id) {
 }
 
 ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor) {
-  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+  if (Global<RuntimeCtx>::Get()->need_record_event() && actor_->task_type_ != kCopyCommNet) {
     ActEvent* act_event = new ActEvent();
     actor->act_events_.emplace_back(act_event);
     act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
@@ -43,7 +43,7 @@ ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor) {
 }
 
 ScopedActEventRecorder::~ScopedActEventRecorder() {
-  if (Global<RuntimeCtx>::Get()->need_record_event()) {
+  if (Global<RuntimeCtx>::Get()->need_record_event() && actor_->task_type_ != kCopyCommNet) {
     ActEvent* act_event = actor_->act_events_.back();
     actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_stop_time(GetCurTime()); });
   }
@@ -62,6 +62,7 @@ Actor::~Actor() {
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TaskProto non_ctrl_task_proto = task_proto;
+  task_type_ = task_proto.task_type();
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
