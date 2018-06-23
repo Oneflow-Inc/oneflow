@@ -52,14 +52,10 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
-  void set_area_id(int64_t val) {
-    CHECK_NE(val, 0);
-    area_id_ = val;
-  }
-  int64_t area_id() const { return area_id_; }
+  virtual int64_t GetAreaId() const = 0;
 
  protected:
-  LogicalNode() : main_model_parallel_(nullptr), area_id_(0) {}
+  LogicalNode() : main_model_parallel_(nullptr) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
@@ -74,7 +70,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
   HashSet<LogicalBlobId> lbi_boxing_;
   HashSet<LogicalBlobId> lbi_121_;
-  int64_t area_id_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -116,9 +111,10 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const LogicalNode* out_logical, BoxingOpConf*);
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()   \
-  std::string TypeName() const override; \
-  CompTaskNode* NewCompTaskNode() const override;
+#define OVERRIDE_PURE_VIRTUAL_METHOD()            \
+  std::string TypeName() const override;          \
+  CompTaskNode* NewCompTaskNode() const override; \
+  int64_t GetAreaId() const override;
 
 #define LOGICAL_NODE_BOILERPLATE(class_name) \
   OF_DISALLOW_COPY_AND_MOVE(class_name);     \
