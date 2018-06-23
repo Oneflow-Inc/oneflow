@@ -166,6 +166,7 @@ class Actor {
 
   // Profile
   std::vector<ActEvent*> act_events_;
+  TaskType task_type_;
 };
 
 class ScopedActEventRecorder {
