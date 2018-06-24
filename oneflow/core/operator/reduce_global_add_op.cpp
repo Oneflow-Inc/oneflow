@@ -7,7 +7,6 @@ void ReduceGlobalAddOp::InitFromOpConf() {
   for (int64_t parallel_id : op_conf().reduce_global_add_conf().in_parallel_ids()) {
     EnrollInputBn("in_" + std::to_string(parallel_id), false);
   }
-  EnrollDataTmpBn("middle");
   EnrollOutputBn("out", false);
 }
 
@@ -28,8 +27,6 @@ void ReduceGlobalAddOp::InferBlobDescs(
   int32_t in_num = op_conf().reduce_global_add_conf().in_parallel_ids_size();
   CHECK_GE(in_num, 2);
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
-  BlobDesc* middle_blob = GetBlobDesc4BnInOp("middle");
-  if (middle_blob) { *middle_blob = *first_in_blob; }
   *GetBlobDesc4BnInOp(SoleObn()) = *first_in_blob;
   for (int32_t i = 1; i < in_num; ++i) {
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
