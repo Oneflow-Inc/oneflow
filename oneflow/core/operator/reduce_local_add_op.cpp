@@ -8,7 +8,6 @@ void ReduceLocalAddOp::InitFromOpConf() {
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().in_num()) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
-  EnrollDataTmpBn("middle");
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
     EnrollOutputBn("out_" + std::to_string(i), false);
   }
@@ -34,7 +33,6 @@ void ReduceLocalAddOp::InferBlobDescs(
   FOR_RANGE(int32_t, i, 1, in_num) {
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
   }
-  *GetBlobDesc4BnInOp("middle") = *first_in_blob;
   BalancedSplitter splitter(op_conf().reduce_local_add_conf().model_elem_cnt(),
                             parallel_ctx->parallel_num());
   int32_t min_out_parallel_id = op_conf().reduce_local_add_conf().min_out_parallel_id();

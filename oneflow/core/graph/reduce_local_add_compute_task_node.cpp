@@ -14,7 +14,6 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name);
     edge->AddRegst(regst_name, out_regst);
   }
-  ProduceRegst("data_tmp", 1, 1);
 }
 
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
@@ -53,7 +52,6 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
         GetSoleConsumedRegst("in_" + std::to_string(i + min_in_parallel_id_));
     node->BindBnWithRegst(reduce_local_add_op->input_bns().Get(i), in_regst);
   }
-  node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   FOR_RANGE(size_t, i, 0, reduce_local_add_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst =
         GetProducedRegst("out_" + std::to_string(i + min_out_parallel_id_));
