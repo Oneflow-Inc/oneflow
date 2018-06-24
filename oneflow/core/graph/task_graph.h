@@ -34,9 +34,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
  private:
   void Build121Path(
-      TaskNode* src, TaskNode* dst,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+      CompTaskNode* src, CompTaskNode* dst,
+      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+          Mut121BufTask,
       bool allow_share_path);
   TaskNode* Build121Step(
       TaskNode* cur_node, TaskNode* dst,
