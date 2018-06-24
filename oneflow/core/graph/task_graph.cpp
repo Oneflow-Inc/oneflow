@@ -171,19 +171,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    auto Get121BufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
-      return *Mut121BufTask(src, machine_id, mem_zone_id);
-    };
-    auto Set121BufTask = [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
-      TaskNode** cur_val = Mut121BufTask(src, machine_id, mem_zone_id);
-      if (*cur_val == nullptr) {
-        *cur_val = new_val;
-      } else {
-        CHECK_EQ(*cur_val, new_val);
-      }
-      return new_val;
-    };
-    Build121Path(src, dst, Get121BufTask, Set121BufTask, true);
+    Build121Path(src, dst, Mut121BufTask, true);
   }
 }
 
@@ -244,11 +232,24 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
 }
 
 void TaskGraph::Build121Path(
-    TaskNode* src, TaskNode* dst,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+    CompTaskNode* src, CompTaskNode* dst,
+    std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+        Mut121BufTask,
     bool allow_share_path) {
   CHECK_NE(src, dst);
+  auto Get121BufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
+    return *Mut121BufTask(src, machine_id, mem_zone_id);
+  };
+  auto Set121BufTask = [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
+    TaskNode** cur_val = Mut121BufTask(src, machine_id, mem_zone_id);
+    if (*cur_val == nullptr) {
+      *cur_val = new_val;
+    } else {
+      CHECK_EQ(*cur_val, new_val);
+    }
+    return new_val;
+  };
+
   TaskNode* cur_node = src;
   while (cur_node->machine_id() != dst->machine_id()
          || cur_node->MemZoneId121() != dst->MemZoneId121()) {
