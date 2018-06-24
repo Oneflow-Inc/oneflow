@@ -210,7 +210,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
-        Build121Path(src_comp_task, dst_comp_task, nullptr, nullptr, false);
+        Build121Path(src_comp_task, dst_comp_task, Mut121BufTask, false);
       }
     }
   }
@@ -220,7 +220,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
-      Build121Path(src_comp_task, dst_comp_task, nullptr, nullptr, false);
+      Build121Path(src_comp_task, dst_comp_task, Mut121BufTask, false);
     }
   }
 }
@@ -238,8 +238,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
         if (splitter.At(splitter_idx).end() == dst_comp_task->parallel_ctx()->parallel_id()) {
           ++splitter_idx;
         }
-        Build121Path(src_nodes_in_same_machine[splitter_idx], dst_comp_task, nullptr, nullptr,
-                     false);
+        Build121Path(src_nodes_in_same_machine[splitter_idx], dst_comp_task, Mut121BufTask, false);
       }
       CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());
       src_nodes_in_same_machine.clear();
@@ -251,19 +250,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   CHECK_GE(sorted_src_comp_tasks.size(), 2);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      auto Get121BufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
-        return *Mut121BufTask(src_comp_task, machine_id, mem_zone_id);
-      };
-      auto Set121BufTask = [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
-        TaskNode** cur_val = Mut121BufTask(src_comp_task, machine_id, mem_zone_id);
-        if (*cur_val == nullptr) {
-          *cur_val = new_val;
-        } else {
-          CHECK_EQ(*cur_val, new_val);
-        }
-        return new_val;
-      };
-      Build121Path(src_comp_task, dst_comp_task, Get121BufTask, Set121BufTask, true);
+      Build121Path(src_comp_task, dst_comp_task, Mut121BufTask, true);
     }
   }
 }
