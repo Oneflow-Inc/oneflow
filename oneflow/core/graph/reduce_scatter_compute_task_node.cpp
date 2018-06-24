@@ -20,11 +20,6 @@ void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
   ConsumeRegst("in", this->SoleInEdge()->GetSoleRegst());
 }
 
-void ReduceScatterCompTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  mem_case->mutable_device_cuda_mem()->set_device_id(
-      Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id()));
-}
-
 void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   OperatorConf reduce_scatter_op_conf;

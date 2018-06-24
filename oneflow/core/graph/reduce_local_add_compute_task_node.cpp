@@ -13,12 +13,6 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
     std::string regst_name = "out_" + std::to_string(parallel_id);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name);
     edge->AddRegst(regst_name, out_regst);
-    if (this->parallel_id() == parallel_id && device_type() == DeviceType::kGPU) {
-      MemoryCase* mem_case = out_regst.get()->mut_mem_case();
-      mem_case->Clear();
-      mem_case->mutable_device_cuda_mem()->set_device_id(
-          Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id()));
-    }
   }
   ProduceRegst("data_tmp", 1, 1);
 }
@@ -31,18 +25,6 @@ void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
     int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
     min_in_parallel_id_ = std::min(min_in_parallel_id_, parallel_id);
     ConsumeRegst("in_" + std::to_string(parallel_id), edge->GetSoleRegst());
-  }
-}
-
-void ReduceLocalAddCompTaskNode::InitProducedRegstMemCase(RegstDesc* regst_desc) {
-  std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
-  if (data_tmp_regst && regst_desc->regst_desc_id() == data_tmp_regst->regst_desc_id()) {
-    TaskNode::InitProducedRegstMemCase(regst_desc->mut_mem_case());
-  } else {
-    regst_desc->mut_mem_case()->mutable_host_mem();
-    if (device_type() == DeviceType::kGPU) {
-      regst_desc->mut_mem_case()->mutable_host_mem()->set_used_by_device(true);
-    }
   }
 }
 
