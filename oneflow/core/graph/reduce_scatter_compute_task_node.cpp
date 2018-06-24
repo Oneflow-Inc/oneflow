@@ -13,13 +13,6 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     std::string out_regst_name = "out_" + std::to_string(parallel_id);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name);
     edge->AddRegst(out_regst_name, out_regst);
-    if (this->parallel_id() == comp_task_nodes.front()->parallel_id()
-        && device_type() == DeviceType::kGPU) {
-      MemoryCase* mem_case = out_regst.get()->mut_mem_case();
-      mem_case->Clear();
-      mem_case->mutable_device_cuda_mem()->set_device_id(
-          Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id()));
-    }
   }
 }
 
@@ -28,8 +21,8 @@ void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
 }
 
 void ReduceScatterCompTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  mem_case->mutable_host_mem();
-  if (device_type() == DeviceType::kGPU) { mem_case->mutable_host_mem()->set_used_by_device(true); }
+  mem_case->mutable_device_cuda_mem()->set_device_id(
+      Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id()));
 }
 
 void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
