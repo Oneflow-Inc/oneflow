@@ -32,10 +32,12 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
     std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(input_bn);
     node->BindBnWithRegst(input_bn, in_regst);
   }
+  /*
   if (std::find(in_parallel_ids_.begin(), in_parallel_ids_.end(), this->parallel_id())
       == in_parallel_ids_.end()) {
     node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   }
+  */
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(reduce_global_add_op->BnInOp2Lbi(reduce_global_add_op->SoleObn()));
   node->BindBnWithRegst(reduce_global_add_op->SoleObn(), out_regst);
