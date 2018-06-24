@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -205,28 +206,51 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
                          nullptr, Mut121BufTask, AllocateCpuThrdIdEvenly);
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      ConnectWithCopyCommNetIfNeed(src_comp_task, dst_comp_task);
+      if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
+        Build121Path(src_comp_task, dst_comp_task, Mut121BufTask, false);
+      }
     }
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
+      Build121Path(src_comp_task, dst_comp_task, Mut121BufTask, false);
+    }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
+  std::vector<CompTaskNode*> src_nodes_in_same_machine;
+  FOR_RANGE(int32_t, i, 0, sorted_src_comp_tasks.size()) {
+    src_nodes_in_same_machine.push_back(sorted_src_comp_tasks[i]);
+    if (i + 1 == sorted_src_comp_tasks.size()
+        || sorted_src_comp_tasks[i + 1]->machine_id() != sorted_src_comp_tasks[i]->machine_id()) {
+      BalancedSplitter splitter(src_nodes_in_same_machine.front()->parallel_ctx()->parallel_num(),
+                                src_nodes_in_same_machine.size());
+      int32_t splitter_idx = 0;
+      for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+        if (splitter.At(splitter_idx).end() == dst_comp_task->parallel_ctx()->parallel_id()) {
+          ++splitter_idx;
+        }
+        Build121Path(src_nodes_in_same_machine[splitter_idx], dst_comp_task, Mut121BufTask, false);
+      }
+      CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());
+      src_nodes_in_same_machine.clear();
+    }
+  }
+}
+
+DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   CHECK_GE(sorted_src_comp_tasks.size(), 2);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
-    TaskNode* src_d2h_task = src_comp_task;
-    if (src_comp_task->device_type() == DeviceType::kGPU) {
-      src_d2h_task = AddCopyD2HTaskFrom(src_comp_task);
-      Connect<TaskNode>(src_comp_task, NewEdge(), src_d2h_task);
-    }
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (src_comp_task->parallel_id() == dst_comp_task->parallel_id()) {
-        Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
-      } else {
-        ConnectWithCopyCommNetIfNeed(src_d2h_task, dst_comp_task);
-      }
+      Build121Path(src_comp_task, dst_comp_task, Mut121BufTask, true);
     }
   }
 }
