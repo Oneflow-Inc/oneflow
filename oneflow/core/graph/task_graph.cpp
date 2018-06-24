@@ -222,7 +222,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
-        Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
+        Build121Path(src_comp_task, dst_comp_task, nullptr, nullptr, false);
       }
     }
   }
@@ -232,7 +232,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
-      Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
+      Build121Path(src_comp_task, dst_comp_task, nullptr, nullptr, false);
     }
   }
 }
@@ -250,7 +250,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
         if (splitter.At(splitter_idx).end() == dst_comp_task->parallel_ctx()->parallel_id()) {
           ++splitter_idx;
         }
-        ConnectWithCopyCommNetIfNeed(src_nodes_in_same_machine[splitter_idx], dst_comp_task);
+        Build121Path(src_nodes_in_same_machine[splitter_idx], dst_comp_task, nullptr, nullptr,
+                     false);
       }
       CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());
       src_nodes_in_same_machine.clear();
@@ -261,31 +262,20 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   CHECK_GE(sorted_src_comp_tasks.size(), 2);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
-    HashMap<int64_t, TaskNode*> machine_id2comm_net_node;
-    TaskNode* src_d2h_task = src_comp_task;
-    if (src_comp_task->device_type() == DeviceType::kGPU) {
-      src_d2h_task = AddCopyD2HTaskFrom(src_comp_task);
-      Connect<TaskNode>(src_comp_task, NewEdge(), src_d2h_task);
-    }
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      if (src_comp_task->parallel_id() == dst_comp_task->parallel_id()) {
-        Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
-      } else {
-        if (src_d2h_task->machine_id() == dst_comp_task->machine_id()) {
-          Connect<TaskNode>(src_d2h_task, NewEdge(), dst_comp_task);
+      auto Get121BufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
+        return *Mut121BufTask(src_comp_task, machine_id, mem_zone_id);
+      };
+      auto Set121BufTask = [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
+        TaskNode** cur_val = Mut121BufTask(src_comp_task, machine_id, mem_zone_id);
+        if (*cur_val == nullptr) {
+          *cur_val = new_val;
         } else {
-          auto iter = machine_id2comm_net_node.find(dst_comp_task->machine_id());
-          if (iter == machine_id2comm_net_node.end()) {
-            TaskNode* comm_net_node = AddCopyCommNetTaskBetween(src_d2h_task, dst_comp_task);
-            Connect<TaskNode>(src_d2h_task, NewEdge(), comm_net_node);
-            Connect<TaskNode>(comm_net_node, NewEdge(), dst_comp_task);
-            CHECK(machine_id2comm_net_node.emplace(dst_comp_task->machine_id(), comm_net_node)
-                      .second);
-          } else {
-            Connect<TaskNode>(iter->second, NewEdge(), dst_comp_task);
-          }
+          CHECK_EQ(*cur_val, new_val);
         }
-      }
+        return new_val;
+      };
+      Build121Path(src_comp_task, dst_comp_task, Get121BufTask, Set121BufTask, true);
     }
   }
 }
