@@ -29,33 +29,34 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(PushActEvent)  \
   OF_PP_MAKE_TUPLE_SEQ(Clear)         \
   OF_PP_MAKE_TUPLE_SEQ(IncreaseCount) \
-  OF_PP_MAKE_TUPLE_SEQ(EraseCount)    \
-  OF_PP_MAKE_TUPLE_SEQ(PushAvgActInterval)
+  OF_PP_MAKE_TUPLE_SEQ(EraseCount)
 
-enum class CtrlMethod {
-#define MAKE_ENTRY(method) k##method,
-  OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ)
-};
-#undef MAKE_ENTRY
+#define CatRequest(method) method##Request,
+#define CatReqponse(method) method##Response,
+#define CatEnum(method) k##method,
+#define CatName(method) "/oneflow.CtrlService/" OF_PP_STRINGIZE(method),
 
-const int32_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
+#define MAKE_META_DATA()                                                                       \
+  enum class CtrlMethod { OF_PP_FOR_EACH_TUPLE(CatEnum, CTRL_METHOD_SEQ) };                    \
+  static const char* g_method_name[] = {OF_PP_FOR_EACH_TUPLE(CatName, CTRL_METHOD_SEQ)};       \
+  using CtrlRequestTuple = std::tuple<OF_PP_FOR_EACH_TUPLE(CatRequest, CTRL_METHOD_SEQ) void>; \
+  using CtrlResponseTuple = std::tuple<OF_PP_FOR_EACH_TUPLE(CatReqponse, CTRL_METHOD_SEQ) void>;
 
-using CtrlRequestTuple = std::tuple<
-#define MAKE_ENTRY(method) method##Request,
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ) void>;
-#undef MAKE_ENTRY
+MAKE_META_DATA()
 
-using CtrlResponseTuple = std::tuple<
-#define MAKE_ENTRY(method) method##Response,
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, CTRL_METHOD_SEQ) void>;
-#undef MAKE_ENTRY
+constexpr const size_t kCtrlMethodNum = OF_PP_SEQ_SIZE(CTRL_METHOD_SEQ);
 
 template<CtrlMethod ctrl_method>
 using CtrlRequest =
     typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlRequestTuple>::type;
+
 template<CtrlMethod ctrl_method>
 using CtrlResponse =
     typename std::tuple_element<static_cast<size_t>(ctrl_method), CtrlResponseTuple>::type;
+
+inline const char* GetMethodName(CtrlMethod method) {
+  return g_method_name[static_cast<int32_t>(method)];
+}
 
 class CtrlService final {
  public:
