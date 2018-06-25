@@ -19,13 +19,14 @@ const std::string& JobDesc::MachineName4MachineId(int64_t machine_id) const {
 }
 
 int64_t JobDesc::RecordLoaderNum() const {
-  // FIXME(jiyuan)
-  return 4;
   CHECK_GT(record_loader_num_, 0);
   return record_loader_num_;
 }
 
-void JobDesc::SetRecordLoaderNum(int64_t val) { record_loader_num_ = val; }
+void JobDesc::SetRecordLoaderNum(int64_t val) {
+  CHECK_EQ(record_loader_num_, -1);
+  record_loader_num_ = val;
+}
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
   return job_conf_.other().piece_num_of_experiment_phase();
