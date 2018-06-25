@@ -1,4 +1,0 @@
-net: "./train.net"
-resource: "./train.resource"
-placement: "./train.placement"
-other: "./train.other"

@@ -6,7 +6,6 @@ namespace oneflow {
 void ReduceGlobalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("out");
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
-  ProduceRegst("data_tmp", 1, 1);
 }
 
 void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
@@ -31,10 +30,6 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
   for (const std::string& input_bn : reduce_global_add_op->input_bns()) {
     std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst(input_bn);
     node->BindBnWithRegst(input_bn, in_regst);
-  }
-  if (std::find(in_parallel_ids_.begin(), in_parallel_ids_.end(), this->parallel_id())
-      == in_parallel_ids_.end()) {
-    node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));
   }
   std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   out_regst->AddLbi(reduce_global_add_op->BnInOp2Lbi(reduce_global_add_op->SoleObn()));

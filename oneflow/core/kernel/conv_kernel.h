@@ -7,6 +7,20 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+const T* GetImgDptr(const Blob* blob, int64_t idx) {
+  return blob->dptr<T>() + blob->shape().Count(1) * idx;
+}
+
+template<typename T>
+T* GetImgMutDptr(Blob* blob, int64_t idx) {
+  return const_cast<T*>(GetImgDptr<T>(blob, idx));
+}
+
+}  // namespace
+
 template<DeviceType device_type, typename T>
 class ConvKernelIf : public KernelIfWithActivation<device_type, T>,
                      public KernelIfWithModel<device_type, T> {
@@ -44,16 +58,18 @@ class ConvKernelIf : public KernelIfWithActivation<device_type, T>,
 };
 
 template<typename T>
-using Im2ColFunc = void (*)(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                            const Shape& weight_shape, const Shape& out_shape,
-                            const int32_t* strides, const int32_t* dilation_rate,
-                            const int32_t* padding_before, T* col_buf);
+using Im2ColFunc = void (*)(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                            const Shape& in_shape, const Shape& weight_shape,
+                            const Shape& out_shape, const int32_t* strides,
+                            const int32_t* dilation_rate, const int32_t* padding_before,
+                            T* col_buf);
 
 template<typename T>
-using Col2ImFunc = void (*)(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                            const Shape& weight_shape, const Shape& out_shape,
-                            const int32_t* strides, const int32_t* dilation_rate,
-                            const int32_t* padding_before, T* in_diff_ptr);
+using Col2ImFunc = void (*)(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                            const Shape& in_shape, const Shape& weight_shape,
+                            const Shape& out_shape, const int32_t* strides,
+                            const int32_t* dilation_rate, const int32_t* padding_before,
+                            T* in_diff_ptr);
 
 template<typename T>
 using GemmFunc = void (*)(DeviceCtx* ctx, enum CBLAS_TRANSPOSE, enum CBLAS_TRANSPOSE, const int m,
@@ -61,16 +77,13 @@ using GemmFunc = void (*)(DeviceCtx* ctx, enum CBLAS_TRANSPOSE, enum CBLAS_TRANS
                           const T beta, T* c);
 
 template<DeviceType device_type, typename T>
-class ConvKernel;
-
-template<typename T>
-class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kCPU, T> {
+class ConvKernelImplByIm2Col : public ConvKernelIf<device_type, T> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
-  ConvKernel() = default;
-  ~ConvKernel() = default;
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernelImplByIm2Col);
+  ConvKernelImplByIm2Col() = default;
+  ~ConvKernelImplByIm2Col() = default;
 
- private:
+ protected:
   void VirtualKernelInit(const ParallelContext*) override;
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
@@ -80,6 +93,8 @@ class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kC
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+ private:
   Im2ColFunc<T> im2col_func_;
   Col2ImFunc<T> col2im_func_;
   GemmFunc<T> forward_func_;
@@ -93,8 +108,21 @@ class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelIf<DeviceType::kC
   Shape weight_shape_;
 };
 
+template<DeviceType device_type, typename T>
+class ConvKernel;
+
 template<typename T>
-class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kGPU, T> {
+class ConvKernel<DeviceType::kCPU, T> final : public ConvKernelImplByIm2Col<DeviceType::kCPU, T> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
+  ConvKernel() = default;
+  ~ConvKernel() = default;
+
+ private:
+};
+
+template<typename T>
+class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelImplByIm2Col<DeviceType::kGPU, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ConvKernel);
   ConvKernel() = default;
@@ -102,14 +130,26 @@ class ConvKernel<DeviceType::kGPU, T> final : public ConvKernelIf<DeviceType::kG
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
+  void KernelInitWithCudnn(const ParallelContext*);
+
   void DoForwardDataContent(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
                             Blob* out_blob,
                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void DoForwardDataContentWithCudnn(DeviceCtx*, const Blob* in_blob, const Blob* weight_blob,
+                                     Blob* out_blob,
+                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
   void WeightBackward(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
                       Blob* weight_diff_blob, Blob* in_diff_blob,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void WeightBackwardWithCudnn(DeviceCtx*, const Blob* out_diff_blob, const Blob* in_blob,
+                               Blob* weight_diff_blob, Blob* in_diff_blob,
+                               std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+
   void BiasBackward(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BiasBackwardWithCudnn(DeviceCtx*, const Blob* out_diff_blob, Blob* bias_diff_blob,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
   std::unique_ptr<CudnnTensorDesc> in_desc_;
   std::unique_ptr<CudnnTensorDesc> out_desc_;
@@ -194,26 +234,31 @@ class ColBufUtil final {
   DHWValidFunc<T> dhw_valid_func_;
 };
 
+template<DeviceType device_type, typename T>
+class ConvKernelUtil;
+
 template<typename T>
-struct ConvKernelUtil final {
+struct ConvKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void NCDHWIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+  static void NCDHWIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
 
-  static void NDHWCIm2Col(DeviceCtx* device_ctx, const T* in_dptr, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before, T* col_buf);
+  static void NDHWCIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
 
-  static void NCDHWCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before,
-                          T* in_diff_ptr);
+  static void NCDHWCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 
-  static void NDHWCCol2Im(DeviceCtx* device_ctx, const T* col_buf, const Shape& in_shape,
-                          const Shape& weight_shape, const Shape& out_shape, const int32_t* strides,
-                          const int32_t* dilation_rate, const int32_t* padding_before,
-                          T* in_diff_ptr);
+  static void NDHWCCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
 
  private:
   static void DoNCDWHFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
@@ -221,6 +266,32 @@ struct ConvKernelUtil final {
 
   static void DoNDWHCFunc(const Shape& weight_shape, ColBufUtil<T>& conv_util,
                           ColBufWriter<T>* col_buf_writer);
+};
+
+template<typename T>
+struct ConvKernelUtil<DeviceType::kGPU, T> final {
+ public:
+  static void NCDHWIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
+
+  static void NDHWCIm2Col(const int dim_num, DeviceCtx* device_ctx, const T* in_dptr,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* col_buf);
+
+  static void NCDHWCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
+
+  static void NDHWCCol2Im(const int dim_num, DeviceCtx* device_ctx, const T* col_buf,
+                          const Shape& in_shape, const Shape& weight_shape, const Shape& out_shape,
+                          const int32_t* strides, const int32_t* dilation_rate,
+                          const int32_t* padding_before, T* in_diff_ptr);
+
+ private:
 };
 
 }  // namespace oneflow
