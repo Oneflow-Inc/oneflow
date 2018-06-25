@@ -31,13 +31,19 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
 
  private:
-  TaskNode* Build121BufTo(
-      TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
+  void Build121Path(
+      CompTaskNode* src, CompTaskNode* dst,
+      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+          Mut121BufTask,
+      bool allow_share_path);
+  TaskNode* Build121Step(
+      TaskNode* cur_node, TaskNode* dst,
       std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask);
-  TaskNode* AddCopyH2DTaskIfNotCpu(TaskNode*);
-  TaskNode* AddCopyD2HTaskIfNotCpu(TaskNode*);
-  void AddCopyCommNetTask(TaskNode* src, TaskNode* dst);
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+      bool allow_share_path);
+  TaskNode* AddCopyH2DTaskTo(TaskNode*);
+  TaskNode* AddCopyD2HTaskFrom(TaskNode*);
+  TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
   void BuildOutBoxing(const LogicalNode* logical,
                       const std::vector<CompTaskNode*>& sorted_comp_tasks,
                       std::vector<TaskNode*>* sorted_out_box,

@@ -39,7 +39,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
         AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-          comp_task_node->set_area_id(logical_node->area_id());
+          comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
@@ -135,8 +135,8 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   CHECK(src_logical != nullptr && dst_logical != nullptr);
   ForEachNode([&](TaskNode* node) {
     if (node->area_id() != static_cast<int64_t>(kInvalidArea)) return;
-    if (src_logical->area_id() == dst_logical->area_id()) {
-      node->set_area_id(src_logical->area_id());
+    if (src_logical->GetAreaId() == dst_logical->GetAreaId()) {
+      node->set_area_id(src_logical->GetAreaId());
     } else {
       node->set_area_id(static_cast<int64_t>(kBoundaryArea));
     }
@@ -162,13 +162,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   sorted_in_box = &(logical2sorted_in_box->at(dst_logical));
 
   for (TaskNode* src_box : *sorted_out_box) {
-    for (TaskNode* dst_box : *sorted_in_box) {
-      if (src_box->machine_id() == dst_box->machine_id()) {
-        Connect<TaskNode>(src_box, NewEdge(), dst_box);
-      } else {
-        AddCopyCommNetTask(src_box, dst_box);
-      }
-    }
+    for (TaskNode* dst_box : *sorted_in_box) { ConnectWithCopyCommNetIfNeed(src_box, dst_box); }
   }
 }
 
@@ -177,21 +171,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
     CompTaskNode* dst = sorted_dst_comp_tasks[i];
-    Connect<TaskNode>(
-        Build121BufTo(src, dst->machine_id(), dst->MemZoneId121(),
-                      [&](int64_t machine_id, int32_t mem_zone_id) {
-                        return *Mut121BufTask(src, machine_id, mem_zone_id);
-                      },
-                      [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
-                        TaskNode** cur_val = Mut121BufTask(src, machine_id, mem_zone_id);
-                        if (*cur_val == nullptr) {
-                          *cur_val = new_val;
-                        } else {
-                          CHECK_EQ(*cur_val, new_val);
-                        }
-                        return new_val;
-                      }),
-        NewEdge(), dst);
+    Build121Path(src, dst, Mut121BufTask, true);
   }
 }
 
@@ -236,7 +216,11 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
   CHECK_GE(sorted_src_comp_tasks.size(), 2);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
-    TaskNode* src_d2h_task = AddCopyD2HTaskIfNotCpu(src_comp_task);
+    TaskNode* src_d2h_task = src_comp_task;
+    if (src_comp_task->device_type() == DeviceType::kGPU) {
+      src_d2h_task = AddCopyD2HTaskFrom(src_comp_task);
+      Connect<TaskNode>(src_comp_task, NewEdge(), src_d2h_task);
+    }
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->parallel_id() == dst_comp_task->parallel_id()) {
         Connect<TaskNode>(src_comp_task, NewEdge(), dst_comp_task);
@@ -247,70 +231,87 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather) {
   }
 }
 
-TaskNode* TaskGraph::Build121BufTo(
-    TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask) {
-  {
-    TaskNode* done = Get121BufTask(dst_machine_id, dst_mem_zone_id);
-    if (done) { return done; }
-  }
-  int32_t cpu_mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
-
-  if (src->machine_id() != dst_machine_id) {
-    if (dst_mem_zone_id == cpu_mem_zone_id) {
-      TaskNode* src_cpu =
-          Build121BufTo(src, src->machine_id(), cpu_mem_zone_id, Get121BufTask, Set121BufTask);
-      CopyCommNetTaskNode* copy_comm_net = NewNode<CopyCommNetTaskNode>();
-      copy_comm_net->Init(dst_machine_id, src_cpu->machine_id());
-      Connect<TaskNode>(src_cpu, NewEdge(), copy_comm_net);
-      return Set121BufTask(dst_machine_id, dst_mem_zone_id, copy_comm_net);
+void TaskGraph::Build121Path(
+    CompTaskNode* src, CompTaskNode* dst,
+    std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+        Mut121BufTask,
+    bool allow_share_path) {
+  CHECK_NE(src, dst);
+  auto Get121BufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
+    return *Mut121BufTask(src, machine_id, mem_zone_id);
+  };
+  auto Set121BufTask = [&](int64_t machine_id, int32_t mem_zone_id, TaskNode* new_val) {
+    TaskNode** cur_val = Mut121BufTask(src, machine_id, mem_zone_id);
+    if (*cur_val == nullptr) {
+      *cur_val = new_val;
     } else {
-      TaskNode* dst_cpu =
-          Build121BufTo(src, dst_machine_id, cpu_mem_zone_id, Get121BufTask, Set121BufTask);
-      return Build121BufTo(dst_cpu, dst_machine_id, dst_mem_zone_id, Get121BufTask, Set121BufTask);
+      CHECK_EQ(*cur_val, new_val);
+    }
+    return new_val;
+  };
+
+  TaskNode* cur_node = src;
+  while (cur_node->machine_id() != dst->machine_id()
+         || cur_node->MemZoneId121() != dst->MemZoneId121()) {
+    cur_node = Build121Step(cur_node, dst, Get121BufTask, Set121BufTask, allow_share_path);
+  }
+  Connect<TaskNode>(cur_node, NewEdge(), dst);
+}
+
+TaskNode* TaskGraph::Build121Step(
+    TaskNode* cur_node, TaskNode* dst,
+    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
+    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask,
+    bool allow_share_path) {
+  int32_t cpu_mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
+  int32_t next_mem_zone_id = -1;
+  TaskNode* next_node = nullptr;
+  if (cur_node->MemZoneId121() != cpu_mem_zone_id) {
+    next_mem_zone_id = cpu_mem_zone_id;
+    if (!allow_share_path
+        || !(next_node = Get121BufTask(cur_node->machine_id(), next_mem_zone_id))) {
+      next_node = AddCopyD2HTaskFrom(cur_node);
+      Connect<TaskNode>(cur_node, NewEdge(), next_node);
+    }
+  } else if (cur_node->machine_id() == dst->machine_id()) {
+    next_mem_zone_id = dst->MemZoneId121();
+    if (!allow_share_path
+        || !(next_node = Get121BufTask(cur_node->machine_id(), next_mem_zone_id))) {
+      next_node = AddCopyH2DTaskTo(dst);
+      Connect<TaskNode>(cur_node, NewEdge(), next_node);
+    }
+  } else if (cur_node->machine_id() != dst->machine_id()) {
+    next_mem_zone_id = cpu_mem_zone_id;
+    if (!allow_share_path || !(next_node = Get121BufTask(dst->machine_id(), next_mem_zone_id))) {
+      next_node = AddCopyCommNetTaskBetween(cur_node, dst);
+      Connect<TaskNode>(cur_node, NewEdge(), next_node);
     }
   } else {
-    if (src->MemZoneId121() == dst_mem_zone_id) {
-      return Set121BufTask(dst_machine_id, dst_mem_zone_id, src);
-    } else {
-      if (dst_mem_zone_id == cpu_mem_zone_id) {
-        return Set121BufTask(dst_machine_id, dst_mem_zone_id, AddCopyD2HTaskIfNotCpu(src));
-      } else {
-        TaskNode* src_cpu =
-            Build121BufTo(src, dst_machine_id, cpu_mem_zone_id, Get121BufTask, Set121BufTask);
-        CopyHdTaskNode* src_h2d = NewNode<CopyHdTaskNode>();
-        src_h2d->Init(CopyHdOpConf::H2D, dst_machine_id,
-                      Global<IDMgr>::Get()->GetGpuPhyIdFromMemZoneId(dst_mem_zone_id));
-        Connect<TaskNode>(src_cpu, NewEdge(), src_h2d);
-        return Set121BufTask(dst_machine_id, dst_mem_zone_id, src_h2d);
-      }
-    }
+    UNIMPLEMENTED();
   }
+  if (allow_share_path) { Set121BufTask(next_node->machine_id(), next_mem_zone_id, next_node); }
+  return next_node;
 }
 
-TaskNode* TaskGraph::AddCopyH2DTaskIfNotCpu(TaskNode* task) {
-  if (task->device_type() == DeviceType::kCPU) { return task; }
+TaskNode* TaskGraph::AddCopyH2DTaskTo(TaskNode* task) {
+  CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::H2D, task->machine_id(), task->GpuPhyId());
-  Connect<TaskNode>(copy_task, NewEdge(), task);
   return copy_task;
 }
 
-TaskNode* TaskGraph::AddCopyD2HTaskIfNotCpu(TaskNode* task) {
-  if (task->device_type() == DeviceType::kCPU) { return task; }
+TaskNode* TaskGraph::AddCopyD2HTaskFrom(TaskNode* task) {
+  CHECK_EQ(task->device_type(), DeviceType::kGPU);
   CopyHdTaskNode* copy_task = NewNode<CopyHdTaskNode>();
   copy_task->Init(CopyHdOpConf::D2H, task->machine_id(), task->GpuPhyId());
-  Connect<TaskNode>(task, NewEdge(), copy_task);
   return copy_task;
 }
 
-void TaskGraph::AddCopyCommNetTask(TaskNode* src, TaskNode* dst) {
+TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
   CHECK_NE(src->machine_id(), dst->machine_id());
   CopyCommNetTaskNode* copy_comm_net_task = NewNode<CopyCommNetTaskNode>();
   copy_comm_net_task->Init(dst->machine_id(), src->machine_id());
-  Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
-  Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
+  return copy_comm_net_task;
 }
 
 void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
@@ -319,7 +320,11 @@ void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
                                std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
-    TaskNode* task = AddCopyD2HTaskIfNotCpu(comp_task);
+    TaskNode* task = comp_task;
+    if (task->device_type() == DeviceType::kGPU) {
+      task = AddCopyD2HTaskFrom(comp_task);
+      Connect<TaskNode>(comp_task, NewEdge(), task);
+    }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }
   for (const auto& pair : machine_id2bound_task) {
@@ -337,7 +342,11 @@ void TaskGraph::BuildInBoxing(const LogicalNode* logical,
                               std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
-    TaskNode* task = AddCopyH2DTaskIfNotCpu(comp_task);
+    TaskNode* task = comp_task;
+    if (task->device_type() == DeviceType::kGPU) {
+      task = AddCopyH2DTaskTo(comp_task);
+      Connect<TaskNode>(task, NewEdge(), comp_task);
+    }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }
   for (const auto& pair : machine_id2bound_task) {
@@ -353,7 +362,9 @@ void TaskGraph::ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst) {
   if (src->machine_id() == dst->machine_id()) {
     Connect(src, NewEdge(), dst);
   } else {
-    AddCopyCommNetTask(src, dst);
+    TaskNode* copy_comm_net_task = AddCopyCommNetTaskBetween(src, dst);
+    Connect<TaskNode>(src, NewEdge(), copy_comm_net_task);
+    Connect<TaskNode>(copy_comm_net_task, NewEdge(), dst);
   }
 }
 

@@ -132,6 +132,7 @@ class Actor {
   int64_t GetGlobalWorkStreamId() const;
   int64_t GetLocalWorkStreamId() const;
 
+  TaskType task_type_;
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
@@ -163,9 +164,6 @@ class Actor {
   int64_t readable_ctrl_regst_desc_cnt_;
   int64_t writeable_ctrl_regst_desc_cnt_;
   bool is_consumed_ctrl_eord_;
-
-  // Profile
-  std::vector<ActEvent*> act_events_;
 };
 
 class ScopedActEventRecorder {
@@ -176,6 +174,7 @@ class ScopedActEventRecorder {
 
  private:
   Actor* actor_;
+  ActEvent* act_event_;
 };
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);

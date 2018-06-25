@@ -49,26 +49,37 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
-  for (const RegstDescProto* regst_desc_proto : regst_protos) {
-    CHECK(regst_desc_id2rt_regst_desc_
-              .emplace(regst_desc_proto->regst_desc_id(),
-                       std::make_unique<const RtRegstDesc>(*regst_desc_proto))
-              .second);
-    mem_case2mem_size[regst_desc_proto->mem_case()] +=
-        regst_desc_id2rt_regst_desc_.at(regst_desc_proto->regst_desc_id())
-            ->TotalByteSize4AllRegst();
-  }
-  for (const auto& pair : mem_case2mem_size) {
+  std::vector<const RegstDescProto*> sorted_regst_protos(regst_protos.begin(), regst_protos.end());
+  for (const RegstDescProto* regst_desc : regst_protos) {
     CHECK(
-        mem_case2mem_ptr
-            .emplace(pair.first, Global<MemoryAllocator>::Get()->Allocate(pair.first, pair.second))
+        regst_desc_id2rt_regst_desc_
+            .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
+    if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
+      CHECK_EQ(regst_desc->register_num(), 1);
+    }
   }
-  for (const auto& pair : regst_desc_id2rt_regst_desc_) {
-    const RtRegstDesc* rt_regst_desc = pair.second.get();
-    const MemoryCase& mem_case = rt_regst_desc->mem_case();
-    CHECK(regst_desc_id2mem_ptr_.emplace(pair.first, mem_case2mem_ptr.at(mem_case)).second);
-    mem_case2mem_ptr.at(mem_case) += rt_regst_desc->TotalByteSize4AllRegst();
+  auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
+    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
+  };
+  std::sort(
+      sorted_regst_protos.begin(), sorted_regst_protos.end(),
+      [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+        return (lhs->mem_sharing_info().mem_shared_id() < rhs->mem_sharing_info().mem_shared_id())
+               || (lhs->mem_sharing_info().mem_shared_id()
+                       == rhs->mem_sharing_info().mem_shared_id()
+                   && GetRegstSize(lhs) > GetRegstSize(rhs));
+      });
+  int32_t last_mem_shared_id = -1;
+  char* mem_ptr = nullptr;
+  for (const RegstDescProto* regst_desc : sorted_regst_protos) {
+    int32_t current_mem_shared_id = regst_desc->mem_sharing_info().mem_shared_id();
+    if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
+      mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
+                                                         GetRegstSize(regst_desc));
+    }
+    CHECK(regst_desc_id2mem_ptr_.emplace(regst_desc->regst_desc_id(), mem_ptr).second);
+    last_mem_shared_id = current_mem_shared_id;
   }
 }
 
