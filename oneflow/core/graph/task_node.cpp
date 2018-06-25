@@ -141,6 +141,7 @@ int64_t TaskNode::MemZoneId121() const {
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) return;
   const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
