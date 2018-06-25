@@ -5,40 +5,45 @@
 namespace oneflow {
 
 StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs,
-                                       const std::vector<std::string>& file_paths, bool cyclic,
-                                       bool with_local_copy)
-    : cur_stream_id_(0), cyclic_(cyclic), with_local_copy_(with_local_copy) {
+                                       const std::vector<std::string>& file_paths, uint64_t offset,
+                                       bool cyclic, bool with_local_copy)
+    : whole_file_offset_(offset), cyclic_(cyclic), with_local_copy_(with_local_copy) {
+  if (with_local_copy_) { CHECK_EQ(whole_file_offset_, 0); }
   stream_num_ = file_paths.size();
-  LOG(INFO) << "New StreamBufferFiller: ";
   whole_file_size_ = 0;
+  int64_t idx = 0;
   for (auto& file_path : file_paths) {
-    LOG(INFO) << file_path;
-    AddStream(fs, file_path, 0);
+    AddStream(fs, file_path, idx);
+    ++idx;
   }
-  whole_file_pos_ = 0;
+  CHECK_LE(whole_file_offset_, whole_file_size_);
+  whole_file_pos_ = whole_file_offset_;
 }
 
-StreamBufferFiller::StreamBufferFiller(fs::FileSystem* fs, const std::string& file_path,
-                                       uint64_t offset, bool cyclic, bool with_local_copy)
-    : cur_stream_id_(0), cyclic_(cyclic), with_local_copy_(with_local_copy) {
-  LOG(INFO) << "New StreamBufferFiller: " << file_path;
-  stream_num_ = 1;
-  whole_file_size_ = 0;
-  AddStream(fs, file_path, offset);
-  whole_file_pos_ = offset;
-}
+void StreamBufferFiller::AddStream(fs::FileSystem* fs, const std::string& file_path, int64_t idx) {
+  uint64_t cur_file_size = fs->GetFileSize(file_path);
+  uint64_t offset;
+  if (whole_file_offset_ < whole_file_size_) { offset = 0; }
+  if (whole_file_offset_ > whole_file_size_) {
+    offset = cur_file_size;
+  } else if (whole_file_size_ <= whole_file_offset_
+             && whole_file_offset_ < whole_file_size_ + cur_file_size) {
+    offset = whole_file_offset_ - whole_file_size_;
+    cur_stream_id_ = idx;
+  } else {
+    if (cyclic_) {
+      offset = 0;
+    } else {
+      offset = cur_file_size;
+    }
+  }
 
-void StreamBufferFiller::AddStream(fs::FileSystem* fs, const std::string& file_path,
-                                   uint64_t offset) {
   if (with_local_copy_) {
     streams_.emplace_back(new BinaryInStreamWithLocalCopy(fs, file_path));
   } else {
     streams_.emplace_back(new BinaryInStreamWithoutLocalCopy(fs, file_path, offset));
   }
-  uint64_t cur_file_size = fs->GetFileSize(file_path);
   whole_file_size_ += cur_file_size;
-  LOG(INFO) << "StreamBufferFiller";
-  LOG(INFO) << file_path << ":" << cur_file_size;
 }
 
 bool StreamBufferFiller::IsEof() const { return whole_file_pos_ == whole_file_size_; }
@@ -53,12 +58,12 @@ uint64_t StreamBufferFiller::UpdateBuffer(std::vector<char>* buffer) {
   if (cyclic_) {
     AddNForCurFilePosCyclic(n);
   } else {
-    AddNForCurFilePosNonCyclic(n);
+    AddNForCurFilePosAcyclic(n);
   }
   return n;
 }
 
-void StreamBufferFiller::AddNForCurFilePosNonCyclic(uint64_t n) {
+void StreamBufferFiller::AddNForCurFilePosAcyclic(uint64_t n) {
   whole_file_pos_ += n;
   if (streams_[cur_stream_id_]->IsEof()) { ++cur_stream_id_; }
 }

@@ -7,21 +7,29 @@ namespace oneflow {
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, bool cyclic,
                                        bool with_local_copy) {
-  stream_buffer_filler_.reset(new StreamBufferFiller(fs, file_paths, cyclic, with_local_copy));
+  stream_buffer_filler_.reset(new StreamBufferFiller(fs, file_paths, 0, cyclic, with_local_copy));
   buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
 }
+
 PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
                                        uint64_t offset, bool cyclic, bool with_local_copy) {
+  std::vector<std::string> file_paths;
+  file_paths.emplace_back(file_path);
   stream_buffer_filler_.reset(
-      new StreamBufferFiller(fs, file_path, offset, cyclic, with_local_copy));
+      new StreamBufferFiller(fs, file_paths, offset, cyclic, with_local_copy));
   buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
 }
+
+PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
+                                       uint64_t offset)
+    : PersistentInStream(fs, file_path, offset, false, false) {}
+
 int32_t PersistentInStream::ReadLine(std::string* l) {
   if (IsEof()) { return -1; }
   l->clear();
