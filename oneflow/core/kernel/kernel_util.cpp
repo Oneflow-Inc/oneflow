@@ -269,7 +269,7 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
   CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
   BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
   int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  PersistentInStream in_stream(GlobalFS(), file_path, begin_pos, false, false);
+  PersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 

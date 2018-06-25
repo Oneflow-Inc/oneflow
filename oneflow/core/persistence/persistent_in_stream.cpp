@@ -30,6 +30,9 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& fi
                                        uint64_t offset)
     : PersistentInStream(fs, file_path, offset, false, false) {}
 
+PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path)
+    : PersistentInStream(fs, file_path, 0, false, false) {}
+
 int32_t PersistentInStream::ReadLine(std::string* l) {
   if (IsEof()) { return -1; }
   l->clear();

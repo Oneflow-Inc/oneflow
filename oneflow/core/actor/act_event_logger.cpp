@@ -23,7 +23,7 @@ ActEventLogger::ActEventLogger(bool is_experiment)
                                                         + act_event_txt_filename_)) {}
 
 void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events) {
-  PersistentInStream in_stream(LocalFS(), act_event_filepath, 0, false, false);
+  PersistentInStream in_stream(LocalFS(), act_event_filepath);
   int64_t act_event_size;
   while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);

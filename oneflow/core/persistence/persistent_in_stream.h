@@ -15,6 +15,7 @@ class PersistentInStream {
   PersistentInStream(fs::FileSystem* fs, const std::string& file_path, uint64_t offset, bool cyclic,
                      bool with_local_copy);
   PersistentInStream(fs::FileSystem* fs, const std::string& file_path, uint64_t offset);
+  PersistentInStream(fs::FileSystem* fs, const std::string& file_path);
 
   // 0: success
   // -1: eof
