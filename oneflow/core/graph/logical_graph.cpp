@@ -552,7 +552,15 @@ void LogicalGraph::BuildRecordLoadStruct() {
         << "Operators sharing same data information belong to different "
            "placement groups";
     for (std::shared_ptr<const ParallelDesc> parallel_desc : parallel_descs) {
+      OperatorConf record_loader_op_conf;
+      record_loader_op_conf.set_name("record_loader_" + NewUniqueId());
+      record_loader_op_conf.set_device_type(DeviceType::kCPU);
+      int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
+      CHECK_EQ(global_piece_size % parallel_desc->parallel_num(), 0);
+      record_loader_op_conf.mutable_record_loader_conf()->set_piece_size_in_each_loader(
+          global_piece_size / parallel_desc->parallel_num());
       LogicalNode* record_load_node = NewNode<RecordLoadLogicalNode>();
+      record_load_node->mut_op_vec() = {ConstructOp(record_loader_op_conf)};
       record_load_node->mut_parallel_desc() = parallel_desc;
       for (DecodeLogicalNode* decode_node : pair.second) {
         if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) { continue; }

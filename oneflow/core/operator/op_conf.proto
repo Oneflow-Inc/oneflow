@@ -481,6 +481,10 @@ message PreprocessConf {
   }
 }
 
+message RecordLoaderOpConf {
+  required int32 piece_size_in_each_loader = 1;
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
@@ -595,6 +599,7 @@ message OperatorConf {
     ReduceScatterOpConf reduce_scatter_conf = 400;
     ReduceAddOpConf reduce_add_conf = 401;
     ReduceGatherOpConf reduce_gather_conf = 402;
+    RecordLoaderOpConf record_loader_conf = 403;
   }
 }
 
