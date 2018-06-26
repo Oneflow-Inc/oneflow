@@ -21,7 +21,6 @@ Actor::~Actor() {}
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TaskProto non_ctrl_task_proto = task_proto;
-  task_type_ = task_proto.task_type();
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -236,7 +235,7 @@ class ScopedActEventRecorder final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
   explicit ScopedActEventRecorder(const Actor* actor) : actor_(actor), act_event_(nullptr) {
-    if (Global<RuntimeCtx>::Get()->need_record_event() && actor_->task_type_ != kCopyCommNet) {
+    if (NeedRecord()) {
       act_event_.reset(new ActEvent());
       ActEvent* act_event = act_event_.get();
       act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
@@ -261,7 +260,7 @@ class ScopedActEventRecorder final {
   }
 
   ~ScopedActEventRecorder() {
-    if (Global<RuntimeCtx>::Get()->need_record_event() && actor_->task_type_ != kCopyCommNet) {
+    if (NeedRecord()) {
       CHECK(act_event_);
       std::shared_ptr<ActEvent> act_event = act_event_;
       actor_->device_ctx_->AddCallBack([act_event]() {
@@ -272,6 +271,9 @@ class ScopedActEventRecorder final {
   }
 
  private:
+  bool NeedRecord() {
+    return Global<RuntimeCtx>::Get()->is_experiment_phase() || actor_->NeedRecordActEvent();
+  }
   const Actor* actor_;
   std::shared_ptr<ActEvent> act_event_;
 };

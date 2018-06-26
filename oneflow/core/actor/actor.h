@@ -131,8 +131,8 @@ class Actor {
   void AsyncSendMsg(const ActorMsg&);
   int64_t GetGlobalWorkStreamId() const;
   int64_t GetLocalWorkStreamId() const;
+  bool NeedRecordActEvent() const { return Global<RuntimeCtx>::Get()->need_record_event(); }
 
-  TaskType task_type_;
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
