@@ -47,7 +47,8 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const { return op_attribute_.op_conf().device_type(); }
-  bool UseCudnn() const;
+  bool UseCudnn() const { return device_type() == DeviceType::kGPU && UseCudnnOnGpu(); }
+  bool UseCudnnOnGpu() const { return op_conf().use_cudnn_on_gpu(); }
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
@@ -105,19 +106,19 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
-  void InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                         const ParallelContext*, size_t* buf_size,
                         std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*, size_t* buf_size,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
   virtual void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }

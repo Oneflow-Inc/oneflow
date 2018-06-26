@@ -42,11 +42,11 @@ void CopyCommNetActor::InitDeviceCtx(const ThreadCtx&) {
 }
 
 void CopyCommNetActor::ForEachCurCustomizedReadableRegst(
-    std::function<void(const Regst*)> handler) {
+    std::function<void(const Regst*)> handler) const {
   handler(piece_id2regst_ctx.at(next_piece_id_).regst_raw_ptr);
 }
 
-void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
+void CopyCommNetActor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) const {
   const RegstCtx& regst_ctx = piece_id2regst_ctx.at(next_piece_id_);
   CHECK(regst == regst_ctx.regst_raw_ptr);
   info->set_regst_desc_id(in_regst_desc_id_);
@@ -71,8 +71,7 @@ void CopyCommNetActor::Act() {
   int64_t src_actor_id = readable_it->second.producer;
   int64_t src_machine_id = Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id);
   // writeable
-  Blob* writeable_blob = GetCurSoleWriteableRegst()->packed_blob();
-  void* writeable_token = writeable_blob->comm_net_token();
+  void* writeable_token = GetCurSoleWriteableRegst()->comm_net_token();
   // Async
   void* read_id =
       Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);

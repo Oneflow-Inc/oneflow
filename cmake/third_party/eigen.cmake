@@ -3,7 +3,7 @@ include (ExternalProject)
 set(EIGEN_INCLUDE_DIR ${THIRD_PARTY_DIR}/eigen/include/eigen3)
 set(EIGEN_INSTALL_DIR ${THIRD_PARTY_DIR}/eigen)
 
-set(eigen_URL https://github.com/RLovelett/eigen.git)
+set(eigen_URL https://github.com/eigenteam/eigen-git-mirror)
 set(eigen_TAG e9e95489a0b241412e31f0525e85b2fab386c786)
 
 add_definitions(-DEIGEN_NO_AUTOMATIC_RESIZING -DEIGEN_NO_MALLOC -DEIGEN_USE_GPU)

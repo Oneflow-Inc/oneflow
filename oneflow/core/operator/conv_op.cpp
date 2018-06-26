@@ -81,7 +81,7 @@ bool ConvOp<NDims>::NeedOutWhenBackward() const {
 }
 
 template<int32_t NDims>
-void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext* parallel_ctx, size_t* buf_size,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
@@ -120,7 +120,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
-    if (!UseCudnn()) {
+    if (!UseCudnnOnGpu()) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
       GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape(bias_mul_shape);
@@ -130,7 +130,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
   ConvOpCtx* conv_op_ctx = new ConvOpCtx();
   EnrollOpCtx(conv_op_ctx);
 
-  if (!UseCudnn()) {
+  if (device_type() == DeviceType::kCPU || !UseCudnnOnGpu()) {
     // col_buf
     size_t col_buf_elem_cnt = 1;
     for (size_t i = 0; i != NDims + 1; ++i) { col_buf_elem_cnt *= weight_shape[i + 1]; }
@@ -139,7 +139,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string)> G
   }
 
 #ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU) {
+  if (device_type() == DeviceType::kGPU && UseCudnnOnGpu()) {
     // cudnn_buf
     InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx));
     *buf_size = std::max({conv_op_ctx->cudnn_conv_algo_ctx.fwd_ws_size,
@@ -235,7 +235,7 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   conv_conf->set_dim(NDims);
-  if (!UseCudnn()) {
+  if (!UseCudnnOnGpu()) {
     GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
   } else {
     GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf, op_ctx);

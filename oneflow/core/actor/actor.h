@@ -54,9 +54,10 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>);
+  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
+  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
+  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>) const;
+  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>) const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -117,13 +118,20 @@ class Actor {
   }
 
  private:
+  friend class ScopedActEventRecorder;
   bool IsReadReady();
+  bool IsCtrlReady();
+  int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
+  int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
+  void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
+  void AsyncSendCtrlRegstMsg();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
   void AsyncSendMsg(const ActorMsg&);
   int64_t GetGlobalWorkStreamId() const;
   int64_t GetLocalWorkStreamId() const;
+  bool NeedRecordActEvent() const { return Global<RuntimeCtx>::Get()->need_record_event(); }
 
   int64_t actor_id_;
   int64_t act_id_;
@@ -148,12 +156,17 @@ class Actor {
   HashMap<int64_t, std::deque<Regst*>> naive_readable_regst_;
   size_t naive_readable_regst_cnt_;
   bool is_naive_readable_eord_;
-  int64_t in_delay_regst_desc_id_;
 
-  // Profile
-  double last_act_start_time_;
-  double act_interval_acc_;
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
+  int64_t total_reading_ctrl_cnt_;
+  int64_t readable_ctrl_regst_desc_cnt_;
+  int64_t writeable_ctrl_regst_desc_cnt_;
+  bool is_consumed_ctrl_eord_;
 };
+
+class ScopedActEventRecorder;
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 

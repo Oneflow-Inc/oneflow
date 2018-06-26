@@ -45,9 +45,12 @@ class RegstDesc final {
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
-  void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
+  void set_enable_mem_sharing(bool enable_mem_sharing) {
+    mem_sharing_info_.set_enable_mem_sharing(enable_mem_sharing);
+  }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
+  const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
@@ -68,7 +71,7 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
-  bool enable_mem_sharing_;
+  MemSharingProto mem_sharing_info_;
 };
 
 }  // namespace oneflow

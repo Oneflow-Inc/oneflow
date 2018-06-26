@@ -21,7 +21,9 @@ RegstDesc::RegstDesc() {
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
-  enable_mem_sharing_ = false;
+  mem_sharing_info_.set_enable_mem_sharing(false);
+  mem_sharing_info_.set_mem_shared_id(-1);
+  mem_sharing_info_.set_used_order_value(-1);
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -122,7 +124,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
-  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_delay_regst_desc()) {
+  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
     UNIMPLEMENTED();
@@ -131,8 +133,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
-  ret->set_enable_mem_sharing(enable_mem_sharing_);
-  ret->set_mem_shared_id(-1);
+  *(ret->mutable_mem_sharing_info()) = mem_sharing_info_;
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {

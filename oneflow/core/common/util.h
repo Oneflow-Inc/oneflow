@@ -23,11 +23,20 @@
 #include <unordered_set>
 #include <utility>
 
-#include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/common/cplusplus_14.h"
-#include "oneflow/core/common/cplusplus_17.h"
+#include "oneflow/core/common/meta_util.hpp"
 
 DECLARE_string(log_dir);
+
+namespace std {
+template<typename T0, typename T1>
+struct hash<std::pair<T0, T1>> {
+  std::size_t operator()(const std::pair<T0, T1>& p) const {
+    auto h0 = std::hash<T0>{}(p.first);
+    auto h1 = std::hash<T1>{}(p.second);
+    return h0 ^ h1;
+  }
+};
+}  // namespace std
 
 namespace oneflow {
 
@@ -175,8 +184,8 @@ inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align *
 size_t GetAvailableCpuMemSize();
 
 template<typename T>
-void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase,
-           std::function<void(const typename T::value_type&)> EraseElementHandler) {
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase,
+           const std::function<void(const typename T::value_type&)>& EraseElementHandler) {
   auto iter = container.begin();
   auto erase_from = container.end();
   while (iter != erase_from) {
@@ -193,38 +202,10 @@ void Erase(T& container, std::function<bool(const typename T::value_type&)> Need
 }
 
 template<typename T>
-void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase) {
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
-inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
-  if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
-  if (lhs.b121_id() != rhs.b121_id()) { return lhs.b121_id() < rhs.b121_id(); }
-  if (lhs.clone_id() != rhs.clone_id()) { return lhs.clone_id() < rhs.clone_id(); }
-  if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
-  return false;
-}
-
-inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  return lhs.op_name() == rhs.op_name() && lhs.blob_name() == rhs.blob_name()
-         && lhs.b121_id() == rhs.b121_id() && lhs.clone_id() == rhs.clone_id()
-         && lhs.is_packed_id() == rhs.is_packed_id();
-}
-
 }  // namespace oneflow
-
-namespace std {
-
-template<>
-struct hash<oneflow::LogicalBlobId> {
-  size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.b121_id())
-                                    + std::to_string(lbi.clone_id())
-                                    + std::to_string(lbi.is_packed_id()));
-  }
-};
-
-}  // namespace std
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_

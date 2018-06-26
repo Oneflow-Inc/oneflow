@@ -23,7 +23,7 @@ int32_t RecurrentOp::MaxModelSplitNum() const {
   return GetValFromCustomizedConf<int32_t>("hidden_size");
 }
 
-void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   DataType data_type = Global<JobDesc>::Get()->DefaultDataType();

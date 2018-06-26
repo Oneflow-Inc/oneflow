@@ -25,7 +25,7 @@ const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
 }
 
 void DecodeOFRecordOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));

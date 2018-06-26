@@ -41,10 +41,6 @@ LogicalBlobId* Operator::MutBnInOp2Lbi(const std::string& bn_in_op) {
   }
 }
 
-bool Operator::UseCudnn() const {
-  return device_type() == DeviceType::kGPU && op_conf().use_cudnn_on_gpu();
-}
-
 const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns().size(), 1);
   return input_bns().Get(0);
@@ -66,7 +62,7 @@ const std::string& Operator::SoleDtbn() const {
   return data_tmp_bns().Get(0);
 }
 
-void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
@@ -76,18 +72,18 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetB
   }
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx, size_t* buf_size,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
 }
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   UNIMPLEMENTED() << typeid(*this).name();
 }
