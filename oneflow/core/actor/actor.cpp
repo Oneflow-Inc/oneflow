@@ -231,11 +231,11 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-class ScopedActEventRecorder final {
+class ScopedActEventLogger final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
-  explicit ScopedActEventRecorder(const Actor* actor) : actor_(actor), act_event_(nullptr) {
-    if (NeedRecord()) {
+  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventLogger);
+  explicit ScopedActEventLogger(const Actor* actor) : actor_(actor), act_event_(nullptr) {
+    if (NeedCollectActEvent()) {
       act_event_.reset(new ActEvent());
       ActEvent* act_event = act_event_.get();
       act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
@@ -259,8 +259,8 @@ class ScopedActEventRecorder final {
     }
   }
 
-  ~ScopedActEventRecorder() {
-    if (NeedRecord()) {
+  ~ScopedActEventLogger() {
+    if (NeedCollectActEvent()) {
       CHECK(act_event_);
       std::shared_ptr<ActEvent> act_event = act_event_;
       actor_->device_ctx_->AddCallBack([act_event]() {
@@ -271,8 +271,8 @@ class ScopedActEventRecorder final {
   }
 
  private:
-  bool NeedRecord() {
-    return Global<RuntimeCtx>::Get()->is_experiment_phase() || actor_->NeedRecordActEvent();
+  bool NeedCollectActEvent() {
+    return Global<RuntimeCtx>::Get()->is_experiment_phase() || actor_->NeedCollectActEvent();
   }
   const Actor* actor_;
   std::shared_ptr<ActEvent> act_event_;
@@ -283,7 +283,7 @@ void Actor::ActUntilFail() {
     act_id_ += 1;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
     {
-      ScopedActEventRecorder scope_recorder(this);
+      ScopedActEventLogger scope_logger(this);
       Act(&IsNaiveAllowedReturnToProducer);
     }
     AsyncSendCtrlRegstMsg();
