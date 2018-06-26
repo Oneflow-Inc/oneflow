@@ -12,6 +12,11 @@ bool IsForwardTaskType(TaskType);
 bool IsBackwardTaskType(TaskType);
 bool IsMdUpdtTaskType(TaskType);
 
+RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
+                                                  const std::string& regst_desc_name);
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name);
+
 class TaskEdge;
 
 class TaskNode : public Node<TaskNode, TaskEdge> {

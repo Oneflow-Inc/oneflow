@@ -1,4 +1,5 @@
 #include "oneflow/core/job/improver.h"
+#include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
@@ -291,15 +292,91 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-void ForEachMemSharingCriticalSection(
-    const Plan& plan,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  TODO();
+void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
+  RegstDescProto* ctrl_regst_desc =
+      FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
+  int64_t dst_task_id = dst_task_proto->task_id();
+  if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
+    ctrl_regst_desc->add_consumer_task_id(dst_task_id);
+    int64_t ctrl_regst_desc_id = ctrl_regst_desc->regst_desc_id();
+    RegstDescIdSet* consumed_ctrl_regst_desc_ids =
+        FindOrCreateConsumedCtrlRegstDescIdSet(dst_task_proto, "in_ctrl");
+    CHECK(!IsInRepeatedField(consumed_ctrl_regst_desc_ids->regst_desc_id(), ctrl_regst_desc_id));
+    consumed_ctrl_regst_desc_ids->add_regst_desc_id(ctrl_regst_desc_id);
+  }
+}
+
+void CollectTailRegstConsumerTaskIds(const std::vector<const RegstDescProto*>& shared_mem_regsts,
+                                     HashSet<int64_t>* task_ids) {
+  for (const RegstDescProto* regst_proto : shared_mem_regsts) {
+    if (regst_proto == shared_mem_regsts.front()) { continue; }
+    for (int64_t consumer_id : regst_proto->consumer_task_id()) { task_ids->insert(consumer_id); }
+  }
+}
+
+void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
+                        const std::function<bool(int64_t, int64_t)>& IsReachable,
+                        std::list<int64_t>* sink_task_ids) {
+  auto IsReachableToAnyOherTask = [&](int64_t src_task_id) -> bool {
+    for (int64_t dst_task_id : task_ids) {
+      if (src_task_id == dst_task_id) { continue; }
+      if (IsReachable(src_task_id, dst_task_id)) { return true; }
+    }
+    return false;
+  };
+  sink_task_ids->clear();
+  for (int64_t src_task_id : task_ids) {
+    if (!IsReachableToAnyOherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
+  }
 }
 
 std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrlRegst(
     Plan* plan, const std::function<bool(int64_t, int64_t)>& IsReachable) {
-  TODO();
+  auto task_id2task_proto = std::make_shared<HashMap<int64_t, TaskProto*>>();
+  for (int i = 0; i < plan->task_size(); i++) {
+    TaskProto* task_proto = plan->mutable_task(i);
+    CHECK(task_id2task_proto->emplace(task_proto->task_id(), task_proto).second);
+  }
+  return [task_id2task_proto,
+          IsReachable](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
+    if (shared_mem_regsts.size() == 1) { return; }
+    int64_t header_task_id = shared_mem_regsts.front()->producer_task_id();
+    TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
+    HashSet<int64_t> tail_regsts_consumer_task_ids;
+    CollectTailRegstConsumerTaskIds(shared_mem_regsts, &tail_regsts_consumer_task_ids);
+    std::list<int64_t> sink_task_ids;
+    CollectSinkTaskIds(tail_regsts_consumer_task_ids, IsReachable, &sink_task_ids);
+    for (int64_t sink_task_id : sink_task_ids) {
+      TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
+      TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
+    }
+  };
+}
+
+void ForEachMemSharingCriticalSection(
+    const Plan& plan,
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
+  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
+  for (const auto& task : plan.task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      int32_t mem_sharing_id = pair.second.mem_sharing_info().mem_shared_id();
+      if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
+        CHECK(pair.second.mem_sharing_info().enable_mem_sharing());
+        CHECK_NE(pair.second.mem_sharing_info().used_order_value(), -1);
+        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
+      }
+    }
+  }
+  for (auto& pair : mem_sharing_id2regst_descs) {
+    std::sort(pair.second.begin(), pair.second.end(),
+              [](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+                int32_t lhs_mem_sharing_order = lhs->mem_sharing_info().used_order_value();
+                int32_t rhs_mem_sharing_order = rhs->mem_sharing_info().used_order_value();
+                CHECK_NE(lhs_mem_sharing_order, rhs_mem_sharing_order);
+                return lhs_mem_sharing_order < rhs_mem_sharing_order;
+              });
+    Handler(pair.second);
+  }
 }
 
 }  // namespace
