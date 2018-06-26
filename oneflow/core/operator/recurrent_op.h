@@ -14,14 +14,14 @@ class RecurrentOp : public Operator {
   void InitFromOpConf() override;
   bool IsRecurrentOp() const override { return true; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   int32_t ModelSplitAxis() const override { return 1; }
   int32_t MaxModelSplitNum() const override;
 
  private:
   virtual void VirtualInitFromOpConf() { UNIMPLEMENTED(); }
-  virtual void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                      const ParallelContext* parallel_ctx) const {
     UNIMPLEMENTED();
   }
