@@ -184,8 +184,8 @@ inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align *
 size_t GetAvailableCpuMemSize();
 
 template<typename T>
-void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase,
-           std::function<void(const typename T::value_type&)> EraseElementHandler) {
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase,
+           const std::function<void(const typename T::value_type&)>& EraseElementHandler) {
   auto iter = container.begin();
   auto erase_from = container.end();
   while (iter != erase_from) {
@@ -202,7 +202,7 @@ void Erase(T& container, std::function<bool(const typename T::value_type&)> Need
 }
 
 template<typename T>
-void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase) {
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
