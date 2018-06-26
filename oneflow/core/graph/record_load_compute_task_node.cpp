@@ -23,6 +23,18 @@ void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
 }
 
+void RecordLoadCompTaskNode::BuildExecGphAndRegst() {
+  std::shared_ptr<RegstDesc> record_regst = GetProducedRegst("record");
+  ExecNode* node = mut_exec_gph().NewNode();
+  node->mut_op() = logical_node()->SoleOp();
+  for (const std::string& obn : node->op()->output_bns()) {
+    const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
+    record_regst->AddLbi(lbi);
+    node->BindBnWithRegst(obn, record_regst);
+  }
+  node->InferBlobDescs(parallel_ctx());
+}
+
 void RecordLoadCompTaskNode::ToProto(TaskProto* task_proto) {
   CompTaskNode::ToProto(task_proto);
   int32_t data_part_num = Global<JobDesc>::Get()->DataPartNum();

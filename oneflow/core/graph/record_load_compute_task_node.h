@@ -13,7 +13,7 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
 
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
-  void BuildExecGphAndRegst() override {}
+  void BuildExecGphAndRegst() override;
   void ToProto(TaskProto*) override;
   bool IsMeaningLess() override { return false; }
   void EraseEmptyProducedRegst() override {}
