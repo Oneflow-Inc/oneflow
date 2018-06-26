@@ -113,7 +113,7 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
   }
 
   SplitDecodeOps();
-  AddRecordLoaderOps();
+  AddRecordLoadOps();
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
@@ -168,7 +168,7 @@ void JobDesc::SplitDecodeOps() {
   }
 }
 
-void JobDesc::AddRecordLoaderOps() {
+void JobDesc::AddRecordLoadOps() {
   HashMap<std::string, std::vector<OperatorConf*>> data_info2decode_ops;
   HashMap<std::string, int32_t> data_info2suffix_length;
   size_t op_num = job_conf_.net().op_size();
@@ -213,15 +213,15 @@ void JobDesc::AddRecordLoaderOps() {
     LOG_IF(WARNING, parallel_confs.size() > 1)
         << "Operators sharing the same data information belong to different placement groups";
     for (const ParallelConf* parallel_conf : parallel_confs) {
-      std::string record_loader_op_name = "record_loader_" + NewUniqueId();
-      std::string record_loader_out_name = "out";
-      std::string record_loader_lbi_name = record_loader_op_name + "/" + record_loader_out_name;
+      std::string record_load_op_name = "loader" + NewUniqueId();
+      std::string record_load_out_name = "out";
+      std::string record_load_lbi_name = record_load_op_name + "/" + record_load_out_name;
       OperatorConf* op = job_conf_.mutable_net()->add_op();
-      RecordLoaderOpConf* record_loader_op = op->mutable_record_loader_conf();
-      op->set_name(record_loader_op_name);
-      record_loader_op->set_out(record_loader_out_name);
+      RecordLoadOpConf* record_load_op = op->mutable_record_load_conf();
+      op->set_name(record_load_op_name);
+      record_load_op->set_out(record_load_out_name);
       PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
-      *(p_group->mutable_op_set()->add_op_name()) = record_loader_op_name;
+      *(p_group->mutable_op_set()->add_op_name()) = record_load_op_name;
       *(p_group->mutable_parallel_conf()) = *parallel_conf;
       for (OperatorConf* op : pair.second) {
         std::string op_name = op->name();
@@ -229,7 +229,7 @@ void JobDesc::AddRecordLoaderOps() {
         CHECK(op_parallel_conf_it != name2parallel_conf.end());
         PbMd message_diff;
         if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
-        op->mutable_decode_ofrecord_conf()->set_in(record_loader_lbi_name);
+        op->mutable_decode_ofrecord_conf()->set_in(record_load_lbi_name);
       }
     }
   }
