@@ -11,7 +11,7 @@ void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
         || succ_logical->TypeName() == "ReduceScatter") {
-      edge->AddRegst("model_diff", ProduceRegst("model_diff", false));
+      edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
     } else {
       BindEdgeWithProducedB121Regst(edge, "in_diff");
     }

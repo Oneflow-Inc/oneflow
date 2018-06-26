@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void AccCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  auto acc_regst = ProduceRegst("acc", false);
+  auto acc_regst = ProduceRegst("acc", true);
   SoleOutEdge()->AddRegst("acc", acc_regst);
 }
 
