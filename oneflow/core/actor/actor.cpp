@@ -463,11 +463,11 @@ void Actor::AsyncSendCtrlRegstMsg() {
   for (auto& pair : writeable_produced_ctrl_regst_) {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
-    CHECK_EQ(regst->consumers_actor_id().size(), 1);
     regst->set_act_id(act_id_);
-    AsyncSendMsg(
-        ActorMsg::BuildRegstMsgToConsumer(actor_id_, regst->consumers_actor_id()[0], regst));
-    ++total_reading_ctrl_cnt_;
+    for (int64_t consumer : regst->consumers_actor_id()) {
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+      ++total_reading_ctrl_cnt_;
+    }
     pair.second.pop_front();
     if (pair.second.empty()) { --writeable_ctrl_regst_desc_cnt_; }
   }
@@ -476,11 +476,12 @@ void Actor::AsyncSendCtrlRegstMsg() {
 void Actor::AsyncSendEORDMsgForAllProducedCtrlRegstDesc() {
   for (auto& pair : produced_ctrl_regst_) {
     CHECK(!pair.second.empty());
-    Regst* regst = pair.second.front().get();
-    CHECK_EQ(regst->consumers_actor_id().size(), 1);
-    device_ctx_->AddCallBack([regst]() {
-      Global<ActorMsgBus>::Get()->SendMsg(
-          ActorMsg::BuildEordMsg(regst->consumers_actor_id()[0], regst->regst_desc_id()));
+    const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
+    device_ctx_->AddCallBack([regst_desc]() {
+      for (int64_t consumer : regst_desc->consumers_actor_id()) {
+        Global<ActorMsgBus>::Get()->SendMsg(
+            ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
+      }
     });
   }
 }
