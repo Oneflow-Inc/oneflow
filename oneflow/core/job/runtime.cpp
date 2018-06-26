@@ -25,6 +25,14 @@ void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
 
+bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
+  for (const auto& pair : task.consumed_regst_desc_id()) {
+    if (pair.first == "in_ctrl") { continue; }
+    return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
@@ -37,7 +45,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     if (IsMdUpdtTaskType(task.task_type())) {
       mdupdt_tasks.push_back(&task);
-    } else if (task.consumed_regst_desc_id_size() == 0) {
+    } else if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {
       other_tasks.push_back(&task);
