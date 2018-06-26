@@ -53,7 +53,7 @@ void RegstLifetimeGraph::ForEachSameColoredRegstDescs(
     BfsForEachNode({start}, ForEachIntersected, [&](const RegstLifetimeNode* node) {
       if (node2color_id.find(node) != node2color_id.end()) { return; }
       int32_t color_id = 0;
-      const auto& excluded_color_ids = node2excluded_color_ids.at(node);
+      const auto& excluded_color_ids = node2excluded_color_ids[node];
       for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
       node2color_id[node] = color_id;
       (node->*ForEachIntersected)([&](const RegstLifetimeNode* intersected) {
