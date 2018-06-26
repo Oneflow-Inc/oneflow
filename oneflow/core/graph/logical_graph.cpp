@@ -14,7 +14,6 @@ LogicalGraph::LogicalGraph(bool is_train) {
   SetNodeDataLbi();
   if (is_train) { BuildLossPrintStruct(); }
   BuildModelStruct(is_train);
-  BuildRecordLoadStruct();
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
 }
@@ -516,58 +515,6 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
   if (is_train) { BuildMdSaveStruct(fw_logical, md_updt_logical); }
   return md_updt_logical;
-}
-
-void LogicalGraph::BuildRecordLoadStruct() {
-  HashMap<std::string, std::vector<DecodeLogicalNode*>> data_info2decode_nodes;
-  HashMap<std::string, int32_t> data_info2suffix_length;
-  ForEachLogicalNode<DecodeLogicalNode>([&](DecodeLogicalNode* decode_node) {
-    std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
-    if (decode_op->HasFieldInCustomizedConf("data_dir") == false) { return; }
-    std::string data_dir = decode_op->GetValFromCustomizedConf<std::string>("data_dir");
-    std::string part_name_prefix =
-        decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");
-    std::string data_info = data_dir + "_" + part_name_prefix;
-    data_info2decode_nodes[data_info].emplace_back(decode_node);
-    int32_t part_name_suffix_length =
-        decode_op->GetValFromCustomizedConf<int32_t>("part_name_suffix_length");
-    if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {
-      CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
-    } else {
-      data_info2suffix_length[data_info] = part_name_suffix_length;
-    }
-  });
-  for (auto& pair : data_info2decode_nodes) {
-    std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
-    for (DecodeLogicalNode* decode_node : pair.second) {
-      auto iter = std::find_if(parallel_descs.begin(), parallel_descs.end(),
-                               [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
-                                 return parallel_desc->Equal(decode_node->parallel_desc().get());
-                               });
-      if (iter == parallel_descs.end()) {
-        parallel_descs.emplace_back(decode_node->parallel_desc());
-      }
-    }
-    LOG_IF(WARNING, parallel_descs.size() > 1)
-        << "Operators sharing same data information belong to different "
-           "placement groups";
-    for (std::shared_ptr<const ParallelDesc> parallel_desc : parallel_descs) {
-      OperatorConf record_loader_op_conf;
-      record_loader_op_conf.set_name("record_loader_" + NewUniqueId());
-      record_loader_op_conf.set_device_type(DeviceType::kCPU);
-      int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
-      CHECK_EQ(global_piece_size % parallel_desc->parallel_num(), 0);
-      record_loader_op_conf.mutable_record_loader_conf()->set_piece_size_in_each_loader(
-          global_piece_size / parallel_desc->parallel_num());
-      LogicalNode* record_load_node = NewNode<RecordLoadLogicalNode>();
-      record_load_node->mut_op_vec() = {ConstructOp(record_loader_op_conf)};
-      record_load_node->mut_parallel_desc() = parallel_desc;
-      for (DecodeLogicalNode* decode_node : pair.second) {
-        if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) { continue; }
-        Connect<LogicalNode>(record_load_node, NewEdge(), decode_node);
-      }
-    }
-  }
 }
 
 void LogicalGraph::ConnectFwToBw() {

@@ -70,6 +70,7 @@ class JobDesc final {
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
   void SplitDecodeOps();
+  void AddRecordLoaderOps();
 
   JobConf1 job_conf_;
   int64_t record_loader_num_ = -1;

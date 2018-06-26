@@ -1,4 +1,5 @@
 #include "oneflow/core/job/job_desc.h"
+#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 
@@ -112,6 +113,7 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
   }
 
   SplitDecodeOps();
+  AddRecordLoaderOps();
 #ifndef WITH_RDMA
   CHECK_EQ(job_conf_.other().use_rdma(), false) << "Please compile ONEFLOW with RDMA";
 #endif
@@ -160,8 +162,76 @@ void JobDesc::SplitDecodeOps() {
           *gen_decode_conf->add_blob() = blob_conf;
         });
   }
+  // TODO: erase decode op which has no blob any more
   for (OperatorConf& gen_op_conf : gen_op_confs) {
     *(job_conf_.mutable_net()->add_op()) = gen_op_conf;
+  }
+}
+
+void JobDesc::AddRecordLoaderOps() {
+  HashMap<std::string, std::vector<OperatorConf*>> data_info2decode_ops;
+  HashMap<std::string, int32_t> data_info2suffix_length;
+  size_t op_num = job_conf_.net().op_size();
+  FOR_RANGE(size_t, idx, 0, op_num) {
+    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op()->Mutable(idx);
+    if (op_conf->has_decode_ofrecord_conf() == false) { continue; }
+    const DecodeOFRecordOpConf& decode_conf = op_conf->decode_ofrecord_conf();
+    if (decode_conf.blob_size() == 0) { continue; }
+    std::string data_dir = decode_conf.data_dir();
+    std::string part_name_prefix = decode_conf.part_name_prefix();
+    std::string data_info = data_dir + "_" + part_name_prefix;
+    data_info2decode_ops[data_info].emplace_back(op_conf);
+    int32_t part_name_suffix_length = decode_conf.part_name_suffix_length();
+    if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {
+      CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
+    } else {
+      data_info2suffix_length[data_info] = part_name_suffix_length;
+    }
+  }
+
+  HashMap<std::string, const ParallelConf*> name2parallel_conf;
+  for (const PlacementGroup& p_group : job_conf_.placement().placement_group()) {
+    for (const std::string& op_name : p_group.op_set().op_name()) {
+      CHECK(name2parallel_conf.emplace(op_name, &p_group.parallel_conf()).second);
+    }
+  }
+
+  for (const auto& pair : data_info2decode_ops) {
+    std::vector<const ParallelConf*> parallel_confs;
+    for (const OperatorConf* op_conf : pair.second) {
+      auto op_parallel_conf_it = name2parallel_conf.find(op_conf->name());
+      CHECK(op_parallel_conf_it != name2parallel_conf.end());
+      auto iter = std::find_if(
+          parallel_confs.begin(), parallel_confs.end(), [&](const ParallelConf* parallel_conf) {
+            PbMd message_diff;
+            return message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second));
+          });
+      if (iter == parallel_confs.end()) {
+        parallel_confs.emplace_back(op_parallel_conf_it->second);
+      }
+    }
+    LOG_IF(WARNING, parallel_confs.size() > 1)
+        << "Operators sharing the same data information belong to different placement groups";
+    for (const ParallelConf* parallel_conf : parallel_confs) {
+      std::string record_loader_op_name = "record_loader_" + NewUniqueId();
+      std::string record_loader_out_name = "out";
+      std::string record_loader_lbi_name = record_loader_op_name + "/" + record_loader_out_name;
+      OperatorConf* op = job_conf_.mutable_net()->add_op();
+      RecordLoaderOpConf* record_loader_op = op->mutable_record_loader_conf();
+      op->set_name(record_loader_op_name);
+      record_loader_op->set_out(record_loader_out_name);
+      PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
+      *(p_group->mutable_op_set()->add_op_name()) = record_loader_op_name;
+      *(p_group->mutable_parallel_conf()) = *parallel_conf;
+      for (OperatorConf* op : pair.second) {
+        std::string op_name = op->name();
+        auto op_parallel_conf_it = name2parallel_conf.find(op_name);
+        CHECK(op_parallel_conf_it != name2parallel_conf.end());
+        PbMd message_diff;
+        if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
+        op->mutable_decode_ofrecord_conf()->set_in(record_loader_lbi_name);
+      }
+    }
   }
 }
 

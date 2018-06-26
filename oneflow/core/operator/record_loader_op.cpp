@@ -7,11 +7,12 @@ void RecordLoaderOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-void RecordLoaderOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void RecordLoaderOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
-  const RecordLoaderOpConf& conf = op_conf().record_loader_conf();
-  out_blob_desc->mut_shape() = Shape({conf.piece_size_in_each_loader()});
+  int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
+  CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
+  out_blob_desc->mut_shape() = Shape({global_piece_size / parallel_ctx->parallel_num()});
 }
 
 }  // namespace oneflow

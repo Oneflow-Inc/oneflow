@@ -482,7 +482,7 @@ message PreprocessConf {
 }
 
 message RecordLoaderOpConf {
-  required int32 piece_size_in_each_loader = 1;
+  required string out = 2;
 }
 
 message BlobConf {
@@ -498,7 +498,8 @@ message DecodeOFRecordOpConf {
   required string data_dir = 1;
   optional string part_name_prefix = 2 [default = "part-"];
   optional int32 part_name_suffix_length = 3 [default = -1];
-  repeated BlobConf blob = 4;
+  optional string in = 4;
+  repeated BlobConf blob = 5;
 }
 
 message DecodeRandomOpConf {

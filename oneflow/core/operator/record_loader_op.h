@@ -12,7 +12,7 @@ class RecordLoaderOp final : public Operator {
   ~RecordLoaderOp() = default;
 
   void InitFromOpConf() override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
  private:
