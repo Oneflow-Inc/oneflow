@@ -10,7 +10,7 @@ void ReduceSumOp::InitFromOpConf() {
 
 const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
 
-void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext*, size_t* buf_size,
                                  std::function<void(OpContext*)>) const {
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");

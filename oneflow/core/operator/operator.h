@@ -106,19 +106,19 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
-  void InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                         const ParallelContext*, size_t* buf_size,
                         std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*, size_t* buf_size,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
   virtual void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
