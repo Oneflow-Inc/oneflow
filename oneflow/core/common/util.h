@@ -27,6 +27,17 @@
 
 DECLARE_string(log_dir);
 
+namespace std {
+template<typename T0, typename T1>
+struct hash<std::pair<T0, T1>> {
+  std::size_t operator()(const std::pair<T0, T1>& p) const {
+    auto h0 = std::hash<T0>{}(p.first);
+    auto h1 = std::hash<T1>{}(p.second);
+    return h0 ^ h1;
+  }
+};
+}  // namespace std
+
 namespace oneflow {
 
 #define OF_DISALLOW_COPY(ClassName)     \
@@ -173,8 +184,8 @@ inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align *
 size_t GetAvailableCpuMemSize();
 
 template<typename T>
-void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase,
-           std::function<void(const typename T::value_type&)> EraseElementHandler) {
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase,
+           const std::function<void(const typename T::value_type&)>& EraseElementHandler) {
   auto iter = container.begin();
   auto erase_from = container.end();
   while (iter != erase_from) {
@@ -191,7 +202,7 @@ void Erase(T& container, std::function<bool(const typename T::value_type&)> Need
 }
 
 template<typename T>
-void Erase(T& container, std::function<bool(const typename T::value_type&)> NeedErase) {
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 

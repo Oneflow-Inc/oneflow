@@ -36,7 +36,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
 }
 
 void NormalForwardCompActor::ForEachCurCustomizedReadableRegst(
-    std::function<void(const Regst*)> handler) {
+    std::function<void(const Regst*)> handler) const {
   if (model_regst_desc_id_ != -1) { handler(model_regst_); }
   if (const_model_regst_desc_id_ != -1) { handler(const_model_regst_); }
 }

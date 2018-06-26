@@ -52,6 +52,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
+  virtual int64_t GetAreaId() const = 0;
+
  protected:
   LogicalNode() : main_model_parallel_(nullptr) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
@@ -109,9 +111,10 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const LogicalNode* out_logical, BoxingOpConf*);
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()   \
-  std::string TypeName() const override; \
-  CompTaskNode* NewCompTaskNode() const override;
+#define OVERRIDE_PURE_VIRTUAL_METHOD()            \
+  std::string TypeName() const override;          \
+  CompTaskNode* NewCompTaskNode() const override; \
+  int64_t GetAreaId() const override;
 
 #define LOGICAL_NODE_BOILERPLATE(class_name) \
   OF_DISALLOW_COPY_AND_MOVE(class_name);     \
