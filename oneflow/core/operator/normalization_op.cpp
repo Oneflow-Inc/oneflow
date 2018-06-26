@@ -46,9 +46,9 @@ bool NormalizationOp::NeedOutWhenBackward() const {
   }
 }
 
-void NormalizationOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                     const ParallelContext* parallel_ctx,
-                                     std::function<void(OpContext*)> EnrollOpCtx) const {
+void NormalizationOp::InferBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {
   const auto& conf = op_conf().normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const DataType in_data_type = in_blob_desc->data_type();
@@ -89,8 +89,9 @@ void NormalizationOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)
 }
 
 void NormalizationOp::InferParamBlobDescs(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const NormalizationOpConf& conf,
-    int64_t norm_part_num, DataType in_data_type, bool use_cudnn) const {
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const NormalizationOpConf& conf, int64_t norm_part_num, DataType in_data_type,
+    bool use_cudnn) const {
   BlobDesc blob_desc(Shape({norm_part_num}), in_data_type, false, false, 1);
   std::list<std::string> blob_names = {"moving_mean", "moving_variance"};
   std::list<std::string> bns_needless_in_predict_or_cudnn = {"new_mean", "new_variance"};
