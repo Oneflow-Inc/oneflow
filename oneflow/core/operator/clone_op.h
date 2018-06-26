@@ -15,10 +15,10 @@ class CloneOp final : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
 
  private:

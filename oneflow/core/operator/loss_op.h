@@ -15,15 +15,16 @@ class LossOp : public Operator {
   void InitFromOpConf() override;
   LogicalNode* NewProperLogicalNode() override { return new LossLogicalNode; }
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx, size_t* buf_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
   bool IsLossOp() const override { return true; }
 
  protected:
   virtual void VirtualInitFromOpConf() {}
-  virtual void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                                     const ParallelContext* parallel_ctx, size_t* buf_size) const {}
+  virtual void VirtualInferBlobDescs(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx, size_t* buf_size) const {}
   virtual LossKernelConf* GetMutLossKernelConf(KernelConf*) const = 0;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

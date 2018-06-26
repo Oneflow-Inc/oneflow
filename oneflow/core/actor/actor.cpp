@@ -17,47 +17,10 @@ bool NeedModelSave(int64_t model_version_id) {
          || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
 }
 
-ScopedActEventRecorder::ScopedActEventRecorder(Actor* actor) : actor_(actor), act_event_(nullptr) {
-  if (Global<RuntimeCtx>::Get()->need_record_event() && actor_->task_type_ != kCopyCommNet) {
-    act_event_ = new ActEvent();
-    ActEvent* act_event = act_event_;
-    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
-    act_event->set_actor_id(actor_->actor_id());
-    act_event->set_work_stream_id(actor_->GetGlobalWorkStreamId());
-    act_event->set_act_id(actor_->act_id_);
-    act_event->set_ready_time(GetCurTime());
-    actor_->ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      (actor_->Actor::SetReadableRegstInfo)(readable_regst, info);
-    });
-    actor_->ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      actor_->SetReadableRegstInfo(readable_regst, info);
-    });
-    actor_->ForEachCurConsumedCtrlRegst([&](const Regst* consumed_ctrl_regst) {
-      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-      (actor_->Actor::SetReadableRegstInfo)(consumed_ctrl_regst, info);
-    });
-    actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-  }
-}
-
-ScopedActEventRecorder::~ScopedActEventRecorder() {
-  if (Global<RuntimeCtx>::Get()->need_record_event() && actor_->task_type_ != kCopyCommNet) {
-    ActEvent* act_event = act_event_;
-    actor_->device_ctx_->AddCallBack([act_event]() {
-      act_event->set_stop_time(GetCurTime());
-      Global<CtrlClient>::Get()->PushActEvent(*act_event);
-      delete act_event;
-    });
-  }
-}
-
 Actor::~Actor() {}
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TaskProto non_ctrl_task_proto = task_proto;
-  task_type_ = task_proto.task_type();
   actor_id_ = task_proto.task_id();
   act_id_ = -1;
   InitDeviceCtx(thread_ctx);
@@ -179,12 +142,12 @@ KernelCtx Actor::GenDefaultKernelCtx() const {
   return ctx;
 }
 
-void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) {
+void Actor::SetReadableRegstInfo(const Regst* regst, ReadableRegstInfo* info) const {
   info->set_regst_desc_id(regst->regst_desc_id());
   info->set_act_id(regst->act_id());
 }
 
-void Actor::ForEachCurNaiveReadableRegst(std::function<void(const Regst*)> func) {
+void Actor::ForEachCurNaiveReadableRegst(std::function<void(const Regst*)> func) const {
   for (const auto& pair : naive_readable_regst_) {
     if (pair.second.empty() == false) { func(pair.second.front()); }
   }
@@ -268,12 +231,61 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
+class ScopedActEventRecorder final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
+  explicit ScopedActEventRecorder(const Actor* actor) : actor_(actor), act_event_(nullptr) {
+    if (NeedRecord()) {
+      act_event_.reset(new ActEvent());
+      ActEvent* act_event = act_event_.get();
+      act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
+      act_event->set_actor_id(actor_->actor_id());
+      act_event->set_work_stream_id(actor_->GetGlobalWorkStreamId());
+      act_event->set_act_id(actor_->act_id_);
+      act_event->set_ready_time(GetCurTime());
+      actor_->ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        (actor_->Actor::SetReadableRegstInfo)(readable_regst, info);
+      });
+      actor_->ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        actor_->SetReadableRegstInfo(readable_regst, info);
+      });
+      actor_->ForEachCurConsumedCtrlRegst([&](const Regst* consumed_ctrl_regst) {
+        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+        (actor_->Actor::SetReadableRegstInfo)(consumed_ctrl_regst, info);
+      });
+      actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
+    }
+  }
+
+  ~ScopedActEventRecorder() {
+    if (NeedRecord()) {
+      CHECK(act_event_);
+      std::shared_ptr<ActEvent> act_event = act_event_;
+      actor_->device_ctx_->AddCallBack([act_event]() {
+        act_event->set_stop_time(GetCurTime());
+        Global<CtrlClient>::Get()->PushActEvent(*act_event);
+      });
+    }
+  }
+
+ private:
+  bool NeedRecord() {
+    return Global<RuntimeCtx>::Get()->is_experiment_phase() || actor_->NeedRecordActEvent();
+  }
+  const Actor* actor_;
+  std::shared_ptr<ActEvent> act_event_;
+};
+
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
     act_id_ += 1;
-    ScopedActEventRecorder scope_recorder(this);
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
-    Act(&IsNaiveAllowedReturnToProducer);
+    {
+      ScopedActEventRecorder scope_recorder(this);
+      Act(&IsNaiveAllowedReturnToProducer);
+    }
     AsyncSendCtrlRegstMsg();
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);
@@ -463,11 +475,11 @@ void Actor::AsyncSendCtrlRegstMsg() {
   for (auto& pair : writeable_produced_ctrl_regst_) {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
-    CHECK_EQ(regst->consumers_actor_id().size(), 1);
     regst->set_act_id(act_id_);
-    AsyncSendMsg(
-        ActorMsg::BuildRegstMsgToConsumer(actor_id_, regst->consumers_actor_id()[0], regst));
-    ++total_reading_ctrl_cnt_;
+    for (int64_t consumer : regst->consumers_actor_id()) {
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
+      ++total_reading_ctrl_cnt_;
+    }
     pair.second.pop_front();
     if (pair.second.empty()) { --writeable_ctrl_regst_desc_cnt_; }
   }
@@ -476,16 +488,17 @@ void Actor::AsyncSendCtrlRegstMsg() {
 void Actor::AsyncSendEORDMsgForAllProducedCtrlRegstDesc() {
   for (auto& pair : produced_ctrl_regst_) {
     CHECK(!pair.second.empty());
-    Regst* regst = pair.second.front().get();
-    CHECK_EQ(regst->consumers_actor_id().size(), 1);
-    device_ctx_->AddCallBack([regst]() {
-      Global<ActorMsgBus>::Get()->SendMsg(
-          ActorMsg::BuildEordMsg(regst->consumers_actor_id()[0], regst->regst_desc_id()));
+    const RtRegstDesc* regst_desc = pair.second.front()->regst_desc();
+    device_ctx_->AddCallBack([regst_desc]() {
+      for (int64_t consumer : regst_desc->consumers_actor_id()) {
+        Global<ActorMsgBus>::Get()->SendMsg(
+            ActorMsg::BuildEordMsg(consumer, regst_desc->regst_desc_id()));
+      }
     });
   }
 }
 
-void Actor::ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)> func) {
+void Actor::ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)> func) const {
   for (const auto& pair : consumed_ctrl_regst_) {
     if (pair.second.empty() == false) { func(pair.second.front()); }
   }
