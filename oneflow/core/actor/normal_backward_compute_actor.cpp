@@ -15,7 +15,7 @@ void NormalBackwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) 
 }
 
 void NormalBackwardCompActor::ForEachCurCustomizedReadableRegst(
-    std::function<void(const Regst*)> handler) {
+    std::function<void(const Regst*)> handler) const {
   if (model_regst_desc_id_ != -1) {
     CHECK_EQ(model_regst_queue_.empty(), false);
     handler(model_regst_queue_.front());

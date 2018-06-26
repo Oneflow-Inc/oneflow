@@ -54,10 +54,10 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
-  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
-  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>);
+  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
+  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
+  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>) const;
+  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>) const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -166,16 +166,7 @@ class Actor {
   bool is_consumed_ctrl_eord_;
 };
 
-class ScopedActEventRecorder {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
-  explicit ScopedActEventRecorder(Actor* actor);
-  ~ScopedActEventRecorder();
-
- private:
-  Actor* actor_;
-  ActEvent* act_event_;
-};
+class ScopedActEventRecorder;
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 
