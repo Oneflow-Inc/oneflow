@@ -17,7 +17,18 @@ bool NeedModelSave(int64_t model_version_id) {
          || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
 }
 
-Actor::~Actor() {}
+Actor::~Actor() {
+  for (auto& pair : produced_regsts_) {
+    for (auto& regst : pair.second) {
+      Blob* blob = regst->packed_blob();
+      if (blob->blob_desc().data_type() == kOFRecordPtr) {
+        int64_t elem_cnt = blob->blob_desc().shape().elem_cnt();
+        OFRecordPtr* ofrecord_ptr = blob->mut_dptr<OFRecordPtr>();
+        FOR_RANGE(int64_t, i, 0, elem_cnt) { delete *(ofrecord_ptr + i); }
+      }
+    }
+  }
+}
 
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TaskProto non_ctrl_task_proto = task_proto;
@@ -94,6 +105,17 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   is_consumed_ctrl_eord_ = false;
   TakeOverNaiveConsumed(non_ctrl_task_proto.consumed_regst_desc_id());
   VirtualActorInit(non_ctrl_task_proto);
+
+  for (auto& pair : produced_regsts_) {
+    for (auto& regst : pair.second) {
+      Blob* blob = regst->packed_blob();
+      if (blob->blob_desc().data_type() == kOFRecordPtr) {
+        int64_t elem_cnt = blob->blob_desc().shape().elem_cnt();
+        OFRecordPtr* ofrecord_ptr = blob->mut_dptr<OFRecordPtr>();
+        FOR_RANGE(int64_t, i, 0, elem_cnt) { *(ofrecord_ptr + i) = new OFRecord(); }
+      }
+    }
+  }
 }
 
 DeviceType Actor::GetDeviceType() const {

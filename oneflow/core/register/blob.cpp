@@ -23,19 +23,6 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) {
   dptr_ = offset + RoundUp(blob_desc->ByteSizeOfColNumField(), kCudaAlignSize);
   blob_desc_ = blob_desc;
   regst_ = regst;
-  if (blob_desc_->data_type() == kOFRecordPtr) {
-    int64_t elem_cnt = blob_desc->shape().elem_cnt();
-    OFRecordPtr* ofrecord_ptr = static_cast<OFRecordPtr*>(dptr_);
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { *(ofrecord_ptr + i) = new OFRecord(); }
-  }
-}
-
-Blob::~Blob() {
-  if (blob_desc_->data_type() == kOFRecordPtr) {
-    int64_t elem_cnt = blob_desc_->shape().elem_cnt();
-    OFRecordPtr* ofrecord_ptr = static_cast<OFRecordPtr*>(dptr_);
-    FOR_RANGE(int64_t, i, 0, elem_cnt) { delete *(ofrecord_ptr + i); }
-  }
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -72,7 +59,7 @@ const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type) {
   static const HashMap<
       std::string, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc, char* mem_ptr)>>
-      creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_POD_DATA_TYPE_SEQ, DIM_SEQ,
+      creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ, DIM_SEQ,
                                                    DEVICE_TYPE_SEQ)};
   std::string key = GetHashKey(blob_desc->data_type(),
                                static_cast<int32_t>(blob_desc->shape().NumAxes()), device_type);

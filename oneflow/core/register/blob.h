@@ -27,7 +27,7 @@ class BlobIf {
 class Blob : public BlobIf {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  virtual ~Blob();
+  virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
   char* mut_data_id(int32_t no) { return const_cast<char*>(data_id(no)); }
