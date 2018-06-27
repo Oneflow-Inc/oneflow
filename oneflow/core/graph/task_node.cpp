@@ -189,9 +189,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
-  if (Global<JobDesc>::Get()->other_conf().enable_mem_sharing()) {
-    regst->set_enable_mem_sharing(enable_mem_sharing);
-  }
+  regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
   InitProducedRegstMemCase(regst.get());
   return regst;
 }
