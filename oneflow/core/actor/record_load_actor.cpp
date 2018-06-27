@@ -26,10 +26,10 @@ void RecordLoadActor::VirtualCompActorInit(const TaskProto& task_proto) {
 void RecordLoadActor::Act() {
   Regst* regst = GetCurSoleWriteableRegst();
   regst->set_piece_id(piece_id_++);
-  RecordBlobIf* blob = regst->GetRecordBlobIf();
-  blob->ReadFrom(in_stream_.get());
-  if (blob->record_num() < Global<JobDesc>::Get()->PieceSizeInOneLoader()) { is_eof_ = true; }
-  if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
+  // RecordBlobIf* blob = regst->GetRecordBlobIf();
+  // blob->ReadFrom(in_stream_.get());
+  // if (blob->record_num() < Global<JobDesc>::Get()->PieceSizeInOneLoader()) { is_eof_ = true; }
+  // if (blob->record_num() > 0) { AsyncSendRegstMsgToConsumer(); }
 }
 
 bool RecordLoadActor::IsCustomizedReadReady() {

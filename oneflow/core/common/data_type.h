@@ -63,9 +63,6 @@ struct GetDataType;
 template<>
 struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 
-// template<>
-// struct GetDataType<OFRecordPtr> : std::integral_constant<DataType, DataType::kOFRecordPtr> {};
-
 #define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto) \
   template<>                                           \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {};
