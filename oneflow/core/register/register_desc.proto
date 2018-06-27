@@ -16,19 +16,12 @@ message NormalRegstDesc {
   required BlobDescProto packed_blob_desc = 2;
 }
 
-message RecordRegstDesc {
-  required RecordTypeProto record_type = 1;
-  repeated LbiBlobDescPair lbi2blob_desc = 2;
-  required BlobDescProto packed_blob_desc = 3;
-}
-
 message CtrlRegstDesc {
 }
 
 message RegstDescTypeProto {
   oneof type {
     NormalRegstDesc normal_regst_desc = 1;
-    RecordRegstDesc record_regst_desc = 2;
     CtrlRegstDesc ctrl_regst_desc = 3;
   }
 }

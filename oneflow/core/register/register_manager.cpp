@@ -117,12 +117,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
             mem_ptr, rt_regst_desc->packed_blob_desc()->TotalByteSize());
       }
       mem_ptr += rt_regst_desc->packed_blob_desc()->TotalByteSize();
-    } else if (regst_desc_type.has_record_regst_desc()) {
-      const RecordTypeProto& record_type = regst_desc_type.record_regst_desc().record_type();
-      switch (record_type) {
-        case kOFRecord: regst->packed_blob_.reset(new RecordBlob<OFRecord>); break;
-        default: UNIMPLEMENTED();
-      }
     } else if (regst_desc_type.has_ctrl_regst_desc()) {
       // do nothing
     } else {

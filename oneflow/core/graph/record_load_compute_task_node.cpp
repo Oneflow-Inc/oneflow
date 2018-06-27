@@ -13,13 +13,7 @@ std::shared_ptr<const Operator> RecordLoadCompTaskNode::GetRelatedDecodeOp() {
 }
 
 void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  RegstDescTypeProto regst_desc_type;
-  if (GetRelatedDecodeOp()->op_conf().has_decode_ofrecord_conf()) {
-    regst_desc_type.mutable_record_regst_desc()->set_record_type(RecordTypeProto::kOFRecord);
-  } else {
-    UNIMPLEMENTED();
-  }
-  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2, regst_desc_type);
+  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
 }
 
