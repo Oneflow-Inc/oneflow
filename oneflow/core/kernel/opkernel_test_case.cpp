@@ -24,7 +24,7 @@ namespace {
 #define DEFINE_OPKT_SWITCHER(return_type, func_name)                          \
   DEFINE_STATIC_SWITCH_FUNC(return_type, func_name, MAKE_OPKT_SWITCH_ENTRY_2, \
                             MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),       \
-                            MAKE_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
+                            MAKE_DATA_TYPE_CTRV_SEQ(ALL_POD_DATA_TYPE_SEQ))
 #define MAKE_OPKT_SWITCH_ENTRY_2(func_name, device_type, T) \
   OpKernelTestUtil<device_type>::template func_name<T>
 
@@ -58,7 +58,7 @@ void BlobCmp(const std::string& blob_name, const Blob* lhs, DeviceType lhs_devic
 
 #define MAKE_OPK_HELPER_SWITCH_ENTRY(func_name, type_cpp) OpKTSwitchHelper<type_cpp>::func_name
 DEFINE_STATIC_SWITCH_FUNC(DataType, GetDataTypeValue, MAKE_OPK_HELPER_SWITCH_ENTRY,
-                          MAKE_STRINGIZED_DATA_TYPE_CTRV_SEQ(ALL_DATA_TYPE_SEQ))
+                          MAKE_STRINGIZED_DATA_TYPE_CTRV_SEQ(ALL_POD_DATA_TYPE_SEQ))
 
 }  // namespace
 
@@ -198,7 +198,7 @@ void OpKernelTestUtil<DeviceType::kCPU>::BlobCmp(const std::string& blob_name, c
   template void OpKernelTestUtil<DeviceType::kCPU>::CheckInitializeResult<T>( \
       const Blob* blob, const InitializerConf& initializer_conf);
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_OPKERNEL_TEST_UTIL_METHODS, ALL_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CPU_OPKERNEL_TEST_UTIL_METHODS, ALL_POD_DATA_TYPE_SEQ);
 
 void OpKernelTestCase::EnrollBlobRegst(const std::string& blob_name, Regst* regst) {
   CHECK(bn_in_op2regst_.emplace(blob_name, regst).second);
@@ -557,7 +557,7 @@ void DiffKernelImplTestCase::MultiRunThenCheck() {
   template void OpKernelTestCase::BackwardCheckBlobWithAnother<T>(                            \
       const std::string&, const BlobDesc* blob_desc, const std::string&, bool);
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OPKERNEL_TEST_CASE_METHODS, ALL_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OPKERNEL_TEST_CASE_METHODS, ALL_POD_DATA_TYPE_SEQ);
 
 }  // namespace test
 

@@ -59,7 +59,7 @@ const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type) {
   static const HashMap<
       std::string, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc, char* mem_ptr)>>
-      creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ, DIM_SEQ,
+      creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_POD_DATA_TYPE_SEQ, DIM_SEQ,
                                                    DEVICE_TYPE_SEQ)};
   std::string key = GetHashKey(blob_desc->data_type(),
                                static_cast<int32_t>(blob_desc->shape().NumAxes()), device_type);

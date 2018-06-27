@@ -70,7 +70,7 @@ void OpKernelTestUtil<DeviceType::kGPU>::CheckInitializeResult(
       const std::string& blob_name, const Blob* lhs, DeviceType, const Blob* rhs, DeviceType); \
   template void OpKernelTestUtil<DeviceType::kGPU>::CheckInitializeResult<type_cpp>(           \
       const Blob* blob, const InitializerConf& initializer_conf);
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_METHODS, ALL_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_METHODS, ALL_POD_DATA_TYPE_SEQ);
 
 #endif
 
