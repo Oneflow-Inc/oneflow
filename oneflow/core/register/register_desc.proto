@@ -18,6 +18,8 @@ message NormalRegstDesc {
 
 message RecordRegstDesc {
   required RecordTypeProto record_type = 1;
+  repeated LbiBlobDescPair lbi2blob_desc = 2;
+  required BlobDescProto packed_blob_desc = 3;
 }
 
 message CtrlRegstDesc {

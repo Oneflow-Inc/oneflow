@@ -24,6 +24,7 @@ size_t GetSizeOfDataType(DataType data_type) {
 #define MAKE_CASE(type_cpp, type_proto) \
   case type_proto: return sizeof(type_cpp);
     OF_PP_FOR_EACH_TUPLE(MAKE_CASE, ALL_DATA_TYPE_SEQ);
+    case kOFRecordPtr: return sizeof(void*);
     default: UNIMPLEMENTED();
   }
 }

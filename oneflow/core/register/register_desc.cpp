@@ -115,7 +115,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
   *(ret->mutable_regst_desc_type()) = regst_desc_type_;
-  if (regst_desc_type_.has_normal_regst_desc()) {
+  if (regst_desc_type_.has_normal_regst_desc() || regst_desc_type_.has_record_regst_desc()) {
     NormalRegstDesc* normal_regst_desc_proto =
         ret->mutable_regst_desc_type()->mutable_normal_regst_desc();
     packed_blob_desc_->ToProto(normal_regst_desc_proto->mutable_packed_blob_desc());
@@ -124,7 +124,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }
-  } else if (regst_desc_type_.has_record_regst_desc() || regst_desc_type_.has_ctrl_regst_desc()) {
+  } else if (regst_desc_type_.has_ctrl_regst_desc()) {
     // do nothing
   } else {
     UNIMPLEMENTED();
