@@ -27,8 +27,6 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) {
     int64_t elem_cnt = blob_desc->shape().elem_cnt();
     OFRecordPtr* ofrecord_ptr = static_cast<OFRecordPtr*>(dptr_);
     FOR_RANGE(int64_t, i, 0, elem_cnt) { *(ofrecord_ptr + i) = new OFRecord(); }
-  } else {
-    UNIMPLEMENTED();
   }
 }
 
@@ -37,8 +35,6 @@ Blob::~Blob() {
     int64_t elem_cnt = blob_desc_->shape().elem_cnt();
     OFRecordPtr* ofrecord_ptr = static_cast<OFRecordPtr*>(dptr_);
     FOR_RANGE(int64_t, i, 0, elem_cnt) { delete *(ofrecord_ptr + i); }
-  } else {
-    UNIMPLEMENTED();
   }
 }
 
