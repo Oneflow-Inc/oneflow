@@ -101,8 +101,11 @@ void PlanTaskGraph::SortByProducerTaskTopoOrder(
       if (out_node == end_node || IsReachableToAncestor(end_node, out_node)) { Handler(out_node); }
     });
   };
-  TopoForEachNode({start_node}, ForEachInNode, ForEachOutNode,
-                  [&](const PlanTaskNode* node) { Handler(producer_node2regst_desc.at(node)); });
+  TopoForEachNode({start_node}, ForEachInNode, ForEachOutNode, [&](const PlanTaskNode* node) {
+    if (producer_node2regst_desc.find(node) != producer_node2regst_desc.end()) {
+      Handler(producer_node2regst_desc.at(node));
+    }
+  });
 }
 
 void PlanTaskGraph::ComputeLifetimeSameChainActorIds(
