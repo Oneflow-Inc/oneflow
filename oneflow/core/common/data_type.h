@@ -55,6 +55,15 @@ struct IsIntegral : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
+template<DataType T>
+struct IsPtrType : std::integral_constant<bool, false> {};
+
+#define SPECIALIZE_TRUE_PTR_TYPE(type_cpp, type_proto) \
+  template<>                                           \
+  struct IsPtrType<type_proto> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_PTR_TYPE, PTR_DATA_TYPE_SEQ);
+#undef SPECIALIZE_TRUE_INTEGRAL
+
 // Type Trait: GetDataType
 
 template<typename T>

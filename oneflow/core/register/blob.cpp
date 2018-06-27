@@ -23,6 +23,23 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) {
   dptr_ = offset + RoundUp(blob_desc->ByteSizeOfColNumField(), kCudaAlignSize);
   blob_desc_ = blob_desc;
   regst_ = regst;
+  if (blob_desc_->data_type() == kOFRecordPtr) {
+    int64_t elem_cnt = blob_desc->shape().elem_cnt();
+    OFRecordPtr* ofrecord_ptr = static_cast<OFRecordPtr*>(dptr_);
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { *(ofrecord_ptr + i) = new OFRecord(); }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+Blob::~Blob() {
+  if (blob_desc_->data_type() == kOFRecordPtr) {
+    int64_t elem_cnt = blob_desc_->shape().elem_cnt();
+    OFRecordPtr* ofrecord_ptr = static_cast<OFRecordPtr*>(dptr_);
+    FOR_RANGE(int64_t, i, 0, elem_cnt) { delete *(ofrecord_ptr + i); }
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 const char* Blob::data_id(int32_t no) const {
