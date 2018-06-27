@@ -8,6 +8,7 @@
 namespace oneflow {
 
 class OFRecord;
+using OFRecordPtr = OFRecord*;
 // SEQ
 
 #define FLOATING_DATA_TYPE_SEQ                  \
@@ -22,7 +23,7 @@ class OFRecord;
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 
-#define PTR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ((OFRecord*), DataType::kOFRecordPtr)
+#define PTR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecordPtr, DataType::kOFRecordPtr)
 
 #define ARITHMETIC_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ         \
@@ -30,7 +31,7 @@ class OFRecord;
 
 #define ALL_POD_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ
 
-// #define ALL_DATA_TYPE_SEQ ALL_POD_DATA_TYPE_SEQ PTR_DATA_TYPE_SEQ
+#define ALL_DATA_TYPE_SEQ ALL_POD_DATA_TYPE_SEQ PTR_DATA_TYPE_SEQ
 
 // Type Trait: IsFloating
 
@@ -63,12 +64,12 @@ template<>
 struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 
 // template<>
-// struct GetDataType<OFRecord*> : std::integral_constant<DataType, DataType::kOFRecordPtr> {};
+// struct GetDataType<OFRecordPtr> : std::integral_constant<DataType, DataType::kOFRecordPtr> {};
 
 #define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto) \
   template<>                                           \
   struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {};
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_POD_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
 
 // Type Trait: const var
