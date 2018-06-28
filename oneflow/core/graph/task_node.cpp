@@ -90,7 +90,7 @@ void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->regst_desc_type().has_normal_regst_desc() && it->second->NumOfLbi() == 0;
+        return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
       });
 }
 
@@ -163,7 +163,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
 std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
                                                   int32_t max_register_num) {
   RegstDescTypeProto regst_desc_type;
-  regst_desc_type.mutable_normal_regst_desc();
+  regst_desc_type.mutable_data_regst_desc();
   return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
 }
 

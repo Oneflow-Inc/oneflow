@@ -115,12 +115,12 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_producer_task_id(producer_->task_id());
   for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
   *(ret->mutable_regst_desc_type()) = regst_desc_type_;
-  if (regst_desc_type_.has_normal_regst_desc()) {
-    NormalRegstDesc* normal_regst_desc_proto =
-        ret->mutable_regst_desc_type()->mutable_normal_regst_desc();
-    packed_blob_desc_->ToProto(normal_regst_desc_proto->mutable_packed_blob_desc());
+  if (regst_desc_type_.has_data_regst_desc()) {
+    DataRegstDesc* data_regst_desc_proto =
+        ret->mutable_regst_desc_type()->mutable_data_regst_desc();
+    packed_blob_desc_->ToProto(data_regst_desc_proto->mutable_packed_blob_desc());
     for (const auto& pair : lbi2blob_desc_) {
-      LbiBlobDescPair* pb_pair = normal_regst_desc_proto->mutable_lbi2blob_desc()->Add();
+      LbiBlobDescPair* pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
       *(pb_pair->mutable_lbi()) = pair.first;
       pair.second->ToProto(pb_pair->mutable_blob_desc());
     }

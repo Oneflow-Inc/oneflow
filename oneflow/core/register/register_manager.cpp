@@ -94,8 +94,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
   char* mem_ptr = regst_desc_id2mem_ptr_.at(regst_desc_id);
   std::vector<LogicalBlobId> lbis;
-  if (regst_desc_type.has_normal_regst_desc()) {
-    for (const LbiBlobDescPair& pair : regst_desc_type.normal_regst_desc().lbi2blob_desc()) {
+  if (regst_desc_type.has_data_regst_desc()) {
+    for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
       lbis.push_back(pair.lbi());
     }
     CHECK(!lbis.empty());
@@ -103,7 +103,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
     regst->set_regst_desc(rt_regst_desc);
-    if (regst_desc_type.has_normal_regst_desc()) {
+    if (regst_desc_type.has_data_regst_desc()) {
       std::sort(lbis.begin(), lbis.end());
       char* cur_pointer = mem_ptr;
       for (const LogicalBlobId& lbi : lbis) {
