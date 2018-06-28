@@ -36,9 +36,6 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t PieceSize() const { return job_conf_.other().piece_size(); }
-  int64_t PieceSizeInOneLoader() const;
-  int64_t RecordLoaderNum() const;
-  void SetRecordLoaderNum(int64_t val);
   int64_t piece_num_of_experiment_phase() const;
   float available_zone_mem_ratio() const;
   size_t persistence_buf_byte() const;
@@ -73,7 +70,6 @@ class JobDesc final {
   void AddRecordLoadOps();
 
   JobConf1 job_conf_;
-  int64_t record_loader_num_ = -1;
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;

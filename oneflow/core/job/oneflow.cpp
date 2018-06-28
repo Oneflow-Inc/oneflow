@@ -76,18 +76,6 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
-void FixRecordLoaderNum() {
-  int64_t record_loader_num;
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    record_loader_num = Global<JobDesc>::Get()->RecordLoaderNum();
-    Global<CtrlClient>::Get()->PushKVT("record_loader_num", record_loader_num);
-  } else {
-    Global<CtrlClient>::Get()->PullKVT("record_loader_num", &record_loader_num);
-    Global<JobDesc>::Get()->SetRecordLoaderNum(record_loader_num);
-  }
-  OF_BARRIER();
-}
-
 }  // namespace
 
 class Oneflow final {
@@ -122,7 +110,6 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   }
   OF_BARRIER();
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
-  FixRecordLoaderNum();
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
   PushAvailableMemDescOfThisMachine();

@@ -5,11 +5,6 @@
 
 namespace oneflow {
 
-int64_t JobDesc::PieceSizeInOneLoader() const {
-  CHECK_EQ(PieceSize() % RecordLoaderNum(), 0);
-  return PieceSize() / RecordLoaderNum();
-}
-
 int64_t JobDesc::MachineID4MachineName(const std::string& machine_name) const {
   auto it = machine_name2machine_id_.find(machine_name);
   CHECK(it != machine_name2machine_id_.end()) << "Undefined machine name: " << machine_name;
@@ -17,16 +12,6 @@ int64_t JobDesc::MachineID4MachineName(const std::string& machine_name) const {
 }
 const std::string& JobDesc::MachineName4MachineId(int64_t machine_id) const {
   return machine_id2machine_name_.at(machine_id);
-}
-
-int64_t JobDesc::RecordLoaderNum() const {
-  CHECK_GT(record_loader_num_, 0);
-  return record_loader_num_;
-}
-
-void JobDesc::SetRecordLoaderNum(int64_t val) {
-  CHECK_EQ(record_loader_num_, -1);
-  record_loader_num_ = val;
 }
 
 int64_t JobDesc::piece_num_of_experiment_phase() const {
@@ -179,7 +164,6 @@ void JobDesc::AddRecordLoadOps() {
     if (decode_conf.blob_size() == 0) { continue; }
     std::pair<std::string, std::string> data_info = {decode_conf.data_dir(),
                                                      decode_conf.part_name_prefix()};
-    // std::string data_info = data_dir + "_" + part_name_prefix;
     data_info2decode_ops[data_info].emplace_back(op_conf);
     int32_t part_name_suffix_length = decode_conf.part_name_suffix_length();
     if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {

@@ -89,7 +89,6 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
-  if (IsDecodeOp()) { Global<JobDesc>::Get()->SetRecordLoaderNum(pr_desc->parallel_num()); }
   if (model_bns().empty() && const_model_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
