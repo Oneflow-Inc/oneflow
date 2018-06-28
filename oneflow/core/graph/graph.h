@@ -245,6 +245,8 @@ void Graph<NodeType, EdgeType>::DFSTopoForEachNode(
     const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
     const std::function<void(NodeType*)>& Handler) const {
   HashMap<NodeType*, bool> has_stacked;
+  HashMap<NodeType*, bool> be_visited;
+  ForEachNode([&](NodeType* node) { be_visited[node] = false; });
   std::stack<NodeType*> stack;
   for (NodeType* start : starts) {
     stack.push(start);
@@ -255,10 +257,11 @@ void Graph<NodeType, EdgeType>::DFSTopoForEachNode(
     NodeType* cur_node = stack.top();
     stack.pop();
     Handler(cur_node);
+    be_visited[cur_node] = true;
     ForEachOutNode(cur_node, [&](NodeType* out) {
       bool will_be_ready = true;
       ForEachInNode(out, [&](NodeType* in) {
-        if (will_be_ready && !has_stacked[in]) { will_be_ready = false; }
+        if (will_be_ready && (!has_stacked[in] || !be_visited[in])) { will_be_ready = false; }
       });
       if (will_be_ready && !has_stacked[out]) {
         stack.push(out);
