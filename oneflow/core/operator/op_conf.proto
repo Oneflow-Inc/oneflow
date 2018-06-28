@@ -482,7 +482,10 @@ message PreprocessConf {
 }
 
 message RecordLoadOpConf {
-  required string out = 2;
+  required string out = 1;
+  required string data_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
 message BlobConf {

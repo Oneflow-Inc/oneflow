@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_RECORD_LOAD_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
-#include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/kernel/record_load_kernel.h"
 
 namespace oneflow {
 
@@ -25,7 +25,7 @@ class RecordLoadActor final : public CompActor {
 
   int32_t piece_id_;
   bool is_eof_;
-  std::unique_ptr<PersistentInStream> in_stream_;
+  RecordLoadStatus record_load_status_;
 };
 
 }  // namespace oneflow

@@ -169,17 +169,17 @@ void JobDesc::SplitDecodeOps() {
 }
 
 void JobDesc::AddRecordLoadOps() {
-  HashMap<std::string, std::vector<OperatorConf*>> data_info2decode_ops;
-  HashMap<std::string, int32_t> data_info2suffix_length;
+  HashMap<std::pair<std::string, std::string>, std::vector<OperatorConf*>> data_info2decode_ops;
+  HashMap<std::pair<std::string, std::string>, int32_t> data_info2suffix_length;
   size_t op_num = job_conf_.net().op_size();
   FOR_RANGE(size_t, idx, 0, op_num) {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op()->Mutable(idx);
     if (op_conf->has_decode_ofrecord_conf() == false) { continue; }
     const DecodeOFRecordOpConf& decode_conf = op_conf->decode_ofrecord_conf();
     if (decode_conf.blob_size() == 0) { continue; }
-    std::string data_dir = decode_conf.data_dir();
-    std::string part_name_prefix = decode_conf.part_name_prefix();
-    std::string data_info = data_dir + "_" + part_name_prefix;
+    std::pair<std::string, std::string> data_info = {decode_conf.data_dir(),
+                                                     decode_conf.part_name_prefix()};
+    // std::string data_info = data_dir + "_" + part_name_prefix;
     data_info2decode_ops[data_info].emplace_back(op_conf);
     int32_t part_name_suffix_length = decode_conf.part_name_suffix_length();
     if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {
@@ -220,6 +220,9 @@ void JobDesc::AddRecordLoadOps() {
       RecordLoadOpConf* record_load_op = op->mutable_record_load_conf();
       op->set_name(record_load_op_name);
       record_load_op->set_out(record_load_out_name);
+      record_load_op->set_data_dir(pair.first.first);
+      record_load_op->set_part_name_prefix(pair.first.second);
+      record_load_op->set_part_name_suffix_length(data_info2suffix_length.at(pair.first));
       PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
       *(p_group->mutable_op_set()->add_op_name()) = record_load_op_name;
       *(p_group->mutable_parallel_conf()) = *parallel_conf;

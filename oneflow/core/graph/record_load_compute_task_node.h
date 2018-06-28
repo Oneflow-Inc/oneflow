@@ -14,16 +14,12 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
   void BuildExecGphAndRegst() override;
-  void ToProto(TaskProto*) override;
   bool IsMeaningLess() override { return false; }
   void EraseEmptyProducedRegst() override {}
   void FixRegisterNumRange() override {}
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
   bool IsPersistence() const override { return true; }
-
- private:
-  std::shared_ptr<const Operator> GetRelatedDecodeOp();
 };
 
 }  // namespace oneflow
