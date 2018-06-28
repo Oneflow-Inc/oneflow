@@ -42,6 +42,10 @@ RegstMgr::RegstMgr(const Plan& plan) {
   InitFromRegstProtoList(regst_protos);
 }
 
+RegstMgr::~RegstMgr() {
+  for (auto ptr : ofrecord_ptrs_) { delete ptr; }
+}
+
 RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
   InitFromRegstProtoList(regst_protos);
 }
@@ -106,6 +110,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
         const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
         std::unique_ptr<Blob> blob_ptr;
         blob_ptr.reset(NewBlob(regst, blob_desc, cur_pointer, device_type));
+        AllocateOFRecordIfNeed(blob_ptr);
         CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_pointer += blob_desc->TotalByteSize();
       }
@@ -123,6 +128,22 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       UNIMPLEMENTED();
     }
     OneRegstDone(regst);
+  }
+}
+
+void RegstMgr::AllocateOFRecordIfNeed(const std::unique_ptr<Blob>& blob) {
+  const BlobDesc blob_desc = blob->blob_desc();
+  if (blob_desc.data_type() == kOFRecordPtr) {
+    int64_t elem_cnt = blob_desc.shape().elem_cnt();
+    OFRecordPtr* ofrecord_ptr = blob->mut_dptr<OFRecordPtr>();
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      OFRecordPtr ptr = new OFRecord();
+      *(ofrecord_ptr + i) = ptr;
+      {
+        std::unique_lock<std::mutex> lck(ofrecord_ptrs_mtx_);
+        ofrecord_ptrs_.push_back(ptr);
+      }
+    }
   }
 }
 
