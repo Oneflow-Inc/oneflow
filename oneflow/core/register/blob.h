@@ -102,20 +102,6 @@ class Blob : public BlobIf {
 
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);
 
-/*
-class RecordBlobIf : public BlobIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordBlobIf);
-  RecordBlobIf() = default;
-  virtual ~RecordBlobIf() = default;
-
-  virtual void ReadFrom(PersistentInStream* in_stream) = 0;
-  virtual int32_t record_num() = 0;
-
- private:
-};
-*/
-
 template<typename RecordType>
 class RecordBlob final {
  public:

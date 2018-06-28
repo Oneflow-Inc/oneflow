@@ -26,7 +26,6 @@ class DecodeOFRecordOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  // LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
 };
 
