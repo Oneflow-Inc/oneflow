@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
+#include <stack>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
@@ -28,6 +29,12 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   void TopoForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*)>& Handler) const;
+
+  void DFSTopoForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -226,6 +233,39 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(
       if (will_be_ready && !has_queued[out]) {
         queue.push(out);
         has_queued[out] = true;
+      }
+    });
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DFSTopoForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<void(NodeType*)>& Handler) const {
+  HashMap<NodeType*, bool> has_stacked;
+  HashMap<NodeType*, bool> be_visited;
+  ForEachNode([&](NodeType* node) { be_visited[node] = false; });
+  std::stack<NodeType*> stack;
+  for (NodeType* start : starts) {
+    stack.push(start);
+    has_stacked[start] = true;
+    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+  }
+  while (!stack.empty()) {
+    NodeType* cur_node = stack.top();
+    stack.pop();
+    Handler(cur_node);
+    be_visited[cur_node] = true;
+    ForEachOutNode(cur_node, [&](NodeType* out) {
+      bool will_be_ready = true;
+      ForEachInNode(out, [&](NodeType* in) {
+        if (will_be_ready && (!has_stacked[in] || !be_visited[in])) { will_be_ready = false; }
+      });
+      if (will_be_ready && !has_stacked[out]) {
+        stack.push(out);
+        has_stacked[out] = true;
       }
     });
   }
