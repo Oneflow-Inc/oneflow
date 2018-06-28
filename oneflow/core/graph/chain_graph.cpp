@@ -70,6 +70,23 @@ bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
   return false;
 }
 
+bool DoMergeX(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
+  for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
+    ChainIt lhs = *chains_it;
+    HashSet<TaskNode*> merged_ancestors = lhs->ancestors_and_this;
+    merged_ancestors.insert(rhs->ancestors.begin(), rhs->ancestors.end());
+    if (lhs->ancestors_and_this == merged_ancestors) {
+      for (TaskNode* node : rhs->nodes) {
+        lhs->nodes.push_back(node);
+        lhs->ancestors_and_this.insert(node);
+        task2chain_it->at(node) = lhs;
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 bool TryMerge(
     std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it,
     std::function<bool(std::list<ChainIt>& chains, ChainIt cur_it, Task2ChainItMap* task2chain_it)>
@@ -92,8 +109,9 @@ bool TryMerge(
 }
 
 void MergeChains(std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it) {
-  while (TryMerge(chain_list, task2chain_it, DoMergeWithConnect)
-         || TryMerge(chain_list, task2chain_it, DoMergeWithoutConnect)) {}
+  // while (TryMerge(chain_list, task2chain_it, DoMergeWithConnect)
+  //       || TryMerge(chain_list, task2chain_it, DoMergeWithoutConnect)) {}
+  while (TryMerge(chain_list, task2chain_it, DoMergeX)) {}
 }
 
 }  // namespace
