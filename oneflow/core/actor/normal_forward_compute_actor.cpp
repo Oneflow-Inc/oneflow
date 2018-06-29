@@ -31,7 +31,7 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 
   if (const_buf_regst_ && !const_buf_regst_->consumers_actor_id().empty()) {
-    DecreaseActualWriteableProducedRegstDescNum(1);
+    DecreaseActualWriteableProducedDataRegstDescNum(1);
   }
 }
 
