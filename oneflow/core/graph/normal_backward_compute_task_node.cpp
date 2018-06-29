@@ -6,12 +6,12 @@ namespace oneflow {
 
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceB121Regst("in_diff");
-  ProduceRegst("activation_diff", 1, 1);
+  ProduceRegst("activation_diff", true, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
         || succ_logical->TypeName() == "ReduceScatter") {
-      edge->AddRegst("model_diff", ProduceRegst("model_diff"));
+      edge->AddRegst("model_diff", ProduceRegst("model_diff", true));
     } else {
       BindEdgeWithProducedB121Regst(edge, "in_diff");
     }

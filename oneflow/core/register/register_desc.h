@@ -8,6 +8,8 @@ namespace oneflow {
 
 const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
+void InitCtrlRegstDesc(int64_t produced_task_id, RegstDescProto* ctrl_regst_proto);
+
 class TaskNode;
 
 class RegstDesc final {
@@ -45,6 +47,9 @@ class RegstDesc final {
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
+  void set_enable_mem_sharing(bool enable_mem_sharing) {
+    mem_sharing_info_.set_enable_mem_sharing(enable_mem_sharing);
+  }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
@@ -68,7 +73,7 @@ class RegstDesc final {
 
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
-  MemSharingProto mem_sharing_info_;
+  MemSharingInfo mem_sharing_info_;
 };
 
 }  // namespace oneflow
