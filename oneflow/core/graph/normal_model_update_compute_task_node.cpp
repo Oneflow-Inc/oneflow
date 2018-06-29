@@ -15,9 +15,9 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
       max_model_regst = Global<JobDesc>::Get()->Staleness() + 1;
     }
   }
-  auto model_regst = ProduceRegst("model", 1, max_model_regst);
-  auto const_model_regst = ProduceRegst("const_model", 1, 1);
-  ProduceRegst("data_tmp", 1, 1);
+  auto model_regst = ProduceRegst("model", false, 1, max_model_regst);
+  auto const_model_regst = ProduceRegst("const_model", false, 1, 1);
+  ProduceRegst("data_tmp", false, 1, 1);
   related_init_model_task_id_ = -1;
   for (TaskEdge* out_edge : out_edges()) {
     TaskNode* dst_node = out_edge->dst_node();

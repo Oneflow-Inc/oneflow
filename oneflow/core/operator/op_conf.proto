@@ -539,8 +539,16 @@ message ReduceScatterOpConf {
   required int32 out_num = 1;
 };
 
-message ReduceAddOpConf {
+message ReduceLocalAddOpConf {
   required int32 in_num = 1;
+  required int32 out_num = 2;
+  required int64 min_in_parallel_id = 3;
+  required int64 min_out_parallel_id = 4;
+  required int64 model_elem_cnt = 5; 
+};
+
+message ReduceGlobalAddOpConf {
+  repeated int64 in_parallel_ids = 1;
 };
 
 message ReduceGatherOpConf {
@@ -593,8 +601,9 @@ message OperatorConf {
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
     ReduceScatterOpConf reduce_scatter_conf = 400;
-    ReduceAddOpConf reduce_add_conf = 401;
-    ReduceGatherOpConf reduce_gather_conf = 402;
+    ReduceLocalAddOpConf reduce_local_add_conf = 401;
+    ReduceGlobalAddOpConf reduce_global_add_conf = 402;
+    ReduceGatherOpConf reduce_gather_conf = 403;
   }
 }
 

@@ -9,8 +9,8 @@ void ReduceScatterKernel::ForwardDataContent(
   for (const std::string& obn : this->op_attribute().output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
     size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
-    AutoMemcpy(ctx.device_ctx, out_blob->mut_dptr<char>(), src_cur_dptr, out_byte_size,
-               in_blob->mem_case(), out_blob->mem_case());
+    Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_dptr<char>(), src_cur_dptr,
+                             out_byte_size);
     src_cur_dptr += out_byte_size;
   }
 }
