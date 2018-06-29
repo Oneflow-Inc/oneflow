@@ -267,17 +267,14 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
     });
     node2distance_to_sink[node] = distince_to_sink + 1;
   });
-  HashMap<NodeType*, std::vector<NodeType*>> node2sorted_out_nodes;
   auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
                                                   const std::function<void(NodeType*)>& Handler) {
-    if (node2sorted_out_nodes.find(node) == node2sorted_out_nodes.end()) {
-      auto& out_nodes = node2sorted_out_nodes[node];
-      ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.push_back(out_node); });
-      std::sort(out_nodes.begin(), out_nodes.end(), [&](NodeType* lhs, NodeType* rhs) {
-        return node2distance_to_sink.at(lhs) > node2distance_to_sink.at(rhs);
-      });
-    }
-    for (NodeType* out_node : node2sorted_out_nodes.at(node)) { Handler(out_node); }
+    std::vector<NodeType*> out_nodes;
+    ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.push_back(out_node); });
+    std::sort(out_nodes.begin(), out_nodes.end(), [&](NodeType* lhs, NodeType* rhs) {
+      return node2distance_to_sink.at(lhs) > node2distance_to_sink.at(rhs);
+    });
+    for (NodeType* out_node : out_nodes) { Handler(out_node); }
   };
   DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNodeSortedByDistanceToSink, Handler);
 }
