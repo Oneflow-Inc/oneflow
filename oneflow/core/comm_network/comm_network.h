@@ -10,9 +10,10 @@
 namespace oneflow {
 
 struct CommNetItem {
-  std::function<void()> callback;
   bool is_read;
-  CommNetItem() : callback(nullptr), is_read(false) {}
+  std::function<void()> callback;
+  CommNetItem() : CommNetItem(false, nullptr) {}
+  CommNetItem(bool read, const std::function<void()>& cb) : is_read(read), callback(cb) {}
 };
 
 class CommNet {

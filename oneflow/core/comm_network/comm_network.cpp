@@ -27,9 +27,7 @@ void CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token,
     if (actor_read_ctx->waiting_list.empty()) {
       ready_cbs_.Send(do_read);
     } else {
-      CommNetItem work_item;
-      work_item.is_read = true;
-      work_item.callback = do_read;
+      CommNetItem work_item(true, do_read);
       actor_read_ctx->waiting_list.push_back(work_item);
     }
     CommNetItem read_cb;
@@ -44,8 +42,7 @@ void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callbac
     if (actor_read_ctx->waiting_list.empty()) {
       ready_cbs_.Send(callback);
     } else {
-      CommNetItem work_item;
-      work_item.callback = callback;
+      CommNetItem work_item(false, callback);
       actor_read_ctx->waiting_list.push_back(work_item);
     }
   }
