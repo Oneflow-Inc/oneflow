@@ -11,7 +11,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     int64_t parallel_id = comp_task_nodes.front()->parallel_id();
     min_out_parallel_id_ = std::min(min_out_parallel_id_, parallel_id);
     std::string out_regst_name = "out_" + std::to_string(parallel_id);
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name);
+    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false);
     edge->AddRegst(out_regst_name, out_regst);
   }
 }

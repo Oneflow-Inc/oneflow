@@ -67,8 +67,8 @@ const LogicalNode* CompTaskNode::GetOnePredLogicalNodeOnEdge(TaskEdge* edge) {
 }
 
 void CompTaskNode::ProduceB121Regst(const std::string& name) {
-  ProduceRegst("boxing_" + name);
-  ProduceRegst("121_" + name);
+  ProduceRegst("boxing_" + name, true);
+  ProduceRegst("121_" + name, true);
 }
 
 void CompTaskNode::BindEdgeWithProducedB121Regst(TaskEdge* edge, const std::string& b121_name) {

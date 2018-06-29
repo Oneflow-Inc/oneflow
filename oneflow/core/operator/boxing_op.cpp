@@ -37,7 +37,7 @@ LogicalBlobId BoxingOp::obn2lbi(const std::string& output_bn) const {
   return GetMsgFromCustomizedConf<LogicalBlobId>("lbi");
 }
 
-void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
@@ -73,7 +73,7 @@ void BoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlo
   }
 }
 
-void BoxingOp::InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void BoxingOp::InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     std::vector<int64_t>* data_tmp_vec_ptr) const {
   const BoxingOpConf& conf = op_conf().boxing_conf();
   if (conf.in_box_case() == BoxingOpConf::kConcatBox) {

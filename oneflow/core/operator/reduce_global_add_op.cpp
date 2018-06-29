@@ -22,7 +22,7 @@ LogicalBlobId ReduceGlobalAddOp::obn2lbi(const std::string& output_bn) const {
 }
 
 void ReduceGlobalAddOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t in_num = op_conf().reduce_global_add_conf().in_parallel_ids_size();
   CHECK_GE(in_num, 2);

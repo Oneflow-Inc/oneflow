@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ReduceGatherCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out"));
+  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false));
 }
 
 void ReduceGatherCompTaskNode::ConsumeAllRegsts() {

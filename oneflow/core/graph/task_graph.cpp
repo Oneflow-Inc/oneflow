@@ -61,14 +61,12 @@ void TaskGraph::FindChainsInSameStream() {
   ChainGraph chain_gph(*this);
   const auto& ordered_chain_nodes = chain_gph.ordered_chain_nodes();
   int64_t order_in_graph = 0;
-  HashMap<int64_t, HashSet<TaskNode*>> chain_id2task_nodes;
   for (auto& chain_node : ordered_chain_nodes) {
     auto& ordered_in_chain = chain_node->chain_it()->nodes;
     int64_t chain_id = chain_node->chain_id();
     for (auto& task_node : ordered_in_chain) {
       task_node->set_chain_id(chain_id);
       task_node->set_order_in_graph(order_in_graph);
-      CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
       ordered_task_nodes_.emplace_back(task_node);
       ++order_in_graph;
     }
