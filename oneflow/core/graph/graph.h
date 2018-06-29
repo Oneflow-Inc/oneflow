@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
+#include <stack>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
@@ -28,6 +29,12 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   void TopoForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*)>& Handler) const;
+
+  void DfsTopoForEachNodeSortByDistanceToSink(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -219,14 +226,70 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(
     queue.pop();
     Handler(cur_node);
     ForEachOutNode(cur_node, [&](NodeType* out) {
-      bool will_be_ready = true;
+      bool is_ready = true;
       ForEachInNode(out, [&](NodeType* in) {
-        if (will_be_ready && !has_queued[in]) { will_be_ready = false; }
+        if (is_ready && !has_queued[in]) { is_ready = false; }
       });
-      if (will_be_ready && !has_queued[out]) {
+      if (is_ready && !has_queued[out]) {
         queue.push(out);
         has_queued[out] = true;
       }
+    });
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<void(NodeType*)>& Handler) const {
+  std::list<NodeType*> nodes;
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode,
+                  [&](NodeType* node) { nodes.push_back(node); });
+  std::list<NodeType*> sinks;
+  for (NodeType* node : nodes) {
+    bool is_sink = true;
+    ForEachOutNode(node, [&](NodeType* out_node) { is_sink = false; });
+    if (is_sink) { sinks.push_back(node); }
+  }
+  HashMap<NodeType*, int64_t> node2distance_to_sink;
+  TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
+    int64_t distince_to_sink = -1;
+    ForEachOutNode(node, [&](NodeType* out_node) {
+      distince_to_sink = std::max(distince_to_sink, node2distance_to_sink[out_node]);
+    });
+    node2distance_to_sink[node] = distince_to_sink + 1;
+  });
+  HashMap<NodeType*, std::vector<NodeType*>> node2sorted_out_nodes;
+  auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
+                                                  const std::function<void(NodeType*)>& Handler) {
+    if (node2sorted_out_nodes.find(node) == node2sorted_out_nodes.end()) {
+      auto& out_nodes = node2sorted_out_nodes[node];
+      ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.push_back(out_node); });
+      std::sort(out_nodes.begin(), out_nodes.end(), [&](NodeType* lhs, NodeType* rhs) {
+        return node2distance_to_sink.at(lhs) > node2distance_to_sink.at(rhs);
+      });
+    }
+    for (NodeType* out_node : node2sorted_out_nodes.at(node)) { Handler(out_node); }
+  };
+  HashMap<NodeType*, bool> be_visited;
+  std::stack<NodeType*> stack;
+  for (NodeType* start : starts) {
+    stack.push(start);
+    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+  }
+  while (!stack.empty()) {
+    NodeType* cur_node = stack.top();
+    stack.pop();
+    Handler(cur_node);
+    be_visited[cur_node] = true;
+    ForEachOutNodeSortedByDistanceToSink(cur_node, [&](NodeType* out) {
+      bool is_ready = true;
+      ForEachInNode(out, [&](NodeType* in) {
+        if (is_ready && !be_visited[in]) { is_ready = false; }
+      });
+      if (is_ready && !be_visited[out]) { stack.push(out); }
     });
   }
 }
