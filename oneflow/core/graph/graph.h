@@ -34,6 +34,12 @@ class Graph {
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
       const std::function<void(NodeType*)>& Handler) const;
 
+  void DfsTopoForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*)>& Handler) const;
+
   void DfsTopoForEachNodeSortByDistanceToSink(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
@@ -273,6 +279,15 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
     }
     for (NodeType* out_node : node2sorted_out_nodes.at(node)) { Handler(out_node); }
   };
+  DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNodeSortedByDistanceToSink, Handler);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DfsTopoForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<void(NodeType*)>& Handler) const {
   HashMap<NodeType*, bool> be_visited;
   std::stack<NodeType*> stack;
   for (NodeType* start : starts) {
@@ -284,7 +299,7 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
     stack.pop();
     Handler(cur_node);
     be_visited[cur_node] = true;
-    ForEachOutNodeSortedByDistanceToSink(cur_node, [&](NodeType* out) {
+    ForEachOutNode(cur_node, [&](NodeType* out) {
       bool is_ready = true;
       ForEachInNode(out, [&](NodeType* in) {
         if (is_ready && !be_visited[in]) { is_ready = false; }
