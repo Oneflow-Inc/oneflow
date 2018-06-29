@@ -11,7 +11,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     }
     CompTaskNode* reduce_add_node = static_cast<CompTaskNode*>(dst_node);
     std::string out_regst_name = "out_" + std::to_string(reduce_add_node->parallel_id());
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name);
+    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false);
     edge->AddRegst(out_regst_name, out_regst);
     if (this->parallel_id() == reduce_add_node->parallel_id()
         && device_type() == DeviceType::kGPU) {
