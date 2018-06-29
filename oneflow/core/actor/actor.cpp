@@ -90,7 +90,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   naive_readable_data_regst_cnt_ = 0;
   readable_ctrl_regst_desc_cnt_ = 0;
   writeable_ctrl_regst_desc_cnt_ = writeable_produced_ctrl_regst_.size();
-  is_naive_readable_eord_ = false;
+  is_naive_readable_data_eord_ = false;
   is_consumed_ctrl_eord_ = false;
   TakeOverNaiveConsumed(non_ctrl_task_proto.consumed_regst_desc_id());
   VirtualActorInit(non_ctrl_task_proto);
@@ -159,7 +159,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
     CHECK(eord_regst_desc_ids_.insert(msg.eord_regst_desc_id()).second);
     if (naive_readable_data_regst_.find(msg.eord_regst_desc_id())
         != naive_readable_data_regst_.end()) {
-      is_naive_readable_eord_ = true;
+      is_naive_readable_data_eord_ = true;
     } else if (consumed_ctrl_regst_.find(msg.eord_regst_desc_id()) != consumed_ctrl_regst_.end()) {
       is_consumed_ctrl_eord_ = true;
     } else {
@@ -192,7 +192,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
-  if (((is_naive_readable_eord_ && naive_readable_data_regst_cnt_ == 0)
+  if (((is_naive_readable_data_eord_ && naive_readable_data_regst_cnt_ == 0)
        || IsCustomizedReadAlwaysUnReadyFromNow())
       && ((is_consumed_ctrl_eord_ && readable_ctrl_regst_desc_cnt_ == 0)
           || consumed_ctrl_regst_.size() == 0)) {

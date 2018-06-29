@@ -144,6 +144,7 @@ class Actor {
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashSet<int64_t> eord_regst_desc_ids_;
   std::unique_ptr<CudaStreamHandle> cuda_handle_;
+  int64_t remaining_eord_cnt_;
 
   // Status of Produced Registers
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
@@ -151,12 +152,11 @@ class Actor {
   int64_t actual_writeable_produced_data_regst_desc_num_;
   int64_t writeable_produced_data_regst_desc_cnt_;
   int64_t total_reading_data_cnt_;
-  int64_t remaining_eord_cnt_;
 
   // Status of Naive Consumed Registers
   HashMap<int64_t, std::deque<Regst*>> naive_readable_data_regst_;
   size_t naive_readable_data_regst_cnt_;
-  bool is_naive_readable_eord_;
+  bool is_naive_readable_data_eord_;
 
   // Status of Control Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
