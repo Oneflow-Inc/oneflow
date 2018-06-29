@@ -5,14 +5,21 @@
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/common/channel.h"
 
 namespace oneflow {
+
+struct CommNetItem {
+  std::function<void()> callback;
+  bool is_read;
+  CommNetItem() : callback(nullptr), is_read(false) {}
+};
 
 class CommNet {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CommNet);
   CommNet() = delete;
-  virtual ~CommNet() = default;
+  virtual ~CommNet();
 
   // "RegisterMemory" will return a Token, after "RegisterMemoryDone",
   // we can use this token to use the "Read"
@@ -23,9 +30,8 @@ class CommNet {
   // Stream
   void* NewActorReadId();
   void DeleteActorReadId(void* actor_read_id);
-  void* Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token);
-  void AddReadCallBack(void* actor_read_id, void* read_id, std::function<void()> callback);
-  void AddReadCallBackDone(void* read_id);
+  void Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token);
+  void AddReadCallBack(void* actor_read_id, std::function<void()> callback);
   void ReadDone(void* read_id);
 
   //
@@ -37,23 +43,22 @@ class CommNet {
   virtual void DoRead(void* read_id, int64_t src_machine_id, void* src_token, void* dst_token) = 0;
   const HashSet<int64_t>& peer_machine_id() { return peer_machine_id_; }
 
+  Channel<std::function<void()>> ready_cbs_;
+
  private:
   struct ActorReadContext;
   struct ReadContext {
     ActorReadContext* actor_read_ctx;
-    std::list<std::function<void()>> cbl;
-    std::mutex done_cnt_mtx;
-    int8_t done_cnt;
   };
   struct ActorReadContext {
-    std::mutex read_ctx_list_mtx;
-    std::list<ReadContext*> read_ctx_list;
+    std::mutex waiting_list_mtx;
+    std::list<CommNetItem> waiting_list;
   };
   friend class Global<CommNet>;
-  int8_t IncreaseDoneCnt(ReadContext*);
-  void FinishOneRead(ReadContext*);
 
   HashSet<int64_t> peer_machine_id_;
+
+  std::thread ready_cb_poller_;
 };
 
 template<typename MemDescType>
