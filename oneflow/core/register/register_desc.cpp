@@ -146,10 +146,10 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
   return true;
 }
 
-void InitCtrlRegstDesc(int64_t produced_task_id, RegstDescProto* ctrl_regst_proto) {
+void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
   CHECK_NOTNULL(ctrl_regst_proto);
   ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
-  ctrl_regst_proto->set_producer_task_id(produced_task_id);
+  ctrl_regst_proto->set_producer_task_id(producer_task_id);
   ctrl_regst_proto->set_min_register_num(1);
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);

@@ -508,13 +508,13 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   Plan mem_unlimited_plan(naive_plan);
   ForEachImprovedRegstNum(act_graph, naive_plan, false,
                           MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
-  Plan mem_shared_plan = ImproveMemSharedInfoOnly(mem_unlimited_plan);
+  Plan mem_shared_plan = ImproveMemSharingInfoOnly(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, MakeSetterSetPlanRegstNum(&plan));
   return plan;
 }
 
-Plan Improver::ImproveMemSharedInfoOnly(const Plan& naive_plan) const {
+Plan Improver::ImproveMemSharingInfoOnly(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
   ForEachImprovedMemSharingInfo(plan_task_graph, naive_plan,
