@@ -118,7 +118,6 @@ class Actor {
   }
 
  private:
-  friend class ScopedActEventLogger;
   bool IsReadReady();
   bool IsCtrlReady();
   int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
@@ -131,7 +130,10 @@ class Actor {
   void AsyncSendMsg(const ActorMsg&);
   int64_t GetGlobalWorkStreamId() const;
   int64_t GetLocalWorkStreamId() const;
-  bool NeedCollectActEvent() const { return Global<RuntimeCtx>::Get()->NeedCollectActEvent(); }
+  virtual bool NeedCollectActEvent() const {
+    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
+  }
+  void TryLogActEvent(const std::function<void()>& Callback) const;
 
   int64_t actor_id_;
   int64_t act_id_;
