@@ -22,30 +22,11 @@ void CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token,
   auto do_read = [this, read_ctx, src_machine_id, src_token, dst_token]() {
     DoRead(read_ctx, src_machine_id, src_token, dst_token);
   };
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-    if (actor_read_ctx->waiting_list.empty()) {
-      ready_cbs_.Send(do_read);
-    } else {
-      CommNetItem work_item(true, do_read);
-      actor_read_ctx->waiting_list.push_back(work_item);
-    }
-    CommNetItem read_cb;
-    actor_read_ctx->waiting_list.push_back(read_cb);
-  }
+  AddWorkToStream(actor_read_id, do_read, true);
 }
 
 void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callback) {
-  auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-    if (actor_read_ctx->waiting_list.empty()) {
-      ready_cbs_.Send(callback);
-    } else {
-      CommNetItem work_item(false, callback);
-      actor_read_ctx->waiting_list.push_back(work_item);
-    }
-  }
+  AddWorkToStream(actor_read_id, callback, false);
 }
 
 void CommNet::ReadDone(void* read_id) {
@@ -61,6 +42,21 @@ void CommNet::ReadDone(void* read_id) {
     }
   }
   delete read_ctx;
+}
+
+void CommNet::AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read) {
+  auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
+  std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
+  if (actor_read_ctx->waiting_list.empty()) {
+    ready_cbs_.Send(cb);
+  } else {
+    CommNetItem work_item(is_read, cb);
+    actor_read_ctx->waiting_list.push_back(work_item);
+  }
+  if (is_read) {
+    CommNetItem empty_cb;
+    actor_read_ctx->waiting_list.push_back(empty_cb);
+  }
 }
 
 CommNet::CommNet(const Plan& plan) {

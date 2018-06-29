@@ -47,6 +47,7 @@ class CommNet {
   Channel<std::function<void()>> ready_cbs_;
 
  private:
+  void AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read);
   struct ActorReadContext;
   struct ReadContext {
     ActorReadContext* actor_read_ctx;
