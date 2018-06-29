@@ -79,7 +79,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
    std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       Mut121BufTask,                                                                     \
+       MutBufTask,                                                                        \
    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
 
 class TaskGraph;
@@ -199,7 +199,8 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAddLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 
 }  // namespace oneflow
