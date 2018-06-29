@@ -444,21 +444,19 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   // Reduce Scatter
-  OperatorConf reduce_scatter_op_conf;
-  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
-  reduce_scatter_op_conf.set_device_type(src_pd->device_type());
-  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(src_pd->parallel_num());
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
-  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf)};
   reduce_scatter_node->mut_parallel_desc() = src_pd;
-  // Reduce Add
-  OperatorConf reduce_add_op_conf;
-  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
-  reduce_add_op_conf.set_device_type(src_pd->device_type());
-  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(src_pd->parallel_num());
-  LogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
-  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf)};
-  reduce_add_node->mut_parallel_desc() = src_pd;
+  LogicalNode* pred_reduce_global_node = reduce_scatter_node;
+  if (src_pd->sorted_machine_ids().size() > 1) {
+    // Reduce Local Add
+    LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
+    reduce_local_add_node->mut_parallel_desc() = src_pd;
+    Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);
+    pred_reduce_global_node = reduce_local_add_node;
+  }
+  // Reduce Global Add
+  LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
+  reduce_global_add_node->mut_parallel_desc() = src_pd;
   // Reduce Gather
   OperatorConf reduce_gather_op_conf;
   reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
@@ -469,8 +467,8 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   reduce_gather_node->mut_parallel_desc() = src_pd;
   // Connect
   Connect(src, NewEdge(), reduce_scatter_node);
-  Connect(reduce_scatter_node, NewEdge(), reduce_add_node);
-  Connect(reduce_add_node, NewEdge(), reduce_gather_node);
+  Connect(pred_reduce_global_node, NewEdge(), reduce_global_add_node);
+  Connect(reduce_global_add_node, NewEdge(), reduce_gather_node);
   Connect(reduce_gather_node, NewEdge(), dst);
 }
 

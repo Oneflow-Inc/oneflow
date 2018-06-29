@@ -9,10 +9,10 @@ namespace oneflow {
 void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* out_edge : out_edges()) {
     std::string name = "boxing_out_" + std::to_string(out_edge->edge_id());
-    auto out_regst = ProduceRegst(name);
+    auto out_regst = ProduceRegst(name, true);
     out_edge->AddRegst(name, out_regst);
   }
-  ProduceRegst("middle", 1, 1);
+  ProduceRegst("middle", true, 1, 1);
 }
 
 void BoxingTaskNode::ConsumeAllRegsts() {

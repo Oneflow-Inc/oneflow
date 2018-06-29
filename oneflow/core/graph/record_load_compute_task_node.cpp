@@ -7,7 +7,7 @@
 namespace oneflow {
 
 void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2);
+  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", false, 2, 2);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
 }
 

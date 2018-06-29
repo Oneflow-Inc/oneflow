@@ -24,6 +24,33 @@ const LogicalNode* LogicalNodeOnEdge(TaskEdge* edge, TaskNode* (TaskEdge::*GetNo
   return nullptr;
 }
 
+std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(TaskEdge* edge,
+                                                  TaskNode* (TaskEdge::*GetNode)() const,
+                                                  const HashSet<TaskEdge*>& (TaskNode::*GetEdges)()
+                                                      const) {
+  std::queue<TaskNode*> nodes;
+  HashSet<TaskNode*> visited_nodes;
+  nodes.push((edge->*GetNode)());
+  CHECK(visited_nodes.emplace((edge->*GetNode)()).second);
+  std::vector<CompTaskNode*> comp_task_nodes;
+  while (!nodes.empty()) {
+    TaskNode* node = nodes.front();
+    nodes.pop();
+    CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(node);
+    if (comp_task_node) {
+      comp_task_nodes.push_back(comp_task_node);
+    } else {
+      for (TaskEdge* task_edge : (node->*GetEdges)()) {
+        if (visited_nodes.find((task_edge->*GetNode)()) == visited_nodes.end()) {
+          nodes.push((task_edge->*GetNode)());
+          CHECK(visited_nodes.emplace((task_edge->*GetNode)()).second);
+        }
+      }
+    }
+  }
+  return comp_task_nodes;
+}
+
 }  // namespace
 
 void CompTaskNode::ToProto(TaskProto* task_proto) {
@@ -40,8 +67,8 @@ const LogicalNode* CompTaskNode::GetOnePredLogicalNodeOnEdge(TaskEdge* edge) {
 }
 
 void CompTaskNode::ProduceB121Regst(const std::string& name) {
-  ProduceRegst("boxing_" + name);
-  ProduceRegst("121_" + name);
+  ProduceRegst("boxing_" + name, true);
+  ProduceRegst("121_" + name, true);
 }
 
 void CompTaskNode::BindEdgeWithProducedB121Regst(TaskEdge* edge, const std::string& b121_name) {
@@ -72,6 +99,14 @@ bool CompTaskNode::TryAddLbiToB121RegstAndBindIt(ExecNode* exec_node, const std:
     return false;
   }
   return true;
+}
+
+std::vector<CompTaskNode*> CompTaskNode::GetSuccCompTaskNodesOnEdge(TaskEdge* edge) const {
+  return GetCompTaskNodesOnEdge(edge, &TaskEdge::dst_node, &TaskNode::out_edges);
+}
+
+std::vector<CompTaskNode*> CompTaskNode::GetPredCompTaskNodesOnEdge(TaskEdge* edge) const {
+  return GetCompTaskNodesOnEdge(edge, &TaskEdge::src_node, &TaskNode::in_edges);
 }
 
 }  // namespace oneflow
