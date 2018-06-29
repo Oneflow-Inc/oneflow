@@ -146,7 +146,7 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
-  auto regst = NewProducedRegst(1, kMaxRegisterNum, regst_desc_type);
+  auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
   std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
   CHECK(produced_regsts_.emplace(name, regst).second);
   dst_node->ConsumeRegst("in_ctrl", regst);
@@ -156,18 +156,32 @@ void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
-  return ProduceRegst(name, 1, kMaxRegisterNum);
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
+                                                  bool enable_mem_sharing) {
+  return ProduceRegst(name, enable_mem_sharing, 1, kMaxRegisterNum);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                                  int32_t min_register_num,
                                                   int32_t max_register_num) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_normal_regst_desc();
-  return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
+  return ProduceRegst(name, enable_mem_sharing, min_register_num, max_register_num,
+                      regst_desc_type);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                                  int32_t min_register_num,
+                                                  int32_t max_register_num,
+                                                  const RegstDescTypeProto& regst_desc_type) {
+  auto regst =
+      NewProducedRegst(enable_mem_sharing, min_register_num, max_register_num, regst_desc_type);
+  CHECK(produced_regsts_.emplace(name, regst).second);
+  return regst;
+}
+
+std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
+                                                      int32_t min_register_num,
                                                       int32_t max_register_num,
                                                       const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
@@ -175,15 +189,8 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(int32_t min_register_num,
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
+  regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
   InitProducedRegstMemCase(regst.get());
-  return regst;
-}
-
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
-                                                  int32_t max_register_num,
-                                                  const RegstDescTypeProto& regst_desc_type) {
-  auto regst = NewProducedRegst(min_register_num, max_register_num, regst_desc_type);
-  CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
 
@@ -335,11 +342,13 @@ RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
 }
 
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
-    {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"}, {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},  {kBoxing, "10"},       {kPrint, "1"},          {kReduceScatter, "2"},
-    {kReduceAdd, "2"},    {kReduceGather, "2"},
+    {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},
+    {kRecordLoad, "1"},    {kDecode, "1"},         {kLoss, "4"},
+    {kLossAcc, "5"},       {kLossPrint, "1"},      {kNormalMdUpdt, "6"},
+    {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
+    {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
+    {kReduceGather, "2"},
 };
 
 }  // namespace oneflow

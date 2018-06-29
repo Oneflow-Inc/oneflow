@@ -18,7 +18,7 @@ void RecordLoadCompTaskNode::ProduceAllRegstsAndBindEdges() {
   } else {
     UNIMPLEMENTED();
   }
-  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", 2, 2, regst_desc_type);
+  std::shared_ptr<RegstDesc> record_regst = ProduceRegst("record", false, 2, 2, regst_desc_type);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst("record", record_regst); }
 }
 

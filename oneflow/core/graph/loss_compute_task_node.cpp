@@ -5,9 +5,9 @@
 namespace oneflow {
 
 void LossCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("loss");
+  ProduceRegst("loss", false);
   ProduceB121Regst("out");
-  ProduceRegst("data_tmp", 1, 1);
+  ProduceRegst("data_tmp", true, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "LossAcc") {

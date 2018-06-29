@@ -231,61 +231,44 @@ int Actor::HandlerZombie(const ActorMsg& msg) {
   return 0;
 }
 
-class ScopedActEventRecorder final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(ScopedActEventRecorder);
-  explicit ScopedActEventRecorder(const Actor* actor) : actor_(actor), act_event_(nullptr) {
-    if (NeedRecord()) {
-      act_event_.reset(new ActEvent());
-      ActEvent* act_event = act_event_.get();
-      act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
-      act_event->set_actor_id(actor_->actor_id());
-      act_event->set_work_stream_id(actor_->GetGlobalWorkStreamId());
-      act_event->set_act_id(actor_->act_id_);
-      act_event->set_ready_time(GetCurTime());
-      actor_->ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        (actor_->Actor::SetReadableRegstInfo)(readable_regst, info);
-      });
-      actor_->ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        actor_->SetReadableRegstInfo(readable_regst, info);
-      });
-      actor_->ForEachCurConsumedCtrlRegst([&](const Regst* consumed_ctrl_regst) {
-        ReadableRegstInfo* info = act_event->add_readable_regst_infos();
-        (actor_->Actor::SetReadableRegstInfo)(consumed_ctrl_regst, info);
-      });
-      actor_->device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
-    }
-  }
+void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
+  if (Global<RuntimeCtx>::Get()->is_experiment_phase() || NeedCollectActEvent()) {
+    auto act_event = std::make_shared<ActEvent>();
+    act_event->set_is_experiment_phase(Global<RuntimeCtx>::Get()->is_experiment_phase());
+    act_event->set_actor_id(actor_id());
+    act_event->set_work_stream_id(GetGlobalWorkStreamId());
+    act_event->set_act_id(act_id_);
+    act_event->set_ready_time(GetCurTime());
+    ForEachCurNaiveReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      Actor::SetReadableRegstInfo(readable_regst, info);
+    });
+    ForEachCurCustomizedReadableRegst([&](const Regst* readable_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      SetReadableRegstInfo(readable_regst, info);
+    });
+    ForEachCurConsumedCtrlRegst([&](const Regst* consumed_ctrl_regst) {
+      ReadableRegstInfo* info = act_event->add_readable_regst_infos();
+      Actor::SetReadableRegstInfo(consumed_ctrl_regst, info);
+    });
+    device_ctx_->AddCallBack([act_event]() { act_event->set_start_time(GetCurTime()); });
 
-  ~ScopedActEventRecorder() {
-    if (NeedRecord()) {
-      CHECK(act_event_);
-      std::shared_ptr<ActEvent> act_event = act_event_;
-      actor_->device_ctx_->AddCallBack([act_event]() {
-        act_event->set_stop_time(GetCurTime());
-        Global<CtrlClient>::Get()->PushActEvent(*act_event);
-      });
-    }
-  }
+    DoAct();
 
- private:
-  bool NeedRecord() {
-    return Global<RuntimeCtx>::Get()->is_experiment_phase() || actor_->NeedRecordActEvent();
+    device_ctx_->AddCallBack([act_event]() {
+      act_event->set_stop_time(GetCurTime());
+      Global<CtrlClient>::Get()->PushActEvent(*act_event);
+    });
+  } else {
+    DoAct();
   }
-  const Actor* actor_;
-  std::shared_ptr<ActEvent> act_event_;
-};
+}
 
 void Actor::ActUntilFail() {
   while (IsReadReady() && IsWriteReady() && IsCtrlReady()) {
     act_id_ += 1;
     std::function<bool(Regst*)> IsNaiveAllowedReturnToProducer = [](Regst*) { return true; };
-    {
-      ScopedActEventRecorder scope_recorder(this);
-      Act(&IsNaiveAllowedReturnToProducer);
-    }
+    TryLogActEvent([&] { Act(&IsNaiveAllowedReturnToProducer); });
     AsyncSendCtrlRegstMsg();
     for (auto& pair : naive_readable_regst_) {
       CHECK_EQ(pair.second.empty(), false);

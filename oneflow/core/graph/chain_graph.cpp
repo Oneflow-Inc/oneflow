@@ -25,40 +25,12 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
   }
 }
 
-bool IsConnected(ChainIt src_chain_it, ChainIt dst_chain_it, const Task2ChainItMap& task2chain) {
-  for (auto& dst_task_node : dst_chain_it->nodes) {
-    for (auto& in_edge : dst_task_node->in_edges()) {
-      auto src_task_node = in_edge->src_node();
-      if (IsBackEdge(src_task_node, dst_task_node)) { continue; }
-      auto src_chain_it_it = task2chain.find(src_task_node);
-      if (src_chain_it_it != task2chain.end()) {
-        if (src_chain_it == src_chain_it_it->second) { return true; }
-      }
-    }
-  }
-  return false;
-}
-
-bool DoMergeWithConnect(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
+bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (IsConnected(lhs, rhs, *task2chain_it) && lhs->ancestors_and_this == rhs->ancestors) {
-      for (TaskNode* node : rhs->nodes) {
-        lhs->nodes.push_back(node);
-        lhs->ancestors_and_this.insert(node);
-        task2chain_it->at(node) = lhs;
-      }
-      return true;
-    }
-  }
-  return false;
-}
-
-bool DoMergeWithoutConnect(std::list<ChainIt>& chains, ChainIt rhs,
-                           Task2ChainItMap* task2chain_it) {
-  for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
-    ChainIt lhs = *chains_it;
-    if (!IsConnected(lhs, rhs, *task2chain_it) && lhs->ancestors == rhs->ancestors) {
+    HashSet<TaskNode*> merged_ancestors = lhs->ancestors_and_this;
+    merged_ancestors.insert(rhs->ancestors.begin(), rhs->ancestors.end());
+    if (lhs->ancestors_and_this == merged_ancestors) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.insert(node);
@@ -92,8 +64,7 @@ bool TryMerge(
 }
 
 void MergeChains(std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it) {
-  while (TryMerge(chain_list, task2chain_it, DoMergeWithConnect)
-         || TryMerge(chain_list, task2chain_it, DoMergeWithoutConnect)) {}
+  while (TryMerge(chain_list, task2chain_it, DoMerge)) {}
 }
 
 }  // namespace

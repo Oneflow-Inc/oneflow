@@ -78,13 +78,14 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void BuildCtrlRegstDescIfNeed(TaskNode* dst_node);
 
  protected:
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
-                                          int32_t max_register_num);
-  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, int32_t min_register_num,
-                                          int32_t max_register_num, const RegstDescTypeProto&);
-  std::shared_ptr<RegstDesc> NewProducedRegst(int32_t min_register_num, int32_t max_register_num,
-                                              const RegstDescTypeProto&);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                          int32_t min_register_num, int32_t max_register_num);
+  std::shared_ptr<RegstDesc> ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                          int32_t min_register_num, int32_t max_register_num,
+                                          const RegstDescTypeProto&);
+  std::shared_ptr<RegstDesc> NewProducedRegst(bool enable_mem_sharing, int32_t min_register_num,
+                                              int32_t max_register_num, const RegstDescTypeProto&);
   virtual void InitProducedRegstMemCase(RegstDesc* regst);
   virtual void InitProducedRegstMemCase(MemoryCase*);
   virtual void PinConsumedRegstMemCase(MemoryCase*);
