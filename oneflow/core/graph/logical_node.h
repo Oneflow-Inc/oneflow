@@ -79,7 +79,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
    std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       Mut121BufTask,                                                                     \
+       MutBufTask,                                                                        \
    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
 
 class TaskGraph;
