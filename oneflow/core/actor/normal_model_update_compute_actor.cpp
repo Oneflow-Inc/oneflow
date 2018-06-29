@@ -10,7 +10,7 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   if (model_regst_desc_id_ != -1) { init_remaining_cnt_ += 1; }
   if (const_model_regst_desc_id_ != -1) {
     init_remaining_cnt_ += 1;
-    DecreaseActualWriteableProducedRegstDescNum(1);
+    DecreaseActualWriteableProducedDataRegstDescNum(1);
   }
   next_model_version_id_ = 0;
   related_save_model_actor_id_ = task_proto.related_save_model_task_id();
