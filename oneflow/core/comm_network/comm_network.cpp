@@ -32,14 +32,16 @@ void CommNet::AddReadCallBack(void* actor_read_id, std::function<void()> callbac
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   ActorReadContext* actor_read_ctx = read_ctx->actor_read_ctx;
-  {
-    std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
-    while (!actor_read_ctx->waiting_list.empty()) {
-      const CommNetItem& item = actor_read_ctx->waiting_list.front();
-      if (item.callback) { ready_cbs_.Send(item.callback); }
+  CommNetItem item;
+  for (;;) {
+    {
+      std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
+      if (actor_read_ctx->waiting_list.empty()) { break; }
+      item = actor_read_ctx->waiting_list.front();
       actor_read_ctx->waiting_list.pop_front();
-      if (item.is_read) { break; }
     }
+    if (item.callback) { ready_cbs_.Send(item.callback); }
+    if (item.is_read) { break; }
   }
   delete read_ctx;
 }
