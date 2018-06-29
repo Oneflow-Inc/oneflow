@@ -64,14 +64,12 @@ void TaskGraph::FindChainsInSameStream() {
   for (auto& chain_node : ordered_chain_nodes) {
     auto& ordered_in_chain = chain_node->chain_it()->nodes;
     int64_t chain_id = chain_node->chain_id();
-    LOG(INFO) << "chain_id" << chain_id;
     for (auto& task_node : ordered_in_chain) {
       task_node->set_chain_id(chain_id);
       task_node->set_order_in_graph(order_in_graph);
       CHECK(chain_id2task_nodes[chain_id].insert(task_node).second);
       ordered_task_nodes_.emplace_back(task_node);
       ++order_in_graph;
-      LOG(INFO) << task_node->VisualStrWithOpName();
     }
   }
 }
@@ -127,17 +125,12 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
     std::vector<TaskNode*> out_nodes;
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
       if (IsBackEdge(node, node_on_out_edge)) return;
-      // handler(const_cast<TaskNode*>(node_on_out_edge));
       out_nodes.emplace_back(node_on_out_edge);
     });
-    // std::sort(out_nodes.begin(), out_nodes.end(), [](TaskNode* lhs, TaskNode* rhs) {
-    //   return (rhs->GetTaskType() == kLossAcc || rhs->GetTaskType() == kMdDiffAcc);
-    //});
-    LOG(INFO) << "OUT:" << node->VisualStrWithOpName();
-    for (auto& out_node : out_nodes) {
-      handler(const_cast<TaskNode*>(out_node));
-      LOG(INFO) << out_node->VisualStrWithOpName();
-    }
+    std::sort(out_nodes.begin(), out_nodes.end(), [](TaskNode* lhs, TaskNode* rhs) {
+      return (rhs->GetTaskType() == kLossAcc || rhs->GetTaskType() == kMdDiffAcc);
+    });
+    for (auto& out_node : out_nodes) { handler(const_cast<TaskNode*>(out_node)); }
   };
   DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
