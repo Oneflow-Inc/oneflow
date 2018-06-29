@@ -121,12 +121,17 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
     });
   };
   auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    std::vector<TaskNode*> out_nodes;
     node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
       if (IsBackEdge(node, node_on_out_edge)) return;
-      handler(const_cast<TaskNode*>(node_on_out_edge));
+      out_nodes.emplace_back(node_on_out_edge);
     });
+    std::sort(out_nodes.begin(), out_nodes.end(), [](TaskNode* lhs, TaskNode* rhs) {
+      return (rhs->GetTaskType() == kLossAcc || rhs->GetTaskType() == kMdDiffAcc);
+    });
+    for (auto& out_node : out_nodes) { handler(const_cast<TaskNode*>(out_node)); }
   };
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
+  DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,

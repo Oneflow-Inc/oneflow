@@ -1,6 +1,7 @@
 #ifndef ONEFLOW_CORE_GRAPH_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_GRAPH_H_
 
+#include <stack>
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/graph/node.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
@@ -28,6 +29,12 @@ class Graph {
       const std::function<void(NodeType*)>& Handler) const;
 
   void TopoForEachNode(
+      const std::list<NodeType*>& starts,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+      const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+      const std::function<void(NodeType*)>& Handler) const;
+
+  void DfsTopoForEachNode(
       const std::list<NodeType*>& starts,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
       const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
@@ -219,14 +226,41 @@ void Graph<NodeType, EdgeType>::TopoForEachNode(
     queue.pop();
     Handler(cur_node);
     ForEachOutNode(cur_node, [&](NodeType* out) {
-      bool will_be_ready = true;
+      bool is_ready = true;
       ForEachInNode(out, [&](NodeType* in) {
-        if (will_be_ready && !has_queued[in]) { will_be_ready = false; }
+        if (is_ready && !has_queued[in]) { is_ready = false; }
       });
-      if (will_be_ready && !has_queued[out]) {
+      if (is_ready && !has_queued[out]) {
         queue.push(out);
         has_queued[out] = true;
       }
+    });
+  }
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DfsTopoForEachNode(
+    const std::list<NodeType*>& starts,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachInNode,
+    const std::function<void(NodeType*, const std::function<void(NodeType*)>&)>& ForEachOutNode,
+    const std::function<void(NodeType*)>& Handler) const {
+  HashMap<NodeType*, bool> be_visited;
+  std::stack<NodeType*> stack;
+  for (NodeType* start : starts) {
+    stack.push(start);
+    ForEachInNode(start, [&](NodeType*) { LOG(FATAL) << "not a source"; });
+  }
+  while (!stack.empty()) {
+    NodeType* cur_node = stack.top();
+    stack.pop();
+    Handler(cur_node);
+    be_visited[cur_node] = true;
+    ForEachOutNode(cur_node, [&](NodeType* out) {
+      bool is_ready = true;
+      ForEachInNode(out, [&](NodeType* in) {
+        if (is_ready && !be_visited[in]) { is_ready = false; }
+      });
+      if (is_ready && !be_visited[out]) { stack.push(out); }
     });
   }
 }

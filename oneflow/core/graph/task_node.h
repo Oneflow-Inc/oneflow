@@ -65,6 +65,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
   std::string VisualStr() const override;
+  std::string VisualStrWithOpName() const;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*);
   virtual bool IsPersistence() const { return false; }

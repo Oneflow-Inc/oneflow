@@ -102,6 +102,16 @@ std::string TaskNode::VisualStr() const {
   return ss.str();
 }
 
+std::string TaskNode::VisualStrWithOpName() const {
+  std::string str = "";
+  auto& exec_graph = exec_gph();
+  if (exec_graph.node_num() == 1) {
+    auto exec_node = exec_graph.SoleNode();
+    str += exec_node->VisualStr();
+  }
+  return str;
+}
+
 bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_regsts_.empty(); }
 
 void TaskNode::ToProto(TaskProto* task_proto) {
