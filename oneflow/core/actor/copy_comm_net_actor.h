@@ -33,7 +33,6 @@ class CopyCommNetActor final : public Actor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {}};
   }
-  bool NeedCollectActEvent() const override { return true; }
 
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;
