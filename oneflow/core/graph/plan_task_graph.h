@@ -25,6 +25,7 @@ class PlanTaskNode final : public Node<PlanTaskNode, PlanTaskEdge> {
   int64_t task_id() const { return task_proto_->task_id(); }
   int64_t area_id() const { return task_proto_->task_set_info().area_id(); }
   int64_t chain_id() const { return task_proto_->task_set_info().chain_id(); }
+  int64_t order_in_graph() const { return task_proto_->task_set_info().order_in_graph(); }
 
  private:
   const TaskProto* task_proto_;
@@ -40,8 +41,9 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
                                         HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
   void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;
 
-  void SortByProducerTaskTopoOrder(const std::list<const RegstDescProto*>& regst_descs,
-                                   const std::function<void(const RegstDescProto*)>& Handler) const;
+  void SortByProducerTaskOrderInGraph(
+      const std::list<const RegstDescProto*>& regst_descs,
+      const std::function<void(const RegstDescProto*)>& Handler) const;
   const TaskProto* TaskProto4TaskId(int64_t task_id) const {
     return task_id2plan_task_node_.at(task_id)->task_proto();
   }

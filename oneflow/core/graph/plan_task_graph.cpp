@@ -57,55 +57,20 @@ bool PlanTaskGraph::IsReachableToAncestor(const PlanTaskNode* node,
   return node2ancestors_.at(node).find(ancestor) != node2ancestors_.at(node).end();
 }
 
-void PlanTaskGraph::SortByProducerTaskTopoOrder(
+void PlanTaskGraph::SortByProducerTaskOrderInGraph(
     const std::list<const RegstDescProto*>& regst_descs,
     const std::function<void(const RegstDescProto*)>& Handler) const {
-  HashMap<const PlanTaskNode*, const RegstDescProto*> producer_node2regst_desc;
+  using ProducerAndRegstDesc = std::pair<const PlanTaskNode*, const RegstDescProto*>;
+  std::vector<ProducerAndRegstDesc> producer_and_regst_descs;
   for (const auto* regst_desc : regst_descs) {
     const auto* producer = task_id2plan_task_node_.at(regst_desc->producer_task_id());
-    CHECK(producer_node2regst_desc.emplace(producer, regst_desc).second);
+    producer_and_regst_descs.emplace_back(std::make_pair(producer, regst_desc));
   }
-  auto IsSourceNode = [&](const PlanTaskNode* node) {
-    for (const auto& pair : producer_node2regst_desc) {
-      if (IsReachableToAncestor(node, pair.first)) { return false; }
-    }
-    return true;
-  };
-  auto IsSinkNode = [&](const PlanTaskNode* node) {
-    for (const auto& pair : producer_node2regst_desc) {
-      if (IsReachableToAncestor(pair.first, node)) { return false; }
-    }
-    return true;
-  };
-  const PlanTaskNode* start_node = nullptr;
-  const PlanTaskNode* end_node = nullptr;
-  for (const auto& pair : producer_node2regst_desc) {
-    if (IsSourceNode(pair.first)) {
-      CHECK(start_node == nullptr);
-      start_node = pair.first;
-    }
-    if (IsSinkNode(pair.first)) {
-      CHECK(end_node == nullptr);
-      end_node = pair.first;
-    }
-  }
-  auto ForEachInNode = [&](const PlanTaskNode* node,
-                           const std::function<void(const PlanTaskNode*)>& Handler) {
-    node->ForEachNodeOnInEdge([&](const PlanTaskNode* in_node) {
-      if (in_node == start_node || IsReachableToAncestor(in_node, start_node)) { Handler(in_node); }
-    });
-  };
-  auto ForEachOutNode = [&](const PlanTaskNode* node,
-                            const std::function<void(const PlanTaskNode*)>& Handler) {
-    node->ForEachNodeOnOutEdge([&](const PlanTaskNode* out_node) {
-      if (out_node == end_node || IsReachableToAncestor(end_node, out_node)) { Handler(out_node); }
-    });
-  };
-  TopoForEachNode({start_node}, ForEachInNode, ForEachOutNode, [&](const PlanTaskNode* node) {
-    if (producer_node2regst_desc.find(node) != producer_node2regst_desc.end()) {
-      Handler(producer_node2regst_desc.at(node));
-    }
-  });
+  std::sort(producer_and_regst_descs.begin(), producer_and_regst_descs.end(),
+            [&](const ProducerAndRegstDesc& lhs, const ProducerAndRegstDesc& rhs) {
+              return lhs.first->order_in_graph() < rhs.first->order_in_graph();
+            });
+  for (const auto& pair : producer_and_regst_descs) { Handler(pair.second); }
 }
 
 void PlanTaskGraph::ComputeLifetimeSameChainActorIds(

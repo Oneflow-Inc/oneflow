@@ -19,12 +19,11 @@ bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
                                        const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  HashSet<int64_t> stream_ids;
-  stream_ids.insert(ChainId4TaskId(regst_desc.producer_task_id()));
+  int64_t producer_chain_id = ChainId4TaskId(regst_desc.producer_task_id());
   for (int64_t consumer_task_id : regst_desc.consumer_task_id()) {
-    stream_ids.insert(ChainId4TaskId(consumer_task_id));
+    if (ChainId4TaskId(consumer_task_id) != producer_chain_id) { return false; }
   }
-  return stream_ids.size() == 1;
+  return true;
 }
 
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
@@ -121,7 +120,7 @@ void ForEachImprovedMemSharingInfo(
   ForEachSameColoredChainRegstDescWithConsumer(graph, plan, [&](const RegstDescs& regst_descs) {
     int32_t used_order_value = 0;
     mem_sharing_info.set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
-    graph.SortByProducerTaskTopoOrder(regst_descs, [&](const RegstDescProto* regst_desc) {
+    graph.SortByProducerTaskOrderInGraph(regst_descs, [&](const RegstDescProto* regst_desc) {
       mem_sharing_info.set_used_order_value(used_order_value++);
       Handler(regst_desc->regst_desc_id(), mem_sharing_info);
     });
