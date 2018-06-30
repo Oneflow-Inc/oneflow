@@ -2,6 +2,12 @@
 
 namespace oneflow {
 
+int64_t PlanTaskNode::chain_id() const {
+  int64_t chain_id = task_proto_->task_set_info().chain_id();
+  CHECK_NE(chain_id, -1);
+  return chain_id;
+}
+
 bool PlanTaskGraph::IsReachableInSameArea(int64_t src_task_id, int64_t dst_task_id) const {
   return IsReachableToAncestor(task_id2plan_task_node_.at(dst_task_id),
                                task_id2plan_task_node_.at(src_task_id));
