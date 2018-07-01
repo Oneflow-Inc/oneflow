@@ -1,4 +1,6 @@
 #include "oneflow/core/persistence/persistent_in_stream.h"
+#include "oneflow/core/persistence/binary_in_stream_with_local_copy.h"
+#include "oneflow/core/persistence/binary_in_stream_without_local_copy.h"
 #include "oneflow/core/job/job_desc.h"
 #include <cstring>
 
@@ -7,10 +9,19 @@ namespace oneflow {
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, uint64_t offset,
                                        bool cyclic, bool with_local_copy) {
+  std::vector<std::shared_ptr<BinaryInStream>> streams;
+  for (auto& file_path : file_paths) {
+    if (with_local_copy) {
+      streams.emplace_back(new BinaryInStreamWithLocalCopy(fs, file_path));
+    } else {
+      streams.emplace_back(new BinaryInStreamWithoutLocalCopy(fs, file_path, 0));
+    }
+  }
+
   if (cyclic) {
-    stream_scanner_.reset(new CyclicStreamScanner(fs, file_paths, offset, with_local_copy));
+    stream_scanner_.reset(new CyclicStreamScanner(fs, streams, offset));
   } else {
-    stream_scanner_.reset(new AcyclicStreamScanner(fs, file_paths, offset, with_local_copy));
+    stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
   buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();

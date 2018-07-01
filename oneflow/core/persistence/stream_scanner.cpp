@@ -4,23 +4,25 @@
 
 namespace oneflow {
 
-StreamScanner::StreamScanner(fs::FileSystem* fs, const std::vector<std::string>& file_paths,
-                             uint64_t offset, bool with_local_copy)
-    : whole_file_offset_(offset), with_local_copy_(with_local_copy) {
-  if (with_local_copy_) { CHECK_EQ(whole_file_offset_, 0); }
-  stream_num_ = file_paths.size();
+StreamScanner::StreamScanner(fs::FileSystem* fs,
+                             const std::vector<std::shared_ptr<BinaryInStream>>& streams,
+                             uint64_t offset)
+    : whole_file_offset_(offset) {
+  // if (with_local_copy_) { CHECK_EQ(whole_file_offset_, 0); }
+  stream_num_ = streams.size();
   whole_file_size_ = 0;
   int64_t idx = 0;
-  for (auto& file_path : file_paths) {
-    AddStream(fs, file_path, idx);
+  for (auto& stream : streams) {
+    AddStream(fs, stream, idx);
     ++idx;
   }
   CHECK_LE(whole_file_offset_, whole_file_size_);
   whole_file_pos_ = whole_file_offset_;
 }
 
-void StreamScanner::AddStream(fs::FileSystem* fs, const std::string& file_path, int64_t idx) {
-  uint64_t cur_file_size = fs->GetFileSize(file_path);
+void StreamScanner::AddStream(fs::FileSystem* fs, const std::shared_ptr<BinaryInStream>& stream,
+                              int64_t idx) {
+  uint64_t cur_file_size = stream->file_size();
   uint64_t offset;
   if (whole_file_offset_ < whole_file_size_) { offset = 0; }
   if (whole_file_offset_ > whole_file_size_) {
@@ -40,11 +42,7 @@ void StreamScanner::AddStream(fs::FileSystem* fs, const std::string& file_path, 
     */
   }
 
-  if (with_local_copy_) {
-    streams_.emplace_back(new BinaryInStreamWithLocalCopy(fs, file_path));
-  } else {
-    streams_.emplace_back(new BinaryInStreamWithoutLocalCopy(fs, file_path, offset));
-  }
+  streams_.emplace_back(stream);
   whole_file_size_ += cur_file_size;
 }
 

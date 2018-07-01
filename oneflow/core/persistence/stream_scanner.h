@@ -12,15 +12,15 @@ class StreamScanner {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StreamScanner);
 
-  StreamScanner(fs::FileSystem* fs, const std::vector<std::string>& file_paths, uint64_t offset,
-                bool with_local_copy);
+  StreamScanner(fs::FileSystem* fs, const std::vector<std::shared_ptr<BinaryInStream>>& streams,
+                uint64_t offset);
   bool IsEof() const;
   uint64_t UpdateBuffer(std::vector<char>* buffer);
 
  protected:
   virtual void AddNForCurFilePos(uint64_t n) = 0;
 
-  std::vector<std::unique_ptr<BinaryInStream>> streams_;
+  std::vector<std::shared_ptr<BinaryInStream>> streams_;
   uint64_t whole_file_size_;
   uint64_t whole_file_pos_;
   int32_t cur_stream_id_;
@@ -28,17 +28,16 @@ class StreamScanner {
 
  private:
   uint64_t whole_file_offset_;
-  bool with_local_copy_;
 
-  void AddStream(fs::FileSystem* fs, const std::string& file_path, int64_t idx);
+  void AddStream(fs::FileSystem* fs, const std::shared_ptr<BinaryInStream>& stream, int64_t idx);
 };
 
 class CyclicStreamScanner final : public StreamScanner {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CyclicStreamScanner);
-  CyclicStreamScanner(fs::FileSystem* fs, const std::vector<std::string>& file_paths,
-                      uint64_t offset, bool with_local_copy)
-      : StreamScanner(fs, file_paths, offset, with_local_copy) {}
+  CyclicStreamScanner(fs::FileSystem* fs,
+                      const std::vector<std::shared_ptr<BinaryInStream>>& streams, uint64_t offset)
+      : StreamScanner(fs, streams, offset) {}
 
  protected:
   void AddNForCurFilePos(uint64_t n) override;
@@ -47,9 +46,9 @@ class CyclicStreamScanner final : public StreamScanner {
 class AcyclicStreamScanner final : public StreamScanner {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AcyclicStreamScanner);
-  AcyclicStreamScanner(fs::FileSystem* fs, const std::vector<std::string>& file_paths,
-                       uint64_t offset, bool with_local_copy)
-      : StreamScanner(fs, file_paths, offset, with_local_copy) {}
+  AcyclicStreamScanner(fs::FileSystem* fs,
+                       const std::vector<std::shared_ptr<BinaryInStream>>& streams, uint64_t offset)
+      : StreamScanner(fs, streams, offset) {}
 
  protected:
   void AddNForCurFilePos(uint64_t n) override;
