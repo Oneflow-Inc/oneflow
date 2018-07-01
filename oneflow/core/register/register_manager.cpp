@@ -55,26 +55,22 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
-    if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
-      CHECK_EQ(regst_desc->register_num(), 1);
-    }
+    if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
   auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
     return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
   };
-  std::sort(
-      sorted_regst_protos.begin(), sorted_regst_protos.end(),
-      [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-        return (lhs->mem_sharing_info().mem_shared_id() < rhs->mem_sharing_info().mem_shared_id())
-               || (lhs->mem_sharing_info().mem_shared_id()
-                       == rhs->mem_sharing_info().mem_shared_id()
-                   && GetRegstSize(lhs) < GetRegstSize(rhs));
-      });
+  std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
+            [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+              return (lhs->mem_shared_id() < rhs->mem_shared_id())
+                     || (lhs->mem_shared_id() == rhs->mem_shared_id()
+                         && GetRegstSize(lhs) < GetRegstSize(rhs));
+            });
   auto ForEachRegstDesc7IsLast =
       [&](const std::function<void(const RegstDescProto*, bool)>& Handler) {
         for (int64_t i = 0; i < sorted_regst_protos.size() - 1; ++i) {
-          int32_t cur_shared_id = sorted_regst_protos.at(i)->mem_sharing_info().mem_shared_id();
-          int32_t nxt_shared_id = sorted_regst_protos.at(i + 1)->mem_sharing_info().mem_shared_id();
+          int32_t cur_shared_id = sorted_regst_protos.at(i)->mem_shared_id();
+          int32_t nxt_shared_id = sorted_regst_protos.at(i + 1)->mem_shared_id();
           Handler(sorted_regst_protos.at(i), cur_shared_id == -1 || cur_shared_id != nxt_shared_id);
         }
         Handler(sorted_regst_protos.back(), true);

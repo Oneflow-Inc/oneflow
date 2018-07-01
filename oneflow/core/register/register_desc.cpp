@@ -21,9 +21,7 @@ RegstDesc::RegstDesc() {
   min_register_num_ = 1;
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
-  mem_sharing_info_.set_enable_mem_sharing(false);
-  mem_sharing_info_.set_mem_shared_id(-1);
-  mem_sharing_info_.set_used_order_value(-1);
+  enable_mem_sharing_ = false;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -133,7 +131,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
-  *(ret->mutable_mem_sharing_info()) = mem_sharing_info_;
+  ret->set_enable_mem_sharing(enable_mem_sharing_);
+  ret->set_mem_shared_id(-1);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
@@ -144,6 +143,19 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
     if (!(*(pair.second.get()) == *(iter->second.get()))) { return false; }
   }
   return true;
+}
+
+void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
+  CHECK_NOTNULL(ctrl_regst_proto);
+  ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
+  ctrl_regst_proto->set_producer_task_id(producer_task_id);
+  ctrl_regst_proto->set_min_register_num(1);
+  ctrl_regst_proto->set_max_register_num(1);
+  ctrl_regst_proto->set_register_num(1);
+  ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
+  ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
+  ctrl_regst_proto->set_enable_mem_sharing(false);
+  ctrl_regst_proto->set_mem_shared_id(-1);
 }
 
 }  // namespace oneflow
