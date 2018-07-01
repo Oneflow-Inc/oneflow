@@ -46,6 +46,10 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
   InitFromRegstProtoList(regst_protos);
 }
 
+RegstMgr::~RegstMgr() {
+  for (auto& ptr : ofrecord_ptrs_) { ptr->~OFRecord(); }
+}
+
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
@@ -55,7 +59,6 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
-    AllocateOFRecordsIfNeed(regst_desc);
     if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
       CHECK_EQ(regst_desc->register_num(), 1);
     }
@@ -123,9 +126,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       for (const LogicalBlobId& lbi : lbis) {
         const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
         std::unique_ptr<Blob> blob_ptr(NewBlob(regst, blob_desc, cur_pointer, device_type));
-        if (blob_desc->data_type() == kOFRecord) {
-          blob_ptr->set_dptr(reinterpret_cast<void*>(lbi2ofrecords_.at(lbi).at(i).data()));
-        }
+        AllocateOFRecordsIfNeed(blob_ptr);
         CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_pointer += blob_desc->TotalByteSize();
       }
@@ -146,16 +147,17 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   }
 }
 
-void RegstMgr::AllocateOFRecordsIfNeed(const RegstDescProto* regst_desc) {
-  const RegstDescTypeProto& regst_desc_type = regst_desc->regst_desc_type();
-  if (regst_desc_type.has_data_regst_desc()) {
-    for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
-      if (pair.blob_desc().data_type() == kOFRecord) {
-        const ShapeProto& shape = pair.blob_desc().shape();
-        CHECK_EQ(shape.dim_size(), 1);
-        lbi2ofrecords_[pair.lbi()].assign(regst_desc->register_num(),
-                                          std::vector<OFRecord>(shape.dim(0)));
-      }
+void RegstMgr::AllocateOFRecordsIfNeed(const std::unique_ptr<Blob>& blob_ptr) {
+  const BlobDesc& blob_desc = blob_ptr->blob_desc();
+  if (blob_desc.data_type() == kOFRecord) {
+    int64_t elem_cnt = blob_desc.shape().elem_cnt();
+    std::vector<OFRecord*> ofrecord_ptrs(elem_cnt);
+    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
+      ofrecord_ptrs[idx] = new (blob_ptr->mut_dptr<char>() + idx * sizeof(OFRecord)) OFRecord();
+    }
+    {
+      std::unique_lock<std::mutex> lck(ofrecord_ptrs_mtx_);
+      ofrecord_ptrs_.insert(ofrecord_ptrs_.end(), ofrecord_ptrs.begin(), ofrecord_ptrs.end());
     }
   }
 }
