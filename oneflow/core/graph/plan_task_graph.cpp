@@ -63,33 +63,13 @@ void PlanTaskGraph::InitChainId2SortedPlanTaskNode() {
   }
 }
 
-bool PlanTaskGraph::IsAnyNodeReachableToAncestor(const HashSet<const PlanTaskNode*>& nodes,
-                                                 const PlanTaskNode* ancestor) const {
-  for (const PlanTaskNode* node : nodes) {
-    if (IsReachableToAncestor(node, ancestor)) { return true; }
-  }
-  return false;
-}
-
 bool PlanTaskGraph::IsReachableToAncestor(const PlanTaskNode* node,
                                           const PlanTaskNode* ancestor) const {
   return node2ancestors_.at(node).find(ancestor) != node2ancestors_.at(node).end();
 }
 
-void PlanTaskGraph::SortByProducerTaskOrderInGraph(
-    const std::list<const RegstDescProto*>& regst_descs,
-    const std::function<void(const RegstDescProto*)>& Handler) const {
-  using ProducerAndRegstDesc = std::pair<const PlanTaskNode*, const RegstDescProto*>;
-  std::vector<ProducerAndRegstDesc> producer_and_regst_descs;
-  for (const auto* regst_desc : regst_descs) {
-    const auto* producer = task_id2plan_task_node_.at(regst_desc->producer_task_id());
-    producer_and_regst_descs.emplace_back(std::make_pair(producer, regst_desc));
-  }
-  std::sort(producer_and_regst_descs.begin(), producer_and_regst_descs.end(),
-            [&](const ProducerAndRegstDesc& lhs, const ProducerAndRegstDesc& rhs) {
-              return lhs.first->order_in_graph() < rhs.first->order_in_graph();
-            });
-  for (const auto& pair : producer_and_regst_descs) { Handler(pair.second); }
+const TaskProto* PlanTaskGraph::TaskProto4TaskId(int64_t task_id) const {
+  return task_id2plan_task_node_.at(task_id)->task_proto();
 }
 
 void PlanTaskGraph::ComputeLifetimeSameChainActorIds(

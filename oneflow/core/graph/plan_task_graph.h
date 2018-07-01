@@ -39,15 +39,9 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
 
   void ComputeLifetimeSameChainActorIds(const RegstDescProto* regst_desc,
                                         HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
-
-  void SortByProducerTaskOrderInGraph(
-      const std::list<const RegstDescProto*>& regst_descs,
-      const std::function<void(const RegstDescProto*)>& Handler) const;
-  const TaskProto* TaskProto4TaskId(int64_t task_id) const {
-    return task_id2plan_task_node_.at(task_id)->task_proto();
-  }
   bool IsReachableInSameArea(int64_t src_task_id, int64_t dst_task_id) const;
 
+  const TaskProto* TaskProto4TaskId(int64_t task_id) const;
   const Plan& plan() const { return *plan_; }
 
  private:
@@ -55,8 +49,6 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   void InitEdges();
   void InitNode2Ancestor();
   void InitChainId2SortedPlanTaskNode();
-  bool IsAnyNodeReachableToAncestor(const HashSet<const PlanTaskNode*>& nodes,
-                                    const PlanTaskNode* ancestor) const;
   bool IsReachableToAncestor(const PlanTaskNode* node, const PlanTaskNode* ancestor) const;
 
   const Plan* plan_;
