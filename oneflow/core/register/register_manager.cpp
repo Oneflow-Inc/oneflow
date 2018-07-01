@@ -1,37 +1,11 @@
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/job/job_desc.h"
-#include "oneflow/core/register/blob.h"
 #include "oneflow/core/common/str_util.h"
-#include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-
-namespace std {
-
-template<>
-struct hash<oneflow::MemoryCase> {
-  size_t operator()(const oneflow::MemoryCase& val) const {
-    if (val.has_host_mem()) {
-      return val.host_mem().used_by_device() + 1024;
-    } else {
-      return val.device_cuda_mem().device_id();
-    }
-  }
-};
-
-}  // namespace std
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
-
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
-  }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
-  }
-  return false;
-}
 
 RegstMgr::RegstMgr(const Plan& plan) {
   std::list<const RegstDescProto*> regst_protos;
@@ -47,93 +21,66 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 }
 
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
+  std::vector<const RegstDescProto*> sorted_regst_descs(regst_protos.size());
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
-  std::vector<const RegstDescProto*> sorted_regst_protos(regst_protos.begin(), regst_protos.end());
+  HashMap<std::pair<MemoryCase, int32_t>, size_t> mem_case7mem_shared_id2size;
   for (const RegstDescProto* regst_desc : regst_protos) {
-    CHECK(
-        regst_desc_id2rt_regst_desc_
-            .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
-            .second);
-    if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
+    int32_t mem_shared_id = regst_desc->mem_sharing_info().mem_shared_id();
+    auto rt_regst_desc_ptr = std::make_unique<RtRegstDesc>(*regst_desc);
+    if (mem_shared_id != -1) {
       CHECK_EQ(regst_desc->register_num(), 1);
+      for (const auto& pair : rt_regst_desc_ptr->GetSize4AllActuallyMemCase()) {
+        auto mem_region = std::make_pair(pair.first, mem_shared_id);
+        mem_case7mem_shared_id2size[mem_region] =
+            std::max(mem_case7mem_shared_id2size[mem_region], pair.second);
+      }
+    } else {
+      for (const auto& pair : rt_regst_desc_ptr->GetSize4AllActuallyMemCase()) {
+        mem_case7mem_shared_id2size[std::make_pair(pair.first, mem_shared_id)] +=
+            pair.second * regst_desc->register_num();
+      }
     }
+    sorted_regst_descs.push_back(regst_desc);
+    CHECK(regst_desc_id2rt_regst_desc_
+              .emplace(regst_desc->regst_desc_id(), std::move(rt_regst_desc_ptr))
+              .second);
   }
-  auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
-    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
-  };
-  std::sort(
-      sorted_regst_protos.begin(), sorted_regst_protos.end(),
-      [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-        return (lhs->mem_sharing_info().mem_shared_id() < rhs->mem_sharing_info().mem_shared_id())
-               || (lhs->mem_sharing_info().mem_shared_id()
-                       == rhs->mem_sharing_info().mem_shared_id()
-                   && GetRegstSize(lhs) < GetRegstSize(rhs));
-      });
-  auto ForEachRegstDesc7IsLast =
-      [&](const std::function<void(const RegstDescProto*, bool)>& Handler) {
-        for (int64_t i = 0; i < sorted_regst_protos.size() - 1; ++i) {
-          int32_t cur_shared_id = sorted_regst_protos.at(i)->mem_sharing_info().mem_shared_id();
-          int32_t nxt_shared_id = sorted_regst_protos.at(i + 1)->mem_sharing_info().mem_shared_id();
-          Handler(sorted_regst_protos.at(i), cur_shared_id == -1 || cur_shared_id != nxt_shared_id);
-        }
-        Handler(sorted_regst_protos.back(), true);
-      };
-  ForEachRegstDesc7IsLast([&](const RegstDescProto* regst_desc, bool is_last_when_share_same_mem) {
-    if (is_last_when_share_same_mem) {
-      mem_case2mem_size[regst_desc->mem_case()] += GetRegstSize(regst_desc);
-    }
-  });
+  for (const auto& pair : mem_case7mem_shared_id2size) {
+    mem_case2mem_size[pair.first.first] += pair.second;
+  }
   for (const auto& pair : mem_case2mem_size) {
     CHECK(
         mem_case2mem_ptr
             .emplace(pair.first, Global<MemoryAllocator>::Get()->Allocate(pair.first, pair.second))
             .second);
   }
-  ForEachRegstDesc7IsLast([&](const RegstDescProto* regst_desc, bool is_last_when_share_same_mem) {
-    CHECK(regst_desc_id2mem_ptr_
-              .emplace(regst_desc->regst_desc_id(), mem_case2mem_ptr.at(regst_desc->mem_case()))
-              .second);
-    if (is_last_when_share_same_mem) {
-      mem_case2mem_ptr.at(regst_desc->mem_case()) += GetRegstSize(regst_desc);
-    }
-  });
+  std::sort(sorted_regst_descs.begin(), sorted_regst_descs.end(),
+            [](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+              int32_t lhs_mem_shared_id = lhs->mem_sharing_info().mem_shared_id();
+              int32_t rhs_mem_shared_id = rhs->mem_sharing_info().mem_shared_id();
+              int32_t lhs_used_order_value = lhs->mem_sharing_info().used_order_value();
+              int32_t rhs_used_order_value = rhs->mem_sharing_info().used_order_value();
+              if (lhs_mem_shared_id == rhs_mem_shared_id) {
+                CHECK_NE(lhs_used_order_value, rhs_used_order_value);
+                return lhs_used_order_value < rhs_used_order_value;
+              }
+              return lhs_mem_shared_id < rhs_mem_shared_id;
+            });
+  for (const RegstDescProto* regst_desc : sorted_regst_descs) {
+    regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->PickMemory(mem_case2mem_ptr);
+  }
 }
 
 void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
                          std::function<void(Regst*)> OneRegstDone) {
   const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
   const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
-  const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
-  char* mem_ptr = regst_desc_id2mem_ptr_.at(regst_desc_id);
-  std::vector<LogicalBlobId> lbis;
-  if (regst_desc_type.has_normal_regst_desc()) {
-    for (const LbiBlobDescPair& pair : regst_desc_type.normal_regst_desc().lbi2blob_desc()) {
-      lbis.push_back(pair.lbi());
-    }
-    CHECK(!lbis.empty());
-  }
+  RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
-    Regst* regst = new Regst;
-    regst->set_regst_desc(rt_regst_desc);
+    Regst* regst = new Regst(rt_regst_desc);
     if (regst_desc_type.has_normal_regst_desc()) {
-      std::sort(lbis.begin(), lbis.end());
-      char* cur_pointer = mem_ptr;
-      for (const LogicalBlobId& lbi : lbis) {
-        const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
-        std::unique_ptr<Blob> blob_ptr;
-        blob_ptr.reset(NewBlob(regst, blob_desc, cur_pointer, device_type));
-        CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
-        cur_pointer += blob_desc->TotalByteSize();
-      }
-      regst->packed_blob_.reset(
-          NewBlob(regst, rt_regst_desc->packed_blob_desc(), mem_ptr, device_type));
-      if (rt_regst_desc->mem_case().has_host_mem()
-          && rt_regst_desc->mem_case().host_mem().used_by_network()) {
-        regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
-            mem_ptr, rt_regst_desc->packed_blob_desc()->TotalByteSize());
-      }
-      mem_ptr += rt_regst_desc->packed_blob_desc()->TotalByteSize();
+      rt_regst_desc->AllocMem4Regst(regst, i, device_type);
     } else if (regst_desc_type.has_record_regst_desc()) {
       const RecordTypeProto& record_type = regst_desc_type.record_regst_desc().record_type();
       switch (record_type) {

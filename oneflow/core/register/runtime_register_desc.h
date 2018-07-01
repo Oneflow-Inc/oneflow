@@ -1,11 +1,14 @@
 #ifndef ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 #define ONEFLOW_CORE_REGISTER_RUNTIME_REGISTER_DESC_H_
 
-#include "oneflow/core/memory/memory_case.pb.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/register_desc.pb.h"
 
 namespace oneflow {
+
+class Regst;
 
 class RtRegstDesc {
  public:
@@ -23,9 +26,14 @@ class RtRegstDesc {
 
   const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
   const BlobDesc* packed_blob_desc() const { return &packed_blob_desc_; }
-  size_t TotalByteSize4AllRegst() const {
-    return packed_blob_desc_.TotalByteSize() * register_num_;
+
+  const HashMap<MemoryCase, size_t>& GetSize4AllActuallyMemCase() const {
+    return actually_mem_case2size_;
   }
+  void AccumulateActuallyMemCaseSize(const BlobDesc* blob_desc);
+  std::pair<size_t, size_t> SizeOfBlobField(const BlobDesc* blob_desc) const;
+  void PickMemory(HashMap<MemoryCase, char*>& mem_case2mem_ptr);
+  void AllocMem4Regst(Regst* regst, int64_t index, DeviceType device_type);
 
  private:
   int64_t regst_desc_id_;
@@ -33,8 +41,13 @@ class RtRegstDesc {
   std::vector<int64_t> consumers_actor_id_;
   int64_t register_num_;
   MemoryCase mem_case_;
+  MemoryCase header_mem_case_;
+  MemSharingProto mem_sharing_info_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
   BlobDesc packed_blob_desc_;
+  std::vector<LogicalBlobId> sorted_lbis_;
+  HashMap<MemoryCase, size_t> actually_mem_case2size_;
+  HashMap<MemoryCase, char*> mem_case2mem_ptr_;
 };
 
 }  // namespace oneflow

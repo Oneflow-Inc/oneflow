@@ -41,8 +41,11 @@ class BlobDesc final {
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfHeaderField() const;
   size_t ByteSizeOfDataContentField() const;
+  size_t AlignSizeOfDataContentField() const;
   size_t TotalByteSize() const;
+
   bool operator==(const BlobDesc& rhs) const;
 
  private:
@@ -53,7 +56,8 @@ class BlobDesc final {
   int64_t max_col_num_;
 };
 
-BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
+BlobDesc ComputePackedBlobDesc(const MemoryCase& mem_case,
+                               std::function<const BlobDesc*()> NextBlobDesc);
 
 }  // namespace oneflow
 

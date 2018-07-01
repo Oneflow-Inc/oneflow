@@ -44,7 +44,7 @@ void RegstDesc::Lock() {
   is_locked_ = true;
   auto it = lbi2blob_desc_.begin();
   packed_blob_desc_.reset(new BlobDesc);
-  *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
+  *packed_blob_desc_ = ComputePackedBlobDesc(mem_case_, [&]() {
     const BlobDesc* ret = nullptr;
     if (it != lbi2blob_desc_.end()) {
       ret = it->second.get();
