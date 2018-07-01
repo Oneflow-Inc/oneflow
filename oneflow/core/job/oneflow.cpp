@@ -105,7 +105,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   if (machine_ctx->IsThisMachineMaster()) {
     Compiler compiler;
     naive_plan = compiler.Compile();
-    plan = Improver().ImproveMemSharingInfoOnly(naive_plan);
+    plan = Improver().ImproveMemSharedIdOnly(naive_plan);
     Global<CtrlClient>::Get()->PushKV("mem_shared_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
