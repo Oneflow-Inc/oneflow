@@ -15,7 +15,7 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
     if (with_local_copy) {
       streams.emplace_back(new BinaryInStreamWithLocalCopy(fs, file_path));
     } else {
-      streams.emplace_back(new BinaryInStreamWithoutLocalCopy(fs, file_path, 0));
+      streams.emplace_back(new BinaryInStreamWithoutLocalCopy(fs, file_path));
     }
   }
   if (cyclic) {

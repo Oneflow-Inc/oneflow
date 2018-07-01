@@ -13,11 +13,10 @@ int32_t BinaryInStreamWithoutLocalCopy::Read(char* s, size_t n) {
 }
 
 BinaryInStreamWithoutLocalCopy::BinaryInStreamWithoutLocalCopy(fs::FileSystem* fs,
-                                                               const std::string& file_path,
-                                                               uint64_t offset) {
+                                                               const std::string& file_path)
+    : cur_file_pos_(0) {
   fs->NewRandomAccessFile(file_path, &file_);
   file_size_ = fs->GetFileSize(file_path);
-  cur_file_pos_ = offset;
 }
 
 }  // namespace oneflow

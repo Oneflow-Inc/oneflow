@@ -12,7 +12,7 @@ class BinaryInStreamWithoutLocalCopy final : public BinaryInStream {
   BinaryInStreamWithoutLocalCopy() = delete;
   virtual ~BinaryInStreamWithoutLocalCopy() = default;
 
-  BinaryInStreamWithoutLocalCopy(fs::FileSystem*, const std::string& file_path, uint64_t offset);
+  BinaryInStreamWithoutLocalCopy(fs::FileSystem*, const std::string& file_path);
   int32_t Read(char* s, size_t n) override;
 
   uint64_t file_size() const override { return file_size_; }
