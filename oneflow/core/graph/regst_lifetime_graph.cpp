@@ -34,7 +34,9 @@ void RegstLifetimeGraph::InitEdges(const std::list<RegstLifetimeNode*>& nodes) {
   for (const auto& pair : task_id2intersected_nodes) {
     for (RegstLifetimeNode* src_node : pair.second) {
       for (RegstLifetimeNode* dst_node : pair.second) {
-        if (src_node < dst_node) { src_node2dst_nodes[src_node].emplace(dst_node); }
+        if (src_node->regst_desc_id() < dst_node->regst_desc_id()) {
+          src_node2dst_nodes[src_node].emplace(dst_node);
+        }
       }
     }
   }
