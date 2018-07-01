@@ -36,7 +36,6 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
     const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
   HashMap<int64_t, std::list<const RegstDescProto*>> global_work_stream_id2regst_descs;
   for (const auto& task : plan.task()) {
-    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) != 0) { continue; }
     int64_t global_work_stream_id = Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task.task_id());
     for (const auto& pair : task.produced_regst_desc()) {
       if (IsSharableRegstWithoutConsumer(pair.second)) {
@@ -54,7 +53,6 @@ void ForEachSharableChainRegstDescsWithConsumer(
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
   HashMap<int64_t, std::list<const TaskProto*>> chain_id2task_proto;
   for (const TaskProto& task : plan.task()) {
-    if (Global<IDMgr>::Get()->LocalWorkStreamId4TaskId(task.task_id()) != 0) { continue; }
     chain_id2task_proto[task.task_set_info().chain_id()].push_back(&task);
   }
   for (const auto& chain_tasks_pair : chain_id2task_proto) {
