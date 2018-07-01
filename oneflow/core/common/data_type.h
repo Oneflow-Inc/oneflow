@@ -2,13 +2,13 @@
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
 class OFRecord;
-using OFRecordPtr = OFRecord*;
 // SEQ
 
 #define FLOATING_DATA_TYPE_SEQ                  \
@@ -23,7 +23,7 @@ using OFRecordPtr = OFRecord*;
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 
-#define PTR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecordPtr, DataType::kOFRecordPtr)
+#define RECORD_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
 
 #define ARITHMETIC_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ         \
@@ -31,7 +31,7 @@ using OFRecordPtr = OFRecord*;
 
 #define ALL_POD_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ
 
-#define ALL_DATA_TYPE_SEQ ALL_POD_DATA_TYPE_SEQ PTR_DATA_TYPE_SEQ
+#define ALL_DATA_TYPE_SEQ ALL_POD_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
 
 // Type Trait: IsFloating
 
@@ -56,12 +56,12 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 template<DataType T>
-struct IsPtrType : std::integral_constant<bool, false> {};
+struct IsRecordType : std::integral_constant<bool, false> {};
 
-#define SPECIALIZE_TRUE_PTR_TYPE(type_cpp, type_proto) \
-  template<>                                           \
-  struct IsPtrType<type_proto> : std::integral_constant<bool, true> {};
-OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_PTR_TYPE, PTR_DATA_TYPE_SEQ);
+#define SPECIALIZE_TRUE_RECORD(type_cpp, type_proto) \
+  template<>                                         \
+  struct IsRecordType<type_proto> : std::integral_constant<bool, true> {};
+OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_RECORD, RECORD_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
 // Type Trait: GetDataType
