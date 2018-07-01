@@ -154,7 +154,7 @@ void RegstMgr::AllocateOFRecordsIfNeed(const std::unique_ptr<Blob>& blob_ptr) {
     int64_t elem_cnt = blob_desc.shape().elem_cnt();
     std::vector<OFRecord*> ofrecord_ptrs(elem_cnt);
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      ofrecord_ptrs[idx] = new (blob_ptr->mut_dptr<char>() + sizeof(OFRecord)) OFRecord();
+      ofrecord_ptrs[idx] = new (blob_ptr->mut_dptr<char>() + idx * sizeof(OFRecord)) OFRecord();
     }
     {
       std::unique_lock<std::mutex> lck(ofrecord_ptrs_mtx_);
