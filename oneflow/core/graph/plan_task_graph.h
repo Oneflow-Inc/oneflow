@@ -39,7 +39,6 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
 
   void ComputeLifetimeSameChainActorIds(const RegstDescProto* regst_desc,
                                         HashSet<int64_t>* lifetime_same_chain_actor_ids) const;
-  void AssertThereIsOnlyOneTopoOrder(const HashSet<int64_t>& same_stream_nodes) const;
 
   void SortByProducerTaskOrderInGraph(
       const std::list<const RegstDescProto*>& regst_descs,
@@ -49,19 +48,21 @@ class PlanTaskGraph final : public Graph<const PlanTaskNode, PlanTaskEdge> {
   }
   bool IsReachableInSameArea(int64_t src_task_id, int64_t dst_task_id) const;
 
+  const Plan& plan() const { return *plan_; }
+
  private:
-  void InitNodes(const Plan& plan);
+  void InitNodes();
   void InitEdges();
   void InitNode2Ancestor();
+  void InitChainId2SortedPlanTaskNode();
   bool IsAnyNodeReachableToAncestor(const HashSet<const PlanTaskNode*>& nodes,
                                     const PlanTaskNode* ancestor) const;
   bool IsReachableToAncestor(const PlanTaskNode* node, const PlanTaskNode* ancestor) const;
-  void ComputeLifetimeActorIds(const RegstDescProto* regst_desc,
-                               HashSet<int64_t>* lifetime_actor_ids,
-                               const std::function<bool(int64_t)>& IsAllowed) const;
 
+  const Plan* plan_;
   HashMap<int64_t, PlanTaskNode*> task_id2plan_task_node_;
   HashMap<const PlanTaskNode*, HashSet<const PlanTaskNode*>> node2ancestors_;
+  HashMap<int64_t, std::vector<const PlanTaskNode*>> chain_id2sorted_plan_task_nodes_;
 };
 
 }  // namespace oneflow

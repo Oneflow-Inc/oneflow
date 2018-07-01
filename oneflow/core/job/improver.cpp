@@ -85,18 +85,18 @@ void ForEachSameColoredStreamRegstDescWithoutConsumer(
 }
 
 void ForEachSameColoredChainRegstDescWithConsumer(
-    const PlanTaskGraph& graph, const Plan& plan,
+    const PlanTaskGraph& plan_task_graph,
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
   auto ComputeLifetimeSameChainActorIds = [&](const RegstDescProto* regst_desc,
                                               HashSet<int64_t>* ret_actor_ids) {
     CHECK(regst_desc->mem_sharing_info().enable_mem_sharing());
     ret_actor_ids->clear();
-    graph.ComputeLifetimeSameChainActorIds(regst_desc, ret_actor_ids);
-    graph.AssertThereIsOnlyOneTopoOrder(*ret_actor_ids);
+    plan_task_graph.ComputeLifetimeSameChainActorIds(regst_desc, ret_actor_ids);
   };
   auto ChainId4TaskId = [&](int64_t task_id) {
-    return graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
+    return plan_task_graph.TaskProto4TaskId(task_id)->task_set_info().chain_id();
   };
+  const Plan& plan = plan_task_graph.plan();
   ForEachSharableChainRegstDescsWithConsumer(
       plan, ChainId4TaskId, [&](const std::list<const RegstDescProto*>& regst_descs) {
         RegstLifetimeGraph(regst_descs, ComputeLifetimeSameChainActorIds)
@@ -105,11 +105,12 @@ void ForEachSameColoredChainRegstDescWithConsumer(
 }
 
 void ForEachImprovedMemSharingInfo(
-    const PlanTaskGraph& graph, const Plan& plan,
+    const PlanTaskGraph& plan_task_graph,
     const std::function<void(int64_t, const MemSharingInfo&)>& Handler) {
   MemSharingInfo mem_sharing_info;
   mem_sharing_info.set_enable_mem_sharing(true);
   using RegstDescs = std::list<const RegstDescProto*>;
+  const Plan& plan = plan_task_graph.plan();
   ForEachSameColoredStreamRegstDescWithoutConsumer(plan, [&](const RegstDescs& regst_descs) {
     mem_sharing_info.set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
     mem_sharing_info.set_used_order_value(-1);
@@ -117,13 +118,14 @@ void ForEachImprovedMemSharingInfo(
       Handler(regst_desc->regst_desc_id(), mem_sharing_info);
     }
   });
-  ForEachSameColoredChainRegstDescWithConsumer(graph, plan, [&](const RegstDescs& regst_descs) {
+  ForEachSameColoredChainRegstDescWithConsumer(plan_task_graph, [&](const RegstDescs& regst_descs) {
     int32_t used_order_value = 0;
     mem_sharing_info.set_mem_shared_id(Global<IDMgr>::Get()->NewMemSharedId());
-    graph.SortByProducerTaskOrderInGraph(regst_descs, [&](const RegstDescProto* regst_desc) {
-      mem_sharing_info.set_used_order_value(used_order_value++);
-      Handler(regst_desc->regst_desc_id(), mem_sharing_info);
-    });
+    plan_task_graph.SortByProducerTaskOrderInGraph(
+        regst_descs, [&](const RegstDescProto* regst_desc) {
+          mem_sharing_info.set_used_order_value(used_order_value++);
+          Handler(regst_desc->regst_desc_id(), mem_sharing_info);
+        });
   });
 }
 
@@ -516,8 +518,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
 Plan Improver::ImproveMemSharingInfoOnly(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
-  ForEachImprovedMemSharingInfo(plan_task_graph, naive_plan,
-                                MakeSetterSetPlanMemSharingInfo(&plan));
+  ForEachImprovedMemSharingInfo(plan_task_graph, MakeSetterSetPlanMemSharingInfo(&plan));
   auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
     return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
   };
