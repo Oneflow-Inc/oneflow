@@ -92,8 +92,6 @@ class Blob : public BlobIf {
                    && blob_desc_->data_type() != GetDataType<T>::value))
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
-  void set_dptr(void* dptr) { dptr_ = dptr; }
-  friend class RegstMgr;
 
   void* mem_ptr_;
   char* data_id_ptr_;
