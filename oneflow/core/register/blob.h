@@ -13,6 +13,7 @@
 
 namespace oneflow {
 
+class RegstMgr;
 class Regst;
 
 class BlobIf {
@@ -107,18 +108,18 @@ class RecordBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
   RecordBlob(Blob* records) : records_(records), record_num_(0) {
-    CHECK_EQ(records->blob_desc().data_type(), GetDataType<RecordType*>::value);
+    CHECK_EQ(records->blob_desc().data_type(), GetDataType<RecordType>::value);
     record_num_ = records_->shape().elem_cnt();
   }
   ~RecordBlob() = default;
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {
-    FOR_RANGE(int32_t, i, 0, record_num_) { Handler(**(records_->mut_dptr<RecordType*>() + i)); }
+    FOR_RANGE(int32_t, i, 0, record_num_) { Handler(*(records_->mut_dptr<RecordType>() + i)); }
   }
 
   const RecordType& GetRecord(size_t i) {
     CHECK_LT(i, record_num_);
-    return **(records_->mut_dptr<RecordType*>() + i);
+    return *(records_->mut_dptr<RecordType>() + i);
   }
 
   int32_t record_num() { return record_num_; }
