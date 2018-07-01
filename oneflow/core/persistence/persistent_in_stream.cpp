@@ -9,6 +9,7 @@ namespace oneflow {
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, uint64_t offset,
                                        bool cyclic, bool with_local_copy) {
+  if (with_local_copy) { CHECK_EQ(offset, 0); }
   std::vector<std::shared_ptr<BinaryInStream>> streams;
   for (auto& file_path : file_paths) {
     if (with_local_copy) {
@@ -17,12 +18,12 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
       streams.emplace_back(new BinaryInStreamWithoutLocalCopy(fs, file_path, 0));
     }
   }
-
   if (cyclic) {
     stream_scanner_.reset(new CyclicStreamScanner(fs, streams, offset));
   } else {
     stream_scanner_.reset(new AcyclicStreamScanner(fs, streams, offset));
   }
+
   buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
@@ -31,16 +32,13 @@ PersistentInStream::PersistentInStream(fs::FileSystem* fs,
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
                                        const std::vector<std::string>& file_paths, bool cyclic,
-                                       bool with_local_copy) {
-  PersistentInStream(fs, file_paths, 0, cyclic, with_local_copy);
-}
+                                       bool with_local_copy)
+    : PersistentInStream(fs, file_paths, 0, cyclic, with_local_copy) {}
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
-                                       uint64_t offset, bool cyclic, bool with_local_copy) {
-  std::vector<std::string> file_paths;
-  file_paths.emplace_back(file_path);
-  PersistentInStream(fs, file_paths, offset, cyclic, with_local_copy);
-}
+                                       uint64_t offset, bool cyclic, bool with_local_copy)
+    : PersistentInStream(fs, std::vector<std::string>({file_path}), offset, cyclic,
+                         with_local_copy) {}
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
                                        uint64_t offset)

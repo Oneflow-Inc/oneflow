@@ -8,7 +8,6 @@ StreamScanner::StreamScanner(fs::FileSystem* fs,
                              const std::vector<std::shared_ptr<BinaryInStream>>& streams,
                              uint64_t offset)
     : whole_file_offset_(offset) {
-  // if (with_local_copy_) { CHECK_EQ(whole_file_offset_, 0); }
   stream_num_ = streams.size();
   whole_file_size_ = 0;
   int64_t idx = 0;
@@ -23,23 +22,14 @@ StreamScanner::StreamScanner(fs::FileSystem* fs,
 void StreamScanner::AddStream(fs::FileSystem* fs, const std::shared_ptr<BinaryInStream>& stream,
                               int64_t idx) {
   uint64_t cur_file_size = stream->file_size();
-  uint64_t offset;
-  if (whole_file_offset_ < whole_file_size_) { offset = 0; }
-  if (whole_file_offset_ > whole_file_size_) {
-    offset = cur_file_size;
+  if (whole_file_offset_ < whole_file_size_) {
+    stream->set_cur_file_pos(0);
   } else if (whole_file_size_ <= whole_file_offset_
              && whole_file_offset_ < whole_file_size_ + cur_file_size) {
-    offset = whole_file_offset_ - whole_file_size_;
+    stream->set_cur_file_pos(whole_file_offset_ - whole_file_size_);
     cur_stream_id_ = idx;
-  } else {
-    // FIXME
-    /*
-    if (cyclic_) {
-      offset = 0;
-    } else {
-      offset = cur_file_size;
-    }
-    */
+  } else if (whole_file_offset_ >= whole_file_size_ + cur_file_size) {
+    stream->set_cur_file_pos(0);  // works for both cyclic and acyclic cases
   }
 
   streams_.emplace_back(stream);

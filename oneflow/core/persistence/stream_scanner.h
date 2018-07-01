@@ -25,10 +25,9 @@ class StreamScanner {
   uint64_t whole_file_pos_;
   int32_t cur_stream_id_;
   int32_t stream_num_;
-
- private:
   uint64_t whole_file_offset_;
 
+ private:
   void AddStream(fs::FileSystem* fs, const std::shared_ptr<BinaryInStream>& stream, int64_t idx);
 };
 
