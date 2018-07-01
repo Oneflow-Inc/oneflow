@@ -12,6 +12,8 @@ class MemoryAllocator final {
   ~MemoryAllocator();
 
   char* Allocate(MemoryCase mem_case, std::size_t size);
+  template<typename T>
+  T* New();
 
  private:
   friend class Global<MemoryAllocator>;
@@ -19,8 +21,19 @@ class MemoryAllocator final {
   MemoryAllocator() = default;
   void Deallocate(char* dptr, MemoryCase mem_case);
 
+  std::mutex deleters_mutex_;
   std::list<std::function<void()>> deleters_;
 };
+
+template<typename T>
+T* MemoryAllocator::New() {
+  T* obj = new T();
+  {
+    std::unique_lock<std::mutex> lck(deleters_mutex_);
+    deleters_.push_front([obj] { delete obj; });
+  }
+  return obj;
+}
 
 }  // namespace oneflow
 
