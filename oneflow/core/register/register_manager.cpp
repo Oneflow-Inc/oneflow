@@ -46,10 +46,6 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
   InitFromRegstProtoList(regst_protos);
 }
 
-RegstMgr::~RegstMgr() {
-  for (auto& ptr : ofrecord_ptrs_) { ptr->~OFRecord(); }
-}
-
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
@@ -126,7 +122,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       for (const LogicalBlobId& lbi : lbis) {
         const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
         std::unique_ptr<Blob> blob_ptr(NewBlob(regst, blob_desc, cur_pointer, device_type));
-        AllocateOFRecordsIfNeed(blob_ptr);
+        InitOFRecordBlobIfNeed(blob_ptr.get());
         CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_pointer += blob_desc->TotalByteSize();
       }
@@ -147,17 +143,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   }
 }
 
-void RegstMgr::AllocateOFRecordsIfNeed(const std::unique_ptr<Blob>& blob_ptr) {
+void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
   const BlobDesc& blob_desc = blob_ptr->blob_desc();
   if (blob_desc.data_type() == kOFRecord) {
     int64_t elem_cnt = blob_desc.shape().elem_cnt();
-    std::vector<OFRecord*> ofrecord_ptrs(elem_cnt);
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      ofrecord_ptrs[idx] = new (blob_ptr->mut_dptr<char>() + idx * sizeof(OFRecord)) OFRecord();
-    }
-    {
-      std::unique_lock<std::mutex> lck(ofrecord_ptrs_mtx_);
-      ofrecord_ptrs_.insert(ofrecord_ptrs_.end(), ofrecord_ptrs.begin(), ofrecord_ptrs.end());
+      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
     }
   }
 }

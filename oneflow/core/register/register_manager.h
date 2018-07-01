@@ -15,7 +15,7 @@ class RegstMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RegstMgr);
   RegstMgr() = delete;
-  ~RegstMgr();
+  ~RegstMgr() = default;
 
   void NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
                  std::function<void(Regst*)> OneRegstDone);
@@ -26,13 +26,10 @@ class RegstMgr final {
   explicit RegstMgr(const Plan& plan);
   explicit RegstMgr(const std::list<const RegstDescProto*>& regst_protos);
   void InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos);
-  void AllocateOFRecordsIfNeed(const std::unique_ptr<Blob>& blob_ptr);
+  void InitOFRecordBlobIfNeed(Blob* blob_ptr);
 
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
   HashMap<int64_t, char*> regst_desc_id2mem_ptr_;
-
-  std::mutex ofrecord_ptrs_mtx_;
-  std::vector<OFRecord*> ofrecord_ptrs_;
 };
 
 }  // namespace oneflow
