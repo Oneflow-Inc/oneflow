@@ -5,25 +5,30 @@
 namespace oneflow {
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs,
-                                       const std::vector<std::string>& file_paths, bool cyclic,
-                                       bool with_local_copy) {
-  stream_buffer_filler_.reset(new StreamBufferFiller(fs, file_paths, 0, cyclic, with_local_copy));
+                                       const std::vector<std::string>& file_paths, uint64_t offset,
+                                       bool cyclic, bool with_local_copy) {
+  if (cyclic) {
+    stream_scanner_.reset(new CyclicStreamScanner(fs, file_paths, offset, with_local_copy));
+  } else {
+    stream_scanner_.reset(new AcyclicStreamScanner(fs, file_paths, offset, with_local_copy));
+  }
   buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data();
   *cur_buf_end_ = '\0';
 }
 
+PersistentInStream::PersistentInStream(fs::FileSystem* fs,
+                                       const std::vector<std::string>& file_paths, bool cyclic,
+                                       bool with_local_copy) {
+  PersistentInStream(fs, file_paths, 0, cyclic, with_local_copy);
+}
+
 PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
                                        uint64_t offset, bool cyclic, bool with_local_copy) {
   std::vector<std::string> file_paths;
   file_paths.emplace_back(file_path);
-  stream_buffer_filler_.reset(
-      new StreamBufferFiller(fs, file_paths, offset, cyclic, with_local_copy));
-  buffer_.resize(Global<JobDesc>::Get()->persistence_buf_byte() + 1);
-  cur_buf_begin_ = buffer_.data();
-  cur_buf_end_ = buffer_.data();
-  *cur_buf_end_ = '\0';
+  PersistentInStream(fs, file_paths, offset, cyclic, with_local_copy);
 }
 
 PersistentInStream::PersistentInStream(fs::FileSystem* fs, const std::string& file_path,
@@ -67,13 +72,13 @@ int32_t PersistentInStream::Read(char* s, size_t n) {
 
 void PersistentInStream::UpdateBuffer() {
   CHECK_EQ(cur_buf_begin_, cur_buf_end_);
-  uint64_t n = stream_buffer_filler_->UpdateBuffer(&buffer_);
+  uint64_t n = stream_scanner_->UpdateBuffer(&buffer_);
   cur_buf_begin_ = buffer_.data();
   cur_buf_end_ = buffer_.data() + n;
   *cur_buf_end_ = '\0';
 }
 
 bool PersistentInStream::IsEof() const {
-  return cur_buf_begin_ == cur_buf_end_ && stream_buffer_filler_->IsEof();
+  return cur_buf_begin_ == cur_buf_end_ && stream_scanner_->IsEof();
 }
 }  // namespace oneflow
