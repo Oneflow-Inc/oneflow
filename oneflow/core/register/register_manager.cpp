@@ -59,7 +59,6 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
-    // AllocateOFRecordsIfNeed(regst_desc);
     if (regst_desc->mem_sharing_info().mem_shared_id() != -1) {
       CHECK_EQ(regst_desc->register_num(), 1);
     }
