@@ -1,6 +1,8 @@
 /build
 /third_party/
 /examples/**/oneflow
+/examples/**/predict_log/
+/examples/**/train_log/
 /benchmark/**/oneflow
 *plan
 core.*
