@@ -1,0 +1,39 @@
+dlnet_filepath: "./train_net.prototxt"
+resource_filepath: "./single_machine_resource.prototxt"
+placement_filepath: "./single_machine_train_placement.prototxt"
+use_rdma: false
+globalfs_conf {
+  localfs_conf {
+  }
+}
+piece_size: 30
+data_part_num: 30
+model_load_snapshot_path: ""
+max_data_id_length: 0
+train_conf {
+  model_save_snapshots_path: "/tmp/snapshot"
+  num_of_batches_in_snapshot: 50000
+  staleness: 0
+  total_batch_num: 600000
+  default_initializer_conf {
+    random_normal_conf {
+      mean: 0.0
+      std: 0.01
+    }
+  }
+  l2: 0.0001
+  batch_size: 240
+  model_update_conf {
+    learning_rate: 0.1
+    momentum_conf {
+      beta: 0.9
+    }
+    learning_rate_decay {
+      exponential_conf {
+        decay_rate: 0.1;
+        decay_batches: 100000;
+        staircase: true;
+      }
+    }
+  }
+}

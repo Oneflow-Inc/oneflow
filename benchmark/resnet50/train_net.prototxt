@@ -1,0 +1,2028 @@
+op {
+  name: "decode"
+  decode_ofrecord_conf {
+    data_dir: "/dataset/imagenet/train/30"
+    blob {
+      name: "encoded"
+      data_type: kFloat
+      shape {
+        dim: 224
+        dim: 224
+        dim: 3
+      }
+      encode_case {
+        jpeg {
+        }
+      }
+    }
+    blob {
+      name: "class/label"
+      data_type: kInt32
+      shape {
+      }
+      encode_case {
+        raw {
+        }
+      }
+    }
+  }
+}
+op {
+  name: "transpose"
+  transpose_conf {
+   in: "decode/encoded"
+   out: "out"
+   perm: 3
+   perm: 1
+   perm: 2
+  }
+}
+op {
+  name: "conv1"
+  conv_2d_conf {
+    in: "transpose/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 7
+    kernel_size: 7
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_conv1"
+  normalization_conf {
+    in: "conv1/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "pool1"
+  max_pooling_2d_conf {
+    in: "bn_conv1/out"
+    out: "out"
+    padding: "same"
+    data_format: "channels_first"
+    pool_size: 3
+    pool_size: 3
+    strides: 2
+    strides: 2
+  }
+}
+op {
+  name: "res2_bb1_b2"
+  conv_2d_conf {
+    in: "pool1/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb1_b2"
+  normalization_conf {
+    in: "res2_bb1_b2/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res2_bb1_b1a"
+  conv_2d_conf {
+    in: "pool1/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb1_b1a"
+  normalization_conf {
+    in: "res2_bb1_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res2_bb1_b1b"
+  conv_2d_conf {
+    in: "bn_res2_bb1_b1a/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb1_b1b"
+  normalization_conf {
+    in: "res2_bb1_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res2_bb1_b1c"
+  conv_2d_conf {
+    in: "bn_res2_bb1_b1b/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb1_b1c"
+  normalization_conf {
+    in: "res2_bb1_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res2_bb1_add"
+  add_conf {
+    in: "bn_res2_bb1_b1c/out"
+    in: "bn_res2_bb1_b2/out"
+    out: "out"
+  }
+}
+op {
+  name: "res2_bb1_relu"
+  relu_conf {
+    in: "res2_bb1_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res2_bb2_b1a"
+  conv_2d_conf {
+    in: "res2_bb1_relu/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb2_b1a"
+  normalization_conf {
+    in: "res2_bb2_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res2_bb2_b1b"
+  conv_2d_conf {
+    in: "bn_res2_bb2_b1a/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb2_b1b"
+  normalization_conf {
+    in: "res2_bb2_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res2_bb2_b1c"
+  conv_2d_conf {
+    in: "bn_res2_bb2_b1b/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb2_b1c"
+  normalization_conf {
+    in: "res2_bb2_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res2_bb2_add"
+  add_conf {
+    in: "bn_res2_bb2_b1c/out"
+    in: "res2_bb1_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res2_bb2_relu"
+  relu_conf {
+    in: "res2_bb2_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res2_bb3_b1a"
+  conv_2d_conf {
+    in: "res2_bb2_relu/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb3_b1a"
+  normalization_conf {
+    in: "res2_bb3_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res2_bb3_b1b"
+  conv_2d_conf {
+    in: "bn_res2_bb3_b1a/out"
+    out: "out"
+    filters: 64
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb3_b1b"
+  normalization_conf {
+    in: "res2_bb3_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res2_bb3_b1c"
+  conv_2d_conf {
+    in: "bn_res2_bb3_b1b/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res2_bb3_b1c"
+  normalization_conf {
+    in: "res2_bb3_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res2_bb3_add"
+  add_conf {
+    in: "bn_res2_bb3_b1c/out"
+    in: "res2_bb2_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res2_bb3_relu"
+  relu_conf {
+    in: "res2_bb3_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb1_b2"
+  conv_2d_conf {
+    in: "res2_bb3_relu/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb1_b2"
+  normalization_conf {
+    in: "res3_bb1_b2/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res3_bb1_b1a"
+  conv_2d_conf {
+    in: "res2_bb3_relu/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb1_b1a"
+  normalization_conf {
+    in: "res3_bb1_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb1_b1b"
+  conv_2d_conf {
+    in: "bn_res3_bb1_b1a/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb1_b1b"
+  normalization_conf {
+    in: "res3_bb1_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb1_b1c"
+  conv_2d_conf {
+    in: "bn_res3_bb1_b1b/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb1_b1c"
+  normalization_conf {
+    in: "res3_bb1_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res3_bb1_add"
+  add_conf {
+    in: "bn_res3_bb1_b1c/out"
+    in: "bn_res3_bb1_b2/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb1_relu"
+  relu_conf {
+    in: "res3_bb1_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb2_b1a"
+  conv_2d_conf {
+    in: "res3_bb1_relu/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb2_b1a"
+  normalization_conf {
+    in: "res3_bb2_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb2_b1b"
+  conv_2d_conf {
+    in: "bn_res3_bb2_b1a/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb2_b1b"
+  normalization_conf {
+    in: "res3_bb2_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb2_b1c"
+  conv_2d_conf {
+    in: "bn_res3_bb2_b1b/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb2_b1c"
+  normalization_conf {
+    in: "res3_bb2_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res3_bb2_add"
+  add_conf {
+    in: "bn_res3_bb2_b1c/out"
+    in: "res3_bb1_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb2_relu"
+  relu_conf {
+    in: "res3_bb2_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb3_b1a"
+  conv_2d_conf {
+    in: "res3_bb2_relu/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb3_b1a"
+  normalization_conf {
+    in: "res3_bb3_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb3_b1b"
+  conv_2d_conf {
+    in: "bn_res3_bb3_b1a/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb3_b1b"
+  normalization_conf {
+    in: "res3_bb3_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb3_b1c"
+  conv_2d_conf {
+    in: "bn_res3_bb3_b1b/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb3_b1c"
+  normalization_conf {
+    in: "res3_bb3_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res3_bb3_add"
+  add_conf {
+    in: "bn_res3_bb3_b1c/out"
+    in: "res3_bb2_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb3_relu"
+  relu_conf {
+    in: "res3_bb3_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb4_b1a"
+  conv_2d_conf {
+    in: "res3_bb3_relu/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb4_b1a"
+  normalization_conf {
+    in: "res3_bb4_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb4_b1b"
+  conv_2d_conf {
+    in: "bn_res3_bb4_b1a/out"
+    out: "out"
+    filters: 128
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb4_b1b"
+  normalization_conf {
+    in: "res3_bb4_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res3_bb4_b1c"
+  conv_2d_conf {
+    in: "bn_res3_bb4_b1b/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res3_bb4_b1c"
+  normalization_conf {
+    in: "res3_bb4_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res3_bb4_add"
+  add_conf {
+    in: "bn_res3_bb4_b1c/out"
+    in: "res3_bb3_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res3_bb4_relu"
+  relu_conf {
+    in: "res3_bb4_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb1_b2"
+  conv_2d_conf {
+    in: "res3_bb4_relu/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb1_b2"
+  normalization_conf {
+    in: "res4_bb1_b2/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb1_b1a"
+  conv_2d_conf {
+    in: "res3_bb4_relu/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb1_b1a"
+  normalization_conf {
+    in: "res4_bb1_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb1_b1b"
+  conv_2d_conf {
+    in: "bn_res4_bb1_b1a/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb1_b1b"
+  normalization_conf {
+    in: "res4_bb1_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb1_b1c"
+  conv_2d_conf {
+    in: "bn_res4_bb1_b1b/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb1_b1c"
+  normalization_conf {
+    in: "res4_bb1_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb1_add"
+  add_conf {
+    in: "bn_res4_bb1_b1c/out"
+    in: "bn_res4_bb1_b2/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb1_relu"
+  relu_conf {
+    in: "res4_bb1_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb2_b1a"
+  conv_2d_conf {
+    in: "res4_bb1_relu/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb2_b1a"
+  normalization_conf {
+    in: "res4_bb2_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb2_b1b"
+  conv_2d_conf {
+    in: "bn_res4_bb2_b1a/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb2_b1b"
+  normalization_conf {
+    in: "res4_bb2_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb2_b1c"
+  conv_2d_conf {
+    in: "bn_res4_bb2_b1b/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb2_b1c"
+  normalization_conf {
+    in: "res4_bb2_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb2_add"
+  add_conf {
+    in: "bn_res4_bb2_b1c/out"
+    in: "res4_bb1_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb2_relu"
+  relu_conf {
+    in: "res4_bb2_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb3_b1a"
+  conv_2d_conf {
+    in: "res4_bb2_relu/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb3_b1a"
+  normalization_conf {
+    in: "res4_bb3_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb3_b1b"
+  conv_2d_conf {
+    in: "bn_res4_bb3_b1a/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb3_b1b"
+  normalization_conf {
+    in: "res4_bb3_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb3_b1c"
+  conv_2d_conf {
+    in: "bn_res4_bb3_b1b/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb3_b1c"
+  normalization_conf {
+    in: "res4_bb3_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb3_add"
+  add_conf {
+    in: "bn_res4_bb3_b1c/out"
+    in: "res4_bb2_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb3_relu"
+  relu_conf {
+    in: "res4_bb3_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb4_b1a"
+  conv_2d_conf {
+    in: "res4_bb3_relu/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb4_b1a"
+  normalization_conf {
+    in: "res4_bb4_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb4_b1b"
+  conv_2d_conf {
+    in: "bn_res4_bb4_b1a/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb4_b1b"
+  normalization_conf {
+    in: "res4_bb4_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb4_b1c"
+  conv_2d_conf {
+    in: "bn_res4_bb4_b1b/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb4_b1c"
+  normalization_conf {
+    in: "res4_bb4_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb4_add"
+  add_conf {
+    in: "bn_res4_bb4_b1c/out"
+    in: "res4_bb3_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb4_relu"
+  relu_conf {
+    in: "res4_bb4_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb5_b1a"
+  conv_2d_conf {
+    in: "res4_bb4_relu/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb5_b1a"
+  normalization_conf {
+    in: "res4_bb5_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb5_b1b"
+  conv_2d_conf {
+    in: "bn_res4_bb5_b1a/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb5_b1b"
+  normalization_conf {
+    in: "res4_bb5_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb5_b1c"
+  conv_2d_conf {
+    in: "bn_res4_bb5_b1b/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb5_b1c"
+  normalization_conf {
+    in: "res4_bb5_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb5_add"
+  add_conf {
+    in: "bn_res4_bb5_b1c/out"
+    in: "res4_bb4_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb5_relu"
+  relu_conf {
+    in: "res4_bb5_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb6_b1a"
+  conv_2d_conf {
+    in: "res4_bb5_relu/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb6_b1a"
+  normalization_conf {
+    in: "res4_bb6_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb6_b1b"
+  conv_2d_conf {
+    in: "bn_res4_bb6_b1a/out"
+    out: "out"
+    filters: 256
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb6_b1b"
+  normalization_conf {
+    in: "res4_bb6_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res4_bb6_b1c"
+  conv_2d_conf {
+    in: "bn_res4_bb6_b1b/out"
+    out: "out"
+    filters: 1024
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res4_bb6_b1c"
+  normalization_conf {
+    in: "res4_bb6_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res4_bb6_add"
+  add_conf {
+    in: "bn_res4_bb6_b1c/out"
+    in: "res4_bb5_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res4_bb6_relu"
+  relu_conf {
+    in: "res4_bb6_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res5_bb1_b2"
+  conv_2d_conf {
+    in: "res4_bb6_relu/out"
+    out: "out"
+    filters: 2048
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb1_b2"
+  normalization_conf {
+    in: "res5_bb1_b2/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res5_bb1_b1a"
+  conv_2d_conf {
+    in: "res4_bb6_relu/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 2
+    strides: 2
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb1_b1a"
+  normalization_conf {
+    in: "res5_bb1_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res5_bb1_b1b"
+  conv_2d_conf {
+    in: "bn_res5_bb1_b1a/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb1_b1b"
+  normalization_conf {
+    in: "res5_bb1_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res5_bb1_b1c"
+  conv_2d_conf {
+    in: "bn_res5_bb1_b1b/out"
+    out: "out"
+    filters: 2048
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb1_b1c"
+  normalization_conf {
+    in: "res5_bb1_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res5_bb1_add"
+  add_conf {
+    in: "bn_res5_bb1_b1c/out"
+    in: "bn_res5_bb1_b2/out"
+    out: "out"
+  }
+}
+op {
+  name: "res5_bb1_relu"
+  relu_conf {
+    in: "res5_bb1_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res5_bb2_b1a"
+  conv_2d_conf {
+    in: "res5_bb1_relu/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb2_b1a"
+  normalization_conf {
+    in: "res5_bb2_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res5_bb2_b1b"
+  conv_2d_conf {
+    in: "bn_res5_bb2_b1a/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb2_b1b"
+  normalization_conf {
+    in: "res5_bb2_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res5_bb2_b1c"
+  conv_2d_conf {
+    in: "bn_res5_bb2_b1b/out"
+    out: "out"
+    filters: 2048
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb2_b1c"
+  normalization_conf {
+    in: "res5_bb2_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res5_bb2_add"
+  add_conf {
+    in: "bn_res5_bb2_b1c/out"
+    in: "res5_bb1_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res5_bb2_relu"
+  relu_conf {
+    in: "res5_bb2_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "res5_bb3_b1a"
+  conv_2d_conf {
+    in: "res5_bb2_relu/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb3_b1a"
+  normalization_conf {
+    in: "res5_bb3_b1a/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res5_bb3_b1b"
+  conv_2d_conf {
+    in: "bn_res5_bb3_b1a/out"
+    out: "out"
+    filters: 512
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 3
+    kernel_size: 3
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb3_b1b"
+  normalization_conf {
+    in: "res5_bb3_b1b/out"
+    out: "out"
+    axis: 1
+    activation: kRelu
+  }
+}
+op {
+  name: "res5_bb3_b1c"
+  conv_2d_conf {
+    in: "bn_res5_bb3_b1b/out"
+    out: "out"
+    filters: 2048
+    padding: "same"
+    data_format: "channels_first"
+    kernel_size: 1
+    kernel_size: 1
+    strides: 1
+    strides: 1
+    dilation_rate: 1
+    dilation_rate: 1
+    activation: kNone
+    use_bias: false
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+  }
+}
+op {
+  name: "bn_res5_bb3_b1c"
+  normalization_conf {
+    in: "res5_bb3_b1c/out"
+    out: "out"
+    axis: 1
+    activation: kNone
+  }
+}
+op {
+  name: "res5_bb3_add"
+  add_conf {
+    in: "bn_res5_bb3_b1c/out"
+    in: "res5_bb2_relu/out"
+    out: "out"
+  }
+}
+op {
+  name: "res5_bb3_relu"
+  relu_conf {
+    in: "res5_bb3_add/out"
+    out: "out"
+  }
+}
+op {
+  name: "pool5"
+  average_pooling_2d_conf {
+    in: "res5_bb3_relu/out"
+    out: "out"
+    padding: "valid"
+    data_format: "channels_first"
+    pool_size: 7
+    pool_size: 7
+    strides: 1
+    strides: 1
+  }
+}
+op {
+  name: "fc1000"
+  fully_connected_conf {
+    in: "pool5/out"
+    out: "out"
+    units: 1000
+    use_bias: true
+    weight_initializer {
+      msra_conf {
+        variance_norm: kFanIn
+      }
+    }
+    bias_initializer {
+      constant_conf {
+        value: 0
+      }
+    }
+  }
+}
+op {
+  name: "softmax_loss"
+  sparse_softmax_cross_entropy_loss_conf {
+    prediction: "fc1000/out"
+    label: "decode/class/label"
+    loss: "loss"
+  }
+}
