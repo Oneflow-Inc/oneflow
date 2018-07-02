@@ -1,0 +1,4 @@
+net: "./train_net.prototxt"
+resource: "./single_machine_resource.prototxt"
+placement: "./single_machine_train_placement.prototxt"
+other: "./single_machine_other.prototxt"
