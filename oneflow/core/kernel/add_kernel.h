@@ -20,6 +20,7 @@ class AddKernel final
 
   void BackwardDataContent(const KernelCtx& ctx,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 }  // namespace oneflow
