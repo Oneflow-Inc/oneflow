@@ -21,7 +21,8 @@ RegstMgr::RegstMgr(const std::list<const RegstDescProto*>& regst_protos) {
 }
 
 void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos) {
-  std::vector<const RegstDescProto*> sorted_regst_descs(regst_protos.size());
+  std::vector<const RegstDescProto*> sorted_regst_descs;
+  sorted_regst_descs.reserve(regst_protos.size());
   HashMap<MemoryCase, char*> mem_case2mem_ptr;
   HashMap<MemoryCase, size_t> mem_case2mem_size;
   HashMap<std::pair<MemoryCase, int32_t>, size_t> mem_case7mem_shared_id2size;
@@ -62,8 +63,11 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
               int32_t lhs_used_order_value = lhs->mem_sharing_info().used_order_value();
               int32_t rhs_used_order_value = rhs->mem_sharing_info().used_order_value();
               if (lhs_mem_shared_id == rhs_mem_shared_id) {
-                CHECK_NE(lhs_used_order_value, rhs_used_order_value);
-                return lhs_used_order_value < rhs_used_order_value;
+                if (lhs_mem_shared_id != -1) {
+                  CHECK_NE(lhs_used_order_value, rhs_used_order_value);
+                  return lhs_used_order_value < rhs_used_order_value;
+                }
+                return lhs->regst_desc_id() < rhs->regst_desc_id();
               }
               return lhs_mem_shared_id < rhs_mem_shared_id;
             });

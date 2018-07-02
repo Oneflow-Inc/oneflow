@@ -102,6 +102,8 @@ class Blob : public BlobIf {
   Regst* regst_;
 };
 
+using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
+
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* header_mem_ptr, char* data_mem_ptr,
               DeviceType device_type);
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);

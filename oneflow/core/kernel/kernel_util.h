@@ -272,8 +272,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
                    const int incy);
 };
 
-using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
-
 template<DeviceType device_type, typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
   const char* src_ptr = nullptr;
