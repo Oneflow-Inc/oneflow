@@ -70,6 +70,10 @@ const MemoryCase& Blob::mem_case() const {
   return regst_->regst_desc()->mem_case();
 }
 
+bool Blob::IsMemoryContinuous() const {
+  return mem_case().has_host_mem() && !mem_case().host_mem().used_by_device();
+}
+
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                                      \
   {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type),                            \
    [](Regst* regst, const BlobDesc* blob_desc, char* hptr, char* dptr) {                         \

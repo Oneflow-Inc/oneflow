@@ -8,11 +8,6 @@
 
 namespace oneflow {
 
-struct BlobHeader {
-  int32_t col_id;
-  int32_t max_col_id;
-};
-
 class BlobDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);

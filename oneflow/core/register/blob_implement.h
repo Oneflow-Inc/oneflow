@@ -49,7 +49,7 @@ class BlobImpl final : public Blob {
   }
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
-    if (device_type == DeviceType::kCPU) {
+    if (IsMemoryContinuous() && mem_case() == rhs->mem_case()) {
       Memcpy<DeviceType::kCPU>(device_ctx, mut_hptr(), rhs->hptr(), TotalByteSize());
     } else {
       if (ByteSizeOfHeaderField() > 0) { CopyHeaderFrom(device_ctx, rhs); }

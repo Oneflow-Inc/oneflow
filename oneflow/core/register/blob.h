@@ -80,6 +80,7 @@ class Blob : public BlobIf {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
+  bool IsMemoryContinuous() const;
 
  protected:
   Blob(Regst* regst, const BlobDesc* blob_desc, char* hptr, char* dptr);
