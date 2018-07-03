@@ -459,8 +459,8 @@ double Improver::BinarySearchII(
 
 void Improver::ForEachImprovedRegstNum(
     const ActGraph& graph, const Plan& plan, bool is_memory_limited,
-    const std::function<const HashMap<int64_t, double>&(int64_t)> PathDurations4RegstDescId,
-    const std::function<const HashMap<int64_t, double>&(int64_t)> PathIIScales4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
   double ii = CalcBaseII(graph);
   if (is_memory_limited) {
