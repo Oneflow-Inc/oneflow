@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_PERSISTENCE_SNAPSHOT_H_
 
 #include "oneflow/core/control/ctrl_client.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {

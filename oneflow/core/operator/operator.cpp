@@ -89,11 +89,6 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
-  if (IsDecodeOp()) {
-    CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->other_conf().data_part_num())
-        << "parallel_num of data loader is not equal to the data_part_num in "
-           "job.prototxt";
-  }
   if (model_bns().empty() && const_model_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }

@@ -17,8 +17,6 @@ bool NeedModelSave(int64_t model_version_id) {
          || (model_version_id + 1) % Global<JobDesc>::Get()->NumOfBatchesInSnapshot() == 0;
 }
 
-Actor::~Actor() {}
-
 void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   TaskProto non_ctrl_task_proto = task_proto;
   actor_id_ = task_proto.task_id();
