@@ -20,8 +20,11 @@ class Improver final {
   Plan ImproveMemSharedIdOnly(const Plan& naive_plan) const;
 
  private:
-  void ForEachImprovedRegstNum(const ActGraph& graph, const Plan& plan, bool is_memory_limited,
-                               const std::function<void(int64_t, uint64_t)>& Handler) const;
+  void ForEachImprovedRegstNum(
+      const ActGraph& graph, const Plan& plan, bool is_memory_limited,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+      const std::function<void(int64_t, uint64_t)>& Handler) const;
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;
