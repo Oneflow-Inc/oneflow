@@ -460,8 +460,8 @@ double Improver::BinarySearchII(
 void Improver::ForEachImprovedRegstNum(
     const ActGraph& graph, const Plan& plan, bool is_memory_limited,
     const std::function<const HashMap<int64_t, double>&(int64_t)> PathDurations4RegstDescId,
+    const std::function<const HashMap<int64_t, double>&(int64_t)> PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
-  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(graph);
   double ii = CalcBaseII(graph);
   if (is_memory_limited) {
     MemZoneRegstDescs mz_regst_descs;
@@ -491,13 +491,14 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
   auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
+  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
   Plan mem_unlimited_plan(naive_plan);
   ForEachImprovedRegstNum(act_graph, naive_plan, false, PathDurations4RegstDescId,
-                          MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
+                          PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
   Plan mem_shared_plan = ImproveMemSharedIdOnly(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
-                          MakeSetterSetPlanRegstNum(&plan));
+                          PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   return plan;
 }
 
