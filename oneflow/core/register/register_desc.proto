@@ -4,20 +4,15 @@ package oneflow;
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/memory/memory_case.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/record/record.proto";
 
 message LbiBlobDescPair {
   required LogicalBlobId lbi = 1;
   required BlobDescProto blob_desc = 2;
 }
 
-message NormalRegstDesc {
+message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
   required BlobDescProto packed_blob_desc = 2;
-}
-
-message RecordRegstDesc {
-  required RecordTypeProto record_type = 1;
 }
 
 message CtrlRegstDesc {
@@ -25,8 +20,7 @@ message CtrlRegstDesc {
 
 message RegstDescTypeProto {
   oneof type {
-    NormalRegstDesc normal_regst_desc = 1;
-    RecordRegstDesc record_regst_desc = 2;
+    DataRegstDesc data_regst_desc = 1;
     CtrlRegstDesc ctrl_regst_desc = 3;
   }
 }

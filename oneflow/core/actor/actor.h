@@ -24,7 +24,7 @@ bool NeedModelSave(int64_t model_version_id);
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor();
+  virtual ~Actor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&);
 

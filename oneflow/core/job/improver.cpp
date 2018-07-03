@@ -1,4 +1,5 @@
 #include "oneflow/core/job/improver.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/register/register_desc.pb.h"
 #include "oneflow/core/register/register_manager.h"

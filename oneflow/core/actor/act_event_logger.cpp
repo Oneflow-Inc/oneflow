@@ -1,5 +1,5 @@
 #include "oneflow/core/actor/act_event_logger.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
+#include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/common/protobuf.h"
 #include <google/protobuf/text_format.h>
 
@@ -23,7 +23,7 @@ ActEventLogger::ActEventLogger(bool is_experiment)
                                                         + act_event_txt_filename_)) {}
 
 void ParseActEvents(const std::string& act_event_filepath, std::list<ActEvent>* act_events) {
-  NormalPersistentInStream in_stream(LocalFS(), act_event_filepath);
+  PersistentInStream in_stream(LocalFS(), act_event_filepath);
   int64_t act_event_size;
   while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);
