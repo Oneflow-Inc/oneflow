@@ -194,6 +194,7 @@ class Operator {
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
+  void EnrollModelDiffBn(const std::string& mdbn);
   void EnrollConstModelBn(const std::string& cmbn);
 
   void EnrollConstBufBn(const std::string& cbbn);
