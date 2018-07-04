@@ -273,6 +273,11 @@ void Operator::EnrollModelBn(const std::string& mbn) {
   *(mut_model_diff_bns()->Add()) = mdbn;
   CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
 }
+void Operator::EnrollModelDiffBn(const std::string& mdbn) {
+  LogicalBlobId lbi = mbn2lbi(mdbn);
+  *(mut_model_diff_bns()->Add()) = mdbn;
+  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+}
 void Operator::EnrollConstModelBn(const std::string& cmbn) {
   *(mut_const_model_bns()->Add()) = cmbn;
   CHECK(mut_bn_in_op2lbi()->insert({cmbn, cmbn2lbi(cmbn)}).second);
