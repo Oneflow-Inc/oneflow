@@ -366,6 +366,9 @@ message NormalModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
+message EmbeddingLookupAccumulateOpConf {
+}
+
 message ModelSaveOpConf {
 }
 
@@ -614,6 +617,7 @@ message OperatorConf {
     AveragePooling3DOpConf average_pooling_3d_conf = 204;
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
     EmbeddingLookupOpConf embedding_lookup_conf = 250;
+    EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 251;
     AddOpConf add_conf = 301;
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;

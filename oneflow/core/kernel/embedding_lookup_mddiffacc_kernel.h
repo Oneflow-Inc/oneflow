@@ -12,9 +12,8 @@ class EmbeddingLookupMdDiffAccKernel final : public KernelIf<device_type> {
   EmbeddingLookupMdDiffAccKernel() = default;
   ~EmbeddingLookupMdDiffAccKernel() = default;
 
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
 
  private:
 };

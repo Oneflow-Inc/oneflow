@@ -15,7 +15,6 @@ const PbMessage& EmbeddingLookupAccumulateOp::GetCustomizedConf() const {
   return op_conf().embedding_lookup_accumulate_conf();
 }
 
-REGISTER_OP(OperatorConf::kEmbeddingLookupAccumulateConf,
-            EmbeddingLookupAccumulateOp);
+REGISTER_OP(OperatorConf::kEmbeddingLookupAccumulateConf, EmbeddingLookupAccumulateOp);
 
 }  // namespace oneflow
