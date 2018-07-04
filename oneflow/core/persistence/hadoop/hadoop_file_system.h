@@ -42,8 +42,7 @@ class LibHDFS {
   std::function<tSize(hdfsFS, hdfsFile, const void*, tSize)> hdfsWrite;
   std::function<int(hdfsFS, hdfsFile)> hdfsHFlush;
   std::function<int(hdfsFS, hdfsFile)> hdfsHSync;
-  std::function<hdfsFile(hdfsFS, const char*, int, int, short, tSize)>
-      hdfsOpenFile;
+  std::function<hdfsFile(hdfsFS, const char*, int, int, short, tSize)> hdfsOpenFile;
   std::function<int(hdfsFS, const char*)> hdfsExists;
   std::function<hdfsFileInfo*(hdfsFS, const char*, int*)> hdfsListDirectory;
   std::function<void(hdfsFileInfo*, int)> hdfsFreeFileInfo;
@@ -69,11 +68,9 @@ class HadoopFileSystem final : public FileSystem {
   void NewRandomAccessFile(const std::string& fname,
                            std::unique_ptr<RandomAccessFile>* result) override;
 
-  void NewWritableFile(const std::string& fname,
-                       std::unique_ptr<WritableFile>* result) override;
+  void NewWritableFile(const std::string& fname, std::unique_ptr<WritableFile>* result) override;
 
-  void NewAppendableFile(const std::string& fname,
-                         std::unique_ptr<WritableFile>* result) override;
+  void NewAppendableFile(const std::string& fname, std::unique_ptr<WritableFile>* result) override;
 
   bool FileExists(const std::string& fname) override;
 
@@ -85,10 +82,11 @@ class HadoopFileSystem final : public FileSystem {
 
   void DeleteDir(const std::string& dirname) override;
 
+  void RecursivelyDeleteDir(const std::string& dirname) override;
+
   uint64_t GetFileSize(const std::string& fname) override;
 
-  void RenameFile(const std::string& old_name,
-                  const std::string& new_name) override;
+  void RenameFile(const std::string& old_name, const std::string& new_name) override;
 
   bool IsDirectory(const std::string& fname) override;
 

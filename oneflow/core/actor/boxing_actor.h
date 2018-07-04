@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_ACTOR_BOXING_ACTOR_H_
 
 #include "oneflow/core/actor/actor.h"
-#include "oneflow/core/actor/naive_readable_register_manager.h"
 
 namespace oneflow {
 
@@ -15,22 +14,16 @@ class BoxingActor final : public Actor {
   void VirtualActorInit(const TaskProto&) override;
 
  private:
-  int HandlerNormal(const ActorMsg&) override;
-
-  void Act() override;
-  bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
-
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-
+  void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) override;
+  void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {true, {}};
+  }
   void TrySetColIdOrder(const Regst*);
 
-  NaiveReadableRegstMgr readable_regst_mgr_;
   // <regst_desc_id, <pid, cid>>
-  HashMap<int64_t, std::pair<int64_t, int32_t>>* previous_pid_cid_;
+  std::unique_ptr<HashMap<int64_t, std::pair<int64_t, int32_t>>> previous_pid_cid_;
   ColIdOrder col_id_order_;
-  bool is_eord_;
 };
 
 }  // namespace oneflow

@@ -23,7 +23,20 @@
 #include <unordered_set>
 #include <utility>
 
+#include "oneflow/core/common/meta_util.hpp"
+
 DECLARE_string(log_dir);
+
+namespace std {
+template<typename T0, typename T1>
+struct hash<std::pair<T0, T1>> {
+  std::size_t operator()(const std::pair<T0, T1>& p) const {
+    auto h0 = std::hash<T0>{}(p.first);
+    auto h1 = std::hash<T1>{}(p.second);
+    return h0 ^ h1;
+  }
+};
+}  // namespace std
 
 namespace oneflow {
 
@@ -41,26 +54,40 @@ namespace oneflow {
 
 #define UNIMPLEMENTED() LOG(FATAL) << "UNIMPLEMENTED"
 
-#define TODO() LOG(FATAL) << "TODO";
+#define TODO() LOG(FATAL) << "TODO"
 
-#define OF_SINGLETON(ClassName)                                    \
-  static ClassName* Singleton() { return *SingletonPPtr(); }       \
-  static ClassName** SingletonPPtr() {                             \
-    static ClassName* ptr = nullptr;                               \
-    return &ptr;                                                   \
-  }                                                                \
-  template<typename... Args>                                       \
-  static void NewSingleton(Args&&... args) {                       \
-    DeleteSingleton();                                             \
-    LOG(INFO) << "NewSingleton " << #ClassName;                    \
-    *SingletonPPtr() = new ClassName(std::forward<Args>(args)...); \
-  }                                                                \
-  static void DeleteSingleton() {                                  \
-    if (Singleton()) {                                             \
-      LOG(INFO) << "DeleteSingleton " << #ClassName;               \
-      delete Singleton();                                          \
-      *SingletonPPtr() = nullptr;                                  \
-    }                                                              \
+template<typename T>
+class Global final {
+ public:
+  static T* Get() { return *GetPPtr(); }
+  static void SetAllocated(T* val) { *GetPPtr() = val; }
+  template<typename... Args>
+  static void New(Args&&... args) {
+    CHECK(Get() == nullptr);
+    LOG(INFO) << "NewGlobal " << typeid(T).name();
+    *GetPPtr() = new T(std::forward<Args>(args)...);
+  }
+  static void Delete() {
+    if (Get() != nullptr) {
+      LOG(INFO) << "DeleteGlobal " << typeid(T).name();
+      delete Get();
+      *GetPPtr() = nullptr;
+    }
+  }
+
+ private:
+  static T** GetPPtr() {
+    static T* ptr = nullptr;
+    return &ptr;
+  }
+};
+
+#define OF_COMMA ,
+
+#define DEFINE_STATIC_VAR(type, name) \
+  static type* name() {               \
+    static type var;                  \
+    return &var;                      \
   }
 
 #define COMMAND(...)                                                \
@@ -82,11 +109,6 @@ using HashMap = std::unordered_map<Key, T, Hash>;
 template<typename Key, typename Hash = std::hash<Key>>
 using HashSet = std::unordered_set<Key, Hash>;
 
-template<typename T, typename... Args>
-std::unique_ptr<T> of_make_unique(Args&&... args) {
-  return std::unique_ptr<T>(new T(std::forward<Args>(args)...));
-}
-
 template<typename T>
 void SortAndRemoveDuplication(std::vector<T>* vec) {
   std::sort(vec->begin(), vec->end());
@@ -105,8 +127,7 @@ inline const std::string& LogDir() {
 }
 
 template<typename K, typename V>
-void EraseIf(HashMap<K, V>* hash_map,
-             std::function<bool(typename HashMap<K, V>::iterator)> cond) {
+void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>::iterator)> cond) {
   for (auto it = hash_map->begin(); it != hash_map->end();) {
     if (cond(it)) {
       hash_map->erase(it++);
@@ -116,14 +137,12 @@ void EraseIf(HashMap<K, V>* hash_map,
   }
 }
 
-#define OF_DECLARE_ENUM_TO_OSTREAM_FUNC(EnumType) \
-  std::ostream& operator<<(std::ostream& out_stream, const EnumType&)
-
-#define OF_DEFINE_ENUM_TO_OSTREAM_FUNC(EnumType)                          \
-  std::ostream& operator<<(std::ostream& out_stream, const EnumType& x) { \
-    out_stream << static_cast<int>(x);                                    \
-    return out_stream;                                                    \
-  }
+template<typename T>
+typename std::enable_if<std::is_enum<T>::value, std::ostream&>::type operator<<(
+    std::ostream& out_stream, const T& x) {
+  out_stream << static_cast<int>(x);
+  return out_stream;
+}
 
 template<typename OutType, typename InType>
 OutType oneflow_cast(const InType&);
@@ -132,13 +151,6 @@ inline uint32_t NewRandomSeed() {
   static std::mt19937 gen{std::random_device{}()};
   return gen();
 }
-
-// Work around the following issue on Windows
-// https://stackoverflow.com/questions/33218522/cuda-host-device-variables
-// const float LOG_THRESHOLD = 1e-20;
-#define LOG_THRESHOLD (1e-20)
-#define MAX_WITH_LOG_THRESHOLD(x) ((x) > LOG_THRESHOLD ? (x) : LOG_THRESHOLD)
-#define SAFE_LOG(x) logf(MAX_WITH_LOG_THRESHOLD(x))
 
 #if defined(WITH_CUDA)
 #define DEVICE_TYPE_SEQ                  \
@@ -151,12 +163,13 @@ inline uint32_t NewRandomSeed() {
 #define DIM_SEQ (1)(2)(3)(4)(5)(6)(7)(8)
 
 #define BOOL_SEQ (true)(false)
-#define PARALLEL_POLICY_SEQ \
-  (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
+#define PARALLEL_POLICY_SEQ (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
+#define ENCODE_CASE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
+  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 
 #define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
-#define FOR_EACH(it, container) \
-  for (auto it = container.begin(); it != container.end(); ++it)
+#define FOR_EACH(it, container) for (auto it = container.begin(); it != container.end(); ++it)
 
 void RedirectStdoutAndStderrToGlogDir();
 void CloseStdoutAndStderr();
@@ -165,7 +178,33 @@ inline double GetCurTime() {
   return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
+const size_t kCudaAlignSize = 8;
+inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align * align; }
+
 size_t GetAvailableCpuMemSize();
+
+template<typename T>
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase,
+           const std::function<void(const typename T::value_type&)>& EraseElementHandler) {
+  auto iter = container.begin();
+  auto erase_from = container.end();
+  while (iter != erase_from) {
+    if (NeedErase(*iter)) {
+      --erase_from;
+      if (iter == erase_from) { break; }
+      std::swap(*iter, *erase_from);
+    } else {
+      ++iter;
+    }
+  }
+  for (; iter != container.end(); ++iter) { EraseElementHandler(*iter); }
+  if (erase_from != container.end()) { container.erase(erase_from, container.end()); }
+}
+
+template<typename T>
+void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
+  Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
+}
 
 }  // namespace oneflow
 

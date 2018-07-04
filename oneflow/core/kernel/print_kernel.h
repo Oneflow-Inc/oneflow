@@ -13,10 +13,9 @@ class PrintKernel final : public KernelIf<DeviceType::kCPU> {
 
  private:
   void VirtualKernelInit(const ParallelContext*) override;
-  void Forward(const KernelCtx&,
-               std::function<Blob*(const std::string&)>) const override;
+  void Forward(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
 
-  std::vector<std::unique_ptr<PersistentOutStream>> out_streams_;
+  std::unique_ptr<PersistentOutStream> out_stream_;
 };
 
 }  // namespace oneflow

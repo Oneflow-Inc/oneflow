@@ -11,8 +11,11 @@ class AveragePoolingOp : virtual public PoolingOp {
   AveragePoolingOp() = default;
   virtual ~AveragePoolingOp() = default;
 
+  bool NeedOutWhenBackward() const override { return false; }
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
+
  private:
-  PoolingKernelConf* GetMutPoolingKernelConf(KernelConf*) const override;
+  PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
 };
 
 }  // namespace oneflow

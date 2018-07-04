@@ -12,41 +12,41 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
-  Improver() = delete;
+  Improver() = default;
   ~Improver() = default;
 
-  OF_SINGLETON(Improver);
-
-  Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
+  Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+               const std::string& act_event_filepath);
+  Plan ImproveMemSharedIdOnly(const Plan& naive_plan) const;
 
  private:
-  explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
-  void MemoryLimitedAllocate(
-      const ActGraph& graph, double base_ii,
-      const std::function<void(int64_t, size_t)>& Handler) const;
-
+  void ForEachImprovedRegstNum(
+      const ActGraph& graph, const Plan& plan, bool is_memory_limited,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+      const std::function<void(int64_t, uint64_t)>& Handler) const;
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
-  using MemZoneRegstDescs =
-      std::vector<std::vector<std::list<const RegstDescProto*>>>;
+  using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;
   bool IsAnyZoneOutOfMemory(
       const MemZoneRegstDescs& mz_regst_descs,
-      const std::function<double(int64_t)>& Duration4RegstDescId,
-      const std::function<double(int64_t)>& Ratio4RegstDescId, double ii) const;
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
+      double ii) const;
   double BinarySearchII(
-      const std::function<double(int64_t)>& Duration4RegstDescId,
-      const std::function<double(int64_t)>& Ratio4RegstDescId,
-      const MemZoneRegstDescs& mz_regst_descs, double ii) const;
-  size_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
+      double base_ii,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& Ratio4RegstDescId,
+      const MemZoneRegstDescs& mz_regst_descs) const;
+  uint64_t AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const;
   int64_t GetMemoryZoneId(const MemoryCase& mem_case) const;
-  void MakeMemZoneRegstDescs(const Plan& plan,
-                             MemZoneRegstDescs* mz2regst_desc) const;
+  void MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2regst_desc) const;
   double CalcMaxRegstDescDuration(
-      const std::function<double(int64_t)>& Duration4RegstDescId,
-
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& Duration4RegstDescId,
       const MemZoneRegstDescs& mz_regst_descs) const;
 
   AvailableMemDesc amd_;
+  std::vector<int32_t> record_load_task_num_;
 };
 
 }  // namespace oneflow

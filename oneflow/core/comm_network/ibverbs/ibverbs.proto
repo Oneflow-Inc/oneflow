@@ -1,0 +1,19 @@
+syntax = "proto2";
+package oneflow;
+
+message IBVerbsMemDescProto {
+  repeated uint64 mem_ptr = 1;
+  repeated uint32 mr_rkey = 2;
+}
+
+message IBVerbsConnectionInfo {
+  required uint32 lid = 1;
+  required uint32 qp_num = 2;
+  required uint64 subnet_prefix = 3;
+  required uint64 interface_id = 4;
+}
+
+message IBVerbsTokensMsg {
+  map<uint64, IBVerbsMemDescProto> token2mem_desc = 1;
+}
+

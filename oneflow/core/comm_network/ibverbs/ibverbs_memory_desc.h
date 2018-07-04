@@ -3,7 +3,7 @@
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/comm_network/ibverbs/ibverbs_memory_desc_proto.pb.h"
+#include "oneflow/core/comm_network/ibverbs/ibverbs.pb.h"
 
 #if defined(WITH_RDMA) && defined(PLATFORM_POSIX)
 
@@ -11,17 +11,20 @@
 
 namespace oneflow {
 
-class IBVerbsMemDesc {
+class IBVerbsMemDesc final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(IBVerbsMemDesc);
+  IBVerbsMemDesc() = delete;
   IBVerbsMemDesc(ibv_pd* pd, void* mem_ptr, size_t byte_size);
-  ~IBVerbsMemDesc() { CHECK_EQ(ibv_dereg_mr(mr_), 0); }
+  ~IBVerbsMemDesc();
 
-  IBVerbsMemDescProto IBVerbsMemDescToProto();
-  ibv_sge* ibv_sge_ptr() { return &sge_; }
+  const std::vector<ibv_sge>& sge_vec() const { return sge_vec_; }
+
+  IBVerbsMemDescProto ToProto();
 
  private:
-  ibv_sge sge_;
-  ibv_mr* mr_;
+  std::vector<ibv_sge> sge_vec_;
+  std::vector<ibv_mr*> mr_vec_;
 };
 
 }  // namespace oneflow

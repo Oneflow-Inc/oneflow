@@ -42,8 +42,7 @@
 #define EINTERNAL 255
 #endif
 
-#define ELASTIC_BYTE_BUFFER_POOL_CLASS \
-  "org/apache/hadoop/io/ElasticByteBufferPool"
+#define ELASTIC_BYTE_BUFFER_POOL_CLASS "org/apache/hadoop/io/ElasticByteBufferPool"
 
 /** All APIs set errno to meaningful values */
 
@@ -123,8 +122,7 @@ int hdfsFileGetReadStatistics(hdfsFile file, struct hdfsReadStatistics **stats);
  * @return the number of remote bytes read.
  */
 LIBHDFS_EXTERNAL
-int64_t hdfsReadStatisticsGetRemoteBytesRead(
-    const struct hdfsReadStatistics *stats);
+int64_t hdfsReadStatisticsGetRemoteBytesRead(const struct hdfsReadStatistics *stats);
 
 /**
  * Clear the read statistics for a file.
@@ -184,8 +182,7 @@ hdfsFS hdfsConnect(const char *nn, tPort port);
  * @deprecated   Use hdfsBuilderConnect instead.
  */
 LIBHDFS_EXTERNAL
-hdfsFS hdfsConnectAsUserNewInstance(const char *nn, tPort port,
-                                    const char *user);
+hdfsFS hdfsConnectAsUserNewInstance(const char *nn, tPort port, const char *user);
 
 /**
  * hdfsConnect - Connect to an hdfs file system.
@@ -283,8 +280,7 @@ void hdfsBuilderSetUserName(struct hdfsBuilder *bld, const char *userName);
  *                            will be shallow-copied.
  */
 LIBHDFS_EXTERNAL
-void hdfsBuilderSetKerbTicketCachePath(struct hdfsBuilder *bld,
-                                       const char *kerbTicketCachePath);
+void hdfsBuilderSetKerbTicketCachePath(struct hdfsBuilder *bld, const char *kerbTicketCachePath);
 
 /**
  * Free an HDFS builder.
@@ -309,8 +305,7 @@ void hdfsFreeBuilder(struct hdfsBuilder *bld);
  * @return         0 on success; nonzero error code otherwise.
  */
 LIBHDFS_EXTERNAL
-int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key,
-                          const char *val);
+int hdfsBuilderConfSetStr(struct hdfsBuilder *bld, const char *key, const char *val);
 
 /**
  * Get a configuration string.
@@ -375,8 +370,8 @@ int hdfsDisconnect(hdfsFS fs);
  * @return Returns the handle to the open file or NULL on error.
  */
 LIBHDFS_EXTERNAL
-hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize,
-                      short replication, tSize blocksize);
+hdfsFile hdfsOpenFile(hdfsFS fs, const char *path, int flags, int bufferSize, short replication,
+                      tSize blocksize);
 
 /**
  * hdfsTruncateFile - Truncate a hdfs file to given length.
@@ -473,8 +468,7 @@ tSize hdfsRead(hdfsFS fs, hdfsFile file, void *buffer, tSize length);
  * @return      See hdfsRead
  */
 LIBHDFS_EXTERNAL
-tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer,
-                tSize length);
+tSize hdfsPread(hdfsFS fs, hdfsFile file, tOffset position, void *buffer, tSize length);
 
 /**
  * hdfsWrite - Write data into an open file.
@@ -683,8 +677,7 @@ int hdfsFileIsEncrypted(hdfsFileInfo *hdfsFileInfo);
  * NULL on error.
  */
 LIBHDFS_EXTERNAL
-char ***hdfsGetHosts(hdfsFS fs, const char *path, tOffset start,
-                     tOffset length);
+char ***hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length);
 
 /**
  * hdfsFreeHosts - Free up the structure returned by hdfsGetHosts
@@ -745,8 +738,7 @@ tOffset hdfsGetUsed(hdfsFS fs);
  * @return              0 on success else -1
  */
 LIBHDFS_EXTERNAL
-int hdfsChown(hdfsFS fs, const char *path, const char *owner,
-              const char *group);
+int hdfsChown(hdfsFS fs, const char *path, const char *owner, const char *group);
 
 /**
  * hdfsChmod
@@ -809,8 +801,7 @@ int hadoopRzOptionsSetSkipChecksum(struct hadoopRzOptions *opts, int skip);
  *                    -1 plus errno otherwise.
  */
 LIBHDFS_EXTERNAL
-int hadoopRzOptionsSetByteBufferPool(struct hadoopRzOptions *opts,
-                                     const char *className);
+int hadoopRzOptionsSetByteBufferPool(struct hadoopRzOptions *opts, const char *className);
 
 /**
  * Free a hadoopRzOptionsFree structure.
@@ -845,8 +836,7 @@ void hadoopRzOptionsFree(struct hadoopRzOptions *opts);
  *                   supplied.
  */
 LIBHDFS_EXTERNAL
-struct hadoopRzBuffer *hadoopReadZero(hdfsFile file,
-                                      struct hadoopRzOptions *opts,
+struct hadoopRzBuffer *hadoopReadZero(hdfsFile file, struct hadoopRzOptions *opts,
                                       int32_t maxLength);
 
 /**

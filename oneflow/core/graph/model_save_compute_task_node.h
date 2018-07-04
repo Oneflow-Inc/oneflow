@@ -12,6 +12,7 @@ class MdSaveCompTaskNode final : public SinkCompTaskNode {
   ~MdSaveCompTaskNode() = default;
 
   TaskType GetTaskType() const override { return TaskType::kMdSave; }
+  bool IsPersistence() const override { return true; }
 
  private:
 };

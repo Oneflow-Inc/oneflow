@@ -5,22 +5,26 @@
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/thread/thread.h"
+#include "oneflow/core/thread/thread_pool.h"
 
 namespace oneflow {
 
 class ThreadMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThreadMgr);
+  ThreadMgr() = delete;
   ~ThreadMgr();
-
-  OF_SINGLETON(ThreadMgr);
 
   Thread* GetThrd(int64_t thrd_id);
 
+  ThreadPool* compute_thread_pool() { return compute_thread_pool_.get(); }
+
  private:
-  ThreadMgr();
+  friend class Global<ThreadMgr>;
+  explicit ThreadMgr(const Plan& plan);
 
   std::vector<Thread*> threads_;
+  std::unique_ptr<ThreadPool> compute_thread_pool_;
 };
 
 }  // namespace oneflow

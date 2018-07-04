@@ -3,20 +3,32 @@ package oneflow;
 
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
+import "oneflow/core/record/image.proto";
+import "oneflow/core/job/resource.proto";
 
 enum ActivationType {
-  kTanH = 0;
-  kSigmoid = 1;
-  kRelu = 2;
+  kNone = 0;
+  kTanH = 1;
+  kSigmoid = 2;
+  kRelu = 3;
 }
 
 message ConstantInitializerConf {
   optional float value = 1 [default = 0];
 }
 
+message ConstantIntInitializerConf {
+  optional int32 value = 1 [default = 0];
+}
+
 message RandomUniformInitializerConf {
   optional float min = 1 [default = 0];
   optional float max = 2 [default = 1];
+}
+
+message RandomUniformIntInitializerConf {
+  optional int32 min = 1 [default = 0];
+  optional int32 max = 2 [default = 1];
 }
 
 message RandomNormalInitializerConf {
@@ -41,10 +53,12 @@ message MsraInitializerConf {
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
-    RandomUniformInitializerConf random_uniform_conf = 2;
-    RandomNormalInitializerConf random_normal_conf = 3;
-    XavierInitializerConf xavier_conf = 4;
-    MsraInitializerConf msra_conf = 5;
+    ConstantIntInitializerConf constant_int_conf = 2;
+    RandomUniformInitializerConf random_uniform_conf = 3;
+    RandomUniformIntInitializerConf random_uniform_int_conf = 4;
+    RandomNormalInitializerConf random_normal_conf = 5;
+    XavierInitializerConf xavier_conf = 6;
+    MsraInitializerConf msra_conf = 7;
   }
 }
 
@@ -52,59 +66,63 @@ message Conv1DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  required string padding = 4;
+  optional string padding = 4 [default = "valid"];
   required string data_format = 5;
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional bool use_bias = 9 [default = true];
-  optional InitializerConf weight_initializer = 10;
-  optional InitializerConf bias_initializer = 11;
+  optional ActivationType activation = 9 [default = kNone];
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
 }
 
 message Conv2DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  required string padding = 4;
+  optional string padding = 4 [default = "valid"];
   required string data_format = 5;
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional bool use_bias = 9 [default = true];
-  optional InitializerConf weight_initializer = 10;
-  optional InitializerConf bias_initializer = 11;
+  optional ActivationType activation = 9 [default = kNone];
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
 }
 
 message Conv3DOpConf {
   required string in = 1;
   required string out = 2;
   required int32 filters = 3;
-  required string padding = 4;
+  optional string padding = 4 [default = "valid"];
   required string data_format = 5;
   repeated int32 kernel_size = 6;
   repeated int32 strides = 7;
   repeated int32 dilation_rate = 8;
-  optional bool use_bias = 9 [default = true];
-  optional InitializerConf weight_initializer = 10;
-  optional InitializerConf bias_initializer = 11;
+  optional ActivationType activation = 9 [default = kNone];
+  optional bool use_bias = 10 [default = true];
+  optional InitializerConf weight_initializer = 11;
+  optional InitializerConf bias_initializer = 12;
 }
 
 message FullyConnectedOpConf {
   required string in = 1;
   required string out = 2;
   required int32 units = 3;
-  optional bool use_bias = 4 [default = true];
-  optional InitializerConf weight_initializer = 5;
-  optional InitializerConf bias_initializer = 6;
+  optional ActivationType activation = 4 [default = kNone];
+  optional bool use_bias = 5 [default = true];
+  optional InitializerConf weight_initializer = 6;
+  optional InitializerConf bias_initializer = 7;
 }
 
 message AveragePooling1DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -113,8 +131,8 @@ message MaxPooling1DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -123,8 +141,8 @@ message AveragePooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -133,8 +151,8 @@ message MaxPooling2DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -143,8 +161,8 @@ message AveragePooling3DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -153,8 +171,8 @@ message MaxPooling3DOpConf {
   required string in = 1;
   required string out = 2;
 
-  required string padding = 3;
-  required string data_format = 4 [default = "channels_last"];
+  optional string padding = 3 [default = "valid"];
+  required string data_format = 4;
   repeated int32 pool_size = 5;
   repeated int32 strides = 6;
 }
@@ -191,7 +209,7 @@ message SparseSoftmaxCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN]; 
+  optional LossReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
 }
@@ -200,7 +218,7 @@ message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional LossReductionType reduction = 4 [default = kSumOverN]; 
+  optional LossReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
 }
@@ -224,7 +242,6 @@ message CopyHdOpConf {
 
 message CloneOpConf {
   required int32 out_num = 1;
-  required string lbn = 2;
 }
 
 message BoxConcatConf {
@@ -242,8 +259,16 @@ message BoxSplitConf {
 message BoxCloneConf {
 }
 
+message LogicalBlobId {
+  optional string op_name = 1;
+  optional string blob_name = 2;
+  optional int32 b121_id = 3 [default = -1]; // [0, boxing], [1, 121]
+  optional int32 clone_id = 4 [default = -1];
+  optional bool is_packed_id = 5 [default = false];
+}
+
 message BoxingOpConf {
-  required string lbn = 1;
+  required LogicalBlobId lbi = 1;
   required int32 in_num = 2;
   required int32 out_num = 3;
 
@@ -257,31 +282,84 @@ message BoxingOpConf {
   }
 }
 
-message NormalModelUpdateConf {
-  optional float learning_rate = 1 [default = 0.01];
+message NaiveModelUpdateConf {
 }
 
 message MomentumModelUpdateConf {
-  optional float learning_rate = 1 [default = 0.01];
-  optional float beta = 2 [default = 0.9];
+  optional float beta = 1 [default = 0.9];
 }
 
 message RMSPropModelUpdateConf {
-  optional float learning_rate = 1 [default = 0.01];
-  optional float decay_rate = 2 [default = 0.99];
-  optional float epsilon = 3 [default = 1e-8];
+  optional float decay_rate = 1 [default = 0.99];
+  optional float epsilon = 2 [default = 1e-8];
 }
 
-message ModelUpdateOpUserConf {
-  oneof mdupdt {
-    NormalModelUpdateConf normal_conf = 1000;
+message ExponentialDecayConf {
+  required int64 decay_batches = 1;
+  required double decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message InverseTimeDecayConf {
+  required int64 decay_batches = 1;
+  required double decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message NaturalExpDecayConf {
+  required int64 decay_batches = 1;
+  required double decay_rate = 2;
+  optional bool staircase = 3 [default = false];
+}
+
+message PiecewiseConstantConf {
+  repeated int64 boundaries = 1;
+  repeated double values = 2;
+}
+
+message PolynomialDecayConf {
+  required int64 decay_batches = 1;
+  optional double end_learning_rate = 2 [default = 0.0001];
+  optional double power = 3 [default = 1.0];
+  optional bool cycle = 4 [default = false];
+}
+
+message CosineDecayConf {
+  required int64 decay_batches = 1; 
+  optional double alpha = 2 [default = 0.0];
+}
+
+message LinearCosineDecayConf {
+  required int64 decay_batches = 1; 
+  optional double num_periods = 2 [default = 0.5];
+  optional double alpha = 3 [default = 0.0];
+  optional double beta = 4 [default = 0.001];
+}
+
+message LearningRateDecayConf {
+  oneof type {
+    ExponentialDecayConf exponential_conf = 2000;
+    InverseTimeDecayConf inverse_time_conf = 2001;
+    NaturalExpDecayConf natural_exp_conf = 2002;
+    PiecewiseConstantConf piecewise_constant_conf = 2003;
+    PolynomialDecayConf polynomial_conf = 2004;
+    CosineDecayConf cosine_conf = 2005;
+    LinearCosineDecayConf linear_cosine_conf = 2006;
+  }
+}
+
+message NormalModelUpdateOpUserConf {
+  optional double learning_rate = 1 [default = 0.01];
+  optional LearningRateDecayConf learning_rate_decay = 2;
+  oneof normal_mdupdt {
+    NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
   }
 }
 
-message ModelUpdateOpConf {
-  required ModelUpdateOpUserConf user_conf = 1;
+message NormalModelUpdateOpConf {
+  required NormalModelUpdateOpUserConf user_conf = 1;
   required int32 in_num = 2;
 }
 
@@ -289,26 +367,37 @@ message AccumulateOpConf {
 }
 
 message ModelSaveOpConf {
-  repeated string lbn = 1;
+}
+
+
+message PrintRecordConf {
+  required string lbn = 1;
+  optional string name = 2;
+  required EncodeConf encode_case = 3;
 }
 
 message PrintOpConf {
-  repeated string lbn = 1;
-  required string print_path = 2;
+  repeated PrintRecordConf in = 1;
+  required string print_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
 message LossPrintOpConf {
-  required string loss_lbn = 1;
-  optional string reduction_lbn = 2;
+  required LogicalBlobId loss_lbi = 1;
+  optional LogicalBlobId reduction_lbi = 2;
   optional float weight_scalar = 3 [default = 1.0];
-  optional LossReductionType reduction_type = 4 [default = kSumOverN]; 
+  optional LossReductionType reduction_type = 4 [default = kSumOverN];
 }
 
 message ReduceSumOpConf {
-  required string in = 1;
-  required string out = 2;
-  optional int32 axis = 3;
-  optional bool keepdims = 4 [default = false];
+  oneof in_conf {
+    string in = 1; // For User
+    LogicalBlobId in_sys = 2; // For System
+  }
+  required string out = 3;
+  optional int32 axis = 4;
+  optional bool keepdims = 5 [default = false];
 }
 
 message BasicRnnOpConf {
@@ -336,13 +425,76 @@ message ReshapeOpConf {
   required ShapeProto shape = 3;
 }
 
+message EmbeddingLookupOpConf {
+  required string ids = 1;
+  required string out = 2;
+  required int32 units = 3;
+  required int32 table_size = 4;
+  optional InitializerConf weight_initializer = 5;
+}
+
+message AddOpConf {
+  repeated string in = 1;
+  required string out = 2;
+  optional ActivationType activation = 3 [default = kNone];
+}
+
+message MaximumOpConf {
+  repeated string in = 1;
+  required string out = 2;
+}
+
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
-  optional int32 depth_radius = 3 [default = 5];
-  optional double bias = 4 [default = 1];
-  optional double alpha = 5 [default = 1];
-  optional double beta = 6 [default = 0.5];
+  required string data_format = 3; 
+  optional int32 depth_radius = 4 [default = 5];
+  optional double bias = 5 [default = 1];
+  optional double alpha = 6 [default = 1];
+  optional double beta = 7 [default = 0.5];
+}
+
+message EncodeConf {
+  oneof encode {
+    EncodeRaw raw = 1;
+    EncodeJpeg jpeg = 2;
+  }
+}
+
+message EncodeRaw {
+}
+
+message EncodeJpeg {
+  repeated ImagePreprocess preprocess = 1;
+}
+
+message SubtractPreprocessConf {
+  required float value = 1;
+}
+
+message NormByChannelPreprocessConf {
+  repeated float mean_value = 1;
+  repeated float std_value = 2;
+  required string data_format = 3;
+}
+
+message ScalePreprocessConf {
+  required float value = 1;
+}
+
+message PreprocessConf {
+  oneof type {
+    SubtractPreprocessConf subtract_conf = 1;
+    NormByChannelPreprocessConf norm_by_channel_conf = 2;
+    ScalePreprocessConf scale_conf = 3;
+  }
+}
+
+message RecordLoadOpConf {
+  required string out = 1;
+  required string data_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
 }
 
 message BlobConf {
@@ -350,30 +502,94 @@ message BlobConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
+  required EncodeConf encode_case = 5;
+  repeated PreprocessConf preprocess = 6;
 }
 
 message DecodeOFRecordOpConf {
   required string data_dir = 1;
   optional string part_name_prefix = 2 [default = "part-"];
   optional int32 part_name_suffix_length = 3 [default = -1];
-  repeated BlobConf blob = 4;
+  optional string in = 4;
+  repeated BlobConf blob = 5;
 }
+
+message DecodeRandomOpConf {
+  required string out = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
+  optional int32 max_sequence_size = 4 [default = 1];
+  required InitializerConf distribution = 7; 
+}
+
+message NormalizationOpConf {
+  required string in = 1;
+  required string out = 2;
+  optional int32 axis = 3 [default = -1]; // NCHW = 1, NHWC = 3, TODO: axis list
+  optional float momentum = 4 [default = 0.99];
+  optional float epsilon = 5 [default = 0.001];
+  optional bool center = 6 [default = true];
+  optional bool scale = 7 [default = true];
+  optional float beta_init = 8 [default = 0.0];
+  optional float gamma_init = 9 [default = 1.0];
+  optional float mean_init = 10 [default = 0.0];
+  optional float variance_init = 11 [default = 1.0];
+  optional bool use_first_piece_init_moving = 12 [default = false];
+  optional ActivationType activation = 13 [default = kNone];
+}
+
+message DropoutOpConf {
+  required string in = 1;
+  required string out = 2;
+  required double rate = 3;
+  optional ShapeProto noise_shape = 4;
+  optional int64 seed = 5;
+}
+
+message TransposeOpConf {
+  required string in = 1;
+  required string out = 2;
+  repeated int32 perm = 3;
+}
+
+message ReduceScatterOpConf {
+  required int32 out_num = 1;
+};
+
+message ReduceLocalAddOpConf {
+  required int32 in_num = 1;
+  required int32 out_num = 2;
+  required int64 min_in_parallel_id = 3;
+  required int64 min_out_parallel_id = 4;
+  required int64 model_elem_cnt = 5; 
+};
+
+message ReduceGlobalAddOpConf {
+  repeated int64 in_parallel_ids = 1;
+};
+
+message ReduceGatherOpConf {
+  required int32 in_num = 1;
+};
 
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
-  optional bool use_cudnn_on_gpu = 3;
-  optional bool trainable = 4 [default = true];
+  optional bool trainable = 3 [default = true];
+  optional DeviceType device_type = 4 [default = kInvalidDevice];
+  optional bool use_cudnn_on_gpu = 5;
+  optional int64 cudnn_buf_limit_mbyte = 6 [default = 131072]; // 128GByte
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
     DecodeOFRecordOpConf decode_ofrecord_conf = 102;
+    DecodeRandomOpConf decode_random_conf = 103;
     ReluOpConf relu_conf = 104;
     SoftmaxOpConf softmax_conf = 105;
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
     BoxingOpConf boxing_conf = 109;
-    ModelUpdateOpConf mdupdt_conf = 110;
+    NormalModelUpdateOpConf normal_mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
     AccumulateOpConf accumulate_conf = 112;
     ConcatOpConf concat_conf = 113;
@@ -389,13 +605,24 @@ message OperatorConf {
     Conv1DOpConf conv_1d_conf = 125;
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
+    TransposeOpConf transpose_conf = 128;
+    DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;
     MaxPooling2DOpConf max_pooling_2d_conf = 203;
     AveragePooling3DOpConf average_pooling_3d_conf = 204;
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
+    EmbeddingLookupOpConf embedding_lookup_conf = 250;
+    AddOpConf add_conf = 301;
+    MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
+    NormalizationOpConf normalization_conf = 350;
+    ReduceScatterOpConf reduce_scatter_conf = 400;
+    ReduceLocalAddOpConf reduce_local_add_conf = 401;
+    ReduceGlobalAddOpConf reduce_global_add_conf = 402;
+    ReduceGatherOpConf reduce_gather_conf = 403;
+    RecordLoadOpConf record_load_conf = 404;
   }
 }
 

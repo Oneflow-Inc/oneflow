@@ -4,7 +4,7 @@ namespace oneflow {
 
 void RuntimeCtx::NewCounter(const std::string& name, int64_t val) {
   LOG(INFO) << "NewCounter " << name << " " << val;
-  CHECK(counters_.emplace(name, of_make_unique<BlockingCounter>(val)).second);
+  CHECK(counters_.emplace(name, std::make_unique<BlockingCounter>(val)).second);
 }
 
 void RuntimeCtx::DecreaseCounter(const std::string& name) {
@@ -19,14 +19,6 @@ void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {
 RuntimeCtx::RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase) {
   total_piece_num_ = total_piece_num;
   is_experiment_phase_ = is_experiment_phase;
-}
-
-int32_t RuntimeCtx::Staleness() const {
-  if (is_experiment_phase_) {
-    return 0;
-  } else {
-    return JobDesc::Singleton()->Staleness();
-  }
 }
 
 }  // namespace oneflow
