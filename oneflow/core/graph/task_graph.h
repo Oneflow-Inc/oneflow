@@ -5,6 +5,8 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 
 namespace oneflow {
 
@@ -60,6 +62,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void CollectAncestorsForEachNode();
   void FindChainsInSameStream();
+  void CollectCopyCommNetForGlobalAddNodes(
+      const std::vector<ReduceGlobalAddCompTaskNode*>& global_add_nodes,
+      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_parallel_id);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
