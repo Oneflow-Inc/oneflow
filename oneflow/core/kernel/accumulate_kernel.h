@@ -12,9 +12,8 @@ class AccumulateKernel final : public KernelIf<device_type> {
   AccumulateKernel() = default;
   ~AccumulateKernel() = default;
 
-  void ForwardDataContent(
-      const KernelCtx&,
-      std::function<Blob*(const std::string&)>) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
 
  private:
 };

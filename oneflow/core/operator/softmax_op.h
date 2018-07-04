@@ -5,6 +5,14 @@
 
 namespace oneflow {
 
+struct SoftmaxOpCtx : public OpContext {
+  int32_t axis;
+  int32_t dims;
+  int64_t transpose_rows;
+  int64_t transpose_cols;
+  bool need_transpose;
+};
+
 class SoftmaxOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SoftmaxOp);
@@ -15,16 +23,14 @@ class SoftmaxOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, DeviceType device_type,
-      std::function<void(OpContext*)> EnrollOpContext) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext*, size_t* buf_size,
+                      std::function<void(OpContext*)> EnrollOpCtx) const override;
 
  private:
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*, const OpContext* op_ctx,
-      KernelConf*) const override;
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext*, KernelConf*, const OpContext*) const override;
+  SoftmaxOpCtx* NewSoftmaxOpCtx(const Shape& in_shape) const;
 };
 
 }  // namespace oneflow

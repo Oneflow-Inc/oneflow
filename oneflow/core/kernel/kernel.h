@@ -18,96 +18,99 @@ class Kernel {
   OF_DISALLOW_COPY_AND_MOVE(Kernel);
   virtual ~Kernel() = default;
 
-  void Init(const ParallelContext*, const KernelConf&);
+  void Init(const ParallelContext*, const KernelConf&, DeviceCtx*);
 
-  void InitModelAndModelTmp(
-      const KernelCtx& ctx, const ParallelContext* parallel_ctx,
-      const Snapshot*,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
+                            const Snapshot*,
+                            std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  void Launch(const KernelCtx& ctx,
-              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void Launch(const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 
-  const std::string& Lbn4BnInOp(const std::string& bn_in_op) const;
+  const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
+  const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
 
  protected:
   Kernel() = default;
+  virtual void VirtualKernelInit(const ParallelContext* parallel_ctx, DeviceCtx* device_ctx) {
+    VirtualKernelInit(parallel_ctx);
+  }
   virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
-  const OperatorConf& op_conf() const { return kernel_conf_.op_conf(); }
+  const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
-  virtual void InitPureModelTmpBlobs(
-      DeviceCtx* ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void InitConstBufBlobs(DeviceCtx* ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void InitModelBlobsWithRandomSeed(
       DeviceCtx* ctx, std::mt19937* random_seed_gen,
       std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void InitModelBlobsWithDir(
-      DeviceCtx* ctx, int32_t part_id, int32_t part_num,
-      const std::string& model_load_dir,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void InitModelBlobsWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                     const std::string& model_load_dir,
+                                     std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
-  virtual void Forward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void ForwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void ForwardDataId(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual void ForwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
 
-  virtual void Backward(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  virtual void BackwardDataContent(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void BackwardDataId(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-  virtual void BackwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
+  virtual void Forward(const KernelCtx& ctx,
+                       std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  virtual void ForwardDataContent(const KernelCtx& ctx,
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardActivation(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void ForwardDataId(const KernelCtx& ctx,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void ForwardColNum(const KernelCtx& ctx,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+
+  virtual void Backward(const KernelCtx& ctx,
+                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  virtual void BackwardDataContent(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
+  virtual void BackwardActivation(const KernelCtx& ctx,
+                                  std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                  Blob* activation_blob) const {}
+  virtual void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
+                                 const BlobDesc* activation_blob_desc) const {
+    UNIMPLEMENTED();
+  };
+  virtual void BackwardDataId(const KernelCtx& ctx,
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
+  virtual void BackwardColNum(const KernelCtx& ctx,
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, conf_type) \
-  ret_type Get##func_name##FromCustomized##conf_type(                       \
-      const std::string& field_name) const {                                \
-    const PbMessage& customized_conf = GetCustomized##conf_type();          \
-    return Get##func_name##FromPbMessage(customized_conf, field_name);      \
+#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(conf_type)                                   \
+  template<typename T>                                                                   \
+  T GetValFromCustomized##conf_type(const std::string& field_name) const {               \
+    const PbMessage& customized_conf = GetCustomized##conf_type();                       \
+    return GetValFromPbMessage<T>(customized_conf, field_name);                          \
+  }                                                                                      \
+  template<typename T>                                                                   \
+  const PbRf<T>& GetPbRfFromCustomized##conf_type(const std::string& field_name) const { \
+    return GetPbRfFromPbMessage<T>(GetCustomized##conf_type(), field_name);              \
+  }                                                                                      \
+  int32_t GetEnumFromCustomized##conf_type(const std::string& field_name) const {        \
+    return GetEnumFromPbMessage(GetCustomized##conf_type(), field_name);                 \
   }
 
-#define DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE(ret_type, func_name) \
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, OpConf);   \
-  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(ret_type, func_name, KernelConf);
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(OpConf);
+  DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(KernelConf);
 
-  OF_PP_FOR_EACH_TUPLE(DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE,
-                       PROTOBUF_BASIC_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(
-                           const PbMessage&, Message));
-
-#undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF_TYPE
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
 
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedOpConf(
-      const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedOpConf(), field_name);
-  }
-
-  template<typename T>
-  const PbRf<T>& GetPbRfFromCustomizedKernelConf(
-      const std::string& field_name) const {
-    return GetPbRfFromPbMessage<T>(GetCustomizedKernelConf(), field_name);
-  }
-
  private:
+  bool HasModelBns() const;
   KernelConf kernel_conf_;
+  std::unique_ptr<Blob> activation_blob_;
+  BlobDesc activation_blob_desc_;
 };
 
 template<DeviceType device_type>
@@ -119,83 +122,117 @@ class KernelIf : public Kernel {
  protected:
   KernelIf() = default;
 
-  virtual void ForwardDataId(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void ForwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardDataId(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  virtual void BackwardColNum(
-      const KernelCtx& ctx,
-      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardDataId(const KernelCtx& ctx,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardColNum(const KernelCtx& ctx,
+                             std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void BackwardDataId(const KernelCtx& ctx,
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void BackwardColNum(const KernelCtx& ctx,
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
-  void CopyDataId(DeviceCtx* ctx,
-                  std::function<Blob*(const std::string&)> BnInOp2Blob,
-                  const Blob* from_blob,
-                  const PbRpf<std::string>& to_bns) const;
-  void CopyColNum(DeviceCtx* ctx,
-                  std::function<Blob*(const std::string&)> BnInOp2Blob,
-                  const Blob* from_blob,
-                  const PbRpf<std::string>& to_bns) const;
-  void CopyField(DeviceCtx* ctx,
-                 std::function<Blob*(const std::string&)> BnInOp2Blob,
+  void CopyDataId(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                  const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
+  void CopyColNum(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                  const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
+  void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
-  void CopyField(DeviceCtx* ctx,
-                 std::function<Blob*(const std::string&)> BnInOp2Blob,
-                 const PbRpf<std::string>& from_bns,
-                 const PbRpf<std::string>& to_bns,
+  void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+                 const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
+
+  bool UseCudnn() const { return device_type == DeviceType::kGPU && UseCudnnOnGpu(); }
+  bool UseCudnnOnGpu() const { return op_conf().use_cudnn_on_gpu(); }
 };
 
-using KernelCreator1 = std::function<Kernel*(const KernelConf&)>;
-using KernelCreator2 = std::function<Kernel*()>;
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator1);
-void AddKernelCreator(OperatorConf::OpTypeCase, KernelCreator2);
-std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*,
-                                              const KernelConf&);
+template<DeviceType device_type, typename ModelType>
+class KernelIfWithModel : virtual public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithModel);
+  virtual ~KernelIfWithModel() = default;
+
+ protected:
+  KernelIfWithModel() = default;
+};
+
+template<DeviceType device_type, typename T>
+class KernelIfWithActivation : virtual public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
+  virtual ~KernelIfWithActivation() = default;
+
+ protected:
+  KernelIfWithActivation() = default;
+
+  ActivationType GetActivationType() const override;
+  void ForwardActivation(const KernelCtx& ctx,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void BackwardActivation(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob,
+                          Blob* activation_blob) const override;
+  void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
+                         const BlobDesc* activation_blob_desc) const override;
+};
+
+#define REGISTER_KERNEL(k, KernelType) \
+  REGISTER_CLASS_WITH_ARGS(k, Kernel, KernelType, const KernelConf&)
+#define REGISTER_KERNEL_CREATOR(k, f) REGISTER_CLASS_CREATOR(k, Kernel, f, const KernelConf&)
+
+std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext*, const KernelConf&,
+                                              DeviceCtx*);
 
 }  // namespace oneflow
 
-#define MAKE_KERNEL_CREATOR_ENTRY(kernel_class, device_type, data_type_pair)   \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)), []() {          \
-     return new kernel_class<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); \
-   }},
+#define MAKE_KERNEL_CREATOR_ENTRY(kernel_class, device_type, data_type_pair) \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(data_type_pair)),               \
+   []() { return new kernel_class<device_type, OF_PP_PAIR_FIRST(data_type_pair)>(); }},
 
-#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq) \
-  namespace {                                                                 \
-                                                                              \
-  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {  \
-    static const HashMap<std::string, std::function<Kernel*()>> creators = {  \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY,           \
-                                         (kernel_class), DEVICE_TYPE_SEQ,     \
-                                         data_type_seq)};                     \
-    return creators.at(                                                       \
-        GetHashKey(kernel_conf.device_type(), kernel_conf.data_type()))();    \
-  }                                                                           \
-                                                                              \
-  COMMAND(AddKernelCreator(op_type_case, OF_PP_CAT(CreateKernel, __LINE__))); \
+#define ADD_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)         \
+  namespace {                                                                         \
+                                                                                      \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {          \
+    static const HashMap<std::string, std::function<Kernel*()>> creators = {          \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_KERNEL_CREATOR_ENTRY, (kernel_class),   \
+                                         DEVICE_TYPE_SEQ, data_type_seq)};            \
+    return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(), \
+                                  kernel_conf.data_type()))();                        \
+  }                                                                                   \
+                                                                                      \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));           \
+  }
+
+#define MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY(kernel_class, device_type) \
+  {device_type, []() { return new kernel_class<device_type>(); }},
+
+#define ADD_DEVICE_TYPE_KERNEL_CREATOR(op_type_case, kernel_class)                              \
+  namespace {                                                                                   \
+                                                                                                \
+  Kernel* OF_PP_CAT(CreateKernel, __LINE__)(const KernelConf& kernel_conf) {                    \
+    static const HashMap<int, std::function<Kernel*()>> creators = {                            \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_DEVICE_TYPE_KERNEL_CREATOR_ENTRY, (kernel_class), \
+                                         DEVICE_TYPE_SEQ)};                                     \
+    return creators.at(kernel_conf.op_attribute().op_conf().device_type())();                   \
+  }                                                                                             \
+                                                                                                \
+  REGISTER_KERNEL_CREATOR(op_type_case, OF_PP_CAT(CreateKernel, __LINE__));                     \
   }
 
 #define MAKE_CPU_KERNEL_CREATOR_ENTRY(kernel_class, data_type_pair) \
   {OF_PP_PAIR_SECOND(data_type_pair),                               \
    []() { return new kernel_class<OF_PP_PAIR_FIRST(data_type_pair)>(); }},
 
-#define ADD_CPU_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class,        \
-                                       data_type_seq)                     \
-  namespace {                                                             \
-                                                                          \
-  Kernel* CreateKernel(const KernelConf& kernel_conf) {                   \
-    static const HashMap<int, std::function<Kernel*()>> creators = {      \
-        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CPU_KERNEL_CREATOR_ENTRY,   \
-                                         (kernel_class), data_type_seq)}; \
-    return creators.at(kernel_conf.data_type())();                        \
-  }                                                                       \
-                                                                          \
-  COMMAND(AddKernelCreator(op_type_case, CreateKernel));                  \
+#define ADD_CPU_DEFAULT_KERNEL_CREATOR(op_type_case, kernel_class, data_type_seq)       \
+  namespace {                                                                           \
+                                                                                        \
+  Kernel* CreateKernel(const KernelConf& kernel_conf) {                                 \
+    static const HashMap<int, std::function<Kernel*()>> creators = {                    \
+        OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_CPU_KERNEL_CREATOR_ENTRY, (kernel_class), \
+                                         data_type_seq)};                               \
+    return creators.at(kernel_conf.data_type())();                                      \
+  }                                                                                     \
+                                                                                        \
+  REGISTER_KERNEL_CREATOR(op_type_case, CreateKernel);                                  \
   }
 
 #endif  // ONEFLOW_CORE_KERNEL_KERNEL_H_

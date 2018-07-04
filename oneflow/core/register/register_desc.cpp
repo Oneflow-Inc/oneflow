@@ -5,35 +5,46 @@
 
 namespace oneflow {
 
+namespace {
+
+LogicalBlobId GenUnCloneLbi(const LogicalBlobId& lbi) {
+  LogicalBlobId ret(lbi);
+  ret.set_clone_id(-1);
+  return ret;
+}
+
+}  // namespace
+
 RegstDesc::RegstDesc() {
-  regst_desc_id_ = IDMgr::Singleton()->NewRegstDescId();
+  regst_desc_id_ = Global<IDMgr>::Get()->NewRegstDescId();
   producer_ = nullptr;
-  min_register_num_ = -1;
-  max_register_num_ = -1;
+  min_register_num_ = 1;
+  max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
+  enable_mem_sharing_ = false;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
 }
 
-void RegstDesc::set_min_register_num(int32_t val) {
-  min_register_num_ = val;
-  max_register_num_ = std::max(min_register_num_, max_register_num_);
+void RegstDesc::UpdtMinRegstNumIfNeed(int32_t val) {
+  CHECK_LE(val, max_register_num_);
+  min_register_num_ = std::max(min_register_num_, val);
 }
-void RegstDesc::set_max_register_num(int32_t val) {
-  max_register_num_ = val;
-  min_register_num_ = std::min(min_register_num_, max_register_num_);
+void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
+  CHECK_GE(val, min_register_num_);
+  max_register_num_ = std::min(max_register_num_, val);
 }
 
 void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
-  auto it = lbn2blob_desc_.begin();
+  auto it = lbi2blob_desc_.begin();
   packed_blob_desc_.reset(new BlobDesc);
   *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
     const BlobDesc* ret = nullptr;
-    if (it != lbn2blob_desc_.end()) {
+    if (it != lbi2blob_desc_.end()) {
       ret = it->second.get();
       ++it;
     }
@@ -43,87 +54,56 @@ void RegstDesc::Lock() {
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
-  CHECK(lbn2blob_desc_.empty());
-  for (const auto& pair : rhs->lbn2blob_desc_) {
-    const std::string& lbn = pair.first;
-    AddLbn(lbn);
+  CHECK(lbi2blob_desc_.empty());
+  for (const auto& pair : rhs->lbi2blob_desc_) {
+    const LogicalBlobId& lbi = pair.first;
+    AddLbi(lbi);
   }
-  CopyBlobDescWithoutAddLbn(rhs);
+  CopyBlobDescWithoutAddLbi(rhs);
 }
 
-void RegstDesc::CopyBlobDescWithoutAddLbn(const RegstDesc* rhs) {
+void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
   CHECK_EQ(is_locked_, false);
-  for (const auto& pair : lbn2blob_desc_) {
-    *(pair.second) = *(rhs->lbn2blob_desc_.at(pair.first));
+  for (const auto& pair : lbi2blob_desc_) {
+    auto rhs_it = rhs->lbi2blob_desc_.find(pair.first);
+    if (rhs_it == rhs->lbi2blob_desc_.end()) {
+      auto un_clone_it = rhs->lbi2blob_desc_.find(GenUnCloneLbi(pair.first));
+      if (un_clone_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(un_clone_it->second); }
+    } else {
+      *(pair.second) = *(rhs_it->second);
+    }
   }
 }
 
-BlobDesc* RegstDesc::AddLbn(const std::string& lbn) {
+BlobDesc* RegstDesc::AddLbi(const LogicalBlobId& lbi) {
   CHECK_EQ(is_locked_, false);
-  CHECK(lbn2blob_desc_.find(lbn) == lbn2blob_desc_.end()) << lbn;
+  CHECK(lbi2blob_desc_.find(lbi) == lbi2blob_desc_.end());
   BlobDesc* blob_desc = new BlobDesc;
-  lbn2blob_desc_[lbn].reset(blob_desc);
+  lbi2blob_desc_[lbi].reset(blob_desc);
   return blob_desc;
 }
 
-const BlobDesc* RegstDesc::GetBlobDesc(const std::string& lbn) const {
-  return const_cast<RegstDesc*>(this)->MutBlobDesc(lbn);
+const BlobDesc* RegstDesc::GetBlobDesc(const LogicalBlobId& lbi) const {
+  return const_cast<RegstDesc*>(this)->MutBlobDesc(lbi);
 }
 
-BlobDesc* RegstDesc::MutBlobDesc(const std::string& lbn) {
-  if (lbn == kPackedBlobName) { return packed_blob_desc_.get(); }
-  auto it = lbn2blob_desc_.find(lbn);
-  if (it != lbn2blob_desc_.end()) {
+BlobDesc* RegstDesc::MutBlobDesc(const LogicalBlobId& lbi) {
+  if (lbi.is_packed_id()) { return packed_blob_desc_.get(); }
+  auto it = lbi2blob_desc_.find(lbi);
+  if (it != lbi2blob_desc_.end()) {
     return it->second.get();
   } else {
     return nullptr;
   }
 }
 
-void RegstDesc::ForEachLbn(std::function<void(const std::string&)> func) const {
-  for (const auto& p : lbn2blob_desc_) { func(p.first); }
-}
-
-static void SetHostPinnedMemoryAccordingToConsumers(
-    const HashSet<const TaskNode*>& consumers, MemoryCase* mem_case) {
-  for (const TaskNode* consumer : consumers) {
-    if (consumer->GetTaskType() == kCopyCommNet) {
-      mem_case->mutable_host_pinned_mem()->set_used_by_network(true);
-    }
-    if (consumer->GetTaskType() == kCopyHd) {
-      mem_case->mutable_host_pinned_mem()->set_used_by_device(true);
-    }
-  }
-}
-
-void RegstDesc::InferMemCase() {
-  int64_t thrd_id = producer_->thrd_id();
-  if (auto cp_hd_producer = dynamic_cast<const CopyHdTaskNode*>(producer_)) {
-    if (cp_hd_producer->copy_type() == CopyHdOpConf::H2D) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(
-          IDMgr::Singleton()->GetGpuDevPhyIdFromThrdId(thrd_id));
-    } else {
-      mem_case_.mutable_host_pinned_mem()->set_used_by_device(true);
-      SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
-    }
-  } else if (producer_->GetTaskType() == kCopyCommNet) {
-    mem_case_.mutable_host_pinned_mem()->set_used_by_network(true);
-    SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
-  } else {
-    if (producer_->device_type() == kGPU) {
-      mem_case_.mutable_device_cuda_mem()->set_device_id(
-          IDMgr::Singleton()->GetGpuDevPhyIdFromThrdId(thrd_id));
-    } else {
-      mem_case_.mutable_host_pageable_mem();
-      SetHostPinnedMemoryAccordingToConsumers(consumers_, &mem_case_);
-    }
-  }
+void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const {
+  for (const auto& p : lbi2blob_desc_) { func(p.first); }
 }
 
 void RegstDesc::EraseZeroSizeBlob() {
-  EraseIf<std::string, std::unique_ptr<BlobDesc>>(
-      &lbn2blob_desc_,
-      [](HashMap<std::string, std::unique_ptr<BlobDesc>>::iterator it) {
+  EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
+      &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
         return it->second->ByteSizeOfDataContentField() == 0;
       });
 }
@@ -131,29 +111,51 @@ void RegstDesc::EraseZeroSizeBlob() {
 void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_regst_desc_id(regst_desc_id_);
   ret->set_producer_task_id(producer_->task_id());
-  for (const TaskNode* consumer : consumers_) {
-    ret->add_consumer_task_id(consumer->task_id());
+  for (const TaskNode* consumer : consumers_) { ret->add_consumer_task_id(consumer->task_id()); }
+  *(ret->mutable_regst_desc_type()) = regst_desc_type_;
+  if (regst_desc_type_.has_data_regst_desc()) {
+    DataRegstDesc* data_regst_desc_proto =
+        ret->mutable_regst_desc_type()->mutable_data_regst_desc();
+    packed_blob_desc_->ToProto(data_regst_desc_proto->mutable_packed_blob_desc());
+    for (const auto& pair : lbi2blob_desc_) {
+      LbiBlobDescPair* pb_pair = data_regst_desc_proto->mutable_lbi2blob_desc()->Add();
+      *(pb_pair->mutable_lbi()) = pair.first;
+      pair.second->ToProto(pb_pair->mutable_blob_desc());
+    }
+  } else if (regst_desc_type_.has_ctrl_regst_desc()) {
+    // do nothing
+  } else {
+    UNIMPLEMENTED();
   }
-  for (const auto& pair : lbn2blob_desc_) {
-    PbMapPair<std::string, BlobDescProto> pb_pair(pair.first);
-    pair.second->ToProto(&(pb_pair.second));
-    CHECK(ret->mutable_lbn2blob_desc()->insert(pb_pair).second);
-  }
-  packed_blob_desc_->ToProto(ret->mutable_packed_blob_desc());
   ret->set_min_register_num(min_register_num_);
   ret->set_max_register_num(max_register_num_);
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
+  ret->set_enable_mem_sharing(enable_mem_sharing_);
+  ret->set_mem_shared_id(-1);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
-  if (rhs->lbn2blob_desc_.size() != lbn2blob_desc_.size()) { return false; }
-  for (const auto& pair : rhs->lbn2blob_desc_) {
-    auto iter = lbn2blob_desc_.find(pair.first);
-    if (iter == lbn2blob_desc_.end()) { return false; }
+  if (rhs->lbi2blob_desc_.size() != lbi2blob_desc_.size()) { return false; }
+  for (const auto& pair : rhs->lbi2blob_desc_) {
+    auto iter = lbi2blob_desc_.find(pair.first);
+    if (iter == lbi2blob_desc_.end()) { return false; }
     if (!(*(pair.second.get()) == *(iter->second.get()))) { return false; }
   }
   return true;
+}
+
+void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {
+  CHECK_NOTNULL(ctrl_regst_proto);
+  ctrl_regst_proto->set_regst_desc_id(Global<IDMgr>::Get()->NewRegstDescId());
+  ctrl_regst_proto->set_producer_task_id(producer_task_id);
+  ctrl_regst_proto->set_min_register_num(1);
+  ctrl_regst_proto->set_max_register_num(1);
+  ctrl_regst_proto->set_register_num(1);
+  ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
+  ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
+  ctrl_regst_proto->set_enable_mem_sharing(false);
+  ctrl_regst_proto->set_mem_shared_id(-1);
 }
 
 }  // namespace oneflow

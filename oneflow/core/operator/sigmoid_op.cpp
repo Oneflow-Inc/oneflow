@@ -1,5 +1,4 @@
 #include "oneflow/core/operator/sigmoid_op.h"
-#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
@@ -9,13 +8,10 @@ void SigmoidOp::InitFromOpConf() {
   EnrollOutputBn("out");
 }
 
-const PbMessage& SigmoidOp::GetCustomizedConf() const {
-  return op_conf().sigmoid_conf();
-}
+const PbMessage& SigmoidOp::GetCustomizedConf() const { return op_conf().sigmoid_conf(); }
 
-void SigmoidOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void SigmoidOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                               const ParallelContext* parallel_ctx) const {
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
 }
 

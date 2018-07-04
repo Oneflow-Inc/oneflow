@@ -1,10 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-message HostPageableMemory {
-}
-
-message HostPinnedMemory {
+message HostMemory {
   optional bool used_by_device = 1 [default = false];
   optional bool used_by_network = 2 [default = false];
 }
@@ -15,8 +12,7 @@ message DeviceCudaMemory {
 
 message MemoryCase {
   oneof case {
-    HostPageableMemory host_pageable_mem = 1;
-    HostPinnedMemory host_pinned_mem = 2;
-    DeviceCudaMemory device_cuda_mem = 3;
+    HostMemory host_mem = 1;
+    DeviceCudaMemory device_cuda_mem = 2;
   }
 }

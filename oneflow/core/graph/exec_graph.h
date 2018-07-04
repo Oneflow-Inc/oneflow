@@ -18,18 +18,18 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
   ~ExecEdge() = default;
 
   // Getters
-  const std::string& lbn() const { return lbn_; }
+  const LogicalBlobId& lbi() const { return lbi_; }
   const std::string& src_bn() const { return src_bn_; }
   const std::string& dst_bn() const { return dst_bn_; }
 
   // Setters
-  void set_lbn(const std::string& lbn) { lbn_ = lbn; }
+  void set_lbi(const LogicalBlobId& lbi) { lbi_ = lbi; }
   std::string& mut_src_bn() { return src_bn_; }
   std::string& mut_dst_bn() { return dst_bn_; }
 
  private:
   // various names for one blob
-  std::string lbn_;
+  LogicalBlobId lbi_;
   std::string src_bn_;
   std::string dst_bn_;
 };
@@ -37,27 +37,40 @@ class ExecEdge final : public Edge<ExecNode, ExecEdge> {
 class ExecNode final : public Node<ExecNode, ExecEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ExecNode);
-  ExecNode() = default;
+  ExecNode() : fw_node_(nullptr), buf_size_(0) {}
   ~ExecNode() = default;
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
 
-  void BindBnInOpAndRegst(const std::string&, std::weak_ptr<RegstDesc>);
+  void BindBnWithRegst(const std::string& bn, std::weak_ptr<RegstDesc>);
+  void BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                        std::weak_ptr<RegstDesc>);
+  void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                             std::shared_ptr<RegstDesc>);
+  void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::weak_ptr<RegstDesc>>&);
+
+  void set_fw_node(ExecNode* val) { fw_node_ = val; }
+  ExecNode* fw_node() { return fw_node_; }
+
+  size_t buf_size() const { return buf_size_; }
 
   std::string VisualStr() const override { return op_->op_name(); }
-  void ToProto(bool is_forward, DeviceType, const ParallelContext*,
-               ExecNodeProto*) const;
+  void ToProto(bool is_forward, const ParallelContext*, ExecNodeProto*) const;
 
-  void InferBlobDescs(const ParallelContext* parallel_ctx,
-                      DeviceType device_type);
+  void InferBlobDescs(const ParallelContext* parallel_ctx);
+  void InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx);
 
  private:
+  const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
   std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOpFunc() const;
 
   std::shared_ptr<const Operator> op_;
-  std::unique_ptr<OpContext> op_ctx_;
   HashMap<std::string, std::weak_ptr<RegstDesc>> bn_in_op2regst_;
+  ExecNode* fw_node_;
+  size_t buf_size_;
+
+  std::unique_ptr<OpContext> op_ctx_;
 };
 
 class ExecGraph final : public Graph<ExecNode, ExecEdge> {
@@ -66,8 +79,7 @@ class ExecGraph final : public Graph<ExecNode, ExecEdge> {
   ExecGraph() = default;
   ~ExecGraph() = default;
 
-  void ToExecSequence(bool is_forward, DeviceType, const ParallelContext*,
-                      ExecSequence*) const;
+  void ToExecSequence(bool is_forward, const ParallelContext*, ExecSequence*) const;
   const char* TypeName() const override { return "ExecGraph"; }
 
  private:

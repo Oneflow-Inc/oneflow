@@ -15,17 +15,18 @@ void FileSystem::CreateDirIfNotExist(const std::string& dirname) {
   CreateDir(dirname);
 }
 
-bool FileSystem::IsDirEmpty(const std::string& dirname) {
-  return ListDir(dirname).empty();
+void FileSystem::RecursivelyCreateDirIfNotExist(const std::string& dirname) {
+  if (IsDirectory(dirname)) { return; }
+  RecursivelyCreateDir(dirname);
 }
 
-std::string FileSystem::TranslateName(const std::string& name) const {
-  return CleanPath(name);
-}
+bool FileSystem::IsDirEmpty(const std::string& dirname) { return ListDir(dirname).empty(); }
+
+std::string FileSystem::TranslateName(const std::string& name) const { return CleanPath(name); }
 
 void FileSystem::MakeEmptyDir(const std::string& dirname) {
   if (IsDirectory(dirname)) { RecursivelyDeleteDir(dirname); }
-  CreateDir(dirname);
+  RecursivelyCreateDir(dirname);
 }
 
 void FileSystem::RecursivelyDeleteDir(const std::string& dirname) {
@@ -91,10 +92,9 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
 
 struct GlobalFSConstructor {
   GlobalFSConstructor() {
-    const GlobalFSConf& gfs_conf =
-        JobDesc::Singleton()->job_conf().global_fs_conf();
+    const GlobalFSConf& gfs_conf = Global<JobDesc>::Get()->other_conf().globalfs_conf();
     if (gfs_conf.has_localfs_conf()) {
-      CHECK_EQ(JobDesc::Singleton()->resource().machine().size(), 1);
+      CHECK_EQ(Global<JobDesc>::Get()->resource().machine().size(), 1);
       gfs = LocalFS();
     } else if (gfs_conf.has_hdfs_conf()) {
       gfs = new HadoopFileSystem(gfs_conf.hdfs_conf());

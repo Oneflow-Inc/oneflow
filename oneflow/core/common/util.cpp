@@ -63,12 +63,27 @@ void CloseStdoutAndStderr() {
 
 size_t GetAvailableCpuMemSize() {
 #ifdef PLATFORM_POSIX
-  struct sysinfo sys_info;
-  PCHECK(sysinfo(&sys_info) == 0);
-  return sys_info.freeram * sys_info.mem_unit;
+  std::ifstream mem_info("/proc/meminfo");
+  CHECK(mem_info.good()) << "can't open file: /proc/meminfo";
+  std::string line;
+  while (std::getline(mem_info, line).good()) {
+    std::string token;
+    const char* p = line.c_str();
+    p = StrToToken(p, " ", &token);
+    if (token != "MemAvailable:") { continue; }
+    CHECK_NE(*p, '\0');
+    p = StrToToken(p, " ", &token);
+    size_t mem_available = oneflow_cast<size_t>(token);
+    CHECK_NE(*p, '\0');
+    p = StrToToken(p, " ", &token);
+    CHECK_EQ(token, "kB");
+    return mem_available * 1024;
+  }
+  LOG(FATAL) << "can't find MemAvailable in /proc/meminfo";
 #else
-  return 0;  // TODO
+  TODO();
 #endif
+  return 0;
 }
 
 }  // namespace oneflow

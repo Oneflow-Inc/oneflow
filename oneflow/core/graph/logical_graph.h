@@ -6,84 +6,65 @@
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/placement.pb.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
-
-class LogicalEdge;
-
-class LogicalNode final : public Node<LogicalNode, LogicalEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LogicalNode);
-  LogicalNode() = default;
-  ~LogicalNode() = default;
-
-  std::shared_ptr<const Operator> op() const { return op_; }
-  std::shared_ptr<Operator>& mut_op() { return op_; }
-
-  std::shared_ptr<const ParallelDesc> parallel_desc() const {
-    return parallel_desc_;
-  }
-  std::shared_ptr<const ParallelDesc>& mut_parallel_desc() {
-    return parallel_desc_;
-  }
-
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes() const {
-    return shared_model_nodes_;
-  }
-  std::shared_ptr<const std::vector<LogicalNode*>>& mut_shared_model_nodes() {
-    return shared_model_nodes_;
-  }
-
-  std::string VisualStr() const override { return op_->op_name(); }
-
- private:
-  std::shared_ptr<Operator> op_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
-  std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
-};
-
-class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(LogicalEdge);
-  LogicalEdge() = default;
-  ~LogicalEdge() = default;
-
- private:
-};
 
 class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LogicalGraph);
+  LogicalGraph() = delete;
   ~LogicalGraph() = default;
 
-  OF_SINGLETON(LogicalGraph);
+  LogicalGraph(bool is_train);
 
   const char* TypeName() const override { return "LogicalGraph"; }
-  std::shared_ptr<const Operator> GetProducerOp(const std::string& lbn);
-  void SetProducerOp(const std::string& lbn, std::weak_ptr<const Operator> op);
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
-  LogicalGraph();
-  void NaiveBuildGraphStruct(HashMap<LogicalEdge*, std::string>* edge2lbn,
-                             HashMap<LogicalEdge*, std::string>* edge2ibn,
-                             HashMap<std::string, LogicalNode*>* op_name2node);
-  void FillNodeWithParallelDesc(
-      const HashMap<std::string, LogicalNode*>& op_name2node);
-
-  struct CloneInfo {
-    std::shared_ptr<Operator> clone_op;
+  struct B121CloneInfo {
     LogicalNode* pred_node;
+    LogicalBlobId lbi;
+    std::vector<LogicalEdge*> edges_boxing;
+    std::vector<LogicalEdge*> edges_121;
+  };
+  struct BackwardCloneInfo {
+    LogicalNode* succ_node;
+    LogicalBlobId lbi;
     std::vector<LogicalEdge*> edges;
   };
-  void AddCloneNodes(const HashMap<LogicalEdge*, std::string>& edge2lbn,
-                     const HashMap<LogicalEdge*, std::string>& edge2ibn);
-  void CollectCloneInfos(std::vector<CloneInfo>* clone_infos,
-                         const HashMap<LogicalEdge*, std::string>& edge2lbn);
-  void AddOneCloneNode(const CloneInfo& clone_info,
-                       const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  template<typename LogicalNodeType>
+  void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
-  HashMap<std::string, std::weak_ptr<const Operator>> lbn2producer_;
+  void BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void NaiveBuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn,
+                          HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
+  void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
+  void AddB121Clone(HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos);
+  void AddOneB121CloneNode(const B121CloneInfo& clone_info,
+                           HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
+                          const std::vector<LogicalEdge*>& edges,
+                          const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  void SetMainModelParallel();
+  void BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void AddBackwardClone(const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  void AddOneBackwardClone(const BackwardCloneInfo& clone_info,
+                           const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  void MergeEdge();
+  void SetNodeDataLbi();
+  void BuildLossPrintStruct();
+  void BuildModelStruct(bool is_train);
+  void BuildReduceStruct(LogicalNode* src, LogicalNode* dst);
+  void SetupNormalMdUpdtOp();
+  MdSaveLogicalNode* BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
+                                       LogicalNode* need_save_logical);
+  NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
+                                                            ForwardLogicalNode* fw_logical);
+  void ConnectFwToBw();
+
   int64_t total_mbn_num_;
 };
 

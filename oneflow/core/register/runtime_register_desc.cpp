@@ -11,17 +11,20 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
-  for (const auto& pair : proto.lbn2blob_desc()) {
-    auto blob_desc = of_make_unique<BlobDesc>(pair.second);
-    CHECK(lbn2blob_desc_.emplace(pair.first, std::move(blob_desc)).second);
+  if (proto.regst_desc_type().has_data_regst_desc()) {
+    const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
+    for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {
+      auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
+      CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
+    }
+    packed_blob_desc_ = BlobDesc(data_regst_desc.packed_blob_desc());
   }
-  packed_blob_desc_ = BlobDesc(proto.packed_blob_desc());
 }
 
-const BlobDesc* RtRegstDesc::GetBlobDescFromLbn(const std::string& lbn) const {
-  auto it = lbn2blob_desc_.find(lbn);
-  if (it == lbn2blob_desc_.end()) {
-    CHECK_STREQ(lbn.c_str(), kPackedBlobName);
+const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const {
+  auto it = lbi2blob_desc_.find(lbi);
+  if (it == lbi2blob_desc_.end()) {
+    CHECK(lbi.is_packed_id());
     return &packed_blob_desc_;
   } else {
     return it->second.get();

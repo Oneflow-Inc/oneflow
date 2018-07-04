@@ -4,11 +4,10 @@
 namespace oneflow {
 
 BlobDesc::BlobDesc()
-    : BlobDesc(Shape(), JobDesc::Singleton()->DefaultDataType(), false, false,
-               1) {}
+    : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, 1) {}
 
-BlobDesc::BlobDesc(Shape shape, DataType data_type, bool has_data_id_field,
-                   bool has_col_num_field, int32_t max_col_num)
+BlobDesc::BlobDesc(Shape shape, DataType data_type, bool has_data_id_field, bool has_col_num_field,
+                   int32_t max_col_num)
     : shape_(shape),
       data_type_(data_type),
       has_data_id_field_(has_data_id_field),
@@ -33,7 +32,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (has_data_id_field_) {
-    return shape_.At(0) * JobDesc::Singleton()->SizeOfOneDataId();
+    return shape_.At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
   } else {
     return 0;
   }
@@ -52,15 +51,15 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 }
 
 size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfDataIdField() + ByteSizeOfColNumField()
-         + ByteSizeOfDataContentField();
+  return RoundUp(ByteSizeOfDataIdField(), kCudaAlignSize)
+         + RoundUp(ByteSizeOfColNumField(), kCudaAlignSize)
+         + RoundUp(ByteSizeOfDataContentField(), kCudaAlignSize);
 }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return shape_ == rhs.shape_ && data_type_ == rhs.data_type_
          && has_data_id_field_ == rhs.has_data_id_field_
-         && has_col_num_field_ == rhs.has_col_num_field_
-         && max_col_num_ == rhs.max_col_num_;
+         && has_col_num_field_ == rhs.has_col_num_field_ && max_col_num_ == rhs.max_col_num_;
 }
 
 BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
@@ -87,8 +86,7 @@ BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
     ret = *blob_desc;
   }
   if (blob_desc_cnt <= 1) { return ret; }
-  if (has_data_id_field == false && has_col_num_field == false
-      && data_type_set.size() == 1) {
+  if (has_data_id_field == false && has_col_num_field == false && data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(total_data_content_byte_size % size_of_one_elem, 0);

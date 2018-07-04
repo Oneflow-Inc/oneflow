@@ -8,6 +8,8 @@ namespace oneflow {
 
 const int32_t kMaxRegisterNum = std::numeric_limits<int32_t>::max();
 
+void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto);
+
 class TaskNode;
 
 class RegstDesc final {
@@ -27,24 +29,31 @@ class RegstDesc final {
 
   // min_register_num_, max_register_num_
   int32_t min_register_num() const { return min_register_num_; }
-  void set_min_register_num(int32_t val);
+  void UpdtMinRegstNumIfNeed(int32_t val);
   int32_t max_register_num() const { return max_register_num_; }
-  void set_max_register_num(int32_t val);
+  void UpdtMaxRegstNumIfNeed(int32_t val);
 
-  // lbn2blob_desc_
+  // lbi2blob_desc_
   bool IsLocked() const { return is_locked_; }
   void Lock();
   void CopyBlobDescFrom(const RegstDesc*);
-  void CopyBlobDescWithoutAddLbn(const RegstDesc*);
-  BlobDesc* AddLbn(const std::string& lbn);
-  const BlobDesc* GetBlobDesc(const std::string& lbn) const;
-  BlobDesc* MutBlobDesc(const std::string& lbn);
-  void ForEachLbn(std::function<void(const std::string&)> func) const;
-  size_t NumOfLbn() const { return lbn2blob_desc_.size(); }
+  void CopyBlobDescWithoutAddLbi(const RegstDesc*);
+  BlobDesc* AddLbi(const LogicalBlobId&);
+  const BlobDesc* GetBlobDesc(const LogicalBlobId& lbi) const;
+  BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
+  void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
+  size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
+
+  // mem
+  const MemoryCase& mem_case() const { return mem_case_; }
+  MemoryCase* mut_mem_case() { return &mem_case_; }
+  void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
+
+  RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
+  const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
   // util
   int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
-  void InferMemCase();
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);
@@ -56,18 +65,14 @@ class RegstDesc final {
   int32_t min_register_num_;
   int32_t max_register_num_;
 
-  HashMap<std::string, std::unique_ptr<BlobDesc>> lbn2blob_desc_;
+  HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
   std::unique_ptr<BlobDesc> packed_blob_desc_;
   bool is_locked_;
 
   MemoryCase mem_case_;
+  RegstDescTypeProto regst_desc_type_;
+  bool enable_mem_sharing_;
 };
-
-inline void UpdtMinRegisterNumByMaxSequenceSize(RegstDesc* regst_desc) {
-  if (regst_desc->min_register_num() < regst_desc->MaxColNum()) {
-    regst_desc->set_min_register_num(regst_desc->MaxColNum());
-  }
-}
 
 }  // namespace oneflow
 

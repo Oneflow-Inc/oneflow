@@ -15,7 +15,7 @@ enum TaskType {
   kLoss = 6;
   kLossAcc = 7;
   kLossPrint = 8;
-  kMdUpdt = 9;
+  kNormalMdUpdt = 9;
   kMdSave = 10;
   kMdDiffAcc = 11;
   kCopyHd = 12;
@@ -23,7 +23,32 @@ enum TaskType {
   kBoxing = 14;
   kPrint = 15;
   kRecordLoad = 16;
+  kReduceLocalAdd = 17;
+  kReduceGlobalAdd = 18;
+  kReduceGather = 19;
+  kReduceScatter = 20;
 };
+
+enum AreaType {
+  kInvalidArea = 0;
+  kDataPreprocessArea = 1;
+  kDataForwardArea = 2;
+  kDataBackwardArea = 3;
+  kMdUpdtArea = 4;
+  kMdSaveArea = 5;
+  kPrintArea = 6;
+  kBoundaryArea = 7;
+}
+
+message RegstDescIdSet {
+  repeated int64 regst_desc_id = 1;
+}
+
+message TaskSetInfo {
+  required int64 area_id = 1;
+  required int64 chain_id = 4;
+  required int64 order_in_graph = 5;
+}
 
 message TaskProto {
   // common
@@ -31,9 +56,10 @@ message TaskProto {
   required int64 machine_id = 2;
   required int64 thrd_id = 3;
   required int64 task_id = 4;
-  required ExecSequence exec_sequence = 5;
-  map<string, RegstDescProto> produced_regst_desc = 6;
-  map<string, int64> consumed_regst_desc_id = 7;
+  required TaskSetInfo task_set_info = 5;
+  required ExecSequence exec_sequence = 6;
+  map<string, RegstDescProto> produced_regst_desc = 7;
+  map<string, RegstDescIdSet> consumed_regst_desc_id = 8;
   // compute task
   optional ParallelContext parallel_ctx = 1000; // CompTask
   optional int64 random_seed = 1001; // ForwardCompTask

@@ -4,74 +4,43 @@
 
 namespace oneflow {
 
-std::tuple<char*, const void*, std::function<void()>> MemoryAllocator::Allocate(
-    MemoryCase mem_case, std::size_t size) {
-  const int memset_val = 0;
-  char* dptr = nullptr;
-  const void* comm_net_token = nullptr;
-  if (mem_case.has_host_pageable_mem()) {
-    dptr = reinterpret_cast<char*>(malloc(size));
-    CHECK_NOTNULL(dptr);
-    memset(dptr, memset_val, size);
-  } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().used_by_device()) {
-#ifdef WITH_CUDA
-      CudaCheck(cudaMallocHost(&dptr, size));
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      dptr = reinterpret_cast<char*>(malloc(size));
-    }
-    if (mem_case.host_pinned_mem().used_by_network()) {
-      comm_net_token = CommNet::Singleton()->RegisterMemory(dptr, size);
-    }
-    memset(dptr, memset_val, size);
-  }
-#ifdef WITH_CUDA
-  else if (mem_case.has_device_cuda_mem()) {
-    int32_t current_device_id;
-    CudaCheck(cudaGetDevice(&current_device_id));
-    CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
-    CudaCheck(cudaMalloc(&dptr, size));
-    CudaCheck(cudaMemset(dptr, memset_val, size));
-  }
-#endif
-  else {
-    UNIMPLEMENTED();
-  }
-  return std::make_tuple(dptr, comm_net_token,
-                         std::bind(&MemoryAllocator::Deallocate, this, dptr,
-                                   comm_net_token, mem_case));
+MemoryAllocator::~MemoryAllocator() {
+  for (std::function<void()> deleter : deleters_) { deleter(); }
 }
 
-void MemoryAllocator::Deallocate(char* dptr, const void* comm_net_token,
-                                 MemoryCase mem_case) {
-  if (mem_case.has_host_pageable_mem()) {
-    free(dptr);
-  } else if (mem_case.has_host_pinned_mem()) {
-    if (mem_case.host_pinned_mem().used_by_network()) {
-      CommNet::Singleton()->UnRegisterMemory(comm_net_token);
+char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
+  const int memset_val = 0;
+  char* dptr = nullptr;
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().used_by_device()) {
+      CudaCheck(cudaMallocHost(&dptr, size));
+    } else {
+      dptr = reinterpret_cast<char*>(malloc(size));
+      CHECK_NOTNULL(dptr);
     }
-    if (mem_case.host_pinned_mem().used_by_device()) {
-#ifdef WITH_CUDA
+    memset(dptr, memset_val, size);
+  } else if (mem_case.has_device_cuda_mem()) {
+    CudaCheck(cudaSetDevice(mem_case.device_cuda_mem().device_id()));
+    CudaCheck(cudaMalloc(&dptr, size));
+    CudaCheck(cudaMemset(dptr, memset_val, size));
+  } else {
+    UNIMPLEMENTED();
+  }
+  deleters_.push_front(std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
+  return dptr;
+}
+
+void MemoryAllocator::Deallocate(char* dptr, MemoryCase mem_case) {
+  if (mem_case.has_host_mem()) {
+    if (mem_case.host_mem().used_by_device()) {
       CudaCheck(cudaFreeHost(dptr));
-#else
-      UNIMPLEMENTED();
-#endif
     } else {
       free(dptr);
     }
-  }
-#ifdef WITH_CUDA
-  else if (mem_case.has_device_cuda_mem()) {
-    int32_t current_device_id;
-    CudaCheck(cudaGetDevice(&current_device_id));
-    CHECK_EQ(mem_case.device_cuda_mem().device_id(), current_device_id);
+  } else if (mem_case.has_device_cuda_mem()) {
+    CudaCheck(cudaSetDevice(mem_case.device_cuda_mem().device_id()));
     CudaCheck(cudaFree(dptr));
-  }
-#endif
-  else {
+  } else {
     UNIMPLEMENTED();
   }
 }

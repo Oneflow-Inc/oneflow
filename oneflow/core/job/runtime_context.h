@@ -14,18 +14,18 @@ class RuntimeCtx final {
   RuntimeCtx() = delete;
   ~RuntimeCtx() = default;
 
-  OF_SINGLETON(RuntimeCtx);
-
   int64_t total_piece_num() const { return total_piece_num_; }
   bool is_experiment_phase() const { return is_experiment_phase_; }
+  bool NeedCollectActEvent() const {
+    return is_experiment_phase_ || Global<JobDesc>::Get()->collect_act_event();
+  }
 
   void NewCounter(const std::string& name, int64_t val);
   void DecreaseCounter(const std::string& name);
   void WaitUntilCntEqualZero(const std::string& name);
 
-  int32_t Staleness() const;
-
  private:
+  friend class Global<RuntimeCtx>;
   RuntimeCtx(int64_t total_piece_num, bool is_experiment_phase);
 
   int64_t total_piece_num_;

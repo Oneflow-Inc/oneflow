@@ -2,9 +2,7 @@
 
 namespace oneflow {
 
-const PbMessage& Conv2DOp::GetCustomizedConf() const {
-  return op_conf().conv_2d_conf();
-}
+const PbMessage& Conv2DOp::GetCustomizedConf() const { return op_conf().conv_2d_conf(); }
 
 REGISTER_OP(OperatorConf::kConv2DConf, Conv2DOp);
 

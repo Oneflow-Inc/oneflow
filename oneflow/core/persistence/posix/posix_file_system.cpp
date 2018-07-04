@@ -23,8 +23,7 @@ class PosixRandomAccessFile : public RandomAccessFile {
   int fd_;
 
  public:
-  PosixRandomAccessFile(const std::string& fname, int fd)
-      : fname_(fname), fd_(fd) {}
+  PosixRandomAccessFile(const std::string& fname, int fd) : fname_(fname), fd_(fd) {}
   ~PosixRandomAccessFile() override { close(fd_); }
 
   void Read(uint64_t offset, size_t n, char* result) const override {
@@ -54,16 +53,14 @@ class PosixWritableFile : public WritableFile {
   FILE* file_;
 
  public:
-  PosixWritableFile(const std::string& fname, FILE* file)
-      : fname_(fname), file_(file) {}
+  PosixWritableFile(const std::string& fname, FILE* file) : fname_(fname), file_(file) {}
 
   ~PosixWritableFile() override {
     if (file_ != nullptr) { fclose(file_); }
   }
 
   void Append(const char* data, size_t n) override {
-    PCHECK(fwrite(data, sizeof(char), n, file_) == n)
-        << "Fail to append to file " << fname_;
+    PCHECK(fwrite(data, sizeof(char), n, file_) == n) << "Fail to append to file " << fname_;
   }
 
   void Close() override {
@@ -72,13 +69,11 @@ class PosixWritableFile : public WritableFile {
     file_ = nullptr;
   }
 
-  void Flush() override {
-    PCHECK(fflush(file_) == 0) << "Fail to flush file " << fname_;
-  }
+  void Flush() override { PCHECK(fflush(file_) == 0) << "Fail to flush file " << fname_; }
 };
 
-void PosixFileSystem::NewRandomAccessFile(
-    const std::string& fname, std::unique_ptr<RandomAccessFile>* result) {
+void PosixFileSystem::NewRandomAccessFile(const std::string& fname,
+                                          std::unique_ptr<RandomAccessFile>* result) {
   std::string translated_fname = TranslateName(fname);
   int fd = open(translated_fname.c_str(), O_RDONLY);
   PCHECK(fd >= 0) << "Fail to open file " << fname;
@@ -116,9 +111,7 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
   PCHECK(d != nullptr) << "Fail to open dir " << dir;
   struct dirent* entry;
   while ((entry = readdir(d)) != nullptr) {
-    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-      continue;
-    }
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) { continue; }
     result.push_back(entry->d_name);
   }
   closedir(d);
@@ -126,41 +119,32 @@ std::vector<std::string> PosixFileSystem::ListDir(const std::string& dir) {
 }
 
 void PosixFileSystem::DelFile(const std::string& fname) {
-  PCHECK(unlink(TranslateName(fname).c_str()) == 0)
-      << "Fail to delete file " << fname;
+  PCHECK(unlink(TranslateName(fname).c_str()) == 0) << "Fail to delete file " << fname;
 }
 
 void PosixFileSystem::CreateDir(const std::string& dirname) {
-  PCHECK(mkdir(TranslateName(dirname).c_str(), 0755) == 0)
-      << "Fail to create dir " << dirname;
+  PCHECK(mkdir(TranslateName(dirname).c_str(), 0755) == 0) << "Fail to create dir " << dirname;
 }
 
 void PosixFileSystem::DeleteDir(const std::string& dirname) {
-  PCHECK(rmdir(TranslateName(dirname).c_str()) == 0)
-      << "Fail to delete dir " << dirname;
+  PCHECK(rmdir(TranslateName(dirname).c_str()) == 0) << "Fail to delete dir " << dirname;
 }
 
 uint64_t PosixFileSystem::GetFileSize(const std::string& fname) {
   struct stat sbuf;
-  PCHECK(stat(TranslateName(fname).c_str(), &sbuf) == 0)
-      << "Fail to load statistics of " << fname;
+  PCHECK(stat(TranslateName(fname).c_str(), &sbuf) == 0) << "Fail to load statistics of " << fname;
   ;
   return sbuf.st_size;
 }
 
-void PosixFileSystem::RenameFile(const std::string& old_name,
-                                 const std::string& new_name) {
-  PCHECK(
-      rename(TranslateName(old_name).c_str(), TranslateName(new_name).c_str())
-      == 0)
+void PosixFileSystem::RenameFile(const std::string& old_name, const std::string& new_name) {
+  PCHECK(rename(TranslateName(old_name).c_str(), TranslateName(new_name).c_str()) == 0)
       << "Fail to rename file from " << old_name << " to " << new_name;
 }
 
 bool PosixFileSystem::IsDirectory(const std::string& fname) {
   struct stat sbuf;
-  if (stat(TranslateName(fname).c_str(), &sbuf) == 0 && S_ISDIR(sbuf.st_mode)) {
-    return true;
-  }
+  if (stat(TranslateName(fname).c_str(), &sbuf) == 0 && S_ISDIR(sbuf.st_mode)) { return true; }
   return false;
 }
 

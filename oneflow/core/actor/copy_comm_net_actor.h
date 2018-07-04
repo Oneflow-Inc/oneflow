@@ -14,7 +14,7 @@ class CopyCommNetActor final : public Actor {
  private:
   class CommNetDeviceCtx;
   struct RegstCtx {
-    const void* comm_net_token;
+    void* comm_net_token;
     Regst* regst_raw_ptr;
     int64_t producer;
     int64_t act_id;
@@ -22,16 +22,17 @@ class CopyCommNetActor final : public Actor {
 
   void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx&) override;
-
-  int HandlerNormal(const ActorMsg&) override;
-
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const override;
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
+  bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
   void Act() override;
-  bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
-
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
+  bool IsCustomizedReadReady() override;
+  bool IsCustomizedReadAlwaysUnReadyFromNow() override;
+  void AsyncReturnAllCustomizedReadableRegst() override;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {false, {}};
+  }
 
   bool is_in_eord_;
   HashMap<int64_t, RegstCtx> piece_id2regst_ctx;

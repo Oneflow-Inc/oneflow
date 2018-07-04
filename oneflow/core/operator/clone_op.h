@@ -15,21 +15,18 @@ class CloneOp final : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
+  void InferDiffBlobDescsWithoutFwBlob(
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+      const ParallelContext* parallel_ctx) const override;
 
  private:
-  std::string ibn2lbn(const std::string& input_bn) const override {
-    return GetStringFromCustomizedConf("lbn");
-  }
-  std::string obn2lbn(const std::string& output_bn) const override {
-    return op_name() + "/" + output_bn;
-  }
-  void VirtualGenKernelConf(
-      std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx,
-      KernelConf* kernel_conf) const override;
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return LogicalBlobId(); }
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override { return LogicalBlobId(); }
+  void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                            const ParallelContext* parallel_ctx,
+                            KernelConf* kernel_conf) const override;
 };
 
 }  // namespace oneflow

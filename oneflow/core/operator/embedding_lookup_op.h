@@ -16,13 +16,10 @@ class EmbeddingLookupOp final : public Operator {
   bool NeedOutWhenBackward() const override { return false; }
   bool IsEmbeddingLookupOp() const override { return true; }
   const PbMessage& GetCustomizedConf() const override;
-  void InferBlobDescs(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                      const ParallelContext* parallel_ctx) const override;
   int32_t ModelSplitAxis() const override { return 1; }
-  int32_t MaxModelSplitNum() const override {
-    return op_conf().embedding_lookup_conf().units();
-  }
+  int32_t MaxModelSplitNum() const override { return op_conf().embedding_lookup_conf().units(); }
 
  private:
 };

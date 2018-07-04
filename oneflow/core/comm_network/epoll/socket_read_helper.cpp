@@ -15,9 +15,7 @@ SocketReadHelper::SocketReadHelper(int sockfd) {
   SwitchToMsgHeadReadHandle();
 }
 
-void SocketReadHelper::NotifyMeSocketReadable() {
-  ReadUntilSocketNotReadable();
-}
+void SocketReadHelper::NotifyMeSocketReadable() { ReadUntilSocketNotReadable(); }
 
 void SocketReadHelper::SwitchToMsgHeadReadHandle() {
   cur_read_handle_ = &SocketReadHelper::MsgHeadReadHandle;
@@ -37,8 +35,7 @@ bool SocketReadHelper::MsgBodyReadHandle() {
   return DoCurRead(&SocketReadHelper::SetStatusWhenMsgBodyDone);
 }
 
-bool SocketReadHelper::DoCurRead(
-    void (SocketReadHelper::*set_cur_read_done)()) {
+bool SocketReadHelper::DoCurRead(void (SocketReadHelper::*set_cur_read_done)()) {
   ssize_t n = read(sockfd_, read_ptr_, read_size_);
   if (n == read_size_) {
     (this->*set_cur_read_done)();
@@ -66,7 +63,7 @@ void SocketReadHelper::SetStatusWhenMsgHeadDone() {
 
 void SocketReadHelper::SetStatusWhenMsgBodyDone() {
   if (cur_msg_.msg_type == SocketMsgType::kRequestRead) {
-    EpollCommNet::Singleton()->ReadDone(cur_msg_.request_read_msg.read_id);
+    Global<EpollCommNet>::Get()->ReadDone(cur_msg_.request_read_msg.read_id);
   }
   SwitchToMsgHeadReadHandle();
 }
@@ -77,21 +74,20 @@ void SocketReadHelper::SetStatusWhenRequestWriteMsgHeadDone() {
   msg_to_send.request_read_msg.src_token = cur_msg_.request_write_msg.src_token;
   msg_to_send.request_read_msg.dst_token = cur_msg_.request_write_msg.dst_token;
   msg_to_send.request_read_msg.read_id = cur_msg_.request_write_msg.read_id;
-  EpollCommNet::Singleton()->SendSocketMsg(
-      cur_msg_.request_write_msg.dst_machine_id, msg_to_send);
+  Global<EpollCommNet>::Get()->SendSocketMsg(cur_msg_.request_write_msg.dst_machine_id,
+                                             msg_to_send);
   SwitchToMsgHeadReadHandle();
 }
 
 void SocketReadHelper::SetStatusWhenRequestReadMsgHeadDone() {
-  auto mem_desc =
-      static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
+  auto mem_desc = static_cast<const SocketMemDesc*>(cur_msg_.request_read_msg.dst_token);
   read_ptr_ = reinterpret_cast<char*>(mem_desc->mem_ptr);
   read_size_ = mem_desc->byte_size;
   cur_read_handle_ = &SocketReadHelper::MsgBodyReadHandle;
 }
 
 void SocketReadHelper::SetStatusWhenActorMsgHeadDone() {
-  ActorMsgBus::Singleton()->SendMsg(cur_msg_.actor_msg);
+  Global<ActorMsgBus>::Get()->SendMsgWithoutCommNet(cur_msg_.actor_msg);
   SwitchToMsgHeadReadHandle();
 }
 

@@ -24,8 +24,7 @@ class AveragePoolingKernelIf : public PoolingKernel<device_type, T> {
 };
 
 template<DeviceType device_type, typename T>
-class AveragePoolingKernel final
-    : public AveragePoolingKernelIf<device_type, T> {
+class AveragePoolingKernel final : public AveragePoolingKernelIf<device_type, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AveragePoolingKernel);
   AveragePoolingKernel() = default;
@@ -43,17 +42,15 @@ class AveragePoolingKernel<DeviceType::kCPU, T> final
  private:
   T ForwardInitialize() const override;
   void NCDHWProcess(const T& lhs, T& rhs) const override;
-  void NDHWCProcess(const int64_t in_col, const int64_t out_col,
-                    ConstEigenMatrixMap<T>& in_mat,
+  void NDHWCProcess(const int64_t in_col, const int64_t out_col, ConstEigenMatrixMap<T>& in_mat,
                     EigenMatrixMap<T>& out_mat) const override;
   void NCDHWFinalize(const int64_t size, T& out) const override;
   void NDHWCFinalize(const int64_t size, const int64_t col,
                      EigenMatrixMap<T>& out_mat) const override;
-  void NCDHWProcessGrad(const T& in, const T& out, const T& out_diff,
-                        const int64_t size, T& in_diff) const override;
-  void NDHWCProcessGrad(const int64_t out_col, const int64_t in_col,
-                        const int64_t size, ConstEigenArrayMap<T>& out_arr,
-                        ConstEigenArrayMap<T>& in_arr,
+  void NCDHWProcessGrad(const T& in, const T& out, const T& out_diff, const int64_t size,
+                        T& in_diff) const override;
+  void NDHWCProcessGrad(const int64_t out_col, const int64_t in_col, const int64_t size,
+                        ConstEigenArrayMap<T>& out_arr, ConstEigenArrayMap<T>& in_arr,
                         ConstEigenArrayMap<T>& out_diff_arr,
                         EigenArrayMap<T>& in_diff_arr) const override;
 };
