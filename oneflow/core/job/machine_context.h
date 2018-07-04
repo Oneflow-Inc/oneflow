@@ -11,8 +11,6 @@ class MachineCtx final {
   MachineCtx() = delete;
   ~MachineCtx() = default;
 
-  OF_SINGLETON(MachineCtx);
-
   int64_t this_machine_id() const { return this_machine_id_; }
   bool IsThisMachineMaster() const { return this_machine_id_ == 0; }
   std::string GetThisCtrlAddr() const { return GetCtrlAddr(this_machine_id_); }
@@ -20,6 +18,7 @@ class MachineCtx final {
   std::string GetCtrlAddr(int64_t machine_id) const;
 
  private:
+  friend class Global<MachineCtx>;
   MachineCtx(const std::string& this_mchn_name);
 
   int64_t this_machine_id_;

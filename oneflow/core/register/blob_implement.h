@@ -19,52 +19,31 @@ class BlobImpl final : public Blob {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BlobImpl);
   BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr)
-      : BlobImpl(regst, blob_desc, mem_ptr, nullptr) {}
-  BlobImpl(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr,
-           const void* comm_net_token)
-      : Blob(regst, blob_desc, mem_ptr, comm_net_token) {
+      : Blob(regst, blob_desc, mem_ptr) {
     CHECK_EQ(NDIMS, blob_desc_ptr()->shape().NumAxes());
-    for (int32_t d = 0; d < NDIMS; ++d) {
-      dsizes_[d] = blob_desc_ptr()->shape().At(d);
-    }
-    tensor_ = of_make_unique<EigenTensor<T, NDIMS>>(
-        reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
-    const_tensor_ = of_make_unique<EigenConstTensor<T, NDIMS>>(
+    for (int32_t d = 0; d < NDIMS; ++d) { dsizes_[d] = blob_desc_ptr()->shape().At(d); }
+    tensor_ =
+        std::make_unique<EigenTensor<T, NDIMS>>(reinterpret_cast<T*>(mut_memory_ptr()), dsizes_);
+    const_tensor_ = std::make_unique<EigenConstTensor<T, NDIMS>>(
         reinterpret_cast<const T*>(memory_ptr()), dsizes_);
   }
   ~BlobImpl() = default;
 
-  void Transpose(DeviceCtx* ctx, Blob* out_blob,
-                 const PbRf<int32_t>& permutation) const override {
-    CHECK_EQ(NDIMS, out_blob->blob_desc_ptr()->shape().NumAxes());
-    CHECK_EQ(NDIMS, permutation.size());
-    CHECK_EQ(blob_desc_ptr()->shape().elem_cnt(),
-             out_blob->blob_desc_ptr()->shape().elem_cnt());
-    auto out_blob_impl =
-        reinterpret_cast<const BlobImpl<T, NDIMS, device_type>*>(out_blob);
-    BlobImplUtil<device_type, T, NDIMS>::DoTranspose(
-        ctx, out_blob_impl->tensor_.get(), const_tensor_.get(), permutation);
-  }
-
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
-    Memcpy<device_type>(device_ctx, mut_dptr(), rhs->dptr(),
-                        ByteSizeOfDataContentField());
+    Memcpy<device_type>(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataContentField());
   }
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
-    Memcpy<device_type>(device_ctx, mut_data_id(), rhs->data_id(),
-                        ByteSizeOfDataIdField());
+    Memcpy<device_type>(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField());
   }
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
-    Memcpy<device_type>(device_ctx, mut_col_num(), rhs->col_num(),
-                        ByteSizeOfColNumField());
+    Memcpy<device_type>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
   }
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
     if (this == rhs) { return; }
-    Memcpy<device_type>(device_ctx, mut_memory_ptr(), rhs->memory_ptr(),
-                        TotalByteSize());
+    Memcpy<device_type>(device_ctx, mut_memory_ptr(), rhs->memory_ptr(), TotalByteSize());
   }
 
  private:

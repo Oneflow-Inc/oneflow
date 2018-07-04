@@ -5,6 +5,7 @@
 #include "oneflow/core/job/improver.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
+#include "oneflow/core/job/profiler.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
@@ -15,6 +16,23 @@ namespace oneflow {
 
 namespace {
 
+#define OF_VERSION_MAJOR "0"
+#define OF_VERSION_MINOR "1"
+#define OF_VERSION_PATCH "0"
+#define OF_VERSION OF_VERSION_MAJOR "." OF_VERSION_MINOR "." OF_VERSION_PATCH
+
+std::string BuildVersionString() {
+  static const HashMap<std::string, std::string> month_word2num = {
+      {"Jan", "01"}, {"Feb", "02"}, {"Mar", "03"}, {"Apr", "04"}, {"May", "05"}, {"Jun", "06"},
+      {"Jul", "07"}, {"Aug", "08"}, {"Sep", "09"}, {"Oct", "10"}, {"Nov", "11"}, {"Dec", "12"},
+  };
+  static const std::string date_str(__DATE__);
+  std::string day = date_str.substr(4, 2);
+  StringReplace(&day, ' ', '0');
+  return OF_VERSION " (" + date_str.substr(7) + month_word2num.at(date_str.substr(0, 3)) + day + "."
+         + __TIME__ + ")";
+}
+
 std::string GetAmdCtrlKey(int64_t machine_id) {
   return "AvailableMemDesc/" + std::to_string(machine_id);
 }
@@ -22,24 +40,40 @@ std::string GetAmdCtrlKey(int64_t machine_id) {
 void PushAvailableMemDescOfThisMachine() {
   AvailableMemDescOfMachine this_machine_mem_desc;
 #ifdef WITH_CUDA
-  const JobDesc* job_desc = JobDesc::Singleton();
+  const JobDesc* job_desc = Global<JobDesc>::Get();
   FOR_RANGE(int, i, 0, job_desc->GpuDeviceNum()) {
     this_machine_mem_desc.add_zone_size(GetAvailableGpuMemSize(i));
   }
 #endif
   this_machine_mem_desc.add_zone_size(GetAvailableCpuMemSize());
-  CtrlClient::Singleton()->PushKV(
-      GetAmdCtrlKey(MachineCtx::Singleton()->this_machine_id()),
-      this_machine_mem_desc);
+  Global<CtrlClient>::Get()->PushKV(GetAmdCtrlKey(Global<MachineCtx>::Get()->this_machine_id()),
+                                    this_machine_mem_desc);
 }
 
 AvailableMemDesc PullAvailableMemDesc() {
   AvailableMemDesc ret;
   AvailableMemDescOfMachine machine_amd_i;
-  FOR_RANGE(int64_t, i, 0, JobDesc::Singleton()->TotalMachineNum()) {
-    CtrlClient::Singleton()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
+  FOR_RANGE(int64_t, i, 0, Global<JobDesc>::Get()->TotalMachineNum()) {
+    Global<CtrlClient>::Get()->PullKV(GetAmdCtrlKey(i), ret.add_machine_amd());
   }
   return ret;
+}
+
+void FixCpuDeviceNum() {
+  int32_t cpu_device_num = Global<JobDesc>::Get()->CpuDeviceNum();
+  if (cpu_device_num > 0) { return; }
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    cpu_device_num = std::thread::hardware_concurrency();
+    Global<CtrlClient>::Get()->PushKVT("cpu_device_num", cpu_device_num);
+  } else {
+    Global<CtrlClient>::Get()->PullKVT("cpu_device_num", &cpu_device_num);
+  }
+  OF_BARRIER();
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    Global<CtrlClient>::Get()->ClearKV("cpu_device_num");
+  }
+  CHECK_GT(cpu_device_num, 0);
+  Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
 }  // namespace
@@ -49,92 +83,84 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  OF_SINGLETON(Oneflow);
+  Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name);
 
  private:
-  Oneflow(const JobDescProto& job_desc, const std::string& this_mchn_name);
-
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const JobDescProto& job_desc,
-                 const std::string& this_mchn_name) {
-  // New All Singleton
-  JobDesc::NewSingleton(job_desc);
-  IDMgr::NewSingleton();
-  MachineCtx::NewSingleton(this_mchn_name);
-  const MachineCtx* machine_ctx = MachineCtx::Singleton();
+Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
+  // New All Global
+  Global<JobDesc>::New(job_conf_filepath);
+  Global<MachineCtx>::New(this_mchn_name);
+  const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
-  CtrlClient::NewSingleton();
+  Global<CtrlClient>::New();
+  FixCpuDeviceNum();
+  Global<IDMgr>::New();
   // Compile
+  Plan naive_plan;
   Plan plan;
   if (machine_ctx->IsThisMachineMaster()) {
-    Compiler::NewSingleton();
-    plan = Compiler::Singleton()->Compile();
-    CtrlClient::Singleton()->PushKV("naive_plan", plan);
-    Compiler::DeleteSingleton();
+    Compiler compiler;
+    naive_plan = compiler.Compile();
+    plan = Improver().ImproveMemSharedIdOnly(naive_plan);
+    Global<CtrlClient>::Get()->PushKV("mem_shared_plan", plan);
   } else {
-    CtrlClient::Singleton()->PullKV("naive_plan", &plan);
+    Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "naive_plan"));
+  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
+  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
   // Experiment Runtime
-  Runtime::NewSingleton(plan, true);
-  Runtime::DeleteSingleton();
+  { Runtime experiment_run(plan, true); }
   PushAvailableMemDescOfThisMachine();
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
-    Improver::NewSingleton(PullAvailableMemDesc());
-    plan = Improver::Singleton()->Improve(
-        plan, JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
-    Improver::DeleteSingleton();
-    CtrlClient::Singleton()->PushKV("improved_plan", plan);
+    const AvailableMemDesc& amd = PullAvailableMemDesc();
+    PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+    plan = Improver().Improve(amd, naive_plan,
+                              JoinPath(LogDir(), ActEventLogger::experiment_prefix_
+                                                     + ActEventLogger::act_event_bin_filename_));
+    Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
   } else {
-    CtrlClient::Singleton()->PullKV("improved_plan", &plan);
+    Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
   }
   OF_BARRIER();
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
-  CtrlClient::Singleton()->Clear();
+  Global<CtrlClient>::Get()->Clear();
   OF_BARRIER();
   // Runtime
-  Runtime::NewSingleton(plan, false);
-  Runtime::DeleteSingleton();
-  // Delete All Singleton
-  CtrlClient::DeleteSingleton();
+  { Runtime run(plan, false); }
+  if (machine_ctx->IsThisMachineMaster()) {
+    if (Global<JobDesc>::Get()->collect_act_event()) {
+      Global<Profiler>::Get()->Profile(plan,
+                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
+    }
+  }
+  // Delete All Global
+  Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  MachineCtx::DeleteSingleton();
-  IDMgr::DeleteSingleton();
-  JobDesc::DeleteSingleton();
+  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
+  Global<MachineCtx>::Delete();
+  Global<IDMgr>::Delete();
+  Global<JobDesc>::Delete();
 }
 
 }  // namespace oneflow
 
-DEFINE_string(job_conf_filepath, "", "");
-DEFINE_string(job_desc_filepath, "", "");
+DEFINE_string(job_conf, "", "");
 DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
   google::InitGoogleLogging(argv[0]);
+  gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
-  LocalFS()->CreateDirIfNotExist(LogDir());
+  LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
-  JobDescProto job_desc;
-  if (FLAGS_job_desc_filepath != "") {
-    ParseProtoFromTextFile(FLAGS_job_desc_filepath, &job_desc);
-  } else if (FLAGS_job_conf_filepath != "") {
-    JobConf* jc = job_desc.mutable_job_conf();
-    ParseProtoFromTextFile(FLAGS_job_conf_filepath, jc);
-    ParseProtoFromTextFile(jc->dlnet_filepath(), job_desc.mutable_dlnet_conf());
-    ParseProtoFromTextFile(jc->resource_filepath(),
-                           job_desc.mutable_resource());
-    ParseProtoFromTextFile(jc->placement_filepath(),
-                           job_desc.mutable_placement());
-  } else {
-    LOG(FATAL) << "Please Set job_conf_filepath or job_desc_filepath";
-  }
-  Oneflow::NewSingleton(job_desc, FLAGS_this_machine_name);
-  Oneflow::DeleteSingleton();
+  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_name); }
   CloseStdoutAndStderr();
   return 0;
 }

@@ -11,13 +11,15 @@ class RecordLoadCompTaskNode final : public CompTaskNode {
   RecordLoadCompTaskNode() = default;
   ~RecordLoadCompTaskNode() = default;
 
-  void ProduceAllRegstsAndBindEdges() override {}
+  void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override {}
-  void BuildExecGphAndRegst() override {}
+  void BuildExecGphAndRegst() override;
+  bool IsMeaningLess() override { return false; }
+  void EraseEmptyProducedRegst() override {}
+  void FixRegisterNumRange() override {}
 
   TaskType GetTaskType() const override { return TaskType::kRecordLoad; }
-
- private:
+  bool IsPersistence() const override { return true; }
 };
 
 }  // namespace oneflow

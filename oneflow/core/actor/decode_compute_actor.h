@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_ACTOR_DECODE_COMPUTE_ACTOR_H_
 
 #include "oneflow/core/actor/compute_actor.h"
+#include "oneflow/core/kernel/decode_ofrecord_kernel.h"
 
 namespace oneflow {
 
@@ -13,14 +14,13 @@ class DecodeCompActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
+  void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) override;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {true, {}};
+  }
 
-  int HandlerWaitToStart(const ActorMsg&);
-  int HandlerNormal(const ActorMsg&) override;
-
-  void Act() override;
-  bool IsReadReady() override;
-  bool IsReadAlwaysUnReadyFromNow() override { return !IsReadReady(); }
-  void AsyncReturnAllReadableRegst() override {}
+  int32_t piece_id_;
+  DecodeStatus decode_status_;
 };
 
 }  // namespace oneflow

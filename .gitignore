@@ -1,5 +1,6 @@
 /build
 /third_party/
-/examples/*/*/oneflow
-*plan*
+/examples/**/oneflow
+/benchmark/**/oneflow
+*plan
 core.*

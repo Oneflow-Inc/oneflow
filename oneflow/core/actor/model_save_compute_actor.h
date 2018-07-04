@@ -13,7 +13,8 @@ class MdSaveCompActor final : public SinkCompActor {
 
  private:
   void VirtualSinkCompActorInit(const TaskProto&) override;
-  KernelCtx GenSinkKernelCtx() override;
+  void* NewOther() override;
+  void DeleteOther(void*) override;
 
   int64_t next_snapshot_id_;
 };

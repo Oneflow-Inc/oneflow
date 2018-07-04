@@ -2,9 +2,8 @@
 
 namespace oneflow {
 
-PoolingKernelConf* MaxPoolingOp::GetMutPoolingKernelConf(
-    KernelConf* kernel_conf) const {
-  return kernel_conf->mutable_max_pooling_conf()->mutable_pooling_conf();
+PbMessage* MaxPoolingOp::MutableCustomizedKernelConf(KernelConf* kernel_conf) const {
+  return kernel_conf->mutable_max_pooling_conf();
 }
 
 }  // namespace oneflow

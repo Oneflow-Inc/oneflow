@@ -5,8 +5,8 @@ namespace oneflow {
 template<typename T>
 std::shared_ptr<Operator> GetTestPoolingOp() {
   JobConf job_conf;
-  job_conf.set_DefaultDataType(GetDataType<T>::val);
-  JobDesc::Singleton()->InitFromJobConf(job_conf);
+  job_conf.set_DefaultDataType(GetDataType<T>::value);
+  Global<JobDesc>::Get()->InitFromJobConf(job_conf);
   OperatorConf op_conf;
   op_conf.set_name("pooling_test");
   op_conf.mutable_pooling_conf()->set_in("pooling_in");
@@ -25,26 +25,23 @@ template<typename T>
 void TestPoolingOp(ParallelPolicy policy, bool has_data_id_field) {
   auto pooling_op = GetTestPoolingOp<T>();
   HashMap<std::string, BlobDesc*> bn2blob_desc_map{
-      {"in", new BlobDesc(Shape({100, 64, 11, 11}), GetDataType<T>::val,
-                          has_data_id_field)},
+      {"in", new BlobDesc(Shape({100, 64, 11, 11}), GetDataType<T>::value, has_data_id_field)},
       {"out", new BlobDesc},
       {"idx", new BlobDesc}};
   auto Bn2BlobDescFunc = [&bn2blob_desc_map](const std::string& bn) {
     return bn2blob_desc_map.at(bn);
   };
   pooling_op->InferBlobDescs(Bn2BlobDescFunc, policy, 0, 1);
-  ASSERT_EQ(
-      *Bn2BlobDescFunc("out"),
-      BlobDesc(Shape({100, 64, 6, 6}), GetDataType<T>::val, has_data_id_field));
-  ASSERT_EQ(*Bn2BlobDescFunc("idx"),
-            BlobDesc(Shape({100, 64, 6, 6}), DataType::kUInt32, false));
+  ASSERT_EQ(*Bn2BlobDescFunc("out"),
+            BlobDesc(Shape({100, 64, 6, 6}), GetDataType<T>::value, has_data_id_field));
+  ASSERT_EQ(*Bn2BlobDescFunc("idx"), BlobDesc(Shape({100, 64, 6, 6}), DataType::kUInt32, false));
 }
 
 TEST(PoolingOp, pooling) {
 #define MAKE_ENTRY(data_type, policy, has_data_id_field) \
   TestPoolingOp<OF_PP_PAIR_FIRST(data_type)>(policy, has_data_id_field);
-  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ,
-                                   PARALLEL_POLICY_SEQ, BOOL_SEQ)
+  OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, PARALLEL_POLICY_SEQ,
+                                   BOOL_SEQ)
 }
 
 }  // namespace oneflow

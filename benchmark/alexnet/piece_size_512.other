@@ -1,0 +1,32 @@
+use_rdma: true
+globalfs_conf {
+  localfs_conf {
+  }
+}
+data_part_num: 32
+piece_size: 512
+train_conf {
+  model_save_snapshots_path: "/tmp/snapshot"
+  num_of_batches_in_snapshot: 3000
+  total_batch_num: 30000
+  default_initializer_conf {
+    random_normal_conf {
+      mean: 0.0
+      std: 0.01
+    }
+  }
+  batch_size: 1024
+  l2: 0.0005
+  model_update_conf {
+    learning_rate: 0.01
+    naive_conf {
+    }
+    learning_rate_decay {
+      exponential_conf {
+        decay_rate: 0.1
+        decay_batches: 10000
+        staircase: true
+      }
+    }
+  }
+}

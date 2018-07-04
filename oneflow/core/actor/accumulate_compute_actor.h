@@ -15,18 +15,12 @@ class AccumulateCompActor : public CompActor {
   void Init(const TaskProto&, int32_t max_acc_cnt, ColIdOrder order);
 
  private:
-  int HandlerNormal(const ActorMsg&) override;
-
-  bool IsReadReady() override { return !pending_in_regst_.empty(); }
-  bool IsReadAlwaysUnReadyFromNow() override;
-  void AsyncReturnAllReadableRegst() override;
   void Act() override;
+  std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
+    return {true, {}};
+  }
 
-  void ForEachCurReadableRegst(std::function<void(const Regst*)>) override;
-
-  bool is_in_eord_;
   ColIdOrder order_;
-  std::queue<Regst*> pending_in_regst_;
   std::function<void(DeviceCtx*, void* dst, const void* src, size_t)> cpy_func_;
   int32_t acc_cnt_;
   int32_t max_acc_cnt_;

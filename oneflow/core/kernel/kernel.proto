@@ -2,20 +2,29 @@ syntax = "proto2";
 package oneflow;
 
 import "oneflow/core/common/shape.proto";
-import "oneflow/core/operator/op_conf.proto";
 import "oneflow/core/common/data_type.proto";
-import "oneflow/core/job/resource.proto";
+import "oneflow/core/operator/op_conf.proto";
+import "oneflow/core/register/blob_desc.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
   required ShapeProto weight = 3;
-  repeated int32 pad_small_side = 4;
-  repeated int32 pad_large_side = 5;
-  optional int32 cudnn_fwd_algo = 6 [default = -1];
-  optional int32 cudnn_bwd_filter_algo = 7 [default = -1];
-  optional int32 cudnn_bwd_data_algo = 8 [default = -1];
+  required int32 dim = 4;
+  repeated int32 pad_small_side = 5;
+  repeated int32 pad_large_side = 6;
+  repeated int32 dilation_rate = 7;
+  repeated int32 strides = 8;
+  optional int32 cudnn_fwd_algo = 9 [default = -1];
+  optional int32 cudnn_bwd_filter_algo = 10 [default = -1];
+  optional int32 cudnn_bwd_data_algo = 11 [default = -1];
 }
+
+message DropoutKernelConf {
+  required ShapeProto in = 1;
+  required ShapeProto random_mask = 2;
+  required ShapeProto out = 3;
+};
 
 message LossKernelConf { 
   required DataType prediction_type = 1;
@@ -35,11 +44,12 @@ message SparseCrossEntropyLossKernelConf {
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
-  repeated int32 padding_before = 3;
-  repeated int32 padding_after = 4;
-  repeated int32 pool_size = 5;
-  repeated int32 strides = 6;
-  required string data_format = 7;
+  required int32 dim = 3;
+  repeated int32 padding_before = 4;
+  repeated int32 padding_after = 5;
+  repeated int32 pool_size = 6;
+  repeated int32 strides = 7;
+  required string data_format = 8;
 }
 
 message AveragePoolingKernelConf {
@@ -62,38 +72,74 @@ message SoftmaxKernelConf {
   repeated int32 perm = 5;
 }
 
+message TransposeKernelConf {
+  repeated int32 perm = 1;
+  repeated int32 invert_perm = 2; 
+}
+
 message LocalResponseNormalizationKernelConf {
   required ShapeProto batch = 1;
 }
 
-message KernelConf {
+message NormalizationKernelConf {
+  optional int32 axis = 1;
+  optional int64 transpose_rows = 2;
+  optional int64 transpose_cols = 3;
+  optional bool need_transpose = 4;
+  repeated int32 perm = 5;
+
+  required bool use_cudnn = 6;
+  optional ShapeProto in = 7;
+  optional int32 cudnn_bn_mode = 8;
+}
+
+message DecodeRandomKernelConf {
+  required uint32 random_seed = 1;
+}
+
+message DecodeOFRecordKernelConf {
+  required uint32 random_seed = 1;
+}
+
+message OpAttribute {
   required OperatorConf op_conf = 1;
-  map<string, string> bn_in_op2lbn = 2;
+  map<string, LogicalBlobId> bn_in_op2lbi = 2;
   
-  repeated string data_tmp_bns = 3;
-  repeated string input_bns = 4;
-  repeated string input_diff_bns = 5;
-  repeated string output_bns = 6;
-  repeated string output_diff_bns = 7;
+  repeated string input_bns = 3;
+  repeated string input_diff_bns = 4;
+  repeated string output_bns = 5;
+  repeated string output_diff_bns = 6;
+  repeated string data_tmp_bns = 7;
 
   repeated string model_bns = 8;
   repeated string model_diff_bns = 9;
-  repeated string model_tmp_bns = 10;
+  repeated string const_model_bns = 10;
+  
+  repeated string forward_model_bns = 11;
+  repeated string const_buf_bns = 12;
+}
 
-  required bool need_do_data_id = 12;
-  required bool need_do_col_num = 13;
-  required bool is_forward = 14;
-  required DataType data_type = 15;
-  required DeviceType device_type = 16;
+message KernelConf {
+  required OpAttribute op_attribute = 1; 
+  required bool need_do_data_id = 2;
+  required bool need_do_col_num = 3;
+  required bool is_forward = 4;
+  required DataType data_type = 5;
+  optional BlobDescProto activation_blob_desc = 6;
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
     SparseCrossEntropyLossKernelConf sparse_cross_entropy_loss_conf = 102;
+    DecodeRandomKernelConf decode_random_conf = 103;
+    DecodeOFRecordKernelConf decode_ofrecord_conf = 104;
     SoftmaxKernelConf softmax_conf = 116;
+    TransposeKernelConf transpose_conf = 117;
     ReduceSumKernelConf reduce_sum_conf = 120;
     ConvKernelConf conv_conf = 127;
+    DropoutKernelConf dropout_conf = 140;
     AveragePoolingKernelConf average_pooling_conf = 204;
     MaxPoolingKernelConf max_pooling_conf = 205;
+    NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
   }
 }

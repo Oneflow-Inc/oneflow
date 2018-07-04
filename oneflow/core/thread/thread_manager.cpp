@@ -16,24 +16,29 @@ ThreadMgr::~ThreadMgr() {
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) { return threads_.at(thrd_id); }
 
-ThreadMgr::ThreadMgr() {
-  const JobDesc* job_desc = JobDesc::Singleton();
+ThreadMgr::ThreadMgr(const Plan& plan) {
+  const JobDesc* job_desc = Global<JobDesc>::Get();
   int64_t thrd_id = 0;
 
-#define ADD_CPU_THREAD(n) \
-  FOR_RANGE(int64_t, i, 0, n) { threads_.push_back(new CpuThread(thrd_id++)); }
+  const OneMachineBufInfo& info = plan.buf_info().Get(Global<MachineCtx>::Get()->this_machine_id());
 
-  ADD_CPU_THREAD(job_desc->CpuDeviceNum());
-// gpu device
 #ifdef WITH_CUDA
-  FOR_RANGE(int64_t, i, 0, job_desc->GpuDeviceNum()) {
-    threads_.push_back(new GpuThread(thrd_id++, i));
+  FOR_RANGE(int64_t, i, 0, 4) {
+    FOR_RANGE(int64_t, dev_phy_id, 0, job_desc->GpuDeviceNum()) {
+      threads_.push_back(new GpuThread(thrd_id, dev_phy_id, info.buf_size(thrd_id)));
+      thrd_id += 1;
+    }
   }
 #endif
-  ADD_CPU_THREAD(job_desc->DecodeWorkerNum());
-  ADD_CPU_THREAD(job_desc->BoxingWorkerNum());
-  ADD_CPU_THREAD(1);  // CommNet Actor Thread
-  ADD_CPU_THREAD(job_desc->PersistenceWorkerNum());
+  FOR_RANGE(int64_t, i, 0, job_desc->CpuDeviceNum()) {
+    threads_.push_back(new CpuThread(thrd_id, info.buf_size(thrd_id)));
+    thrd_id += 1;
+  }
+  FOR_RANGE(int64_t, i, 0, job_desc->PersistenceWorkerNum()) {
+    threads_.push_back(new CpuThread(thrd_id++, 0));
+  }
+  threads_.push_back(new CpuThread(thrd_id++, 0));  // comm_net
+  compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
 
 }  // namespace oneflow

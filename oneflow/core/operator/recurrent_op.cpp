@@ -6,13 +6,13 @@ namespace oneflow {
 void RecurrentOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollInputBn("rec_in");
-  if (!GetStringFromCustomizedConf("init_hidden").empty()) {
-    CHECK(!GetBoolFromCustomizedConf("has_init_hidden_initializer"));
+  if (!GetValFromCustomizedConf<std::string>("init_hidden").empty()) {
+    CHECK(!GetValFromCustomizedConf<bool>("has_init_hidden_initializer"));
     EnrollInputBn("h0");
-  } else if (GetBoolFromCustomizedConf("is_init_hidden_trainable")) {
+  } else if (GetValFromCustomizedConf<bool>("is_init_hidden_trainable")) {
     EnrollModelBn("h0");
   } else {
-    EnrollModelTmpBn("h0");
+    EnrollConstBufBn("h0");
   }
   EnrollOutputBn("out");
   EnrollOutputBn("rec_out");
@@ -20,26 +20,24 @@ void RecurrentOp::InitFromOpConf() {
 }
 
 int32_t RecurrentOp::MaxModelSplitNum() const {
-  return GetInt32FromCustomizedConf("hidden_size");
+  return GetValFromCustomizedConf<int32_t>("hidden_size");
 }
 
-void RecurrentOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
+void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                 const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  DataType data_type = JobDesc::Singleton()->DefaultDataType();
+  DataType data_type = Global<JobDesc>::Get()->DefaultDataType();
   CHECK_EQ(in_blob_desc->data_type(), data_type);
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(in_blob_desc->has_col_num_field(), true);
   int64_t data_num = in_blob_desc->shape().At(0);
-  int32_t hidden_size = GetInt32FromCustomizedConf("hidden_size");
+  int32_t hidden_size = GetValFromCustomizedConf<int32_t>("hidden_size");
   Shape h0_shape = Shape({data_num, hidden_size});
-  if (!GetStringFromCustomizedConf("init_hidden").empty()) {
+  if (!GetValFromCustomizedConf<std::string>("init_hidden").empty()) {
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
     CHECK_EQ(h0_blob_desc->data_type(), data_type);
     CHECK_EQ(h0_blob_desc->shape(), h0_shape);
-    CHECK_EQ(h0_blob_desc->has_data_id_field(),
-             in_blob_desc->has_data_id_field());
+    CHECK_EQ(h0_blob_desc->has_data_id_field(), in_blob_desc->has_data_id_field());
     CHECK_EQ(h0_blob_desc->max_col_num(), 1);
   } else {
     *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
@@ -55,35 +53,34 @@ void RecurrentOp::InferBlobDescs(
   // recurrent_out
   BlobDesc* rec_out_blob_desc = GetBlobDesc4BnInOp("rec_out");
   *rec_out_blob_desc = *out_blob_desc;
-  if (parallel_ctx->policy() == kDataParallel) {
-    rec_out_blob_desc->set_max_col_num(1);
-  }
+  if (parallel_ctx->policy() == kDataParallel) { rec_out_blob_desc->set_max_col_num(1); }
 
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-std::string RecurrentOp::ibn2lbn(const std::string& input_bn) const {
+LogicalBlobId RecurrentOp::ibn2lbi(const std::string& input_bn) const {
   if (input_bn == "rec_in") {
-    return obn2lbn("rec_out");
+    return obn2lbi("rec_out");
   } else if (input_bn == "h0") {
-    return GetStringFromCustomizedConf("init_hidden");
+    return GenLogicalBlobId(GetValFromCustomizedConf<std::string>("init_hidden"));
   } else if (input_bn == "in") {
-    return GetStringFromCustomizedConf("in");
+    return GenLogicalBlobId(GetValFromCustomizedConf<std::string>("in"));
   } else {
     UNIMPLEMENTED();
-    return "";
   }
 }
 
-std::string RecurrentOp::obn2lbn(const std::string& output_bn) const {
+LogicalBlobId RecurrentOp::obn2lbi(const std::string& output_bn) const {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name());
   if (output_bn == "out") {
-    return op_name() + "/" + GetStringFromCustomizedConf("out");
+    ret.set_blob_name(GetValFromCustomizedConf<std::string>("out"));
   } else if (output_bn == "rec_out") {
-    return op_name() + "/rec_" + GetStringFromCustomizedConf("out");
+    ret.set_blob_name("/rec_" + GetValFromCustomizedConf<std::string>("out"));
   } else {
     UNIMPLEMENTED();
-    return "";
   }
+  return ret;
 }
 
 }  // namespace oneflow

@@ -1,7 +1,7 @@
 #ifndef ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 #define ONEFLOW_CORE_GRAPH_COPY_TASK_NODE_H_
 
-#include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 
@@ -29,11 +29,21 @@ class CopyHdTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
-  void Init(const CompTaskNode*, CopyHdOpConf::Type);
+  void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
+  int64_t MemZoneId121() const override {
+    if (copy_type_ == CopyHdOpConf::H2D) {
+      return TaskNode::MemZoneId121();
+    } else if (copy_type_ == CopyHdOpConf::D2H) {
+      return Global<IDMgr>::Get()->CpuMemZoneId();
+    } else {
+      UNIMPLEMENTED();
+    }
+  }
 
  private:
+  void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
 
   CopyHdOpConf::Type copy_type_;
@@ -47,10 +57,14 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   TaskType GetTaskType() const override { return TaskType::kCopyCommNet; }
 
-  void Init(int64_t machine_id);
+  void Init(int64_t machine_id, int64_t src_machine_id);
+  int64_t AllocateLocalWorkStreamId() override;
 
  private:
+  void InitProducedRegstMemCase(MemoryCase*) override;
+  void PinConsumedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
+  int64_t peer_machine_id_;
 };
 
 }  // namespace oneflow

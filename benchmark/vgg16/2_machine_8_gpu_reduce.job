@@ -1,0 +1,4 @@
+net: "./train.net"
+resource: "./2_machine_8_gpu.resource"
+placement: "./2_machine_8_gpu_reduce.placement"
+other: "./hdfs_piece_size_8.other"

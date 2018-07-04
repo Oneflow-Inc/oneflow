@@ -19,6 +19,7 @@ enum class ColIdOrder { kUnCertain = 0, kAscending, kDescending };
 
 bool IsFirstRegstInPieceWithOrder(const Regst*, ColIdOrder);
 bool IsLastRegstInPieceWithOrder(const Regst*, ColIdOrder);
+bool NeedModelSave(int64_t model_version_id);
 
 class Actor {
  public:
@@ -31,13 +32,11 @@ class Actor {
   // 0: success, and actor not finish
   int ProcessMsg(const ActorMsg& msg) { return (this->*msg_handler_)(msg); }
 
-  int64_t machine_id() const;
-  int64_t thrd_id() const;
+  int64_t machine_id() const { return Global<IDMgr>::Get()->MachineId4ActorId(actor_id_); }
+  int64_t thrd_id() const { return Global<IDMgr>::Get()->ThrdId4ActorId(actor_id_); }
   int64_t actor_id() const { return actor_id_; }
 
  protected:
-  friend class NaiveReadableRegstMgr;
-
   struct ExecKernel {
     std::unique_ptr<const Kernel> kernel;
     HashMap<std::string, int64_t> bn_in_op2regst_desc_id;
@@ -46,19 +45,19 @@ class Actor {
 
   // Util
   Actor() = default;
-  int64_t GetReservedWorkStreamId(int64_t reserved_id);
-  int64_t NewWorkStreamId();
-  int64_t GetWorkStreamId() const { return device_ctx_->work_stream_id(); }
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
-  int64_t RegstDescId4Name(const std::string& name) const;
+  int64_t Name2SoleRegstDescId(const std::string& name) const;
+  const std::vector<int64_t>& Name2RegstDescId(const std::string& name) const;
   virtual void InitDeviceCtx(const ThreadCtx&);
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void ForEachCurReadableRegst(std::function<void(const Regst*)>) {}
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
+  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
+  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
+  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>) const;
+  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>) const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -68,23 +67,27 @@ class Actor {
     set_msg_handler(static_cast<MsgHandler>(val));                \
   } while (0)
 
-  // Common Handlers
-  virtual int HandlerNormal(const ActorMsg& msg) = 0;
+  // Common Handlers and related virtual method
+  int HandlerNormal(const ActorMsg& msg);
   int HandlerZombie(const ActorMsg& msg);
+
+  virtual void NormalProcessCustomizedEordMsg(const ActorMsg&) {}
+  virtual void NormalProcessNaiveReadableRegstMsg(const std::deque<Regst*>&) {}
+  virtual void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) { UNIMPLEMENTED(); }
+  virtual bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) { return false; }
 
   // Act
   void ActUntilFail();
-  virtual void Act() = 0;
-  virtual bool IsReadReady() = 0;
-  virtual bool IsReadAlwaysUnReadyFromNow() = 0;
-  virtual bool IsWriteReady();
-  virtual void AsyncReturnAllReadableRegst() = 0;
-  void DecreaseRemainingEordCnt();
-  int TrySwitchToZombieOrFinish();
+  virtual void Act(std::function<bool(Regst*)>* IsNaiveAllowedReturnToProducer) { Act(); }
+  virtual void Act() { UNIMPLEMENTED(); }
+  virtual bool IsCustomizedReadReady() { return true; }
+  virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
+  bool IsWriteReady();
+  virtual void AsyncReturnAllCustomizedReadableRegst() {}
 
   // Async Do on device_ctx_
-  void AsyncLaunchKernel(const KernelCtx&,
-                         std::function<Regst*(int64_t)> Regst4RegstDescId);
+  void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
+  void AsyncLaunchKernel(const KernelCtx&);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess,
                                    std::function<bool(int64_t)> IsAllowedActor);
   void AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProcess);
@@ -94,49 +97,82 @@ class Actor {
   void AsyncSendEORDMsgForAllProducedRegstDesc();
   void AsyncSendRegstMsgToProducer(Regst*);
   void AsyncSendRegstMsgToProducer(Regst*, int64_t producer);
-  void AsyncDo(std::function<void()>);
+  void AsyncDo(std::function<void()> func) { device_ctx_->AddCallBack(func); }
 
   // Status of Produced Registers
-  int TryUpdtStateAsProducedRegst(Regst* regst);
   Regst* GetCurWriteableRegst(int64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   Regst* GetCurSoleWriteableRegst();
-  int64_t total_reading_cnt() const { return total_reading_cnt_; }
+
+  // Status Of Naive Consumed Registers
+  virtual std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName();
+  Regst* GetNaiveCurReadable(int64_t regst_desc_id);
+  Regst* GetNaiveNextReadable(int64_t regst_desc_id);
+  Regst* GetNaiveSoleCurReadable();
+  Regst* GetNaiveFirstCurReadable();
+  Regst* GetSoleProducedRegst(int64_t regst_desc_id);
+
+  void DecreaseActualWriteableProducedDataRegstDescNum(int64_t amount) {
+    actual_writeable_produced_data_regst_desc_num_ -= amount;
+  }
 
  private:
+  bool IsReadReady();
+  bool IsCtrlReady();
+  int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
+  int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
+  void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
+  void AsyncSendCtrlRegstMsg();
+  int TryUpdtStateAsProducedRegst(Regst* regst);
+  void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
+  void AddNaiveConsumed(const RegstDescIdSet&);
+  void AsyncSendMsg(const ActorMsg&);
+  int64_t GetGlobalWorkStreamId() const;
+  int64_t GetLocalWorkStreamId() const;
+  virtual bool NeedCollectActEvent() const {
+    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
+  }
+  void TryLogActEvent(const std::function<void()>& Callback) const;
+
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
-  HashMap<std::string, int64_t> name2regst_desc_id_;
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
+  HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
-#ifdef WITH_CUDA
-  CudaStreamHandle cuda_handle_;
-#endif
+  HashSet<int64_t> eord_regst_desc_ids_;
+  std::unique_ptr<CudaStreamHandle> cuda_handle_;
+  int64_t remaining_eord_cnt_;
 
   // Status of Produced Registers
-  HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;
-  HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
-  int64_t writeable_produced_regst_desc_num_;
-  int64_t total_reading_cnt_;
-  int64_t remaining_eord_cnt_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
+  HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
+  int64_t actual_writeable_produced_data_regst_desc_num_;
+  int64_t writeable_produced_data_regst_desc_cnt_;
+  int64_t total_reading_data_cnt_;
+
+  // Status of Naive Consumed Registers
+  HashMap<int64_t, std::deque<Regst*>> naive_readable_data_regst_;
+  size_t naive_readable_data_regst_cnt_;
+  bool is_naive_readable_data_eord_;
+
+  // Status of Control Registers
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
+  int64_t total_reading_ctrl_cnt_;
+  int64_t readable_ctrl_regst_desc_cnt_;
+  int64_t writeable_ctrl_regst_desc_cnt_;
+  bool is_consumed_ctrl_eord_;
 };
 
-void AddActorCreator(TaskType task_type, std::function<Actor*()> creator);
+class ScopedActEventRecorder;
+
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 
-template<TaskType task_type, typename T>
-struct ActorRegistry {
-  ActorRegistry() {
-    AddActorCreator(task_type, []() { return new T; });
-  }
-};
-
-#define REGISTER_ACTOR(TaskType, ActorType)            \
-  static ActorRegistry<TaskType, ActorType> OF_PP_CAT( \
-      g_actor_##ActorType##registry_var, __LINE__)
+#define REGISTER_ACTOR(task_type, ActorType) REGISTER_CLASS(task_type, Actor, ActorType)
 
 }  // namespace oneflow
 

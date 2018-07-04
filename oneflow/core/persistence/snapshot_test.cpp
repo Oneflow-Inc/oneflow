@@ -12,12 +12,11 @@ TEST(Snapshot, write_and_read) {
   gfs_conf->set_allocated_localfs_conf(new LocalFsConf);
   auto resource = jb_desc_proto.mutable_resource();
   resource->add_machine();
-  JobDesc::Singleton()->InitFromProto(jb_desc_proto);
+  Global<JobDesc>::Get()->InitFromProto(jb_desc_proto);
 
   std::string current_dir = GetCwd();
   StringReplace(&current_dir, '\\', '/');
-  std::string snapshot_root_path =
-      JoinPath(current_dir, "/tmp_snapshot_test_asdfasdf");
+  std::string snapshot_root_path = JoinPath(current_dir, "/tmp_snapshot_test_asdfasdf");
   if (GlobalFS()->IsDirectory(snapshot_root_path)) {
     ASSERT_TRUE(GlobalFS()->ListDir(snapshot_root_path).empty());
   } else {
@@ -41,8 +40,8 @@ TEST(Snapshot, write_and_read) {
   }
   // read
   {
-    auto read_stream_ptr = of_make_unique<NormalPersistentInStream>(
-        GlobalFS(), JoinPath(snapshot_root_path, key));
+    auto read_stream_ptr =
+        std::make_unique<NormalPersistentInStream>(GlobalFS(), JoinPath(snapshot_root_path, key));
     std::string content;
     read_stream_ptr->ReadLine(&content);
     ASSERT_EQ(content, "ab");

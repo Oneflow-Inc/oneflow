@@ -4,9 +4,6 @@
 
 namespace oneflow {
 
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorCmd);
-OF_DEFINE_ENUM_TO_OSTREAM_FUNC(ActorMsgType);
-
 ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
                                            Regst* regst_raw_ptr) {
   ActorMsg msg;
@@ -14,14 +11,13 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
   msg.dst_actor_id_ = consumer;
   msg.msg_type_ = ActorMsgType::kRegstMsg;
   msg.regst_wrapper_.regst = regst_raw_ptr;
-  if (IDMgr::Singleton()->MachineId4ActorId(consumer)
-      == MachineCtx::Singleton()->this_machine_id()) {
+  if (Global<IDMgr>::Get()->MachineId4ActorId(consumer)
+      == Global<MachineCtx>::Get()->this_machine_id()) {
     msg.regst_wrapper_.comm_net_token = nullptr;
   } else {
-    msg.regst_wrapper_.comm_net_token =
-        regst_raw_ptr->packed_blob()->comm_net_token();
-    msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
+    msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
   }
+  msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
   return msg;
 }
 
@@ -55,7 +51,7 @@ ActorMsg ActorMsg::BuildCommandMsg(int64_t dst_actor_id, ActorCmd cmd) {
 }
 
 int64_t ActorMsg::SrcMachineId() const {
-  return IDMgr::Singleton()->MachineId4ActorId(src_actor_id_);
+  return Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_);
 }
 
 ActorCmd ActorMsg::actor_cmd() const {
@@ -68,6 +64,16 @@ Regst* ActorMsg::regst() const {
   return regst_wrapper_.regst;
 }
 
+int64_t ActorMsg::regst_desc_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_)
+      == Global<MachineCtx>::Get()->this_machine_id()) {
+    return regst_wrapper_.regst->regst_desc_id();
+  } else {
+    return regst_wrapper_.regst_status.regst_desc_id;
+  }
+}
+
 int64_t ActorMsg::piece_id() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.regst_status.piece_id;
@@ -78,7 +84,7 @@ int64_t ActorMsg::act_id() const {
   return regst_wrapper_.regst_status.act_id;
 }
 
-const void* ActorMsg::comm_net_token() const {
+void* ActorMsg::comm_net_token() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.comm_net_token;
 }

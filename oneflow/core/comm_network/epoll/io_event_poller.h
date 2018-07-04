@@ -13,8 +13,7 @@ class IOEventPoller final {
   IOEventPoller();
   ~IOEventPoller();
 
-  void AddFd(int fd, std::function<void()> read_handler,
-             std::function<void()> write_handler);
+  void AddFd(int fd, std::function<void()> read_handler, std::function<void()> write_handler);
   void AddFdWithOnlyReadHandler(int fd, std::function<void()> read_handler);
 
   void Start();
@@ -32,8 +31,7 @@ class IOEventPoller final {
     int fd;
   };
 
-  void AddFd(int fd, std::function<void()>* read_handler,
-             std::function<void()>* write_handler);
+  void AddFd(int fd, std::function<void()>* read_handler, std::function<void()>* write_handler);
 
   void EpollLoop();
   static const int max_event_num_;

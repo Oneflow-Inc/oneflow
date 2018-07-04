@@ -50,9 +50,7 @@ int Channel<T>::Send(const T& item) {
 template<typename T>
 int Channel<T>::Receive(T* item) {
   std::unique_lock<std::mutex> lock(mutex_);
-  cond_.wait(lock, [this]() {
-    return !val_.empty() || is_receive_closed_ || is_send_closed_;
-  });
+  cond_.wait(lock, [this]() { return !val_.empty() || is_receive_closed_ || is_send_closed_; });
   if (val_.empty() || is_receive_closed_) { return -1; }
   *item = val_.front();
   val_.pop();

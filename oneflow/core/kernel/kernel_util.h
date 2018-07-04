@@ -1,8 +1,7 @@
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_H_
 
-#include "oneflow/core/blas/cblas_template.h"
-#include "oneflow/core/blas/cublas_template.h"
+#include "oneflow/core/common/blas.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/device/cudnn_util.h"
@@ -12,10 +11,13 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/register/blob.h"
+#include "oneflow/core/common/switch_func.h"
 
 namespace oneflow {
 
-#ifdef WITH_CUDA
+template<cudaMemcpyKind cpy_kind>
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz);
+
 template<DeviceType device_type>
 struct GetCudaMemcpyKind;
 template<>
@@ -26,141 +28,248 @@ template<>
 struct GetCudaMemcpyKind<DeviceType::kGPU> {
   static const cudaMemcpyKind val = cudaMemcpyKind::cudaMemcpyDeviceToDevice;
 };
-#endif
+size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num);
 
 template<DeviceType device_type>
-void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz
-#ifdef WITH_CUDA
-            ,
-            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val
-#endif
-);
+void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
+            cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
+
+void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
 
-template<DeviceType device_type, typename T>
-struct KernelUtil final {
-  // dot product
-  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx,
-                  const T* y, const int incy, T* result);
+#if defined(__CUDACC__)
+#define OF_DEVICE_FUNC __device__
+#else
+#define OF_DEVICE_FUNC
+#endif
 
-  // copy x into y
-  static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx,
-                   T* y, const int incy);
+template<typename T>
+OF_DEVICE_FUNC T ReduceCoreAdd(const T x, const T y) {
+  return x + y;
+}
 
-  // y = a*x + y
-  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x,
-                   const int incx, T* y, const int incy);
+template<typename T>
+OF_DEVICE_FUNC T ReduceCoreMax(const T x, const T y) {
+  return x > y ? x : y;
+}
 
-  // x = a*x
-  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x,
-                   const int incx);
-  // max(x) only cpu
-  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr);
-
-  // max(x) temp_storage is for gpu
-  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr,
-                  T* temp_storage, size_t temp_storage_bytes);
-
-  // y = exp(x)
-  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // sum(x), only cpu
-  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
-
-  // sum(x) temp_storage is for gpu parallel
-  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr,
-                  T* temp_storage, size_t temp_storage_bytes);
-
-  // x = x / a
-  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
-
-  // z[i] = x[i] * y[i]
-  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y,
-                  T* z);
-
-  // y = sigmoid(x)
-  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // y = sigmoid(x)
-  // x' = y * (1 - y) * y'
-  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x,
-                              const T* y, const T* dy, T* dx);
-
-  // y = tanh(x)
-  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // y = tanh(x)
-  // x' = (1 - y^2) * y'
-  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x,
-                           const T* y, const T* dy, T* dx);
-
-  // y = relu(x)
-  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
-
-  // y = relu(x)
-  // x' = y * y'
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x,
-                           const T* y, const T* dy, T* dx);
-
-  // matrix vector multiply
-  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m,
-                   int n, const T alpha, const T* a, int lda, const T* x,
-                   const int incx, const T beta, T* y, const int incy);
-
-  // matrix matrix multiply
-  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order,
-                   const enum CBLAS_TRANSPOSE trans_a,
-                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                   const int k, const T alpha, const T* a, const int lda,
-                   const T* b, const int ldb, const T beta, T* c,
-                   const int ldc);
-
-  // Generate random number of specific distribution
-  static void Initialize(DeviceCtx* ctx,
-                         const InitializerConf& initializer_conf,
-                         uint32_t random_seed, Blob* blob);
-
-  // detect initialize conf
-  static void InitializeWithProperConf(DeviceCtx* ctx,
-                                       const InitializerConf* initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
-    if (initializer_conf == nullptr) {
-      initializer_conf = JobDesc::Singleton()->DefaultInitializerConf();
-    }
-    Initialize(ctx, *initializer_conf, random_seed, blob);
-  }
-  static void InitializeWithProperConf(DeviceCtx* ctx,
-                                       const PbMessage& initializer_conf,
-                                       uint32_t random_seed, Blob* blob) {
-    InitializeWithProperConf(
-        ctx, static_cast<const InitializerConf*>(&initializer_conf),
-        random_seed, blob);
-  }
-
-  // initialize blob with model dir
-  static void InitializeWithModelDir(DeviceCtx* ctx, int32_t part_id,
-                                     int32_t part_num,
-                                     const std::string& model_dir, Blob* blob,
-                                     const std::string& bn_in_op,
-                                     int32_t dim_num, int64_t num_in_each_dim);
-
-  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                       enum CBLAS_TRANSPOSE trans_b, T alpha, T beta,
-                       const Blob* a, const Blob* b, Blob* c) {
-    const int m = c->shape().At(0);
-    const int n = c->shape().Count(1);
-    const int k =
-        (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
-
+// CPU, GPU, Integral, Floating
+template<DeviceType device_type, typename T, typename Derived>
+struct KernelUtilIf {
+  static void OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                     const int m, const int n, const int k, const T alpha, const T* a, const T* b,
+                     const T beta, T* c) {
     const int lda = (trans_a == CblasNoTrans) ? k : m;
     const int ldb = (trans_b == CblasNoTrans) ? n : k;
     const int ldc = n;
 
-    Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(),
-         lda, b->dptr<T>(), ldb, beta, c->mut_dptr<T>(), ldc);
+    Derived::Gemm(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, lda, b, ldb, beta, c,
+                  ldc);
   }
+
+  static void OFGemmTrans(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+                          enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                          const T alpha, const T* a, const T* b, const T beta, T* c) {
+    trans_a = (trans_a == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    trans_b = (trans_b == CblasNoTrans) ? CblasTrans : CblasNoTrans;
+    OFGemm(ctx, trans_b, trans_a, n, m, k, alpha, b, a, beta, c);
+  }
+
+  static void BlobGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a, enum CBLAS_TRANSPOSE trans_b,
+                       T alpha, T beta, const Blob* a, const Blob* b, Blob* c) {
+    const int m = c->shape().At(0);
+    const int n = c->shape().Count(1);
+    const int k = (trans_a == CblasNoTrans) ? a->shape().Count(1) : a->shape().At(0);
+
+    OFGemm(ctx, trans_a, trans_b, m, n, k, alpha, a->dptr<T>(), b->dptr<T>(), beta,
+           c->mut_dptr<T>());
+  }
+
+  static void InitializeWithProperConf(DeviceCtx* ctx, const InitializerConf* initializer_conf,
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format = "") {
+    if (initializer_conf == nullptr) {
+      initializer_conf = Global<JobDesc>::Get()->DefaultInitializerConf();
+    }
+    Derived::InitializeWithConf(ctx, *initializer_conf, random_seed, blob, data_format);
+  }
+  static void InitializeWithProperConf(DeviceCtx* ctx, const PbMessage* initializer_conf,
+                                       uint32_t random_seed, Blob* blob,
+                                       const std::string& data_format = "") {
+    InitializeWithProperConf(ctx, static_cast<const InitializerConf*>(initializer_conf),
+                             random_seed, blob, data_format);
+  }
+};
+
+template<DeviceType device_type, typename T, typename U = void>
+struct KernelUtil;
+
+// CPU, Integral, Floating
+template<typename T, typename Derived>
+struct CpuKernelUtilIf {
+  static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
+                   const int incy);
+  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr);
+  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr, T* temp_storage,
+                  size_t temp_storage_bytes);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
+                  size_t temp_storage_bytes);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
+                             const int64_t y_col_offset, const int64_t y_lda);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
+                     T* y);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    RowMax(ctx, row_num, col_num, x, y);
+  }
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x,
+                     T* y);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes) {
+    RowSum(ctx, row_num, col_num, x, y);
+  }
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim);
+};
+
+// CPU, Floating
+template<typename T>
+struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>
+    : public KernelUtilIf<DeviceType::kCPU, T, KernelUtil<DeviceType::kCPU, T>>,
+      public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
+  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
+                  const int incy, T* result);
+  static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx, T* y, const int incy);
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy);
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx);
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x, const int incx);
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m, int n, const T alpha,
+                   const T* a, int lda, const T* x, const int incx, const T beta, T* y,
+                   const int incy);
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c, const int ldc);
+
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Div(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+  static void Powx(DeviceCtx* ctx, const int64_t n, const T* x, const float power, T* y);
+
+  static void Sigmoid(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx);
+  static void TanH(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+  static void Relu(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format);
+};
+
+// CPU, Integral
+template<typename T>
+struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
+    : public KernelUtilIf<DeviceType::kCPU, T, KernelUtil<DeviceType::kCPU, T>>,
+      public CpuKernelUtilIf<T, KernelUtil<DeviceType::kCPU, T>> {
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format);
+};
+
+// GPU, Integral, Floating
+template<typename T, typename Derived>
+struct GpuKernelUtilIf {
+  static void Max(DeviceCtx* ctx, const int64_t n, const T* x, T* max_ptr, T* temp_storage,
+                  size_t temp_storage_bytes);
+  static void Sum(DeviceCtx* ctx, const int64_t n, const T* x, T* sum_ptr, T* temp_storage,
+                  size_t temp_storage_bytes);
+  static void CopyColsRegion(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num,
+                             const T* x, const int64_t x_col_offset, const int64_t x_lda, T* y,
+                             const int64_t y_col_offset, const int64_t y_lda);
+  static void RowMax(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void RowSum(DeviceCtx* ctx, const int64_t row_num, const int64_t col_num, const T* x, T* y,
+                     void* temp_storage, const size_t temp_storage_bytes);
+  static void Transpose(DeviceCtx* ctx, const int32_t num_axis, const Shape& x_shape,
+                        const Shape& y_shape, const PbRf<int32_t>& permutation,
+                        const int64_t elem_cnt, const T* x, T* y);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob);
+  static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+                                 uint32_t random_seed, Blob* blob, const std::string& data_format);
+  static void InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num,
+                                const std::string& model_dir, Blob* blob,
+                                const std::string& bn_in_op, int32_t dim_num,
+                                int64_t num_in_each_dim);
+};
+
+// GPU, Floating
+template<typename T>
+struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::value>::type>
+    : public KernelUtilIf<DeviceType::kGPU, T, KernelUtil<DeviceType::kGPU, T>>,
+      public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
+  static void Dot(DeviceCtx* ctx, const int n, const T* x, const int incx, const T* y,
+                  const int incy, T* result);
+  static void Copy(DeviceCtx* ctx, const int n, const T* x, const int incx, T* y, const int incy);
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy);
+  static void Axpy(DeviceCtx* ctx, const int n, const T* alpha, const T* x, const int incx, T* y,
+                   const int incy);
+  static void Scal(DeviceCtx* ctx, const int n, const T alpha, T* x, const int incx);
+  static void Scal(DeviceCtx* ctx, const int n, const T* alpha, T* x, const int incx);
+  static void Gemv(DeviceCtx* ctx, const enum CBLAS_TRANSPOSE trans, int m, int n, const T alpha,
+                   const T* a, int lda, const T* x, const int incx, const T beta, T* y,
+                   const int incy);
+  static void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER order, const enum CBLAS_TRANSPOSE trans_a,
+                   const enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
+                   const T alpha, const T* a, const int lda, const T* b, const int ldb,
+                   const T beta, T* c, const int ldc);
+
+  static void Exp(DeviceCtx* ctx, const int64_t n, const T* x, T* y);
+  static void Div(DeviceCtx* ctx, const int64_t n, T* x, const T* alpha);
+  static void Mul(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, T* z);
+  static void Rsqrt(DeviceCtx* ctx, const int64_t n, T* x, const float epsilon);
+
+  static void Sigmoid(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+  static void SigmoidBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                              T* dx);
+  static void TanH(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+  static void TanHBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+  static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y);
+  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
+                           T* dx);
+};
+
+// GPU, Integral
+template<typename T>
+struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::value>::type>
+    : public KernelUtilIf<DeviceType::kGPU, T, KernelUtil<DeviceType::kGPU, T>>,
+      public GpuKernelUtilIf<T, KernelUtil<DeviceType::kGPU, T>> {
+  static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
+                   const int incy);
 };
 
 using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
@@ -226,9 +335,7 @@ class DataContentIterator final {
     return ret;
   }
 
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyDataContentFrom;
-  }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDataContentFrom; }
 
  private:
   std::function<Blob*(const std::string&)> BnInOp2Blob_;
@@ -245,8 +352,8 @@ class FieldIterator {
   FieldIterator() = delete;
   virtual ~FieldIterator() = default;
 
-  FieldIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
-                const PbRpf<std::string>* bns, int32_t axis) {
+  FieldIterator(std::function<Blob*(const std::string&)> BnInOp2Blob, const PbRpf<std::string>* bns,
+                int32_t axis) {
     BnInOp2Blob_ = BnInOp2Blob;
     bns_ = bns;
     bn_idx_ = 0;
@@ -270,6 +377,7 @@ class FieldIterator {
   virtual char* GetMutPtr(Blob* blob) = 0;
   virtual size_t GetSizeOfField(Blob* blob) const = 0;
 
+ private:
   std::function<Blob*(const std::string&)> BnInOp2Blob_;
   const PbRpf<std::string>* bns_;
   int32_t bn_idx_;
@@ -281,16 +389,12 @@ class DataIdIterator final : public FieldIterator {
   DataIdIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyDataIdFrom;
-  }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyDataIdFrom; }
 
  private:
   char* GetMutPtr(Blob* blob) override { return blob->mut_data_id(); }
 
-  size_t GetSizeOfField(Blob* blob) const override {
-    return blob->ByteSizeOfDataIdField();
-  }
+  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfDataIdField(); }
 };
 
 class ColNumIterator final : public FieldIterator {
@@ -298,18 +402,12 @@ class ColNumIterator final : public FieldIterator {
   ColNumIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const PbRpf<std::string>* bns, int32_t axis)
       : FieldIterator(BnInOp2Blob, bns, axis) {}
-  static CopyBlobFieldMthd GetCopyBlobFieldMthd() {
-    return &Blob::CopyColNumFrom;
-  }
+  static CopyBlobFieldMthd GetCopyBlobFieldMthd() { return &Blob::CopyColNumFrom; }
 
  private:
-  char* GetMutPtr(Blob* blob) override {
-    return reinterpret_cast<char*>(blob->mut_col_num());
-  }
+  char* GetMutPtr(Blob* blob) override { return reinterpret_cast<char*>(blob->mut_col_num()); }
 
-  size_t GetSizeOfField(Blob* blob) const override {
-    return blob->ByteSizeOfColNumField();
-  }
+  size_t GetSizeOfField(Blob* blob) const override { return blob->ByteSizeOfColNumField(); }
 };
 
 }  // namespace oneflow

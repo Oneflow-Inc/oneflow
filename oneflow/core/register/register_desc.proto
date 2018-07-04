@@ -3,15 +3,37 @@ package oneflow;
 
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/memory/memory_case.proto";
+import "oneflow/core/operator/op_conf.proto";
+
+message LbiBlobDescPair {
+  required LogicalBlobId lbi = 1;
+  required BlobDescProto blob_desc = 2;
+}
+
+message DataRegstDesc {
+  repeated LbiBlobDescPair lbi2blob_desc = 1;
+  required BlobDescProto packed_blob_desc = 2;
+}
+
+message CtrlRegstDesc {
+}
+
+message RegstDescTypeProto {
+  oneof type {
+    DataRegstDesc data_regst_desc = 1;
+    CtrlRegstDesc ctrl_regst_desc = 3;
+  }
+}
 
 message RegstDescProto {
   required int64 regst_desc_id = 1;
   required int64 producer_task_id = 2;
   repeated int64 consumer_task_id = 3;
-  map<string, BlobDescProto> lbn2blob_desc = 4;
-  required BlobDescProto packed_blob_desc = 5;
-  required int32 min_register_num = 6;
-  required int32 max_register_num = 7;
-  required int32 register_num = 8;
-  required MemoryCase mem_case = 9;
+  required int32 min_register_num = 4;
+  required int32 max_register_num = 5;
+  required int32 register_num = 6;
+  required MemoryCase mem_case = 7;
+  required RegstDescTypeProto regst_desc_type = 8;
+  required bool enable_mem_sharing = 9;
+  required int32 mem_shared_id = 10;
 }

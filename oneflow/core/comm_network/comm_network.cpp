@@ -2,8 +2,6 @@
 
 namespace oneflow {
 
-CommNet* CommNet::comm_network_ptr_;
-
 void* CommNet::NewActorReadId() { return new ActorReadContext; }
 
 void CommNet::DeleteActorReadId(void* actor_read_id) {
@@ -12,8 +10,7 @@ void CommNet::DeleteActorReadId(void* actor_read_id) {
   delete actor_read_ctx;
 }
 
-void* CommNet::Read(void* actor_read_id, int64_t src_machine_id,
-                    const void* src_token, const void* dst_token) {
+void* CommNet::Read(void* actor_read_id, int64_t src_machine_id, void* src_token, void* dst_token) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = new ReadContext;
   read_ctx->actor_read_ctx = actor_read_ctx;
@@ -26,8 +23,7 @@ void* CommNet::Read(void* actor_read_id, int64_t src_machine_id,
   return read_ctx;
 }
 
-void CommNet::AddReadCallBack(void* actor_read_id, void* read_id,
-                              std::function<void()> callback) {
+void CommNet::AddReadCallBack(void* actor_read_id, void* read_id, std::function<void()> callback) {
   auto actor_read_ctx = static_cast<ActorReadContext*>(actor_read_id);
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (read_ctx) {
@@ -54,10 +50,40 @@ void CommNet::AddReadCallBackDone(void* read_id) {
 void CommNet::ReadDone(void* read_id) {
   ReadContext* read_ctx = static_cast<ReadContext*>(read_id);
   if (IncreaseDoneCnt(read_ctx) == 2) {
-    std::unique_lock<std::mutex> lck(
-        read_ctx->actor_read_ctx->read_ctx_list_mtx);
+    std::unique_lock<std::mutex> lck(read_ctx->actor_read_ctx->read_ctx_list_mtx);
     FinishOneRead(read_ctx);
   }
+}
+
+CommNet::CommNet(const Plan& plan) {
+  HashMap<int64_t, int64_t> rid2mid;
+  HashMap<int64_t, int64_t> tid2mid;
+  int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+
+  for (const TaskProto& task_proto : plan.task()) {
+    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
+      rid2mid.emplace(regst_desc_it.second.regst_desc_id(), task_proto.machine_id());
+    }
+    CHECK(tid2mid.emplace(task_proto.task_id(), task_proto.machine_id()).second);
+  }
+  for (const TaskProto& task_proto : plan.task()) {
+    if (task_proto.machine_id() != this_machine_id) { continue; }
+    for (const auto& regst_desc_set_it : task_proto.consumed_regst_desc_id()) {
+      for (int64_t regst_desc_id : regst_desc_set_it.second.regst_desc_id()) {
+        auto rid2mid_it = rid2mid.find(regst_desc_id);
+        CHECK(rid2mid_it != rid2mid.end());
+        peer_machine_id_.insert(rid2mid_it->second);
+      }
+    }
+    for (const auto& regst_desc_it : task_proto.produced_regst_desc()) {
+      for (int64_t consumer_task_id : regst_desc_it.second.consumer_task_id()) {
+        auto tid2mid_it = tid2mid.find(consumer_task_id);
+        CHECK(tid2mid_it != tid2mid.end());
+        peer_machine_id_.insert(tid2mid_it->second);
+      }
+    }
+  }
+  peer_machine_id_.erase(this_machine_id);
 }
 
 int8_t CommNet::IncreaseDoneCnt(ReadContext* read_ctx) {

@@ -7,18 +7,19 @@ namespace oneflow {
 
 class CpuDeviceCtx final : public DeviceCtx {
  public:
-  // OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
+  OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
   CpuDeviceCtx() = delete;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(int64_t work_stream_id) { set_work_stream_id(work_stream_id); }
-
-  void AddCallBack(std::function<void()> callback) const override {
-    callback();
+  CpuDeviceCtx(void* buf_ptr, size_t buf_size) : DeviceCtx(buf_ptr, buf_size) {}
+  std::unique_ptr<DeviceCtx> Copy() const {
+    return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx(buf_ptr(), buf_size()));
   }
 
+  void AddCallBack(std::function<void()> callback) const override { callback(); }
+
  private:
-};
+};  // namespace oneflow
 
 }  // namespace oneflow
 

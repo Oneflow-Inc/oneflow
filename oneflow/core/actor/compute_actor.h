@@ -16,15 +16,13 @@ class CompActor : public Actor {
   virtual void VirtualCompActorInit(const TaskProto& task_proto) {}
 
  private:
-  void VirtualActorInit(const TaskProto& task_proto) override {
-    VirtualCompActorInit(task_proto);
-  }
+  void VirtualActorInit(const TaskProto& task_proto) override { VirtualCompActorInit(task_proto); }
 };
 
-inline int64_t GetLastPieceIdForModelVersionId(int64_t model_version_id) {
-  int32_t staleness = RuntimeCtx::Singleton()->Staleness();
+inline int64_t GetLastPieceIdForModelVersionId(int32_t staleness, int64_t model_version_id) {
+  CHECK_GE(staleness, 0);
   if (staleness == -1) { return std::numeric_limits<int64_t>::max(); }
-  int32_t num_of_pieces_in_batch = JobDesc::Singleton()->NumOfPiecesInBatch();
+  int32_t num_of_pieces_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
   return (model_version_id + staleness + 1) * num_of_pieces_in_batch - 1;
 }
 
