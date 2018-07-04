@@ -18,6 +18,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void AddOrderingCtrlEdgeInSameChain();
+  void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;

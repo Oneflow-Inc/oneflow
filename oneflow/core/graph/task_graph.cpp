@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
+#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
 
@@ -85,6 +86,51 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
     } else {
       iter->second->BuildCtrlRegstDescIfNeed(node);
       iter->second = node;
+    }
+  }
+}
+
+void TaskGraph::AddCtrlEdgeInReduceStruct() {
+  HashMap<int64_t, std::vector<ReduceGlobalAddCompTaskNode*>> machine_id2global_add_nodes;
+  ForEachNode([&](TaskNode* task_node) {
+    auto global_add_node = dynamic_cast<ReduceGlobalAddCompTaskNode*>(task_node);
+    if (global_add_node != nullptr) {
+      machine_id2global_add_nodes[global_add_node->machine_id()].push_back(global_add_node);
+    }
+  });
+
+  for (auto& pair : machine_id2global_add_nodes) {
+    std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_parallel_id;
+    for (ReduceGlobalAddCompTaskNode* global_add_node : pair.second) {
+      for (TaskEdge* in_edge : global_add_node->in_edges()) {
+        TaskNode* pre_node = in_edge->src_node();
+        while (pre_node->GetTaskType() != TaskType::kReduceLocalAdd) {
+          if (pre_node->GetTaskType() == TaskType::kCopyCommNet) {
+            CopyCommNetTaskNode* commnet_node = dynamic_cast<CopyCommNetTaskNode*>(pre_node);
+            CHECK(commnet_node);
+            commnet_nodes_with_parallel_id.emplace_back(
+                commnet_node, global_add_node->parallel_ctx()->parallel_id());
+            break;
+          }
+          pre_node = pre_node->SoleInEdge()->src_node();
+        }
+      }
+    }
+
+    // sort commnet_nodes_with_parallel_id
+    std::sort(commnet_nodes_with_parallel_id.begin(), commnet_nodes_with_parallel_id.end(),
+              [](const std::pair<CopyCommNetTaskNode*, int64_t>& lhs,
+                 const std::pair<CopyCommNetTaskNode*, int64_t>& rhs) {
+                if (lhs.first->peer_machine_id() == rhs.first->peer_machine_id()) {
+                  return lhs.second < rhs.second;
+                }
+                return lhs.first->peer_machine_id() < rhs.first->peer_machine_id();
+              });
+
+    // add ctrl edge
+    for (size_t i = 0; i < commnet_nodes_with_parallel_id.size() - 1; ++i) {
+      commnet_nodes_with_parallel_id.at(i).first->BuildCtrlRegstDescIfNeed(
+          commnet_nodes_with_parallel_id.at(i + 1).first);
     }
   }
 }
