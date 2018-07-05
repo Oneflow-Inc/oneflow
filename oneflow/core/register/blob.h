@@ -6,12 +6,14 @@
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/eigen_util.h"
+#include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/record/record_io.h"
 
 namespace oneflow {
 
+class RegstMgr;
 class Regst;
 
 class BlobIf {
@@ -108,42 +110,31 @@ Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* header_mem_ptr, cha
               DeviceType device_type);
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);
 
-class RecordBlobIf : public BlobIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RecordBlobIf);
-  RecordBlobIf() = default;
-  virtual ~RecordBlobIf() = default;
-
-  virtual void ReadFrom(PersistentInStream* in_stream) = 0;
-  virtual int32_t record_num() = 0;
-
- private:
-};
-
 template<typename RecordType>
-class RecordBlob final : public RecordBlobIf {
+class RecordBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
-  RecordBlob() : records_(Global<JobDesc>::Get()->PieceSizeInOneDataPart()), record_num_(0) {}
+  RecordBlob(Blob* records) : records_(records), record_num_(0) {
+    CHECK_EQ(records->blob_desc().data_type(), GetDataType<RecordType>::value);
+    record_num_ = records_->shape().elem_cnt();
+  }
   ~RecordBlob() = default;
 
   void ForEachRecord(std::function<void(const RecordType&)> Handler) {
-    FOR_RANGE(int32_t, i, 0, record_num_) { Handler(records_.at(i)); }
+    FOR_RANGE(int32_t, i, 0, record_num_) { Handler(*(records_->mut_dptr<RecordType>() + i)); }
   }
 
   const RecordType& GetRecord(size_t i) {
     CHECK_LT(i, record_num_);
-    return records_.at(i);
+    return *(records_->mut_dptr<RecordType>() + i);
   }
 
-  int32_t record_num() override { return record_num_; }
+  int32_t record_num() { return record_num_; }
 
-  void ReadFrom(PersistentInStream* in_stream) override {
-    record_num_ = ReadRecord<RecordType>(in_stream, &records_);
-  }
+  void ReadFrom(PersistentInStream* in_stream) { record_num_ = ReadRecord(in_stream, records_); }
 
  private:
-  std::vector<RecordType> records_;
+  Blob* records_;
   int32_t record_num_;
 };
 

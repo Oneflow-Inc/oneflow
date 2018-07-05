@@ -30,11 +30,6 @@ class Regst final {
   void set_packed_blob(BlobIf* packed_blob) { packed_blob_.reset(packed_blob); }
   Blob* GetBlobByLbi(const LogicalBlobId& lbi) const;
   void AddBlob(LogicalBlobId lbi, BlobIf* blob);
-  template<typename RecordType>
-  RecordBlob<RecordType>* GetRecordBlob() {
-    return static_cast<RecordBlob<RecordType>*>(packed_blob_.get());
-  }
-  RecordBlobIf* GetRecordBlobIf() { return static_cast<RecordBlobIf*>(packed_blob_.get()); }
 
   void* comm_net_token() const { return comm_net_token_; }
   void set_comm_net_token(void* comm_net_token) { comm_net_token_ = comm_net_token; }

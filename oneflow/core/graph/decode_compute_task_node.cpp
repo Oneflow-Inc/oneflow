@@ -20,8 +20,10 @@ void DecodeCompTaskNode::ConsumeAllRegsts() {
 
 void DecodeCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
+  std::weak_ptr<RegstDesc> record_regst = GetSoleConsumedRegst("record");
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
+  node->BindBnWithRegst(node->op()->SoleIbn(), record_regst);
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
     if (TryAddLbiToB121RegstAndBindIt(node, obn, "out") == false) {

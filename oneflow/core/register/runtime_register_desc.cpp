@@ -15,11 +15,11 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
   header_mem_case_.mutable_host_mem();
-  mem_sharing_info_ = proto.mem_sharing_info();
-  if (proto.regst_desc_type().has_normal_regst_desc()) {
-    const NormalRegstDesc& normal_regst_desc = proto.regst_desc_type().normal_regst_desc();
-    sorted_lbis_.reserve(normal_regst_desc.lbi2blob_desc_size());
-    for (const LbiBlobDescPair& pair : normal_regst_desc.lbi2blob_desc()) {
+  mem_shared_id_ = proto.mem_shared_id();
+  if (proto.regst_desc_type().has_data_regst_desc()) {
+    const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
+    sorted_lbis_.reserve(data_regst_desc.lbi2blob_desc_size());
+    for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {
       sorted_lbis_.push_back(pair.lbi());
       auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
       AccumulateActuallyMemCaseSize(blob_desc.get());
@@ -27,7 +27,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     }
     CHECK(!sorted_lbis_.empty());
     std::sort(sorted_lbis_.begin(), sorted_lbis_.end());
-    packed_blob_desc_ = BlobDesc(normal_regst_desc.packed_blob_desc());
+    packed_blob_desc_ = BlobDesc(data_regst_desc.packed_blob_desc());
   }
 }
 
@@ -61,9 +61,14 @@ std::pair<size_t, size_t> RtRegstDesc::SizeOfBlobField(const BlobDesc* blob_desc
   return ret;
 }
 
-void RtRegstDesc::PickMemory(HashMap<MemoryCase, char*>& mem_case2mem_ptr) {
-  bool exclusive_pick_mem =
-      mem_sharing_info_.mem_shared_id() == -1 || mem_sharing_info_.used_order_value() == 0;
+void RtRegstDesc::PickMemory(const MemoryCase& mem_case, char* mem_ptr) {
+  auto mem_ptr_it = mem_case2mem_ptr_.find(mem_case);
+  CHECK(mem_ptr_it == mem_case2mem_ptr_.end());
+  mem_case2mem_ptr_[mem_case] = mem_ptr;
+}
+
+void RtRegstDesc::PickMemoryFromMemBlock(HashMap<MemoryCase, char*>& mem_case2mem_ptr,
+                                         bool need_move_ptr) {
   auto GetMemPtrAndMoveIt = [&](const MemoryCase& mem_case) {
     char* ret = mem_case2mem_ptr.at(mem_case);
     mem_case2mem_ptr.at(mem_case) += actually_mem_case2size_.at(mem_case) * register_num_;
@@ -71,7 +76,7 @@ void RtRegstDesc::PickMemory(HashMap<MemoryCase, char*>& mem_case2mem_ptr) {
   };
   for (const auto& pair : actually_mem_case2size_) {
     mem_case2mem_ptr_[pair.first] =
-        exclusive_pick_mem ? GetMemPtrAndMoveIt(pair.first) : mem_case2mem_ptr.at(pair.first);
+        need_move_ptr ? GetMemPtrAndMoveIt(pair.first) : mem_case2mem_ptr.at(pair.first);
   }
 }
 

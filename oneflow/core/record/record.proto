@@ -1,11 +1,6 @@
 syntax = "proto2";
 package oneflow;
 
-enum RecordTypeProto {
-  kInvalidRecord = 0;
-  kOFRecord = 1;
-}
-
 message BytesList {
   repeated bytes value = 1;
 }

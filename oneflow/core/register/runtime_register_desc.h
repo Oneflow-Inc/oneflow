@@ -32,7 +32,8 @@ class RtRegstDesc {
   }
   void AccumulateActuallyMemCaseSize(const BlobDesc* blob_desc);
   std::pair<size_t, size_t> SizeOfBlobField(const BlobDesc* blob_desc) const;
-  void PickMemory(HashMap<MemoryCase, char*>& mem_case2mem_ptr);
+  void PickMemory(const MemoryCase& mem_case, char* mem_ptr);
+  void PickMemoryFromMemBlock(HashMap<MemoryCase, char*>& mem_case2mem_ptr, bool need_move_ptr);
   void AllocMem4Regst(Regst* regst, int64_t index, DeviceType device_type);
 
  private:
@@ -42,7 +43,7 @@ class RtRegstDesc {
   int64_t register_num_;
   MemoryCase mem_case_;
   MemoryCase header_mem_case_;
-  MemSharingProto mem_sharing_info_;
+  int32_t mem_shared_id_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
   BlobDesc packed_blob_desc_;
   std::vector<LogicalBlobId> sorted_lbis_;

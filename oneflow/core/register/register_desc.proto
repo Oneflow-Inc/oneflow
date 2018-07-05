@@ -4,20 +4,15 @@ package oneflow;
 import "oneflow/core/register/blob_desc.proto";
 import "oneflow/core/memory/memory_case.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/record/record.proto";
 
 message LbiBlobDescPair {
   required LogicalBlobId lbi = 1;
   required BlobDescProto blob_desc = 2;
 }
 
-message NormalRegstDesc {
+message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
   required BlobDescProto packed_blob_desc = 2;
-}
-
-message RecordRegstDesc {
-  required RecordTypeProto record_type = 1;
 }
 
 message CtrlRegstDesc {
@@ -25,16 +20,9 @@ message CtrlRegstDesc {
 
 message RegstDescTypeProto {
   oneof type {
-    NormalRegstDesc normal_regst_desc = 1;
-    RecordRegstDesc record_regst_desc = 2;
+    DataRegstDesc data_regst_desc = 1;
     CtrlRegstDesc ctrl_regst_desc = 3;
   }
-}
-
-message MemSharingProto {
-  required bool enable_mem_sharing = 1;
-  required int32 mem_shared_id = 2;
-  required int32 used_order_value = 3;
 }
 
 message RegstDescProto {
@@ -46,5 +34,6 @@ message RegstDescProto {
   required int32 register_num = 6;
   required MemoryCase mem_case = 7;
   required RegstDescTypeProto regst_desc_type = 8;
-  required MemSharingProto mem_sharing_info = 9;
+  required bool enable_mem_sharing = 9;
+  required int32 mem_shared_id = 10;
 }
