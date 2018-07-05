@@ -43,21 +43,38 @@ NormalizationCtx::NormalizationCtx(const KernelConf& kernel_conf, DataType type)
   std::vector<int64_t> in_shape(conf.in().dim().begin(), conf.in().dim().end());
   CHECK(4 <= in_shape.size() && in_shape.size() <= 5) << in_shape.size();
   int32_t axis = kernel_conf.op_attribute().op_conf().normalization_conf().axis();
-  param_desc_.reset(new CudnnTensorDesc());
-  int N = in_shape[0];
-  int C = in_shape[axis];
-  int H = in_shape[axis == 1 ? 2 : 1];
-  int W = in_shape[axis == 1 ? 3 : 2];
-  int D = in_shape.size() > 4 ? in_shape[axis == 1 ? 4 : 3] : 1;
-  std::vector<int> dims = {N, C, H, W, D};
-  std::vector<int> strides;
-  if (axis == 1) {
-    strides = {C * H * W * D, H * W * D, W * D, D, 1};
-  } else {
-    strides = {H * W * D * C, 1, W * D * C, D * C, C};
+  if (in_shape.size() == 4) {
+    param_desc_.reset(new CudnnTensorDesc());
+    int N = in_shape[0];
+    int C = in_shape[axis];
+    int H = in_shape[axis == 1 ? 2 : 1];
+    int W = in_shape[axis == 1 ? 3 : 2];
+    std::vector<int> dims = {N, C, H, W};
+    std::vector<int> strides;
+    if (axis == 1) {
+      strides = {C * H * W, H * W, W, 1};
+    } else {
+      strides = {H * W * C, 1, W * C, C};
+    }
+    in_desc_.reset(new CudnnTensorDesc(type, in_shape.size(), dims.data(), strides.data()));
+    CudaCheck(cudnnDeriveBNTensorDescriptor(param_desc_->Get(), in_desc_->Get(), mode_));
+  } else if (in_shape.size() == 5) {
+    param_desc_.reset(new CudnnTensorDesc());
+    int N = in_shape[0];
+    int C = in_shape[axis];
+    int H = in_shape[axis == 1 ? 2 : 1];
+    int W = in_shape[axis == 1 ? 3 : 2];
+    int D = in_shape.size() > 4 ? in_shape[axis == 1 ? 4 : 3] : 1;
+    std::vector<int> dims = {N, C, H, W, D};
+    std::vector<int> strides;
+    if (axis == 1) {
+      strides = {C * H * W * D, H * W * D, W * D, D, 1};
+    } else {
+      strides = {H * W * D * C, 1, W * D * C, D * C, C};
+    }
+    in_desc_.reset(new CudnnTensorDesc(type, in_shape.size(), dims.data(), strides.data()));
+    CudaCheck(cudnnDeriveBNTensorDescriptor(param_desc_->Get(), in_desc_->Get(), mode_));
   }
-  in_desc_.reset(new CudnnTensorDesc(type, in_shape.size(), dims.data(), strides.data()));
-  CudaCheck(cudnnDeriveBNTensorDescriptor(param_desc_->Get(), in_desc_->Get(), mode_));
 #endif  // WITH_CUDA
 }
 #ifdef WITH_CUDA
