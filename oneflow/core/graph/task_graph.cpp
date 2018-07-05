@@ -102,6 +102,7 @@ void TaskGraph::AddCtrlEdgeInReduceStruct() {
       machine_id2global_add_nodes.at(global_add_node->machine_id()).push_back(global_add_node);
     }
   });
+  if (total_machine_num == 1) { return; }
 
   for (int64_t machine_id = 0; machine_id < total_machine_num; ++machine_id) {
     std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_parallel_id;
