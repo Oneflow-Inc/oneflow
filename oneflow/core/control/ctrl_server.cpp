@@ -191,13 +191,6 @@ void CtrlServer::Init() {
     call->SendResponse();
     EnqueueRequest<CtrlMethod::kEraseCount>();
   });
-
-  Add([this](CtrlCall<CtrlMethod::kPushAvgActInterval>* call) {
-    Global<Profiler>::Get()->PushAvgActInterval(call->request().actor_id(),
-                                                call->request().avg_act_interval());
-    call->SendResponse();
-    EnqueueRequest<CtrlMethod::kPushAvgActInterval>();
-  });
 }
 
 }  // namespace oneflow

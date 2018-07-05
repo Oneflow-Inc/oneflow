@@ -16,8 +16,8 @@ ActorMsg ActorMsg::BuildRegstMsgToConsumer(int64_t producer, int64_t consumer,
     msg.regst_wrapper_.comm_net_token = nullptr;
   } else {
     msg.regst_wrapper_.comm_net_token = regst_raw_ptr->comm_net_token();
-    msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
   }
+  msg.regst_wrapper_.regst_status = regst_raw_ptr->status();
   return msg;
 }
 
@@ -62,6 +62,16 @@ ActorCmd ActorMsg::actor_cmd() const {
 Regst* ActorMsg::regst() const {
   CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
   return regst_wrapper_.regst;
+}
+
+int64_t ActorMsg::regst_desc_id() const {
+  CHECK_EQ(msg_type_, ActorMsgType::kRegstMsg);
+  if (Global<IDMgr>::Get()->MachineId4ActorId(src_actor_id_)
+      == Global<MachineCtx>::Get()->this_machine_id()) {
+    return regst_wrapper_.regst->regst_desc_id();
+  } else {
+    return regst_wrapper_.regst_status.regst_desc_id;
+  }
 }
 
 int64_t ActorMsg::piece_id() const {

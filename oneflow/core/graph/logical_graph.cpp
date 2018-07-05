@@ -14,7 +14,6 @@ LogicalGraph::LogicalGraph(bool is_train) {
   SetNodeDataLbi();
   if (is_train) { BuildLossPrintStruct(); }
   BuildModelStruct(is_train);
-  BuildRecordLoadStruct();
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
 }
@@ -445,21 +444,19 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
   CHECK_EQ(src_pd->device_type(), dst_pd->device_type());
   // Reduce Scatter
-  OperatorConf reduce_scatter_op_conf;
-  reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
-  reduce_scatter_op_conf.set_device_type(src_pd->device_type());
-  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(src_pd->parallel_num());
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
-  reduce_scatter_node->mut_op_vec() = {ConstructOp(reduce_scatter_op_conf)};
   reduce_scatter_node->mut_parallel_desc() = src_pd;
-  // Reduce Add
-  OperatorConf reduce_add_op_conf;
-  reduce_add_op_conf.set_name("reduce_add_" + NewUniqueId());
-  reduce_add_op_conf.set_device_type(src_pd->device_type());
-  reduce_add_op_conf.mutable_reduce_add_conf()->set_in_num(src_pd->parallel_num());
-  LogicalNode* reduce_add_node = NewNode<ReduceAddLogicalNode>();
-  reduce_add_node->mut_op_vec() = {ConstructOp(reduce_add_op_conf)};
-  reduce_add_node->mut_parallel_desc() = src_pd;
+  LogicalNode* pred_reduce_global_node = reduce_scatter_node;
+  if (src_pd->sorted_machine_ids().size() > 1) {
+    // Reduce Local Add
+    LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
+    reduce_local_add_node->mut_parallel_desc() = src_pd;
+    Connect(reduce_scatter_node, NewEdge(), reduce_local_add_node);
+    pred_reduce_global_node = reduce_local_add_node;
+  }
+  // Reduce Global Add
+  LogicalNode* reduce_global_add_node = NewNode<ReduceGlobalAddLogicalNode>();
+  reduce_global_add_node->mut_parallel_desc() = src_pd;
   // Reduce Gather
   OperatorConf reduce_gather_op_conf;
   reduce_gather_op_conf.set_name("reduce_gather_" + NewUniqueId());
@@ -470,8 +467,8 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   reduce_gather_node->mut_parallel_desc() = src_pd;
   // Connect
   Connect(src, NewEdge(), reduce_scatter_node);
-  Connect(reduce_scatter_node, NewEdge(), reduce_add_node);
-  Connect(reduce_add_node, NewEdge(), reduce_gather_node);
+  Connect(pred_reduce_global_node, NewEdge(), reduce_global_add_node);
+  Connect(reduce_global_add_node, NewEdge(), reduce_gather_node);
   Connect(reduce_gather_node, NewEdge(), dst);
 }
 
@@ -516,50 +513,6 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
   if (is_train) { BuildMdSaveStruct(fw_logical, md_updt_logical); }
   return md_updt_logical;
-}
-
-void LogicalGraph::BuildRecordLoadStruct() {
-  HashMap<std::string, std::vector<DecodeLogicalNode*>> data_info2decode_nodes;
-  HashMap<std::string, int32_t> data_info2suffix_length;
-  ForEachLogicalNode<DecodeLogicalNode>([&](DecodeLogicalNode* decode_node) {
-    std::shared_ptr<const Operator> decode_op = decode_node->SoleOp();
-    if (decode_op->HasFieldInCustomizedConf("data_dir") == false) { return; }
-    std::string data_dir = decode_op->GetValFromCustomizedConf<std::string>("data_dir");
-    std::string part_name_prefix =
-        decode_op->GetValFromCustomizedConf<std::string>("part_name_prefix");
-    std::string data_info = data_dir + "_" + part_name_prefix;
-    data_info2decode_nodes[data_info].emplace_back(decode_node);
-    int32_t part_name_suffix_length =
-        decode_op->GetValFromCustomizedConf<int32_t>("part_name_suffix_length");
-    if (data_info2suffix_length.find(data_info) != data_info2suffix_length.end()) {
-      CHECK_EQ(data_info2suffix_length[data_info], part_name_suffix_length);
-    } else {
-      data_info2suffix_length[data_info] = part_name_suffix_length;
-    }
-  });
-  for (auto& pair : data_info2decode_nodes) {
-    std::vector<std::shared_ptr<const ParallelDesc>> parallel_descs;
-    for (DecodeLogicalNode* decode_node : pair.second) {
-      auto iter = std::find_if(parallel_descs.begin(), parallel_descs.end(),
-                               [&](std::shared_ptr<const ParallelDesc>& parallel_desc) {
-                                 return parallel_desc->Equal(decode_node->parallel_desc().get());
-                               });
-      if (iter == parallel_descs.end()) {
-        parallel_descs.emplace_back(decode_node->parallel_desc());
-      }
-    }
-    LOG_IF(WARNING, parallel_descs.size() > 1)
-        << "Operators sharing same data information belong to different "
-           "placement groups";
-    for (std::shared_ptr<const ParallelDesc> parallel_desc : parallel_descs) {
-      LogicalNode* record_load_node = NewNode<RecordLoadLogicalNode>();
-      record_load_node->mut_parallel_desc() = parallel_desc;
-      for (DecodeLogicalNode* decode_node : pair.second) {
-        if (!decode_node->parallel_desc()->Equal(parallel_desc.get())) { continue; }
-        Connect<LogicalNode>(record_load_node, NewEdge(), decode_node);
-      }
-    }
-  }
 }
 
 void LogicalGraph::ConnectFwToBw() {

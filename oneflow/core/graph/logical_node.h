@@ -52,6 +52,8 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   int32_t GetModelSplitAxis() const;
   int32_t GetMaxModelSplitNum() const;
 
+  virtual int64_t GetAreaId() const = 0;
+
  protected:
   LogicalNode() : main_model_parallel_(nullptr) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
@@ -77,7 +79,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
    std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       Mut121BufTask,                                                                     \
+       MutBufTask,                                                                        \
    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
 
 class TaskGraph;
@@ -109,9 +111,10 @@ using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const LogicalNode* out_logical, BoxingOpConf*);
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst);
 
-#define OVERRIDE_PURE_VIRTUAL_METHOD()   \
-  std::string TypeName() const override; \
-  CompTaskNode* NewCompTaskNode() const override;
+#define OVERRIDE_PURE_VIRTUAL_METHOD()            \
+  std::string TypeName() const override;          \
+  CompTaskNode* NewCompTaskNode() const override; \
+  int64_t GetAreaId() const override;
 
 #define LOGICAL_NODE_BOILERPLATE(class_name) \
   OF_DISALLOW_COPY_AND_MOVE(class_name);     \
@@ -196,7 +199,8 @@ class NormalMdUpdtLogicalNode final : public LogicalNode {
 DECLARE_NAIVE_LOGICAL_NODE(MdSaveLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(MdDiffAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceScatterLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(ReduceAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceLocalAddLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(ReduceGlobalAddLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(ReduceGatherLogicalNode);
 
 }  // namespace oneflow

@@ -12,7 +12,13 @@ bool IsBackwardTaskType(TaskType tt) {
 
 bool IsMdUpdtTaskType(TaskType tt) { return tt == TaskType::kNormalMdUpdt; }
 
-TaskNode::TaskNode() : machine_id_(-1), thrd_id_(-1), task_id_(-1) {}
+TaskNode::TaskNode()
+    : machine_id_(-1),
+      thrd_id_(-1),
+      task_id_(-1),
+      area_id_(0),
+      chain_id_(-1),
+      order_in_graph_(-1) {}
 
 std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   auto produced_regsts_it = produced_regsts_.find(name);
@@ -51,6 +57,21 @@ void TaskNode::set_thrd_id(int64_t val) {
   if (machine_id_ != -1) { UpdateTaskId(); }
 }
 
+void TaskNode::set_area_id(int64_t val) {
+  CHECK_EQ(area_id_, 0);
+  area_id_ = val;
+}
+
+void TaskNode::set_chain_id(int64_t val) {
+  CHECK_EQ(chain_id_, -1);
+  chain_id_ = val;
+}
+
+void TaskNode::set_order_in_graph(int64_t val) {
+  CHECK_EQ(order_in_graph_, -1);
+  order_in_graph_ = val;
+}
+
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
     for (std::weak_ptr<RegstDesc> regst : pair.second) {
@@ -69,7 +90,7 @@ void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->NumOfLbi() == 0;
+        return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
       });
 }
 
@@ -88,6 +109,9 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
   task_proto->set_task_id(task_id_);
+  task_proto->mutable_task_set_info()->set_area_id(area_id_);
+  task_proto->mutable_task_set_info()->set_chain_id(chain_id_);
+  task_proto->mutable_task_set_info()->set_order_in_graph(order_in_graph_);
   exec_gph_.ToExecSequence(IsBackwardTaskType(GetTaskType()) == false, parallel_ctx(),
                            task_proto->mutable_exec_sequence());
   auto produced_regst_proto = task_proto->mutable_produced_regst_desc();
@@ -116,42 +140,57 @@ int64_t TaskNode::MemZoneId121() const {
   }
 }
 
-void TaskNode::BuildDelayRegstDescIfNeed(TaskNode* dst_node) {
-  for (auto& name2regst : produced_regsts_) {
-    const auto& consumers = name2regst.second->consumers();
-    if (consumers.find(dst_node) != consumers.end()) { return; }
-  }
+void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) return;
+  const auto& dst_ancestors = dst_node->ancestors();
+  if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
-  regst_desc_type.mutable_delay_regst_desc();
-  dst_node->ConsumeRegst("in_delay",
-                         ProduceRegst("out_delay", 1, kMaxRegisterNum, regst_desc_type));
+  regst_desc_type.mutable_ctrl_regst_desc();
+  auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
+  std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
+  CHECK(produced_regsts_.emplace(name, regst).second);
+  dst_node->ConsumeRegst("in_ctrl", regst);
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
   edge->AddRegst(name, GetProducedRegst(name));
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name) {
-  return ProduceRegst(name, 1, kMaxRegisterNum);
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name,
+                                                  bool enable_mem_sharing) {
+  return ProduceRegst(name, enable_mem_sharing, 1, kMaxRegisterNum);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                                  int32_t min_register_num,
                                                   int32_t max_register_num) {
   RegstDescTypeProto regst_desc_type;
-  regst_desc_type.mutable_normal_regst_desc();
-  return ProduceRegst(name, min_register_num, max_register_num, regst_desc_type);
+  regst_desc_type.mutable_data_regst_desc();
+  return ProduceRegst(name, enable_mem_sharing, min_register_num, max_register_num,
+                      regst_desc_type);
 }
 
-std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, int32_t min_register_num,
+std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool enable_mem_sharing,
+                                                  int32_t min_register_num,
                                                   int32_t max_register_num,
                                                   const RegstDescTypeProto& regst_desc_type) {
+  auto regst =
+      NewProducedRegst(enable_mem_sharing, min_register_num, max_register_num, regst_desc_type);
+  CHECK(produced_regsts_.emplace(name, regst).second);
+  return regst;
+}
+
+std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
+                                                      int32_t min_register_num,
+                                                      int32_t max_register_num,
+                                                      const RegstDescTypeProto& regst_desc_type) {
   auto regst = std::make_shared<RegstDesc>();
   regst->set_producer(this);
   *(regst->mut_regst_desc_type()) = regst_desc_type;
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
+  regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
   InitProducedRegstMemCase(regst.get());
-  CHECK(produced_regsts_.emplace(name, regst).second);
   return regst;
 }
 
@@ -282,12 +321,34 @@ void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<Reg
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
 
+RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
+                                                  const std::string& regst_desc_name) {
+  auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
+  if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
+    RegstDescProto ctrl_regst_desc;
+    InitCtrlRegstDesc(task_proto->task_id(), &ctrl_regst_desc);
+    CHECK(produced_regst_desc->insert({regst_desc_name, ctrl_regst_desc}).second);
+  }
+  return &produced_regst_desc->at(regst_desc_name);
+}
+
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name) {
+  auto* consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
+  if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
+    CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
+  }
+  return &consumed_regst_desc_id_sets->at(regst_desc_name);
+}
+
 std::map<TaskType, std::string> task_type2color = {
-    {kInvalid, "0"},      {kNormalForward, "2"}, {kNormalBackward, "3"}, {kRecordLoad, "1"},
-    {kDecode, "1"},       {kLoss, "4"},          {kLossAcc, "5"},        {kLossPrint, "1"},
-    {kNormalMdUpdt, "6"}, {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
-    {kCopyCommNet, "9"},  {kBoxing, "10"},       {kPrint, "1"},          {kReduceScatter, "2"},
-    {kReduceAdd, "2"},    {kReduceGather, "2"},
+    {kInvalid, "0"},       {kNormalForward, "2"},  {kNormalBackward, "3"},
+    {kRecordLoad, "1"},    {kDecode, "1"},         {kLoss, "4"},
+    {kLossAcc, "5"},       {kLossPrint, "1"},      {kNormalMdUpdt, "6"},
+    {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
+    {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
+    {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
+    {kReduceGather, "2"},
 };
 
 }  // namespace oneflow

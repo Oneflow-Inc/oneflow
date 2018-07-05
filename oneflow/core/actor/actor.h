@@ -24,7 +24,7 @@ bool NeedModelSave(int64_t model_version_id);
 class Actor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Actor);
-  virtual ~Actor();
+  virtual ~Actor() = default;
 
   void Init(const TaskProto&, const ThreadCtx&);
 
@@ -54,9 +54,10 @@ class Actor {
   std::unique_ptr<DeviceCtx>& mut_device_ctx() { return device_ctx_; }
   KernelCtx GenDefaultKernelCtx() const;
   const std::vector<ExecKernel>& exec_kernel_vec() { return exec_kernel_vec_; }
-  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) {}
-  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*);
-  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>);
+  virtual void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const {}
+  virtual void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const;
+  void ForEachCurNaiveReadableRegst(std::function<void(const Regst*)>) const;
+  void ForEachCurConsumedCtrlRegst(std::function<void(const Regst*)>) const;
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
@@ -102,7 +103,6 @@ class Actor {
   Regst* GetCurWriteableRegst(int64_t regst_desc_id);
   Regst* GetCurWriteableRegst(const std::string& name);
   Regst* GetCurSoleWriteableRegst();
-  int64_t total_reading_cnt() const { return total_reading_cnt_; }
 
   // Status Of Naive Consumed Registers
   virtual std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName();
@@ -112,49 +112,63 @@ class Actor {
   Regst* GetNaiveFirstCurReadable();
   Regst* GetSoleProducedRegst(int64_t regst_desc_id);
 
-  void DecreaseActualWriteableProducedRegstDescNum(int64_t amount) {
-    actual_writeable_produced_regst_desc_num_ -= amount;
+  void DecreaseActualWriteableProducedDataRegstDescNum(int64_t amount) {
+    actual_writeable_produced_data_regst_desc_num_ -= amount;
   }
 
  private:
   bool IsReadReady();
+  bool IsCtrlReady();
+  int ProcessWriteableCtrlRegstMsg(const ActorMsg& msg);
+  int ProcessReadableCtrlRegstMsg(const ActorMsg& msg);
+  void AsyncSendEORDMsgForAllProducedCtrlRegstDesc();
+  void AsyncSendCtrlRegstMsg();
   int TryUpdtStateAsProducedRegst(Regst* regst);
   void TakeOverNaiveConsumed(const PbMap<std::string, RegstDescIdSet>& consumed_ids);
   void AddNaiveConsumed(const RegstDescIdSet&);
   void AsyncSendMsg(const ActorMsg&);
   int64_t GetGlobalWorkStreamId() const;
   int64_t GetLocalWorkStreamId() const;
+  virtual bool NeedCollectActEvent() const {
+    return Global<RuntimeCtx>::Get()->NeedCollectActEvent();
+  }
+  void TryLogActEvent(const std::function<void()>& Callback) const;
 
   int64_t actor_id_;
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   HashSet<int64_t> eord_regst_desc_ids_;
   std::unique_ptr<CudaStreamHandle> cuda_handle_;
-
-  // Status of Produced Registers
-  HashMap<int64_t, std::deque<Regst*>> writeable_produced_regst_;
-  HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
-  int64_t actual_writeable_produced_regst_desc_num_;
-  int64_t writeable_produced_regst_desc_cnt_;
-  int64_t total_reading_cnt_;
   int64_t remaining_eord_cnt_;
 
-  // Status Of Naive Consumed Registers
-  HashMap<int64_t, std::deque<Regst*>> naive_readable_regst_;
-  size_t naive_readable_regst_cnt_;
-  bool is_naive_readable_eord_;
-  int64_t in_delay_regst_desc_id_;
-  int64_t out_delay_regst_desc_id_;
+  // Status of Produced Registers
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
+  HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
+  int64_t actual_writeable_produced_data_regst_desc_num_;
+  int64_t writeable_produced_data_regst_desc_cnt_;
+  int64_t total_reading_data_cnt_;
 
-  // Profile
-  double last_act_start_time_;
-  double act_interval_acc_;
+  // Status of Naive Consumed Registers
+  HashMap<int64_t, std::deque<Regst*>> naive_readable_data_regst_;
+  size_t naive_readable_data_regst_cnt_;
+  bool is_naive_readable_data_eord_;
+
+  // Status of Control Registers
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
+  HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
+  int64_t total_reading_ctrl_cnt_;
+  int64_t readable_ctrl_regst_desc_cnt_;
+  int64_t writeable_ctrl_regst_desc_cnt_;
+  bool is_consumed_ctrl_eord_;
 };
+
+class ScopedActEventRecorder;
 
 std::unique_ptr<Actor> NewActor(const TaskProto&, const ThreadCtx&);
 

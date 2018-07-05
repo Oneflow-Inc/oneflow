@@ -17,23 +17,35 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
+  void AddOrderingCtrlEdgeInSameChain();
+  void AddMutexCtrlEdgeInSameChain();
+  void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
+  void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
 
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
   DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceAdd2ReduceGather);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
+  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather);
 
  private:
-  TaskNode* Build121BufTo(
-      TaskNode* src, int64_t dst_machine_id, int32_t dst_mem_zone_id,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> Get121BufTask,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> Set121BufTask);
-  TaskNode* AddCopyH2DTaskIfNotCpu(TaskNode*);
-  TaskNode* AddCopyD2HTaskIfNotCpu(TaskNode*);
-  void AddCopyCommNetTask(TaskNode* src, TaskNode* dst);
+  void BuildTaskPath(
+      CompTaskNode* src, CompTaskNode* dst,
+      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+          MutBufTask,
+      bool use_buf_task_node);
+  TaskNode* BuildTaskStep(
+      TaskNode* cur_node, TaskNode* dst,
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> GetBufTask,
+      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> SetBufTask,
+      bool use_buf_task_node);
+  TaskNode* AddCopyH2DTaskTo(TaskNode*);
+  TaskNode* AddCopyD2HTaskFrom(TaskNode*);
+  TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
   void BuildOutBoxing(const LogicalNode* logical,
                       const std::vector<CompTaskNode*>& sorted_comp_tasks,
                       std::vector<TaskNode*>* sorted_out_box,
@@ -44,8 +56,14 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
+  void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
+  void CollectAncestorsForEachNode();
+  void FindChainsInSameStream();
+
   std::unique_ptr<const LogicalGraph> logical_gph_;
+  std::vector<TaskNode*> ordered_task_nodes_;
 };
+bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
 }  // namespace oneflow
 

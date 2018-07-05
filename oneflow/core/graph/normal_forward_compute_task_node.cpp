@@ -6,10 +6,10 @@ namespace oneflow {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceB121Regst("out");
-  ProduceRegst("activation");
-  ProduceRegst("data_tmp");
-  ProduceRegst("forward_model");
-  ProduceRegst("const_buf", 1, 1);
+  ProduceRegst("activation", true);
+  ProduceRegst("data_tmp", true);
+  ProduceRegst("forward_model", false);
+  ProduceRegst("const_buf", false, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdSave") {

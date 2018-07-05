@@ -14,7 +14,7 @@ LossKernelConf* SparseSoftmaxCrossEntropyLossOp::GetMutLossKernelConf(
 }
 
 void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, size_t* buf_size) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);

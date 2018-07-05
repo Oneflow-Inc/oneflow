@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/act_graph.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/persistence/normal_persistent_in_stream.h"
 #include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
@@ -373,7 +372,7 @@ void ActGraph::ForEachRegstUidConsumerPathDuration(
 
 void ActGraph::InitNodes() {
   HashMap<int64_t, const TaskProto*> actor_id2task_proto;
-  for (const TaskProto& task : plan().task()) { actor_id2task_proto[task.task_id()] = &task; }
+  for (const TaskProto& task : plan_->task()) { actor_id2task_proto[task.task_id()] = &task; }
   HashMap<std::string, const ActNode*> regst_uid2producer_node;
   for (const ActEvent& act_event : *act_events_) {
     int64_t actor_id = act_event.actor_id();

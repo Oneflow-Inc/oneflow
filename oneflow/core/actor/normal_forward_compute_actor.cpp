@@ -31,12 +31,12 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 
   if (const_buf_regst_ && !const_buf_regst_->consumers_actor_id().empty()) {
-    DecreaseActualWriteableProducedRegstDescNum(1);
+    DecreaseActualWriteableProducedDataRegstDescNum(1);
   }
 }
 
 void NormalForwardCompActor::ForEachCurCustomizedReadableRegst(
-    std::function<void(const Regst*)> handler) {
+    std::function<void(const Regst*)> handler) const {
   if (model_regst_desc_id_ != -1) { handler(model_regst_); }
   if (const_model_regst_desc_id_ != -1) { handler(const_model_regst_); }
 }

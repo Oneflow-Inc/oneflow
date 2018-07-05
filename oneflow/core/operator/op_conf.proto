@@ -366,6 +366,9 @@ message NormalModelUpdateOpConf {
 message AccumulateOpConf {
 }
 
+message EmbeddingLookupAccumulateOpConf {
+}
+
 message ModelSaveOpConf {
 }
 
@@ -425,9 +428,18 @@ message ReshapeOpConf {
   required ShapeProto shape = 3;
 }
 
+message EmbeddingLookupOpConf {
+  required string ids = 1;
+  required string out = 2;
+  required int32 units = 3;
+  required int32 table_size = 4;
+  optional InitializerConf weight_initializer = 5;
+}
+
 message AddOpConf {
   repeated string in = 1;
   required string out = 2;
+  optional ActivationType activation = 3 [default = kNone];
 }
 
 message MaximumOpConf {
@@ -481,6 +493,13 @@ message PreprocessConf {
   }
 }
 
+message RecordLoadOpConf {
+  required string out = 1;
+  required string data_dir = 2;
+  optional string part_name_prefix = 3 [default = "part-"];
+  optional int32 part_name_suffix_length = 4 [default = -1];
+}
+
 message BlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
@@ -494,7 +513,8 @@ message DecodeOFRecordOpConf {
   required string data_dir = 1;
   optional string part_name_prefix = 2 [default = "part-"];
   optional int32 part_name_suffix_length = 3 [default = -1];
-  repeated BlobConf blob = 4;
+  optional string in = 4;
+  repeated BlobConf blob = 5;
 }
 
 message DecodeRandomOpConf {
@@ -539,8 +559,16 @@ message ReduceScatterOpConf {
   required int32 out_num = 1;
 };
 
-message ReduceAddOpConf {
+message ReduceLocalAddOpConf {
   required int32 in_num = 1;
+  required int32 out_num = 2;
+  required int64 min_in_parallel_id = 3;
+  required int64 min_out_parallel_id = 4;
+  required int64 model_elem_cnt = 5; 
+};
+
+message ReduceGlobalAddOpConf {
+  repeated int64 in_parallel_ids = 1;
 };
 
 message ReduceGatherOpConf {
@@ -588,13 +616,17 @@ message OperatorConf {
     MaxPooling2DOpConf max_pooling_2d_conf = 203;
     AveragePooling3DOpConf average_pooling_3d_conf = 204;
     MaxPooling3DOpConf max_pooling_3d_conf = 205;
+    EmbeddingLookupOpConf embedding_lookup_conf = 250;
+    EmbeddingLookupAccumulateOpConf embedding_lookup_accumulate_conf = 251;
     AddOpConf add_conf = 301;
     MaximumOpConf maximum_conf = 302;
     LocalResponseNormalizationOpConf local_response_normalization_conf = 300;
     NormalizationOpConf normalization_conf = 350;
     ReduceScatterOpConf reduce_scatter_conf = 400;
-    ReduceAddOpConf reduce_add_conf = 401;
-    ReduceGatherOpConf reduce_gather_conf = 402;
+    ReduceLocalAddOpConf reduce_local_add_conf = 401;
+    ReduceGlobalAddOpConf reduce_global_add_conf = 402;
+    ReduceGatherOpConf reduce_gather_conf = 403;
+    RecordLoadOpConf record_load_conf = 404;
   }
 }
 

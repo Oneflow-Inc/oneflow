@@ -36,7 +36,6 @@ class JobDesc final {
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t PieceSize() const { return job_conf_.other().piece_size(); }
-  int64_t PieceSizeInOneDataPart() const;
   int64_t piece_num_of_experiment_phase() const;
   float available_zone_mem_ratio() const;
   size_t persistence_buf_byte() const;
@@ -45,6 +44,8 @@ class JobDesc final {
   bool save_downloaded_file_to_local_fs() const;
   size_t rdma_mem_block_byte() const;
   size_t rdma_recv_msg_buf_byte() const;
+  bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
+  bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
 
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
@@ -61,11 +62,13 @@ class JobDesc final {
   int64_t NumOfPiecesInBatch() const;
   float L1() const;
   float L2() const;
+  int32_t DataPartNum() const;
 
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
   void SplitDecodeOps();
+  void AddRecordLoadOps();
 
   JobConf1 job_conf_;
 

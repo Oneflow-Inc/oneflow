@@ -14,7 +14,7 @@ class BoxingOp final : public Operator {
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
 
-  void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
 
  protected:
@@ -25,7 +25,7 @@ class BoxingOp final : public Operator {
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
-  void InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferDataTmpBlobDesc(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             std::vector<int64_t>* data_temp_shape_vec) const;
 };
 

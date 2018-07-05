@@ -62,7 +62,7 @@ const std::string& Operator::SoleDtbn() const {
   return data_tmp_bns().Get(0);
 }
 
-void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
@@ -72,28 +72,23 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetB
   }
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx, size_t* buf_size,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
 }
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   UNIMPLEMENTED() << typeid(*this).name();
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
-  if (IsDecodeOp()) {
-    CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->other_conf().data_part_num())
-        << "parallel_num of data loader is not equal to the data_part_num in "
-           "job.prototxt";
-  }
   if (model_bns().empty() && const_model_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
@@ -275,6 +270,11 @@ void Operator::EnrollModelBn(const std::string& mbn) {
   *(mut_model_bns()->Add()) = mbn;
   CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
   std::string mdbn = GenDiffBn(mbn);
+  *(mut_model_diff_bns()->Add()) = mdbn;
+  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+}
+void Operator::EnrollModelDiffBn(const std::string& mdbn) {
+  LogicalBlobId lbi = mbn2lbi(mdbn);
   *(mut_model_diff_bns()->Add()) = mdbn;
   CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
 }
