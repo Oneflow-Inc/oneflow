@@ -1,4 +1,5 @@
 #include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/normal_forward_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
@@ -91,7 +92,49 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
 
-void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() { UNIMPLEMENTED(); }
+void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
+  if (Global<JobDesc>::Get()->IsTrain() == false) { return; }
+  for (auto task_node : ordered_task_nodes_) {
+    auto copy_hd_task_node = dynamic_cast<CopyHdTaskNode*>(task_node);
+    if (copy_hd_task_node == nullptr) { continue; }
+    if (copy_hd_task_node->copy_type() != CopyHdOpConf::H2D) { continue; }
+    if (copy_hd_task_node->area_id() != static_cast<int64_t>(kDataForwardArea)
+        && copy_hd_task_node->area_id() != static_cast<int64_t>(kBoundaryArea)) {
+      continue;
+    }
+    std::vector<TaskNode*> candidate_nodes;
+    auto ForEachNextNode = [&](TaskNode* node,
+                               const std::function<void(TaskNode*)>& TryPushNodeToQueue) {
+      auto fw_task_node = dynamic_cast<NormalForwardCompTaskNode*>(node);
+      if (fw_task_node != nullptr && fw_task_node->logical_node()->HasOpWithModelBlob()) {
+        if (fw_task_node->parallel_ctx()->parallel_num() > 1
+            && fw_task_node->parallel_ctx()->policy() == kDataParallel) {
+          candidate_nodes.push_back(node);
+        }
+      } else {
+        node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+          auto fw_task_node_on_out_edge =
+              dynamic_cast<NormalForwardCompTaskNode*>(node_on_out_edge);
+          if (fw_task_node_on_out_edge != nullptr) { TryPushNodeToQueue(node_on_out_edge); }
+        });
+      }
+    };
+    BfsForEachNode({task_node}, ForEachNextNode, [](TaskNode*) {});
+    std::sort(candidate_nodes.begin(), candidate_nodes.end(),
+              [](const TaskNode* a, const TaskNode* b) {
+                return a->order_in_graph() < b->order_in_graph();
+              });
+    int64_t last_chain_id = -1;
+    for (TaskNode* candidate_node : candidate_nodes) {
+      if (candidate_node->chain_id() != last_chain_id) {
+        last_chain_id = candidate_node->chain_id();
+        RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(candidate_node);
+        ctrl_regst->UpdtMinRegstNumIfNeed(
+            copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
+      }
+    }
+  }
+}
 
 void TaskGraph::CollectAncestorsForEachNode() {
   std::vector<TaskNode*> ordered_nodes;
