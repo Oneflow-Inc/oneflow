@@ -53,6 +53,11 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddBackwardClone(const HashMap<LogicalEdge*, std::string>& edge2ibn);
   void AddOneBackwardClone(const BackwardCloneInfo& clone_info,
                            const HashMap<LogicalEdge*, std::string>& edge2ibn);
+  void RemoveBackwardAdd(HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void CollectBackwardB121CloneInfos(std::vector<B121CloneInfo>* clone_infos);
+  void RemoveOneBackwardAdd(const B121CloneInfo& clone_info,
+                            HashMap<LogicalEdge*, std::string>* edge2ibn);
+
   void MergeEdge();
   void SetNodeDataLbi();
   void BuildLossPrintStruct();

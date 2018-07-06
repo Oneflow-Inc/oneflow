@@ -211,6 +211,7 @@ void LogicalGraph::SetMainModelParallel() {
 void LogicalGraph::BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
   NaiveBuildBwStruct(edge2ibn);
   AddBackwardClone(*edge2ibn);
+  RemoveBackwardAdd(edge2ibn);
 }
 
 void LogicalGraph::NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn) {
@@ -310,6 +311,53 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info,
   }
 }
 
+void LogicalGraph::RemoveBackwardAdd(HashMap<LogicalEdge*, std::string>* edge2ibn) {
+  std::vector<B121CloneInfo> clone_infos;
+  CollectBackwardB121CloneInfos(&clone_infos);
+  for (const B121CloneInfo& clone_info : clone_infos) {
+    RemoveOneBackwardAdd(clone_info, edge2ibn);
+  }
+}
+
+void LogicalGraph::CollectBackwardB121CloneInfos(std::vector<B121CloneInfo>* clone_infos) {
+  std::vector<LogicalNode*> bw_add_nodes;
+  ForEachNode([&](LogicalNode* cur_node) {
+    if (cur_node->GetAreaId() == kDataBackwardArea) {
+      if (cur_node->op_vec().size() == 1 && cur_node->SoleOp()->op_conf().has_add_conf()) {
+        bw_add_nodes.emplace_back(cur_node);
+      }
+    }
+  });
+  for (auto& bw_add_node : bw_add_nodes) {
+    // LOG(INFO) << "bw_add_node:" << bw_add_node->SoleOp()->op_name();
+    HashMap<LogicalBlobId, B121CloneInfo> lbi2clone_info;
+    for (LogicalEdge* edge : bw_add_node->out_edges()) {
+      B121CloneInfo& clone_info = lbi2clone_info[edge->SoleLbi()];
+      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(bw_add_node, edge->dst_node());
+      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+        clone_info.edges_boxing.push_back(edge);
+      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+        clone_info.edges_121.push_back(edge);
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+    for (auto& pair : lbi2clone_info) {
+      if (!pair.second.edges_boxing.empty() && !pair.second.edges_121.empty()) { continue; }
+      // TODO
+
+      /*
+      if (pair.second.edges_boxing.empty()) { continue; }
+      if (pair.second.edges_121.empty()) { continue; }
+      pair.second.pred_node = cur_node;
+      pair.second.lbi = pair.first;
+      clone_infos->push_back(pair.second);
+      */
+    }
+  }
+}
+void LogicalGraph::RemoveOneBackwardAdd(const B121CloneInfo& clone_info,
+                                        HashMap<LogicalEdge*, std::string>* edge2ibn) {}
 void LogicalGraph::MergeEdge() {
   ForEachNode([](LogicalNode* node) {
     HashMap<LogicalNode*, std::vector<LogicalEdge*>> dst2edges;
