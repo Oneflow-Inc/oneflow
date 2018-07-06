@@ -70,7 +70,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst(rt_regst_desc);
     if (regst_desc_type.has_data_regst_desc()) {
-      rt_regst_desc->AllocMem4Regst(regst, i, device_type);
+      regst->InitBlobs(rt_regst_desc->GetMemPtrOfMemCase4Regst(i), device_type);
     } else if (regst_desc_type.has_ctrl_regst_desc()) {
       // do nothing
     } else {

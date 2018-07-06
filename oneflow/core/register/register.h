@@ -25,11 +25,11 @@ class Regst final {
   int64_t producer_actor_id() const { return regst_desc_->producer_actor_id(); }
   const std::vector<int64_t>& consumers_actor_id() const;
 
+  void InitBlobs(HashMap<MemoryCase, char*> mem_case2mem_ptr, DeviceType device_type);
+  void AddBlob(LogicalBlobId lbi, Blob* blob);
+  Blob* GetBlobByLbi(const LogicalBlobId& lbi) const;
   const HashMap<LogicalBlobId, std::unique_ptr<Blob>>& lbi2blob() const { return lbi2blob_; }
   Blob* packed_blob() const { return static_cast<Blob*>(packed_blob_.get()); }
-  void set_packed_blob(Blob* packed_blob) { packed_blob_.reset(packed_blob); }
-  Blob* GetBlobByLbi(const LogicalBlobId& lbi) const;
-  void AddBlob(LogicalBlobId lbi, Blob* blob);
 
   void* comm_net_token() const { return comm_net_token_; }
   void set_comm_net_token(void* comm_net_token) { comm_net_token_ = comm_net_token; }

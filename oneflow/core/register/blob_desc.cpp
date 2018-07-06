@@ -93,7 +93,6 @@ BlobDesc ComputePackedBlobDesc(const MemoryCase& mem_case,
     ret = *blob_desc;
   }
   if (blob_desc_cnt <= 1) { return ret; }
-
   int64_t packed_blob_size = 0;
   bool packed_as_raw = false;
   if (mem_case.has_host_mem() && !mem_case.host_mem().used_by_device()) {
