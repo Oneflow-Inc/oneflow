@@ -3,6 +3,9 @@
 namespace oneflow {
 
 void ReduceGlobalAddCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+  for (const auto& pair : task_proto.exec_sequence().exec_node().Get(0).bn_in_op2regst_desc_id()) {
+    CHECK(regst_desc_id2bn_in_op_.emplace(pair.second, pair.first).second);
+  }
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     CHECK_EQ(1, pair.second.regst_desc_id_size());
     int64_t regst_desc_id = pair.second.regst_desc_id().Get(0);
@@ -10,6 +13,7 @@ void ReduceGlobalAddCompActor::VirtualCompActorInit(const TaskProto& task_proto)
     CHECK(unprocessed_regst_desc_id_.emplace(regst_desc_id).second);
   }
   cur_processed_regst_desc_id_ = -1;
+  readable_regst_desc_cnt_ = 0;
   OF_SET_MSG_HANDLER(&ReduceGlobalAddCompActor::HandlerNormal);
 }
 
@@ -17,7 +21,9 @@ void ReduceGlobalAddCompActor::NormalProcessCustomizedReadableRegstMsg(const Act
   Regst* regst = msg.regst();
   int regst_desc_id = regst->regst_desc_id();
   CHECK(readable_regsts_.find(regst_desc_id) != readable_regsts_.end());
-  readable_regsts_.at(regst_desc_id).push(regst);
+  std::queue<Regst*>& regst_q = readable_regsts_.at(regst_desc_id);
+  if (regst_q.empty()) { readable_regst_desc_cnt_ += 1; }
+  regst_q.push(regst);
 }
 
 bool ReduceGlobalAddCompActor::IsCustomizedReadReady() {
@@ -38,14 +44,22 @@ void ReduceGlobalAddCompActor::ForEachCurCustomizedReadableRegst(
 }
 
 void ReduceGlobalAddCompActor::Act() {
-  Regst* cur_regst = readable_regsts_.at(cur_processed_regst_desc_id_).front();
+  std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
+  Regst* cur_regst = regst_q.front();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
-  kernel_ctx.other = &cur_processed_regst_desc_id_;
-  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* { return cur_regst; });
+  std::pair<std::string, bool> other_val(
+      regst_desc_id2bn_in_op_.at(cur_processed_regst_desc_id_),
+      unprocessed_regst_desc_id_.size() == readable_regsts_.size());
+  kernel_ctx.other = &other_val;
+  AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
+    CHECK_EQ(cur_processed_regst_desc_id_, regst_desc_id);
+    return cur_regst;
+  });
 
-  readable_regsts_.at(cur_processed_regst_desc_id_).pop();
-  cur_processed_regst_desc_id_ = -1;
+  regst_q.pop();
+  if (regst_q.empty()) { readable_regst_desc_cnt_ -= 1; }
   unprocessed_regst_desc_id_.erase(cur_processed_regst_desc_id_);
+  cur_processed_regst_desc_id_ = -1;
   if (unprocessed_regst_desc_id_.empty()) {
     AsyncSendRegstMsgToConsumer([&](Regst* regst) {
       regst->set_piece_id(cur_regst->piece_id());
@@ -57,8 +71,9 @@ void ReduceGlobalAddCompActor::Act() {
 }
 
 void ReduceGlobalAddCompActor::AsyncReturnAllCustomizedReadableRegst() {
-  CHECK(readable_regsts_.empty());
+  CHECK(unprocessed_regst_desc_id_.size() == readable_regsts_.size());
   CHECK_EQ(-1, cur_processed_regst_desc_id_);
+  CHECK_EQ(0, readable_regst_desc_cnt_);
 }
 
 REGISTER_ACTOR(TaskType::kReduceGlobalAdd, ReduceGlobalAddCompActor);

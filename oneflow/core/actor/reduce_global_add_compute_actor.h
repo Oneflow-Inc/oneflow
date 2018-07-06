@@ -15,16 +15,20 @@ class ReduceGlobalAddCompActor final : public CompActor {
   void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
-  void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   bool IsCustomizedReadReady() override;
-  bool IsCustomizedReadAlwaysUnReadyFromNow() override { return ReceiveAllEordMsg(); }
+  void NormalProcessCustomizedEordMsg(const ActorMsg&) override {}
+  bool IsCustomizedReadAlwaysUnReadyFromNow() override {
+    return ReceiveAllEordMsg() && readable_regst_desc_cnt_ == 0;
+  }
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {}};
   }
 
+  HashMap<int64_t, std::string> regst_desc_id2bn_in_op_;
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
+  int64_t readable_regst_desc_cnt_;
   HashSet<int64_t> unprocessed_regst_desc_id_;
   int64_t cur_processed_regst_desc_id_;
 };
