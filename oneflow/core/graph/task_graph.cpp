@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
 #include "oneflow/core/graph/copy_task_node.h"
@@ -128,9 +129,14 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
     for (TaskNode* candidate_node : candidate_nodes) {
       if (candidate_node->chain_id() != last_chain_id) {
         last_chain_id = candidate_node->chain_id();
-        RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(candidate_node);
-        ctrl_regst->UpdtMinRegstNumIfNeed(
-            copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
+        candidate_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+          auto md_updt_node = dynamic_cast<NormalMdUpdtCompTaskNode*>(node_on_in_edge);
+          if (md_updt_node != nullptr) {
+            RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
+            ctrl_regst->UpdtMinRegstNumIfNeed(
+                copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
+          }
+        });
       }
     }
   }
