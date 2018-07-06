@@ -114,7 +114,7 @@ std::string InceptionBlock4(const std::string& name, const std::string& in,
 
 std::string InceptionBlock5(const std::string& name, const std::string& in, const int num1x1,
                             const std::vector<int> num3x3, const std::vector<int> num3x3_3x3,
-                            const int numPool) {
+                            const int numPool, const std::string& pool_type) {
   std::string out, branch1x1;
   std::string branch3x3, branch3x3_2, branch3x3_3;
   std::string branch3x3_3x3, branch3x3_3x3_2, branch3x3_3x3_3;
@@ -133,8 +133,11 @@ std::string InceptionBlock5(const std::string& name, const std::string& in, cons
   branch3x3_3x3_3 = ConvBnReluBlock(name + "_b3x3_3x3_4", out, num3x3_3x3[3], {3, 1}, 1, "same");
   branch3x3_3x3 = Concat(name + "_concat3x3-3x3", {branch3x3_3x3_2, branch3x3_3x3_3}, CONCAT_AXIS);
 
-  // Average Pooling
-  out = AveragePooling2D(name + "_pool", in, 3, 1, "same", DATA_FORMAT);
+  // Pooling
+  if (pool_type == "avg")
+    out = AveragePooling2D(name + "_pool", in, 3, 1, "same", DATA_FORMAT);
+  else  // if (pool_type == "max")
+    out = MaxPooling2D(name + "_pool", in, 3, 1, "same", DATA_FORMAT);
   out = ConvBnReluBlock(name + "_bPool", out, numPool, {1, 1}, 1, "same");
   out = Concat(name + "_concat", {branch1x1, branch3x3, branch3x3_3x3, out}, CONCAT_AXIS);
   return out;
@@ -179,9 +182,9 @@ void InceptionV3Model() {
   // 17 x 17 x 768
   out = InceptionBlock4("mixed9", mixed8, {192, 320}, {192, 192, 192, 192});
   // 8 x 8 x 1280
-  out = InceptionBlock5("mixed10", out, 320, {384, 384, 384}, {448, 384, 384, 384}, 192);
+  out = InceptionBlock5("mixed10", out, 320, {384, 384, 384}, {448, 384, 384, 384}, 192, "avg");
   // 8 x 8 x 2048
-  out = InceptionBlock5("mixed11", out, 320, {384, 384, 384}, {448, 384, 384, 384}, 192);
+  out = InceptionBlock5("mixed11", out, 320, {384, 384, 384}, {448, 384, 384, 384}, 192, "max");
   // 8 x 8 x 2048
 
   // Prediction
