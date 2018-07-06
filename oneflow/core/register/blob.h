@@ -57,6 +57,8 @@ class Blob : public BlobIf {
     return static_cast<T*>(dptr_);
   }
 
+  void InitOFRecordBlobIfNeed();
+
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
@@ -109,6 +111,8 @@ using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* header_mem_ptr, char* data_mem_ptr,
               DeviceType device_type);
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);
+
+void GenOFRecordBlob(Blob* blob);
 
 template<typename RecordType>
 class RecordBlob final {

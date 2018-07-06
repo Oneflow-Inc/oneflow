@@ -32,9 +32,8 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) const {
   }
 }
 
-void Regst::AddBlob(LogicalBlobId lbi, BlobIf* blob) {
-  std::unique_ptr<BlobIf> blob_ptr;
-  blob_ptr.reset(blob);
+void Regst::AddBlob(LogicalBlobId lbi, Blob* blob) {
+  std::unique_ptr<Blob> blob_ptr(blob);
   CHECK(lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
 }
 

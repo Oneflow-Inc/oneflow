@@ -102,6 +102,7 @@ void RtRegstDesc::AllocMem4Regst(Regst* regst, int64_t index, DeviceType device_
     std::tie(cur_header_mem_size, cur_data_mem_size) = SizeOfBlobField(blob_desc);
     Blob* blob = NewBlob(regst, blob_desc, cur_header_mem_size > 0 ? cur_header_mem_ptr : nullptr,
                          cur_data_mem_size > 0 ? cur_data_mem_ptr : nullptr, device_type);
+    blob->InitOFRecordBlobIfNeed();
     regst->AddBlob(lbi, blob);
     if (cur_header_mem_size > 0) { cur_header_mem_ptr += cur_header_mem_size; }
     if (cur_data_mem_size > 0) { cur_data_mem_ptr += cur_data_mem_size; }

@@ -27,14 +27,15 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     auto rt_regst_desc_ptr = std::make_unique<RtRegstDesc>(*regst_desc);
     int32_t mem_shared_id = regst_desc->mem_shared_id();
     for (const auto& pair : rt_regst_desc_ptr->GetSize4AllActuallyMemCase()) {
-      size_t regst_total_size = pair.second * regst_desc->register_num();
+      size_t regst_mem_case_total_size = pair.second * regst_desc->register_num();
       if (mem_shared_id == -1) {
-        char* mem_ptr = Global<MemoryAllocator>::Get()->Allocate(pair.first, regst_total_size);
+        char* mem_ptr =
+            Global<MemoryAllocator>::Get()->Allocate(pair.first, regst_mem_case_total_size);
         rt_regst_desc_ptr->PickMemory(pair.first, mem_ptr);
       } else {
         auto mem_region = std::make_pair(pair.first, mem_shared_id);
         mem_case7mem_shared_id2mem_size[mem_region] =
-            std::max(mem_case7mem_shared_id2mem_size[mem_region], regst_total_size);
+            std::max(mem_case7mem_shared_id2mem_size[mem_region], regst_mem_case_total_size);
       }
     }
     CHECK(regst_desc_id2rt_regst_desc_
@@ -48,14 +49,15 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
               .second);
   }
   for (const RegstDescProto* regst_desc : regst_protos) {
-    int64_t regst_desc_id = regst_desc->regst_desc_id();
     int32_t mem_shared_id = regst_desc->mem_shared_id();
-    const MemoryCase& mem_case = regst_desc->mem_case();
-    auto mem_region = std::make_pair(mem_case, mem_shared_id);
     if (mem_shared_id != -1) {
-      auto mem_region = std::make_pair(mem_case, mem_shared_id);
-      char* mem_ptr = mem_case7mem_shared_id2mem_ptr.at(mem_region);
-      regst_desc_id2rt_regst_desc_.at(regst_desc_id)->PickMemory(mem_case, mem_ptr);
+      int64_t regst_desc_id = regst_desc->regst_desc_id();
+      auto& rt_regst_desc_ptr = regst_desc_id2rt_regst_desc_.at(regst_desc_id);
+      for (const auto& pair : rt_regst_desc_ptr->GetSize4AllActuallyMemCase()) {
+        auto mem_region = std::make_pair(pair.first, mem_shared_id);
+        char* mem_ptr = mem_case7mem_shared_id2mem_ptr.at(mem_region);
+        rt_regst_desc_ptr->PickMemory(pair.first, mem_ptr);
+      }
     }
   }
 }
@@ -64,7 +66,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
                          std::function<void(Regst*)> OneRegstDone) {
   const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
   const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
-
   RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst(rt_regst_desc);
@@ -76,16 +77,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       UNIMPLEMENTED();
     }
     OneRegstDone(regst);
-  }
-}
-
-void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
-  const BlobDesc& blob_desc = blob_ptr->blob_desc();
-  if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
-    }
   }
 }
 

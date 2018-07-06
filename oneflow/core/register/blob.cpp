@@ -4,6 +4,7 @@
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/register/blob_implement.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/memory/memory_allocator.h"
 
 namespace oneflow {
 
@@ -72,6 +73,15 @@ const MemoryCase& Blob::mem_case() const {
 
 bool Blob::IsMemoryContinuous() const {
   return mem_case().has_host_mem() && !mem_case().host_mem().used_by_device();
+}
+
+void Blob::InitOFRecordBlobIfNeed() {
+  if (blob_desc_->data_type() == kOFRecord) {
+    int64_t elem_cnt = blob_desc_->shape().elem_cnt();
+    FOR_RANGE(int64_t, i, 0, elem_cnt) {
+      Global<MemoryAllocator>::Get()->PlacementNew(&(mut_dptr<OFRecord>()[i]));
+    }
+  }
 }
 
 #define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                                      \
