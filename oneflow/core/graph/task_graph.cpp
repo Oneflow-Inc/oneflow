@@ -135,6 +135,9 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
             ctrl_regst->UpdtMinRegstNumIfNeed(
                 copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
+            // Set Max regst num is Hack
+            ctrl_regst->UpdtMaxRegstNumIfNeed(
+                copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
           }
         });
       }
