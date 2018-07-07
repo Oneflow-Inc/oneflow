@@ -58,7 +58,7 @@ void LogicalGraph::NaiveBuildFwStruct(
   for (OperatorConf cur_op_conf : dlnet_conf.op()) {
     auto parallel_desc_ptr_it = name2parallel_desc.find(cur_op_conf.name());
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
-    std::shared_ptr<ParallelDesc> parallel_desc_ptr = parallel_desc_ptr_it->second;
+    const std::shared_ptr<ParallelDesc>& parallel_desc_ptr = parallel_desc_ptr_it->second;
     cur_op_conf.set_device_type(parallel_desc_ptr->device_type());
     std::shared_ptr<Operator> cur_op = ConstructOp(cur_op_conf);
     LogicalNode* cur_node = cur_op->NewProperLogicalNode();
