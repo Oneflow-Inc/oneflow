@@ -71,7 +71,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void UpdateEdge2IbnObn(const LogicalEdge* edge, const std::string& ibn, const std::string& obn);
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;
-  // HashMap<LogicalBlobId, std::string> lbi2obn_;
 };
 
 }  // namespace oneflow

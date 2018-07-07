@@ -86,18 +86,14 @@ void NormalBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
       for (const std::string& odbn : cur_node->op()->output_diff_bns()) {
         const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(odbn);
         if (lbi2producer.find(lbi) == lbi2producer.end()) {
-          std::string obn = GenUnDiffBn(odbn);  // the lbis of obn and odbn may be different
+          std::string obn =
+              GenUnDiffBn(odbn);  // the lbis of obn and odbn may be different, use obn directly
           LogicalBlobId obn_lbi = cur_node->op()->BnInOp2Lbi(obn);
           if (lbi_boxing.find(obn_lbi) != lbi_boxing.end()) {
             cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst_boxing);
           } else if (lbi_121.find(obn_lbi) != lbi_121.end()) {
             cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst_121);
           } else {
-            const auto& ex_gph = exec_gph();
-            auto node = ex_gph.SoleNode();
-            LOG(INFO) << "bw_node:" << VisualStr() << "," << node->VisualStr();
-
-            LOG(INFO) << "lbi:" << lbi.op_name() << "," << lbi.blob_name();
             UNIMPLEMENTED();
           }
         }

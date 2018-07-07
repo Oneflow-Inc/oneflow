@@ -76,7 +76,6 @@ void LogicalGraph::NaiveBuildFwStruct(
       if (pred_node == cur_node) { continue; }
       LogicalEdge* edge = NewEdge();
       edge->mut_lbis() = {lbi};
-      // CHECK(edge2ibn_.emplace(edge, ibn).second);
       UpdateEdge2IbnObn(edge, ibn, lbi2obn.at(lbi));
       Connect(pred_node, edge, cur_node);
     }
@@ -179,7 +178,6 @@ void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info) {
   LogicalEdge* edge = NewEdge();
   edge->mut_lbis() = {clone_info.lbi};
   Connect(clone_info.pred_node, edge, clone_node);
-  // CHECK(edge2ibn_.emplace(edge, clone_op->SoleIbn()).second);
   UpdateEdge2IbnObn(edge, clone_op->SoleIbn(), "");
   ReConnectToFwClone(clone_node, lbi_boxing, clone_info.edges_boxing, lbi2obn);
   ReConnectToFwClone(clone_node, lbi_121, clone_info.edges_121, lbi2obn);
@@ -252,7 +250,6 @@ void LogicalGraph::NaiveBuildBwStruct() {
     auto NewBwEdge = [&]() {
       LogicalEdge* bw_edge = NewEdge();
       bw_edge->mut_lbis() = fw_edge->lbis();
-      // CHECK(edge2ibn_.emplace(bw_edge, edge2ibn_.at(fw_edge)).second);
       UpdateEdge2IbnObn(bw_edge, edge2ibn_.at(fw_edge), edge2obn_.at(fw_edge));
       return bw_edge;
     };
@@ -336,10 +333,7 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
 void LogicalGraph::RemoveBackwardAdd() {
   HashMap<LogicalNode*, LogicalNode*> bw_add_node2pre_node;
   CollectBackwardB121CloneInfos(&bw_add_node2pre_node);
-  for (const auto& pair : bw_add_node2pre_node) {
-    RemoveOneBackwardAdd(pair);
-    // break;
-  }
+  for (const auto& pair : bw_add_node2pre_node) { RemoveOneBackwardAdd(pair); }
 }
 
 void LogicalGraph::CollectBackwardB121CloneInfos(
@@ -380,18 +374,15 @@ void LogicalGraph::RemoveOneBackwardAdd(
   for (LogicalEdge* edge : out_edges) {
     auto dst_node = edge->dst_node();
     auto old_lbi = edge->SoleLbi();
-    std::string obn = edge2obn_.at(edge);
     DisConnect(edge);
     Connect(pre_node, edge, dst_node);
     edge->mut_lbis() = {lbi};
-    auto dst_op = dst_node->SoleOp();
-    std::string odbn = GenDiffBn(obn);
-    *(dst_op->MutBnInOp2Lbi(odbn)) = lbi;
+    *(edge->dst_node()->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2obn_.at(edge)))) = lbi;
     UpdateEdge2IbnObn(edge, old_ibn, "");
   }
   DeleteNode(bw_add_node);
   // TODO: delete add_in_edge
-  // set the bw_node of fw_add_node as nullptr
+  // TODO: set the bw_node of fw_add_node as nullptr
 }
 
 void LogicalGraph::MergeEdge() {
