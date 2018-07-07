@@ -36,27 +36,23 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
-  void BuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void NaiveBuildFwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn,
-                          HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
+  void BuildFwStruct();
+  void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void AddB121Clone(HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void AddB121Clone();
   void CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos);
-  void AddOneB121CloneNode(const B121CloneInfo& clone_info,
-                           HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void AddOneB121CloneNode(const B121CloneInfo& clone_info);
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
                           const std::vector<LogicalEdge*>& edges,
-                          const HashMap<LogicalEdge*, std::string>& edge2ibn);
+                          const HashMap<LogicalBlobId, std::string>& lbi2obn);
   void SetMainModelParallel();
-  void BuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void NaiveBuildBwStruct(HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void AddBackwardClone(const HashMap<LogicalEdge*, std::string>& edge2ibn);
-  void AddOneBackwardClone(const BackwardCloneInfo& clone_info,
-                           const HashMap<LogicalEdge*, std::string>& edge2ibn);
-  void RemoveBackwardAdd(HashMap<LogicalEdge*, std::string>* edge2ibn);
-  void CollectBackwardB121CloneInfos(std::vector<B121CloneInfo>* clone_infos);
-  void RemoveOneBackwardAdd(const B121CloneInfo& clone_info,
-                            HashMap<LogicalEdge*, std::string>* edge2ibn);
+  void BuildBwStruct();
+  void NaiveBuildBwStruct();
+  void AddBackwardClone();
+  void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
+  void RemoveBackwardAdd();
+  void CollectBackwardB121CloneInfos(HashMap<LogicalNode*, LogicalNode*>* bw_add_node2pre_node);
+  void RemoveOneBackwardAdd(const std::pair<LogicalNode*, LogicalNode*>& bw_add_node_and_pre);
 
   void MergeEdge();
   void SetNodeDataLbi();
@@ -71,6 +67,11 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void ConnectFwToBw();
 
   int64_t total_mbn_num_;
+
+  void UpdateEdge2IbnObn(const LogicalEdge* edge, const std::string& ibn, const std::string& obn);
+  HashMap<const LogicalEdge*, std::string> edge2ibn_;
+  HashMap<const LogicalEdge*, std::string> edge2obn_;
+  // HashMap<LogicalBlobId, std::string> lbi2obn_;
 };
 
 }  // namespace oneflow
