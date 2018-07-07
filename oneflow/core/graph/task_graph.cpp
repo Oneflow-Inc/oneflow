@@ -95,7 +95,7 @@ void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
 
 void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   if (Global<JobDesc>::Get()->IsTrain() == false) { return; }
-  for (auto task_node : ordered_task_nodes_) {
+  for (TaskNode* task_node : ordered_task_nodes_) {
     auto copy_hd_task_node = dynamic_cast<CopyHdTaskNode*>(task_node);
     if (copy_hd_task_node == nullptr) { continue; }
     if (copy_hd_task_node->copy_type() != CopyHdOpConf::H2D) { continue; }
@@ -114,9 +114,9 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
         }
       } else {
         node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-          auto fw_task_node_on_out_edge =
-              dynamic_cast<NormalForwardCompTaskNode*>(node_on_out_edge);
-          if (fw_task_node_on_out_edge != nullptr) { TryPushNodeToQueue(node_on_out_edge); }
+          if (IsForwardTaskType(node_on_out_edge->GetTaskType())) {
+            TryPushNodeToQueue(node_on_out_edge);
+          }
         });
       }
     };
@@ -130,8 +130,7 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
       if (candidate_node->chain_id() != last_chain_id) {
         last_chain_id = candidate_node->chain_id();
         candidate_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-          auto md_updt_node = dynamic_cast<NormalMdUpdtCompTaskNode*>(node_on_in_edge);
-          if (md_updt_node != nullptr) {
+          if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
             RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
             // Set regst num is Hack
