@@ -20,6 +20,7 @@ class NaiveActor final : public Actor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {true, {}};
   }
+  bool NeedCollectActEvent() const override { return false; }
 };
 
 }  // namespace oneflow
