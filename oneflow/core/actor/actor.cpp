@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -256,7 +257,8 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 
     device_ctx_->AddCallBack([act_event]() {
       act_event->set_stop_time(GetCurTime());
-      Global<CtrlClient>::Get()->PushActEvent(*act_event);
+      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+          [act_event]() { Global<CtrlClient>::Get()->PushActEvent(*act_event); });
     });
   } else {
     DoAct();
