@@ -29,6 +29,7 @@ namespace oneflow{
         typedef Ret(*pointer)(Args...);
 
         typedef std::tuple<Args...> tuple_type;
+        typedef std::tuple<std::remove_const_t<std::remove_reference_t<Args>>...> bare_tuple_type;
     };
 
     template<typename Ret, typename... Args>
@@ -45,6 +46,9 @@ namespace oneflow{
 
     template<typename Callable>
     struct function_traits : function_traits<decltype(&Callable::operator())>{};
+
+    template<typename T>
+    using remove_const_reference_t = std::remove_const_t<std::remove_reference_t<T>>;
 }
 
 #endif //ONEFLOW_META_UTIL_HPP
