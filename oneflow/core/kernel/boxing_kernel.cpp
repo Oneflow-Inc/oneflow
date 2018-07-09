@@ -178,28 +178,37 @@ void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
                       const PbRpf<std::string>& input_bns, const PbRpf<std::string>& output_bns) {
   auto in_iter = input_bns.begin();
   auto out_iter = output_bns.begin();
-  int64_t in_data_num = BnInOp2Blob(*in_iter)->shape().At(0);
-  int64_t out_data_num = BnInOp2Blob(*out_iter)->shape().At(0);
-  int32_t max_col_id = BnInOp2Blob(*in_iter)->col_id();
+  bool move_in_iter = true;
+  bool move_out_iter = true;
+  int64_t in_data_num = 0;
+  int64_t out_data_num = 0;
+  int32_t max_col_id = -1;
   while (in_iter != input_bns.end() && out_iter != input_bns.end()) {
-    if (in_data_num < out_data_num) {
-      ++in_iter;
+    if (move_in_iter && in_iter != input_bns.end()) {
       in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
       max_col_id = std::max(max_col_id, BnInOp2Blob(*in_iter)->col_id());
+    }
+    if (move_out_iter && out_iter != output_bns.end()) {
+      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+    }
+    if (in_data_num < out_data_num) {
+      ++in_iter;
+      move_in_iter = true;
+      move_out_iter = false;
     } else if (in_data_num > out_data_num) {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
-      max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+      move_in_iter = false;
+      move_out_iter = true;
     } else {
       BnInOp2Blob(*out_iter)->set_col_id(max_col_id);
       ++in_iter;
-      in_data_num += BnInOp2Blob(*in_iter)->shape().At(0);
-      max_col_id = BnInOp2Blob(*in_iter)->col_id();
       ++out_iter;
-      out_data_num += BnInOp2Blob(*out_iter)->shape().At(0);
+      move_in_iter = true;
+      move_out_iter = true;
     }
   }
+  CHECK_EQ(in_data_num, out_data_num);
 }
 
 }  // namespace
