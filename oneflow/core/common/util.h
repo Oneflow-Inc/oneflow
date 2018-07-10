@@ -179,6 +179,7 @@ inline double GetCurTime() {
 }
 
 const size_t kCudaAlignSize = 8;
+const size_t kCudaMemAllocAlignSize = 256;
 inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align * align; }
 
 size_t GetAvailableCpuMemSize();
