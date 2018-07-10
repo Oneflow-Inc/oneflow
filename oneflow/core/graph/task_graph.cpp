@@ -89,43 +89,51 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
 }
 
 void TaskGraph::AddCtrlEdgeInReduceStruct() {
-  int64_t total_machine_num = 0;
-  std::vector<std::vector<ReduceGlobalAddCompTaskNode*>> machine_id2global_add_nodes;
-  ForEachNode([&](TaskNode* task_node) {
-    auto global_add_node = dynamic_cast<ReduceGlobalAddCompTaskNode*>(task_node);
-    if (global_add_node != nullptr) {
-      if (total_machine_num == 0) {
-        total_machine_num =
-            global_add_node->logical_node()->parallel_desc()->sorted_machine_ids().size();
-        machine_id2global_add_nodes.resize(total_machine_num);
-      }
-      machine_id2global_add_nodes.at(global_add_node->machine_id()).push_back(global_add_node);
-    }
-  });
+  int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
   if (total_machine_num == 1) { return; }
 
-  for (int64_t machine_id = 0; machine_id < total_machine_num; ++machine_id) {
-    std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_parallel_id;
-    CollectCopyCommNetForGlobalAddNodes(machine_id2global_add_nodes.at(machine_id),
-                                        &commnet_nodes_with_parallel_id);
-
-    std::vector<int64_t> val_used_by_sort(total_machine_num);
-    for (size_t i = 0; i < total_machine_num; ++i) {
-      val_used_by_sort.at(i) = (i + total_machine_num - machine_id - 1) % total_machine_num;
+  HashMap<const ReduceGlobalAddLogicalNode*,
+          HashMap<int64_t, std::vector<ReduceGlobalAddCompTaskNode*>>>
+      machine_id2global_add_task_nodes_for_same_logical_node;
+  ForEachNode([&](TaskNode* task_node) {
+    ReduceGlobalAddCompTaskNode* global_add_node =
+        dynamic_cast<ReduceGlobalAddCompTaskNode*>(task_node);
+    if (global_add_node != nullptr) {
+      const ReduceGlobalAddLogicalNode* logical_node =
+          dynamic_cast<const ReduceGlobalAddLogicalNode*>(global_add_node->logical_node());
+      CHECK(logical_node != nullptr);
+      machine_id2global_add_task_nodes_for_same_logical_node[logical_node]
+                                                            [global_add_node->machine_id()]
+                                                                .push_back(global_add_node);
     }
-    std::sort(commnet_nodes_with_parallel_id.begin(), commnet_nodes_with_parallel_id.end(),
-              [&](const std::pair<CopyCommNetTaskNode*, int64_t>& lhs,
-                  const std::pair<CopyCommNetTaskNode*, int64_t>& rhs) {
-                if (lhs.first->peer_machine_id() == rhs.first->peer_machine_id()) {
-                  return lhs.second < rhs.second;
-                }
-                return val_used_by_sort.at(lhs.first->peer_machine_id())
-                       < val_used_by_sort.at(rhs.first->peer_machine_id());
-              });
+  });
 
-    for (size_t i = 0; i < commnet_nodes_with_parallel_id.size() - 1; ++i) {
-      commnet_nodes_with_parallel_id.at(i).first->BuildCtrlRegstDescIfNeed(
-          commnet_nodes_with_parallel_id.at(i + 1).first);
+  for (const auto& kv : machine_id2global_add_task_nodes_for_same_logical_node) {
+    const auto& machine_id2global_add_nodes = kv.second;
+    if (machine_id2global_add_nodes.size() == 1) { continue; }
+    for (int64_t machine_id = 0; machine_id < machine_id2global_add_nodes.size(); ++machine_id) {
+      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_parallel_id;
+      CollectCopyCommNetForGlobalAddNodes(machine_id2global_add_nodes.at(machine_id),
+                                          &commnet_nodes_with_parallel_id);
+
+      std::vector<int64_t> val_used_by_sort(total_machine_num);
+      for (size_t i = 0; i < total_machine_num; ++i) {
+        val_used_by_sort.at(i) = (i + total_machine_num - machine_id - 1) % total_machine_num;
+      }
+      std::sort(commnet_nodes_with_parallel_id.begin(), commnet_nodes_with_parallel_id.end(),
+                [&](const std::pair<CopyCommNetTaskNode*, int64_t>& lhs,
+                    const std::pair<CopyCommNetTaskNode*, int64_t>& rhs) {
+                  if (lhs.first->peer_machine_id() == rhs.first->peer_machine_id()) {
+                    return lhs.second < rhs.second;
+                  }
+                  return val_used_by_sort.at(lhs.first->peer_machine_id())
+                         < val_used_by_sort.at(rhs.first->peer_machine_id());
+                });
+
+      for (size_t i = 0; i < commnet_nodes_with_parallel_id.size() - 1; ++i) {
+        commnet_nodes_with_parallel_id.at(i).first->BuildCtrlRegstDescIfNeed(
+            commnet_nodes_with_parallel_id.at(i + 1).first);
+      }
     }
   }
 }
