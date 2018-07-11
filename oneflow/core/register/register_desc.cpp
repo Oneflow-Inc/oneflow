@@ -153,7 +153,6 @@ void RegstDesc::GenPackedBlobDesc() {
       data_type_set.insert(static_cast<int>(blob_desc.data_type()));
       has_data_id_field = has_data_id_field || blob_desc.has_data_id_field();
       has_col_num_field = has_col_num_field || blob_desc.has_col_num_field();
-      has_col_num_field = has_col_num_field || blob_desc.has_col_num_field();
       if (max_col_num == -1) {
         max_col_num = blob_desc.max_col_num();
       } else {
