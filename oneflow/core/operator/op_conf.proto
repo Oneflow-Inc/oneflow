@@ -393,6 +393,10 @@ message LossPrintOpConf {
   optional LossReductionType reduction_type = 4 [default = kSumOverN];
 }
 
+message AccuracyPrintOpConf {
+  required LogicalBlobId accuracy_lbi = 1;
+}
+
 message ReduceSumOpConf {
   oneof in_conf {
     string in = 1; // For User
@@ -575,6 +579,13 @@ message ReduceGatherOpConf {
   required int32 in_num = 1;
 };
 
+message AccuracyOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  optional int32 top_k = 3 [default = 1];
+  required string accuracy = 4;
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -627,6 +638,8 @@ message OperatorConf {
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
     RecordLoadOpConf record_load_conf = 404;
+    AccuracyOpConf accuracy_conf=405;
+    AccuracyPrintOpConf accuracy_print_conf = 406;
   }
 }
 
