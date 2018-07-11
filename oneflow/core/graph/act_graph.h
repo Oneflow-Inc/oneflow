@@ -70,7 +70,6 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   void ToDotFiles(const std::string& dir) const;
 
   // Getters
-  const Plan& plan() const { return *plan_; }
   const TaskProto& GetTaskProto(int64_t actor_id) const {
     return *task_id2task_proto_.at(actor_id);
   }

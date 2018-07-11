@@ -63,7 +63,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                                        LogicalNode* need_save_logical);
   NormalMdUpdtLogicalNode* BuildNormalMdUpdtAndMdSaveStruct(bool is_train,
                                                             ForwardLogicalNode* fw_logical);
-  void BuildRecordLoadStruct();
   void ConnectFwToBw();
 
   int64_t total_mbn_num_;

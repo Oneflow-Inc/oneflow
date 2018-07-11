@@ -78,6 +78,12 @@ int64_t IDMgr::LocalWorkStreamId4ActorId(int64_t actor_id) const {
   return LocalWorkStreamId4TaskId(actor_id);
 }
 
+int64_t IDMgr::AllocateChainId(int64_t global_work_stream_id) {
+  CHECK_LT(stream_id2chain_cnt_[global_work_stream_id],
+           (static_cast<int64_t>(1) << task_id_bit_num_) - 1);
+  return global_work_stream_id | (stream_id2chain_cnt_[global_work_stream_id]++);
+}
+
 IDMgr::IDMgr() {
   const Resource& resource = Global<JobDesc>::Get()->resource();
   CHECK_LT(resource.machine_size(), static_cast<int64_t>(1) << machine_id_bit_num_);
@@ -85,6 +91,7 @@ IDMgr::IDMgr() {
   cpu_device_num_ = resource.cpu_device_num();
   CHECK_LT(gpu_device_num_ + cpu_device_num_, (static_cast<int64_t>(1) << thread_id_bit_num_) - 3);
   regst_desc_id_count_ = 0;
+  mem_shared_id_count_ = 0;
 }
 
 int64_t IDMgr::GetMachineThrdId(int64_t machine_id, int64_t thrd_id) {

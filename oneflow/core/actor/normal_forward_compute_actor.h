@@ -13,7 +13,7 @@ class NormalForwardCompActor final : public CompActor {
 
  private:
   void VirtualCompActorInit(const TaskProto&) override;
-  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) override;
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void Act() override;
   bool IsCustomizedReadReady() override;

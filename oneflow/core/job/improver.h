@@ -12,17 +12,19 @@ namespace oneflow {
 class Improver final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Improver);
-  Improver() = delete;
+  Improver() = default;
   ~Improver() = default;
 
-  explicit Improver(const AvailableMemDesc& amd) : amd_(amd) {}
-
-  Plan Improve(const Plan& naive_plan, const std::string& act_event_filepath);
+  Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+               const std::string& act_event_filepath);
+  Plan ImproveMemSharedIdOnly(const Plan& naive_plan) const;
 
  private:
-  void MemoryLimitedAllocate(const ActGraph& graph,
-                             const std::function<void(int64_t, uint64_t)>& Handler) const;
-
+  void ForEachImprovedRegstNum(
+      const ActGraph& graph, const Plan& plan, bool is_memory_limited,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
+      const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
+      const std::function<void(int64_t, uint64_t)>& Handler) const;
   //  first dimension index of MemZoneRegstDescs is machine_id
   //  second dimension index of MemZoneRegstDescs is mem_zone_id
   using MemZoneRegstDescs = std::vector<std::vector<std::list<const RegstDescProto*>>>;

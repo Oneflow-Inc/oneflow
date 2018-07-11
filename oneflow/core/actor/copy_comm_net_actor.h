@@ -22,8 +22,8 @@ class CopyCommNetActor final : public Actor {
 
   void VirtualActorInit(const TaskProto&) override;
   void InitDeviceCtx(const ThreadCtx&) override;
-  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) override;
-  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) override;
+  void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
+  void SetReadableRegstInfo(const Regst*, ReadableRegstInfo*) const override;
   void NormalProcessCustomizedEordMsg(const ActorMsg&) override { is_in_eord_ = true; }
   bool NormalTryProcessReadableMsgFromOtherMachine(const ActorMsg&) override;
   void Act() override;

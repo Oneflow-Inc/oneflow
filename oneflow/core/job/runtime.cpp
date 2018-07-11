@@ -25,6 +25,14 @@ void HandoutTasks(const std::vector<const TaskProto*>& tasks) {
   SendCmdMsg(tasks, ActorCmd::kConstructActor);
 }
 
+bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
+  for (const auto& pair : task.consumed_regst_desc_id()) {
+    if (pair.first == "in_ctrl") { continue; }
+    return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
@@ -37,7 +45,7 @@ Runtime::Runtime(const Plan& plan, bool is_experiment_phase) {
     if (task.machine_id() != Global<MachineCtx>::Get()->this_machine_id()) { continue; }
     if (IsMdUpdtTaskType(task.task_type())) {
       mdupdt_tasks.push_back(&task);
-    } else if (task.consumed_regst_desc_id_size() == 0) {
+    } else if (!HasNonCtrlConsumedRegstDescId(task)) {
       source_tasks.push_back(&task);
     } else {
       other_tasks.push_back(&task);
@@ -73,7 +81,6 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
   int64_t piece_num = 0;
   if (is_experiment_phase) {
     piece_num = job_desc->piece_num_of_experiment_phase();
-    Global<ActEventLogger>::New();
   } else {
     if (job_desc->IsTrain()) {
       piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
@@ -82,6 +89,9 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     }
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
+  if (Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
+    Global<ActEventLogger>::New(is_experiment_phase);
+  }
   if (job_desc->TotalMachineNum() > 1) {
 #ifdef PLATFORM_POSIX
     if (job_desc->use_rdma()) {
@@ -109,8 +119,8 @@ void Runtime::DeleteAllGlobal() {
   Global<MemoryAllocator>::Delete();
   Global<SnapshotMgr>::Delete();
   Global<CommNet>::Delete();
-  Global<RuntimeCtx>::Delete();
   Global<ActEventLogger>::Delete();
+  Global<RuntimeCtx>::Delete();
 }
 
 }  // namespace oneflow

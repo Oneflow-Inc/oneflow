@@ -24,7 +24,7 @@ void LossOp::VirtualGenKernelConf(
   conf->set_reduction(static_cast<LossReductionType>(GetEnumFromCustomizedConf("reduction")));
 }
 
-void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void LossOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx, size_t* buf_size,
                             std::function<void(OpContext*)>) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");

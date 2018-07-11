@@ -4,6 +4,7 @@ namespace oneflow {
 
 void DecodeOFRecordOp::InitFromOpConf() {
   CHECK(op_conf().has_decode_ofrecord_conf());
+  EnrollInputBn("in", false);
   const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
   for (int32_t i = 0; i < conf.blob_size(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i), false);
@@ -25,13 +26,14 @@ const PbMessage& DecodeOFRecordOp::GetCustomizedConf() const {
 }
 
 void DecodeOFRecordOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
+  BlobDesc* in_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
   FOR_RANGE(size_t, i, 0, output_bns().size()) {
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
-    dim_vec[0] = Global<JobDesc>::Get()->PieceSizeInOneDataPart();
+    dim_vec[0] = in_blob_desc->shape().At(0);
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
     out_blob_desc->mut_shape() = Shape(dim_vec);
     out_blob_desc->set_data_type(blob_conf.data_type());

@@ -141,13 +141,6 @@ void CtrlClient::EraseCount(const std::string& k) {
   call(GetResponsibleStub(k));
 }
 
-void CtrlClient::PushAvgActInterval(int64_t actor_id, double avg_act_interval) {
-  ClientCall<CtrlMethod::kPushAvgActInterval> call;
-  call.mut_request()->set_actor_id(actor_id);
-  call.mut_request()->set_avg_act_interval(avg_act_interval);
-  call(GetMasterStub());
-}
-
 CtrlClient::CtrlClient() {
   stubs_.reserve(Global<JobDesc>::Get()->TotalMachineNum());
   for (int64_t i = 0; i < Global<JobDesc>::Get()->TotalMachineNum(); ++i) {

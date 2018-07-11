@@ -15,7 +15,7 @@ void BasicRnnOp::VirtualInitFromOpConf() {
 }
 
 void BasicRnnOp::VirtualInferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   int32_t hidden_size = GetBlobDesc4BnInOp("out")->shape().At(1);
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

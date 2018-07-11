@@ -15,7 +15,7 @@ const PbMessage& LocalResponseNormalizationOp::GetCustomizedConf() const {
 }
 
 void LocalResponseNormalizationOp::InferBlobDescs(
-    std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const LocalResponseNormalizationOpConf conf = op_conf().local_response_normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");

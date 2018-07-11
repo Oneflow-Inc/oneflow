@@ -39,6 +39,7 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
+  virtual bool IsEmbeddingLookupOp() const { return false; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -106,19 +107,19 @@ class Operator {
 
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
-  void InferBlobDescsIf(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                         const ParallelContext*, size_t* buf_size,
                         std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*, size_t* buf_size,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
   virtual void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
@@ -193,6 +194,7 @@ class Operator {
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
+  void EnrollModelDiffBn(const std::string& mdbn);
   void EnrollConstModelBn(const std::string& cmbn);
 
   void EnrollConstBufBn(const std::string& cbbn);
