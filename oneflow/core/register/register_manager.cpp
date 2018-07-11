@@ -69,6 +69,8 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
   int32_t last_mem_shared_id = -1;
   char* mem_ptr = nullptr;
   for (const RegstDescProto* regst_desc : sorted_regst_protos) {
+    if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
+    CHECK_GT(GetRegstSize(regst_desc), 0);
     int32_t current_mem_shared_id = regst_desc->mem_shared_id();
     if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
       mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
@@ -84,13 +86,17 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
   const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
   const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
   const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
-  char* mem_ptr = regst_desc_id2mem_ptr_.at(regst_desc_id);
+  char* mem_ptr = nullptr;
+  if (regst_desc_id2mem_ptr_.find(regst_desc_id) != regst_desc_id2mem_ptr_.end()) {
+    mem_ptr = regst_desc_id2mem_ptr_.at(regst_desc_id);
+  }
   std::vector<LogicalBlobId> lbis;
   if (regst_desc_type.has_data_regst_desc()) {
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
       lbis.push_back(pair.lbi());
     }
     CHECK(!lbis.empty());
+    CHECK(mem_ptr != nullptr);
   }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
