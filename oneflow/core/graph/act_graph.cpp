@@ -403,9 +403,9 @@ void ActGraph::TopoForEachActNode(const std::list<ActNode*>& starts,
                                   const std::function<void(ActNode*)>& Handler) const {
   std::list<ActNode*> sorted_starts(starts);
   sorted_starts.sort(
-      [](const ActNode* lhs, const ActNode* rhs) { return lhs->act_id() > rhs->act_id(); });
-  DfsTopoForEachNodeSortByDistanceToSink(sorted_starts, &ActNode::ForEachNodeOnInEdge,
-                                         &ActNode::ForEachNodeOnOutEdge, Handler);
+      [](const ActNode* lhs, const ActNode* rhs) { return lhs->act_id() < rhs->act_id(); });
+  TopoForEachNode(sorted_starts, &ActNode::ForEachNodeOnInEdge, &ActNode::ForEachNodeOnOutEdge,
+                  Handler);
 }
 
 void ActGraph::InitDepth() {
