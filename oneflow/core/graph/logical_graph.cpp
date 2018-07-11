@@ -1,11 +1,12 @@
 #include "oneflow/core/graph/logical_graph.h"
-#include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/graph/graph_helper.hpp"
 
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
+  RegisterMtdType();
   HashMap<LogicalEdge*, std::string> edge2ibn;
   BuildFwStruct(&edge2ibn);
   SetMainModelParallel();
@@ -16,6 +17,30 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildModelStruct(is_train);
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
+}
+
+void LogicalGraph::RegisterMtdType() {
+  std::vector<std::string> one2one_temp{
+      SrcDestName<NormalMdUpdtLogicalNode, NormalForwardLogicalNode>(),
+      SrcDestName<NormalMdUpdtLogicalNode, NormalBackwardLogicalNode>(),
+      SrcDestName<NormalForwardLogicalNode, NormalBackwardLogicalNode>(),
+      SrcDestName<NormalBackwardLogicalNode, MdDiffAccLogicalNode>(),
+      SrcDestName<RecordLoadLogicalNode, DecodeLogicalNode>(),
+      SrcDestName<LossLogicalNode, LossAccLogicalNode>(),
+      SrcDestName<MdDiffAccLogicalNode, ReduceScatterLogicalNode>(),
+      SrcDestName<ReduceGatherLogicalNode, NormalMdUpdtLogicalNode>()};
+
+  auto& helper = GraphHelper::get();
+  for (auto& key : one2one_temp) { helper.RegisterMtdType(key, BldTskGphMtdType::One2One); }
+
+  helper.RegisterMtdType(SrcDestName<ReduceScatterLogicalNode, ReduceLocalAddLogicalNode>(),
+                         BldTskGphMtdType::Scatter2LocalAdd);
+  helper.RegisterMtdType(SrcDestName<ReduceScatterLogicalNode, ReduceGlobalAddLogicalNode>(),
+                         BldTskGphMtdType::Scatter2GlobalAdd);
+  helper.RegisterMtdType(SrcDestName<ReduceLocalAddLogicalNode, ReduceGlobalAddLogicalNode>(),
+                         BldTskGphMtdType::LocalAdd2GlobalAdd);
+  helper.RegisterMtdType(SrcDestName<ReduceGlobalAddLogicalNode, ReduceGatherLogicalNode>(),
+                         BldTskGphMtdType::GlobalAdd2Gather);
 }
 
 template<typename LogicalNodeType>
@@ -129,10 +154,11 @@ void LogicalGraph::CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos
     HashMap<LogicalBlobId, B121CloneInfo> lbi2clone_info;
     for (LogicalEdge* edge : cur_node->out_edges()) {
       B121CloneInfo& clone_info = lbi2clone_info[edge->SoleLbi()];
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(cur_node, edge->dst_node());
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+      auto& helper = GraphHelper::get();
+      BldTskGphMtdType type = helper.GetMtdType(cur_node, edge->dst_node());
+      if (type == BldTskGphMtdType::Boxing) {
         clone_info.edges_boxing.push_back(edge);
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+      } else if (type == BldTskGphMtdType::One2One) {
         clone_info.edges_121.push_back(edge);
       } else {
         UNIMPLEMENTED();

@@ -14,7 +14,7 @@
 #include "oneflow/core/graph/reduce_local_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
-#include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/graph_helper.hpp"
 
 namespace oneflow {
 
@@ -59,23 +59,6 @@ std::string ConcatTypeName(const LogicalNode* lhs, const LogicalNode* rhs) {
   return lhs->TypeName() + rhs->TypeName();
 }
 
-using FuncForFindBldSubTskGphMthd =
-    std::function<BldSubTskGphMthd(const LogicalNode* src, const LogicalNode* dst)>;
-
-DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindBldSubTskGphMthd>,
-                  GetFuncForFindBldSubTskGphMthd);
-
-void AddFuncForFindBldSubTskGphMthd(const std::string& k, FuncForFindBldSubTskGphMthd v) {
-  CHECK(GetFuncForFindBldSubTskGphMthd()->emplace(k, v).second);
-}
-void AddFuncForFindBldSubTskGphMthd(const std::string& k, std::function<BldSubTskGphMthd()> v) {
-  AddFuncForFindBldSubTskGphMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v(); });
-}
-void AddFuncForFindBldSubTskGphMthd(const std::string& k, BldSubTskGphMthd v) {
-  AddFuncForFindBldSubTskGphMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v; });
-}
-#define REGISTER_BLD_SUB_TSK_GPH_MTHD(k, v) COMMAND(AddFuncForFindBldSubTskGphMthd(k, v))
-
 using FuncForFindBldBoxingOpConfMthd =
     std::function<BldBoxingOpConfMthd(const LogicalNode* src, const LogicalNode* dst)>;
 DEFINE_STATIC_VAR(HashMap<std::string OF_COMMA FuncForFindBldBoxingOpConfMthd>,
@@ -92,24 +75,6 @@ void AddFuncForFindBldBoxingOpConfMthd(const std::string& k, BldBoxingOpConfMthd
   AddFuncForFindBldBoxingOpConfMthd(k, [v](const LogicalNode*, const LogicalNode*) { return v; });
 }
 #define REGISTER_BLD_BOXING_OP_CONF_MTHD(k, v) COMMAND(AddFuncForFindBldBoxingOpConfMthd(k, v))
-
-BldSubTskGphMthd BldSubTskGphToMdSave(const LogicalNode*, const LogicalNode* save) {
-  if (save->parallel_desc()->parallel_num() == 1) {
-    return &TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink;
-  } else {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  }
-}
-
-BldSubTskGphMthd BldSubTskGphToNormalMdUpdt(const LogicalNode*, const LogicalNode* updt) {
-  if (updt->parallel_desc()->policy() == kDataParallel) {
-    return &TaskGraph::BldSubTskGphByBoxing;
-  } else if (updt->parallel_desc()->policy() == kModelParallel) {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  } else {
-    UNIMPLEMENTED();
-  }
-}
 
 using FuncForFindLbis =
     std::function<std::vector<LogicalBlobId>(const LogicalNode* src, const LogicalNode* dst)>;
@@ -152,10 +117,11 @@ std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const 
 
 void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
   CHECK(dst2data_lbis_.emplace(dst, lbis).second);
-  BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(this, dst);
-  if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+  auto& helper = GraphHelper::get();
+  BldTskGphMtdType type = helper.GetMtdType(this, dst);
+  if (type == BldTskGphMtdType::Boxing) {
     lbi_boxing_.insert(lbis.begin(), lbis.end());
-  } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+  } else if (type == BldTskGphMtdType::One2One) {
     lbi_121_.insert(lbis.begin(), lbis.end());
   } else {
     UNIMPLEMENTED();
@@ -268,77 +234,6 @@ bool LogicalNode::HasOpWithCondition(std::function<bool(const Operator*)> cond) 
 static bool IsModelParallel121(const LogicalNode* src_node, const LogicalNode* dst_node) {
   return src_node->main_model_parallel() == dst_node->main_model_parallel();
 }
-
-BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src_node, const LogicalNode* dst_node) {
-  std::shared_ptr<const ParallelDesc> src_pd = src_node->parallel_desc();
-  std::shared_ptr<const ParallelDesc> dst_pd = dst_node->parallel_desc();
-  if (src_pd->parallel_num() == 1 && dst_pd->parallel_num() == 1) {
-    return &TaskGraph::BldSubTskGphByOneToOne;
-  }
-  std::string k = ConcatTypeName(src_node, dst_node);
-  auto it = GetFuncForFindBldSubTskGphMthd()->find(k);
-  if (it != GetFuncForFindBldSubTskGphMthd()->end()) { return it->second(src_node, dst_node); }
-  if (src_pd->parallel_num() == dst_pd->parallel_num()) {
-    if (src_pd->policy() == kDataParallel && dst_pd->policy() == kDataParallel) {
-      return &TaskGraph::BldSubTskGphByOneToOne;
-    } else if (src_pd->policy() == kModelParallel && dst_pd->policy() == kModelParallel
-               && IsModelParallel121(src_node, dst_node)) {
-      return &TaskGraph::BldSubTskGphByOneToOne;
-    } else {
-      // do nothing
-    }
-  }
-  return &TaskGraph::BldSubTskGphByBoxing;
-}
-
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "NormalForward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "NormalBackward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalMdUpdt"
-                              "MdSave",
-                              BldSubTskGphToMdSave);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "MdSave",
-                              BldSubTskGphToMdSave);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalForward"
-                              "NormalBackward",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "MdDiffAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
-                              "Decode",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("Loss"
-                              "LossAcc",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "NormalMdUpdt",
-                              BldSubTskGphToNormalMdUpdt);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("NormalBackward"
-                              "NormalMdUpdt",
-                              BldSubTskGphToNormalMdUpdt);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
-                              "ReduceScatter",
-                              &TaskGraph::BldSubTskGphByOneToOne);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-                              "ReduceLocalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceScatter"
-                              "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceLocalAdd"
-                              "ReduceGlobalAdd",
-                              &TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
-                              "ReduceGather",
-                              &TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather);
-REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
-                              "NormalMdUpdt",
-                              &TaskGraph::BldSubTskGphByOneToOne);
 
 BldBoxingOpConfMthd GetMthdForBldBoxingOpConf(const LogicalNode* src, const LogicalNode* dst) {
   std::string k = ConcatTypeName(src, dst);

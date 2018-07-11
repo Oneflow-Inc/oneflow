@@ -1,6 +1,6 @@
 #include "oneflow/core/graph/compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
-#include "oneflow/core/graph/task_graph.h"
+#include "oneflow/core/graph/graph_helper.hpp"
 
 namespace oneflow {
 
@@ -72,10 +72,11 @@ void CompTaskNode::ProduceB121Regst(const std::string& name) {
 }
 
 void CompTaskNode::BindEdgeWithProducedB121Regst(TaskEdge* edge, const std::string& b121_name) {
-  BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(logical_node(), GetOneSuccLogicalNodeOnEdge(edge));
-  if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
+  auto& helper = GraphHelper::get();
+  BldTskGphMtdType type = helper.GetMtdType(logical_node(), GetOneSuccLogicalNodeOnEdge(edge));
+  if (type == BldTskGphMtdType::Boxing) {
     BindEdgeWithProducedRegst(edge, "boxing_" + b121_name);
-  } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
+  } else if (type == BldTskGphMtdType::One2One) {
     BindEdgeWithProducedRegst(edge, "121_" + b121_name);
   } else {
     UNIMPLEMENTED();

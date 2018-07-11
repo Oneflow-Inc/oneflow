@@ -22,27 +22,48 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
 
-#define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
-
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd);
-  DECLARE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather);
+  using MutBufTaskFn = std::function<TaskNode**(CompTaskNode*, int64_t, int32_t)>;
 
  private:
-  void BuildTaskPath(
-      CompTaskNode* src, CompTaskNode* dst,
-      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
-          MutBufTask,
-      bool use_buf_task_node);
-  TaskNode* BuildTaskStep(
-      TaskNode* cur_node, TaskNode* dst,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> GetBufTask,
-      std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> SetBufTask,
-      bool use_buf_task_node);
+  void BldSubTskGphByBoxing(
+      const LogicalNode* src_logical, const LogicalNode* dst_logical,
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+      HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,
+      HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly);
+
+  void BldSubTskGphByOneToOne(const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+                              const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+                              MutBufTaskFn MutBufTask);
+
+  void BldSubTskGphBySelectOneSourceToSoleSink(
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly);
+
+  void BldSubTskGphByReduceScatter2ReduceLocalAdd(
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask);
+
+  void BldSubTskGphByReduceScatter2ReduceGlobalAdd(
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask);
+
+  void BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd(
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask);
+
+  void BldSubTskGphByReduceGlobalAdd2ReduceGather(
+      const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+      const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask);
+
+  void BuildTaskPath(CompTaskNode* src, CompTaskNode* dst, MutBufTaskFn MutBufTask,
+                     bool use_buf_task_node);
+  TaskNode* BuildTaskStep(TaskNode* cur_node, TaskNode* dst,
+                          std::function<TaskNode*(int64_t, int32_t)> GetBufTask,
+                          std::function<TaskNode*(int64_t, int32_t, TaskNode*)> SetBufTask,
+                          bool use_buf_task_node);
   TaskNode* AddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);

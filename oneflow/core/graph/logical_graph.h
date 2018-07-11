@@ -65,6 +65,12 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
                                                             ForwardLogicalNode* fw_logical);
   void ConnectFwToBw();
 
+  void RegisterMtdType();
+  template<typename T, typename U>
+  std::string SrcDestName() {
+    return T().TypeName() + U().TypeName();
+  }
+
   int64_t total_mbn_num_;
 };
 

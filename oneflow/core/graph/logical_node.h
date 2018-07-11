@@ -72,18 +72,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   HashSet<LogicalBlobId> lbi_121_;
 };
 
-#define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
-  (const LogicalNode* src_logical, const LogicalNode* dst_logical,                        \
-   const std::vector<CompTaskNode*>& sorted_src_comp_tasks,                               \
-   const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,                               \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,            \
-   HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,           \
-   std::function<TaskNode**(CompTaskNode * src, int64_t machine_id, int32_t mem_zone_id)> \
-       MutBufTask,                                                                        \
-   std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly)
-
 class TaskGraph;
-using BldSubTskGphMthd = void(TaskGraph::*) BLD_SUB_TSK_GPH_MTHD_ARGS();
 
 class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
  public:
@@ -102,8 +91,6 @@ class LogicalEdge final : public Edge<LogicalNode, LogicalEdge> {
  private:
   std::vector<LogicalBlobId> lbis_;
 };
-
-BldSubTskGphMthd GetMthdForBldSubTskGph(const LogicalNode* src, const LogicalNode* dst);
 
 using BldBoxingOpConfMthd = void (BoxingTaskNode::*)(
     const LogicalBlobId& lbi, const std::vector<BoxingTaskNode::EdgeInfo>& sorted_in_edges,

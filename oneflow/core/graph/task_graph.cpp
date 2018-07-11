@@ -4,6 +4,7 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/graph/graph_helper.hpp"
 
 namespace oneflow {
 
@@ -43,13 +44,50 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
           comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
-  logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
-    BldSubTskGphMthd method =
-        GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
-    (this->*method)(logical_edge->src_node(), logical_edge->dst_node(),
-                    logical2sorted_comp_tasks.at(logical_edge->src_node()),
-                    logical2sorted_comp_tasks.at(logical_edge->dst_node()), &logical2sorted_in_box,
-                    &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
+  logical_gph_->ForEachEdge([&, this](const LogicalEdge* logical_edge) {
+    auto& helper = GraphHelper::get();
+    BldTskGphMtdType type = helper.GetMtdType(logical_edge->src_node(), logical_edge->dst_node());
+    switch (type) {
+      case BldTskGphMtdType::Boxing:
+        BldSubTskGphByBoxing(logical_edge->src_node(), logical_edge->dst_node(),
+                             logical2sorted_comp_tasks.at(logical_edge->src_node()),
+                             logical2sorted_comp_tasks.at(logical_edge->dst_node()),
+                             &logical2sorted_in_box, &logical2sorted_out_box,
+                             AllocateCpuThrdIdEvenly);
+        break;
+      case BldTskGphMtdType::One2One:
+        BldSubTskGphByOneToOne(logical2sorted_comp_tasks.at(logical_edge->src_node()),
+                               logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
+        break;
+      case BldTskGphMtdType::SelectOneSourceToSoleSink:
+        BldSubTskGphBySelectOneSourceToSoleSink(
+            logical2sorted_comp_tasks.at(logical_edge->src_node()),
+            logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask,
+            AllocateCpuThrdIdEvenly);
+        break;
+      case BldTskGphMtdType::Scatter2LocalAdd:
+        BldSubTskGphByReduceScatter2ReduceLocalAdd(
+            logical2sorted_comp_tasks.at(logical_edge->src_node()),
+            logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
+        break;
+      case BldTskGphMtdType::Scatter2GlobalAdd:
+        BldSubTskGphByReduceScatter2ReduceGlobalAdd(
+            logical2sorted_comp_tasks.at(logical_edge->src_node()),
+            logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
+        break;
+      case BldTskGphMtdType::LocalAdd2GlobalAdd:
+        BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd(
+            logical2sorted_comp_tasks.at(logical_edge->src_node()),
+            logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
+        break;
+      case BldTskGphMtdType::GlobalAdd2Gather:
+        BldSubTskGphByReduceGlobalAdd2ReduceGather(
+            logical2sorted_comp_tasks.at(logical_edge->src_node()),
+            logical2sorted_comp_tasks.at(logical_edge->dst_node()), MutBufTask);
+        break;
+      default: break;
+    }
+
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   ToDotWithAutoFilePath();
@@ -109,7 +147,7 @@ void TaskGraph::CollectAncestorsForEachNode() {
   }
 }
 
-void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
+void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode*)> handler) const {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
     if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
@@ -142,10 +180,14 @@ void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
   });
 }
 
-#define DEFINE_BLD_SUB_TASK_GRAPH_METHOD(method_name) \
-  void TaskGraph::method_name BLD_SUB_TSK_GPH_MTHD_ARGS()
-
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
+// new bldsubgraph
+void TaskGraph::BldSubTskGphByBoxing(
+    const LogicalNode* src_logical, const LogicalNode* dst_logical,
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_in_box,
+    HashMap<const LogicalNode*, std::vector<TaskNode*>>* logical2sorted_out_box,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
@@ -165,7 +207,9 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
+void TaskGraph::BldSubTskGphByOneToOne(const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+                                       const std::vector<CompTaskNode*>& sorted_dst_comp_tasks,
+                                       MutBufTaskFn MutBufTask) {
   CHECK_EQ(sorted_src_comp_tasks.size(), sorted_dst_comp_tasks.size());
   FOR_RANGE(size_t, i, 0, sorted_src_comp_tasks.size()) {
     CompTaskNode* src = sorted_src_comp_tasks[i];
@@ -174,7 +218,10 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByOneToOne) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
+void TaskGraph::BldSubTskGphBySelectOneSourceToSoleSink(
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   CHECK_EQ(sorted_dst_comp_tasks.size(), 1);
   CompTaskNode* sole_dst_comp_task = sorted_dst_comp_tasks.front();
   CompTaskNode* selected_src_comp_task = nullptr;
@@ -200,11 +247,12 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
     }
   }
   CHECK_NOTNULL(selected_src_comp_task);
-  BldSubTskGphByOneToOne(nullptr, nullptr, {selected_src_comp_task}, sorted_dst_comp_tasks, nullptr,
-                         nullptr, MutBufTask, AllocateCpuThrdIdEvenly);
+  BldSubTskGphByOneToOne({selected_src_comp_task}, sorted_dst_comp_tasks, MutBufTask);
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
+void TaskGraph::BldSubTskGphByReduceScatter2ReduceLocalAdd(
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
@@ -214,7 +262,9 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
+void TaskGraph::BldSubTskGphByReduceScatter2ReduceGlobalAdd(
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
@@ -223,7 +273,9 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
+void TaskGraph::BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd(
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask) {
   std::vector<CompTaskNode*> src_nodes_in_same_machine;
   FOR_RANGE(int32_t, i, 0, sorted_src_comp_tasks.size()) {
     src_nodes_in_same_machine.push_back(sorted_src_comp_tasks[i]);
@@ -244,7 +296,9 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
   }
 }
 
-DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
+void TaskGraph::BldSubTskGphByReduceGlobalAdd2ReduceGather(
+    const std::vector<CompTaskNode*>& sorted_src_comp_tasks,
+    const std::vector<CompTaskNode*>& sorted_dst_comp_tasks, MutBufTaskFn MutBufTask) {
   CHECK_GE(sorted_src_comp_tasks.size(), 2);
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
@@ -253,11 +307,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceGlobalAdd2ReduceGather) {
   }
 }
 
-void TaskGraph::BuildTaskPath(
-    CompTaskNode* src, CompTaskNode* dst,
-    std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
-        MutBufTask,
-    bool use_buf_task_node) {
+void TaskGraph::BuildTaskPath(CompTaskNode* src, CompTaskNode* dst, MutBufTaskFn MutBufTask,
+                              bool use_buf_task_node) {
   CHECK_NE(src, dst);
   auto GetBufTask = [&](int64_t machine_id, int32_t mem_zone_id) {
     return *MutBufTask(src, machine_id, mem_zone_id);
@@ -280,11 +331,10 @@ void TaskGraph::BuildTaskPath(
   Connect<TaskNode>(cur_node, NewEdge(), dst);
 }
 
-TaskNode* TaskGraph::BuildTaskStep(
-    TaskNode* cur_node, TaskNode* dst,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id)> GetBufTask,
-    std::function<TaskNode*(int64_t machine_id, int32_t mem_zone_id, TaskNode*)> SetBufTask,
-    bool use_buf_task_node) {
+TaskNode* TaskGraph::BuildTaskStep(TaskNode* cur_node, TaskNode* dst,
+                                   std::function<TaskNode*(int64_t, int32_t)> GetBufTask,
+                                   std::function<TaskNode*(int64_t, int32_t, TaskNode*)> SetBufTask,
+                                   bool use_buf_task_node) {
   int32_t cpu_mem_zone_id = Global<IDMgr>::Get()->CpuMemZoneId();
   int32_t next_mem_zone_id = -1;
   TaskNode* next_node = nullptr;
