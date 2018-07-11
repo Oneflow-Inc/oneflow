@@ -36,7 +36,7 @@ void Regst::InitBlobs(HashMap<MemoryCase, char*> mem_case2mem_ptr, DeviceType de
   const MemoryCase& mem_case = regst_desc_->mem_case();
   auto GetOrOccupyMemPtr = [&](const BlobDesc* blob_desc, bool occupy) -> std::pair<char*, char*> {
     std::pair<char*, char*> ret = {nullptr, nullptr};
-    if (mem_case.has_host_mem() && !mem_case.host_mem().used_by_device()) {
+    if (mem_case.has_host_mem() && mem_case.host_mem().used_by_network()) {
       size_t total_mem_size = blob_desc->TotalByteSize();
       auto mem_case_ptr_it = mem_case2mem_ptr.find(mem_case);
       CHECK(mem_case_ptr_it != mem_case2mem_ptr.end());

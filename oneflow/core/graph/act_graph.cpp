@@ -127,7 +127,7 @@ void RegstActSubGraph::ForEachConsumerPathDuration(
   };
   HashMap<const ActNode*, double> node2longest_path_duration;
   TopoForEachActNode([&](const ActNode* node) {
-    double duration = 0;
+    double duration = std::numeric_limits<double>::min();
     ForEachInNode(node, [&](const ActNode* in_node) {
       duration = std::max(duration, node2longest_path_duration[in_node]);
     });
@@ -401,7 +401,11 @@ void ActGraph::InitEdges() {
 
 void ActGraph::TopoForEachActNode(const std::list<ActNode*>& starts,
                                   const std::function<void(ActNode*)>& Handler) const {
-  TopoForEachNode(starts, &ActNode::ForEachNodeOnInEdge, &ActNode::ForEachNodeOnOutEdge, Handler);
+  std::list<ActNode*> sorted_starts(starts);
+  sorted_starts.sort(
+      [](const ActNode* lhs, const ActNode* rhs) { return lhs->act_id() > rhs->act_id(); });
+  DfsTopoForEachNodeSortByDistanceToSink(sorted_starts, &ActNode::ForEachNodeOnInEdge,
+                                         &ActNode::ForEachNodeOnOutEdge, Handler);
 }
 
 void ActGraph::InitDepth() {
@@ -409,13 +413,16 @@ void ActGraph::InitDepth() {
   ForEachNode([&](ActNode* node) {
     if (node->in_edges().empty()) { sources.push_back(node); }
   });
+  int64_t max_depth = -1;
   TopoForEachActNode(sources, [&](ActNode* act_node) {
     int64_t depth = -1;
     act_node->ForEachNodeOnInEdge(
-        [&](const ActNode* in_node) { depth = std::max(depth, in_node->depth()); });
+        [&](ActNode* in_node) { depth = std::max(depth, in_node->depth()); });
+    if (depth == -1) { depth = max_depth; }
     ++depth;
     act_node->set_depth(depth);
     depth2nodes_[depth].push_back(act_node);
+    max_depth = std::max(max_depth, depth);
   });
 }
 

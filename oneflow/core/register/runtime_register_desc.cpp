@@ -41,7 +41,7 @@ const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const 
 }
 
 void RtRegstDesc::AccumulateActuallyMemCaseSize(const BlobDesc* blob_desc) {
-  if (mem_case_.has_host_mem() && !mem_case_.host_mem().used_by_device()) {
+  if (mem_case_.has_host_mem() && mem_case_.host_mem().used_by_network()) {
     mem_case2mem_size_[mem_case_] += blob_desc->TotalByteSize();
   } else {
     MemoryCase header_mem_case;

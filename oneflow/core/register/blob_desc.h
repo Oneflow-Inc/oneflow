@@ -51,9 +51,6 @@ class BlobDesc final {
   int64_t max_col_num_;
 };
 
-BlobDesc ComputePackedBlobDesc(const MemoryCase& mem_case,
-                               std::function<const BlobDesc*()> NextBlobDesc);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_REGISTER_BLOB_DESC_H_

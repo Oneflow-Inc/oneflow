@@ -43,6 +43,7 @@ class RegstDesc final {
   BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
   void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
   size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
+  void GenPackedBlobDesc();
 
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }

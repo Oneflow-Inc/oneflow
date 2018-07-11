@@ -29,25 +29,30 @@ class BlobImpl final : public Blob {
   ~BlobImpl() = default;
 
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
+    CHECK_NOTNULL(rhs);
     if (this == rhs) { return; }
     AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataContentField(), mem_case(),
                rhs->mem_case());
   }
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
+    CHECK_NOTNULL(rhs);
     if (this == rhs) { return; }
     Memcpy<DeviceType::kCPU>(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField());
   }
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
+    CHECK_NOTNULL(rhs);
     if (this == rhs) { return; }
     Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
   }
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
+    CHECK_NOTNULL(rhs);
     if (this == rhs) { return; }
     size_t header_size = ByteSizeOfHeaderField();
     CHECK(header_size > 0);
     Memcpy<DeviceType::kCPU>(device_ctx, mut_hptr(), rhs->hptr(), header_size);
   }
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) override {
+    CHECK_NOTNULL(rhs);
     if (this == rhs) { return; }
     if (IsMemoryContinuous() && mem_case() == rhs->mem_case()) {
       Memcpy<DeviceType::kCPU>(device_ctx, mut_hptr(), rhs->hptr(), TotalByteSize());
