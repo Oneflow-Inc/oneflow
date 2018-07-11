@@ -127,7 +127,7 @@ void RegstActSubGraph::ForEachConsumerPathDuration(
   };
   HashMap<const ActNode*, double> node2longest_path_duration;
   TopoForEachActNode([&](const ActNode* node) {
-    double duration = 0;
+    double duration = std::numeric_limits<double>::min();
     ForEachInNode(node, [&](const ActNode* in_node) {
       duration = std::max(duration, node2longest_path_duration[in_node]);
     });
