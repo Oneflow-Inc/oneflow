@@ -127,7 +127,7 @@ void RegstActSubGraph::ForEachConsumerPathDuration(
   };
   HashMap<const ActNode*, double> node2longest_path_duration;
   TopoForEachActNode([&](const ActNode* node) {
-    double duration = 0;
+    double duration = std::numeric_limits<double>::min();
     ForEachInNode(node, [&](const ActNode* in_node) {
       duration = std::max(duration, node2longest_path_duration[in_node]);
     });
@@ -151,8 +151,9 @@ class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
  private:
   void InitNode2ComponentId();
   void InitComponentId2Sources();
-  void ForEachActNode(const std::list<const ActNode*>& sources,
-                      const std::function<void(const ActNode*)>& Handler) const;
+  void BfsForEachActNode(const std::list<const ActNode*>& sources,
+                         const std::function<void(const ActNode*)>& Handler) const;
+  void ForEachActNode(const std::function<void(const ActNode*)>& Handler) const;
   void TopoForEachActNode(const std::list<const ActNode*>& starts,
                           const std::function<void(const ActNode*)>& Handler) const;
   void ForEachInNode(const ActNode* node, const std::function<void(const ActNode*)>& Handler) const;
@@ -174,7 +175,7 @@ void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
   const auto& sources = compo_id2sources_.at(component_id);
   PersistentOutStream out_stream(LocalFS(), filepath);
   out_stream << "digraph {\n";
-  ForEachActNode(sources, [&](const ActNode* node) {
+  BfsForEachActNode(sources, [&](const ActNode* node) {
     out_stream << node->node_id_str() << "[label=\"" << node->VisualStr()
                << "\", shape=ellipse, style=\"rounded,filled\", "
                << "colorscheme=set312, color=" << task_type2color.at(node->task_type()) << "];\n";
@@ -221,7 +222,7 @@ void DepthRangeActSubGraph::ForEachOutNode(
   });
 }
 
-void DepthRangeActSubGraph::ForEachActNode(
+void DepthRangeActSubGraph::BfsForEachActNode(
     const std::list<const ActNode*>& sources,
     const std::function<void(const ActNode*)>& Handler) const {
   auto ForEachConnectedNode = [&](const ActNode* node,
@@ -230,6 +231,13 @@ void DepthRangeActSubGraph::ForEachActNode(
     ForEachOutNode(node, Handler);
   };
   BfsForEachNode(sources, ForEachConnectedNode, Handler);
+}
+
+void DepthRangeActSubGraph::ForEachActNode(
+    const std::function<void(const ActNode*)>& Handler) const {
+  for (int64_t depth = depth_range_.begin(); depth <= depth_range_.end(); ++depth) {
+    for (const ActNode* node : act_graph_->Nodes4Depth(depth)) { Handler(node); }
+  }
 }
 
 void DepthRangeActSubGraph::InitComponentId2Sources() {
@@ -242,10 +250,9 @@ void DepthRangeActSubGraph::InitComponentId2Sources() {
 
 void DepthRangeActSubGraph::InitNode2ComponentId() {
   int64_t component_id = 0;
-  const auto& sources = act_graph_->Nodes4Depth(depth_range_.begin());
-  ForEachActNode(sources, [&](const ActNode* node) {
+  ForEachActNode([&](const ActNode* node) {
     if (node2component_id_.find(node) != node2component_id_.end()) { return; }
-    ForEachActNode({node}, [&](const ActNode* component_node) {
+    BfsForEachActNode({node}, [&](const ActNode* component_node) {
       node2component_id_.insert({component_node, component_id});
     });
     ++component_id;
@@ -401,7 +408,11 @@ void ActGraph::InitEdges() {
 
 void ActGraph::TopoForEachActNode(const std::list<ActNode*>& starts,
                                   const std::function<void(ActNode*)>& Handler) const {
-  TopoForEachNode(starts, &ActNode::ForEachNodeOnInEdge, &ActNode::ForEachNodeOnOutEdge, Handler);
+  std::list<ActNode*> sorted_starts(starts);
+  sorted_starts.sort(
+      [](const ActNode* lhs, const ActNode* rhs) { return lhs->act_id() > rhs->act_id(); });
+  DfsTopoForEachNodeSortByDistanceToSink(sorted_starts, &ActNode::ForEachNodeOnInEdge,
+                                         &ActNode::ForEachNodeOnOutEdge, Handler);
 }
 
 void ActGraph::InitDepth() {
@@ -409,13 +420,16 @@ void ActGraph::InitDepth() {
   ForEachNode([&](ActNode* node) {
     if (node->in_edges().empty()) { sources.push_back(node); }
   });
+  int64_t max_depth = -1;
   TopoForEachActNode(sources, [&](ActNode* act_node) {
     int64_t depth = -1;
     act_node->ForEachNodeOnInEdge(
-        [&](const ActNode* in_node) { depth = std::max(depth, in_node->depth()); });
+        [&](ActNode* in_node) { depth = std::max(depth, in_node->depth()); });
+    if (depth == -1) { depth = max_depth; }
     ++depth;
     act_node->set_depth(depth);
     depth2nodes_[depth].push_back(act_node);
+    max_depth = std::max(max_depth, depth);
   });
 }
 
@@ -431,15 +445,6 @@ ActGraph::ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_
   InitEdges();
   InitDepth();
   InitTaskId2TaskProto();
-  InitActorStatistics();
-}
-
-void ActGraph::InitActorStatistics() {
-  for (const ActEvent& act_event : *act_events_) {
-    int64_t actor_id = act_event.actor_id();
-    ++actor_id2act_cnt_[actor_id];
-    actor_id2total_act_time_[actor_id] += Duration4ActEvent(act_event);
-  }
 }
 
 void ActGraph::ForEachDepthRangeRegstUids(
