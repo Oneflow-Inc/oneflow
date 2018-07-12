@@ -81,7 +81,7 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
   }
 }
 
-void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType device_type,
+void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
                          std::function<void(Regst*)> OneRegstDone) {
   const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
   const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
@@ -106,13 +106,12 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto, DeviceType devi
       char* cur_pointer = mem_ptr;
       for (const LogicalBlobId& lbi : lbis) {
         const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
-        std::unique_ptr<Blob> blob_ptr(NewBlob(regst, blob_desc, cur_pointer, device_type));
+        std::unique_ptr<Blob> blob_ptr(new Blob(regst, blob_desc, cur_pointer));
         InitOFRecordBlobIfNeed(blob_ptr.get());
         CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_pointer += blob_desc->TotalByteSize();
       }
-      regst->packed_blob_.reset(
-          NewBlob(regst, rt_regst_desc->packed_blob_desc(), mem_ptr, device_type));
+      regst->packed_blob_.reset(new Blob(regst, rt_regst_desc->packed_blob_desc(), mem_ptr));
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(

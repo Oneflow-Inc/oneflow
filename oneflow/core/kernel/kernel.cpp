@@ -224,8 +224,7 @@ template<DeviceType device_type, typename T>
 void KernelIfWithActivation<device_type, T>::GenActivationBlob(
     std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
     const BlobDesc* activation_blob_desc) const {
-  activation_blob->reset(
-      NewBlob(nullptr, activation_blob_desc, static_cast<char*>(buf_ptr), device_type));
+  activation_blob->reset(new Blob(nullptr, activation_blob_desc, static_cast<char*>(buf_ptr)));
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
