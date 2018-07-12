@@ -51,10 +51,10 @@ OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   return conf;
 }
 
-void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t src_machine_id) {
+void CopyCommNetTaskNode::Init(int64_t machine_id, int64_t peer_machine_id) {
   set_machine_id(machine_id);
   set_thrd_id(Global<IDMgr>::Get()->CommNetThrdId());
-  peer_machine_id_ = src_machine_id;
+  peer_machine_id_ = peer_machine_id;
 }
 
 namespace {

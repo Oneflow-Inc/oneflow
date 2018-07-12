@@ -59,7 +59,6 @@ class CopyCommNetTaskNode final : public CopyTaskNode {
 
   void Init(int64_t machine_id, int64_t src_machine_id);
   int64_t AllocateLocalWorkStreamId() override;
-  int64_t peer_machine_id() const { return peer_machine_id_; }
 
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;

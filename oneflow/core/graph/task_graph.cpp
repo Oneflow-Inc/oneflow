@@ -1,10 +1,9 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
+#include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
-#include "oneflow/core/graph/reduce_gather_compute_task_node.h"
 
 namespace oneflow {
 
@@ -88,98 +87,6 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
       iter->second = node;
     }
   }
-}
-
-void TaskGraph::AddCtrlEdgeInReduceStruct() {
-  int64_t total_machine_num = Global<JobDesc>::Get()->resource().machine().size();
-  if (total_machine_num == 1) { return; }
-
-  AddCtrlEdgeForReduceTaskNode<ReduceGlobalAddLogicalNode, ReduceGlobalAddCompTaskNode>(
-      total_machine_num);
-  AddCtrlEdgeForReduceTaskNode<ReduceGatherLogicalNode, ReduceGatherCompTaskNode>(
-      total_machine_num);
-}
-
-template<typename LogicalNodeType, typename TaskNodeType>
-void TaskGraph::AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num) {
-  HashMap<const LogicalNodeType*, HashMap<int64_t, std::vector<TaskNodeType*>>>
-      machine_id2reduce_task_nodes4same_logical_node;
-  ForEachNode([&](TaskNode* task_node) {
-    TaskNodeType* reduce_task_node = dynamic_cast<TaskNodeType*>(task_node);
-    if (reduce_task_node != nullptr) {
-      const LogicalNodeType* logical_node =
-          dynamic_cast<const LogicalNodeType*>(reduce_task_node->logical_node());
-      CHECK(logical_node != nullptr);
-      machine_id2reduce_task_nodes4same_logical_node[logical_node][reduce_task_node->machine_id()]
-          .push_back(reduce_task_node);
-    }
-  });
-
-  for (const auto& kv : machine_id2reduce_task_nodes4same_logical_node) {
-    const auto& machine_id2reduce_task_nodes = kv.second;
-    if (machine_id2reduce_task_nodes.size() == 1) { continue; }
-    for (int64_t machine_id = 0; machine_id < machine_id2reduce_task_nodes.size(); ++machine_id) {
-      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>> commnet_nodes_with_sort_val;
-      CollectCopyCommNetForReduceTaskNodes(machine_id2reduce_task_nodes.at(machine_id),
-                                           &commnet_nodes_with_sort_val);
-
-      std::vector<int64_t> machine_id2sort_order(total_machine_num);
-      for (size_t i = 0; i < total_machine_num; ++i) {
-        machine_id2sort_order.at(i) = (i + total_machine_num - machine_id - 1) % total_machine_num;
-      }
-      std::sort(commnet_nodes_with_sort_val.begin(), commnet_nodes_with_sort_val.end(),
-                [&](const std::pair<CopyCommNetTaskNode*, int64_t>& lhs,
-                    const std::pair<CopyCommNetTaskNode*, int64_t>& rhs) {
-                  if (lhs.first->peer_machine_id() == rhs.first->peer_machine_id()) {
-                    return lhs.second < rhs.second;
-                  }
-                  return machine_id2sort_order.at(lhs.first->peer_machine_id())
-                         < machine_id2sort_order.at(rhs.first->peer_machine_id());
-                });
-
-      for (size_t i = 0; i < commnet_nodes_with_sort_val.size() - 1; ++i) {
-        commnet_nodes_with_sort_val.at(i).first->BuildCtrlRegstDescIfNeed(
-            commnet_nodes_with_sort_val.at(i + 1).first);
-      }
-    }
-  }
-}
-
-template<typename TaskNodeType>
-void TaskGraph::CollectCopyCommNetForReduceTaskNodes(
-    const std::vector<TaskNodeType*>& reduce_task_nodes,
-    std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val) {
-  HashSet<CopyCommNetTaskNode*> inserted_commnet_nodes;
-  for (TaskNodeType* reduce_task_node : reduce_task_nodes) {
-    for (TaskEdge* in_edge : reduce_task_node->in_edges()) {
-      TaskNode* pre_node = in_edge->src_node();
-
-      while (IsEndingTaskType<TaskNodeType>(pre_node->GetTaskType()) == false) {
-        if (pre_node->GetTaskType() == TaskType::kCopyCommNet) {
-          CopyCommNetTaskNode* commnet_node = dynamic_cast<CopyCommNetTaskNode*>(pre_node);
-          CHECK(commnet_node != nullptr);
-
-          if (inserted_commnet_nodes.find(commnet_node) == inserted_commnet_nodes.end()) {
-            commnet_nodes_with_sort_val->emplace_back(
-                commnet_node, reduce_task_node->parallel_ctx()->parallel_id());
-            inserted_commnet_nodes.insert(commnet_node);
-          }
-          break;
-        }
-        pre_node = pre_node->SoleInEdge()->src_node();
-      }
-    }
-  }
-}
-
-template<>
-bool TaskGraph::IsEndingTaskType<ReduceGlobalAddCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceLocalAdd;
-}
-
-template<>
-bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
-  return type == TaskType::kReduceGlobalAdd;
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }

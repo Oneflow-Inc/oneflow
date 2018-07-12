@@ -5,7 +5,6 @@
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/graph/copy_task_node.h"
 
 namespace oneflow {
 
@@ -19,7 +18,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void AddOrderingCtrlEdgeInSameChain();
-  void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
@@ -61,17 +59,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void CollectAncestorsForEachNode();
   void FindChainsInSameStream();
-
-  template<typename LogicalNodeType, typename TaskNodeType>
-  void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
-
-  template<typename TaskNodeType>
-  void CollectCopyCommNetForReduceTaskNodes(
-      const std::vector<TaskNodeType*>& reduce_task_nodes,
-      std::vector<std::pair<CopyCommNetTaskNode*, int64_t>>* commnet_nodes_with_sort_val);
-
-  template<typename TaskNodeType>
-  bool IsEndingTaskType(TaskType type);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;

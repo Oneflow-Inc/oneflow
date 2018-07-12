@@ -60,7 +60,6 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ClearOutOfDateConsumedRegst, _1));
   task_gph->AddOrderingCtrlEdgeInSameChain();
-  task_gph->AddCtrlEdgeInReduceStruct();
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
