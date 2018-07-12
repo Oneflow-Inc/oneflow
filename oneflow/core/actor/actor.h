@@ -46,7 +46,6 @@ class Actor {
   // Util
   Actor() = default;
   const ParallelContext* parallel_ctx() const { return parallel_ctx_.get(); }
-  bool ReceiveAllEordMsg() const { return remaining_eord_cnt_ == 0; }
   DeviceType GetDeviceType() const;
   virtual void VirtualActorInit(const TaskProto&) {}
   int64_t Name2SoleRegstDescId(const std::string& name) const;
@@ -139,6 +138,7 @@ class Actor {
   int64_t act_id_;
   std::unique_ptr<ParallelContext> parallel_ctx_;
   std::vector<ExecKernel> exec_kernel_vec_;
+  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
   HashMap<std::string, std::vector<int64_t>> name2regst_desc_id_;
   MsgHandler msg_handler_;
   std::unique_ptr<DeviceCtx> device_ctx_;
@@ -147,7 +147,6 @@ class Actor {
   int64_t remaining_eord_cnt_;
 
   // Status of Produced Registers
-  HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
   HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
   int64_t actual_writeable_produced_data_regst_desc_num_;
