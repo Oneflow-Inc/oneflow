@@ -151,8 +151,9 @@ class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
  private:
   void InitNode2ComponentId();
   void InitComponentId2Sources();
-  void ForEachActNode(const std::list<const ActNode*>& sources,
-                      const std::function<void(const ActNode*)>& Handler) const;
+  void BfsForEachActNode(const std::list<const ActNode*>& sources,
+                         const std::function<void(const ActNode*)>& Handler) const;
+  void ForEachActNode(const std::function<void(const ActNode*)>& Handler) const;
   void TopoForEachActNode(const std::list<const ActNode*>& starts,
                           const std::function<void(const ActNode*)>& Handler) const;
   void ForEachInNode(const ActNode* node, const std::function<void(const ActNode*)>& Handler) const;
@@ -174,7 +175,7 @@ void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
   const auto& sources = compo_id2sources_.at(component_id);
   PersistentOutStream out_stream(LocalFS(), filepath);
   out_stream << "digraph {\n";
-  ForEachActNode(sources, [&](const ActNode* node) {
+  BfsForEachActNode(sources, [&](const ActNode* node) {
     out_stream << node->node_id_str() << "[label=\"" << node->VisualStr()
                << "\", shape=ellipse, style=\"rounded,filled\", "
                << "colorscheme=set312, color=" << task_type2color.at(node->task_type()) << "];\n";
@@ -221,7 +222,7 @@ void DepthRangeActSubGraph::ForEachOutNode(
   });
 }
 
-void DepthRangeActSubGraph::ForEachActNode(
+void DepthRangeActSubGraph::BfsForEachActNode(
     const std::list<const ActNode*>& sources,
     const std::function<void(const ActNode*)>& Handler) const {
   auto ForEachConnectedNode = [&](const ActNode* node,
@@ -230,6 +231,13 @@ void DepthRangeActSubGraph::ForEachActNode(
     ForEachOutNode(node, Handler);
   };
   BfsForEachNode(sources, ForEachConnectedNode, Handler);
+}
+
+void DepthRangeActSubGraph::ForEachActNode(
+    const std::function<void(const ActNode*)>& Handler) const {
+  for (int64_t depth = depth_range_.begin(); depth <= depth_range_.end(); ++depth) {
+    for (const ActNode* node : act_graph_->Nodes4Depth(depth)) { Handler(node); }
+  }
 }
 
 void DepthRangeActSubGraph::InitComponentId2Sources() {
@@ -242,10 +250,9 @@ void DepthRangeActSubGraph::InitComponentId2Sources() {
 
 void DepthRangeActSubGraph::InitNode2ComponentId() {
   int64_t component_id = 0;
-  const auto& sources = act_graph_->Nodes4Depth(depth_range_.begin());
-  ForEachActNode(sources, [&](const ActNode* node) {
+  ForEachActNode([&](const ActNode* node) {
     if (node2component_id_.find(node) != node2component_id_.end()) { return; }
-    ForEachActNode({node}, [&](const ActNode* component_node) {
+    BfsForEachActNode({node}, [&](const ActNode* component_node) {
       node2component_id_.insert({component_node, component_id});
     });
     ++component_id;
