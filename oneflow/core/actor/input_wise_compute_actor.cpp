@@ -1,8 +1,8 @@
-#include "oneflow/core/actor/reduce_global_add_compute_actor.h"
+#include "oneflow/core/actor/input_wise_compute_actor.h"
 
 namespace oneflow {
 
-void ReduceGlobalAddCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void InputWiseCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   for (const auto& pair : task_proto.exec_sequence().exec_node().Get(0).bn_in_op2regst_desc_id()) {
     CHECK(regst_desc_id2bn_in_op_.emplace(pair.second, pair.first).second);
   }
@@ -14,10 +14,10 @@ void ReduceGlobalAddCompActor::VirtualCompActorInit(const TaskProto& task_proto)
   }
   cur_processed_regst_desc_id_ = -1;
   readable_regst_desc_cnt_ = 0;
-  OF_SET_MSG_HANDLER(&ReduceGlobalAddCompActor::HandlerNormal);
+  OF_SET_MSG_HANDLER(&InputWiseCompActor::HandlerNormal);
 }
 
-void ReduceGlobalAddCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
+void InputWiseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   Regst* regst = msg.regst();
   int regst_desc_id = regst->regst_desc_id();
   CHECK(readable_regsts_.find(regst_desc_id) != readable_regsts_.end());
@@ -26,7 +26,7 @@ void ReduceGlobalAddCompActor::NormalProcessCustomizedReadableRegstMsg(const Act
   regst_q.push(regst);
 }
 
-bool ReduceGlobalAddCompActor::IsCustomizedReadReady() {
+bool InputWiseCompActor::IsCustomizedReadReady() {
   CHECK_EQ(-1, cur_processed_regst_desc_id_);
   for (const auto& pair : readable_regsts_) {
     if (pair.second.empty()) { continue; }
@@ -38,12 +38,12 @@ bool ReduceGlobalAddCompActor::IsCustomizedReadReady() {
   return false;
 }
 
-void ReduceGlobalAddCompActor::ForEachCurCustomizedReadableRegst(
+void InputWiseCompActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) const {
   handler(readable_regsts_.at(cur_processed_regst_desc_id_).front());
 }
 
-void ReduceGlobalAddCompActor::Act() {
+void InputWiseCompActor::Act() {
   std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
   Regst* cur_regst = regst_q.front();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
@@ -70,12 +70,12 @@ void ReduceGlobalAddCompActor::Act() {
   AsyncSendRegstMsgToProducer(cur_regst);
 }
 
-void ReduceGlobalAddCompActor::AsyncReturnAllCustomizedReadableRegst() {
+void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK(unprocessed_regst_desc_id_.size() == readable_regsts_.size());
   CHECK_EQ(-1, cur_processed_regst_desc_id_);
   CHECK_EQ(0, readable_regst_desc_cnt_);
 }
 
-REGISTER_ACTOR(TaskType::kReduceGlobalAdd, ReduceGlobalAddCompActor);
+REGISTER_ACTOR(TaskType::kReduceGlobalAdd, InputWiseCompActor);
 
 }  // namespace oneflow
