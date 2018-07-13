@@ -126,6 +126,7 @@ message KernelConf {
   required bool is_forward = 4;
   required DataType data_type = 5;
   optional BlobDescProto activation_blob_desc = 6;
+  optional ActivationType backward_activation = 7 [default = kNone];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
