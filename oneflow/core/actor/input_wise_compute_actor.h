@@ -5,14 +5,20 @@
 
 namespace oneflow {
 
-class InputWiseCompActor final : public CompActor {
+class InputWiseCompActor : public CompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(InputWiseCompActor);
   InputWiseCompActor() = default;
   ~InputWiseCompActor() = default;
 
+ protected:
+  void Init(const TaskProto&);
+  int64_t cur_processed_regst_desc_id() const { return cur_processed_regst_desc_id_; }
+  int64_t processed_regst_desc_id_cnt() const { return processed_regst_desc_id_cnt_; }
+  int64_t RegstDescNum() const { return readable_regsts_.size(); }
+  std::string BnInOp4RegstDescId(int64_t id) const { return regst_desc_id2bn_in_op_.at(id); }
+
  private:
-  void VirtualCompActorInit(const TaskProto&) override;
   void Act() override;
   void NormalProcessCustomizedReadableRegstMsg(const ActorMsg&) override;
   void ForEachCurCustomizedReadableRegst(std::function<void(const Regst*)>) const override;
@@ -25,6 +31,7 @@ class InputWiseCompActor final : public CompActor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {}};
   }
+  virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
 
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
   int64_t readable_regst_desc_cnt_;

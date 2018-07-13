@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-void InputWiseCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
+void InputWiseCompActor::Init(const TaskProto& task_proto) {
   for (const auto& pair : task_proto.exec_sequence().exec_node().Get(0).bn_in_op2regst_desc_id()) {
     CHECK(regst_desc_id2bn_in_op_.emplace(pair.second, pair.first).second);
   }
@@ -49,9 +49,7 @@ void InputWiseCompActor::Act() {
   Regst* cur_regst = regst_q.front();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
 
-  std::pair<std::string, bool> other_val(regst_desc_id2bn_in_op_.at(cur_processed_regst_desc_id_),
-                                         processed_regst_desc_id_cnt_ == 0);
-  kernel_ctx.other = &other_val;
+  SetKernelCtxOther(&(kernel_ctx.other));
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     CHECK_EQ(cur_processed_regst_desc_id_, regst_desc_id);
     return cur_regst;
@@ -81,7 +79,5 @@ void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
   CHECK_EQ(0, processed_regst_desc_id_cnt_);
   CHECK_EQ(0, readable_regst_desc_cnt_);
 }
-
-REGISTER_ACTOR(TaskType::kReduceGlobalAdd, InputWiseCompActor);
 
 }  // namespace oneflow

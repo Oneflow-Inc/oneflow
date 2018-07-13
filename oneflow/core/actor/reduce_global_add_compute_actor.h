@@ -1,0 +1,23 @@
+#ifndef ONEFLOW_CORE_ACTOR_REDUCE_GLOBAL_ADD_COMPUTE_ACTOR_H_
+#define ONEFLOW_CORE_ACTOR_REDUCE_GLOBAL_ADD_COMPUTE_ACTOR_H_
+
+#include "oneflow/core/actor/input_wise_compute_actor.h"
+
+namespace oneflow {
+
+class ReduceGlobalAddCompActor : public InputWiseCompActor {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ReduceGlobalAddCompActor);
+  ReduceGlobalAddCompActor() = default;
+  ~ReduceGlobalAddCompActor() = default;
+
+ private:
+  void VirtualCompActorInit(const TaskProto& proto) override { InputWiseCompActor::Init(proto); }
+  void SetKernelCtxOther(void** other) override;
+
+  std::pair<std::string, bool> other_val_;
+};
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_ACTOR_REDUCE_GLOBAL_ADD_COMPUTE_ACTOR_H_
