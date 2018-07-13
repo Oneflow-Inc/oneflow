@@ -26,11 +26,13 @@ class InputWiseCompActor final : public CompActor {
     return {false, {}};
   }
 
-  HashMap<int64_t, std::string> regst_desc_id2bn_in_op_;
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
   int64_t readable_regst_desc_cnt_;
-  HashSet<int64_t> unprocessed_regst_desc_id_;
+  HashMap<int64_t, bool> regst_desc_id2is_processed_;
+  int64_t processed_regst_desc_id_cnt_;
   int64_t cur_processed_regst_desc_id_;
+
+  HashMap<int64_t, std::string> regst_desc_id2bn_in_op_;
 };
 
 }  // namespace oneflow
