@@ -13,19 +13,15 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(void* actor_read_id)
-      : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id), read_id_(nullptr) {}
+  CommNetDeviceCtx(void* actor_read_id) : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id) {}
   std::unique_ptr<DeviceCtx> Copy() const { UNIMPLEMENTED(); }
 
   void AddCallBack(std::function<void()> callback) const override {
-    Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, read_id_, callback);
+    Global<CommNet>::Get()->AddReadCallBack(actor_read_id_, callback);
   }
-
-  void set_read_id(void* val) { read_id_ = val; }
 
  private:
   void* actor_read_id_;
-  void* read_id_;
 };
 
 void CopyCommNetActor::VirtualActorInit(const TaskProto& task_proto) {
@@ -73,16 +69,13 @@ void CopyCommNetActor::Act() {
   // writeable
   void* writeable_token = GetCurSoleWriteableRegst()->comm_net_token();
   // Async
-  void* read_id =
-      Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
-  comm_net_device_ctx_->set_read_id(read_id);
+  Global<CommNet>::Get()->Read(actor_read_id_, src_machine_id, readable_token, writeable_token);
   AsyncSendRegstMsgToConsumer([&](Regst* regst) {
     regst->set_piece_id(next_piece_id_);
     return true;
   });
   AsyncSendRegstMsgToProducer(readable_regst, src_actor_id);
-  comm_net_device_ctx_->set_read_id(nullptr);
-  Global<CommNet>::Get()->AddReadCallBackDone(read_id);
+
   piece_id2regst_ctx.erase(readable_it);
   next_piece_id_ += 1;
 }
