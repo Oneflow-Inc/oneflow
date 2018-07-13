@@ -55,7 +55,8 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
+  if (GetBackwardActivationType() == ActivationType::kNone)
+    BackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
   if (activation_blob_.get() != nullptr) {
     const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(odbns.size(), 1);
@@ -79,9 +80,42 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK_EQ(this->GetActivationType(), ActivationType::kNone);
     BackwardDataContent(ctx, BnInOp2Blob);
   }
+  if (GetBackwardActivationType() != ActivationType::kNone)
+    AfterBackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
 
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+}
+
+template<DeviceType device_type>
+template<typename T>
+void KernelIf<device_type>::AfterBackwardActivation(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    Blob* activation_blob) const {
+  ActivationType activation = this->GetBackwardActivationType();
+  if (activation != ActivationType::kNone) {
+    const PbRpf<std::string> ibns = this->op_attribute().input_bns();
+    const PbRpf<std::string> idbns = this->op_attribute().input_diff_bns();
+    CHECK_EQ(ibns.size(), 1);
+    CHECK_EQ(idbns.size(), 1);
+
+    const Blob* in_blob = BnInOp2Blob(ibns[0]);
+    const Blob* in_diff_blob = BnInOp2Blob(idbns[0]);
+    int64_t elem_cnt = in_blob->shape().elem_cnt();
+    switch (activation) {
+#define DEFINE_ONE_CASE(activation_type)                                                           \
+  case ActivationType::k##activation_type:                                                         \
+    KernelUtil<device_type, T>::activation_type##Backward(                                         \
+        ctx.device_ctx, elem_cnt, in_blob->dptr<T>(), in_blob->dptr<T>(), in_diff_blob->dptr<T>(), \
+        activation_blob->mut_dptr<T>());                                                           \
+    break
+      DEFINE_ONE_CASE(TanH);
+      DEFINE_ONE_CASE(Sigmoid);
+      DEFINE_ONE_CASE(Relu);
+#undef DEFINE_ONE_CASE
+      default: UNIMPLEMENTED();
+    }
+  }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
