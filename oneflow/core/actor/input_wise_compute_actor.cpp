@@ -47,6 +47,7 @@ void InputWiseCompActor::Act() {
   std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
   Regst* cur_regst = regst_q.front();
   KernelCtx kernel_ctx = GenDefaultKernelCtx();
+
   std::pair<std::string, bool> other_val(
       regst_desc_id2bn_in_op_.at(cur_processed_regst_desc_id_),
       unprocessed_regst_desc_id_.size() == readable_regsts_.size());
