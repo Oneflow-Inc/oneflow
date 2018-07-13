@@ -48,6 +48,7 @@ class Kernel {
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
   virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
+  ActivationType GetBackwardActivationType() const { return kernel_conf().backward_activation(); }
 
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;

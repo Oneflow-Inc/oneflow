@@ -162,7 +162,10 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 
 template<DeviceType device_type, typename T>
 ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
-  return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
+  if (this->kernel_conf().backward_activation() == ActivationType::kNone)
+    return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
+  else
+    return ActivationType::kNone;
 }
 
 template<DeviceType device_type, typename T>
