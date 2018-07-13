@@ -1,8 +1,8 @@
 # main cpp
 list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/oneflow.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/gen_resnet.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/gen_alexnet.cpp)
-list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/oneflow/core/job/gen_googlenet.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/tools/gen_resnet.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/tools/gen_alexnet.cpp)
+list(APPEND of_main_cc ${PROJECT_SOURCE_DIR}/tools/gen_googlenet.cpp)
 
 function(oneflow_add_executable)
   if (BUILD_CUDA)
