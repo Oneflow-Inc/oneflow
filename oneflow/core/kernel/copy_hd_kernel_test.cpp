@@ -21,7 +21,7 @@ void CopyHdTestCase(OpKernelTestCase* test_case, const std::string& job_type,
   test_case->ForwardCheckBlobWithAnother<T>("out", blob_desc, "in", true);
 }
 
-TEST_CPU_ONLY_OPKERNEL(CopyHdTestCase, ALL_DATA_TYPE_SEQ, (train)(predict), (h2d)(d2h));
+TEST_CPU_ONLY_OPKERNEL(CopyHdTestCase, POD_DATA_TYPE_SEQ, (train)(predict), (h2d)(d2h));
 
 }  // namespace test
 

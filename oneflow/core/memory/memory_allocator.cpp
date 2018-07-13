@@ -26,7 +26,7 @@ char* MemoryAllocator::Allocate(MemoryCase mem_case, std::size_t size) {
   } else {
     UNIMPLEMENTED();
   }
-  deleters_.push_back(std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
+  deleters_.push_front(std::bind(&MemoryAllocator::Deallocate, this, dptr, mem_case));
   return dptr;
 }
 

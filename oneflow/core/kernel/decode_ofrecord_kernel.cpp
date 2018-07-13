@@ -1,6 +1,7 @@
 #include "oneflow/core/kernel/decode_ofrecord_kernel.h"
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -16,7 +17,7 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CHECK(ctx.other);
   auto status = static_cast<DecodeStatus*>(ctx.other);
-  auto record_blob = status->in_regst_->GetRecordBlob<OFRecord>();
+  Blob* in_blob = BnInOp2Blob("in");
   const DecodeOFRecordOpConf& decode_conf = op_conf().decode_ofrecord_conf();
   CHECK_EQ(op_attribute().output_bns_size(), decode_conf.blob_size());
   status->max_col_id_ = -1;
@@ -29,7 +30,7 @@ void DecodeOFRecordKernel::Forward(const KernelCtx& ctx,
     int32_t max_col_id = decoder->DecodeOneCol(
         ctx.device_ctx,
         compute_thread_num / parallel_num_ + (compute_thread_num % parallel_num_ == 0 ? 0 : 1),
-        record_blob, blob_conf, status->cur_col_id_, out_blob,
+        in_blob, blob_conf, status->cur_col_id_, out_blob,
         std::bind(&DecodeOFRecordKernel::NextRandomInt, this));
 
     if (status->max_col_id_ == -1) {

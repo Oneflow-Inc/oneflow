@@ -89,11 +89,6 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
-  if (IsDecodeOp()) {
-    CHECK_EQ(pr_desc->parallel_num(), Global<JobDesc>::Get()->other_conf().data_part_num())
-        << "parallel_num of data loader is not equal to the data_part_num in "
-           "job.prototxt";
-  }
   if (model_bns().empty() && const_model_bns().empty()) {
     pr_desc->set_policy(ParallelPolicy::kDataParallel);
   }
@@ -275,6 +270,11 @@ void Operator::EnrollModelBn(const std::string& mbn) {
   *(mut_model_bns()->Add()) = mbn;
   CHECK(mut_bn_in_op2lbi()->insert({mbn, lbi}).second);
   std::string mdbn = GenDiffBn(mbn);
+  *(mut_model_diff_bns()->Add()) = mdbn;
+  CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
+}
+void Operator::EnrollModelDiffBn(const std::string& mdbn) {
+  LogicalBlobId lbi = mbn2lbi(mdbn);
   *(mut_model_diff_bns()->Add()) = mdbn;
   CHECK(mut_bn_in_op2lbi()->insert({mdbn, lbi}).second);
 }

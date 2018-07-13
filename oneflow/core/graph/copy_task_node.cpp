@@ -5,7 +5,7 @@ namespace oneflow {
 
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::string name("copy_out");
-  auto out_regst = ProduceRegst(name, true);
+  auto out_regst = ProduceRegst(name, false);
   for (TaskEdge* edge : out_edges()) { edge->AddRegst(name, out_regst); }
 }
 

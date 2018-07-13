@@ -90,7 +90,7 @@ void TaskNode::EraseEmptyProducedRegst() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
-        return it->second->regst_desc_type().has_normal_regst_desc() && it->second->NumOfLbi() == 0;
+        return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
       });
 }
 
@@ -141,7 +141,11 @@ int64_t TaskNode::MemZoneId121() const {
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  if (IsMeaningLess() || dst_node->IsMeaningLess()) return;
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
+  if (!Global<JobDesc>::Get()->IsTrain() && GetTaskType() == kNormalMdUpdt
+      && dst_node->GetTaskType() == kNormalMdUpdt) {
+    return;
+  }
   const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
@@ -165,7 +169,7 @@ std::shared_ptr<RegstDesc> TaskNode::ProduceRegst(const std::string& name, bool 
                                                   int32_t min_register_num,
                                                   int32_t max_register_num) {
   RegstDescTypeProto regst_desc_type;
-  regst_desc_type.mutable_normal_regst_desc();
+  regst_desc_type.mutable_data_regst_desc();
   return ProduceRegst(name, enable_mem_sharing, min_register_num, max_register_num,
                       regst_desc_type);
 }
@@ -319,6 +323,26 @@ std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
 
 void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
+}
+
+RegstDescProto* FindOrCreateProducedCtrlRegstDesc(TaskProto* task_proto,
+                                                  const std::string& regst_desc_name) {
+  auto* produced_regst_desc = task_proto->mutable_produced_regst_desc();
+  if (produced_regst_desc->find(regst_desc_name) == produced_regst_desc->end()) {
+    RegstDescProto ctrl_regst_desc;
+    InitCtrlRegstDesc(task_proto->task_id(), &ctrl_regst_desc);
+    CHECK(produced_regst_desc->insert({regst_desc_name, ctrl_regst_desc}).second);
+  }
+  return &produced_regst_desc->at(regst_desc_name);
+}
+
+RegstDescIdSet* FindOrCreateConsumedCtrlRegstDescIdSet(TaskProto* task_proto,
+                                                       const std::string& regst_desc_name) {
+  auto* consumed_regst_desc_id_sets = task_proto->mutable_consumed_regst_desc_id();
+  if (consumed_regst_desc_id_sets->find(regst_desc_name) == consumed_regst_desc_id_sets->end()) {
+    CHECK(consumed_regst_desc_id_sets->insert({regst_desc_name, RegstDescIdSet()}).second);
+  }
+  return &consumed_regst_desc_id_sets->at(regst_desc_name);
 }
 
 std::map<TaskType, std::string> task_type2color = {

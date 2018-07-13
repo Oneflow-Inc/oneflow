@@ -39,6 +39,7 @@ class Operator {
   virtual bool IsLossOp() const { return false; }
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
+  virtual bool IsEmbeddingLookupOp() const { return false; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -193,6 +194,7 @@ class Operator {
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
+  void EnrollModelDiffBn(const std::string& mdbn);
   void EnrollConstModelBn(const std::string& cmbn);
 
   void EnrollConstBufBn(const std::string& cbbn);

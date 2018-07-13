@@ -70,13 +70,8 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   void ToDotFiles(const std::string& dir) const;
 
   // Getters
-  const Plan& plan() const { return *plan_; }
   const TaskProto& GetTaskProto(int64_t actor_id) const {
     return *task_id2task_proto_.at(actor_id);
-  }
-  const HashMap<int64_t, int64_t>& actor_id2act_cnt() const { return actor_id2act_cnt_; }
-  const HashMap<int64_t, double>& actor_id2total_act_time() const {
-    return actor_id2total_act_time_;
   }
   const std::list<const ActNode*>& Nodes4Depth(int64_t depth) const {
     return depth2nodes_.at(depth);
@@ -95,7 +90,6 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   void InitEdges();
   void InitDepth();
   void InitTaskId2TaskProto();
-  void InitActorStatistics();
   void ForEachDepthRangeRegstUids(
       const std::function<void(const Range& range, const std::list<std::string>& regst_uids)>&
           Handler) const;
@@ -111,8 +105,6 @@ class ActGraph final : public Graph<ActNode, ActEdge> {
   HashMap<std::string, ActNode*> regst_uid2producer_node_;
   HashMap<std::string, std::list<const ActNode*>> regst_uid2consumer_nodes_;
   HashMap<int64_t, std::list<const ActNode*>> depth2nodes_;
-  HashMap<int64_t, int64_t> actor_id2act_cnt_;
-  HashMap<int64_t, double> actor_id2total_act_time_;
 };
 
 }  // namespace oneflow

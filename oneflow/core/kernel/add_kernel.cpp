@@ -26,5 +26,10 @@ void AddKernel<device_type, T>::BackwardDataContent(
   }
 }
 
+template<DeviceType device_type, typename T>
+const PbMessage& AddKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().add_conf();
+}
+
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kAddConf, AddKernel, ARITHMETIC_DATA_TYPE_SEQ);
 }  // namespace oneflow
