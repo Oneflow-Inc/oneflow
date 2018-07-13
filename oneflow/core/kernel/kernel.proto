@@ -101,6 +101,10 @@ message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
 }
 
+message ReduceGatherKernelConf {
+  repeated int64 data_offset = 1;
+}
+
 message OpAttribute {
   required OperatorConf op_conf = 1;
   map<string, LogicalBlobId> bn_in_op2lbi = 2;
@@ -141,5 +145,6 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
+    ReduceGatherKernelConf reduce_gather_conf = 350;
   }
 }

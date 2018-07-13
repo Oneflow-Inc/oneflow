@@ -12,7 +12,7 @@ template<DeviceType device_type, typename T>
 void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto* other_val = static_cast<std::pair<std::string, bool>*>(ctx.other);
-  std::string input_bn = other_val->first;
+  const std::string& input_bn = other_val->first;
   bool is_first = other_val->second;
 
   Blob* out_blob = BnInOp2Blob("out");
