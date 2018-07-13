@@ -47,6 +47,7 @@ class CommNet {
   Channel<std::function<void()>> ready_cbs_;
 
  private:
+  friend class Global<CommNet>;
   void AddWorkToStream(void* actor_read_id, const std::function<void()>& cb, bool is_read);
   struct ActorReadContext;
   struct ReadContext {
@@ -56,10 +57,7 @@ class CommNet {
     std::mutex waiting_list_mtx;
     std::list<CommNetItem> waiting_list;
   };
-  friend class Global<CommNet>;
-
   HashSet<int64_t> peer_machine_id_;
-
   std::thread ready_cb_poller_;
 };
 

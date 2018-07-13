@@ -39,7 +39,7 @@ void CommNet::ReadDone(void* read_id) {
     CHECK(actor_read_ctx->waiting_list.front().callback == nullptr);
     actor_read_ctx->waiting_list.pop_front();
   }
-  for (;;) {
+  while (true) {
     {
       std::unique_lock<std::mutex> lck(actor_read_ctx->waiting_list_mtx);
       if (actor_read_ctx->waiting_list.empty()) { break; }
