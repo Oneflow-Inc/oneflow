@@ -332,23 +332,13 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
 }
 
 void LogicalGraph::MoveBackwardActivations() {
-  HashMap<LogicalNode*, LogicalNode*> bw_node_with_activation2pre_node;
-  CollectBackwardActivationInfos(&bw_node_with_activation2pre_node);
-  for (const auto& pair : bw_node_with_activation2pre_node) { MoveOneBackwardActivation(pair); }
-}
-
-void LogicalGraph::CollectBackwardActivationInfos(
-    HashMap<LogicalNode*, LogicalNode*>* bw_node_with_activation2pre_node) {
   ForEachNode([&](LogicalNode* cur_node) {
     if (cur_node->GetAreaId() != kDataBackwardArea) { return; }
-    if (cur_node->op_vec().size() != 1 || !cur_node->SoleOp()->op_conf().has_add_conf()) { return; }
+    if (cur_node->op_vec().size() != 1 || !cur_node->SoleOp()->NeedDoActivation()) { return; }
+    CHECK_EQ(cur_node->in_edges().size(), 1);
+    auto pre_node = cur_node->SoleInEdge()->src_node();
+    // TODO: pre_node set backward activation
   });
-}
-
-void LogicalGraph::MoveOneBackwardActivation(
-    const std::pair<LogicalNode*, LogicalNode*>& bw_node_with_activation2pre_node) {
-  auto bw_node_with_activation = bw_node_with_activation2pre_node.first;
-  auto pre_node = bw_node_with_activation2pre_node.second;
 }
 
 void LogicalGraph::RemoveBackwardAdd() {

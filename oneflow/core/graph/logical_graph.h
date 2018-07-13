@@ -51,10 +51,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddBackwardClone();
   void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
   void MoveBackwardActivations();
-  void CollectBackwardActivationInfos(
-      HashMap<LogicalNode*, LogicalNode*>* bw_node_with_activation2pre_node);
-  void MoveOneBackwardActivation(
-      const std::pair<LogicalNode*, LogicalNode*>& bw_node_with_activation2pre_node);
   void RemoveBackwardAdd();
   void CollectBackwardB121CloneInfos(HashMap<LogicalNode*, LogicalNode*>* bw_add_node2pre_node);
   void RemoveOneBackwardAdd(const std::pair<LogicalNode*, LogicalNode*>& bw_add_node_and_pre);
