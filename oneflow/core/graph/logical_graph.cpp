@@ -215,6 +215,7 @@ void LogicalGraph::SetMainModelParallel() {
 void LogicalGraph::BuildBwStruct() {
   NaiveBuildBwStruct();
   AddBackwardClone();
+  MoveBackwardActivations();
   RemoveBackwardAdd();
 }
 
@@ -328,6 +329,26 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
     UpdateEdge2IbnObn(edge, "", lbi2obn.at(lbi_clone_i));
   }
   UpdateEdge2IbnObn(clone_in_diff_edge, GenUnDiffBn(clone_op->SoleIdbn()), clone_obn);
+}
+
+void LogicalGraph::MoveBackwardActivations() {
+  HashMap<LogicalNode*, LogicalNode*> bw_node_with_activation2pre_node;
+  CollectBackwardActivationInfos(&bw_node_with_activation2pre_node);
+  for (const auto& pair : bw_node_with_activation2pre_node) { MoveOneBackwardActivation(pair); }
+}
+
+void LogicalGraph::CollectBackwardActivationInfos(
+    HashMap<LogicalNode*, LogicalNode*>* bw_node_with_activation2pre_node) {
+  ForEachNode([&](LogicalNode* cur_node) {
+    if (cur_node->GetAreaId() != kDataBackwardArea) { return; }
+    if (cur_node->op_vec().size() != 1 || !cur_node->SoleOp()->op_conf().has_add_conf()) { return; }
+  });
+}
+
+void LogicalGraph::MoveOneBackwardActivation(
+    const std::pair<LogicalNode*, LogicalNode*>& bw_node_with_activation2pre_node) {
+  auto bw_node_with_activation = bw_node_with_activation2pre_node.first;
+  auto pre_node = bw_node_with_activation2pre_node.second;
 }
 
 void LogicalGraph::RemoveBackwardAdd() {
