@@ -445,15 +445,6 @@ ActGraph::ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_
   InitEdges();
   InitDepth();
   InitTaskId2TaskProto();
-  InitActorStatistics();
-}
-
-void ActGraph::InitActorStatistics() {
-  for (const ActEvent& act_event : *act_events_) {
-    int64_t actor_id = act_event.actor_id();
-    ++actor_id2act_cnt_[actor_id];
-    actor_id2total_act_time_[actor_id] += Duration4ActEvent(act_event);
-  }
 }
 
 void ActGraph::ForEachDepthRangeRegstUids(
