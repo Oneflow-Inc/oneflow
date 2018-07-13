@@ -10,7 +10,10 @@ void AccuracyPrintKernel<T>::Forward(const KernelCtx& kernel_ctx,
   int total_num = Global<JobDesc>::Get()->BatchSize();
   float accuracy = accuracy_num / total_num;
   const char* accuracy_op_name = op_conf().name().c_str() + 15;
-  LOG(INFO) << accuracy_op_name << ":" << accuracy;
+  auto kernel_conf = this->kernel_conf();
+  const int32_t top_k_print =
+      kernel_conf.op_attribute().op_conf().accuracy_print_conf().top_k_print();
+  LOG(INFO) << "top_" << top_k_print << "_" << accuracy_op_name << ":" << accuracy;
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kAccuracyPrintConf, AccuracyPrintKernel,

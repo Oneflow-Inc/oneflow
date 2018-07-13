@@ -409,6 +409,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
 
     *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
+    accuracy_print_conf->set_top_k_print(accuracy_op->op_conf().accuracy_conf().top_k());
 
     std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
     ParallelConf accuracy_print_pr_conf;
