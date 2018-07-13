@@ -33,6 +33,7 @@ class Operator {
   virtual bool NeedExtraInDiffMemWhenBackward() const { return true; }
   virtual bool NeedOutWhenBackward() const { return true; }
   bool NeedDoActivation() const;
+  void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
 
   virtual LogicalNode* NewProperLogicalNode();
 
@@ -211,6 +212,7 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
+  ActivationType backward_activation_;
 };
 
 std::string GenDiffBn(const std::string& bn);

@@ -18,6 +18,7 @@ DataType GetDataTypeFromBnInOpVec(
 }  // namespace
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
+  backward_activation_ = ActivationType::kNone;
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
   if (this_op_conf->has_use_cudnn_on_gpu() == false) {
@@ -161,6 +162,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                                   1);
     activation_blob_desc.ToProto(kernel_conf->mutable_activation_blob_desc());
   }
+  kernel_conf->set_backward_activation(backward_activation_);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 
