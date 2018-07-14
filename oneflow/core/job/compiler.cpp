@@ -60,6 +60,9 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ClearOutOfDateConsumedRegst, _1));
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  if (Global<JobDesc>::Get()->other_conf().use_ordered_allreduce_in_mdupdt()) {
+    task_gph->AddCtrlEdgeInReduceStruct();
+  }
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
