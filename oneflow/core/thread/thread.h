@@ -20,6 +20,8 @@ class Thread {
 
   void JoinAllActor() { actor_thread_.join(); }
 
+  int64_t ThreadId() const { return thrd_id_; }
+
  protected:
   Thread() = default;
   std::thread& mut_actor_thread() { return actor_thread_; }

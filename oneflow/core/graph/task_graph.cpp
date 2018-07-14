@@ -23,6 +23,8 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
   std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
+  int64_t record_load_thrd_id = 0;
+  int64_t loss_print_thrd_id = 0;
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
     int64_t ret = -1;
     if (task_node->IsPersistence() == false) {
@@ -30,9 +32,17 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
       offset = (offset + 1) % job_desc->CpuDeviceNum();
     } else {
-      int64_t& offset = persistence_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetPersistenceThrdId(offset);
-      offset = (offset + 1) % job_desc->PersistenceWorkerNum();
+      if (task_node->GetTaskType() == TaskType::kRecordLoad) {
+        ret = job_desc->base_id_of_record_load() + record_load_thrd_id;
+        record_load_thrd_id++;
+      } else if (task_node->GetTaskType() == TaskType::kLossPrint) {
+        ret = job_desc->base_id_of_loss_print() + loss_print_thrd_id;
+        loss_print_thrd_id++;
+      } else {
+        int64_t& offset = persistence_offset.at(task_node->machine_id());
+        ret = Global<IDMgr>::Get()->GetMdSaveThrdId(offset);
+        offset = (offset + 1) % job_desc->PersistenceWorkerNum();
+      }
     }
     return ret;
   };
