@@ -16,6 +16,7 @@ void ReduceGatherKernel::ForwardDataContent(
       CHECK(in_blob != nullptr);
       size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
       Memcpy<DeviceType::kGPU>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
+      break;
     }
     i += 1;
   }
