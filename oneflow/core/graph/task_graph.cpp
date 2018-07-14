@@ -227,7 +227,8 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
           if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
             ctrl_regst->UpdtMinRegstNumIfNeed(
-                copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
+                copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num()
+                + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1);
           }
         });
       }
