@@ -226,13 +226,8 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
         candidate_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
           if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
-            RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
-            // Set regst num is Hack
-            // TODO : Delete this hack
-            int32_t hack_regst_num = copy_out_regst->min_register_num();
-            ctrl_regst->UpdtMinRegstNumIfNeed(hack_regst_num);
-            ctrl_regst->UpdtMaxRegstNumIfNeed(hack_regst_num);
-            copy_out_regst->UpdtMaxRegstNumIfNeed(hack_regst_num);
+            ctrl_regst->UpdtMinRegstNumIfNeed(
+                copy_hd_task_node->GetProducedRegst("copy_out")->min_register_num());
           }
         });
       }
