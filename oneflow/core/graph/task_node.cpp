@@ -270,7 +270,8 @@ int64_t TaskNode::AllocateLocalWorkStreamId() {
     if (device_type() == DeviceType::kCPU) {
       return 0;
     } else if (device_type() == DeviceType::kGPU) {
-      return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
+      // return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
+      return 0;
     } else {
       UNIMPLEMENTED();
     }

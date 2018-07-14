@@ -124,9 +124,10 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
       if (GetLocalWorkStreamId() == 0) {
         cuda_handle = thread_ctx.g_cuda_stream.get();
       } else {
-        CHECK(Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(GetLocalWorkStreamId()));
-        cuda_handle_.reset(new CudaStreamHandle(thread_ctx.cb_event_chan));
-        cuda_handle = cuda_handle_.get();
+        // CHECK(Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(GetLocalWorkStreamId()));
+        // cuda_handle_.reset(new CudaStreamHandle(thread_ctx.cb_event_chan));
+        // cuda_handle = cuda_handle_.get();
+        cuda_handle = thread_ctx.g_cuda_stream.get();
       }
       device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, cuda_handle));
       break;
