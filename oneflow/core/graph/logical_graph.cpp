@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/job/keyword.h"
 
 namespace oneflow {
 
@@ -366,7 +367,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     Connect<LogicalNode>(loss_logical, NewEdge(), loss_acc_logical);
     // Loss Print Logical
     OperatorConf loss_print_op_conf;
-    loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
+    loss_print_op_conf.set_name(LossPrintPrefix + loss_op->op_name());
     loss_print_op_conf.set_device_type(DeviceType::kCPU);
     auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
 
@@ -404,7 +405,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
     Connect<LogicalNode>(accuracy_logical, NewEdge(), accuracy_acc_logical);
     // Accuracy Print Logical
     OperatorConf accuracy_print_op_conf;
-    accuracy_print_op_conf.set_name("accuracy_print_" + accuracy_op->op_name());
+    accuracy_print_op_conf.set_name(AccuracyPrintPrefix + accuracy_op->op_name());
     accuracy_print_op_conf.set_device_type(DeviceType::kCPU);
     auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
 
