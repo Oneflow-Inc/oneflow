@@ -55,8 +55,9 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (GetBackwardActivationType() == ActivationType::kNone)
+  if (GetBackwardActivationType() == ActivationType::kNone) {
     BackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
+  }
   if (activation_blob_.get() != nullptr) {
     const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
     CHECK_EQ(odbns.size(), 1);
@@ -80,8 +81,9 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK_EQ(this->GetActivationType(), ActivationType::kNone);
     BackwardDataContent(ctx, BnInOp2Blob);
   }
-  if (GetBackwardActivationType() != ActivationType::kNone)
+  if (GetBackwardActivationType() != ActivationType::kNone) {
     AfterBackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
+  }
 
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
@@ -196,10 +198,11 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
 
 template<DeviceType device_type, typename T>
 ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
-  if (this->kernel_conf().backward_activation() == ActivationType::kNone)
+  if (this->kernel_conf().backward_activation() == ActivationType::kNone) {
     return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
-  else
+  } else {
     return ActivationType::kNone;
+  }
 }
 
 template<DeviceType device_type, typename T>
