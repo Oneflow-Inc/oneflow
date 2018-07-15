@@ -230,20 +230,27 @@ double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
 
 double CalcBaseII(const ActGraph& act_graph) {
   int64_t max_act_cnt = 0;
-  for (const auto& pair : act_graph.actor_id2act_cnt()) {
-    if (max_act_cnt < pair.second) { max_act_cnt = pair.second; }
-  }
+  HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
+  act_graph.ForEachNode([&](const ActNode* act_node) {
+    int64_t actor_id = act_node->actor_id();
+    if (!act_node->out_edges().empty()) {
+      ++actor_id2outputed_act_cnt[actor_id];
+      max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
+    }
+  });
   HashMap<int64_t, double> actor_id2act_frequency;
-  for (const auto& pair : act_graph.actor_id2act_cnt()) {
+  for (const auto& pair : actor_id2outputed_act_cnt) {
     actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
   }
   HashMap<int64_t, double> stream_id2total_calc_time;
   act_graph.ForEachNode([&](const ActNode* act_node) {
-    int64_t stream_id = act_node->act_event().work_stream_id();
     int64_t actor_id = act_node->actor_id();
+    auto frequence_it = actor_id2act_frequency.find(actor_id);
+    if (frequence_it == actor_id2act_frequency.end()) { return; }
+    int64_t stream_id = act_node->act_event().work_stream_id();
     TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
-    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
-        task_type, act_node->Duration(), actor_id2act_frequency.at(actor_id));
+    stream_id2total_calc_time[stream_id] +=
+        FormalDuration4ExperimentalDuration(task_type, act_node->Duration(), frequence_it->second);
   });
   double base_ii = 0;
   for (const auto& pair : stream_id2total_calc_time) {
