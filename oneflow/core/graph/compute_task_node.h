@@ -16,7 +16,6 @@ class CompTaskNode : public TaskNode {
 
   virtual CudaWorkType GetCudaWorkType() const { return CudaWorkType::kCompute; }
   virtual void ToProto(TaskProto*) override;
-  bool UseIndependentWorkStream() const override { return GetCudaWorkType() == CudaWorkType::kMix; }
 
   // parallel_ctx_
   int64_t parallel_id() const { return parallel_ctx_.parallel_id(); }

@@ -266,17 +266,7 @@ void TaskNode::FixRegisterNumRange() {
 int64_t TaskNode::AllocateLocalWorkStreamId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  if (UseIndependentWorkStream()) {
-    if (device_type() == DeviceType::kCPU) {
-      return 0;
-    } else if (device_type() == DeviceType::kGPU) {
-      return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else {
-    return 0;
-  }
+  return 0;
 }
 
 void TaskNode::UpdateTaskId() {
