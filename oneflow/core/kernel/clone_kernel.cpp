@@ -26,123 +26,114 @@ void CloneKernel<device_type, T>::BackwardDataContent(
   size_t out_num = odbns.size();
   if (out_num == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
+  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
+                      in_diff_blob->ByteSizeOfDataContentField());
   if (out_num > 10) {
-    const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
-    Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), out_diff_blob_0->dptr(),
-                        out_diff_blob_0->ByteSizeOfDataContentField());
-    for (size_t i = 1; i != odbns.size(); ++i) {
+    for (size_t i = 0; i != odbns.size(); ++i) {
       const Blob* out_diff_blob = BnInOp2Blob(odbns[i]);
-      CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, out_diff_blob, in_diff_blob);
+      CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_blob);
     }
   } else {
-    const int64_t elem_cnt = in_diff_blob->shape().elem_cnt();
     switch (out_num) {
       case 1: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        KernelUtil<device_type, T>::Add1(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0);
       } break;
       case 2: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        KernelUtil<device_type, T>::Add2(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
+                                                        out_diff_1);
       } break;
       case 3: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        KernelUtil<device_type, T>::Add3(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
+                                                        out_diff_1, out_diff_2);
       } break;
       case 4: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        KernelUtil<device_type, T>::Add4(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                         out_3->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
+                                                        out_diff_1, out_diff_2, out_diff_3);
       } break;
       case 5: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        KernelUtil<device_type, T>::Add5(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                         out_3->dptr<T>(), out_4->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
+                                                        out_diff_1, out_diff_2, out_diff_3,
+                                                        out_diff_4);
       } break;
       case 6: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        KernelUtil<device_type, T>::Add6(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                         out_3->dptr<T>(), out_4->dptr<T>(), out_5->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
+        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
+                                                        out_diff_1, out_diff_2, out_diff_3,
+                                                        out_diff_4, out_diff_5);
       } break;
       case 7: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        KernelUtil<device_type, T>::Add7(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                         out_3->dptr<T>(), out_4->dptr<T>(), out_5->dptr<T>(),
-                                         out_6->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
+        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
+        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
+                                                        out_diff_1, out_diff_2, out_diff_3,
+                                                        out_diff_4, out_diff_5, out_diff_6);
       } break;
       case 8: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        Blob* out_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
-        KernelUtil<device_type, T>::Add8(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                         out_3->dptr<T>(), out_4->dptr<T>(), out_5->dptr<T>(),
-                                         out_6->dptr<T>(), out_7->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
+        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
+        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
+        Blob* out_diff_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
+        CloneKernelUtil<device_type, T>::AdditionAssign(
+            ctx.device_ctx, in_diff_blob, out_diff_0, out_diff_1, out_diff_2, out_diff_3,
+            out_diff_4, out_diff_5, out_diff_6, out_diff_7);
       } break;
       case 9: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        Blob* out_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
-        Blob* out_8 = BnInOp2Blob(this->op_attribute().output_diff_bns(8));
-        KernelUtil<device_type, T>::Add9(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                         out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                         out_3->dptr<T>(), out_4->dptr<T>(), out_5->dptr<T>(),
-                                         out_6->dptr<T>(), out_7->dptr<T>(), out_8->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
+        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
+        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
+        Blob* out_diff_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
+        Blob* out_diff_8 = BnInOp2Blob(this->op_attribute().output_diff_bns(8));
+        CloneKernelUtil<device_type, T>::AdditionAssign(
+            ctx.device_ctx, in_diff_blob, out_diff_0, out_diff_1, out_diff_2, out_diff_3,
+            out_diff_4, out_diff_5, out_diff_6, out_diff_7, out_diff_8);
       } break;
       case 10: {
-        Blob* out_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        Blob* out_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
-        Blob* out_8 = BnInOp2Blob(this->op_attribute().output_diff_bns(8));
-        Blob* out_9 = BnInOp2Blob(this->op_attribute().output_diff_bns(9));
-        KernelUtil<device_type, T>::Add10(ctx.device_ctx, elem_cnt, in_diff_blob->mut_dptr<T>(),
-                                          out_0->dptr<T>(), out_1->dptr<T>(), out_2->dptr<T>(),
-                                          out_3->dptr<T>(), out_4->dptr<T>(), out_5->dptr<T>(),
-                                          out_6->dptr<T>(), out_7->dptr<T>(), out_8->dptr<T>(),
-                                          out_9->dptr<T>());
+        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
+        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
+        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
+        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
+        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
+        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
+        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
+        Blob* out_diff_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
+        Blob* out_diff_8 = BnInOp2Blob(this->op_attribute().output_diff_bns(8));
+        Blob* out_diff_9 = BnInOp2Blob(this->op_attribute().output_diff_bns(9));
+        CloneKernelUtil<device_type, T>::AdditionAssign(
+            ctx.device_ctx, in_diff_blob, out_diff_0, out_diff_1, out_diff_2, out_diff_3,
+            out_diff_4, out_diff_5, out_diff_6, out_diff_7, out_diff_8, out_diff_9);
       } break;
     }
   }
@@ -151,23 +142,141 @@ void CloneKernel<device_type, T>::BackwardDataContent(
 #define DEFINE_FLOATING_CLONE_KERNEL_UTIL(type_cpp, type_proto)                                    \
   template<DeviceType device_type>                                                                 \
   struct CloneKernelUtil<device_type, type_cpp> {                                                  \
-    static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b) {                    \
-      KernelUtil<device_type, type_cpp>::Axpy(device_ctx, a->shape().elem_cnt(), 1.0,              \
-                                              a->dptr<type_cpp>(), 1, b->mut_dptr<type_cpp>(), 1); \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0) {               \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>()); \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1) {                                                 \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>());                                                                 \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2) {                               \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>());                                         \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3) {             \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>());                 \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,               \
+                               const Blob* in_4) {                                                 \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>(),                  \
+          in_4->dptr<type_cpp>());                                                                 \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,               \
+                               const Blob* in_4, const Blob* in_5) {                               \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>(),                  \
+          in_4->dptr<type_cpp>(), in_5->dptr<type_cpp>());                                         \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,               \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6) {             \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>(),                  \
+          in_4->dptr<type_cpp>(), in_5->dptr<type_cpp>(), in_6->dptr<type_cpp>());                 \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,               \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6,               \
+                               const Blob* in_7) {                                                 \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>(),                  \
+          in_4->dptr<type_cpp>(), in_5->dptr<type_cpp>(), in_6->dptr<type_cpp>(),                  \
+          in_7->dptr<type_cpp>());                                                                 \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,               \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6,               \
+                               const Blob* in_7, const Blob* in_8) {                               \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>(),                  \
+          in_4->dptr<type_cpp>(), in_5->dptr<type_cpp>(), in_6->dptr<type_cpp>(),                  \
+          in_7->dptr<type_cpp>(), in_8->dptr<type_cpp>());                                         \
+    }                                                                                              \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,                 \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,               \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6,               \
+                               const Blob* in_7, const Blob* in_8, const Blob* in_9) {             \
+      KernelUtil<device_type, type_cpp>::AdditionAssign(                                           \
+          device_ctx, out->shape().elem_cnt(), out->mut_dptr<type_cpp>(), in_0->dptr<type_cpp>(),  \
+          in_1->dptr<type_cpp>(), in_2->dptr<type_cpp>(), in_3->dptr<type_cpp>(),                  \
+          in_4->dptr<type_cpp>(), in_5->dptr<type_cpp>(), in_6->dptr<type_cpp>(),                  \
+          in_7->dptr<type_cpp>(), in_8->dptr<type_cpp>(), in_9->dptr<type_cpp>());                 \
     }                                                                                              \
   };
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
 
-#define DEFINE_NONFLOAT_CLONE_KERNEL_UTIL(type_cpp, type_proto)                                    \
-  template<DeviceType device_type>                                                                 \
-  struct CloneKernelUtil<device_type, type_cpp> {                                                  \
-    static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b) { UNIMPLEMENTED(); } \
+#define DEFINE_NONFLOAT_CLONE_KERNEL_UTIL(type_cpp, type_proto)                        \
+  template<DeviceType device_type>                                                     \
+  struct CloneKernelUtil<device_type, type_cpp> {                                      \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0) {   \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1) {                                     \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2) {                   \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3) { \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,   \
+                               const Blob* in_4) {                                     \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,   \
+                               const Blob* in_4, const Blob* in_5) {                   \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,   \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6) { \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,   \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6,   \
+                               const Blob* in_7) {                                     \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,   \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6,   \
+                               const Blob* in_7, const Blob* in_8) {                   \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
+    static void AdditionAssign(DeviceCtx* device_ctx, Blob* out, const Blob* in_0,     \
+                               const Blob* in_1, const Blob* in_2, const Blob* in_3,   \
+                               const Blob* in_4, const Blob* in_5, const Blob* in_6,   \
+                               const Blob* in_7, const Blob* in_8, const Blob* in_9) { \
+      UNIMPLEMENTED();                                                                 \
+    }                                                                                  \
   };
 
 OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL, INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
 
-// ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel, POD_DATA_TYPE_SEQ);
-ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel, FLOATING_DATA_TYPE_SEQ);
+ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel, POD_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
