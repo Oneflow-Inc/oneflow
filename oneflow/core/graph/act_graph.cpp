@@ -5,7 +5,6 @@
 namespace oneflow {
 
 namespace {
-
 std::string GenRegstUid(int64_t regst_desc_id, int64_t producer_act_id) {
   return std::to_string(regst_desc_id) + ":" + std::to_string(producer_act_id);
 }
@@ -20,324 +19,115 @@ int64_t RegstDescId4RegstUid(const std::string& regst_uid) {
 
 }  // namespace
 
-class RegstActSubGraph final : public Graph<const ActNode, const ActEdge> {
+class DepthRangeChainActSubGraph final : public Graph<const ChainActNode, const ChainActEdge> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RegstActSubGraph);
-  RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
-                   const HashSet<const ActNode*>& partial_producer_outs,
-                   const HashSet<const ActNode*>& partial_consumer_nodes,
-                   const std::list<const ActNode*>& fake_sources_super_set);
-  ~RegstActSubGraph() = default;
-
-  void ForEachConsumerPathDuration(const std::function<void(int64_t, double)>& Handler) const;
-
-  // Getters
-  const std::string& regst_uid() const { return regst_uid_; }
-
- private:
-  void TopoForEachActNode(const std::function<void(const ActNode*)>& Handler) const;
-  void ForEachInNode(const ActNode* node, const std::function<void(const ActNode*)>& Handler) const;
-  void ForEachOutNode(const ActNode* node,
-                      const std::function<void(const ActNode*)>& Handler) const;
-  std::list<const ActNode*> CalcSources() const;
-  bool IsWithinDepthRange(const ActNode* node) const;
-
-  std::string regst_uid_;
-  const ActNode* producer_node_;
-  HashSet<const ActNode*> partial_producer_outs_;
-  HashSet<const ActNode*> partial_consumer_nodes_;
-  HashSet<const ActNode*> fake_sources_;
-  Range depth_range_;
-};
-
-bool RegstActSubGraph::IsWithinDepthRange(const ActNode* node) const {
-  return node->depth() >= depth_range_.begin() && node->depth() <= depth_range_.end();
-}
-
-RegstActSubGraph::RegstActSubGraph(const std::string& regst_uid, const ActNode* producer_node,
-                                   const HashSet<const ActNode*>& partial_producer_outs,
-                                   const HashSet<const ActNode*>& partial_consumer_nodes,
-                                   const std::list<const ActNode*>& fake_sources_super_set)
-    : regst_uid_(regst_uid),
-      producer_node_(producer_node),
-      partial_producer_outs_(partial_producer_outs),
-      partial_consumer_nodes_(partial_consumer_nodes) {
-  for (const ActNode* node : fake_sources_super_set) {
-    if (partial_producer_outs_.find(node) == partial_producer_outs_.end()) {
-      fake_sources_.insert(node);
-    }
-  }
-  int64_t min_depth = std::numeric_limits<int64_t>::max();
-  for (const ActNode* node : fake_sources_super_set) {
-    min_depth = std::min(min_depth, node->depth());
-  }
-  int64_t max_depth = std::numeric_limits<int64_t>::min();
-  for (const ActNode* node : partial_consumer_nodes_) {
-    max_depth = std::max(max_depth, node->depth());
-  }
-  depth_range_.mut_begin() = min_depth;
-  depth_range_.mut_end() = max_depth;
-}
-
-std::list<const ActNode*> RegstActSubGraph::CalcSources() const {
-  std::list<const ActNode*> sources;
-  for (const ActNode* node : fake_sources_) { sources.push_back(node); }
-  sources.push_back(producer_node_);
-  return sources;
-}
-
-void RegstActSubGraph::TopoForEachActNode(
-    const std::function<void(const ActNode*)>& Handler) const {
-  auto ForEachIn = std::bind(&RegstActSubGraph::ForEachInNode, this, std::placeholders::_1,
-                             std::placeholders::_2);
-  auto ForEachOut = std::bind(&RegstActSubGraph::ForEachOutNode, this, std::placeholders::_1,
-                              std::placeholders::_2);
-  TopoForEachNode(CalcSources(), ForEachIn, ForEachOut, Handler);
-}
-
-void RegstActSubGraph::ForEachInNode(const ActNode* node,
-                                     const std::function<void(const ActNode*)>& Handler) const {
-  if (partial_producer_outs_.find(node) != partial_producer_outs_.end()) {
-    Handler(producer_node_);
-  }
-  node->ForEachNodeOnInEdge([&](const ActNode* node) {
-    if (IsWithinDepthRange(node)) { Handler(node); }
-  });
-}
-
-void RegstActSubGraph::ForEachOutNode(const ActNode* node,
-                                      const std::function<void(const ActNode*)>& Handler) const {
-  if (node == producer_node_) {
-    for (const ActNode* producer_out : partial_producer_outs_) { Handler(producer_out); }
-  } else {
-    node->ForEachNodeOnOutEdge([&](const ActNode* node) {
-      if (IsWithinDepthRange(node)) { Handler(node); }
-    });
-  }
-}
-
-void RegstActSubGraph::ForEachConsumerPathDuration(
-    const std::function<void(int64_t consumer_actor_id, double duration)>& Handler) const {
-  auto Duration4Node = [&](const ActNode* node) {
-    if (fake_sources_.find(node) != fake_sources_.end()) {
-      return std::numeric_limits<double>::min();
-    } else {
-      return node->Duration();
-    }
-  };
-  HashMap<const ActNode*, double> node2longest_path_duration;
-  TopoForEachActNode([&](const ActNode* node) {
-    double duration = std::numeric_limits<double>::min();
-    ForEachInNode(node, [&](const ActNode* in_node) {
-      duration = std::max(duration, node2longest_path_duration[in_node]);
-    });
-    node2longest_path_duration[node] = duration + Duration4Node(node);
-  });
-  for (const ActNode* node : partial_consumer_nodes_) {
-    Handler(node->actor_id(), node2longest_path_duration.at(node));
-  }
-}
-
-class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(DepthRangeActSubGraph);
-  DepthRangeActSubGraph(const ActGraph* act_graph, const Range& depth_range,
+  OF_DISALLOW_COPY_AND_MOVE(DepthRangeChainActSubGraph);
+  DepthRangeChainActSubGraph(const ChainActGraph* chain_act_graph, const Range& depth_range,
                         const std::list<std::string>& regst_uids);
-  ~DepthRangeActSubGraph() = default;
-
-  void ForEachRegstActSubGraph(const std::function<void(const RegstActSubGraph&)>& Handler) const;
-  void ToDotFiles(const std::string& dir) const;
-
+  ~DepthRangeChainActSubGraph() = default;
+  void CalTotalDuration(const std::function<void(std::string, int64_t, double)>& Handler) const;
  private:
-  void InitNode2ComponentId();
-  void InitComponentId2Sources();
-  void BfsForEachActNode(const std::list<const ActNode*>& sources,
-                         const std::function<void(const ActNode*)>& Handler) const;
-  void ForEachActNode(const std::function<void(const ActNode*)>& Handler) const;
-  void TopoForEachActNode(const std::list<const ActNode*>& starts,
-                          const std::function<void(const ActNode*)>& Handler) const;
-  void ForEachInNode(const ActNode* node, const std::function<void(const ActNode*)>& Handler) const;
-  void ForEachOutNode(const ActNode* node,
-                      const std::function<void(const ActNode*)>& Handler) const;
-  void ComponentToDotFiles(const std::string& dir, int64_t component_id) const;
+  void TopoForEachChainActNode(const std::list<const ChainActNode*>& starts,
+                          const std::function<void(const ChainActNode*)>& Handler) const;
+  void ForEachInEdge(const ChainActNode* node, const std::function<void(const ChainActEdge*)>& Handler) const;
 
-  const ActGraph* act_graph_;
+  const ChainActGraph* graph_;
   Range depth_range_;
   std::list<std::string> regst_uids_;
-  HashMap<const ActNode*, int64_t> node2component_id_;
-  HashMap<int64_t, std::list<const ActNode*>> compo_id2sources_;
-  HashMap<int64_t, std::list<RegstActSubGraph>> compo_id2regst_act_graph_;
 };
 
-void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
-                                                int64_t component_id) const {
-  std::string filepath = JoinPath(dir, std::to_string(component_id) + ".dot");
-  const auto& sources = compo_id2sources_.at(component_id);
-  PersistentOutStream out_stream(LocalFS(), filepath);
-  out_stream << "digraph {\n";
-  BfsForEachActNode(sources, [&](const ActNode* node) {
-    out_stream << node->node_id_str() << "[label=\"" << node->VisualStr()
-               << "\", shape=ellipse, style=\"rounded,filled\", "
-               << "colorscheme=set312, color=" << task_type2color.at(node->task_type()) << "];\n";
-    for (const ActEdge* act_edge : node->out_edges()) {
-      out_stream << "\"" << act_edge->src_node()->node_id_str() << "\" -> \""
-                 << act_edge->dst_node()->node_id_str() << "\";\n";
-    }
-  });
-  out_stream << "}\n";
-}
+DepthRangeChainActSubGraph::DepthRangeChainActSubGraph(const ChainActGraph* chain_act_graph,
+  const Range& depth_range, const std::list<std::string>& regst_uids)
+: graph_(chain_act_graph), depth_range_(depth_range), regst_uids_(regst_uids) {}
 
-void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
-  std::string sub_dir = JoinPath(
-      dir, std::to_string(depth_range_.begin()) + "-" + std::to_string(depth_range_.end()));
-  LocalFS()->RecursivelyCreateDir(sub_dir);
-  for (const auto& pair : compo_id2sources_) { ComponentToDotFiles(sub_dir, pair.first); }
-}
-
-void DepthRangeActSubGraph::TopoForEachActNode(
-    const std::list<const ActNode*>& starts,
-    const std::function<void(const ActNode*)>& Handler) const {
-  auto ForEachIn = std::bind(&DepthRangeActSubGraph::ForEachInNode, this, std::placeholders::_1,
-                             std::placeholders::_2);
-  auto ForEachOut = std::bind(&DepthRangeActSubGraph::ForEachOutNode, this, std::placeholders::_1,
-                              std::placeholders::_2);
-  TopoForEachNode(starts, ForEachIn, ForEachOut, Handler);
-}
-
-void DepthRangeActSubGraph::ForEachInNode(
-    const ActNode* node, const std::function<void(const ActNode*)>& Handler) const {
-  node->ForEachNodeOnInEdge([&](ActNode* in_node) {
+void DepthRangeChainActSubGraph::ForEachInEdge(
+    const ChainActNode* node, const std::function<void(const ChainActEdge*)>& Handler) const {
+  for(const ChainActEdge* in_edge : node->in_edges()) {
+    const ChainActNode* in_node = in_edge->src_node();
     if (in_node->depth() >= depth_range_.begin() && in_node->depth() <= depth_range_.end()) {
-      Handler(in_node);
+      Handler(in_edge);
     }
-  });
-}
-
-void DepthRangeActSubGraph::ForEachOutNode(
-    const ActNode* node, const std::function<void(const ActNode*)>& Handler) const {
-  node->ForEachNodeOnOutEdge([&](ActNode* out_node) {
-    if (out_node->depth() >= depth_range_.begin() && out_node->depth() <= depth_range_.end()) {
-      Handler(out_node);
-    }
-  });
-}
-
-void DepthRangeActSubGraph::BfsForEachActNode(
-    const std::list<const ActNode*>& sources,
-    const std::function<void(const ActNode*)>& Handler) const {
-  auto ForEachConnectedNode = [&](const ActNode* node,
-                                  const std::function<void(const ActNode*)>& Handler) {
-    ForEachInNode(node, Handler);
-    ForEachOutNode(node, Handler);
-  };
-  BfsForEachNode(sources, ForEachConnectedNode, Handler);
-}
-
-void DepthRangeActSubGraph::ForEachActNode(
-    const std::function<void(const ActNode*)>& Handler) const {
-  for (int64_t depth = depth_range_.begin(); depth <= depth_range_.end(); ++depth) {
-    for (const ActNode* node : act_graph_->Nodes4Depth(depth)) { Handler(node); }
   }
 }
 
-void DepthRangeActSubGraph::InitComponentId2Sources() {
-  for (const auto& pair : node2component_id_) {
-    int in_nodes_cnt = 0;
-    ForEachInNode(pair.first, [&](const ActNode*) { ++in_nodes_cnt; });
-    if (in_nodes_cnt == 0) { compo_id2sources_[pair.second].push_back(pair.first); }
+void DepthRangeChainActSubGraph::TopoForEachChainActNode(
+    const std::list<const ChainActNode*>& starts,
+    const std::function<void(const ChainActNode*)>& Handler) const {
+  for (int64_t depth = depth_range_.begin(); depth <= depth_range_.end(); ++depth ) {
+	  for(const  ChainActNode* node : graph_->Nodes4Depth(depth)) { Handler(node); }
   }
 }
 
-void DepthRangeActSubGraph::InitNode2ComponentId() {
-  int64_t component_id = 0;
-  ForEachActNode([&](const ActNode* node) {
-    if (node2component_id_.find(node) != node2component_id_.end()) { return; }
-    BfsForEachActNode({node}, [&](const ActNode* component_node) {
-      node2component_id_.insert({component_node, component_id});
-    });
-    ++component_id;
-  });
-}
-
-DepthRangeActSubGraph::DepthRangeActSubGraph(const ActGraph* act_graph, const Range& depth_range,
-                                             const std::list<std::string>& regst_uids)
-    : act_graph_(act_graph), depth_range_(depth_range), regst_uids_(regst_uids) {
-  InitNode2ComponentId();
-  InitComponentId2Sources();
-}
-
-void DepthRangeActSubGraph::ForEachRegstActSubGraph(
-    const std::function<void(const RegstActSubGraph&)>& Handler) const {
+void DepthRangeChainActSubGraph::CalTotalDuration(
+    const std::function<void(std::string, int64_t, double)>& Handler) const {
+  HashSet<const ChainActNode*> total_producers;
+  HashSet<const ChainActNode*> regst_duration_window_start_nodes;
+  HashMap<int64_t, HashSet<const ChainActNode*>> end_node2start_nodes;
+  HashMap<const ChainActNode*, HashMap<const ChainActNode*, double>> src2dst_duration;
+  const auto& starts = graph_->Nodes4Depth(depth_range_.begin());
   for (const auto& regst_uid : regst_uids_) {
-    const ActNode* producer = act_graph_->ProducerNode4RegstUid(regst_uid);
-    HashMap<int64_t, HashSet<const ActNode*>> compo_id2producer_outs;
-    HashMap<int64_t, HashSet<const ActNode*>> compo_id2consumers;
-    HashSet<int64_t> component_ids;
-    ForEachOutNode(producer, [&](const ActNode* node) {
-      int64_t component_id = node2component_id_.at(node);
-      compo_id2producer_outs[component_id].insert(node);
-      component_ids.insert(component_id);
-    });
-    for (const ActNode* node : act_graph_->ConsumerNodes4RegstUid(regst_uid)) {
-      int64_t component_id = node2component_id_.at(node);
-      compo_id2consumers[component_id].insert(node);
-      component_ids.insert(component_id);
+    const ChainActNode* producer = graph_->ProducerNode4RegstUid(regst_uid);
+    if (total_producers.find(producer) != total_producers.end()) { continue; }
+    total_producers.insert(producer);
+    int64_t max_topo_id = -1;
+    for (const ChainActNode* consumer : graph_->AllConsumers4Producer(producer)) {
+      max_topo_id = std::max(max_topo_id, consumer->topo_id());
     }
-    for (int64_t compo_id : component_ids) {
-      if (compo_id2producer_outs.find(compo_id) != compo_id2producer_outs.end()
-          && compo_id2consumers.find(compo_id) != compo_id2consumers.end()) {
-        RegstActSubGraph regst_act_graph(regst_uid, producer, compo_id2producer_outs.at(compo_id),
-                                         compo_id2consumers.at(compo_id),
-                                         compo_id2sources_.at(compo_id));
-        Handler(regst_act_graph);
+    end_node2start_nodes[max_topo_id].insert(producer);
+  }
+  auto CalDuration = [&](const ChainActNode* src, const ChainActNode* dst) {
+    double duration = 0;
+    ForEachInEdge(dst, [&](const ChainActEdge* in_edge) {
+      const ChainActNode* in_node = in_edge->src_node();
+      if (src2dst_duration[src].find(in_node) != src2dst_duration[src].end()) {
+        duration = std::max(duration, in_edge->duration() + src2dst_duration[src][in_node]);
       }
+    });
+	if (duration != 0) { src2dst_duration[src][dst] = duration; }
+  };
+  TopoForEachChainActNode(starts, [&](const ChainActNode* cur_node) {
+    for (const ChainActNode* pre_node : regst_duration_window_start_nodes) {
+      CalDuration(pre_node, cur_node); 
+      }
+    if (total_producers.find(cur_node) != total_producers.end()) {
+      src2dst_duration[cur_node][cur_node] = 0;
+      regst_duration_window_start_nodes.insert(cur_node);
+    }
+    for (const ChainActNode* start_node : end_node2start_nodes[cur_node->topo_id()]) {
+      regst_duration_window_start_nodes.erase(start_node);
+    }
+  });
+  for (const auto& regst_uid : regst_uids_) {
+    const ActEvent* producer_act_event = graph_->ProducerActEvent4RegstUid(regst_uid);
+    const ChainActNode* producer = graph_->Node4ActEvent(producer_act_event);
+    for (const ActEvent* consumer_act_event : graph_->ConsumerActEvents4RegstUid(regst_uid)) {
+      const ChainActNode* consumer = graph_->Node4ActEvent(consumer_act_event);
+      double duration = src2dst_duration[producer][consumer] + consumer_act_event->stop_time() - producer_act_event->start_time();
+	  LOG(INFO) << "regst_uid = " << regst_uid <<  "dfs_duration = " << duration;
+      Handler(regst_uid, consumer_act_event->actor_id(), duration);
     }
   }
 }
 
-void ActNode::AddConsumerNode(const std::string& regst_uid, const ActNode* consumer_node) {
-  regst_uid2consumer_nodes_[regst_uid].push_back(consumer_node);
-}
-
-std::string ActNode::VisualStr() const {
-  std::string name = std::to_string(act_id()) + "\\n";
-  name += std::to_string(task_proto_->task_id()) + "\\n";
-  for (const auto& exec_node : task_proto_->exec_sequence().exec_node()) {
-    name = name + exec_node.kernel_conf().op_attribute().op_conf().name() + "\\n";
-  }
-  return name;
-}
-
-void ActNode::ForEachProducedRegstDescId(const std::function<void(int64_t)>& Handler) const {
-  for (const auto& pair : task_proto_->produced_regst_desc()) {
-    Handler(pair.second.regst_desc_id());
+ChainActNode::ChainActNode(std::list<ActEvent*> act_events) {
+  act_events.sort([](ActEvent* lhs, ActEvent* rhs){
+    return lhs->start_time() < rhs->start_time();
+  });
+  double pre_stop_time = 0;
+  for (ActEvent* act_event : act_events) {
+    double duration = Duration4ActEvent(*act_event);
+    act_event->set_start_time(pre_stop_time);
+    act_event->set_stop_time(pre_stop_time + duration);
+    pre_stop_time = act_event->stop_time();
+    const ActEvent* const_act_event = act_event;
+    act_events_.push_back(const_act_event);
   }
 }
 
-void ActGraph::ForEachRegstDescConsumerPathIIScale(
+
+void ChainActGraph::ForEachRegstDescConsumerPathMeanDuration(
     const std::function<void(int64_t, int64_t, double)>& Handler) const {
-  std::map<std::pair<int64_t, int64_t>, uint64_t> regst_desc_id_consumed2used_cnt;
-  std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
-  uint64_t max_cnt = 0;
-  for (const auto& pair : regst_uid2consumer_nodes_) {
-    int64_t regst_desc_id = RegstDescId4RegstUid(pair.first);
-    int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_desc_id];
-    if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
-    for (const ActNode* act_node : pair.second) {
-      std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_desc_id, act_node->actor_id());
-      int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
-      if (max_cnt < used_cnt) { max_cnt = used_cnt; }
-    }
-  }
-  for (const auto& pair : regst_desc_id_consumed2used_cnt) {
-    uint64_t produced_cnt = regst_desc_id2produced_cnt.at(pair.first.first);
-    Handler(pair.first.first, pair.first.second,
-            1.0 * max_cnt / std::min(produced_cnt, pair.second));
-  }
-}
-
-void ActGraph::ForEachRegstDescConsumerPathMeanDuration(
-    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+  double t1=GetCurTime();
   std::map<std::pair<int64_t, int64_t>, double> regst_desc_id_consumed2duration;
   std::map<std::pair<int64_t, int64_t>, int> regst_desc_id_consumed2cnt;
   ForEachRegstUidConsumerPathDuration(
@@ -351,122 +141,184 @@ void ActGraph::ForEachRegstDescConsumerPathMeanDuration(
     Handler(pair.first.first, pair.first.second,
             pair.second / regst_desc_id_consumed2cnt.at(pair.first));
   }
+  double t2=GetCurTime();
+  LOG(INFO) << "total_cal_chain_duration = " << t2-t1;
 }
 
-void ActGraph::ForEachRegstActSubGraph(
-    const std::function<void(const RegstActSubGraph&)>& Handler) const {
-  ForEachDepthRangeSubActGraph(
-      [&](const DepthRangeActSubGraph& sub_graph) { sub_graph.ForEachRegstActSubGraph(Handler); });
-}
-
-void ActGraph::ForEachDepthRangeSubActGraph(
-    const std::function<void(const DepthRangeActSubGraph&)>& Handler) const {
-  ForEachDepthRangeRegstUids([&](const Range& range, const std::list<std::string>& regst_uids) {
-    DepthRangeActSubGraph depth_range_subgrpah(this, range, regst_uids);
-    Handler(depth_range_subgrpah);
-  });
-}
-
-void ActGraph::ForEachRegstUidConsumerPathDuration(
-    const std::function<void(const std::string&, int64_t, double)>& Handler) const {
-  ForEachRegstActSubGraph([&](const RegstActSubGraph& regst_csm_graph) {
-    const std::string regst_uid = regst_csm_graph.regst_uid();
-    regst_csm_graph.ForEachConsumerPathDuration([&](int64_t consumer_actor_id, double duration) {
-      Handler(regst_uid, consumer_actor_id, duration);
-    });
-  });
-}
-
-void ActGraph::InitNodes() {
-  HashMap<int64_t, const TaskProto*> actor_id2task_proto;
-  for (const TaskProto& task : plan_->task()) { actor_id2task_proto[task.task_id()] = &task; }
-  HashMap<std::string, const ActNode*> regst_uid2producer_node;
-  for (const ActEvent& act_event : *act_events_) {
-    int64_t actor_id = act_event.actor_id();
-    int64_t act_id = act_event.act_id();
-    ActNode* producer_act_node = new ActNode(&act_event, actor_id2task_proto.at(actor_id));
-    AddAllocatedNode(producer_act_node);
-    producer_act_node->ForEachProducedRegstDescId([&](int64_t regst_desc_id) {
-      const auto& regst_uid = GenRegstUid(regst_desc_id, act_id);
-      regst_uid2producer_node_.insert({regst_uid, producer_act_node});
-    });
+void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
+    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+  std::map<std::pair<int64_t, int64_t>, uint64_t> regst_desc_id_consumed2used_cnt;
+  std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
+  uint64_t max_cnt = 0;
+  for (const auto& pair : regst_uid2consumer_act_events_) {
+    int64_t regst_desc_id = RegstDescId4RegstUid(pair.first);
+    int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_desc_id];
+    if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
+    for (const ActEvent* act_event : pair.second) {
+      std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_desc_id, act_event->actor_id());
+      int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
+      if (max_cnt < used_cnt) { max_cnt = used_cnt; }
+    }
+  }
+  for (const auto& pair : regst_desc_id_consumed2used_cnt) {
+    uint64_t produced_cnt = regst_desc_id2produced_cnt.at(pair.first.first);
+    Handler(pair.first.first, pair.first.second,
+            1.0 * max_cnt / std::min(produced_cnt, pair.second));
   }
 }
 
-void ActGraph::InitEdges() {
-  ForEachNode([&](ActNode* node) {
-    for (const auto& readable : node->act_event().readable_regst_infos()) {
-      const auto& regst_uid = GenRegstUid(readable.regst_desc_id(), readable.act_id());
-      const auto& producer_it = regst_uid2producer_node_.find(regst_uid);
-      if (producer_it == regst_uid2producer_node_.end()) { continue; }
-      Connect(producer_it->second, NewEdge(), node);
-      regst_uid2consumer_nodes_[regst_uid].push_back(node);
-      producer_it->second->AddConsumerNode(regst_uid, node);
-    }
-  });
-}
-
-void ActGraph::TopoForEachActNode(const std::list<ActNode*>& starts,
-                                  const std::function<void(ActNode*)>& Handler) const {
-  std::list<ActNode*> sorted_starts(starts);
-  sorted_starts.sort(
-      [](const ActNode* lhs, const ActNode* rhs) { return lhs->act_id() > rhs->act_id(); });
-  DfsTopoForEachNodeSortByDistanceToSink(sorted_starts, &ActNode::ForEachNodeOnInEdge,
-                                         &ActNode::ForEachNodeOnOutEdge, Handler);
-}
-
-void ActGraph::InitDepth() {
-  std::list<ActNode*> sources;
-  ForEachNode([&](ActNode* node) {
-    if (node->in_edges().empty()) { sources.push_back(node); }
-  });
-  int64_t max_depth = -1;
-  TopoForEachActNode(sources, [&](ActNode* act_node) {
-    int64_t depth = -1;
-    act_node->ForEachNodeOnInEdge(
-        [&](ActNode* in_node) { depth = std::max(depth, in_node->depth()); });
-    if (depth == -1) { depth = max_depth; }
-    ++depth;
-    act_node->set_depth(depth);
-    depth2nodes_[depth].push_back(act_node);
-    max_depth = std::max(max_depth, depth);
-  });
-}
-
-void ActGraph::InitTaskId2TaskProto() {
+void ChainActGraph::InitTaskId2TaskProto() {
   for (const auto& task_proto : plan_->task()) {
     task_id2task_proto_.emplace(task_proto.task_id(), &task_proto);
   }
 }
 
-ActGraph::ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_events)
-    : plan_(&plan), act_events_(std::move(act_events)) {
-  InitNodes();
-  InitEdges();
-  InitDepth();
-  InitTaskId2TaskProto();
+
+void ChainActGraph::TopoForEachChainActNode(std::list<ChainActNode*>& starts,
+                                  const std::function<void(ChainActNode*)>& Handler) const {
+  starts.sort(
+      [](const ChainActNode* lhs, const ChainActNode* rhs) { return lhs->act_id() > rhs->act_id(); });
+  DfsTopoForEachNode(starts, &ChainActNode::ForEachNodeOnInEdge,
+                                         &ChainActNode::ForEachNodeOnOutEdge, Handler);
 }
 
-void ActGraph::ForEachDepthRangeRegstUids(
+void ChainActGraph::InitNodes() {
+  HashMap<std::string, std::list<ActEvent*>> node_str2act_events;
+  for (ActEvent& act_event : *act_events_) {
+    int64_t actor_id = act_event.actor_id();
+    int64_t act_id = act_event.act_id();
+    const TaskProto& task_proto = GetTaskProto(actor_id);
+    int64_t chain_id = task_proto.task_set_info().chain_id();
+    node_str2act_events[std::to_string(chain_id) + ":" + std::to_string(act_id)].push_back(&act_event);
+  }
+  for (auto node_str : node_str2act_events) {
+    ChainActNode* chain_act_node = new ChainActNode(node_str.second);
+    AddAllocatedNode(chain_act_node);
+    for (const ActEvent* act_event : chain_act_node->act_events()) {
+      int64_t actor_id = act_event->actor_id();
+      int64_t act_id = act_event->act_id();
+      const TaskProto& task_proto = GetTaskProto(actor_id);
+      act_event2chain_node_.insert({act_event, chain_act_node});
+      for (const auto& pair : task_proto.produced_regst_desc()) {
+        int64_t regst_desc_id = pair.second.regst_desc_id();
+        const auto& regst_uid = GenRegstUid(regst_desc_id, act_id);
+        regst_uid2producer_act_event_.insert({regst_uid, act_event});
+      }
+    }
+  }
+}
+
+void ChainActGraph::InitEdges() {
+  ForEachNode([&](ChainActNode* node) {
+    HashMap<ChainActNode*, double> producer_node2max_stop_time;
+    for (const ActEvent* act_event : node->act_events()) {
+      for (const auto& readable : act_event->readable_regst_infos()) {
+        const auto& regst_uid = GenRegstUid(readable.regst_desc_id(), readable.act_id());
+        const auto& producer_act_event_it = regst_uid2producer_act_event_.find(regst_uid);
+        if (producer_act_event_it == regst_uid2producer_act_event_.end()) { continue; }
+        regst_uid2consumer_act_events_[regst_uid].push_back(act_event);
+        ChainActNode* producer_node = ProducerNode4RegstUid(regst_uid);
+        producer2consumers_[producer_node].push_back(node);
+        if (producer_node == node) { continue; }
+        double& max_stop_time = producer_node2max_stop_time[producer_node];
+        max_stop_time = std::max(max_stop_time, producer_act_event_it->second->stop_time());
+      }
+    }
+    for (const auto& pair : producer_node2max_stop_time) {
+      ChainActEdge* edge = NewEdge();
+      Connect(pair.first, edge, node);
+      edge->set_duration(pair.second);
+    }
+  });
+}
+
+void ChainActGraph::InitDepth7TopoId() {
+  std::list<ChainActNode*> sources;
+  ForEachNode([&](ChainActNode* node) {
+    if (node->in_edges().empty()) { sources.push_back(node); }
+  });
+  int64_t topo_id = -1;
+  int64_t max_depth = -1;
+  TopoForEachChainActNode(sources, [&](ChainActNode* chain_act_node) {
+    int64_t depth = -1;
+    chain_act_node->ForEachNodeOnInEdge(
+        [&](ChainActNode* in_node) { depth = std::max(depth, in_node->depth()); });
+	if (depth == -1) { depth = max_depth; }
+    ++depth;
+	++topo_id;
+    chain_act_node->set_depth(depth);
+    chain_act_node->set_topo_id(topo_id);
+    depth2nodes_[depth].push_back(chain_act_node);
+	max_depth = std::max(max_depth, depth);
+  });
+}
+
+void ChainActGraph::ForEachActEvent(const std::function<void(const ActEvent&)>& Handler) const {
+  for (const ActEvent& act_event : *act_events_) { Handler(act_event); }
+}
+
+void ChainActGraph::ForEachDepthRangeRegstUids(
     const std::function<void(const Range& range, const std::list<std::string>& regst_uids)>&
         Handler) const {
-  HashMap<Range, std::list<std::string>> depth_range2regst_uids;
-  for (const auto& pair : regst_uid2producer_node_) {
-    const auto& consumer_nodes_it = regst_uid2consumer_nodes_.find(pair.first);
-    if (consumer_nodes_it == regst_uid2consumer_nodes_.end()) { continue; }
-    int64_t begin = std::numeric_limits<int64_t>::max();
-    pair.second->ForEachNodeOnOutEdge(
-        [&](const ActNode* node) { begin = std::min(begin, node->depth()); });
+  struct CompareRangeSize {
+    bool operator()(const Range& lhs, const Range& rhs) {
+      return lhs.size() > rhs.size() || (lhs.size() == rhs.size() && lhs.begin() < rhs.begin());
+    }
+  };
+  struct CompareRange {
+    bool operator()(const Range& lhs, const Range& rhs) {
+      if (lhs.begin() == rhs.begin() || lhs.end() == rhs.end()) { return false; }
+      return lhs.begin() <= rhs.begin() && lhs.end() <= rhs.end();
+    }
+  };
+  std::map<Range, std::list<std::string>, CompareRangeSize> depth_range2regst_uids;
+  std::map<Range, std::list<std::string>, CompareRange> depth_range_cluster2regst_uids;
+  for (const auto& pair : regst_uid2producer_act_event_) {
+    const auto& consumer_act_event_it = regst_uid2consumer_act_events_.find(pair.first);
+    if (consumer_act_event_it == regst_uid2consumer_act_events_.end()) { continue; }
+    int64_t begin = ProducerNode4RegstUid(pair.first)->depth();
     int64_t end = 0;
-    for (const ActNode* node : consumer_nodes_it->second) { end = std::max(end, node->depth()); }
+    for (const ActEvent* consumer_act_event : consumer_act_event_it->second) {
+       end = std::max(end, Node4ActEvent(consumer_act_event)->depth());
+    }
     depth_range2regst_uids[Range(begin, end)].push_back(pair.first);
   }
-  for (const auto& pair : depth_range2regst_uids) { Handler(pair.first, pair.second); }
+  for (const auto& pair : depth_range2regst_uids) {
+    auto iter = depth_range_cluster2regst_uids.find(pair.first);
+    if (iter != depth_range_cluster2regst_uids.end()) {
+      for (const auto& regst_uid : pair.second) { iter->second.push_back(regst_uid); }
+    } else {
+      for (const auto& regst_uid : pair.second) {
+        depth_range_cluster2regst_uids[pair.first].push_back(regst_uid);
+      }
+    }
+  }
+  for (const auto& pair : depth_range_cluster2regst_uids) {
+    Handler(pair.first, pair.second);
+  }
 }
 
-void ActGraph::ToDotFiles(const std::string& dir) const {
-  ForEachDepthRangeSubActGraph(
-      [&](const DepthRangeActSubGraph& sub_graph) { sub_graph.ToDotFiles(dir); });
+void ChainActGraph::ForEachRegstUidConsumerPathDuration(
+  const std::function<void(const std::string&, int64_t, double)>& Handler) const {
+    ForEachDepthRangeRegstUids([&](const Range& range, const std::list<std::string>& regst_uids) {
+      DepthRangeChainActSubGraph depth_range_subgraph(this, range, regst_uids);
+      depth_range_subgraph.CalTotalDuration([&](std::string regst_uid, int64_t consumer_actor_id, double duration) {
+       Handler(regst_uid, consumer_actor_id, duration);
+      });
+    });
+}
+
+void ChainActGraph::ForEachInEdge(
+    const ChainActNode* node, const std::function<void(const ChainActEdge*)>& Handler) const {
+  for(const ChainActEdge* in_edge : node->in_edges()) { Handler(in_edge);  }
+}
+
+ChainActGraph::ChainActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_events)
+    : plan_(&plan), act_events_(std::move(act_events)) {
+  InitTaskId2TaskProto();
+  InitNodes();
+  InitEdges();
+  InitDepth7TopoId();
 }
 
 }  // namespace oneflow
