@@ -28,6 +28,9 @@ void CloneKernel<device_type, T>::BackwardDataContent(
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
   Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
                       in_diff_blob->ByteSizeOfDataContentField());
+  auto out_diff = [&](int32_t idx) {
+    return BnInOp2Blob(this->op_attribute().output_diff_bns(idx));
+  };
   if (out_num > 10) {
     for (size_t i = 0; i != odbns.size(); ++i) {
       const Blob* out_diff_blob = BnInOp2Blob(odbns[i]);
@@ -35,106 +38,51 @@ void CloneKernel<device_type, T>::BackwardDataContent(
     }
   } else {
     switch (out_num) {
-      case 1: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0);
-      } break;
-      case 2: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
-                                                        out_diff_1);
-      } break;
-      case 3: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
-                                                        out_diff_1, out_diff_2);
-      } break;
-      case 4: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
-                                                        out_diff_1, out_diff_2, out_diff_3);
-      } break;
-      case 5: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
-                                                        out_diff_1, out_diff_2, out_diff_3,
-                                                        out_diff_4);
-      } break;
-      case 6: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
-                                                        out_diff_1, out_diff_2, out_diff_3,
-                                                        out_diff_4, out_diff_5);
-      } break;
-      case 7: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_0,
-                                                        out_diff_1, out_diff_2, out_diff_3,
-                                                        out_diff_4, out_diff_5, out_diff_6);
-      } break;
-      case 8: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        Blob* out_diff_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
+      case 1:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0));
+        break;
+      case 2:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
+                                                        out_diff(1));
+        break;
+      case 3:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
+                                                        out_diff(1), out_diff(2));
+        break;
+      case 4:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
+                                                        out_diff(1), out_diff(2), out_diff(3));
+        break;
+      case 5:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
+                                                        out_diff(1), out_diff(2), out_diff(3),
+                                                        out_diff(4));
+        break;
+      case 6:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
+                                                        out_diff(1), out_diff(2), out_diff(3),
+                                                        out_diff(4), out_diff(5));
+        break;
+      case 7:
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
+                                                        out_diff(1), out_diff(2), out_diff(3),
+                                                        out_diff(4), out_diff(5), out_diff(6));
+        break;
+      case 8:
         CloneKernelUtil<device_type, T>::AdditionAssign(
-            ctx.device_ctx, in_diff_blob, out_diff_0, out_diff_1, out_diff_2, out_diff_3,
-            out_diff_4, out_diff_5, out_diff_6, out_diff_7);
-      } break;
-      case 9: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        Blob* out_diff_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
-        Blob* out_diff_8 = BnInOp2Blob(this->op_attribute().output_diff_bns(8));
+            ctx.device_ctx, in_diff_blob, out_diff(0), out_diff(1), out_diff(2), out_diff(3),
+            out_diff(4), out_diff(5), out_diff(6), out_diff(7));
+        break;
+      case 9:
         CloneKernelUtil<device_type, T>::AdditionAssign(
-            ctx.device_ctx, in_diff_blob, out_diff_0, out_diff_1, out_diff_2, out_diff_3,
-            out_diff_4, out_diff_5, out_diff_6, out_diff_7, out_diff_8);
-      } break;
-      case 10: {
-        Blob* out_diff_0 = BnInOp2Blob(this->op_attribute().output_diff_bns(0));
-        Blob* out_diff_1 = BnInOp2Blob(this->op_attribute().output_diff_bns(1));
-        Blob* out_diff_2 = BnInOp2Blob(this->op_attribute().output_diff_bns(2));
-        Blob* out_diff_3 = BnInOp2Blob(this->op_attribute().output_diff_bns(3));
-        Blob* out_diff_4 = BnInOp2Blob(this->op_attribute().output_diff_bns(4));
-        Blob* out_diff_5 = BnInOp2Blob(this->op_attribute().output_diff_bns(5));
-        Blob* out_diff_6 = BnInOp2Blob(this->op_attribute().output_diff_bns(6));
-        Blob* out_diff_7 = BnInOp2Blob(this->op_attribute().output_diff_bns(7));
-        Blob* out_diff_8 = BnInOp2Blob(this->op_attribute().output_diff_bns(8));
-        Blob* out_diff_9 = BnInOp2Blob(this->op_attribute().output_diff_bns(9));
+            ctx.device_ctx, in_diff_blob, out_diff(0), out_diff(1), out_diff(2), out_diff(3),
+            out_diff(4), out_diff(5), out_diff(6), out_diff(7), out_diff(8));
+        break;
+      case 10:
         CloneKernelUtil<device_type, T>::AdditionAssign(
-            ctx.device_ctx, in_diff_blob, out_diff_0, out_diff_1, out_diff_2, out_diff_3,
-            out_diff_4, out_diff_5, out_diff_6, out_diff_7, out_diff_8, out_diff_9);
-      } break;
+            ctx.device_ctx, in_diff_blob, out_diff(0), out_diff(1), out_diff(2), out_diff(3),
+            out_diff(4), out_diff(5), out_diff(6), out_diff(7), out_diff(8), out_diff(9));
+        break;
     }
   }
 }
