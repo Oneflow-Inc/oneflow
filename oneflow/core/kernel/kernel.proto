@@ -104,6 +104,10 @@ message DecodeOFRecordKernelConf {
 message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
+message AccuracyKernelConf { 
+  required DataType prediction_type = 1;
+  required DataType label_type = 2;
+}
 
 message OpAttribute {
   required OperatorConf op_conf = 1;
@@ -146,5 +150,6 @@ message KernelConf {
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
+    AccuracyKernelConf accuracy_conf = 401;
   }
 }

@@ -177,10 +177,13 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
 
 class NormalMdUpdtLogicalNode final : public LogicalNode {
  public:
