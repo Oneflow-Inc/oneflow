@@ -64,6 +64,15 @@ using make_index_sequence = make_integer_sequence<size_t, n>;
 template<typename... T>
 using index_sequence_for = make_index_sequence<sizeof...(T)>;
 
+template<bool B, class T = void>
+using enable_if_t = typename enable_if<B, T>::type;
+
+template<typename T>
+using remove_const_t = typename remove_const<T>::type;
+
+template<typename T>
+using remove_reference_t = typename remove_reference<T>::type;
+
 }  // namespace std
 
 #endif
