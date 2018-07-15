@@ -15,8 +15,9 @@ void CloneKernel<device_type, T>::Forward(
 
 template<DeviceType device_type, typename T>
 struct CloneKernelUtil {
-  // b += a
-  static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b);
+  // out += in
+  static void AdditionAssign(DeviceCtx* device_ctx, const int64_t elem_cnt, Blob* out,
+                             const Blob* in);
 };
 
 template<DeviceType device_type, typename T>
@@ -31,57 +32,62 @@ void CloneKernel<device_type, T>::BackwardDataContent(
   auto out_diff = [&](int32_t idx) {
     return BnInOp2Blob(this->op_attribute().output_diff_bns(idx));
   };
-  if (out_num > 10) {
-    for (size_t i = 0; i != odbns.size(); ++i) {
-      const Blob* out_diff_blob = BnInOp2Blob(odbns[i]);
-      CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff_blob);
-    }
-  } else {
-    switch (out_num) {
+  int32_t offset = 0;
+  while (out_num - offset >= 10) {
+    CloneKernelUtil<device_type, T>::AdditionAssign(
+        ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1), out_diff(offset + 2),
+        out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5), out_diff(offset + 6),
+        out_diff(offset + 7), out_diff(offset + 8), out_diff(offset + 9));
+    offset += 10;
+  }
+
+  if (out_num - offset > 0) {
+    switch (out_num - offset) {
       case 1:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob,
+                                                        out_diff(offset));
         break;
       case 2:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
-                                                        out_diff(1));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob,
+                                                        out_diff(offset), out_diff(offset + 1));
         break;
       case 3:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
-                                                        out_diff(1), out_diff(2));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob,
+                                                        out_diff(offset), out_diff(offset + 1),
+                                                        out_diff(offset + 2));
         break;
       case 4:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
-                                                        out_diff(1), out_diff(2), out_diff(3));
+        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob,
+                                                        out_diff(offset), out_diff(offset + 1),
+                                                        out_diff(offset + 2), out_diff(offset + 3));
         break;
       case 5:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
-                                                        out_diff(1), out_diff(2), out_diff(3),
-                                                        out_diff(4));
+        CloneKernelUtil<device_type, T>::AdditionAssign(
+            ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1),
+            out_diff(offset + 2), out_diff(offset + 3), out_diff(offset + 4));
         break;
       case 6:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
-                                                        out_diff(1), out_diff(2), out_diff(3),
-                                                        out_diff(4), out_diff(5));
+        CloneKernelUtil<device_type, T>::AdditionAssign(
+            ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1),
+            out_diff(offset + 2), out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5));
         break;
       case 7:
-        CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, in_diff_blob, out_diff(0),
-                                                        out_diff(1), out_diff(2), out_diff(3),
-                                                        out_diff(4), out_diff(5), out_diff(6));
+        CloneKernelUtil<device_type, T>::AdditionAssign(
+            ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1),
+            out_diff(offset + 2), out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5),
+            out_diff(offset + 6));
         break;
       case 8:
         CloneKernelUtil<device_type, T>::AdditionAssign(
-            ctx.device_ctx, in_diff_blob, out_diff(0), out_diff(1), out_diff(2), out_diff(3),
-            out_diff(4), out_diff(5), out_diff(6), out_diff(7));
+            ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1),
+            out_diff(offset + 2), out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5),
+            out_diff(offset + 6), out_diff(offset + 7));
         break;
       case 9:
         CloneKernelUtil<device_type, T>::AdditionAssign(
-            ctx.device_ctx, in_diff_blob, out_diff(0), out_diff(1), out_diff(2), out_diff(3),
-            out_diff(4), out_diff(5), out_diff(6), out_diff(7), out_diff(8));
-        break;
-      case 10:
-        CloneKernelUtil<device_type, T>::AdditionAssign(
-            ctx.device_ctx, in_diff_blob, out_diff(0), out_diff(1), out_diff(2), out_diff(3),
-            out_diff(4), out_diff(5), out_diff(6), out_diff(7), out_diff(8), out_diff(9));
+            ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1),
+            out_diff(offset + 2), out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5),
+            out_diff(offset + 6), out_diff(offset + 7), out_diff(offset + 8));
         break;
     }
   }
