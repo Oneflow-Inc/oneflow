@@ -179,6 +179,29 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
 
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6, const T* in_7);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6, const T* in_7, const T* in_8);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6, const T* in_7, const T* in_8, const T* in_9);
+
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
@@ -261,6 +284,29 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void Relu(DeviceCtx* ctx, int64_t n, const T* x, T* y);
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
+
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6, const T* in_7);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6, const T* in_7, const T* in_8);
+  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                             const T* in_6, const T* in_7, const T* in_8, const T* in_9);
 };
 
 // GPU, Integral
