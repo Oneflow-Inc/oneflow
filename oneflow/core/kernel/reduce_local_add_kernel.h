@@ -13,10 +13,8 @@ class ReduceLocalAddKernel final : public KernelIf<device_type> {
   ~ReduceLocalAddKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  int32_t parallel_id_;
 };
 
 }  // namespace oneflow
