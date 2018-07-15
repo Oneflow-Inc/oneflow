@@ -11,12 +11,12 @@ void ReduceGlobalAddKernel<device_type, T>::VirtualKernelInit(const ParallelCont
 template<DeviceType device_type, typename T>
 void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto* other_val = static_cast<std::pair<std::string, bool>*>(ctx.other);
-  const std::string& input_bn = other_val->first;
+  const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
+  int64_t in_bn_id = other_val->first;
   bool is_first = other_val->second;
 
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* in_blob = BnInOp2Blob(input_bn);
+  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
   if (is_first) {
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                         out_blob->ByteSizeOfDataContentField());

@@ -16,7 +16,7 @@ class InputWiseCompActor : public CompActor {
   int64_t cur_processed_regst_desc_id() const { return cur_processed_regst_desc_id_; }
   int64_t processed_regst_desc_id_cnt() const { return processed_regst_desc_id_cnt_; }
   int64_t RegstDescNum() const { return readable_regsts_.size(); }
-  std::string BnInOp4RegstDescId(int64_t id) const { return regst_desc_id2bn_in_op_.at(id); }
+  int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
 
  private:
   void Act() override;
@@ -39,7 +39,7 @@ class InputWiseCompActor : public CompActor {
   int64_t processed_regst_desc_id_cnt_;
   int64_t cur_processed_regst_desc_id_;
 
-  HashMap<int64_t, std::string> regst_desc_id2bn_in_op_;
+  HashMap<int64_t, int64_t> regst_desc_id2in_bn_id_;
 };
 
 }  // namespace oneflow

@@ -15,7 +15,7 @@ class ReduceGlobalAddCompActor : public InputWiseCompActor {
   void VirtualCompActorInit(const TaskProto& proto) override { InputWiseCompActor::Init(proto); }
   void SetKernelCtxOther(void** other) override;
 
-  std::pair<std::string, bool> other_val_;
+  std::pair<int64_t, bool> other_val_;
 };
 
 }  // namespace oneflow

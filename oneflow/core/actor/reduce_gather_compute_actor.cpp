@@ -3,7 +3,7 @@
 namespace oneflow {
 
 void ReduceGatherCompActor::SetKernelCtxOther(void** other) {
-  other_val_ = BnInOp4RegstDescId(cur_processed_regst_desc_id());
+  other_val_ = InBnId4RegstDescId(cur_processed_regst_desc_id());
   *other = static_cast<void*>(&other_val_);
 }
 

@@ -3,9 +3,20 @@
 namespace oneflow {
 
 void InputWiseCompActor::Init(const TaskProto& task_proto) {
-  for (const auto& pair : task_proto.exec_sequence().exec_node().Get(0).bn_in_op2regst_desc_id()) {
-    CHECK(regst_desc_id2bn_in_op_.emplace(pair.second, pair.first).second);
+  CHECK_EQ(1, exec_kernel_vec().size());
+  const auto& input_bns =
+      task_proto.exec_sequence().exec_node().Get(0).kernel_conf().op_attribute().input_bns();
+  HashMap<std::string, int64_t> ibn2in_bn_id;
+  for (int64_t i = 0; i < input_bns.size(); ++i) {
+    CHECK(ibn2in_bn_id.emplace(input_bns.Get(i), i).second);
   }
+  for (const auto& pair : exec_kernel_vec().at(0).bn_in_op2regst_desc_id) {
+    auto it = ibn2in_bn_id.find(pair.first);
+    if (it != ibn2in_bn_id.end()) {
+      CHECK(regst_desc_id2in_bn_id_.emplace(pair.second, it->second).second);
+    }
+  }
+
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
     CHECK_EQ(1, pair.second.regst_desc_id_size());
     int64_t regst_desc_id = pair.second.regst_desc_id().Get(0);
