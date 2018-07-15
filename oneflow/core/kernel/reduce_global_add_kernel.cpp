@@ -3,12 +3,6 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-void ReduceGlobalAddKernel<device_type, T>::VirtualKernelInit(const ParallelContext* parallel_ctx,
-                                                              DeviceCtx* device_ctx) {
-  parallel_id_ = parallel_ctx->parallel_id();
-}
-
-template<DeviceType device_type, typename T>
 void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
