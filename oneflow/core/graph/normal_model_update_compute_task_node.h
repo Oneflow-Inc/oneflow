@@ -19,6 +19,7 @@ class NormalMdUpdtCompTaskNode final : public CompTaskNode {
 
   void set_random_seed(uint32_t val) { random_seed_ = val; }
   TaskType GetTaskType() const override { return TaskType::kNormalMdUpdt; }
+  CudaWorkType GetCudaWorkType() const override { return CudaWorkType::kMix; }
   void ToProto(TaskProto*) override;
 
  private:
