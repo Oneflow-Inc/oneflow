@@ -49,7 +49,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t LocalWorkStreamId() const;
   int64_t GlobalWorkStreamId() const;
   int64_t GpuPhyId() const { return Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id_); }
-  virtual bool UseIndependentWorkStream() const { return false; }
 
   // Setters
   void set_machine_id(int64_t val);

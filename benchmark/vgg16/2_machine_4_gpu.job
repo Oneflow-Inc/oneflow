@@ -1,4 +1,0 @@
-net: "./train.net"
-resource: "./2_machine_4_gpu.resource"
-placement: "./2_machine_4_gpu.placement"
-other: "./hdfs_piece_size_64.other"
