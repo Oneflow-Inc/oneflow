@@ -156,7 +156,7 @@ uint64_t CalcMemoryConsumed(
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += regst_num * total_byte_size;
+      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
     } else {
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();
@@ -164,7 +164,9 @@ uint64_t CalcMemoryConsumed(
       max_bytes = std::max(max_bytes, total_byte_size);
     }
   }
-  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) { mem_consuming += pair.second; }
+  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) {
+    mem_consuming += RoundUp(pair.second, kCudaMemAllocAlignSize);
+  }
   return mem_consuming;
 }
 
