@@ -11,6 +11,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
+  is_reliant_ctrl_regst_ = false;
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
     for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {
@@ -18,6 +19,8 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
     packed_blob_desc_ = BlobDesc(data_regst_desc.packed_blob_desc());
+  } else if (proto.regst_desc_type().has_ctrl_regst_desc()) {
+    is_reliant_ctrl_regst_ = proto.regst_desc_type().ctrl_regst_desc().has_reliant_regst_desc_id();
   }
 }
 
