@@ -29,6 +29,18 @@ void ReduceGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   out_blob->mut_shape() = Shape({out_blob_elem_cnt});
 }
 
+void ReduceGatherOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    KernelConf* kernel_conf) const {
+  ReduceGatherKernelConf* reduce_gather_conf = kernel_conf->mutable_reduce_gather_conf();
+  int64_t offset = 0;
+  for (int32_t i = 0; i < op_conf().reduce_gather_conf().in_num(); ++i) {
+    reduce_gather_conf->mutable_data_offset()->Add(offset);
+    offset += GetBlobDesc4BnInOp(input_bns().Get(i))->ByteSizeOfDataContentField();
+  }
+  CHECK_EQ(offset, GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField());
+}
+
 LogicalBlobId ReduceGatherOp::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
