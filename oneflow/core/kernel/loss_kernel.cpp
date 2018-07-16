@@ -38,6 +38,31 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
         ctx.device_ctx, n, weight_blob->shape().elem_cnt(), weight_blob->dptr<PredType>(),
         reduction_blob->mut_dptr<PredType>(), conf.reduction());
   }
+  this->PostBackwardActivation(ctx, BnInOp2Blob);
+}
+
+template<DeviceType device_type, typename PredType, typename LabelType>
+void LossKernel<device_type, PredType, LabelType>::PostBackwardActivation(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ActivationType activation = this->GetBackwardActivationType();
+  if (activation != ActivationType::kNone) {
+    const Blob* in_blob = BnInOp2Blob("prediction");
+    Blob* in_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
+    int64_t elem_cnt = in_blob->shape().elem_cnt();
+    switch (activation) {
+#define DEFINE_ONE_CASE(activation_type)                                                \
+  case ActivationType::k##activation_type:                                              \
+    KernelUtil<device_type, PredType>::activation_type##Backward(                       \
+        ctx.device_ctx, elem_cnt, in_blob->dptr<PredType>(), in_blob->dptr<PredType>(), \
+        in_diff_blob->dptr<PredType>(), in_diff_blob->mut_dptr<PredType>());            \
+    break
+      DEFINE_ONE_CASE(TanH);
+      DEFINE_ONE_CASE(Sigmoid);
+      DEFINE_ONE_CASE(Relu);
+#undef DEFINE_ONE_CASE
+      default: UNIMPLEMENTED();
+    }
+  }
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>

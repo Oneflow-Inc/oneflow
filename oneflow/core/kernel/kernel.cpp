@@ -51,9 +51,7 @@ void Kernel::Forward(const KernelCtx& ctx,
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardDataContent(ctx, BnInOp2Blob);
-  if (GetBackwardActivationType() != ActivationType::kNone) {
-    PostBackwardActivation(ctx, BnInOp2Blob);
-  }
+  PostBackwardActivation(ctx, BnInOp2Blob);
 
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
@@ -71,7 +69,7 @@ void KernelIf<device_type>::PostBackwardActivation(
     CHECK_EQ(idbns.size(), 1);
 
     const Blob* in_blob = BnInOp2Blob(ibns[0]);
-    const Blob* in_diff_blob = BnInOp2Blob(idbns[0]);
+    Blob* in_diff_blob = BnInOp2Blob(idbns[0]);
     int64_t elem_cnt = in_blob->shape().elem_cnt();
     switch (activation) {
 #define DEFINE_ONE_CASE(activation_type)                                                           \

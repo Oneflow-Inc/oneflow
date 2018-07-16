@@ -133,7 +133,7 @@ bool Operator::NeedDoActivation() const {
 
 void Operator::SetActivation(const ActivationType& activation) {
   if (HasFieldInCustomizedConf("activation")) {
-    SetValInCustomizedConf("activation", static_cast<int>(activation));
+    SetValInCustomizedConf("activation", static_cast<int16_t>(activation));
   }
 }
 
