@@ -14,6 +14,9 @@
 #include "oneflow/core/graph/reduce_local_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/graph/accuracy_compute_task_node.h"
+#include "oneflow/core/graph/accuracy_accumulate_compute_task_node.h"
+#include "oneflow/core/graph/accuracy_print_compute_task_node.h"
 #include "oneflow/core/graph/task_graph.h"
 
 namespace oneflow {
@@ -123,6 +126,9 @@ std::vector<LogicalBlobId> ReturnPackedLbi(const LogicalNode* src, const Logical
 
 REGISTER_FUNC_FOR_FIND_LBIS("LossAcc"
                             "LossPrint",
+                            ReturnPackedLbi);
+REGISTER_FUNC_FOR_FIND_LBIS("AccuracyAcc"
+                            "AccuracyPrint",
                             ReturnPackedLbi);
 REGISTER_FUNC_FOR_FIND_LBIS("MdDiffAcc"
                             "NormalMdUpdt",
@@ -315,6 +321,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("RecordLoad"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("Loss"
                               "LossAcc",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("Accuracy"
+                              "AccuracyAcc",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("MdDiffAcc"
                               "NormalMdUpdt",
                               BldSubTskGphToNormalMdUpdt);
@@ -356,6 +365,12 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("Loss"
 REGISTER_BLD_BOXING_OP_CONF_MTHD("LossAcc"
                                  "LossPrint",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
+REGISTER_BLD_BOXING_OP_CONF_MTHD("AccuracyAcc"
+                                 "AccuracyPrint",
+                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
+REGISTER_BLD_BOXING_OP_CONF_MTHD("Accuracy"
+                                 "Print",
+                                 &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
 REGISTER_BLD_BOXING_OP_CONF_MTHD("MdDiffAcc"
                                  "NormalMdUpdt",
                                  &BoxingTaskNode::BldBoxingOpConfWithAddAndClone);
@@ -378,7 +393,10 @@ REGISTER_BLD_BOXING_OP_CONF_MTHD("NormalBackward"
   OF_PP_MAKE_TUPLE_SEQ(ReduceScatter, kMdUpdtArea)        \
   OF_PP_MAKE_TUPLE_SEQ(ReduceLocalAdd, kMdUpdtArea)       \
   OF_PP_MAKE_TUPLE_SEQ(ReduceGlobalAdd, kMdUpdtArea)      \
-  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)
+  OF_PP_MAKE_TUPLE_SEQ(ReduceGather, kMdUpdtArea)         \
+  OF_PP_MAKE_TUPLE_SEQ(Accuracy, kDataForwardArea)        \
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyAcc, kDataForwardArea)     \
+  OF_PP_MAKE_TUPLE_SEQ(AccuracyPrint, kPrintArea)
 
 #define DEFINE_VIRTUAL_METHOD(x, area_type)                                             \
   std::string x##LogicalNode::TypeName() const { return #x; }                           \
