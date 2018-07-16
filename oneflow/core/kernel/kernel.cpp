@@ -82,7 +82,7 @@ void Kernel::Backward(const KernelCtx& ctx,
     BackwardDataContent(ctx, BnInOp2Blob);
   }
   if (GetBackwardActivationType() != ActivationType::kNone) {
-    AfterBackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
+    PostBackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
   }
 
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
@@ -91,7 +91,7 @@ void Kernel::Backward(const KernelCtx& ctx,
 
 template<DeviceType device_type>
 template<typename T>
-void KernelIf<device_type>::AfterBackwardActivation(
+void KernelIf<device_type>::PostBackwardActivation(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
     Blob* activation_blob) const {
   ActivationType activation = this->GetBackwardActivationType();

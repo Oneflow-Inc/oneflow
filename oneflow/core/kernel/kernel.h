@@ -72,9 +72,9 @@ class Kernel {
   virtual void BackwardActivation(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob,
                                   Blob* activation_blob) const {}
-  virtual void AfterBackwardActivation(const KernelCtx& ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                       Blob* activation_blob) const {}
+  virtual void PostBackwardActivation(const KernelCtx& ctx,
+                                      std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                      Blob* activation_blob) const {}
   virtual void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
                                  const BlobDesc* activation_blob_desc) const {
     UNIMPLEMENTED();
@@ -135,9 +135,9 @@ class KernelIf : public Kernel {
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   template<typename T>
-  void AfterBackwardActivation(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob,
-                               Blob* activation_blob) const override;
+  void PostBackwardActivation(const KernelCtx& ctx,
+                              std::function<Blob*(const std::string&)> BnInOp2Blob,
+                              Blob* activation_blob) const override;
 
   void CopyDataId(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                   const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
