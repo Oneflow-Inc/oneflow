@@ -12,17 +12,6 @@ struct AddKernelUtil {
 template<DeviceType device_type, typename T>
 void AddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  /*
-    Blob* out_blob = BnInOp2Blob("out");
-    const Blob* in_blob_0 = BnInOp2Blob(this->op_attribute().input_bns(0));
-    out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob_0);
-    const int64_t elem_cnt = out_blob->shape().elem_cnt();
-    FOR_RANGE(size_t, i, 1, this->op_attribute().input_bns().size()) {
-      const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(i));
-      KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, OneVal<T>::value,
-    in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
-    }
-  */
   const PbRpf<std::string>& ibns = this->op_attribute().input_bns();
   size_t in_num = ibns.size();
   if (in_num == 0) return;
