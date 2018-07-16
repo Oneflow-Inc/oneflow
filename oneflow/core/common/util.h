@@ -206,6 +206,16 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
 }
 
+template<typename T>
+inline T MinVal() {
+  return std::numeric_limits<T>::lowest();
+}
+
+template<typename T>
+inline T MaxVal() {
+  return std::numeric_limits<T>::max();
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_UTIL_H_
