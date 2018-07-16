@@ -342,6 +342,9 @@ void LogicalGraph::MoveBackwardActivations() {
     CHECK_EQ(cur_node->in_edges().size(), 1);
     auto pre_node = cur_node->SoleInEdge()->src_node();
     CHECK_EQ(pre_node->op_vec().size(), 1);
+    if (pre_node->GetAreaId() != kDataBackwardArea) {
+      if (pre_node->GetAreaId() != kDataForwardArea || !pre_node->SoleOp()->IsLossOp()) { return; }
+    }
     ActivationType activation =
         static_cast<ActivationType>(cur_node->SoleOp()->GetEnumFromCustomizedConf("activation"));
     pre_node->SoleOp()->SetBackwardActivation(activation);
