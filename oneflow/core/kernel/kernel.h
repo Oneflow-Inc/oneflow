@@ -105,8 +105,6 @@ class Kernel {
  private:
   bool HasModelBns() const;
   KernelConf kernel_conf_;
-  std::unique_ptr<Blob> activation_blob_;
-  BlobDesc activation_blob_desc_;
 };
 
 template<DeviceType device_type>
