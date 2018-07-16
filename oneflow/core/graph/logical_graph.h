@@ -58,6 +58,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void MergeEdge();
   void SetNodeDataLbi();
   void BuildLossPrintStruct();
+  void BuildAccuracyPrintStruct();
   void BuildModelStruct(bool is_train);
   void BuildReduceStruct(LogicalNode* src, LogicalNode* dst);
   void SetupNormalMdUpdtOp();

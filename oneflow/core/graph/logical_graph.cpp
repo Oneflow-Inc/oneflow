@@ -2,6 +2,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/job/keyword.h"
 
 namespace oneflow {
 
@@ -11,7 +12,10 @@ LogicalGraph::LogicalGraph(bool is_train) {
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
   SetNodeDataLbi();
-  if (is_train) { BuildLossPrintStruct(); }
+  if (is_train) {
+    BuildLossPrintStruct();
+    BuildAccuracyPrintStruct();
+  }
   BuildModelStruct(is_train);
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
@@ -455,7 +459,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     Connect<LogicalNode>(loss_logical, NewEdge(), loss_acc_logical);
     // Loss Print Logical
     OperatorConf loss_print_op_conf;
-    loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
+    loss_print_op_conf.set_name(LossPrintPrefix + loss_op->op_name());
     loss_print_op_conf.set_device_type(DeviceType::kCPU);
     auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
 
@@ -475,6 +479,40 @@ void LogicalGraph::BuildLossPrintStruct() {
     loss_print_logical->mut_op_vec() = {loss_print_op};
     loss_print_logical->mut_parallel_desc().reset(new ParallelDesc(loss_print_pr_conf));
     Connect<LogicalNode>(loss_acc_logical, NewEdge(), loss_print_logical);
+  });
+}
+
+void LogicalGraph::BuildAccuracyPrintStruct() {
+  ForEachLogicalNode<AccuracyLogicalNode>([&](AccuracyLogicalNode* accuracy_logical) {
+    std::shared_ptr<const Operator> accuracy_op = accuracy_logical->SoleOp();
+    // Accuracy Accumulate Logical
+    OperatorConf accuracy_acc_op_conf;
+    accuracy_acc_op_conf.set_name("accuracy_acc_" + accuracy_op->op_name());
+    accuracy_acc_op_conf.set_device_type(accuracy_op->device_type());
+    accuracy_acc_op_conf.mutable_accumulate_conf();
+    std::shared_ptr<Operator> accuracy_acc_op = ConstructOp(accuracy_acc_op_conf);
+    AccuracyAccLogicalNode* accuracy_acc_logical = NewNode<AccuracyAccLogicalNode>();
+    accuracy_acc_logical->mut_op_vec() = {accuracy_acc_op};
+    accuracy_acc_logical->mut_parallel_desc() = accuracy_logical->parallel_desc();
+    Connect<LogicalNode>(accuracy_logical, NewEdge(), accuracy_acc_logical);
+    // Accuracy Print Logical
+    OperatorConf accuracy_print_op_conf;
+    accuracy_print_op_conf.set_name(AccuracyPrintPrefix + accuracy_op->op_name());
+    accuracy_print_op_conf.set_device_type(DeviceType::kCPU);
+    auto accuracy_print_conf = accuracy_print_op_conf.mutable_accuracy_print_conf();
+
+    *(accuracy_print_conf->mutable_accuracy_lbi()) = accuracy_op->BnInOp2Lbi("accuracy");
+    accuracy_print_conf->set_top_k_print(accuracy_op->op_conf().accuracy_conf().top_k());
+
+    std::shared_ptr<Operator> accuracy_print_op = ConstructOp(accuracy_print_op_conf);
+    ParallelConf accuracy_print_pr_conf;
+    accuracy_print_pr_conf.set_policy(kDataParallel);
+    accuracy_print_pr_conf.add_device_name(Global<JobDesc>::Get()->MachineName4MachineId(0)
+                                           + ":cpu:1");
+    AccuracyPrintLogicalNode* accuracy_print_logical = NewNode<AccuracyPrintLogicalNode>();
+    accuracy_print_logical->mut_op_vec() = {accuracy_print_op};
+    accuracy_print_logical->mut_parallel_desc().reset(new ParallelDesc(accuracy_print_pr_conf));
+    Connect<LogicalNode>(accuracy_acc_logical, NewEdge(), accuracy_print_logical);
   });
 }
 
