@@ -65,7 +65,7 @@ void IBVerbsQP::Connect(const IBVerbsConnectionInfo& peer_info) {
   qp_attr.ah_attr.grh.dgid.global.interface_id = peer_info.interface_id();
   qp_attr.ah_attr.grh.flow_label = 0;
   qp_attr.ah_attr.grh.sgid_index = 0;
-  qp_attr.ah_attr.grh.hop_limit = std::numeric_limits<uint8_t>::max();
+  qp_attr.ah_attr.grh.hop_limit = MaxVal<uint8_t>();
   qp_attr.ah_attr.dlid = peer_info.lid();
   qp_attr.ah_attr.sl = 0;
   qp_attr.ah_attr.src_path_bits = 0;

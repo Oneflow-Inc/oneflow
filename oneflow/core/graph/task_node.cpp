@@ -141,7 +141,11 @@ int64_t TaskNode::MemZoneId121() const {
 }
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
-  if (IsMeaningLess() || dst_node->IsMeaningLess()) return;
+  if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
+  if (!Global<JobDesc>::Get()->IsTrain() && GetTaskType() == kNormalMdUpdt
+      && dst_node->GetTaskType() == kNormalMdUpdt) {
+    return;
+  }
   const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   RegstDescTypeProto regst_desc_type;
@@ -262,17 +266,7 @@ void TaskNode::FixRegisterNumRange() {
 int64_t TaskNode::AllocateLocalWorkStreamId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  if (UseIndependentWorkStream()) {
-    if (device_type() == DeviceType::kCPU) {
-      return 0;
-    } else if (device_type() == DeviceType::kGPU) {
-      return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else {
-    return 0;
-  }
+  return 0;
 }
 
 void TaskNode::UpdateTaskId() {
@@ -348,7 +342,6 @@ std::map<TaskType, std::string> task_type2color = {
     {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
     {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
     {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
-    {kReduceGather, "2"},
-};
-
+    {kReduceGather, "2"},  {kAccuracy, "4"},       {kAccuracyPrint, "1"},
+    {kAccuracyAcc, "5"}};
 }  // namespace oneflow

@@ -1,4 +1,5 @@
 #include "oneflow/core/actor/actor.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -120,13 +121,8 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
     }
     case DeviceType::kGPU: {
       CudaStreamHandle* cuda_handle = nullptr;
-      if (GetLocalWorkStreamId() == 0) {
-        cuda_handle = thread_ctx.g_cuda_stream.get();
-      } else {
-        CHECK(Global<IDMgr>::Get()->IsIndependentLocalWorkStreamId(GetLocalWorkStreamId()));
-        cuda_handle_.reset(new CudaStreamHandle(thread_ctx.cb_event_chan));
-        cuda_handle = cuda_handle_.get();
-      }
+      CHECK_EQ(GetLocalWorkStreamId(), 0);
+      cuda_handle = thread_ctx.g_cuda_stream.get();
       device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, cuda_handle));
       break;
     }
@@ -190,6 +186,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
+  // TODO: refactor code below for potential bugs
   if (((is_naive_readable_data_eord_ && naive_readable_data_regst_cnt_ == 0)
        || IsCustomizedReadAlwaysUnReadyFromNow())
       && ((is_consumed_ctrl_eord_ && readable_ctrl_regst_desc_cnt_ == 0)
@@ -256,7 +253,10 @@ void Actor::TryLogActEvent(const std::function<void()>& DoAct) const {
 
     device_ctx_->AddCallBack([act_event]() {
       act_event->set_stop_time(GetCurTime());
-      Global<CtrlClient>::Get()->PushActEvent(*act_event);
+      // The stream poller thread is not allowed to perform blocking RPC call. Hence, the
+      // RPC call is forwarded to the thread pool and will be executed there.
+      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork(
+          [act_event]() { Global<CtrlClient>::Get()->PushActEvent(*act_event); });
     });
   } else {
     DoAct();

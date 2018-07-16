@@ -27,6 +27,9 @@ enum TaskType {
   kReduceGlobalAdd = 18;
   kReduceGather = 19;
   kReduceScatter = 20;
+  kAccuracy = 21;
+  kAccuracyAcc = 22;
+  kAccuracyPrint = 23;
 };
 
 enum AreaType {
