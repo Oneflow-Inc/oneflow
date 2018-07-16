@@ -69,16 +69,8 @@ class Kernel {
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void BackwardActivation(const KernelCtx& ctx,
-                                  std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                  Blob* activation_blob) const {}
   virtual void PostBackwardActivation(const KernelCtx& ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                      Blob* activation_blob) const {}
-  virtual void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
-                                 const BlobDesc* activation_blob_desc) const {
-    UNIMPLEMENTED();
-  };
+                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void BackwardDataId(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -136,8 +128,7 @@ class KernelIf : public Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   template<typename T>
   void PostBackwardActivation(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob,
-                              Blob* activation_blob) const override;
+                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   void CopyDataId(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                   const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
@@ -176,11 +167,6 @@ class KernelIfWithActivation : virtual public KernelIf<device_type> {
   ActivationType GetActivationType() const override;
   void ForwardActivation(const KernelCtx& ctx,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void BackwardActivation(const KernelCtx& ctx,
-                          std::function<Blob*(const std::string&)> BnInOp2Blob,
-                          Blob* activation_blob) const override;
-  void GenActivationBlob(std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
-                         const BlobDesc* activation_blob_desc) const override;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \

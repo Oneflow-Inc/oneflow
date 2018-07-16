@@ -6,11 +6,6 @@ void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_
                   DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
   VirtualKernelInit(parallel_ctx, device_ctx);
-  if (kernel_conf_.has_activation_blob_desc()) {
-    CHECK_NE(this->GetActivationType(), ActivationType::kNone);
-    activation_blob_desc_ = BlobDesc(kernel_conf_.activation_blob_desc());
-    GenActivationBlob(&activation_blob_, device_ctx->buf_ptr(), &activation_blob_desc_);
-  }
 }
 
 void Kernel::InitModelAndConstBuf(const KernelCtx& ctx, const ParallelContext* parallel_ctx,
@@ -55,34 +50,9 @@ void Kernel::Forward(const KernelCtx& ctx,
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (GetBackwardActivationType() == ActivationType::kNone) {
-    BackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
-  }
-  if (activation_blob_.get() != nullptr) {
-    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
-    CHECK_EQ(odbns.size(), 1);
-    std::unique_ptr<DeviceCtx> device_ctx = ctx.device_ctx->Copy();
-    device_ctx->set_buf_ptr(static_cast<void*>(static_cast<char*>(ctx.device_ctx->buf_ptr())
-                                               + activation_blob_->TotalByteSize()));
-    device_ctx->set_buf_size(ctx.device_ctx->buf_size() - activation_blob_->TotalByteSize());
-    CHECK_GE(device_ctx->buf_size(), 0);
-    KernelCtx new_ctx;
-    new_ctx.other = ctx.other;
-    new_ctx.device_ctx = device_ctx.get();
-
-    BackwardDataContent(new_ctx, [&](const std::string& bn) -> Blob* {
-      if (bn == odbns[0]) {
-        return activation_blob_.get();
-      } else {
-        return BnInOp2Blob(bn);
-      }
-    });
-  } else {
-    CHECK_EQ(this->GetActivationType(), ActivationType::kNone);
-    BackwardDataContent(ctx, BnInOp2Blob);
-  }
+  BackwardDataContent(ctx, BnInOp2Blob);
   if (GetBackwardActivationType() != ActivationType::kNone) {
-    PostBackwardActivation(ctx, BnInOp2Blob, activation_blob_.get());
+    PostBackwardActivation(ctx, BnInOp2Blob);
   }
 
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
@@ -92,8 +62,7 @@ void Kernel::Backward(const KernelCtx& ctx,
 template<DeviceType device_type>
 template<typename T>
 void KernelIf<device_type>::PostBackwardActivation(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    Blob* activation_blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ActivationType activation = this->GetBackwardActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> ibns = this->op_attribute().input_bns();
@@ -109,7 +78,7 @@ void KernelIf<device_type>::PostBackwardActivation(
   case ActivationType::k##activation_type:                                                         \
     KernelUtil<device_type, T>::activation_type##Backward(                                         \
         ctx.device_ctx, elem_cnt, in_blob->dptr<T>(), in_blob->dptr<T>(), in_diff_blob->dptr<T>(), \
-        activation_blob->mut_dptr<T>());                                                           \
+        in_diff_blob->mut_dptr<T>());                                                              \
     break
       DEFINE_ONE_CASE(TanH);
       DEFINE_ONE_CASE(Sigmoid);
@@ -228,44 +197,6 @@ void KernelIfWithActivation<device_type, T>::ForwardActivation(
       default: UNIMPLEMENTED();
     }
   }
-}
-
-template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::BackwardActivation(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-    Blob* activation_blob) const {
-  ActivationType activation = GetActivationType();
-  if (activation != ActivationType::kNone) {
-    const PbRpf<std::string> obns = this->op_attribute().output_bns();
-    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
-    CHECK_EQ(obns.size(), 1);
-    CHECK_EQ(odbns.size(), 1);
-
-    const Blob* out_blob = BnInOp2Blob(obns[0]);
-    const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
-    switch (activation) {
-#define DEFINE_ONE_CASE(activation_type)                                    \
-  case ActivationType::k##activation_type:                                  \
-    KernelUtil<device_type, T>::activation_type##Backward(                  \
-        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
-        out_diff_blob->dptr<T>(), activation_blob->mut_dptr<T>());          \
-    break
-      DEFINE_ONE_CASE(TanH);
-      DEFINE_ONE_CASE(Sigmoid);
-      DEFINE_ONE_CASE(Relu);
-#undef DEFINE_ONE_CASE
-      default: UNIMPLEMENTED();
-    }
-  }
-}
-
-template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::GenActivationBlob(
-    std::unique_ptr<Blob>* activation_blob, void* buf_ptr,
-    const BlobDesc* activation_blob_desc) const {
-  activation_blob->reset(
-      NewBlob(nullptr, activation_blob_desc, static_cast<char*>(buf_ptr), device_type));
 }
 
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
