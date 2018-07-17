@@ -227,10 +227,13 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
           if (IsMdUpdtTaskType(node_on_in_edge->GetTaskType())) {
             RegstDesc* ctrl_regst = task_node->BuildCtrlRegstDesc(node_on_in_edge);
             RegstDesc* copy_out_regst = copy_hd_task_node->GetProducedRegst("copy_out").get();
+            int64_t piece_num_in_batch = Global<JobDesc>::Get()->NumOfPiecesInBatch();
             ctrl_regst->UpdtMinRegstNumIfNeed(copy_out_regst->min_register_num()
-                                              + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1);
-            ctrl_regst->mut_regst_desc_type()->mutable_ctrl_regst_desc()->set_reliant_regst_desc_id(
-                copy_out_regst->regst_desc_id());
+                                              + piece_num_in_batch - 1);
+            CtrlRegstDesc* ctrl_regst_desc =
+                ctrl_regst->mut_regst_desc_type()->mutable_ctrl_regst_desc();
+            ctrl_regst_desc->set_reliant_regst_desc_id(copy_out_regst->regst_desc_id());
+            ctrl_regst_desc->set_returned_regst_num(piece_num_in_batch);
           }
         });
       }

@@ -451,11 +451,9 @@ void Actor::AsyncSendCtrlRegstMsg() {
   for (auto& pair : consumed_ctrl_regst_) {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
-    int32_t regst_return_num = 1;
-    if (regst->regst_desc()->IsReliantCtrlRegst()) {
-      regst_return_num = Global<JobDesc>::Get()->NumOfPiecesInBatch();
-    }
-    while ((regst_return_num--) && (!pair.second.empty())) {
+    int32_t returned_regst_num =
+        regst->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
+    while ((returned_regst_num--) && (!pair.second.empty())) {
       AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
       pair.second.pop_front();
     }
