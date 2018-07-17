@@ -11,7 +11,6 @@ class CloneOp final : public Operator {
   CloneOp() = default;
   ~CloneOp() = default;
 
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
