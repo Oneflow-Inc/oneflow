@@ -13,8 +13,7 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max, uint32_t rando
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_real_distribution<T> random_distribution(
-      min, std::nextafter(max, std::numeric_limits<T>::max()));
+  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -25,8 +24,7 @@ void RngIntUniform(const int64_t elem_cnt, const T min, const T max, uint32_t ra
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_int_distribution<T> random_distribution(
-      min, std::nextafter(max, std::numeric_limits<T>::max()));
+  std::uniform_int_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
