@@ -156,7 +156,7 @@ uint64_t CalcMemoryConsumed(
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += regst_num * total_byte_size;
+      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
     } else {
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();
@@ -164,7 +164,9 @@ uint64_t CalcMemoryConsumed(
       max_bytes = std::max(max_bytes, total_byte_size);
     }
   }
-  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) { mem_consuming += pair.second; }
+  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) {
+    mem_consuming += RoundUp(pair.second, kCudaMemAllocAlignSize);
+  }
   return mem_consuming;
 }
 
@@ -178,6 +180,13 @@ std::shared_ptr<HashMap<int64_t, RegstDescProto*>> MakeRegstDescId2RegstDesc(Pla
     }
   }
   return regst_desc_id2regst_desc;
+}
+
+std::function<uint64_t(int64_t)> MakeGetterGetPlanRegstNum(Plan* plan) {
+  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
+  return [regst_desc_id2regst_desc](int64_t regst_desc_id) {
+    return regst_desc_id2regst_desc->at(regst_desc_id)->register_num();
+  };
 }
 
 std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
@@ -372,6 +381,24 @@ void ForEachMemSharingCriticalSection(
   }
 }
 
+void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
+                            const std::function<void(int64_t, uint64_t)>& SetRegstNum) {
+  for (const auto& task_proto : plan.task()) {
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      const RegstDescProto& regst = pair.second;
+      const RegstDescTypeProto& regst_type = regst.regst_desc_type();
+      if (regst_type.has_ctrl_regst_desc()
+          && regst_type.ctrl_regst_desc().has_reliant_regst_desc_id()) {
+        // set ctrl regst num between copyHd and MdUpdt
+        CHECK(task_proto.task_type() == kCopyHd);
+        uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id())
+                             + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1;
+        SetRegstNum(regst.regst_desc_id(), regst_num);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -507,6 +534,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
+  FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   return plan;
 }
 
