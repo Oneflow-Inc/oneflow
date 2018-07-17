@@ -6,7 +6,7 @@
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
-class RoIPoolingKernel : public KernelIf<device_type> {
+class RoIPoolingKernel final : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RoIPoolingKernel);
   RoIPoolingKernel() = default;
@@ -17,11 +17,6 @@ class RoIPoolingKernel : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
-  void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void BackwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
-  void ForwardColNum(const KernelCtx& ctx, std::function<Blob*(const std::string&)>) const override;
-  void BackwardColNum(const KernelCtx& ctx,
-                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override {}
 };
 
 }  // namespace oneflow

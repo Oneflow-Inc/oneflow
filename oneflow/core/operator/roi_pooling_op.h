@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class RoIPoolingOp : public Operator {
+class RoIPoolingOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RoIPoolingOp);
   RoIPoolingOp() = default;
@@ -15,7 +15,6 @@ class RoIPoolingOp : public Operator {
 
   void InitFromOpConf() override;
 
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
