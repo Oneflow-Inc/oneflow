@@ -42,8 +42,8 @@ class Blob : public BlobIf {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  const void* memory_ptr() const { return mem_ptr_; }
-  void* mut_memory_ptr() { return mem_ptr_; }
+  const void* hptr() const { return hptr_; }
+  void* mut_hptr() { return hptr_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -57,6 +57,8 @@ class Blob : public BlobIf {
     return static_cast<T*>(dptr_);
   }
 
+  void InitOFRecordBlobIfNeed();
+
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
@@ -66,12 +68,14 @@ class Blob : public BlobIf {
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
+  size_t ByteSizeOfHeaderField() const { return blob_desc_->ByteSizeOfHeaderField(); }
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
   virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
   virtual void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
   virtual void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  virtual void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
   virtual void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
 
   int32_t col_id() const;
@@ -80,9 +84,10 @@ class Blob : public BlobIf {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
+  bool IsMemoryContinuous() const;
 
  protected:
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* hptr, char* dptr);
 
  private:
   template<typename T>
@@ -93,15 +98,21 @@ class Blob : public BlobIf {
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
 
-  void* mem_ptr_;
+  void* hptr_;
+  void* dptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
-  void* dptr_;
   const BlobDesc* blob_desc_;
   Regst* regst_;
 };
 
+using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
+
+Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* header_mem_ptr, char* data_mem_ptr,
+              DeviceType device_type);
 Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);
+
+void GenOFRecordBlob(Blob* blob);
 
 template<typename RecordType>
 class RecordBlob final {

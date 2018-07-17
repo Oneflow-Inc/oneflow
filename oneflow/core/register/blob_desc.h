@@ -8,11 +8,6 @@
 
 namespace oneflow {
 
-struct BlobHeader {
-  int32_t col_id;
-  int32_t max_col_id;
-};
-
 class BlobDesc final {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
@@ -41,8 +36,11 @@ class BlobDesc final {
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfHeaderField() const;
   size_t ByteSizeOfDataContentField() const;
+  size_t AlignSizeOfDataContentField() const;
   size_t TotalByteSize() const;
+
   bool operator==(const BlobDesc& rhs) const;
 
  private:
@@ -52,8 +50,6 @@ class BlobDesc final {
   bool has_col_num_field_;
   int64_t max_col_num_;
 };
-
-BlobDesc ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
 
 }  // namespace oneflow
 

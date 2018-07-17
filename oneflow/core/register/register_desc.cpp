@@ -40,16 +40,7 @@ void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
 void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
-  auto it = lbi2blob_desc_.begin();
-  packed_blob_desc_.reset(new BlobDesc);
-  *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
-    const BlobDesc* ret = nullptr;
-    if (it != lbi2blob_desc_.end()) {
-      ret = it->second.get();
-      ++it;
-    }
-    return ret;
-  });
+  GenPackedBlobDesc();
 }
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
@@ -143,6 +134,59 @@ bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
     if (!(*(pair.second.get()) == *(iter->second.get()))) { return false; }
   }
   return true;
+}
+
+void RegstDesc::GenPackedBlobDesc() {
+  if (lbi2blob_desc_.size() == 1) {
+    packed_blob_desc_.reset(new BlobDesc(*lbi2blob_desc_.begin()->second));
+  } else if (lbi2blob_desc_.size() > 1) {
+    int64_t total_byte_size = 0;
+    int64_t total_data_byte_size = 0;
+    HashSet<int> data_type_set;
+    bool has_data_id_field = false;
+    bool has_col_num_field = false;
+    int32_t max_col_num = -1;
+    for (const auto& pair : lbi2blob_desc_) {
+      const BlobDesc& blob_desc = *pair.second;
+      total_byte_size += blob_desc.TotalByteSize();
+      total_data_byte_size += blob_desc.AlignSizeOfDataContentField();
+      data_type_set.insert(static_cast<int>(blob_desc.data_type()));
+      has_data_id_field = has_data_id_field || blob_desc.has_data_id_field();
+      has_col_num_field = has_col_num_field || blob_desc.has_col_num_field();
+      if (max_col_num == -1) {
+        max_col_num = blob_desc.max_col_num();
+      } else {
+        CHECK_EQ(max_col_num, blob_desc.max_col_num());
+      }
+    }
+
+    BlobDesc* packed_blob_desc = new BlobDesc;
+    int64_t packed_blob_size = 0;
+    bool packed_as_raw = false;
+    if (mem_case_.has_host_mem() && mem_case_.host_mem().used_by_network()) {
+      packed_blob_size = total_byte_size;
+      packed_as_raw = has_data_id_field || has_col_num_field || (data_type_set.size() != 1);
+    } else {
+      packed_blob_size = total_data_byte_size;
+      packed_as_raw = (data_type_set.size() != 1);
+    }
+    if (!packed_as_raw) {
+      DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
+      int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
+      CHECK_EQ(packed_blob_size % size_of_one_elem, 0);
+      packed_blob_desc->mut_shape() = Shape({packed_blob_size / size_of_one_elem});
+      packed_blob_desc->set_data_type(sole_data_type);
+    } else {
+      packed_blob_desc->mut_shape() = Shape({packed_blob_size});
+      packed_blob_desc->set_data_type(DataType::kChar);
+    }
+    packed_blob_desc->set_has_data_id_field(false);
+    packed_blob_desc->set_has_col_num_field(false);
+    packed_blob_desc->set_max_col_num(1);
+    packed_blob_desc_.reset(packed_blob_desc);
+  } else {
+    packed_blob_desc_.reset(new BlobDesc);
+  }
 }
 
 void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_proto) {

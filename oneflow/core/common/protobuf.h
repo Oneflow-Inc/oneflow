@@ -11,6 +11,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
@@ -156,6 +157,16 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   return message_diff.Equivalent(lhs, rhs);
 }
 
+inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
+  if (lhs.has_host_mem() && rhs.has_host_mem()) {
+    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
+  }
+  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
+    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
+  }
+  return false;
+}
+
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
@@ -170,6 +181,17 @@ struct hash<oneflow::LogicalBlobId> {
     return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.b121_id())
                                     + std::to_string(lbi.clone_id())
                                     + std::to_string(lbi.is_packed_id()));
+  }
+};
+
+template<>
+struct hash<oneflow::MemoryCase> {
+  size_t operator()(const oneflow::MemoryCase& mem_case) const {
+    if (mem_case.has_host_mem()) {
+      return mem_case.host_mem().used_by_device() + 1024;
+    } else {
+      return mem_case.device_cuda_mem().device_id();
+    }
   }
 };
 

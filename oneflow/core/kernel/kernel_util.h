@@ -35,7 +35,7 @@ void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
             cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case);
+                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
@@ -317,8 +317,6 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsIntegral<T>::va
   static void Axpy(DeviceCtx* ctx, const int n, const T alpha, const T* x, const int incx, T* y,
                    const int incy);
 };
-
-using CopyBlobFieldMthd = void (Blob::*)(DeviceCtx*, const Blob*);
 
 template<DeviceType device_type, typename Iter>
 void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {

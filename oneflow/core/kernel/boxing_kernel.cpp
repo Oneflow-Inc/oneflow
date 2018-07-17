@@ -225,7 +225,7 @@ void BoxingKernel<T>::ForwardDataContent(
       ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
                              boxing_conf.concat_box().axis(), obn_0_, 0);
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                DataContentIterator::GetCopyBlobFieldMthd());
+                                &Blob::CopyDataContentFrom);
     } else {
       UNIMPLEMENTED();
     }
@@ -237,7 +237,7 @@ void BoxingKernel<T>::ForwardDataContent(
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
       CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                DataContentIterator::GetCopyBlobFieldMthd());
+                                &Blob::CopyDataContentFrom);
     } else {
       UNIMPLEMENTED();
     }
