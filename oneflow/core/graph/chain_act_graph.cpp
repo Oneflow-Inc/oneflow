@@ -19,9 +19,45 @@ ChainActNode::ChainActNode(std::list<ActEvent*> act_events) {
 
 void ChainActGraph::ForEachRegstDescConsumerPathMeanDuration(
     const std::function<void(int64_t, int64_t, double)>& Handler) const {
-  HashSet<RegstAct*> regst_act_window;
   std::map<std::pair<int64_t, int64_t>, double> regst_desc_id_consumed2duration;
   std::map<std::pair<int64_t, int64_t>, int> regst_desc_id_consumed2cnt;
+  ForEachRegstActDuration([&](int64_t regst_desc_id, int64_t consumer_actor_id, double duration) {
+    std::pair<int64_t, int64_t> regst_desc_id_consumed(regst_desc_id, consumer_actor_id);
+    regst_desc_id_consumed2duration[regst_desc_id_consumed] += duration;
+    ++regst_desc_id_consumed2cnt[regst_desc_id_consumed];
+  });
+  for (const auto& pair : regst_desc_id_consumed2duration) {
+    Handler(pair.first.first, pair.first.second,
+            pair.second / regst_desc_id_consumed2cnt.at(pair.first));
+  }
+}
+
+void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
+    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+  std::map<std::pair<int64_t, int64_t>, uint64_t> regst_desc_id_consumed2used_cnt;
+  std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
+  uint64_t max_cnt = 0;
+  for (const auto& pair : regst_uid2regst_act_) {
+    if (pair.second->consumer_act_events.empty()) { continue; }
+    int64_t regst_desc_id = pair.second->regst_desc_id;
+    int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_desc_id];
+    if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
+    for (const ActEvent* act_event : pair.second->consumer_act_events) {
+      std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_desc_id, act_event->actor_id());
+      int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
+      if (max_cnt < used_cnt) { max_cnt = used_cnt; }
+    }
+  }
+  for (const auto& pair : regst_desc_id_consumed2used_cnt) {
+    uint64_t produced_cnt = regst_desc_id2produced_cnt.at(pair.first.first);
+    Handler(pair.first.first, pair.first.second,
+            1.0 * max_cnt / std::min(produced_cnt, pair.second));
+  }
+}
+
+void ChainActGraph::ForEachRegstActDuration(
+    const std::function<void(int64_t, int64_t, double)>& Handler) const {
+  HashSet<RegstAct*> regst_act_window;
   auto CalDuration = [&](const ChainActNode* node, RegstAct* regst_act) {
     double duration = 0;
     ForEachInEdge(node, [&](const ChainActEdge* in_edge) {
@@ -50,44 +86,13 @@ void ChainActGraph::ForEachRegstDescConsumerPathMeanDuration(
     }
     for (RegstAct* regst_act : cur_node->last_consumed_regst_acts()) {
       for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
-        int64_t regst_desc_id = regst_act->regst_desc_id;
-        int64_t consumer_actor_id = consumer_act_event->actor_id();
         double duration = regst_act->node2duration.at(Node4ActEvent(consumer_act_event))
                           + consumer_act_event->stop_time()
                           - regst_act->producer_act_event->start_time();
-        std::pair<int64_t, int64_t> regst_desc_id_consumed(regst_desc_id, consumer_actor_id);
-        regst_desc_id_consumed2duration[regst_desc_id_consumed] += duration;
-        ++regst_desc_id_consumed2cnt[regst_desc_id_consumed];
+        Handler(regst_act->regst_desc_id, consumer_act_event->actor_id(), duration);
       }
       regst_act_window.erase(regst_act);
     }
-  }
-  for (const auto& pair : regst_desc_id_consumed2duration) {
-    Handler(pair.first.first, pair.first.second,
-            pair.second / regst_desc_id_consumed2cnt.at(pair.first));
-  }
-}
-
-void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
-    const std::function<void(int64_t, int64_t, double)>& Handler) const {
-  std::map<std::pair<int64_t, int64_t>, uint64_t> regst_desc_id_consumed2used_cnt;
-  std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
-  uint64_t max_cnt = 0;
-  for (const auto& pair : regst_uid2regst_act_) {
-    if (pair.second->consumer_act_events.empty()) { continue; }
-    int64_t regst_desc_id = pair.second->regst_desc_id;
-    int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_desc_id];
-    if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
-    for (const ActEvent* act_event : pair.second->consumer_act_events) {
-      std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_desc_id, act_event->actor_id());
-      int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
-      if (max_cnt < used_cnt) { max_cnt = used_cnt; }
-    }
-  }
-  for (const auto& pair : regst_desc_id_consumed2used_cnt) {
-    uint64_t produced_cnt = regst_desc_id2produced_cnt.at(pair.first.first);
-    Handler(pair.first.first, pair.first.second,
-            1.0 * max_cnt / std::min(produced_cnt, pair.second));
   }
 }
 

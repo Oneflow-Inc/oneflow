@@ -100,6 +100,7 @@ class ChainActGraph final : public Graph<ChainActNode, ChainActEdge> {
                       const std::function<void(const ChainActEdge*)>& Handler) const;
   void TopoForEachChainActNode(std::list<ChainActNode*>& starts,
                                const std::function<void(ChainActNode*)>& Handler) const;
+  void ForEachRegstActDuration(const std::function<void(int64_t, int64_t, double)>& Handler) const;
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
   std::vector<ChainActNode*> topo_nodes_;
