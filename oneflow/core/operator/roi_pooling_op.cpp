@@ -15,7 +15,7 @@ void RoIPoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> Ge
                                   const ParallelContext* parallel_ctx) const {
   // TODO check shape of in (feat. map)
   // TODO check shape of rois
-  // TODO set shape of out
+  // TODO set shape of out, [batch num, roi num, 4]
   // TODO set shape of argmax
 }
 
