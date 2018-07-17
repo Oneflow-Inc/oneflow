@@ -587,6 +587,33 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
+message BboxWeightConf
+{
+  optional float weight1=1 [default = 1.0];
+  optional float weight2=2 [default = 1.0];
+  optional float weight3=3 [default = 1.0];
+  optional float weight4=4 [default = 1.0];
+}
+
+message ProposalTargetOpConf
+{
+  required string rpn_rois = 1;
+  required string gt_boxes = 2;
+  required string rois = 3;
+  required string labels = 4;
+  required string bbox_targets = 5;
+  required string bbox_inside_weights = 6;
+  required string bbox_outside_weights = 7;
+
+  optional int32 roi_batch_size = 8 [default = 256];
+  optional float fg_fraction = 9 [default = 0.5];
+  optional BboxWeightConf bbox_inside_weight_conf=10;
+  optional BboxWeightConf bbox_outside_weight_conf=11;
+
+}
+
+
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -641,6 +668,7 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 404;
     AccuracyOpConf accuracy_conf=405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
+    ProposalTargetOpConf proposal_target_conf=410;
   }
 }
 
