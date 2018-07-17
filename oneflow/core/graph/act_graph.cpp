@@ -140,6 +140,7 @@ class DepthRangeActSubGraph final : public Graph<const ActNode, const ActEdge> {
 
   void ForEachRegstActSubGraph(const std::function<void(const RegstActSubGraph&)>& Handler) const;
   void ToDotFiles(const std::string& dir) const;
+  void CalTotalDuration(const std::function<void(std::string, int64_t, double)>& Handler) const;
 
  private:
   void InitNode2ComponentId();
@@ -178,6 +179,63 @@ void DepthRangeActSubGraph::ComponentToDotFiles(const std::string& dir,
     }
   });
   out_stream << "}\n";
+}
+
+void DepthRangeActSubGraph::CalTotalDuration(
+    const std::function<void(std::string, int64_t, double)>& Handler) const {
+  HashMap<const ActNode*, int64_t> node2node_id;
+  HashSet<const ActNode*> regst_duration_window_start_nodes;
+  HashMap<int64_t, HashSet<const ActNode*>> end_node_id2start_nodes;
+  HashMap<const ActNode*, std::list<int64_t>> start_node2end_nodes_id;
+  HashMap<const ActNode*, HashMap<const ActNode*, double>> src2dst_duration;
+  const auto& starts = act_graph_->Nodes4Depth(depth_range_.begin());
+  int64_t node_id = 0;
+  TopoForEachActNode(starts, [&](const ActNode* cur_node) { node2node_id[cur_node] = ++node_id; });
+  for (const auto& regst_uid : regst_uids_) {
+    const ActNode* producer = act_graph_->ProducerNode4RegstUid(regst_uid);
+    ForEachOutNode(producer, [&](const ActNode* producer_out) {
+      for (const ActNode* consumer : act_graph_->ConsumerNodes4RegstUid(regst_uid)) {
+        start_node2end_nodes_id[producer_out].push_back(node2node_id[consumer]);
+      }
+    });
+  }
+  for (auto& pair : start_node2end_nodes_id) {
+    if (!pair.second.empty()) {
+      pair.second.sort([](int64_t a, int64_t b) { return a < b; });
+      end_node_id2start_nodes[pair.second.back()].insert(pair.first);
+    }
+  }
+  auto CalDuration = [&](const ActNode* src, const ActNode* dst) {
+    double duration = 0;
+    ForEachInNode(dst, [&](const ActNode* in_node) {
+      if (src2dst_duration.at(src).count(in_node) != 0) {
+        duration = std::max(duration, src2dst_duration[src][in_node]);
+      }
+    });
+    if (duration != 0) { src2dst_duration[src][dst] = duration + dst->Duration(); }
+  };
+  TopoForEachActNode(starts, [&](const ActNode* cur_node) {
+    for (const ActNode* pre_node : regst_duration_window_start_nodes) {
+      CalDuration(pre_node, cur_node);
+    }
+    src2dst_duration[cur_node][cur_node] = cur_node->Duration();
+    regst_duration_window_start_nodes.insert(cur_node);
+    for (const ActNode* start_node : end_node_id2start_nodes[node2node_id[cur_node]]) {
+      regst_duration_window_start_nodes.erase(start_node);
+    }
+  });
+  for (const auto& regst_uid : regst_uids_) {
+    const ActNode* producer = act_graph_->ProducerNode4RegstUid(regst_uid);
+    HashSet<const ActNode*> producer_outs;
+    ForEachOutNode(producer, [&](const ActNode* node) { producer_outs.insert(node); });
+    for (const ActNode* consumer : act_graph_->ConsumerNodes4RegstUid(regst_uid)) {
+      double longest_duration = 0;
+      for (const ActNode* produced_out : producer_outs) {
+        longest_duration = std::max(longest_duration, src2dst_duration[produced_out][consumer]);
+      }
+      Handler(regst_uid, consumer->actor_id(), longest_duration + producer->Duration());
+    }
+  }
 }
 
 void DepthRangeActSubGraph::ToDotFiles(const std::string& dir) const {
@@ -362,11 +420,12 @@ void ActGraph::ForEachDepthRangeSubActGraph(
 
 void ActGraph::ForEachRegstUidConsumerPathDuration(
     const std::function<void(const std::string&, int64_t, double)>& Handler) const {
-  ForEachRegstActSubGraph([&](const RegstActSubGraph& regst_csm_graph) {
-    const std::string regst_uid = regst_csm_graph.regst_uid();
-    regst_csm_graph.ForEachConsumerPathDuration([&](int64_t consumer_actor_id, double duration) {
-      Handler(regst_uid, consumer_actor_id, duration);
-    });
+  ForEachDepthRangeRegstUids([&](const Range& range, const std::list<std::string>& regst_uids) {
+    DepthRangeActSubGraph depth_range_subgraph(this, range, regst_uids);
+    depth_range_subgraph.CalTotalDuration(
+        [&](std::string regst_uid, int64_t consumer_actor_id, double duration) {
+          Handler(regst_uid, consumer_actor_id, duration);
+        });
   });
 }
 
@@ -443,7 +502,19 @@ ActGraph::ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_
 void ActGraph::ForEachDepthRangeRegstUids(
     const std::function<void(const Range& range, const std::list<std::string>& regst_uids)>&
         Handler) const {
-  HashMap<Range, std::list<std::string>> depth_range2regst_uids;
+  struct CompareRangeSize {
+    bool operator()(const Range& lhs, const Range& rhs) {
+      return lhs.size() > rhs.size() || (lhs.size() == rhs.size() && lhs.begin() < rhs.begin());
+    }
+  };
+  struct CompareRange {
+    bool operator()(const Range& lhs, const Range& rhs) {
+      if (lhs.begin() == rhs.begin() || lhs.end() == rhs.end()) { return false; }
+      return lhs.begin() <= rhs.begin() && lhs.end() <= rhs.end();
+    }
+  };
+  std::map<Range, std::list<std::string>, CompareRangeSize> depth_range2regst_uids;
+  std::map<Range, std::list<std::string>, CompareRange> depth_range_cluster2regst_uids;
   for (const auto& pair : regst_uid2producer_node_) {
     const auto& consumer_nodes_it = regst_uid2consumer_nodes_.find(pair.first);
     if (consumer_nodes_it == regst_uid2consumer_nodes_.end()) { continue; }
@@ -454,7 +525,17 @@ void ActGraph::ForEachDepthRangeRegstUids(
     for (const ActNode* node : consumer_nodes_it->second) { end = std::max(end, node->depth()); }
     depth_range2regst_uids[Range(begin, end)].push_back(pair.first);
   }
-  for (const auto& pair : depth_range2regst_uids) { Handler(pair.first, pair.second); }
+  for (const auto& pair : depth_range2regst_uids) {
+    auto iter = depth_range_cluster2regst_uids.find(pair.first);
+    if (iter != depth_range_cluster2regst_uids.end()) {
+      for (const auto& regst_uid : pair.second) { iter->second.push_back(regst_uid); }
+    } else {
+      for (const auto& regst_uid : pair.second) {
+        depth_range_cluster2regst_uids[pair.first].push_back(regst_uid);
+      }
+    }
+  }
+  for (const auto& pair : depth_range_cluster2regst_uids) { Handler(pair.first, pair.second); }
 }
 
 void ActGraph::ToDotFiles(const std::string& dir) const {
