@@ -4,7 +4,7 @@ namespace oneflow {
 
 template<typename T>
 T MaxPoolingKernel<DeviceType::kCPU, T>::ForwardInitialize() const {
-  return -std::numeric_limits<T>::max();
+  return MinVal<T>();
 }
 
 template<typename T>

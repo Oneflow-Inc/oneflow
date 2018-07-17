@@ -186,6 +186,7 @@ int Actor::HandlerNormal(const ActorMsg& msg) {
   } else {
     UNIMPLEMENTED();
   }
+  // TODO: refactor code below for potential bugs
   if (((is_naive_readable_data_eord_ && naive_readable_data_regst_cnt_ == 0)
        || IsCustomizedReadAlwaysUnReadyFromNow())
       && ((is_consumed_ctrl_eord_ && readable_ctrl_regst_desc_cnt_ == 0)
