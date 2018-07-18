@@ -24,8 +24,6 @@ class LossKernel : public KernelIf<device_type> {
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   void ForwardColNum(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void PostBackwardActivation(const KernelCtx& ctx,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
 template<DeviceType device_type, typename T>

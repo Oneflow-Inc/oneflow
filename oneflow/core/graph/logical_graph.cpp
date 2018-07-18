@@ -461,7 +461,7 @@ void LogicalGraph::BuildLossPrintStruct() {
     Connect<LogicalNode>(loss_logical, NewEdge(), loss_acc_logical);
     // Loss Print Logical
     OperatorConf loss_print_op_conf;
-    loss_print_op_conf.set_name("loss_print_" + loss_op->op_name());
+    loss_print_op_conf.set_name(LossPrintPrefix + loss_op->op_name());
     loss_print_op_conf.set_device_type(DeviceType::kCPU);
     auto loss_print_conf = loss_print_op_conf.mutable_loss_print_conf();
 

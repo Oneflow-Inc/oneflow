@@ -51,16 +51,6 @@ void Kernel::Forward(const KernelCtx& ctx,
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BackwardDataContent(ctx, BnInOp2Blob);
-  PostBackwardActivation(ctx, BnInOp2Blob);
-
-  if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-}
-
-template<DeviceType device_type>
-template<typename T>
-void KernelIf<device_type>::PostBackwardActivation(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ActivationType activation = this->GetBackwardActivationType();
   if (activation != ActivationType::kNone) {
     const PbRpf<std::string> ibns = this->op_attribute().input_bns();
@@ -70,20 +60,42 @@ void KernelIf<device_type>::PostBackwardActivation(
 
     const Blob* in_blob = BnInOp2Blob(ibns[0]);
     Blob* in_diff_blob = BnInOp2Blob(idbns[0]);
-    int64_t elem_cnt = in_blob->shape().elem_cnt();
-    switch (activation) {
-#define DEFINE_ONE_CASE(activation_type)                                                           \
-  case ActivationType::k##activation_type:                                                         \
-    KernelUtil<device_type, T>::activation_type##Backward(                                         \
-        ctx.device_ctx, elem_cnt, in_blob->dptr<T>(), in_blob->dptr<T>(), in_diff_blob->dptr<T>(), \
-        in_diff_blob->mut_dptr<T>());                                                              \
-    break
-      DEFINE_ONE_CASE(TanH);
-      DEFINE_ONE_CASE(Sigmoid);
-      DEFINE_ONE_CASE(Relu);
+    PostBackwardActivation(ctx, in_blob, in_diff_blob);
+  }
+
+  if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+}
+
+template<DeviceType device_type, typename T>
+void ActivationBackward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
+                        const T* x, const T* y, const T* dy, T* dx) {
+  switch (activation_type) {
+#define DEFINE_ONE_CASE(activation)                                                       \
+  case ActivationType::k##activation:                                                     \
+    KernelUtil<device_type, T>::activation##Backward(device_ctx, elem_cnt, x, y, dy, dx); \
+    break;
+    DEFINE_ONE_CASE(TanH);
+    DEFINE_ONE_CASE(Sigmoid);
+    DEFINE_ONE_CASE(Relu);
 #undef DEFINE_ONE_CASE
-      default: UNIMPLEMENTED();
-    }
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::PostBackwardActivation(const KernelCtx& ctx, const Blob* in_blob,
+                                                   Blob* in_diff_blob) const {
+  int64_t elem_cnt = in_blob->shape().elem_cnt();
+  switch (in_blob->data_type()) {
+#define BACKWARD_ACTIVATION_ENTRY(T, type_proto)                                              \
+  case type_proto:                                                                            \
+    ActivationBackward<device_type, T>(this->GetBackwardActivationType(), ctx.device_ctx,     \
+                                       elem_cnt, in_blob->dptr<T>(), in_blob->dptr<T>(),      \
+                                       in_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>()); \
+    break;
+    OF_PP_FOR_EACH_TUPLE(BACKWARD_ACTIVATION_ENTRY, FLOATING_DATA_TYPE_SEQ);
+    default: UNIMPLEMENTED();
   }
 }
 
