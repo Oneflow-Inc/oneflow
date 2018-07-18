@@ -35,15 +35,16 @@ void ProposalTargetOp::InferBlobDescs(
   BlobDesc* labels_blob_desc = GetBlobDesc4BnInOp("labels");       //(n,roi_sample,1)
   BlobDesc* target_blob_desc = GetBlobDesc4BnInOp("bbox_target");  //(n,roi_sample,4);
   BlobDesc* inside_weights_blob_desc =
-      GetBlobDesc4BnInOp("bbox_inside_weights");                                //(n,roi_sample,4);
-  BlobDesc* outside_weights_desc = GetBlobDesc4BnInOp("bbox_outside_weights");  //(n,roi_sample,4);
+      GetBlobDesc4BnInOp("bbox_inside_weights");  //(n,roi_sample,4);
+  BlobDesc* outside_weights_blob_desc =
+      GetBlobDesc4BnInOp("bbox_outside_weights");  //(n,roi_sample,4);
 
   int32_t num_roi_per_image = conf.num_roi_per_image();
   rois_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 4});
   labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 1});
   target_blob_desc->mut_shape() = Shape(rois_blob_desc->shape());
   inside_weights_blob_desc->mut_shape() = Shape(rois_blob_desc->shape());
-  outside_weights_desc->mut_shape() = Shape(rois_blob_desc->shape());
+  outside_weights_blob_desc->mut_shape() = Shape(rois_blob_desc->shape());
 }
 
 REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
