@@ -325,12 +325,12 @@ message PolynomialDecayConf {
 }
 
 message CosineDecayConf {
-  required int64 decay_batches = 1; 
+  required int64 decay_batches = 1;
   optional double alpha = 2 [default = 0.0];
 }
 
 message LinearCosineDecayConf {
-  required int64 decay_batches = 1; 
+  required int64 decay_batches = 1;
   optional double num_periods = 2 [default = 0.5];
   optional double alpha = 3 [default = 0.0];
   optional double beta = 4 [default = 0.001];
@@ -455,7 +455,7 @@ message MaximumOpConf {
 message LocalResponseNormalizationOpConf {
   required string in = 1;
   required string out = 2;
-  required string data_format = 3; 
+  required string data_format = 3;
   optional int32 depth_radius = 4 [default = 5];
   optional double bias = 5 [default = 1];
   optional double alpha = 6 [default = 1];
@@ -527,7 +527,7 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
-  required InitializerConf distribution = 7; 
+  required InitializerConf distribution = 7;
 }
 
 message NormalizationOpConf {
@@ -569,7 +569,7 @@ message ReduceLocalAddOpConf {
   required int32 out_num = 2;
   required int64 min_in_parallel_id = 3;
   required int64 min_out_parallel_id = 4;
-  required int64 model_elem_cnt = 5; 
+  required int64 model_elem_cnt = 5;
 };
 
 message ReduceGlobalAddOpConf {
@@ -585,6 +585,16 @@ message AccuracyOpConf {
   required string label = 2;
   optional int32 top_k = 3 [default = 1];
   required string accuracy = 4;
+}
+
+message RoIPoolingOpConf {
+  required string in = 1;
+  required string rois = 2;
+  required string out = 3;
+
+  required int32 pooled_h = 4;
+  required int32 pooled_w = 5;
+  required float spatial_scale = 6 [default = 0.0625]; // 1/16
 }
 
 message OperatorConf {
@@ -641,6 +651,7 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 404;
     AccuracyOpConf accuracy_conf=405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
+    RoIPoolingOpConf roi_pooling_conf = 407;
   }
 }
 
