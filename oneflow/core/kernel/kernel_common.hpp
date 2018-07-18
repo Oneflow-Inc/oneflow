@@ -16,7 +16,7 @@ namespace oneflow{
 
     template<DeviceType device_type, typename T, typename... Args>
     inline void AdditionAssign(...) {
-        UNIMPLEMENTED();
+        static_assert(true, "just support float point here");
     }
 
     template<bool in, DeviceType device_type, typename T, typename U>
