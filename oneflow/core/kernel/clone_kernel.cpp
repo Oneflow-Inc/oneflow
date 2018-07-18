@@ -30,9 +30,9 @@ void CloneKernel<device_type, T>::BackwardDataContent(
   int32_t offset = 0;
   while (out_num - offset >= 10) {
     AdditionAssign<device_type, T>(
-        T(), ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1),
-        out_diff(offset + 2), out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5),
-        out_diff(offset + 6), out_diff(offset + 7), out_diff(offset + 8), out_diff(offset + 9));
+        ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1), out_diff(offset + 2),
+        out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5), out_diff(offset + 6),
+        out_diff(offset + 7), out_diff(offset + 8), out_diff(offset + 9));
     offset += 10;
   }
 

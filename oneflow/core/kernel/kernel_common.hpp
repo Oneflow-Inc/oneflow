@@ -4,12 +4,12 @@
 namespace oneflow{
     //function object for add/clone kernel
     template<DeviceType device_type, typename T, typename... Args>
-    inline std::enable_if_t<std::is_same<T, float>::value> AdditionAssign(float, DeviceCtx* device_ctx, Blob* out, Args... in) {
+    inline std::enable_if_t<std::is_same<T, float>::value> AdditionAssign(DeviceCtx* device_ctx, Blob* out, Args... in) {
         KernelUtil<device_type, float>::AdditionAssign(
                 device_ctx, out->shape().elem_cnt(), out->mut_dptr<float>(), in->template dptr<float>()...);
     }
     template<DeviceType device_type, typename T, typename... Args>
-    inline std::enable_if_t<std::is_same<T, double>::value> AdditionAssign(double, DeviceCtx* device_ctx, Blob* out, Args... in) {
+    inline std::enable_if_t<std::is_same<T, double>::value> AdditionAssign(DeviceCtx* device_ctx, Blob* out, Args... in) {
         KernelUtil<device_type, double>::AdditionAssign(
                 device_ctx, out->shape().elem_cnt(), out->mut_dptr<double>(), in->template dptr<double>()...);
     }
@@ -29,11 +29,11 @@ namespace oneflow{
         template<size_t... Idx>
         void AdditionAssignImpl(std::index_sequence<Idx...>) {
             if (in) {
-                AdditionAssign<device_type, T>(T(), device_ctx_, diff_blob_,
+                AdditionAssign<device_type, T>(device_ctx_, diff_blob_,
                                             BnInOp2Blob_(u_->op_attribute().input_bns(offset_ + Idx))...);
             } else {
                 AdditionAssign<device_type, T>(
-                        T(), device_ctx_, diff_blob_,
+                        device_ctx_, diff_blob_,
                         BnInOp2Blob_(u_->op_attribute().output_diff_bns(offset_ + Idx))...);
             }
         }

@@ -16,10 +16,10 @@ void AddKernel<device_type, T>::ForwardDataContent(
   auto in_blob = [&](int32_t idx) { return BnInOp2Blob(this->op_attribute().input_bns(idx)); };
   int32_t offset = 0;
   while (in_num - offset >= 10) {
-    AdditionAssign<device_type, T>(T(), ctx.device_ctx, out_blob, in_blob(offset),
-                                   in_blob(offset + 1), in_blob(offset + 2), in_blob(offset + 3),
-                                   in_blob(offset + 4), in_blob(offset + 5), in_blob(offset + 6),
-                                   in_blob(offset + 7), in_blob(offset + 8), in_blob(offset + 9));
+    AdditionAssign<device_type, T>(ctx.device_ctx, out_blob, in_blob(offset), in_blob(offset + 1),
+                                   in_blob(offset + 2), in_blob(offset + 3), in_blob(offset + 4),
+                                   in_blob(offset + 5), in_blob(offset + 6), in_blob(offset + 7),
+                                   in_blob(offset + 8), in_blob(offset + 9));
     offset += 10;
   }
 
