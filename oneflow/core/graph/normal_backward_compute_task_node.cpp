@@ -116,16 +116,9 @@ void NormalBackwardCompTaskNode::BuildActivationDiffRegst() {
   std::shared_ptr<RegstDesc> activation_regst = GetSoleConsumedRegst("activation");
   std::shared_ptr<RegstDesc> activation_diff_regst = GetProducedRegst("activation_diff");
   mut_exec_gph().ForEachEdge([&](ExecEdge* edge) {
-    if (edge->src_node()->op()->NeedExtraInDiffMemWhenBackward()
-        || edge->dst_node()->op()->NeedOutWhenBackward() || edge->src_node()->fw_node() == nullptr
-        || edge->dst_node()->fw_node() == nullptr) {
-      edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_diff_regst);
-      edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_diff_regst);
-      activation_diff_regst->AddLbi(edge->lbi());
-    } else {
-      edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_regst);
-      edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_regst);
-    }
+    edge->src_node()->BindBnWithRegst(edge->src_bn(), activation_diff_regst);
+    edge->dst_node()->BindBnWithRegst(edge->dst_bn(), activation_diff_regst);
+    activation_diff_regst->AddLbi(edge->lbi());
     edge->src_node()->BindBnWithRegst(GenUnDiffBn(edge->src_bn()), activation_regst);
     edge->dst_node()->BindBnWithRegst(GenUnDiffBn(edge->dst_bn()), activation_regst);
   });
