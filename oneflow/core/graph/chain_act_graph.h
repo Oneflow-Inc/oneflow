@@ -4,7 +4,6 @@
 #include "oneflow/core/graph/graph.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/task.pb.h"
-#include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event.pb.h"
 
 namespace oneflow {
@@ -16,6 +15,9 @@ inline double Duration4ActEvent(const ActEvent& act_event) {
 class ChainActNode;
 
 struct RegstAct {
+  RegstAct(int64_t input_regst_desc_id, const ActEvent* input_producer_act_event)
+      : regst_desc_id(input_regst_desc_id), producer_act_event(input_producer_act_event) {}
+
   int64_t regst_desc_id;
   const ActEvent* producer_act_event;
   std::list<const ActEvent*> consumer_act_events;
@@ -23,6 +25,8 @@ struct RegstAct {
 };
 
 struct RegstActCtx {
+  RegstActCtx(const RegstAct* input_regst_act) : regst_act(input_regst_act) {}
+
   const RegstAct* regst_act;
   HashMap<const ChainActNode*, double> node2duration_to_producer;
 };
@@ -30,16 +34,14 @@ struct RegstActCtx {
 class ChainActEdge final : public Edge<ChainActNode, ChainActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainActEdge);
-  ChainActEdge() = default;
+  ChainActEdge(double duration) : duration_(duration) {}
   ~ChainActEdge() = default;
 
   // Getters
-  double duration() const { return duration_; }
-  // Setters
-  void set_duration(double duration) { duration_ = duration; }
+  const double duration() const { return duration_; }
 
  private:
-  double duration_;
+  const double duration_;
 };
 
 class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
@@ -83,17 +85,18 @@ class ChainActGraph final : public Graph<ChainActNode, ChainActEdge> {
   void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
 
   // Getters
-  bool ActEventHasConsumer(const ActEvent* act_event) const {
-    return act_event_has_consumer_.find(act_event) != act_event_has_consumer_.end();
-  }
-  const ChainActNode* Node4ActEvent(const ActEvent* act_event) const {
-    return act_event2chain_node_.at(act_event);
+  bool IsActEventWithConsumer(const ActEvent* act_event) const {
+    return act_event_with_consumer_.find(act_event) != act_event_with_consumer_.end();
   }
   const TaskProto& GetTaskProto(int64_t actor_id) const {
     return *task_id2task_proto_.at(actor_id);
   }
 
  private:
+  const ChainActNode* Node4ActEvent(const ActEvent* act_event) const {
+    return act_event2chain_node_.at(act_event);
+  }
+
   void InitNodes();
   void InitEdges();
   void InitTopoOrderValue();
@@ -116,7 +119,7 @@ class ChainActGraph final : public Graph<ChainActNode, ChainActEdge> {
   std::unique_ptr<std::list<ActEvent>> act_events_;
   std::vector<const ChainActNode*> topo_nodes_;
   HashMap<int64_t, const TaskProto*> task_id2task_proto_;
-  HashSet<const ActEvent*> act_event_has_consumer_;
+  HashSet<const ActEvent*> act_event_with_consumer_;
   HashMap<const ActEvent*, ChainActNode*> act_event2chain_node_;
   HashMap<std::pair<int64_t, int64_t>, RegstAct*> regst_uid2regst_act_;
 };

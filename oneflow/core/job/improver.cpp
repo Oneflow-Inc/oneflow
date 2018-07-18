@@ -233,7 +233,7 @@ double CalcBaseII(const ChainActGraph& act_graph) {
   HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
   act_graph.ForEachActEvent([&](const ActEvent* act_event) {
     int64_t actor_id = act_event->actor_id();
-    if (act_graph.ActEventHasConsumer(act_event)) {
+    if (act_graph.IsActEventWithConsumer(act_event)) {
       ++actor_id2outputed_act_cnt[actor_id];
       max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
     }

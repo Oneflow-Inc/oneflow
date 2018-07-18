@@ -1,6 +1,5 @@
 #include "oneflow/core/graph/chain_act_graph.h"
 #include "oneflow/core/common/protobuf.h"
-#include "oneflow/core/graph/task_node.h"
 
 namespace oneflow {
 ChainActNode::ChainActNode(std::list<ActEvent*> act_events) {
@@ -69,8 +68,7 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
     }
     for (const RegstAct* regst_act : cur_node->produced_regst_acts()) {
       const ChainActNode* producer = Node4ActEvent(regst_act->producer_act_event);
-      RegstActCtx* regst_act_ctx = new RegstActCtx;
-      regst_act_ctx->regst_act = regst_act;
+      RegstActCtx* regst_act_ctx = new RegstActCtx(regst_act);
       regst_act_ctx->node2duration_to_producer[producer] = 0;
       regst_act_ctx_window.insert(regst_act_ctx);
       regst_act2regst_act_ctx[regst_act] = regst_act_ctx;
@@ -115,15 +113,6 @@ void ChainActGraph::InitTaskId2TaskProto() {
   }
 }
 
-void ChainActGraph::TopoForEachChainActNode(
-    std::list<ChainActNode*>& starts, const std::function<void(ChainActNode*)>& Handler) const {
-  starts.sort([](const ChainActNode* lhs, const ChainActNode* rhs) {
-    return lhs->act_id() > rhs->act_id();
-  });
-  DfsTopoForEachNode(starts, &ChainActNode::ForEachNodeOnInEdge,
-                     &ChainActNode::ForEachNodeOnOutEdge, Handler);
-}
-
 void ChainActGraph::InitNodes() {
   HashMap<std::string, std::list<ActEvent*>> chain_id7act_id_str2act_events;
   for (ActEvent& act_event : *act_events_) {
@@ -134,7 +123,7 @@ void ChainActGraph::InitNodes() {
     chain_id7act_id_str2act_events[std::to_string(chain_id) + ":" + std::to_string(act_id)]
         .push_back(&act_event);
   }
-  for (auto node_str : chain_id7act_id_str2act_events) {
+  for (const auto& node_str : chain_id7act_id_str2act_events) {
     ChainActNode* chain_act_node = new ChainActNode(node_str.second);
     AddAllocatedNode(chain_act_node);
     for (const ActEvent* act_event : chain_act_node->act_events()) {
@@ -145,9 +134,7 @@ void ChainActGraph::InitNodes() {
       for (const auto& pair : task_proto.produced_regst_desc()) {
         int64_t regst_desc_id = pair.second.regst_desc_id();
         std::pair<int64_t, int64_t> regst_uid(regst_desc_id, act_id);
-        RegstAct* regst_act = new RegstAct;
-        regst_act->regst_desc_id = regst_desc_id;
-        regst_act->producer_act_event = act_event;
+        RegstAct* regst_act = new RegstAct(regst_desc_id, act_event);
         regst_uid2regst_act_.emplace(regst_uid, regst_act);
       }
     }
@@ -156,26 +143,25 @@ void ChainActGraph::InitNodes() {
 
 void ChainActGraph::InitEdges() {
   ForEachNode([&](ChainActNode* node) {
-    HashMap<ChainActNode*, double> producer_node2max_stop_time;
+    HashMap<ChainActNode*, double> producer2max_stop_time;
     for (const ActEvent* act_event : node->act_events()) {
       for (const auto& readable : act_event->readable_regst_infos()) {
         std::pair<int64_t, int64_t> regst_uid(readable.regst_desc_id(), readable.act_id());
         const auto& regst_act_it = regst_uid2regst_act_.find(regst_uid);
         if (regst_act_it == regst_uid2regst_act_.end()) { continue; }
-        act_event_has_consumer_.insert(regst_act_it->second->producer_act_event);
+        act_event_with_consumer_.insert(regst_act_it->second->producer_act_event);
         regst_act_it->second->consumer_act_events.push_back(act_event);
-        ChainActNode* producer_node =
-            act_event2chain_node_.at(regst_act_it->second->producer_act_event);
-        if (producer_node == node) { continue; }
-        double& max_stop_time = producer_node2max_stop_time[producer_node];
+        ChainActNode* producer = act_event2chain_node_.at(regst_act_it->second->producer_act_event);
+        if (producer == node) { continue; }
+        double& max_stop_time = producer2max_stop_time[producer];
         max_stop_time =
             std::max(max_stop_time, regst_act_it->second->producer_act_event->stop_time());
       }
     }
-    for (const auto& pair : producer_node2max_stop_time) {
-      ChainActEdge* edge = NewEdge();
+    for (const auto& pair : producer2max_stop_time) {
+      ChainActEdge* edge = new ChainActEdge(pair.second);
+      AddAllocatedEdge(edge);
       Connect(pair.first, edge, node);
-      edge->set_duration(pair.second);
     }
   });
 }
@@ -213,6 +199,15 @@ void ChainActGraph::InitRegstActProduced7LastConsumedNode() {
     }
     act_event2chain_node_.at(last_consumer_act_event)->set_last_consumed_regst_acts(regst_act);
   }
+}
+
+void ChainActGraph::TopoForEachChainActNode(
+    std::list<ChainActNode*>& starts, const std::function<void(ChainActNode*)>& Handler) const {
+  starts.sort([](const ChainActNode* lhs, const ChainActNode* rhs) {
+    return lhs->act_id() > rhs->act_id();
+  });
+  DfsTopoForEachNode(starts, &ChainActNode::ForEachNodeOnInEdge,
+                     &ChainActNode::ForEachNodeOnOutEdge, Handler);
 }
 
 void ChainActGraph::ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const {
