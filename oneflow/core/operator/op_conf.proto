@@ -214,6 +214,15 @@ message SparseSoftmaxCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message SmoothL1LossOpConf {
+  required string prediction = 1;
+  required string target = 2;
+  required string loss = 3;
+  required float sigma = 4;
+  required string inside_weights = 5;
+  required string outside_weights = 6;
+}
+
 message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -641,6 +650,7 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 404;
     AccuracyOpConf accuracy_conf=405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
+    SmoothL1LossOpConf smooth_l1_loss_conf = 407;
   }
 }
 

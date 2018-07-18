@@ -37,6 +37,10 @@ message SparseSoftmaxCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message SmoothL1LossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message SparseCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
@@ -151,5 +155,6 @@ message KernelConf {
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
     ReduceGatherKernelConf reduce_gather_conf = 350;
     AccuracyKernelConf accuracy_conf = 401;
+    SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
   }
 }
