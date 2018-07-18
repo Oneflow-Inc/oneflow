@@ -56,7 +56,7 @@ namespace oneflow{
     }
 
     template<size_t N>
-    auto make_tuple_from_sequence()->decltype(make_tuple_from_sequence(std::make_index_sequence<N>{})) {
+    constexpr auto make_tuple_from_sequence()->decltype(make_tuple_from_sequence(std::make_index_sequence<N>{})) {
         return make_tuple_from_sequence(std::make_index_sequence<N>{});
     }
 
@@ -71,7 +71,7 @@ namespace oneflow{
     } // namespace detail
 
     template <class Tuple, class F>
-    void tuple_switch(const std::size_t i, Tuple&& t, F&& f) {
+    inline void tuple_switch(const std::size_t i, Tuple&& t, F&& f) {
         constexpr auto N =
                 std::tuple_size<std::remove_reference_t<Tuple>>::value;
 

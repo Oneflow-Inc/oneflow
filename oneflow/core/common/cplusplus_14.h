@@ -33,33 +33,32 @@ typename unique_if<T>::unknown_bound make_unique(size_t n) {
 template<class T, class... Args>
 typename unique_if<T>::known_bound make_unique(Args&&...) = delete;
 
-template<typename T, T... Ints>
-struct integer_sequence {
-  static_assert(is_integral<T>::value, "");
-  using value_type = T;
-  static constexpr size_t size() { return sizeof...(Ints); }
-};
-
-template<typename T, T index, typename U, T... Ints>
-struct make_integer_sequence_impl;
-
-template<typename T, T index, T... Ints>
-struct make_integer_sequence_impl<T, index, typename enable_if<index != 0>::type, Ints...>
-    : make_integer_sequence_impl<T, index - 1, void, index, Ints...> {};
-
-template<typename T, T index, T... Ints>
-struct make_integer_sequence_impl<T, index, typename enable_if<index == 0>::type, Ints...> {
-  using type = integer_sequence<T, index, Ints...>;
-};
-
-template<typename T, T n>
-using make_integer_sequence = typename make_integer_sequence_impl<T, n - 1, void>::type;
-
 template<size_t... Ints>
-using index_sequence = integer_sequence<size_t, Ints...>;
+struct index_sequence {
+  using type = index_sequence;
+  using value_type = size_t;
+  static constexpr std::size_t size() noexcept { return sizeof...(Ints); }
+};
 
-template<size_t n>
-using make_index_sequence = make_integer_sequence<size_t, n>;
+// --------------------------------------------------------------
+
+template<class Sequence1, class Sequence2>
+struct _merge_and_renumber;
+
+template<size_t... I1, size_t... I2>
+struct _merge_and_renumber<index_sequence<I1...>, index_sequence<I2...>>
+    : index_sequence<I1..., (sizeof...(I1) + I2)...> {};
+
+// --------------------------------------------------------------
+
+template<size_t N>
+struct make_index_sequence : _merge_and_renumber<typename make_index_sequence<N / 2>::type,
+                                                 typename make_index_sequence<N - N / 2>::type> {};
+
+template<>
+struct make_index_sequence<0> : index_sequence<> {};
+template<>
+struct make_index_sequence<1> : index_sequence<0> {};
 
 template<typename... T>
 using index_sequence_for = make_index_sequence<sizeof...(T)>;
