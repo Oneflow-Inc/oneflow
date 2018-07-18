@@ -2,6 +2,7 @@
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
+
 ChainActNode::ChainActNode(std::list<ActEvent*> act_events) {
   act_events.sort(
       [](ActEvent* lhs, ActEvent* rhs) { return lhs->start_time() < rhs->start_time(); });
@@ -123,16 +124,16 @@ void ChainActGraph::InitNodes() {
     chain_id7act_id_str2act_events[std::to_string(chain_id) + ":" + std::to_string(act_id)]
         .push_back(&act_event);
   }
-  for (const auto& node_str : chain_id7act_id_str2act_events) {
-    ChainActNode* chain_act_node = new ChainActNode(node_str.second);
+  for (const auto& pair : chain_id7act_id_str2act_events) {
+    ChainActNode* chain_act_node = new ChainActNode(pair.second);
     AddAllocatedNode(chain_act_node);
     for (const ActEvent* act_event : chain_act_node->act_events()) {
       int64_t actor_id = act_event->actor_id();
       int64_t act_id = act_event->act_id();
       const TaskProto& task_proto = GetTaskProto(actor_id);
       act_event2chain_node_.emplace(act_event, chain_act_node);
-      for (const auto& pair : task_proto.produced_regst_desc()) {
-        int64_t regst_desc_id = pair.second.regst_desc_id();
+      for (const auto& produced_regst_desc : task_proto.produced_regst_desc()) {
+        int64_t regst_desc_id = produced_regst_desc.second.regst_desc_id();
         std::pair<int64_t, int64_t> regst_uid(regst_desc_id, act_id);
         RegstAct* regst_act = new RegstAct(regst_desc_id, act_event);
         regst_uid2regst_act_.emplace(regst_uid, regst_act);
