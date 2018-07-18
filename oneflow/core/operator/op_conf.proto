@@ -613,7 +613,6 @@ message ProposalTargetOpConf
 }
 
 
-
 message RoIPoolingOpConf {
   required string in = 1;
   required string rois = 2;
@@ -680,8 +679,7 @@ message OperatorConf {
     AccuracyPrintOpConf accuracy_print_conf = 406;
     ProposalTargetOpConf proposal_target_conf=410;
     RoIPoolingOpConf roi_pooling_conf = 407;
-
- }
+  }
 }
 
 message OpNameSet {
