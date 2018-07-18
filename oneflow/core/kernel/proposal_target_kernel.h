@@ -4,8 +4,8 @@
 #include "oneflow/core/kernel/kernel.h"
 
 namespace oneflow {
-template<DeviceType device_type, typename T>
-class ProposalTargetKernel final : public KernelIf<device_type> {
+template<typename T>
+class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ProposalTargetKernel);
   ProposalTargetKernel() = default;

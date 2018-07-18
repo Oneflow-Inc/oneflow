@@ -4,14 +4,14 @@ namespace oneflow {
 
 void ProposalTargetOp::InitFromOpConf() {
   CHECK(op_conf().has_proposal_target_conf());
-  EnrollInputBn("rpn_rois");
-  EnrollInputBn("gt_boxes");
+  EnrollInputBn("rpn_rois", false);
+  EnrollInputBn("gt_boxes", false);
 
-  EnrollOutputBn("rois");
-  EnrollOutputBn("labels");
-  EnrollOutputBn("bbox_targets");
-  EnrollOutputBn("bbox_inside_weights");
-  EnrollOutputBn("bbox_outside_weights");
+  EnrollOutputBn("rois", false);
+  EnrollOutputBn("labels", false);
+  EnrollOutputBn("bbox_targets", false);
+  EnrollOutputBn("bbox_inside_weights", false);
+  EnrollOutputBn("bbox_outside_weights", false);
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -38,9 +38,9 @@ void ProposalTargetOp::InferBlobDescs(
       GetBlobDesc4BnInOp("bbox_inside_weights");                                //(n,roi_sample,4);
   BlobDesc* outside_weights_desc = GetBlobDesc4BnInOp("bbox_outside_weights");  //(n,roi_sample,4);
 
-  int32_t roi_batch_size = conf.roi_batch_size();
-  rois_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), roi_batch_size, 4});
-  labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), roi_batch_size, 1});
+  int32_t num_roi_per_image = conf.num_roi_per_image();
+  rois_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 4});
+  labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 1});
   target_blob_desc->mut_shape() = Shape(rois_blob_desc->shape());
   inside_weights_blob_desc->mut_shape() = Shape(rois_blob_desc->shape());
   outside_weights_desc->mut_shape() = Shape(rois_blob_desc->shape());
