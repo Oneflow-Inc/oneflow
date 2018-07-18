@@ -588,11 +588,11 @@ message AccuracyOpConf {
 }
 
 message ProposalOpConf {
-  required string cls_prob = 1;
+  required string class_prob = 1;
   required string bbox_pred = 2;
   required string rois = 3;
   required string scores = 4;
-  required int32 feature_stride = 5;
+  required int32 feature_map_stride = 5;
   repeated float aspect_ratios = 6;
   repeated int32 anchor_scales = 7;
   optional int32 pre_nms_top_n = 8 [default = 12000]; 
