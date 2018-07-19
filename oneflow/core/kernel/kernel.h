@@ -28,6 +28,7 @@ class Kernel {
 
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
   const OperatorConf& op_conf() const { return op_attribute().op_conf(); }
+  const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
  protected:
   Kernel() = default;
@@ -36,7 +37,6 @@ class Kernel {
   }
   virtual void VirtualKernelInit(const ParallelContext*) {}
   const KernelConf& kernel_conf() const { return kernel_conf_; }
-  const OpAttribute& op_attribute() const { return kernel_conf().op_attribute(); }
 
   virtual void InitConstBufBlobs(DeviceCtx* ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
