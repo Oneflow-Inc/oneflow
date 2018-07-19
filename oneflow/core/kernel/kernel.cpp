@@ -52,7 +52,13 @@ void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
-  if (this->GetActivationType() != ActivationType::kNone) { ForwardActivation(ctx, BnInOp2Blob); }
+  if (this->GetActivationType() != ActivationType::kNone) {
+    const PbRpf<std::string> obns = this->op_attribute().output_bns();
+    CHECK_EQ(obns.size(), 1);
+
+    Blob* out_blob = BnInOp2Blob(obns[0]);
+    PostForwardActivation(ctx, out_blob);
+  }
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
 }
 

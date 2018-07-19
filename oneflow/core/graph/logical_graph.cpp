@@ -362,9 +362,7 @@ void LogicalGraph::CollectBackwardB121CloneInfos(
     HashMap<LogicalNode*, LogicalNode*>* bw_add_node2pre_node) {
   ForEachNode([&](LogicalNode* cur_node) {
     if (cur_node->GetAreaId() != kDataBackwardArea) { return; }
-    CHECK_EQ(cur_node->op_vec().size(), 1);
     if (!cur_node->SoleOp()->op_conf().has_add_conf()) { return; }
-    CHECK_EQ(cur_node->in_edges().size(), 1);
     auto pre_node = cur_node->SoleInEdge()->src_node();
     if (pre_node->GetAreaId() != kDataBackwardArea) { return; }  // excludes the loss node
     bool has_boxing_out_edge = false;
