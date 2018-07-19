@@ -66,6 +66,18 @@ class JobDesc final {
   float L2() const;
   int32_t DataPartNum() const;
 
+  int32_t base_id_of_gpu() const { return 0; }
+
+  int32_t base_id_of_cpu_compute() const { return 128; }
+
+  int32_t base_id_of_record_load() const { return 256; }
+
+  int32_t base_id_of_loss_print() const { return 384; }
+
+  int32_t base_id_of_mdsave() const { return 512; }
+
+  int32_t base_id_of_comm_net() const { return 640; }
+
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
