@@ -589,10 +589,10 @@ message AccuracyOpConf {
 
 message BboxWeightConf
 {
-  optional float weight_x=1 [default = 1.0];
-  optional float weight_y=2 [default = 1.0];
-  optional float weight_w=3 [default = 1.0];
-  optional float weight_h=4 [default = 1.0];
+  required float weight_x=1 [default = 1.0];
+  required float weight_y=2 [default = 1.0];
+  required float weight_w=3 [default = 1.0];
+  required float weight_h=4 [default = 1.0];
 }
 
 message ProposalTargetOpConf
@@ -605,10 +605,9 @@ message ProposalTargetOpConf
   required string bbox_inside_weights = 6;
   required string bbox_outside_weights = 7;
 
-  optional int32 num_roi_per_image = 8 [default = 256];
-  optional float fg_fraction = 9 [default = 0.5];
-  optional BboxWeightConf bbox_inside_weight_conf=10;
-  optional BboxWeightConf bbox_outside_weight_conf=11;
+  required int32 num_roi_per_image = 8 [default = 256];
+  required float fg_fraction = 9 [default = 0.5];
+  required BboxWeightConf bbox_inside_weight_conf=10;
 
 }
 
