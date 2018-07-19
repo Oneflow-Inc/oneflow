@@ -495,8 +495,8 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
-  auto act_events = std::make_unique<std::list<ActEvent>>();
-  ParseActEvents(act_event_filepath, act_events.get());
+  std::list<std::unique_ptr<ActEvent>> act_events;
+  ParseActEvents(act_event_filepath, &act_events);
   ChainActGraph act_graph(naive_plan, std::move(act_events));
   auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
   auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
