@@ -33,6 +33,7 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
   CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
   piece_size_in_one_loader_ = global_piece_size / parallel_ctx->parallel_num();
+  loaded_cnt_ = 0;
 }
 
 void RecordLoadKernel::Forward(const KernelCtx& ctx,
@@ -40,7 +41,10 @@ void RecordLoadKernel::Forward(const KernelCtx& ctx,
   auto status = static_cast<RecordLoadStatus*>(ctx.other);
   Blob* out_blob = BnInOp2Blob("out");
   RecordBlob<OFRecord> record_blob(out_blob);
-  record_blob.ReadFrom(in_stream_.get());
+  if (!Global<JobDesc>::Get()->use_synthetic_data() || loaded_cnt_ < 2) {
+    record_blob.ReadFrom(in_stream_.get());
+    ++loaded_cnt_;
+  }
   status->record_num = record_blob.record_num();
   if (status->record_num < piece_size_in_one_loader_) { status->is_eof = true; }
 }
