@@ -15,8 +15,11 @@ inline double Duration4ActEvent(const ActEvent& act_event) {
 class ChainActNode;
 
 struct RegstAct {
-  RegstAct(int64_t input_regst_desc_id, const ActEvent* input_producer_act_event)
-      : regst_desc_id(input_regst_desc_id), producer_act_event(input_producer_act_event) {}
+  RegstAct(int64_t in_regst_desc_id, const ActEvent* in_producer_act_event,
+           std::list<const ActEvent*> in_consumer_act_events)
+      : regst_desc_id(in_regst_desc_id),
+        producer_act_event(in_producer_act_event),
+        consumer_act_events(in_consumer_act_events) {}
 
   int64_t regst_desc_id;
   const ActEvent* producer_act_event;
@@ -25,7 +28,10 @@ struct RegstAct {
 };
 
 struct RegstActCtx {
-  RegstActCtx(const RegstAct* input_regst_act) : regst_act(input_regst_act) {}
+  RegstActCtx(const RegstAct* input_regst_act, const ChainActNode* producer)
+      : regst_act(input_regst_act) {
+    node2duration_to_producer[producer] = 0;
+  }
 
   const RegstAct* regst_act;
   HashMap<const ChainActNode*, double> node2duration_to_producer;
@@ -52,20 +58,17 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
 
   // Getters
   int64_t act_id() const { return act_events_.front()->act_id(); }
-  int64_t topo_order_value() const { return topo_order_value_; }
   std::list<const ActEvent*> act_events() const { return act_events_; }
-  std::list<const RegstAct*> produced_regst_acts() const { return produced_regst_acts_; }
-  std::list<const RegstAct*> last_consumed_regst_acts() const { return last_consumed_regst_acts_; }
+  std::list<const RegstAct*> ProducedRegstActs() const { return produced_regst_acts_; }
+  std::list<const RegstAct*> LastConsumedRegstActs() const { return last_consumed_regst_acts_; }
 
   // Setters
-  void set_topo_order_value(int64_t topo_order_value) { topo_order_value_ = topo_order_value; }
-  void set_produced_regst_acts(RegstAct* regst_act) { produced_regst_acts_.push_back(regst_act); }
-  void set_last_consumed_regst_acts(RegstAct* regst_act) {
+  void AddProducedRegstActs(RegstAct* regst_act) { produced_regst_acts_.push_back(regst_act); }
+  void AddLastConsumedRegstActs(RegstAct* regst_act) {
     last_consumed_regst_acts_.push_back(regst_act);
   }
 
  private:
-  int64_t topo_order_value_;
   std::list<const ActEvent*> act_events_;
   std::list<const RegstAct*> produced_regst_acts_;
   std::list<const RegstAct*> last_consumed_regst_acts_;
@@ -97,31 +100,35 @@ class ChainActGraph final : public Graph<ChainActNode, ChainActEdge> {
     return act_event2chain_node_.at(act_event);
   }
 
-  void InitNodes();
-  void InitEdges();
-  void InitTopoOrderValue();
+  void InitNodes(
+      HashMap<std::pair<int64_t, int64_t>, const ActEvent*>* regst_uid2producer_act_event);
+  void InitEdges(
+      const HashMap<std::pair<int64_t, int64_t>, const ActEvent*>& regst_uid2producer_act_event,
+      HashMap<std::pair<int64_t, int64_t>, std::list<const ActEvent*>>*
+          regst_uid2consumer_act_events);
+  void InitRegstActs7NodeProducedAndLastConsumedRegstActs(
+      const HashMap<std::pair<int64_t, int64_t>, const ActEvent*>& regst_uid2producer_act_event,
+      const HashMap<std::pair<int64_t, int64_t>, std::list<const ActEvent*>>&
+          regst_uid2consumer_act_events);
   void InitTaskId2TaskProto();
-  void InitRegstActProduced7LastConsumedNode();
   void ForEachInEdge(const ChainActNode* node,
                      const std::function<void(const ChainActEdge*)>& Handler) const;
   void ForEachOutEdge(const ChainActNode* node,
                       const std::function<void(const ChainActEdge*)>& Handler) const;
-  void TopoForEachChainActNode(std::list<ChainActNode*>& starts,
-                               const std::function<void(ChainActNode*)>& Handler) const;
+  void TopoForEachChainActNode(const std::function<void(ChainActNode*)>& Handler) const;
   void ForEachRegstActConsumerPathDuration(
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
-  void ForEachRegstActNodePathDuration(RegstActCtx* regst_act_ctx, const ChainActNode* node) const;
+  void CalcRegstActNodePathDuration(std::shared_ptr<RegstActCtx> regst_act_ctx,
+                                    const ChainActNode* node) const;
   void ForEachConsumerPathDuration(
-      RegstActCtx* regst_act_ctx,
+      std::shared_ptr<RegstActCtx> regst_act_ctx,
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
 
   const Plan* plan_;
   std::unique_ptr<std::list<ActEvent>> act_events_;
-  std::vector<const ChainActNode*> topo_nodes_;
   HashMap<int64_t, const TaskProto*> task_id2task_proto_;
   HashSet<const ActEvent*> act_event_with_consumer_;
   HashMap<const ActEvent*, ChainActNode*> act_event2chain_node_;
-  HashMap<std::pair<int64_t, int64_t>, RegstAct*> regst_uid2regst_act_;
 };
 
 }  // namespace oneflow
