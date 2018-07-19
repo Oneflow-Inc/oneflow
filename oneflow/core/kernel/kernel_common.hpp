@@ -20,7 +20,7 @@ namespace oneflow{
     }
 
     template<bool in, DeviceType device_type, typename T, typename U>
-    struct KernelFunction {
+    struct AdditionAssignFunction {
         template<typename V>
         void operator()(V v) {
             AdditionAssignImpl(std::make_index_sequence<decltype(v)::value>());

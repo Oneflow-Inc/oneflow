@@ -25,7 +25,7 @@ void AddKernel<device_type, T>::ForwardDataContent(
 
   if (in_num - offset > 0) {
     tuple_switch(in_num - offset, tp_,
-                 KernelFunction<true, device_type, T, decltype(this)>{
+                 AdditionAssignFunction<true, device_type, T, decltype(this)>{
                      out_blob, std::move(BnInOp2Blob), ctx.device_ctx, offset, this});
   }
 }

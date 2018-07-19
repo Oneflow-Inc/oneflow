@@ -38,7 +38,7 @@ void CloneKernel<device_type, T>::BackwardDataContent(
 
   if (out_num - offset > 0) {
     tuple_switch(out_num - offset, tp_,
-                 KernelFunction<false, device_type, T, decltype(this)>{
+                 AdditionAssignFunction<false, device_type, T, decltype(this)>{
                      in_diff_blob, std::move(BnInOp2Blob), ctx.device_ctx, offset, this});
   }
 }
