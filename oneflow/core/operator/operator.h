@@ -32,7 +32,6 @@ class Operator {
 
   virtual bool NeedOutWhenBackward() const { return true; }
   bool NeedDoActivation() const;
-  void SetActivation(const ActivationType& activation);
   void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
 
   virtual LogicalNode* NewProperLogicalNode();

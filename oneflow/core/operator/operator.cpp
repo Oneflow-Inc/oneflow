@@ -131,12 +131,6 @@ bool Operator::NeedDoActivation() const {
   return false;
 }
 
-void Operator::SetActivation(const ActivationType& activation) {
-  if (HasFieldInCustomizedConf("activation")) {
-    SetValInCustomizedConf("activation", static_cast<int16_t>(activation));
-  }
-}
-
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {

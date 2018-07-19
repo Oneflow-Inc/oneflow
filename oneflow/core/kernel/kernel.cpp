@@ -36,6 +36,14 @@ void Kernel::Launch(const KernelCtx& ctx,
   }
 }
 
+ActivationType Kernel::GetActivationType() const {
+  if (HasFieldInCustomizedOpConf("activation")) {
+    return static_cast<ActivationType>(GetEnumFromCustomizedOpConf("activation"));
+  } else {
+    return ActivationType::kNone;
+  }
+}
+
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
@@ -44,7 +52,7 @@ void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
-  ForwardActivation(ctx, BnInOp2Blob);
+  if (this->GetActivationType() != ActivationType::kNone) { ForwardActivation(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
 }
 
@@ -79,6 +87,36 @@ void ActivationBackward(ActivationType activation_type, DeviceCtx* device_ctx, i
     DEFINE_ONE_CASE(Sigmoid);
     DEFINE_ONE_CASE(Relu);
 #undef DEFINE_ONE_CASE
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type, typename T>
+void ActivationForward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
+                       const T* x, T* y) {
+  switch (activation_type) {
+#define DEFINE_ONE_CASE(activation)                                     \
+  case ActivationType::k##activation:                                   \
+    KernelUtil<device_type, T>::activation(device_ctx, elem_cnt, x, y); \
+    break;
+    DEFINE_ONE_CASE(TanH);
+    DEFINE_ONE_CASE(Sigmoid);
+    DEFINE_ONE_CASE(Relu);
+#undef DEFINE_ONE_CASE
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::PostForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {
+  int64_t elem_cnt = out_blob->shape().elem_cnt();
+  switch (out_blob->data_type()) {
+#define FORWARD_ACTIVATION_ENTRY(T, type_proto)                                            \
+  case type_proto:                                                                         \
+    ActivationForward<device_type, T>(this->GetActivationType(), ctx.device_ctx, elem_cnt, \
+                                      out_blob->dptr<T>(), out_blob->mut_dptr<T>());       \
+    break;
+    OF_PP_FOR_EACH_TUPLE(FORWARD_ACTIVATION_ENTRY, FLOATING_DATA_TYPE_SEQ);
     default: UNIMPLEMENTED();
   }
 }
@@ -175,40 +213,6 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
   }
 }
 
-template<DeviceType device_type, typename T>
-ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
-  if (this->kernel_conf().backward_activation() == ActivationType::kNone) {
-    return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
-  } else {
-    return ActivationType::kNone;
-  }
-}
-
-template<DeviceType device_type, typename T>
-void KernelIfWithActivation<device_type, T>::ForwardActivation(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const PbRpf<std::string> obns = this->op_attribute().output_bns();
-  CHECK_EQ(obns.size(), 1);
-  Blob* out_blob = BnInOp2Blob(obns[0]);
-  ActivationType activation = GetActivationType();
-  if (activation != ActivationType::kNone) {
-    T* out_dptr = out_blob->mut_dptr<T>();
-    int64_t elem_cnt = out_blob->shape().elem_cnt();
-
-    switch (activation) {
-#define DEFINE_ONE_CASE(activation_type)                                                       \
-  case ActivationType::k##activation_type:                                                     \
-    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, out_dptr, out_dptr); \
-    break;
-      DEFINE_ONE_CASE(TanH)
-      DEFINE_ONE_CASE(Sigmoid)
-      DEFINE_ONE_CASE(Relu)
-#undef DEFINE_ONE_CASE
-      default: UNIMPLEMENTED();
-    }
-  }
-}
-
 std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ctx,
                                               const KernelConf& conf, DeviceCtx* device_ctx) {
   Kernel* rptr = NewObj<Kernel>(conf.op_attribute().op_conf().op_type_case(), conf);
@@ -220,9 +224,8 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ct
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
-#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair)                \
-  template class KernelIfWithModel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
-  template class KernelIfWithActivation<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair) \
+  template class KernelIfWithModel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);
