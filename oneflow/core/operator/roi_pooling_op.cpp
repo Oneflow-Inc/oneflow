@@ -11,7 +11,7 @@ void RoIPoolingOp::InitFromOpConf() {
 
 const PbMessage& RoIPoolingOp::GetCustomizedConf() const { return op_conf().roi_pooling_conf(); }
 
-void RoIPoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
+void RoIPoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
