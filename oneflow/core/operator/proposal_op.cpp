@@ -7,9 +7,11 @@ void ProposalOp::InitFromOpConf() {
   CHECK(op_conf().has_proposal_conf());
   EnrollInputBn("class_prob", false);
   EnrollInputBn("bbox_pred", false);
+  EnrollInputBn("image_info", false);
   EnrollOutputBn("rois", false);
   EnrollOutputBn("scores", false);
   EnrollConstBufBn("anchors");
+  EnrollDataTmpBn("fg_scores");
   EnrollDataTmpBn("proposals");
 }
 
@@ -33,8 +35,10 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
   const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
   const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
+  const BlobDesc* im_info_blob_desc = GetBlobDesc4BnInOp("image_info");
   // bactch
   CHECK_EQ(cls_prob_blob_desc->shape().At(0), bbox_pred_blob_desc->shape().At(0));
+  CHECK_EQ(cls_prob_blob_desc->shape().At(0), im_info_blob_desc->shape().At(0));
   // H
   CHECK_EQ(cls_prob_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(1));
   // W
@@ -43,6 +47,8 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK_EQ(cls_prob_blob_desc->shape().At(3), 2 * num_of_anchors);
   // proposal 4 * 9
   CHECK_EQ(bbox_pred_blob_desc->shape().At(3), 4 * num_of_anchors);
+  // im_info (n, (origin_height, origin_width, scale))
+  CHECK_EQ(im_info_blob_desc->shape().At(1), 3);
 
   // anchors
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
@@ -56,10 +62,15 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
   // scores
   BlobDesc* scores_blob_desc = GetBlobDesc4BnInOp("scores");
-  scores_blob_desc->mut_shape() =
-      Shape({cls_prob_blob_desc->shape().At(0),
-             cls_prob_blob_desc->shape().Count(1, 3) * post_nms_top_n, 1});
+  scores_blob_desc->mut_shape() = Shape({cls_prob_blob_desc->shape().At(0), post_nms_top_n, 1});
   rois_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
+
+  // fg_prob
+  BlobDesc* fg_prob_blob_desc = GetBlobDesc4BnInOp("fg_scores");
+  fg_prob_blob_desc->mut_shape() =
+      Shape({cls_prob_blob_desc->shape().At(0),
+             cls_prob_blob_desc->shape().Count(1, 3) * num_of_anchors, 1});
+  fg_prob_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
 
   // proposals
   *GetBlobDesc4BnInOp("proposals") = *bbox_pred_blob_desc;

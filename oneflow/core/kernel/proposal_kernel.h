@@ -19,6 +19,18 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 };
 
+template<DeviceType device_type, typename T>
+class ProposalKernelUtil final {
+ public:
+  static void TakeFgScores(DeviceCtx* ctx, int64_t m, int64_t a, const T* class_prob, T* fg_scores);
+  static void ClipBoxes(DeviceCtx* ctx, int64_t n, int64_t m, const float* im_info, T* proposals);
+  static std::vector<int64_t> FilterBoxesByMinSize(DeviceCtx* ctx, int64_t n, int64_t m,
+                                                   int32_t min_size, const float* im_info,
+                                                   T* proposals);
+  static void SortByScore(DeviceCtx* ctx, int64_t n, int64_t m, std::vector<int64_t> keep_to,
+                          T* fg_score, T* proposals);
+};
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_PROPOSAL_KERNEL_H_
