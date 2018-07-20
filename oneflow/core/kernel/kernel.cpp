@@ -36,14 +36,6 @@ void Kernel::Launch(const KernelCtx& ctx,
   }
 }
 
-ActivationType Kernel::GetActivationType() const {
-  if (HasFieldInCustomizedOpConf("activation")) {
-    return static_cast<ActivationType>(GetEnumFromCustomizedOpConf("activation"));
-  } else {
-    return ActivationType::kNone;
-  }
-}
-
 const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
   return op_attribute().bn_in_op2lbi().at(bn_in_op);
 }
@@ -51,7 +43,7 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   ForwardDataContent(ctx, BnInOp2Blob);
-  if (this->GetActivationType() != ActivationType::kNone) {
+  if (this->GetForwardActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
     CHECK_EQ(obns.size(), 1);
 
@@ -117,10 +109,10 @@ template<DeviceType device_type>
 void KernelIf<device_type>::PostForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {
   int64_t elem_cnt = out_blob->shape().elem_cnt();
   switch (out_blob->data_type()) {
-#define FORWARD_ACTIVATION_ENTRY(T, type_proto)                                            \
-  case type_proto:                                                                         \
-    ActivationForward<device_type, T>(this->GetActivationType(), ctx.device_ctx, elem_cnt, \
-                                      out_blob->dptr<T>(), out_blob->mut_dptr<T>());       \
+#define FORWARD_ACTIVATION_ENTRY(T, type_proto)                                                   \
+  case type_proto:                                                                                \
+    ActivationForward<device_type, T>(this->GetForwardActivationType(), ctx.device_ctx, elem_cnt, \
+                                      out_blob->dptr<T>(), out_blob->mut_dptr<T>());              \
     break;
     OF_PP_FOR_EACH_TUPLE(FORWARD_ACTIVATION_ENTRY, FLOATING_DATA_TYPE_SEQ);
     default: UNIMPLEMENTED();

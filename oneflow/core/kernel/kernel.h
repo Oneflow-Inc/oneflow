@@ -47,7 +47,7 @@ class Kernel {
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
-  ActivationType GetActivationType() const;
+  ActivationType GetForwardActivationType() const { return kernel_conf().forward_activation(); }
   ActivationType GetBackwardActivationType() const { return kernel_conf().backward_activation(); }
 
   virtual void Forward(const KernelCtx& ctx,
@@ -100,9 +100,6 @@ class Kernel {
   DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF(KernelConf);
 
 #undef DEFINE_GET_VAL_FROM_CUSTOMIZED_CONF
-  bool HasFieldInCustomizedOpConf(const std::string& field_name) const {
-    return HasFieldInPbMessage(GetCustomizedOpConf(), field_name);
-  }
 
  private:
   bool HasModelBns() const;

@@ -386,7 +386,7 @@ void LogicalGraph::RemoveOneBackwardAdd(
   }
   static_cast<BackwardLogicalNode*>(bw_add_node)->fw_node()->SetBwNode(nullptr);
   DeleteNode(bw_add_node);
-  // TODO: delete add_in_edge
+  // TODO: delete add_in_edge ant related edge2ibn, edge2obn
 }
 
 void LogicalGraph::MergeEdge() {

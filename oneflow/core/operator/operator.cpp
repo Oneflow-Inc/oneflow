@@ -156,6 +156,12 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
 
+  if (HasFieldInCustomizedConf("activation")) {
+    kernel_conf->set_forward_activation(
+        static_cast<ActivationType>(GetEnumFromCustomizedConf("activation")));
+  } else {
+    kernel_conf->set_forward_activation(ActivationType::kNone);
+  }
   kernel_conf->set_backward_activation(backward_activation_);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
