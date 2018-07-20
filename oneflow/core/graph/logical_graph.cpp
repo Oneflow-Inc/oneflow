@@ -289,19 +289,17 @@ void LogicalGraph::AddBackwardClone() {
 }
 
 void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
-  HashMap<LogicalBlobId, std::string> lbi2obn;
   OperatorConf clone_op_conf;
   clone_op_conf.set_name("bw_clone_" + NewUniqueId());
   clone_op_conf.set_device_type(clone_info.succ_node->SoleOp()->device_type());
   clone_op_conf.mutable_clone_conf()->set_out_num(clone_info.edges.size());
   std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
-  *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
-  // TODO: ibn -> lbi
-
   LogicalNode* clone_node = NewNode<NormalBackwardLogicalNode>();
   clone_node->mut_op_vec() = {clone_op};
   clone_node->mut_parallel_desc() = clone_info.succ_node->parallel_desc();
 
+  // TODO: ibn -> lbi
+  *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
   LogicalEdge* clone_in_diff_edge = NewEdge();
   clone_in_diff_edge->mut_lbis() = {clone_info.lbi};
   Connect(clone_node, clone_in_diff_edge, clone_info.succ_node);
@@ -380,7 +378,6 @@ void LogicalGraph::RemoveOneBackwardAdd(
   HashSet<LogicalEdge*> out_edges = bw_add_node->out_edges();
   for (LogicalEdge* edge : out_edges) {
     auto dst_node = edge->dst_node();
-    auto old_lbi = edge->SoleLbi();
     DisConnect(edge);
     Connect(pre_node, edge, dst_node);
     edge->mut_lbis() = {lbi};
