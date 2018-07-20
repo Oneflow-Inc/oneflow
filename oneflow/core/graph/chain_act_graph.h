@@ -123,8 +123,7 @@ class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge>
   void TopoForEachChainActNode(const std::function<void(const ChainActNode*)>& Handler) const;
   void ForEachRegstActConsumerPathDuration(
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
-  void CalcRegstActNodePathDuration(std::shared_ptr<RegstActCtx> regst_act_ctx,
-                                    const ChainActNode* node) const;
+  void CalcRegstActNodePathDuration(RegstActCtx* regst_act_ctx, const ChainActNode* node) const;
 
   const Plan* plan_;
   HashMap<int64_t, const TaskProto*> task_id2task_proto_;

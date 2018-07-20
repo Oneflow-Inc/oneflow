@@ -88,13 +88,13 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
     for (auto& regst_act_ctx : regst_act_ctx_window) {
       const auto& fake_producer_outs = regst_act_ctx->regst_act->fake_producer_outs;
       if (fake_producer_outs.find(cur_node) != fake_producer_outs.end()) { continue; }
-      CalcRegstActNodePathDuration(regst_act_ctx, cur_node);
+      CalcRegstActNodePathDuration(regst_act_ctx.get(), cur_node);
     }
     cur_node->ForEachProducedRegstAct([&](const RegstAct* regst_act) {
-      const ChainActNode* producer = Node4ActEvent(regst_act->producer_act_event);
+      const ChainActNode* producer = cur_node;
       std::shared_ptr<RegstActCtx> regst_act_ctx(new RegstActCtx(regst_act, producer));
-      regst_act_ctx_window.insert(regst_act_ctx);
-      regst_act2regst_act_ctx[regst_act] = regst_act_ctx;
+      regst_act_ctx_window.emplace(regst_act_ctx);
+      CHECK(regst_act2regst_act_ctx.emplace(regst_act, regst_act_ctx).second);
     });
     cur_node->ForEachLastConsumedRegstAct([&](const RegstAct* regst_act) {
       for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
@@ -109,7 +109,7 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
   });
 }
 
-void ChainActGraph::CalcRegstActNodePathDuration(std::shared_ptr<RegstActCtx> regst_act_ctx,
+void ChainActGraph::CalcRegstActNodePathDuration(RegstActCtx* regst_act_ctx,
                                                  const ChainActNode* node) const {
   double duration = 0;
   ForEachInEdge(node, [&](const ChainActEdge* in_edge) {
