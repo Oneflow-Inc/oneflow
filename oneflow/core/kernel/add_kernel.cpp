@@ -1,18 +1,32 @@
 #include "oneflow/core/kernel/add_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/kernel_common.hpp"
+
 namespace oneflow {
 
 template<DeviceType device_type, typename T>
 void AddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  Blob* out_blob = BnInOp2Blob("out");
-  const Blob* in_blob_0 = BnInOp2Blob(this->op_attribute().input_bns(0));
-  out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob_0);
-  const int64_t elem_cnt = out_blob->shape().elem_cnt();
-  FOR_RANGE(size_t, i, 1, this->op_attribute().input_bns().size()) {
-    const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(i));
-    KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, OneVal<T>::value, in_blob->dptr<T>(),
-                                     1, out_blob->mut_dptr<T>(), 1);
+  const PbRpf<std::string>& ibns = this->op_attribute().input_bns();
+  size_t in_num = ibns.size();
+  if (in_num == 0) return;
+  Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(0));
+  Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), 0,
+                      out_blob->ByteSizeOfDataContentField());
+  auto in_blob = [&](int32_t idx) { return BnInOp2Blob(this->op_attribute().input_bns(idx)); };
+  int32_t offset = 0;
+  while (in_num - offset >= 10) {
+    AdditionAssign<device_type, T>(ctx.device_ctx, out_blob, in_blob(offset), in_blob(offset + 1),
+                                   in_blob(offset + 2), in_blob(offset + 3), in_blob(offset + 4),
+                                   in_blob(offset + 5), in_blob(offset + 6), in_blob(offset + 7),
+                                   in_blob(offset + 8), in_blob(offset + 9));
+    offset += 10;
+  }
+
+  if (in_num - offset > 0) {
+    tuple_switch(in_num - offset, tp_,
+                 AdditionAssignFunction<true, device_type, T, decltype(this)>{
+                     out_blob, std::move(BnInOp2Blob), ctx.device_ctx, offset, this});
   }
 }
 

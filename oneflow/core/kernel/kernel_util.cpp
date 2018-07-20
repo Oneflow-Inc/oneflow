@@ -13,8 +13,7 @@ void RngUniform(const int64_t elem_cnt, const T min, const T max, uint32_t rando
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_real_distribution<T> random_distribution(
-      min, std::nextafter(max, std::numeric_limits<T>::max()));
+  std::uniform_real_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -25,8 +24,7 @@ void RngIntUniform(const int64_t elem_cnt, const T min, const T max, uint32_t ra
   CHECK(dptr);
   CHECK_LE(min, max);
   std::mt19937 generator(random_seed);
-  std::uniform_int_distribution<T> random_distribution(
-      min, std::nextafter(max, std::numeric_limits<T>::max()));
+  std::uniform_int_distribution<T> random_distribution(min, std::nextafter(max, MaxVal<T>()));
   for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = random_distribution(generator); }
 }
 
@@ -351,6 +349,63 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, con
                                 const T* dy, T* dx) {
   T zero = ZeroVal<T>::value;
   for (int64_t i = 0; i != n; ++i) { dx[i] = (y[i] > zero) * dy[i]; }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
+  for (int64_t i = 0; i != n; ++i) { out[i] += in_0[i]; }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1) {
+  for (int64_t i = 0; i != n; ++i) { out[i] += in_0[i] + in_1[i]; }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2) {
+  for (int64_t i = 0; i != n; ++i) { out[i] += in_0[i] + in_1[i] + in_2[i]; }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3) {
+  for (int64_t i = 0; i != n; ++i) { out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4) {
+  for (int64_t i = 0; i != n; ++i) { out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
+                                  const T* in_5) {
+  for (int64_t i = 0; i != n; ++i) {
+    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i];
+  }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
+                                  const T* in_5, const T* in_6) {
+  for (int64_t i = 0; i != n; ++i) {
+    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i];
+  }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
+                                  const T* in_5, const T* in_6, const T* in_7) {
+  for (int64_t i = 0; i != n; ++i) {
+    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i];
+  }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
+                                  const T* in_5, const T* in_6, const T* in_7, const T* in_8) {
+  for (int64_t i = 0; i != n; ++i) {
+    out[i] +=
+        in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i] + in_8[i];
+  }
+}
+KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
+                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
+                                  const T* in_5, const T* in_6, const T* in_7, const T* in_8,
+                                  const T* in_9) {
+  for (int64_t i = 0; i != n; ++i) {
+    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i]
+              + in_8[i] + in_9[i];
+  }
 }
 
 KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,

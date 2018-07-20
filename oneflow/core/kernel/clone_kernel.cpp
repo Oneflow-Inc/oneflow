@@ -1,4 +1,6 @@
 #include "oneflow/core/kernel/clone_kernel.h"
+#include "oneflow/core/common/meta_util.hpp"
+#include "oneflow/core/kernel/kernel_common.hpp"
 
 namespace oneflow {
 
@@ -14,44 +16,32 @@ void CloneKernel<device_type, T>::Forward(
 }
 
 template<DeviceType device_type, typename T>
-struct CloneKernelUtil {
-  // b += a
-  static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b);
-};
-
-template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const PbRpf<std::string>& odbns = this->op_attribute().output_diff_bns();
-  if (odbns.size() == 0) return;
+  size_t out_num = odbns.size();
+  if (out_num == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
-  const Blob* out_diff_blob_0 = BnInOp2Blob(odbns[0]);
-  Memcpy<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr(), out_diff_blob_0->dptr(),
-                      out_diff_blob_0->ByteSizeOfDataContentField());
-  for (size_t i = 1; i != odbns.size(); ++i) {
-    const Blob* out_diff_blob = BnInOp2Blob(odbns[i]);
-    CloneKernelUtil<device_type, T>::AdditionAssign(ctx.device_ctx, out_diff_blob, in_diff_blob);
+  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
+                      in_diff_blob->ByteSizeOfDataContentField());
+  auto out_diff = [&](int32_t idx) {
+    return BnInOp2Blob(this->op_attribute().output_diff_bns(idx));
+  };
+  int32_t offset = 0;
+  while (out_num - offset >= 10) {
+    AdditionAssign<device_type, T>(
+        ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1), out_diff(offset + 2),
+        out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5), out_diff(offset + 6),
+        out_diff(offset + 7), out_diff(offset + 8), out_diff(offset + 9));
+    offset += 10;
+  }
+
+  if (out_num - offset > 0) {
+    tuple_switch(out_num - offset, tp_,
+                 AdditionAssignFunction<false, device_type, T, decltype(this)>{
+                     in_diff_blob, std::move(BnInOp2Blob), ctx.device_ctx, offset, this});
   }
 }
-
-#define DEFINE_FLOATING_CLONE_KERNEL_UTIL(type_cpp, type_proto)                                    \
-  template<DeviceType device_type>                                                                 \
-  struct CloneKernelUtil<device_type, type_cpp> {                                                  \
-    static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b) {                    \
-      KernelUtil<device_type, type_cpp>::Axpy(device_ctx, a->shape().elem_cnt(), 1.0,              \
-                                              a->dptr<type_cpp>(), 1, b->mut_dptr<type_cpp>(), 1); \
-    }                                                                                              \
-  };
-
-OF_PP_FOR_EACH_TUPLE(DEFINE_FLOATING_CLONE_KERNEL_UTIL, FLOATING_DATA_TYPE_SEQ)
-
-#define DEFINE_NONFLOAT_CLONE_KERNEL_UTIL(type_cpp, type_proto)                                    \
-  template<DeviceType device_type>                                                                 \
-  struct CloneKernelUtil<device_type, type_cpp> {                                                  \
-    static void AdditionAssign(DeviceCtx* device_ctx, const Blob* a, Blob* b) { UNIMPLEMENTED(); } \
-  };
-
-OF_PP_FOR_EACH_TUPLE(DEFINE_NONFLOAT_CLONE_KERNEL_UTIL, INT_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ)
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel, POD_DATA_TYPE_SEQ);
 
