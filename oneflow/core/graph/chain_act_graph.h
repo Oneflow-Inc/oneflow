@@ -12,7 +12,7 @@ class ChainActNode;
 
 struct RegstAct {
   RegstAct(int64_t input_regst_desc_id, const ActEvent* input_producer_act_event,
-           std::list<const ActEvent*> input_consumer_act_events)
+           const std::list<const ActEvent*>& input_consumer_act_events)
       : regst_desc_id(input_regst_desc_id),
         producer_act_event(input_producer_act_event),
         consumer_act_events(input_consumer_act_events) {}
@@ -20,7 +20,7 @@ struct RegstAct {
   int64_t regst_desc_id;
   const ActEvent* producer_act_event;
   std::list<const ActEvent*> consumer_act_events;
-  HashSet<const ChainActNode*> actual_producer_outs;
+  HashSet<const ChainActNode*> fake_producer_outs;
 };
 
 struct RegstActCtx {
@@ -32,18 +32,6 @@ struct RegstActCtx {
   const RegstAct* regst_act;
   HashMap<const ChainActNode*, double> node2duration_to_producer;
 };
-
-inline double Duration4ActEvent(const ActEvent& act_event) {
-  return act_event.stop_time() - act_event.start_time();
-}
-
-inline double Duration4RegstActConsumerPath(std::shared_ptr<RegstActCtx> regst_act_ctx,
-                                            const ActEvent* consumer_act_event,
-                                            const ChainActNode* consumer_node) {
-  return regst_act_ctx->node2duration_to_producer.at(consumer_node)
-         + consumer_act_event->stop_time()
-         - regst_act_ctx->regst_act->producer_act_event->start_time();
-}
 
 class ChainActEdge final : public Edge<ChainActNode, ChainActEdge> {
  public:
@@ -61,7 +49,7 @@ class ChainActEdge final : public Edge<ChainActNode, ChainActEdge> {
 class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainActNode);
-  ChainActNode(std::list<std::unique_ptr<ActEvent>>&& act_events);
+  explicit ChainActNode(std::list<std::unique_ptr<ActEvent>>&& act_events);
   ~ChainActNode() = default;
 
   // ForEach
@@ -109,7 +97,7 @@ class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge>
 
  private:
   const ChainActNode* Node4ActEvent(const ActEvent* act_event) const;
-  std::function<const int64_t&(const ChainActNode*)> MakeGetterTopoOrderValue4Node() const;
+  std::function<int64_t(const ChainActNode*)> MakeGetterTopoOrderValue4Node() const;
 
   void InitNodes(
       std::list<std::unique_ptr<ActEvent>>&& act_events,

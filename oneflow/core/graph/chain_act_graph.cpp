@@ -3,6 +3,17 @@
 
 namespace oneflow {
 
+inline double Duration4ActEvent(const ActEvent& act_event) {
+  return act_event.stop_time() - act_event.start_time();
+}
+
+inline double Duration4RegstActConsumerPath(const RegstActCtx& regst_act_ctx,
+                                            const ActEvent* consumer_act_event,
+                                            const ChainActNode* consumer_node) {
+  return regst_act_ctx.node2duration_to_producer.at(consumer_node) + consumer_act_event->stop_time()
+         - regst_act_ctx.regst_act->producer_act_event->start_time();
+}
+
 ChainActNode::ChainActNode(std::list<std::unique_ptr<ActEvent>>&& act_events)
     : act_events_(std::move(act_events)) {
   act_events_.sort([](const std::unique_ptr<ActEvent>& lhs, const std::unique_ptr<ActEvent>& rhs) {
@@ -79,8 +90,8 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
   HashMap<const RegstAct*, std::shared_ptr<RegstActCtx>> regst_act2regst_act_ctx;
   TopoForEachChainActNode([&](const ChainActNode* cur_node) {
     for (auto& regst_act_ctx : regst_act_ctx_window) {
-      const auto& actual_producer_outs = regst_act_ctx->regst_act->actual_producer_outs;
-      if (actual_producer_outs.find(cur_node) == actual_producer_outs.end()) { continue; }
+      const auto& fake_producer_outs = regst_act_ctx->regst_act->fake_producer_outs;
+      if (fake_producer_outs.find(cur_node) != fake_producer_outs.end()) { continue; }
       CalcRegstActNodePathDuration(regst_act_ctx, cur_node);
     }
     cur_node->ForEachProducedRegstAct([&](const RegstAct* regst_act) {
@@ -92,8 +103,8 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
     cur_node->ForEachLastConsumedRegstAct([&](const RegstAct* regst_act) {
       for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
         double duration =
-            Duration4RegstActConsumerPath(regst_act2regst_act_ctx.at(regst_act), consumer_act_event,
-                                          Node4ActEvent(consumer_act_event));
+            Duration4RegstActConsumerPath(*(regst_act2regst_act_ctx.at(regst_act)),
+                                          consumer_act_event, Node4ActEvent(consumer_act_event));
         Handler(regst_act->regst_desc_id, consumer_act_event->actor_id(), duration);
       }
       regst_act_ctx_window.erase(regst_act2regst_act_ctx.at(regst_act));
@@ -188,11 +199,11 @@ void ChainActGraph::InitNodeProducedRegstActs(
     const auto& consumers_act_event_it = regst_uid2consumer_act_events.find(pair.first);
     if (consumers_act_event_it == regst_uid2consumer_act_events.end()) { continue; }
     ChainActNode* producer = act_event2chain_node_.at(pair.second);
-    std::unique_ptr<RegstAct> regst_act(
-        new RegstAct(pair.first.first, pair.second, consumers_act_event_it->second));
+    auto regst_act =
+        std::make_unique<RegstAct>(pair.first.first, pair.second, consumers_act_event_it->second);
     ForEachOutEdge(producer, [&](const ChainActEdge* out_edge) {
-      if (out_edge->duration() >= regst_act->producer_act_event->stop_time()) {
-        regst_act->actual_producer_outs.emplace(out_edge->dst_node());
+      if (out_edge->duration() < regst_act->producer_act_event->stop_time()) {
+        regst_act->fake_producer_outs.emplace(out_edge->dst_node());
       }
     });
     producer->AddProducedRegstActs(std::move(regst_act));
@@ -206,9 +217,10 @@ void ChainActGraph::InitNodeLastConsumedRegstActs() {
       int64_t max_consumer_topo_order_value = -1;
       const ActEvent* last_consumer_act_event = nullptr;
       for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
-        if (TopoOrderValue4Node((Node4ActEvent(consumer_act_event)))
-            > max_consumer_topo_order_value) {
-          max_consumer_topo_order_value = TopoOrderValue4Node(Node4ActEvent(consumer_act_event));
+        int64_t cur_consumer_topo_order_value =
+            TopoOrderValue4Node(Node4ActEvent(consumer_act_event));
+        if (cur_consumer_topo_order_value > max_consumer_topo_order_value) {
+          max_consumer_topo_order_value = cur_consumer_topo_order_value;
           last_consumer_act_event = consumer_act_event;
         }
       }
@@ -217,22 +229,14 @@ void ChainActGraph::InitNodeLastConsumedRegstActs() {
   });
 }
 
-std::function<const int64_t&(const ChainActNode*)> ChainActGraph::MakeGetterTopoOrderValue4Node()
-    const {
+std::function<int64_t(const ChainActNode*)> ChainActGraph::MakeGetterTopoOrderValue4Node() const {
   auto node2topo_order_value = std::make_shared<HashMap<const ChainActNode*, int64_t>>();
   int64_t topo_order_value = -1;
   TopoForEachChainActNode([&](const ChainActNode* chain_act_node) {
     (*node2topo_order_value)[chain_act_node] = ++topo_order_value;
   });
-  int64_t error = -1;
-  return [node2topo_order_value, error](const ChainActNode* node) {
-    const auto& it = node2topo_order_value->find(node);
-    if (it == node2topo_order_value->end()) {
-      return error;
-    } else {
-      return it->second;
-    }
-  };
+  return
+      [node2topo_order_value](const ChainActNode* node) { return node2topo_order_value->at(node); };
 }
 
 const ChainActNode* ChainActGraph::Node4ActEvent(const ActEvent* act_event) const {
@@ -253,9 +257,7 @@ void ChainActGraph::TopoForEachChainActNode(
 }
 
 void ChainActGraph::ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const {
-  ForEachNode([&](const ChainActNode* node) {
-    node->ForEachActEvent([&](const ActEvent* act_event) { Handler(act_event); });
-  });
+  ForEachNode([&](const ChainActNode* node) { node->ForEachActEvent(Handler); });
 }
 
 void ChainActGraph::ForEachInEdge(const ChainActNode* node,
