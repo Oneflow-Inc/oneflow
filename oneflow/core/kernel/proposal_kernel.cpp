@@ -58,7 +58,7 @@ void ProposalKernel<T>::ForwardDataContent(
   // 7. nms
   // 8. post_nms_topN
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
-  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
+  // const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* im_info_blob = BnInOp2Blob("image_info");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* fg_scores_blob = BnInOp2Blob("fg_scores");
@@ -152,9 +152,30 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
   }
 
   static void SortByScore(DeviceCtx* ctx, int64_t n, int64_t m, std::vector<int64_t> keep_to,
-                          T* fg_score, T* proposals) {
+                          T* fg_scores, T* proposals) {
+    // fg_scores n * h * w * a * 1
+    // proposals n * h * w * a * 4
     // m = h * w * a
-    for (int64_t i = 0; i < n; ++i) {}
+    for (int64_t i = 0; i < n; ++i) {
+      int64_t keep = keep_to.at(i);
+      T* cur_scores = fg_scores + i * m;
+      T* cur_proposals = proposals + i * m * 4;
+      std::vector<size_t> sort_indexes(keep);
+      std::iota(sort_indexes.begin(), sort_indexes.end(), 0);
+      sort(sort_indexes.begin(), sort_indexes.end(),
+           [&](size_t idx1, size_t idx2) { return cur_scores[idx1] > cur_scores[idx2]; });
+      for (int64_t j = 0; j < sort_indexes.size(); ++j) {
+        int64_t idx = j;
+        int64_t val = sort_indexes[j];
+        while (sort_indexes[idx] != val) {
+          std::iter_swap(cur_scores + idx, cur_scores + val);
+          std::swap_ranges(cur_proposals + idx * 4, cur_proposals + (idx + 1) * 4,
+                           cur_proposals + val * 4);
+          val = idx;
+          idx = std::find(sort_indexes.begin(), sort_indexes.end(), idx) - sort_indexes.begin();
+        }
+      }
+    }
   }
 };
 
