@@ -20,9 +20,9 @@ void RoiPoolingTestCase(OpKernelTestCase* roi_pooling_test_case, const std::stri
   BlobDesc* in_blob_desc =
       new BlobDesc(Shape({1, 1, 4, 4}), GetDataType<T>::value, false, false, 1);
   BlobDesc* roi_blob_desc = new BlobDesc(Shape({1, 3, 4}), GetDataType<T>::value, false, false, 1);
-  BlobDesc* out_blob_desc =
-      new BlobDesc(Shape({1, 3, 2, 2}), GetDataType<T>::value, false, false, 1);
-
+  auto out_shape = Shape({1, 3, 2, 2});
+  BlobDesc* out_blob_desc = new BlobDesc(out_shape, GetDataType<T>::value, false, false, 1);
+  BlobDesc* argmax_blob_desc = new BlobDesc(out_shape, DataType::kInt32, false, false, 1);
   roi_pooling_test_case->template InitBlob<T>("in", in_blob_desc,
                                               {1, 2, 4, 4, 3, 4, 1, 2, 6, 2, 1, 7, 1, 3, 2, 8});
   roi_pooling_test_case->template InitBlob<T>("rois", roi_blob_desc,
@@ -35,8 +35,8 @@ void RoiPoolingTestCase(OpKernelTestCase* roi_pooling_test_case, const std::stri
   roi_pooling_test_case->template ForwardCheckBlob<T>("out", out_blob_desc,
                                                       {3, 4, 6, 3, 1, 7, 2, 8, 4, 4, 4, 7});
   //   to add real value for argmax
-  roi_pooling_test_case->template ForwardCheckBlob<T>("argmax", out_blob_desc,
-                                                      {4, 4, 6, 3, 1, 7, 2, 8, 4, 4, 4, 7});
+  roi_pooling_test_case->template ForwardCheckBlob<int32_t>("argmax", argmax_blob_desc,
+                                                            {4, 4, 6, 3, 1, 7, 2, 8, 4, 4, 4, 7});
   //   to add real value for indiff
   roi_pooling_test_case->template BackwardCheckBlob<T>(
       GenDiffBn("in"), in_blob_desc,
