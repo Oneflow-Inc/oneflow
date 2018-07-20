@@ -250,7 +250,7 @@ double CalcBaseII(const ChainActGraph& act_graph) {
     int64_t stream_id = act_event->work_stream_id();
     TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
     stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
-        task_type, act_event->stop_time() - act_event->start_time(), frequence_it->second);
+        task_type, Duration4ActEvent(*act_event), frequence_it->second);
   });
   double base_ii = 0;
   for (const auto& pair : stream_id2total_calc_time) {

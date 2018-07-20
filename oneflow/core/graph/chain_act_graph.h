@@ -8,6 +8,10 @@
 
 namespace oneflow {
 
+inline double Duration4ActEvent(const ActEvent& act_event) {
+  return act_event.stop_time() - act_event.start_time();
+}
+
 class ChainActNode;
 
 struct RegstAct {

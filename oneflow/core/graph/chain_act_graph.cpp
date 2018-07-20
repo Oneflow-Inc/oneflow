@@ -3,10 +3,6 @@
 
 namespace oneflow {
 
-inline double Duration4ActEvent(const ActEvent& act_event) {
-  return act_event.stop_time() - act_event.start_time();
-}
-
 inline double Duration4RegstActConsumerPath(const RegstActCtx& regst_act_ctx,
                                             const ActEvent* consumer_act_event,
                                             const ChainActNode* consumer_node) {
