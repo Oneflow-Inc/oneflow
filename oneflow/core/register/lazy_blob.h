@@ -340,18 +340,20 @@ class LazyBlobVarBuilder final {
   int32_t touched_cnt_;
 };
 
-#define LAZY_BLOB_BINARY_CORE_OP_FUNC_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(Add, +, T)         \
-  OF_PP_MAKE_TUPLE_SEQ(Sub, -, T)         \
-  OF_PP_MAKE_TUPLE_SEQ(Mul, *, T)         \
-  OF_PP_MAKE_TUPLE_SEQ(Div, /, T)         \
-  OF_PP_MAKE_TUPLE_SEQ(Mod, %, T)         \
-  OF_PP_MAKE_TUPLE_SEQ(Eq, ==, bool)      \
-  OF_PP_MAKE_TUPLE_SEQ(Ne, !=, bool)      \
-  OF_PP_MAKE_TUPLE_SEQ(Gt, >, bool)       \
-  OF_PP_MAKE_TUPLE_SEQ(Ge, >=, bool)      \
-  OF_PP_MAKE_TUPLE_SEQ(Lt, <, bool)       \
-  OF_PP_MAKE_TUPLE_SEQ(Le, <=, bool)
+#define LAZY_BLOB_BINARY_CORE_OP_FUNC_SEQ    \
+  OF_PP_MAKE_TUPLE_SEQ(Add, +, T)            \
+  OF_PP_MAKE_TUPLE_SEQ(Sub, -, T)            \
+  OF_PP_MAKE_TUPLE_SEQ(Mul, *, T)            \
+  OF_PP_MAKE_TUPLE_SEQ(Div, /, T)            \
+  OF_PP_MAKE_TUPLE_SEQ(Mod, %, T)            \
+  OF_PP_MAKE_TUPLE_SEQ(Eq, ==, bool)         \
+  OF_PP_MAKE_TUPLE_SEQ(Ne, !=, bool)         \
+  OF_PP_MAKE_TUPLE_SEQ(Gt, >, bool)          \
+  OF_PP_MAKE_TUPLE_SEQ(Ge, >=, bool)         \
+  OF_PP_MAKE_TUPLE_SEQ(Lt, <, bool)          \
+  OF_PP_MAKE_TUPLE_SEQ(Le, <=, bool)         \
+  OF_PP_MAKE_TUPLE_SEQ(LogicalAnd, &&, bool) \
+  OF_PP_MAKE_TUPLE_SEQ(LogicalOr, &&, bool)
 
 #define DECLARE_LAZY_BLOB_BINARY_CORE(name, op, ret_type)                    \
   template<typename T, typename YDT = T>                                     \
