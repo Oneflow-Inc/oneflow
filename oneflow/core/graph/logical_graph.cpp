@@ -224,14 +224,6 @@ void LogicalGraph::BuildBwStruct() {
   RemoveBackwardAdd();
 }
 
-void LogicalGraph::UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn) {
-  if (!ibn.empty()) { edge2ibn_[edge] = ibn; }
-}
-
-void LogicalGraph::UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn) {
-  if (!obn.empty()) { edge2obn_[edge] = obn; }
-}
-
 void LogicalGraph::NaiveBuildBwStruct() {
   HashSet<LogicalNode*> nodes_need_bw;
   TopoForEachNode([&](LogicalNode* logical_node) {
@@ -304,29 +296,25 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
   clone_op_conf.mutable_clone_conf()->set_out_num(clone_info.edges.size());
   std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
+  // TODO: ibn -> lbi
+
+  LogicalNode* clone_node = NewNode<NormalBackwardLogicalNode>();
+  clone_node->mut_op_vec() = {clone_op};
+  clone_node->mut_parallel_desc() = clone_info.succ_node->parallel_desc();
+
+  LogicalEdge* clone_in_diff_edge = NewEdge();
+  clone_in_diff_edge->mut_lbis() = {clone_info.lbi};
+  Connect(clone_node, clone_in_diff_edge, clone_info.succ_node);
+  UpdateEdge2Ibn(clone_in_diff_edge, clone_op->SoleIbn());
+  UpdateEdge2Obn(clone_in_diff_edge, edge2obn_.at(clone_info.edges.at(0)));
+
   FOR_RANGE(size_t, i, 0, clone_info.edges.size()) {
     LogicalBlobId lbi_clone_i = clone_info.lbi;
     lbi_clone_i.set_clone_id(i);
     std::string odbn = clone_op->output_diff_bns().Get(i);
-    std::string obn = GenUnDiffBn(odbn);
-    CHECK(lbi2obn.emplace(lbi_clone_i, obn).second);
     *(clone_op->MutBnInOp2Lbi(odbn)) = lbi_clone_i;
-  }
-  LogicalNode* clone_node = NewNode<NormalBackwardLogicalNode>();
-  clone_node->mut_op_vec() = {clone_op};
-  clone_node->mut_parallel_desc() = clone_info.succ_node->parallel_desc();
-  LogicalEdge* clone_in_diff_edge = NewEdge();
-  clone_in_diff_edge->mut_lbis() = {clone_info.lbi};
-  Connect(clone_node, clone_in_diff_edge, clone_info.succ_node);
-  std::string clone_obn;
-  FOR_RANGE(size_t, i, 0, clone_op->output_diff_bns().size()) {
-    const LogicalBlobId& lbi_clone_i = clone_op->BnInOp2Lbi(clone_op->output_diff_bns().Get(i));
+
     LogicalEdge* edge = clone_info.edges.at(i);
-    if (clone_obn.empty()) {
-      clone_obn = edge2obn_.at(edge);
-    } else {
-      CHECK_EQ(clone_obn, edge2obn_.at(edge));
-    }
     std::vector<LogicalBlobId>& edge_lbis = edge->mut_lbis();
     CHECK_EQ(1, edge_lbis.size());
     edge_lbis.front() = lbi_clone_i;
@@ -334,10 +322,8 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
     *(src_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2ibn_.at(edge)))) = lbi_clone_i;
     DisConnect(edge);
     Connect(src_node, edge, clone_node);
-    UpdateEdge2Obn(edge, lbi2obn.at(lbi_clone_i));
+    UpdateEdge2Obn(edge, GenUnDiffBn(odbn));
   }
-  UpdateEdge2Ibn(clone_in_diff_edge, clone_op->SoleIbn());
-  UpdateEdge2Obn(clone_in_diff_edge, clone_obn);
 }
 
 void LogicalGraph::MoveBackwardActivations() {
@@ -650,6 +636,14 @@ void LogicalGraph::ConnectFwToBw() {
     if (bw_node->fw_node() == nullptr) { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
+}
+
+void LogicalGraph::UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn) {
+  if (!ibn.empty()) { edge2ibn_[edge] = ibn; }
+}
+
+void LogicalGraph::UpdateEdge2Obn(const LogicalEdge* edge, const std::string& obn) {
+  if (!obn.empty()) { edge2obn_[edge] = obn; }
 }
 
 }  // namespace oneflow

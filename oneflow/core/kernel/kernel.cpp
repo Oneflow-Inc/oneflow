@@ -50,7 +50,6 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   ForwardDataContent(ctx, BnInOp2Blob);
   if (this->GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -60,6 +59,7 @@ void Kernel::Forward(const KernelCtx& ctx,
     PostForwardActivation(ctx, out_blob);
   }
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
@@ -82,12 +82,12 @@ void Kernel::Backward(const KernelCtx& ctx,
 }
 
 template<DeviceType device_type, typename T>
-void ActivationBackward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
-                        const T* x, const T* y, const T* dy, T* dx) {
+void ActivationForward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
+                       const T* x, T* y) {
   switch (activation_type) {
-#define DEFINE_ONE_CASE(activation)                                                       \
-  case ActivationType::k##activation:                                                     \
-    KernelUtil<device_type, T>::activation##Backward(device_ctx, elem_cnt, x, y, dy, dx); \
+#define DEFINE_ONE_CASE(activation)                                     \
+  case ActivationType::k##activation:                                   \
+    KernelUtil<device_type, T>::activation(device_ctx, elem_cnt, x, y); \
     break;
     DEFINE_ONE_CASE(TanH);
     DEFINE_ONE_CASE(Sigmoid);
@@ -98,12 +98,12 @@ void ActivationBackward(ActivationType activation_type, DeviceCtx* device_ctx, i
 }
 
 template<DeviceType device_type, typename T>
-void ActivationForward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
-                       const T* x, T* y) {
+void ActivationBackward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
+                        const T* x, const T* y, const T* dy, T* dx) {
   switch (activation_type) {
-#define DEFINE_ONE_CASE(activation)                                     \
-  case ActivationType::k##activation:                                   \
-    KernelUtil<device_type, T>::activation(device_ctx, elem_cnt, x, y); \
+#define DEFINE_ONE_CASE(activation)                                                       \
+  case ActivationType::k##activation:                                                     \
+    KernelUtil<device_type, T>::activation##Backward(device_ctx, elem_cnt, x, y, dy, dx); \
     break;
     DEFINE_ONE_CASE(TanH);
     DEFINE_ONE_CASE(Sigmoid);
