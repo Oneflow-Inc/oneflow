@@ -55,8 +55,9 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
         out_blob->shape().Count(1);  // roi_num * channel_num * pooled_h * pooled_w
     FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
       const T* rois_dptr = rois_blob->dptr<T>() + roi_size * n;
-      T* out_dptr = out_blob->mut_dptr<T>() + out_size * n;
-      int32_t* argmax_dptr = argmax_blob->mut_dptr<int32_t>() + out_size * n;
+      int64_t n_out_size = out_size * n;
+      T* out_dptr = out_blob->mut_dptr<T>() + n_out_size;
+      int32_t* argmax_dptr = argmax_blob->mut_dptr<int32_t>() + n_out_size;
       FOR_RANGE(int64_t, r, 0, roi_num) {
         // stay within feature map
         int64_t roi_start_h =
