@@ -8,16 +8,15 @@
 
 namespace oneflow {
 
+#define LAZY_EVALUATE(T, var)                                                          \
+  for (LazyBlobVarBuilder<T> var(std::make_unique<LazyBlobGraph>()); var.Touch() == 0; \
+       var.graph().Evaluate())
+
 class Slice final {
  public:
   Slice(int64_t x);
   ~Slice() = default;
 };
-
-template<typename T>
-class LazyBlobVarBuilder;
-template<typename T>
-void WithLazyEvaluation(const std::function<void(LazyBlobVarBuilder<T>&)>& Handler);
 
 class LazyBlobEdge;
 class LazyBlobGraph;
@@ -66,7 +65,9 @@ class LazyBlobGraph final : public Graph<LazyBlobNode, LazyBlobEdge> {
   LazyBlobGraph() = default;
   ~LazyBlobGraph() = default;
 
-  void Evaluate() const;
+  void Evaluate() const {
+    TopoForEachNode([](const LazyBlobNode* blob_node) { blob_node->Evaluate(); });
+  }
 
   bool IsBlobAssigned(const Blob* blob) const {
     return assigned_blob_.find(blob) != assigned_blob_.end();
@@ -84,7 +85,7 @@ class LazyBlobIf : public LazyBlobNode {
   virtual ~LazyBlobIf() = default;
 
   virtual void Evaluate(Blob* output_blob) const override {
-    CHECK_EQ(this->backend_blob(), nullptr);
+    CHECK(this->backend_blob() == nullptr);
     switch (this->shape().NumAxes()) {
       case 1: return Evaluate1(output_blob);
       case 2: return Evaluate2(output_blob);
@@ -129,6 +130,7 @@ class VarLazyBlob final : public LazyBlobIf<VarLazyBlob<T>> {
  public:
   typedef T dtype;
 
+  OF_DISALLOW_COPY_AND_MOVE(VarLazyBlob);
   VarLazyBlob(LazyBlobGraph* graph, Blob* backend_blob)
       : LazyBlobIf<VarLazyBlob<T>>(graph, backend_blob),
         dptr_(backend_blob->mut_dptr<T>()),
@@ -142,17 +144,17 @@ class VarLazyBlob final : public LazyBlobIf<VarLazyBlob<T>> {
   }
 
   VarLazyBlob<T>& operator=(const LazyBlobNode& value_lazy_blob_node) {
-    CHECK_EQ(value_lazy_blob_node.backend_blob(), nullptr);
+    CHECK(value_lazy_blob_node.backend_blob() == nullptr);
     CHECK(!this->graph()->IsBlobAssigned(this->backend_blob()))
         << "a blob should be only assigned once";
     CHECK(this->shape() == value_lazy_blob_node.shape());
     value_lazy_blob_node_ = &value_lazy_blob_node;
-    this->mut_graph().AddAssignedBlob(this->backend_blob());
+    this->mut_graph()->AddAssignedBlob(this->backend_blob());
     return *this;
   }
 
   void Evaluate(Blob* output_blob) const override {
-    CHECK_EQ(output_blob, nullptr);
+    CHECK(output_blob == nullptr);
     if (value_lazy_blob_node_ == nullptr) { return; }
     value_lazy_blob_node_->Evaluate(this->mut_backend_blob());
   }
@@ -188,13 +190,13 @@ class VarLazyBlob final : public LazyBlobIf<VarLazyBlob<T>> {
   const LazyBlobNode* value_lazy_blob_node_;
 };
 
-template<template<typename> class CoreFunc, typename XT,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value>::type>
+template<template<typename> class CoreFunc, typename XT>
 class UnaryExpresionLazyBlob final : public LazyBlobIf<UnaryExpresionLazyBlob<CoreFunc, XT>> {
  public:
   using XDT = typename XT::dtype;
   typedef decltype(CoreFunc<XDT>::Invoke(*(const XDT*)nullptr)) dtype;
 
+  OF_DISALLOW_COPY_AND_MOVE(UnaryExpresionLazyBlob);
   explicit UnaryExpresionLazyBlob(const XT& x)
       : LazyBlobIf<UnaryExpresionLazyBlob<CoreFunc, XT>>(x.mut_graph(), x.shape(),
                                                          GetDataType<dtype>::value),
@@ -219,15 +221,14 @@ class UnaryExpresionLazyBlob final : public LazyBlobIf<UnaryExpresionLazyBlob<Co
   const XT& x_;
 };
 
-template<template<typename, typename> class CoreFunc, typename XT, typename YT = XT,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value>::type,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, YT>::value>::type>
+template<template<typename, typename> class CoreFunc, typename XT, typename YT = XT>
 class BinaryExpresionLazyBlob final : public LazyBlobIf<BinaryExpresionLazyBlob<CoreFunc, XT, YT>> {
  public:
   using XDT = typename XT::dtype;
   using YDT = typename YT::dtype;
   typedef decltype(CoreFunc<XDT, YDT>::Invoke(*(const XDT*)nullptr, *(const YDT*)nullptr)) dtype;
 
+  OF_DISALLOW_COPY_AND_MOVE(BinaryExpresionLazyBlob);
   BinaryExpresionLazyBlob(const XT& x, const YT& y)
       : LazyBlobIf<BinaryExpresionLazyBlob<CoreFunc, XT, YT>>(x.mut_graph(), x.shape(),
                                                               GetDataType<dtype>::value),
@@ -259,13 +260,14 @@ class BinaryExpresionLazyBlob final : public LazyBlobIf<BinaryExpresionLazyBlob<
   const YT& y_;
 };
 
-template<typename XT,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value>::type>
+template<typename XT>
 class BroadcastLazyBlob final : public LazyBlobIf<BroadcastLazyBlob<XT>> {
  public:
   using XDT = typename XT::dtype;
   typedef XDT dtype;
 
+  OF_DISALLOW_MOVE(BroadcastLazyBlob);
+  BroadcastLazyBlob(const BroadcastLazyBlob<XT>&) = default;
   BroadcastLazyBlob(const XT& x, const Shape& shape)
       : LazyBlobIf<BroadcastLazyBlob<XT>>(x.mut_graph(), shape, GetDataType<dtype>::value),
         x_(x),
@@ -316,17 +318,26 @@ template<typename T>
 class LazyBlobVarBuilder final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LazyBlobVarBuilder);
-  explicit LazyBlobVarBuilder(LazyBlobGraph* graph) : graph_(graph) {}
+  explicit LazyBlobVarBuilder(std::unique_ptr<LazyBlobGraph>&& graph)
+      : graph_(std::move(graph)), touched_cnt_(0) {}
 
+  // for define lazy blob var
   template<typename dtype = T>
   VarLazyBlob<dtype>& operator()(Blob* blob) {
-    auto* lazy_blob = new VarLazyBlob<dtype>(graph_, blob);
+    auto* lazy_blob = new VarLazyBlob<dtype>(graph_.get(), blob);
     graph_->AddAllocatedNode(lazy_blob);
     return *lazy_blob;
   }
 
+  // Getter
+  const LazyBlobGraph& graph() const { return *graph_; }
+
+  //  never use Touch() in your code
+  int32_t Touch() { return touched_cnt_++; }
+
  private:
-  LazyBlobGraph* graph_;
+  std::unique_ptr<LazyBlobGraph> graph_;
+  int32_t touched_cnt_;
 };
 
 #define LAZY_BLOB_BINARY_CORE_OP_FUNC_SEQ \
@@ -360,29 +371,57 @@ OF_PP_FOR_EACH_TUPLE(DECLARE_LAZY_BLOB_BINARY_CORE, LAZY_BLOB_BINARY_CORE_OP_FUN
   };
 OF_PP_FOR_EACH_TUPLE(DECLARE_LAZY_BLOB_UNARY_CORE, LAZY_BLOB_UNARY_CORE_OP_FUNC_SEQ);
 
-template<typename XT, typename YT = XT,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value>::type,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, YT>::value>::type>
-BinaryExpresionLazyBlob<LazyBlobCoreAdd, XT, YT>& operator+(XT&& x, XT&& y) {
-  auto* ret = new BinaryExpresionLazyBlob<LazyBlobCoreAdd, XT, YT>(x, y);
-  CHECK_EQ(x.graph(), y.graph());
+template<template<typename, typename> class LazyBlobCoreFunc, typename XT, typename YT = XT>
+typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value
+                            && std::is_base_of<LazyBlobNode, YT>::value,
+                        BinaryExpresionLazyBlob<LazyBlobCoreFunc, XT, YT>>::type&
+BuildBinaryLazyBlob(XT& x, YT& y) {
+  auto* ret = new BinaryExpresionLazyBlob<LazyBlobCoreFunc, XT, YT>(x, y);
+  CHECK(x.graph() == y.graph());
   CHECK(x.shape() == y.shape());
   LazyBlobGraph* graph = x.mut_graph();
-  graph->AddAllocatedNode(ret);
-  Connect(&x, graph->NewEdge(), &ret);
-  Connect(&y, graph->NewEdge(), &ret);
+  LazyBlobNode* base_ret = ret;
+  graph->AddAllocatedNode(base_ret);
+  Connect(dynamic_cast<LazyBlobNode*>(&x), graph->NewEdge(), base_ret);
+  Connect(dynamic_cast<LazyBlobNode*>(&y), graph->NewEdge(), base_ret);
+  if (x.backend_blob() == nullptr) { CHECK_EQ(x.out_edges().size(), 1); }
+  if (x.backend_blob() == nullptr) { CHECK_EQ(y.out_edges().size(), 1); }
   return *ret;
 }
 
-template<typename XT,
-         typename = typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value>::type>
-UnaryExpresionLazyBlob<LazyBlobCoreNegative, XT>& operator-(XT&& x) {
-  auto* ret = new UnaryExpresionLazyBlob<LazyBlobCoreNegative, XT>(x);
+#define OVERLOAD_BINARY_LAZY_BLOB_OP_FUNC(name, op, ret_type)                         \
+  template<typename XType, typename YType = XType,                                    \
+           typename XT = typename std::remove_reference<XType>::type,                 \
+           typename YT = typename std::remove_reference<YType>::type>                 \
+  typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value                    \
+                              && std::is_base_of<LazyBlobNode, YT>::value,            \
+                          BinaryExpresionLazyBlob<LazyBlobCore##name, XT, YT>>::type& \
+  operator op(XType& x, YType& y) {                                                   \
+    return BuildBinaryLazyBlob<LazyBlobCore##name, XT, YT>(x, y);                     \
+  }
+OF_PP_FOR_EACH_TUPLE(OVERLOAD_BINARY_LAZY_BLOB_OP_FUNC, LAZY_BLOB_BINARY_CORE_OP_FUNC_SEQ);
+
+template<template<typename> class LazyBlobCoreFunc, typename XT>
+typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value,
+                        UnaryExpresionLazyBlob<LazyBlobCoreFunc, XT>>::type&
+BuildUnaryLazyBlob(XT& x) {
+  auto* ret = new UnaryExpresionLazyBlob<LazyBlobCoreFunc, XT>(x);
   LazyBlobGraph* graph = x.mut_graph();
-  graph->AddAllocatedNode(ret);
-  Connect(&x, graph->NewEdge(), &ret);
+  LazyBlobNode* base_ret = ret;
+  graph->AddAllocatedNode(base_ret);
+  Connect(&x, graph->NewEdge(), base_ret);
+  if (x.backend_blob() == nullptr) { CHECK_EQ(x.out_edges().size(), 1); }
   return *ret;
 }
+
+#define OVERLOAD_UNARY_LAZY_BLOB_OP_FUNC(name, op, ret_type)                          \
+  template<typename XType, typename XT = typename std::remove_reference<XType>::type> \
+  typename std::enable_if<std::is_base_of<LazyBlobNode, XT>::value,                   \
+                          UnaryExpresionLazyBlob<LazyBlobCore##name, XT>>::type&      \
+  operator op(XType& x) {                                                             \
+    return BuildUnaryLazyBlob<LazyBlobCore##name, XT>(x);                             \
+  }
+OF_PP_FOR_EACH_TUPLE(OVERLOAD_UNARY_LAZY_BLOB_OP_FUNC, LAZY_BLOB_UNARY_CORE_OP_FUNC_SEQ);
 
 //  implementations
 
@@ -490,15 +529,6 @@ LazyBlobNode::LazyBlobNode(LazyBlobGraph* graph, Blob* backend_blob)
       backend_blob_(backend_blob),
       shape_(backend_blob->shape()),
       data_type_(backend_blob->data_type()) {}
-
-template<typename T>
-void WithLazyEvaluation(const std::function<void(LazyBlobVarBuilder<T>&)>& Handler) {
-  LazyBlobGraph graph;
-  LazyBlobVarBuilder<T> var_builder(&graph);
-  Handler(var_builder);
-  graph.Evaluate();
-  graph.TopoForEachNode([](const LazyBlobNode* blob_node) { blob_node->Evaluate(); });
-}
 
 }  // namespace oneflow
 
