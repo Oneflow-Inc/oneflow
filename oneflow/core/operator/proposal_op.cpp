@@ -57,7 +57,7 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
 
   // rois
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0), post_nms_top_n, 5});
+  rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0), post_nms_top_n, 4});
   rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
 
   // scores

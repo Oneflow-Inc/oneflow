@@ -29,6 +29,9 @@ class ProposalKernelUtil final {
                                                    T* proposals);
   static void SortByScore(DeviceCtx* ctx, int64_t n, int64_t m, std::vector<int64_t> keep_to,
                           T* fg_score, T* proposals);
+  static void Nms(DeviceCtx* ctx, int64_t n, int64_t m, const std::vector<int64_t>& keep_to,
+                  int64_t pre_nms_top_n, int64_t post_nms_top_n, float nms_threshold,
+                  const T* proposals, const T* fg_scores, T* rois, T* scores);
 };
 
 }  // namespace oneflow

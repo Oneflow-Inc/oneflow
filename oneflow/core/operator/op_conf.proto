@@ -593,13 +593,13 @@ message ProposalOpConf {
   required string image_info = 3;
   required string rois = 4;
   required string scores = 5;
-  required int32 feature_map_stride = 6;
+  required int32 feature_map_stride = 6 [default = 16];
   required int32 min_size = 7;
-  repeated float aspect_ratios = 8;
-  repeated int32 anchor_scales = 9;
-  optional int32 pre_nms_top_n = 10 [default = 12000]; 
-  optional int32 post_nms_top_n = 11 [default = 2000]; 
-  optional float nms_threshold = 12 [default = 0.7];
+  required int32 pre_nms_top_n = 8; 
+  required int32 post_nms_top_n = 9; 
+  required float nms_threshold = 10;
+  repeated float aspect_ratios = 11;
+  repeated int32 anchor_scales = 12;
 }
 
 message RoIPoolingOpConf {

@@ -62,6 +62,8 @@ void ProposalKernel<T>::ForwardDataContent(
   const Blob* im_info_blob = BnInOp2Blob("image_info");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* fg_scores_blob = BnInOp2Blob("fg_scores");
+  Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* scores_blob = BnInOp2Blob("scores");
 
   int64_t num_batch = class_prob_blob->shape().At(0);
   int64_t height = class_prob_blob->shape().At(1);
@@ -83,6 +85,10 @@ void ProposalKernel<T>::ForwardDataContent(
   ProposalKernelUtil<DeviceType::kCPU, T>::SortByScore(
       ctx.device_ctx, num_batch, height * width * num_anchors, keep_to,
       fg_scores_blob->mut_dptr<T>(), proposals_blob->mut_dptr<T>());
+  ProposalKernelUtil<DeviceType::kCPU, T>::Nms(
+      ctx.device_ctx, num_batch, height * width * num_anchors, keep_to, conf.pre_nms_top_n(),
+      conf.post_nms_top_n(), conf.nms_threshold(), proposals_blob->dptr<T>(),
+      fg_scores_blob->dptr<T>(), rois_blob->mut_dptr<T>(), scores_blob->mut_dptr<T>());
 }
 
 template<typename T>
@@ -151,10 +157,10 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
     return keep_to;
   }
 
-  static void SortByScore(DeviceCtx* ctx, int64_t n, int64_t m, std::vector<int64_t> keep_to,
+  static void SortByScore(DeviceCtx* ctx, int64_t n, int64_t m, const std::vector<int64_t>& keep_to,
                           T* fg_scores, T* proposals) {
-    // fg_scores n * h * w * a * 1
-    // proposals n * h * w * a * 4
+    // fg_scores (n, h * w * a, 1)
+    // proposals (n, h * w * a, 4)
     // m = h * w * a
     for (int64_t i = 0; i < n; ++i) {
       int64_t keep = keep_to.at(i);
@@ -174,6 +180,38 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
           val = idx;
           idx = std::find(sort_indexes.begin(), sort_indexes.end(), idx) - sort_indexes.begin();
         }
+      }
+    }
+  }
+
+  static void Nms(DeviceCtx* ctx, int64_t n, int64_t m, const std::vector<int64_t>& keep_to,
+                  int64_t pre_nms_top_n, int64_t post_nms_top_n, float nms_threshold,
+                  const T* proposals, const T* fg_scores, T* rois, T* scores) {
+    // proposals (n, h * w * a, 4)
+    // fg_scores (n, h * w * a, 1)
+    // rois (n, post_nms_top_n, 4)
+    // scores (n, post_nms_top_n, 1)
+    // m = h * w * a
+    for (int64_t i = 0; i < n; ++i) {
+      int64_t topn = pre_nms_top_n == -1 ? keep_to.at(i) : std::min(keep_to.at(i), pre_nms_top_n);
+      std::vector<bool> suppressed(topn, false);
+      std::vector<int64_t> keep;
+      for (int64_t j = 0; j < topn; ++j) {
+        if (suppressed[j]) { continue; }
+        keep.push_back(j);
+        const T* cur_prop = proposals + (i * m + j) * 4;
+        for (int64_t k = j + 1; k < topn; ++k) {
+          const T* cand_prop = proposals + (i * m + k) * 4;
+          // float iou = RcnnUtil<T>::InterOverUnion(cur_prop, cand_prop);
+          float iou = (*cur_prop) + (*cand_prop);
+          if (iou >= nms_threshold) { suppressed[k] = true; }
+        }
+      }
+      for (int64_t l = 0; l < std::min(keep.size(), static_cast<size_t>(post_nms_top_n)); ++l) {
+        for (int64_t h = 0; h < 4; ++h) {
+          rois[(i * post_nms_top_n + l) * 4 + h] = proposals[(i * m + keep[l]) * 4 + h];
+        }
+        scores[i * post_nms_top_n + l] = fg_scores[i * m + keep[l]];
       }
     }
   }
