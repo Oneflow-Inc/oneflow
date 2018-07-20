@@ -58,8 +58,9 @@ void ProposalKernel<T>::ForwardDataContent(
   // 7. nms
   // 8. post_nms_topN
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
-  // const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
+  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* im_info_blob = BnInOp2Blob("image_info");
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* fg_scores_blob = BnInOp2Blob("fg_scores");
   Blob* rois_blob = BnInOp2Blob("rois");
@@ -74,8 +75,9 @@ void ProposalKernel<T>::ForwardDataContent(
   ProposalKernelUtil<DeviceType::kCPU, T>::TakeFgScores(ctx.device_ctx, num_batch * height * width,
                                                         num_anchors, class_prob_blob->dptr<T>(),
                                                         fg_scores_blob->mut_dptr<T>());
-  // KernelUtil<DeviceType::kCPU, T>::bbox_transform_inv(ctx.device_ctx, num_batch, height, width,
-  // num_anchors, bbox_pred_blob->mut_dptr<T>(), proposals_blob->mut_dptr<T>());
+  ProposalKernelUtil<DeviceType::kCPU, T>::BboxTransformInv(
+      ctx.device_ctx, num_batch * height * width * num_anchors, anchors_blob->dptr<T>(),
+      bbox_pred_blob->dptr<T>(), proposals_blob->mut_dptr<T>());
   ProposalKernelUtil<DeviceType::kCPU, T>::ClipBoxes(
       ctx.device_ctx, num_batch, height * width * num_anchors, im_info_blob->dptr<T>(),
       proposals_blob->mut_dptr<T>());
@@ -105,6 +107,50 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
     // class_prob (n, h, w, a * 2)
     // fg_scores (n, h * w * a, 1)
     for (int64_t i = 0; i < m * a; ++i) { fg_scores[i] = class_prob[i / m * a * 2 + i % m + a]; }
+  }
+
+  static void BboxTransform(DeviceCtx* ctx, int64_t m, const T* bbox, const T* target_bbox,
+                            T* deltas) {
+    // m = n * h * w * a
+    // shape: bbox == target_bbox == deltas (n, h, w, a * 4)
+    for (int64_t i = 0; i < m; ++i) {
+      float b_w = bbox[i * 4 + 2] - bbox[i * 4] + 1.0f;
+      float b_h = bbox[i * 4 + 3] - bbox[i * 4 + 1] + 1.0f;
+      float b_ctr_x = bbox[i * 4] + 0.5f * b_w;
+      float b_ctr_y = bbox[i * 4 + 1] + 0.5f * b_h;
+
+      float t_w = target_bbox[i * 4 + 2] - target_bbox[i * 4] + 1.0f;
+      float t_h = target_bbox[i * 4 + 3] - target_bbox[i * 4 + 1] + 1.0f;
+      float t_ctr_x = target_bbox[i * 4] + 0.5f * t_w;
+      float t_ctr_y = target_bbox[i * 4 + 1] + 0.5f * t_h;
+
+      deltas[i * 4 + 0] = (t_ctr_x - b_ctr_x) / b_w;
+      deltas[i * 4 + 1] = (t_ctr_y - b_ctr_y) / b_h;
+      deltas[i * 4 + 2] = std::log(t_w / b_w);
+      deltas[i * 4 + 3] = std::log(t_h / b_h);
+    }
+  }
+
+  static void BboxTransformInv(DeviceCtx* ctx, int64_t m, const T* bbox, const T* deltas,
+                               T* bbox_pred) {
+    // m = n * h * w * a
+    // shape: bbox == deltas == bbox_pred (n, h, w, a * 4)
+    for (int64_t i = 0; i < m; ++i) {
+      float w = bbox[i * 4 + 2] - bbox[i * 4] + 1.0f;
+      float h = bbox[i * 4 + 3] - bbox[i * 1 + 1] + 1.0f;
+      float ctr_x = bbox[i * 4] + 0.5f * w;
+      float ctr_y = bbox[i * 4 + 1] + 0.5f * h;
+
+      float pred_ctr_x = deltas[i * 4] * w + ctr_x;
+      float pred_ctr_y = deltas[i * 4 + 1] * h + ctr_y;
+      float pred_w = std::exp(deltas[i * 4 + 2]) * w;
+      float pred_h = std::exp(deltas[i * 4 + 3]) * h;
+
+      bbox_pred[i * 4 + 0] = pred_ctr_x - 0.5f * pred_w;
+      bbox_pred[i * 4 + 1] = pred_ctr_y - 0.5f * pred_h;
+      bbox_pred[i * 4 + 2] = pred_ctr_x + 0.5f * pred_w;
+      bbox_pred[i * 4 + 3] = pred_ctr_y + 0.5f * pred_h;
+    }
   }
 
   static void ClipBoxes(DeviceCtx* ctx, int64_t n, int64_t m, const T* im_info, T* proposals) {
