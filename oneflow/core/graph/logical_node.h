@@ -134,6 +134,8 @@ class ForwardLogicalNode : public LogicalNode {
 
   BackwardLogicalNode* NewBackwardNode();
 
+  void SetBwNode(BackwardLogicalNode* bw_node) { bw_node_ = bw_node; }
+
  protected:
   virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;
 
