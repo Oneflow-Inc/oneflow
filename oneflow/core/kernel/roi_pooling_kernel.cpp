@@ -60,26 +60,26 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
       int32_t* argmax_dptr = argmax_blob->mut_dptr<int32_t>() + n_out_size;
       FOR_RANGE(int64_t, r, 0, roi_num) {
         // stay within feature map
-        int64_t roi_start_h =
-            min(max(static_cast<int64_t>(round(rois_dptr[r * 4] * spatial_scale)), 0l), height);
         int64_t roi_start_w =
+            min(max(static_cast<int64_t>(round(rois_dptr[r * 4] * spatial_scale)), 0l), height);
+        int64_t roi_start_h =
             min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 1] * spatial_scale)), 0l), width);
-        int64_t roi_end_h =
-            min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 2] * spatial_scale)), 0l), height);
         int64_t roi_end_w =
+            min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 2] * spatial_scale)), 0l), height);
+        int64_t roi_end_h =
             min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 3] * spatial_scale)), 0l), width);
         // no smaller than 1 * 1
-        int64_t roi_height = max<int64_t>(roi_end_h - roi_start_h, 1);
-        int64_t roi_width = max<int64_t>(roi_end_w - roi_start_w, 1);
+        int64_t roi_height = max<int64_t>(roi_end_h - roi_start_h + 1, 1);
+        int64_t roi_width = max<int64_t>(roi_end_w - roi_start_w + 1, 1);
         const float bin_height = static_cast<float>(roi_height) / static_cast<float>(pooled_height);
-        const float bin_weight = static_cast<float>(roi_width) / static_cast<float>(pooled_width);
+        const float bin_width = static_cast<float>(roi_width) / static_cast<float>(pooled_width);
         FOR_RANGE(int64_t, c, 0, in_blob->shape().At(1)) {
           FOR_RANGE(int64_t, h, 0, pooled_height) {
             FOR_RANGE(int64_t, w, 0, pooled_width) {
               int64_t hstart = floor(static_cast<float>(h) * bin_height);
-              int64_t wstart = floor(static_cast<float>(w) * bin_weight);
+              int64_t wstart = floor(static_cast<float>(w) * bin_width);
               int64_t hend = ceil(static_cast<float>(h + 1) * bin_height);
-              int64_t wend = ceil(static_cast<float>(w + 1) * bin_weight);
+              int64_t wend = ceil(static_cast<float>(w + 1) * bin_width);
               hstart = min(max(roi_start_h + hstart, 0l), height);
               wstart = min(max(roi_start_w + wstart, 0l), width);
               hend = min(max(roi_start_h + hend, 0l), height);
@@ -87,7 +87,7 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
               int64_t out_pos =
                   r * out_blob->shape().Count(2) + c * pooled_area + h * pooled_width + w;
               bool is_bin_empty = (hend <= hstart) || (wend <= wstart);
-              out_dptr[out_pos] = 0;
+              out_dptr[out_pos] = is_bin_empty ? 0 : -FLT_MAX;
               argmax_dptr[out_pos] = -1;
               if (!is_bin_empty) {
                 const T* offset_in_dptr = in_dptr + c * in_blob->shape().Count(2);

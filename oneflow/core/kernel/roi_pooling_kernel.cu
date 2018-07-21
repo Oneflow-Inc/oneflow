@@ -19,43 +19,44 @@ __global__ void RoIPoolForward(const int64_t nthreads, const T* in_dptr, const f
     const int64_t c = (index / pooled_area) % channel_num;
     const int64_t r = (index / pooled_area / channel_num) % roi_num;
     const int64_t n = index / pooled_area / channel_num / roi_num;
-    const T* offset_rois = rois_dptr + n * roi_num * 4 + r * 4;
-    int64_t roi_start_h =
-        min(max(static_cast<int64_t>(round(offset_rois[0] * spatial_scale)), 0l), height);
+    const T* offset_rois = rois_dptr + (n * roi_num + r) * 4;
     int64_t roi_start_w =
+        min(max(static_cast<int64_t>(round(offset_rois[0] * spatial_scale)), 0l), height);
+    int64_t roi_start_h =
         min(max(static_cast<int64_t>(round(offset_rois[1] * spatial_scale)), 0l), width);
-    int64_t roi_end_h =
-        min(max(static_cast<int64_t>(round(offset_rois[2] * spatial_scale)), 0l), height);
     int64_t roi_end_w =
+        min(max(static_cast<int64_t>(round(offset_rois[2] * spatial_scale)), 0l), height);
+    int64_t roi_end_h =
         min(max(static_cast<int64_t>(round(offset_rois[3] * spatial_scale)), 0l), width);
-    int64_t roi_width = min(roi_end_w - roi_start_w, 1l);
-    int64_t roi_height = min(roi_end_h - roi_start_h, 1l);
+    int64_t roi_height = max(roi_end_h - roi_start_h + 1, 1l);
+    int64_t roi_width = max(roi_end_w - roi_start_w + 1, 1l);
     const float bin_height = static_cast<float>(roi_height) / static_cast<float>(pooled_height);
-    const float bin_weight = static_cast<float>(roi_width) / static_cast<float>(pooled_width);
+    const float bin_width = static_cast<float>(roi_width) / static_cast<float>(pooled_width);
     int64_t hstart = floor(static_cast<float>(h) * bin_height);
-    int64_t wstart = floor(static_cast<float>(w) * bin_weight);
+    int64_t wstart = floor(static_cast<float>(w) * bin_width);
     int64_t hend = ceil(static_cast<float>(h + 1) * bin_height);
-    int64_t wend = ceil(static_cast<float>(w + 1) * bin_weight);
+    int64_t wend = ceil(static_cast<float>(w + 1) * bin_width);
     hstart = min(max(roi_start_h + hstart, 0l), height);
     wstart = min(max(roi_start_w + wstart, 0l), width);
     hend = min(max(roi_start_h + hend, 0l), height);
     wend = min(max(roi_start_w + wend, 0l), width);
     bool is_bin_empty = (hend <= hstart) || (wend <= wstart);
-    T maxval = 0;
-    int64_t maxidx = -1;
+    T max_val = is_bin_empty ? 0 : -FLT_MAX;
+    int32_t max_idx = -1;
     if (!is_bin_empty) {
       const T* offset_in_dptr = in_dptr + (n * channel_num + c) * height * width;
       FOR_RANGE(int64_t, feat_h, hstart, hend) {
         FOR_RANGE(int64_t, feat_w, wstart, wend) {
-          if (offset_in_dptr[feat_h * width + feat_w] > maxval) {
-            maxidx = feat_h * width + feat_w;
-            maxval = offset_in_dptr[maxidx];
+          int32_t idx = feat_h * width + feat_w;
+          if (offset_in_dptr[idx] > max_val) {
+            max_val = offset_in_dptr[idx];
+            max_idx = idx;
           }
         }
       }
     }
-    out_dptr[index] = maxval;
-    argmax_dptr[index] = maxidx;
+    out_dptr[index] = max_val;
+    argmax_dptr[index] = max_idx;
   }
 }
 
@@ -73,7 +74,7 @@ class RoIPoolingKernelUtil<DeviceType::kGPU, T> final {
     RoIPoolForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                         ctx.device_ctx->cuda_stream()>>>(
         count, in_blob->dptr<T>(), conf.spatial_scale(), in_blob->shape().At(1),
-        in_blob->shape().At(2), in_blob->shape().At(3), out_blob->shape().At(1), conf.pooled_h(),
+        in_blob->shape().At(2), in_blob->shape().At(3), rois_blob->shape().At(1), conf.pooled_h(),
         conf.pooled_w(), rois_blob->dptr<T>(), out_blob->mut_dptr<T>(),
         argmax_blob->mut_dptr<int32_t>());
   }
