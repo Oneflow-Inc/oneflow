@@ -102,10 +102,16 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   // Compile
   Plan naive_plan;
   Plan plan;
+  PushAvailableMemDescOfThisMachine();
+  AvailableMemDesc amd;
+  ;
+
   if (machine_ctx->IsThisMachineMaster()) {
     Compiler compiler;
     naive_plan = compiler.Compile();
-    plan = Improver().ImproveMemSharedIdOnly(naive_plan);
+    Improver improver;
+    amd = PullAvailableMemDesc();
+    plan = improver.ImproveMemSharedIdOnly(amd, naive_plan);
     Global<CtrlClient>::Get()->PushKV("mem_shared_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
@@ -115,11 +121,10 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
-  PushAvailableMemDescOfThisMachine();
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
-    const AvailableMemDesc& amd = PullAvailableMemDesc();
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+    CHECK_GT(amd.machine_amd_size(), 0);
     plan = Improver().Improve(amd, naive_plan,
                               JoinPath(LogDir(), ActEventLogger::experiment_prefix_
                                                      + ActEventLogger::act_event_bin_filename_));
