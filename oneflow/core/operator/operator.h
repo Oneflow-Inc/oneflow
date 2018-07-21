@@ -30,7 +30,6 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  virtual bool NeedOutWhenBackward() const { return true; }
   ActivationType GetForwardActivationType() const;
   void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
 
