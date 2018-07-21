@@ -37,11 +37,11 @@ message SparseSoftmaxCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
-message SmoothL1LossKernelConf {
+message SparseCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
-message SparseCrossEntropyLossKernelConf {
+message SmoothL1LossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
@@ -108,6 +108,7 @@ message DecodeOFRecordKernelConf {
 message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
+
 message AccuracyKernelConf { 
   required DataType prediction_type = 1;
   required DataType label_type = 2;
