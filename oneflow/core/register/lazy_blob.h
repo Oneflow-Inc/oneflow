@@ -182,11 +182,11 @@ class VarLazyBlob final : public LazyBlobIf<VarLazyBlob<T>> {
     return (index + 1 < shape.NumAxes() ? shape.Count(index + 1) : MaxVal<int32_t>());
   };
   T* dptr_;
-  int64_t dim0_next_dim_count_;
-  int64_t dim1_next_dim_count_;
-  int64_t dim2_next_dim_count_;
-  int64_t dim3_next_dim_count_;
-  int64_t dim4_next_dim_count_;
+  const int64_t dim0_next_dim_count_;
+  const int64_t dim1_next_dim_count_;
+  const int64_t dim2_next_dim_count_;
+  const int64_t dim3_next_dim_count_;
+  const int64_t dim4_next_dim_count_;
   const LazyBlobNode* value_lazy_blob_node_;
 };
 
@@ -304,11 +304,11 @@ class BroadcastLazyBlob final : public LazyBlobIf<BroadcastLazyBlob<XT>> {
     return (index < shape.NumAxes() ? shape.At(index) : MaxVal<int32_t>());
   };
   const XT& x_;
-  int64_t dim0_size_;
-  int64_t dim1_size_;
-  int64_t dim2_size_;
-  int64_t dim3_size_;
-  int64_t dim4_size_;
+  const int64_t dim0_size_;
+  const int64_t dim1_size_;
+  const int64_t dim2_size_;
+  const int64_t dim3_size_;
+  const int64_t dim4_size_;
 };
 
 template<typename T>
