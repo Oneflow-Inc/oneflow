@@ -66,12 +66,7 @@ const std::string& Operator::SoleDtbn() const {
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
-  // TODO: remove this code
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
-  if (GetForwardActivationType() != ActivationType::kNone && Global<JobDesc>::Get()->IsTrain()) {
-    *buf_size +=
-        RoundUp(GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField(), kCudaAlignSize);
-  }
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
