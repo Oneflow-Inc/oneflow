@@ -104,14 +104,11 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Plan plan;
   PushAvailableMemDescOfThisMachine();
   AvailableMemDesc amd;
-  ;
 
   if (machine_ctx->IsThisMachineMaster()) {
-    Compiler compiler;
-    naive_plan = compiler.Compile();
-    Improver improver;
+    naive_plan = Compiler().Compile();
     amd = PullAvailableMemDesc();
-    plan = improver.ImproveMemSharedIdOnly(amd, naive_plan);
+    plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
     Global<CtrlClient>::Get()->PushKV("mem_shared_plan", plan);
   } else {
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
