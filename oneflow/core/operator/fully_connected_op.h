@@ -12,7 +12,6 @@ class FullyConnectedOp final : public Operator {
   ~FullyConnectedOp() = default;
 
   void InitFromOpConf() override;
-  bool NeedOutWhenBackward() const override;
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

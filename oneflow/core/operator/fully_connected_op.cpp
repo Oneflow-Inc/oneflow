@@ -16,14 +16,6 @@ void FullyConnectedOp::InitFromOpConf() {
   }
 }
 
-bool FullyConnectedOp::NeedOutWhenBackward() const {
-  if (op_conf().fully_connected_conf().activation() != ActivationType::kNone) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 const PbMessage& FullyConnectedOp::GetCustomizedConf() const {
   return op_conf().fully_connected_conf();
 }
