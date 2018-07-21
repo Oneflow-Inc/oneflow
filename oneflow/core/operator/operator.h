@@ -31,7 +31,7 @@ class Operator {
   virtual bool IsElemWiseOp() const { return false; }
 
   virtual bool NeedOutWhenBackward() const { return true; }
-  bool NeedDoActivation() const;
+  ActivationType GetForwardActivationType() const;
   void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
 
   virtual LogicalNode* NewProperLogicalNode();

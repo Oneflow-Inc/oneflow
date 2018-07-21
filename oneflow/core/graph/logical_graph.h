@@ -73,6 +73,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;
+  HashMap<LogicalNode*, LogicalNode*> bw_clone2fw_producer_;
 };
 
 }  // namespace oneflow

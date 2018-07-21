@@ -297,8 +297,9 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
   LogicalNode* clone_node = NewNode<NormalBackwardLogicalNode>();
   clone_node->mut_op_vec() = {clone_op};
   clone_node->mut_parallel_desc() = clone_info.succ_node->parallel_desc();
+  CHECK(bw_clone2fw_producer_.emplace(clone_node, nullptr).second);
 
-  // TODO: ibn -> lbi
+  *(clone_op->MutBnInOp2Lbi(clone_op->SoleIbn())) = clone_info.lbi;
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
   LogicalEdge* clone_in_diff_edge = NewEdge();
   clone_in_diff_edge->mut_lbis() = {clone_info.lbi};
@@ -326,13 +327,20 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
 
 void LogicalGraph::MoveBackwardActivations() {
   ForEachNode([&](LogicalNode* cur_node) {
+    BackwardLogicalNode* cur_bw_node = dynamic_cast<BackwardLogicalNode*>(cur_node);
+    ActivationType forward_activation = cur_node->SoleOp()->GetForwardActivationType();
+    if (!cur_bw_node) { return; }
     if (cur_node->GetAreaId() != kDataBackwardArea) { return; }
-    if (!cur_node->SoleOp()->NeedDoActivation()) { return; }
+    if (forward_activation == ActivationType::kNone) { return; }
     auto pre_node = cur_node->SoleInEdge()->src_node();
     CHECK(pre_node->GetAreaId() == kDataBackwardArea || pre_node->SoleOp()->IsLossOp());
-    ActivationType activation =
-        static_cast<ActivationType>(cur_node->SoleOp()->GetEnumFromCustomizedConf("activation"));
-    pre_node->SoleOp()->SetBackwardActivation(activation);
+    pre_node->SoleOp()->SetBackwardActivation(forward_activation);
+    auto bw_clone_it = bw_clone2fw_producer_.find(pre_node);
+    if (bw_clone_it != bw_clone2fw_producer_.end()) {
+      LogicalNode* fw_of_cur_node = cur_bw_node->fw_node();
+      CHECK_NOTNULL(fw_of_cur_node);
+      bw_clone2fw_producer_[pre_node] = fw_of_cur_node;
+    }
   });
 }
 
@@ -633,6 +641,9 @@ void LogicalGraph::ConnectFwToBw() {
     if (bw_node->fw_node() == nullptr) { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
+  for (auto& pair : bw_clone2fw_producer_) {
+    if (pair.second) { Connect<LogicalNode>(pair.second, NewEdge(), pair.first); }
+  }
 }
 
 void LogicalGraph::UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn) {
