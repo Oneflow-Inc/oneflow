@@ -17,7 +17,7 @@ class CloneKernel final : public KernelIf<device_type> {
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
 
-  decltype(make_tuple_from_sequence<9>()) tp_;
+  decltype(make_tuple_from_sequence<7>()) tp_;
 };
 
 }  // namespace oneflow

@@ -20,7 +20,7 @@ class AddKernel final : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   const PbMessage& GetCustomizedOpConf() const override;
 
-  decltype(make_tuple_from_sequence<9>()) tp_;
+  decltype(make_tuple_from_sequence<7>()) tp_;
 };
 
 }  // namespace oneflow

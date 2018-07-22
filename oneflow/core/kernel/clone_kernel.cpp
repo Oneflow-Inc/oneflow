@@ -22,24 +22,20 @@ void CloneKernel<device_type, T>::BackwardDataContent(
   size_t out_num = odbns.size();
   if (out_num == 0) return;
   Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
-  Memset<device_type>(ctx.device_ctx, in_diff_blob->mut_dptr<T>(), 0,
-                      in_diff_blob->ByteSizeOfDataContentField());
   auto out_diff = [&](int32_t idx) {
     return BnInOp2Blob(this->op_attribute().output_diff_bns(idx));
   };
-  int32_t offset = 0;
-  while (out_num - offset >= 10) {
-    AdditionAssign<device_type, T>(
-        ctx.device_ctx, in_diff_blob, out_diff(offset), out_diff(offset + 1), out_diff(offset + 2),
-        out_diff(offset + 3), out_diff(offset + 4), out_diff(offset + 5), out_diff(offset + 6),
-        out_diff(offset + 7), out_diff(offset + 8), out_diff(offset + 9));
-    offset += 10;
+  static const int kWidth = 8;
+  int r = out_num % kWidth;
+  if (r) {
+    tuple_switch(r, tp_,
+                 AdditionFunction<false, device_type, T, decltype(this)>{
+                     in_diff_blob, std::move(BnInOp2Blob), ctx.device_ctx, 0, this});
   }
-
-  if (out_num - offset > 0) {
-    tuple_switch(out_num - offset, tp_,
-                 AdditionAssignFunction<false, device_type, T, decltype(this)>{
-                     in_diff_blob, std::move(BnInOp2Blob), ctx.device_ctx, offset, this});
+  for (; r < out_num; r += kWidth) {
+    Addition<device_type, T>(ctx.device_ctx, in_diff_blob, in_diff_blob, out_diff(r),
+                             out_diff(r + 1), out_diff(r + 2), out_diff(r + 3), out_diff(r + 4),
+                             out_diff(r + 5), out_diff(r + 6), out_diff(r + 7));
   }
 }
 
