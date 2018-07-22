@@ -161,7 +161,7 @@ void Memcpy<DeviceType::kCPU>(DeviceCtx* ctx, void* dst, const void* src, size_t
 }
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case) {
+                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   void (*func)(DeviceCtx*, void* dst, const void* src, size_t sz, cudaMemcpyKind);
   cudaMemcpyKind kind;
   if (src_mem_case.has_host_mem() && dst_mem_case.has_host_mem()) {

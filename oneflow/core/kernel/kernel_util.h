@@ -35,7 +35,7 @@ void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
             cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case);
+                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
