@@ -29,7 +29,15 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-enum class CudaWorkType { kCompute = 0, kCopyH2D, kCopyD2H, kMix };
+enum class CudaWorkType : std::int32_t {
+  kCompute = 0,
+  kCopyH2D,
+  kCopyD2H,
+  kMix,
+  kMdUpdt,
+  kCudaWorkTypeSize
+};
+using CudaWorkRepType = std::underlying_type<CudaWorkType>::type;
 
 }  // namespace oneflow
 
