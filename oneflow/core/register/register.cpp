@@ -26,9 +26,9 @@ Regst::~Regst() {
 Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   auto it = lbi2blob_.find(lbi);
   if (it != lbi2blob_.end()) {
-    return static_cast<Blob*>(it->second.get());
+    return it->second.get();
   } else if (lbi.is_packed_id()) {
-    return static_cast<Blob*>(packed_blob_.get());
+    return packed_blob_.get();
   } else {
     return nullptr;
   }

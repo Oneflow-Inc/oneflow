@@ -15,16 +15,7 @@ namespace oneflow {
 class RegstMgr;
 class Regst;
 
-class BlobIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BlobIf);
-  virtual ~BlobIf() = default;
-
- protected:
-  BlobIf() = default;
-};
-
-class Blob final : public BlobIf {
+class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr);
