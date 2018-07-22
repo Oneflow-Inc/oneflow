@@ -5,7 +5,6 @@
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
-#include "oneflow/core/common/eigen_util.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
@@ -16,18 +15,10 @@ namespace oneflow {
 class RegstMgr;
 class Regst;
 
-class BlobIf {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BlobIf);
-  virtual ~BlobIf() = default;
-
- protected:
-  BlobIf() = default;
-};
-
-class Blob : public BlobIf {
+class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
+  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr);
   virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -69,10 +60,10 @@ class Blob : public BlobIf {
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
-  virtual void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
-  virtual void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
-  virtual void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
-  virtual void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) = 0;
+  void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
 
   int32_t col_id() const;
   void set_col_id(int32_t val);
@@ -80,9 +71,6 @@ class Blob : public BlobIf {
   void set_max_col_id(int32_t val);
   bool IsColValid() const { return col_id() <= max_col_id(); }
   const MemoryCase& mem_case() const;
-
- protected:
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr);
 
  private:
   template<typename T>
@@ -100,8 +88,6 @@ class Blob : public BlobIf {
   const BlobDesc* blob_desc_;
   Regst* regst_;
 };
-
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type);
 
 template<typename RecordType>
 class RecordBlob final {
