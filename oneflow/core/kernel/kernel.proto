@@ -4,7 +4,6 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/operator/op_conf.proto";
-import "oneflow/core/register/blob_desc.proto";
 
 message ConvKernelConf {
   required ShapeProto in = 1;
@@ -101,6 +100,14 @@ message DecodeOFRecordKernelConf {
   required uint32 random_seed = 1;
 }
 
+message ReduceGatherKernelConf {
+  repeated int64 data_offset = 1;
+}
+message AccuracyKernelConf { 
+  required DataType prediction_type = 1;
+  required DataType label_type = 2;
+}
+
 message OpAttribute {
   required OperatorConf op_conf = 1;
   map<string, LogicalBlobId> bn_in_op2lbi = 2;
@@ -125,7 +132,8 @@ message KernelConf {
   required bool need_do_col_num = 3;
   required bool is_forward = 4;
   required DataType data_type = 5;
-  optional BlobDescProto activation_blob_desc = 6;
+  optional ActivationType forward_activation = 6 [default = kNone];
+  optional ActivationType backward_activation = 7 [default = kNone];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
@@ -141,5 +149,7 @@ message KernelConf {
     MaxPoolingKernelConf max_pooling_conf = 205;
     NormalizationKernelConf normalization_conf = 250;
     LocalResponseNormalizationKernelConf local_response_normalization_conf = 300;
+    ReduceGatherKernelConf reduce_gather_conf = 350;
+    AccuracyKernelConf accuracy_conf = 401;
   }
 }

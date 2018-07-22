@@ -67,11 +67,11 @@ RegstActSubGraph::RegstActSubGraph(const std::string& regst_uid, const ActNode* 
       fake_sources_.insert(node);
     }
   }
-  int64_t min_depth = std::numeric_limits<int64_t>::max();
+  int64_t min_depth = MaxVal<int64_t>();
   for (const ActNode* node : fake_sources_super_set) {
     min_depth = std::min(min_depth, node->depth());
   }
-  int64_t max_depth = std::numeric_limits<int64_t>::min();
+  int64_t max_depth = MinVal<int64_t>();
   for (const ActNode* node : partial_consumer_nodes_) {
     max_depth = std::max(max_depth, node->depth());
   }
@@ -118,20 +118,13 @@ void RegstActSubGraph::ForEachOutNode(const ActNode* node,
 
 void RegstActSubGraph::ForEachConsumerPathDuration(
     const std::function<void(int64_t consumer_actor_id, double duration)>& Handler) const {
-  auto Duration4Node = [&](const ActNode* node) {
-    if (fake_sources_.find(node) != fake_sources_.end()) {
-      return std::numeric_limits<double>::min();
-    } else {
-      return node->Duration();
-    }
-  };
   HashMap<const ActNode*, double> node2longest_path_duration;
   TopoForEachActNode([&](const ActNode* node) {
-    double duration = std::numeric_limits<double>::min();
+    double prev_path_duration = (node == producer_node_) ? 0 : MinVal<double>();
     ForEachInNode(node, [&](const ActNode* in_node) {
-      duration = std::max(duration, node2longest_path_duration[in_node]);
+      prev_path_duration = std::max(prev_path_duration, node2longest_path_duration.at(in_node));
     });
-    node2longest_path_duration[node] = duration + Duration4Node(node);
+    node2longest_path_duration[node] = prev_path_duration + node->Duration();
   });
   for (const ActNode* node : partial_consumer_nodes_) {
     Handler(node->actor_id(), node2longest_path_duration.at(node));
@@ -445,15 +438,6 @@ ActGraph::ActGraph(const Plan& plan, std::unique_ptr<std::list<ActEvent>>&& act_
   InitEdges();
   InitDepth();
   InitTaskId2TaskProto();
-  InitActorStatistics();
-}
-
-void ActGraph::InitActorStatistics() {
-  for (const ActEvent& act_event : *act_events_) {
-    int64_t actor_id = act_event.actor_id();
-    ++actor_id2act_cnt_[actor_id];
-    actor_id2total_act_time_[actor_id] += Duration4ActEvent(act_event);
-  }
 }
 
 void ActGraph::ForEachDepthRangeRegstUids(
@@ -463,7 +447,7 @@ void ActGraph::ForEachDepthRangeRegstUids(
   for (const auto& pair : regst_uid2producer_node_) {
     const auto& consumer_nodes_it = regst_uid2consumer_nodes_.find(pair.first);
     if (consumer_nodes_it == regst_uid2consumer_nodes_.end()) { continue; }
-    int64_t begin = std::numeric_limits<int64_t>::max();
+    int64_t begin = MaxVal<int64_t>();
     pair.second->ForEachNodeOnOutEdge(
         [&](const ActNode* node) { begin = std::min(begin, node->depth()); });
     int64_t end = 0;

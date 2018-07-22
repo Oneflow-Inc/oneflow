@@ -67,6 +67,10 @@ int32_t JobDesc::PieceNumOfPrintLoss() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().piece_num_of_print_loss();
 }
+int32_t JobDesc::PieceNumOfPrintAccuracy() const {
+  CHECK(IsTrain());
+  return job_conf_.other().train_conf().piece_num_of_print_accuracy();
+}
 int64_t JobDesc::BatchSize() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().batch_size();
@@ -107,6 +111,9 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     TrainConf* train_conf = job_conf_.mutable_other()->mutable_train_conf();
     if (train_conf->piece_num_of_print_loss() == -1) {
       train_conf->set_piece_num_of_print_loss(NumOfPiecesInBatch());
+    }
+    if (train_conf->piece_num_of_print_accuracy() == -1) {
+      train_conf->set_piece_num_of_print_accuracy(NumOfPiecesInBatch());
     }
     if (piece_exp == -1) { piece_exp = 19 * NumOfPiecesInBatch(); }
     piece_exp = std::max(piece_exp, NumOfPiecesInBatch());

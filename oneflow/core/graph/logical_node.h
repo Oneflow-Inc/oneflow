@@ -134,6 +134,8 @@ class ForwardLogicalNode : public LogicalNode {
 
   BackwardLogicalNode* NewBackwardNode();
 
+  void SetBwNode(BackwardLogicalNode* bw_node) { bw_node_ = bw_node; }
+
  protected:
   virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;
 
@@ -177,10 +179,13 @@ class NormalBackwardLogicalNode final : public BackwardLogicalNode {
 
 DECLARE_NAIVE_LOGICAL_NODE(RecordLoadLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(DecodeLogicalNode);
-DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(PrintLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(LossLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossAccLogicalNode);
 DECLARE_NAIVE_LOGICAL_NODE(LossPrintLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(AccuracyLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(AccuracyAccLogicalNode);
+DECLARE_NAIVE_LOGICAL_NODE(AccuracyPrintLogicalNode);
 
 class NormalMdUpdtLogicalNode final : public LogicalNode {
  public:

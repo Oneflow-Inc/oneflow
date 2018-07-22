@@ -12,8 +12,6 @@ class EmbeddingLookupOp final : public Operator {
   ~EmbeddingLookupOp() = default;
 
   void InitFromOpConf() override;
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
-  bool NeedOutWhenBackward() const override { return false; }
   bool IsEmbeddingLookupOp() const override { return true; }
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,

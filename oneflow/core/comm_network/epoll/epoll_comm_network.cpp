@@ -95,7 +95,7 @@ void EpollCommNet::InitSockets() {
   // listen
   int listen_sockfd = socket(AF_INET, SOCK_STREAM, 0);
   uint16_t this_listen_port = 1024;
-  uint16_t listen_port_max = std::numeric_limits<uint16_t>::max();
+  uint16_t listen_port_max = MaxVal<uint16_t>();
   for (; this_listen_port < listen_port_max; ++this_listen_port) {
     sockaddr_in this_sockaddr = GetSockAddr(this_machine_id, this_listen_port);
     int bind_result =

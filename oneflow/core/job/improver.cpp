@@ -156,7 +156,7 @@ uint64_t CalcMemoryConsumed(
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += regst_num * total_byte_size;
+      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
     } else {
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();
@@ -164,7 +164,9 @@ uint64_t CalcMemoryConsumed(
       max_bytes = std::max(max_bytes, total_byte_size);
     }
   }
-  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) { mem_consuming += pair.second; }
+  for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) {
+    mem_consuming += RoundUp(pair.second, kCudaMemAllocAlignSize);
+  }
   return mem_consuming;
 }
 
@@ -178,6 +180,13 @@ std::shared_ptr<HashMap<int64_t, RegstDescProto*>> MakeRegstDescId2RegstDesc(Pla
     }
   }
   return regst_desc_id2regst_desc;
+}
+
+std::function<uint64_t(int64_t)> MakeGetterGetPlanRegstNum(Plan* plan) {
+  auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
+  return [regst_desc_id2regst_desc](int64_t regst_desc_id) {
+    return regst_desc_id2regst_desc->at(regst_desc_id)->register_num();
+  };
 }
 
 std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
@@ -230,20 +239,27 @@ double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
 
 double CalcBaseII(const ActGraph& act_graph) {
   int64_t max_act_cnt = 0;
-  for (const auto& pair : act_graph.actor_id2act_cnt()) {
-    if (max_act_cnt < pair.second) { max_act_cnt = pair.second; }
-  }
+  HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
+  act_graph.ForEachNode([&](const ActNode* act_node) {
+    int64_t actor_id = act_node->actor_id();
+    if (!act_node->out_edges().empty()) {
+      ++actor_id2outputed_act_cnt[actor_id];
+      max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
+    }
+  });
   HashMap<int64_t, double> actor_id2act_frequency;
-  for (const auto& pair : act_graph.actor_id2act_cnt()) {
+  for (const auto& pair : actor_id2outputed_act_cnt) {
     actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
   }
   HashMap<int64_t, double> stream_id2total_calc_time;
   act_graph.ForEachNode([&](const ActNode* act_node) {
-    int64_t stream_id = act_node->act_event().work_stream_id();
     int64_t actor_id = act_node->actor_id();
+    auto frequence_it = actor_id2act_frequency.find(actor_id);
+    if (frequence_it == actor_id2act_frequency.end()) { return; }
+    int64_t stream_id = act_node->act_event().work_stream_id();
     TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
-    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
-        task_type, act_node->Duration(), actor_id2act_frequency.at(actor_id));
+    stream_id2total_calc_time[stream_id] +=
+        FormalDuration4ExperimentalDuration(task_type, act_node->Duration(), frequence_it->second);
   });
   double base_ii = 0;
   for (const auto& pair : stream_id2total_calc_time) {
@@ -365,6 +381,24 @@ void ForEachMemSharingCriticalSection(
   }
 }
 
+void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
+                            const std::function<void(int64_t, uint64_t)>& SetRegstNum) {
+  for (const auto& task_proto : plan.task()) {
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      const RegstDescProto& regst = pair.second;
+      const RegstDescTypeProto& regst_type = regst.regst_desc_type();
+      if (regst_type.has_ctrl_regst_desc()
+          && regst_type.ctrl_regst_desc().has_reliant_regst_desc_id()) {
+        // set ctrl regst num between copyHd and MdUpdt
+        CHECK(task_proto.task_type() == kCopyHd);
+        uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id())
+                             + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1;
+        SetRegstNum(regst.regst_desc_id(), regst_num);
+      }
+    }
+  }
+}
+
 }  // namespace
 
 uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) const {
@@ -479,8 +513,7 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
-                       const std::string& act_event_filepath) {
+void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& naive_plan) {
   amd_ = amd;
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -488,6 +521,23 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
+}
+
+Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
+  InitAvailableMemDesc(amd, naive_plan);
+  Plan mem_shared_plan = ImproveMemSharedId(naive_plan);
+  // Check if there is any zone out of memory even though all register_num == 1
+  MemZoneRegstDescs mz_regst_descs;
+  MakeMemZoneRegstDescs(mem_shared_plan, &mz_regst_descs);
+  HashMap<int64_t, double> zero2one{{0, 1}};
+  auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
+  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  return mem_shared_plan;
+}
+
+Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+                       const std::string& act_event_filepath) {
+  InitAvailableMemDesc(amd, naive_plan);
   auto act_events = std::make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
@@ -496,14 +546,15 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   Plan mem_unlimited_plan(naive_plan);
   ForEachImprovedRegstNum(act_graph, naive_plan, false, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
-  Plan mem_shared_plan = ImproveMemSharedIdOnly(mem_unlimited_plan);
+  Plan mem_shared_plan = ImproveMemSharedId(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
+  FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   return plan;
 }
 
-Plan Improver::ImproveMemSharedIdOnly(const Plan& naive_plan) const {
+Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
   ForEachImprovedMemSharedId(plan_task_graph, MakeSetterSetPlanMemSharedId(&plan));

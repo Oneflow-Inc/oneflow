@@ -17,9 +17,11 @@ class Improver final {
 
   Plan Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                const std::string& act_event_filepath);
-  Plan ImproveMemSharedIdOnly(const Plan& naive_plan) const;
+  Plan ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan);
 
  private:
+  Plan ImproveMemSharedId(const Plan& naive_plan) const;
+  void InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& naive_plan);
   void ForEachImprovedRegstNum(
       const ActGraph& graph, const Plan& plan, bool is_memory_limited,
       const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,

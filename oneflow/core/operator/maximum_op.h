@@ -11,9 +11,6 @@ class MaximumOp final : public CWiseOp {
   MaximumOp() = default;
   ~MaximumOp() = default;
 
-  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
-  bool NeedOutWhenBackward() const override { return false; }
-
   void VirtualInitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;

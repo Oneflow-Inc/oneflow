@@ -148,12 +148,17 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   }
   const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
+  BuildCtrlRegstDesc(dst_node);
+}
+
+RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
   std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
   CHECK(produced_regsts_.emplace(name, regst).second);
   dst_node->ConsumeRegst("in_ctrl", regst);
+  return regst.get();
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
@@ -266,17 +271,7 @@ void TaskNode::FixRegisterNumRange() {
 int64_t TaskNode::AllocateLocalWorkStreamId() {
   CHECK_NE(machine_id_, -1);
   CHECK_NE(thrd_id_, -1);
-  if (UseIndependentWorkStream()) {
-    if (device_type() == DeviceType::kCPU) {
-      return 0;
-    } else if (device_type() == DeviceType::kGPU) {
-      return Global<IDMgr>::Get()->AllocateLocalWorkStreamId(machine_id_, thrd_id_);
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else {
-    return 0;
-  }
+  return 0;
 }
 
 void TaskNode::UpdateTaskId() {
@@ -352,7 +347,6 @@ std::map<TaskType, std::string> task_type2color = {
     {kMdSave, "1"},        {kMdDiffAcc, "7"},      {kCopyHd, "8"},
     {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
     {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
-    {kReduceGather, "2"},
-};
-
+    {kReduceGather, "2"},  {kAccuracy, "4"},       {kAccuracyPrint, "1"},
+    {kAccuracyAcc, "5"}};
 }  // namespace oneflow
