@@ -34,4 +34,10 @@ Blob* Regst::GetBlobByLbi(const LogicalBlobId& lbi) {
   }
 }
 
+void Regst::set_regst_desc(const RtRegstDesc* regst_desc) {
+  CHECK(regst_desc_ == nullptr);
+  regst_desc_ = regst_desc;
+  status_.regst_desc_id = regst_desc_->regst_desc_id();
+}
+
 }  // namespace oneflow
