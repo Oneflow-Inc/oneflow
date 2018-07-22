@@ -56,19 +56,20 @@ void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 
 void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataIdField(), mem_case(),
+  AutoMemcpy(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfColNumField(), mem_case(),
+  AutoMemcpy(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField(), mem_case(),
              rhs->mem_case());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), TotalByteSize(), mem_case(), rhs->mem_case());
+  AutoMemcpy(device_ctx, mut_memory_ptr(), rhs->memory_ptr(), TotalByteSize(), mem_case(),
+             rhs->mem_case());
 }
 
 }  // namespace oneflow
