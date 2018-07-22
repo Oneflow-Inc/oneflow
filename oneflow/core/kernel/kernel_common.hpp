@@ -4,41 +4,41 @@
 namespace oneflow{
     //function object for add/clone kernel
     template<DeviceType device_type, typename T, typename... Args>
-    inline std::enable_if_t<std::is_same<T, float>::value> AdditionAssign(DeviceCtx* device_ctx, Blob* out, Args... in) {
-        KernelUtil<device_type, float>::AdditionAssign(
+    inline std::enable_if_t<std::is_same<T, float>::value> Addition(DeviceCtx* device_ctx, Blob* out, Args... in) {
+        KernelUtil<device_type, float>::Addition(
                 device_ctx, out->shape().elem_cnt(), out->mut_dptr<float>(), in->template dptr<float>()...);
     }
     template<DeviceType device_type, typename T, typename... Args>
-    inline std::enable_if_t<std::is_same<T, double>::value> AdditionAssign(DeviceCtx* device_ctx, Blob* out, Args... in) {
-        KernelUtil<device_type, double>::AdditionAssign(
+    inline std::enable_if_t<std::is_same<T, double>::value> Addition(DeviceCtx* device_ctx, Blob* out, Args... in) {
+        KernelUtil<device_type, double>::Addition(
                 device_ctx, out->shape().elem_cnt(), out->mut_dptr<double>(), in->template dptr<double>()...);
     }
 
     template<DeviceType device_type, typename T, typename... Args>
-    inline void AdditionAssign(...) {
+    inline void Addition(...) {
         static_assert(true, "just support float point here");
     }
 
     template<bool in, DeviceType device_type, typename T, typename U>
-    struct AdditionAssignFunction {
+    struct AdditionFunction {
         template<typename V>
         void operator()(V v) {
-            AdditionAssignImpl(std::make_index_sequence<decltype(v)::value>());
+            AdditionImpl(std::make_index_sequence<decltype(v)::value>());
         }
 
         template<size_t... Idx>
-        void AdditionAssignImpl(std::index_sequence<Idx...>) {
+        void AdditionImpl(std::index_sequence<Idx...>) {
             if (in) {
-                AdditionAssign<device_type, T>(device_ctx_, diff_blob_,
+                Addition<device_type, T>(device_ctx_, diff_blob_,
                                             BnInOp2Blob_(u_->op_attribute().input_bns(offset_ + Idx))...);
             } else {
-                AdditionAssign<device_type, T>(
+                Addition<device_type, T>(
                         device_ctx_, diff_blob_,
                         BnInOp2Blob_(u_->op_attribute().output_diff_bns(offset_ + Idx))...);
             }
         }
 
-        void AdditionAssignImpl(std::index_sequence<>) {}
+        void AdditionImpl(std::index_sequence<>) {}
 
         Blob* diff_blob_;
         std::function<Blob*(const std::string&)> BnInOp2Blob_;
