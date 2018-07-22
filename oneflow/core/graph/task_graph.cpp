@@ -7,6 +7,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/job/thrd_id_distributor.h"
 
 namespace oneflow {
 
@@ -24,7 +25,17 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   };
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
-  std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
+  std::vector<int64_t> mdsave_offset(job_desc->TotalMachineNum(), 0);
+  std::vector<int64_t> record_load_offset(job_desc->TotalMachineNum(), 0);
+  std::vector<int64_t> loss_print_offset(job_desc->TotalMachineNum(), 0);
+  auto& distributor = ThrdIdDistributor::get();
+  auto GenerateThrdId = [&distributor](const TaskNode* task_node, std::vector<int64_t>& offset_vec,
+                                       int64_t& ret) {
+    int64_t& offset = offset_vec.at(task_node->machine_id());
+    ret = distributor.GenerateThrdId(task_node->GetTaskType(), offset);
+    offset = (offset + 1) % distributor.GetThrdNum(task_node->GetTaskType());
+  };
+
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
     int64_t ret = -1;
     if (task_node->IsPersistence() == false) {
@@ -32,12 +43,17 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
       ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
       offset = (offset + 1) % job_desc->CpuDeviceNum();
     } else {
-      int64_t& offset = persistence_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetPersistenceThrdId(offset);
-      offset = (offset + 1) % job_desc->PersistenceWorkerNum();
+      if (task_node->GetTaskType() == TaskType::kRecordLoad) {
+        GenerateThrdId(task_node, record_load_offset, ret);
+      } else if (task_node->GetTaskType() == TaskType::kLossPrint) {
+        GenerateThrdId(task_node, loss_print_offset, ret);
+      } else {
+        GenerateThrdId(task_node, mdsave_offset, ret);
+      }
     }
     return ret;
   };
+  CollectPersistenceNodesNum();
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
     logical_node->GenSortedCompTaskNodes(
         AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
@@ -56,6 +72,35 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   ToDotWithAutoFilePath();
+}
+
+void TaskGraph::CollectPersistenceNodesNum() {
+  int32_t recordload_nodes_num = 0;
+  int32_t loassprint_nodes_num = 0;
+  int32_t mdsave_nodes_num = 0;
+
+  logical_gph_->ForEachNode([&recordload_nodes_num, &loassprint_nodes_num,
+                             &mdsave_nodes_num](const LogicalNode* logical_node) {
+    auto parallel_desc = logical_node->parallel_desc();
+    for (int64_t machine_id : parallel_desc->sorted_machine_ids()) {
+      auto vec = parallel_desc->sorted_dev_phy_ids(machine_id);
+      std::for_each(vec.begin(), vec.end(), [&](int64_t dev_phy_id) {
+        if (logical_node->TypeName() == "RecordLoad") {
+          recordload_nodes_num++;
+        } else if (logical_node->TypeName() == "LossPrint") {
+          loassprint_nodes_num++;
+        } else if (logical_node->TypeName() == "MdSave") {
+          mdsave_nodes_num++;
+        }
+      });
+    }
+  });
+
+  ThrdIdDistributor::get().AddThrdNum(TaskType::kRecordLoad, recordload_nodes_num);
+  ThrdIdDistributor::get().AddThrdNum(TaskType::kLossPrint, loassprint_nodes_num);
+  const int32_t conf_mdsave_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
+  ThrdIdDistributor::get().AddThrdNum(
+      TaskType::kMdSave, mdsave_nodes_num < conf_mdsave_num ? mdsave_nodes_num : conf_mdsave_num);
 }
 
 void TaskGraph::FindChainsInSameStream() {
