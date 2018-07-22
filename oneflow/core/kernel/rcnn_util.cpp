@@ -3,37 +3,80 @@
 namespace oneflow {
 
 template<typename T>
-float RcnnUtil<T>::ComputeArea(const T* box_dptr, int32_t offset) {
-  return (box_dptr[offset + 2] - box_dptr[offset] + 1)
-         * (box_dptr[offset + 3] - box_dptr[offset + 1] + 1);
+float RcnnUtil<T>::BBoxArea(const T* box_dptr) {
+  return (box_dptr[2] - box_dptr[0] + 1) * (box_dptr[3] - box_dptr[1] + 1);
 }
 
 template<typename T>
-void RcnnUtil<T>::BboxOverlaps(DeviceCtx* ctx, const Blob* boxes, const Blob* gt_boxes,
-                               Blob* overlaps) {
-  const T* bbox_dptr = boxes->dptr<T>();
-  const T* gt_bbox_dptr = gt_boxes->dptr<T>();
-  T* overlaps_dptr = overlaps->mut_dptr<T>();
-  FOR_RANGE(int32_t, i, 0, boxes->shape().At(0)) {
-    FOR_RANGE(int32_t, j, 0, gt_boxes->shape().At(1)) {
-      int32_t gt_id =
-          i * gt_boxes->shape().At(1) * gt_boxes->shape().At(2) + j * gt_boxes->shape().At(2);
-      float gt_area = ComputeArea(gt_bbox_dptr, gt_id);
-      FOR_RANGE(int32_t, k, 0, boxes->shape().At(1)) {
-        int32_t box_id = i * boxes->shape().At(1) * boxes->shape().At(2) + k * boxes->shape().At(2);
-        int32_t iw = std::min(bbox_dptr[box_id + 2], gt_bbox_dptr[gt_id + 2])
-                     - std::max(bbox_dptr[box_id], gt_bbox_dptr[gt_id]) + 1;
-        if (iw > 0) {
-          int32_t ih = std::min(bbox_dptr[box_id + 3], gt_bbox_dptr[gt_id + 3])
-                       - std::max(bbox_dptr[box_id + 1], gt_bbox_dptr[gt_id + 1]) + 1;
-          if (ih > 0) {
-            float ua = ComputeArea(bbox_dptr, box_id) + gt_area - iw * ih;
-            int32_t overlap_id = i * boxes->shape().At(1) * gt_boxes->shape().At(1)
-                                 + k * gt_boxes->shape().At(1) + j;
-            overlaps_dptr[overlap_id] = iw * ih / ua;
-          }
-        }
+float RcnnUtil<T>::InterOverUnion(const T* box1_dptr, const T* box2_dptr) {
+  float boxIou = 0;
+  int32_t iw = std::min(box1_dptr[2], box2_dptr[2]) - std::max(box1_dptr[0], box2_dptr[0]) + 1;
+  if (iw > 0) {
+    int32_t ih = std::min(box1_dptr[3], box2_dptr[3]) - std::max(box1_dptr[1], box2_dptr[1]) + 1;
+    if (ih > 0) {
+      float ua = BBoxArea(box1_dptr) + BBoxArea(box2_dptr) - iw * ih;
+      boxIou = iw * ih / ua;
+    }
+  }
+  return boxIou;
+}
+
+template<typename T>
+void RcnnUtil<T>::BboxOverlaps(const T* rois, const int32_t roi_num, const T* gt_boxes,
+                               const int32_t gt_num, const int32_t gt_max_num, T* overlaps) {
+  FOR_RANGE(int32_t, i, 0, roi_num) {
+    FOR_RANGE(int32_t, j, 0, gt_num) {
+      overlaps[i * gt_max_num + j] = InterOverUnion(rois + i * 4, gt_boxes + j * 5);
+    }
+  }
+}
+
+template<typename T>
+void RcnnUtil<T>::OverlapRowArgMax7Max(const T* overlaps, const int32_t roi_num,
+                                       const int32_t gt_num, const int32_t gt_max_num,
+                                       T* argmax_dptr, T* max_dptr) {
+  FOR_RANGE(int32_t, i, 0, roi_num) {
+    FOR_RANGE(int32_t, j, 0, gt_num) {
+      if (max_dptr[i] < overlaps[i * gt_max_num + j]) {
+        max_dptr[i] = overlaps[i * gt_max_num + j];
+        argmax_dptr[i] = j;
       }
+    }
+  }
+}
+
+template<typename T>
+void RcnnUtil<T>::OverlapColArgMax7Max(const T* overlaps, const int32_t roi_num,
+                                       const int32_t gt_num, const int32_t gt_max_num,
+                                       T* argmax_dptr, T* max_dptr) {
+  FOR_RANGE(int32_t, i, 0, gt_num) {
+    FOR_RANGE(int32_t, j, 0, roi_num) {
+      if (max_dptr[i] < overlaps[j * gt_max_num + i]) {
+        max_dptr[i] = overlaps[j * gt_max_num + i];
+        argmax_dptr[i] = j;
+      }
+    }
+  }
+}
+
+template<typename T>
+void RcnnUtil<T>::SampleChoice(T* rois_ptr, const int32_t num, T* sample_ptr,
+                               const int32_t sample_num) {
+  if (num == sample_num) {
+    FOR_RANGE(int32_t, i, 0, num) { sample_ptr[i] = rois_ptr[i]; }
+    return;
+  }
+  // get not repeating sample
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, num - 1);
+  for (int i = 0; i < sample_num; i++) {
+    int32_t randn = dis(gen);
+    if (rois_ptr[randn] == -1) {
+      i--;
+    } else {
+      sample_ptr[i] = rois_ptr[randn];
+      rois_ptr[randn] = -1;
     }
   }
 }
