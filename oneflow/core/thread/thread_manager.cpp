@@ -23,7 +23,7 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
   const OneMachineBufInfo& info = plan.buf_info().Get(Global<MachineCtx>::Get()->this_machine_id());
 
 #ifdef WITH_CUDA
-  FOR_RANGE(int64_t, i, 0, 4) {
+  FOR_RANGE(int64_t, i, 0, static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize)) {
     FOR_RANGE(int64_t, dev_phy_id, 0, job_desc->GpuDeviceNum()) {
       threads_.push_back(new GpuThread(thrd_id, dev_phy_id, info.buf_size(thrd_id)));
       thrd_id += 1;
