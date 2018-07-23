@@ -29,7 +29,6 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");
   Blob* inside_weights_blob = BnInOp2Blob("bbox_inside_weights");
   Blob* outside_weights_blob = BnInOp2Blob("bbox_outside_weights");
-
   // data_tmp blob
   Blob* all_rois_blob = BnInOp2Blob("all_rois");
   Blob* overlap_blob = BnInOp2Blob("bbox_overlap");
@@ -39,13 +38,11 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   Blob* fg_inds_blob = BnInOp2Blob("fg_inds");  // fg_indexs(box_num,1)
   Blob* bg_inds_blob = BnInOp2Blob("bg_inds");  // bg_indexs(box_num,1)
   Blob* fg_bg_sample_inds_blob = BnInOp2Blob("fg_bg_sample_inds");
-
   const int32_t num_roi_per_image = this->op_conf().proposal_target_conf().num_roi_per_image();
   const float fg_fraction = this->op_conf().proposal_target_conf().fg_fraction();
   const int32_t fg_thresh = this->op_conf().proposal_target_conf().fg_thresh();
   const int32_t bg_thresh_hi = this->op_conf().proposal_target_conf().bg_thresh_hi();
   const int32_t bg_thresh_lo = this->op_conf().proposal_target_conf().bg_thresh_lo();
-
   const int32_t weight_x =
       this->op_conf().proposal_target_conf().bbox_inside_weight_conf().weight_x();
   const int32_t weight_y =
@@ -54,7 +51,6 @@ void ProposalTargetKernel<T>::ForwardDataContent(
       this->op_conf().proposal_target_conf().bbox_inside_weight_conf().weight_w();
   const int32_t weight_h =
       this->op_conf().proposal_target_conf().bbox_inside_weight_conf().weight_h();
-
   const bool bbox_normalize_targets_precomputed =
       this->op_conf().proposal_target_conf().bbox_normalize_targets_precomputed();
   const int32_t means_x = this->op_conf().proposal_target_conf().bbox_normalize_means().means_x();
@@ -74,11 +70,9 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   // 7. Select background RoIs indexs as [BG_THRESH_LO, BG_THRESH_HI)
   // 8. Compute number of background RoIs to take from this image
   // 9. Sample background regions without replacement
-
   int32_t num_batch = rpn_rois_blob->shape().At(0);
   int32_t rois_num = rpn_rois_blob->shape().At(1);
   int32_t gt_max_num = gt_boxes_blob->shape().At(1);
-
   const T* rpn_rois_dptr = rpn_rois_blob->dptr<T>();
   const T* gt_bbox_dptr = gt_boxes_blob->dptr<T>();
   const T* gt_num_dptr = gt_num_blob->dptr<T>();
@@ -87,7 +81,6 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   T* bbox_targets_dptr = bbox_targets_blob->mut_dptr<T>();
   T* inside_weights_dptr = inside_weights_blob->mut_dptr<T>();
   T* outside_weights_dptr = outside_weights_blob->mut_dptr<T>();
-
   // tmp blob
   T* all_rois_dptr = all_rois_blob->mut_dptr<T>();                    //(roi_num + gt_max_num, 4)
   T* overlap_dptr = overlap_blob->mut_dptr<T>();                      //(roi_num,gt_max_num)
@@ -97,7 +90,6 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   T* fg_inds_dptr = fg_inds_blob->mut_dptr<T>();                      //(roi_num,1)
   T* bg_inds_dptr = bg_inds_blob->mut_dptr<T>();                      //(roi_num,1)
   T* fg_bg_sample_inds_dptr = fg_bg_sample_inds_blob->mut_dptr<T>();  //(num_roi_per_image,1)
-
   FOR_RANGE(int32_t, i, 0, num_batch) {
     int32_t gt_num = gt_num_dptr[i];
     rpn_rois_dptr = rpn_rois_blob->dptr<T>() + i * rois_num * 4;
@@ -107,15 +99,12 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     bbox_targets_dptr = bbox_targets_blob->mut_dptr<T>() + i * num_roi_per_image * 4;
     inside_weights_dptr = inside_weights_blob->mut_dptr<T>() + i * num_roi_per_image * 4;
     outside_weights_dptr = outside_weights_blob->mut_dptr<T>() + i * num_roi_per_image * 4;
-
     // tmp blob do not need to offset , its size not include im_num axis.
-
     IncludeGt2Rois(rpn_rois_dptr, rois_num, gt_bbox_dptr, gt_num, all_rois_dptr);
     RcnnUtil<T>::BboxOverlaps(all_rois_dptr, rois_num, gt_bbox_dptr, gt_num, gt_max_num,
                               overlap_dptr);
     RcnnUtil<T>::OverlapRowArgMax7Max(overlap_dptr, rois_num, gt_num, gt_max_num, roi_argmax_dptr,
                                       max_overlaps_dptr);
-
     int32_t fgidx = 0;
     int32_t bgidx = 0;
     FOR_RANGE(int32_t, j, 0, rois_num) {
@@ -142,7 +131,6 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     int out_weight_y = (weight_y > 0 ? weight_y : 0);
     int out_weight_w = (weight_w > 0 ? weight_w : 0);
     int out_weight_h = (weight_h > 0 ? weight_h : 0);
-
     FOR_RANGE(int32_t, j, 0, num_roi_per_image) {
       if (j < fg_rois_per_image)  // foreground
       {
@@ -172,11 +160,9 @@ void ProposalTargetKernel<T>::ForwardDataContent(
       }
     }
   }
-
-   ProposalKernelUtil<DeviceType::kCPU, T>::BboxTransform(ctx.device_ctx,
-                                                         num_batch * num_roi_per_image, rois_dptr,
-                                                          bbox_targets_dptr, bbox_targets_dptr);
-
+  ProposalKernelUtil<DeviceType::kCPU, T>::BboxTransform(ctx.device_ctx,
+                                                           num_batch * num_roi_per_image, rois_dptr,
+                                                            bbox_targets_dptr, bbox_targets_dptr);
   if (bbox_normalize_targets_precomputed) {
     FOR_RANGE(int32_t, i, 0, num_batch * num_roi_per_image) {
       bbox_targets_dptr[i * 4] = (bbox_targets_dptr[i * 4] - means_x) / stds_x;
@@ -188,5 +174,4 @@ void ProposalTargetKernel<T>::ForwardDataContent(
 }
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalTargetConf, ProposalTargetKernel,
                                ARITHMETIC_DATA_TYPE_SEQ);
-
 }  // namespace oneflow
