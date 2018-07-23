@@ -26,16 +26,17 @@ class ProposalKernelUtil final {
                             T* deltas);
   static void BboxTransformInv(DeviceCtx* ctx, int64_t m, const T* bbox, const T* deltas,
                                T* bbox_pred);
-  static void TakeFgScores(DeviceCtx* ctx, int64_t m, int64_t a, const T* class_prob, T* fg_scores);
-  static void ClipBoxes(DeviceCtx* ctx, int64_t n, int64_t m, const float* im_info, T* proposals);
+  static void TakeFgProbs(DeviceCtx* ctx, int64_t m, int64_t a, const T* class_prob, T* fg_scores);
+  static void ClipBoxes(DeviceCtx* ctx, int64_t n, int64_t m, int64_t image_height,
+                        int64_t image_width, T* proposals);
   static std::vector<int64_t> FilterBoxesByMinSize(DeviceCtx* ctx, int64_t n, int64_t m,
-                                                   int32_t min_size, const float* im_info,
-                                                   T* proposals);
+                                                   int32_t min_size, float scale, T* proposals);
   static void SortByScore(DeviceCtx* ctx, int64_t n, int64_t m, std::vector<int64_t> keep_to,
                           T* fg_score, T* proposals);
-  static void Nms(DeviceCtx* ctx, int64_t n, int64_t m, const std::vector<int64_t>& keep_to,
-                  int64_t pre_nms_top_n, int64_t post_nms_top_n, float nms_threshold,
-                  const T* proposals, const T* fg_scores, T* rois, T* scores);
+  static void Nms(DeviceCtx* ctx, int64_t n, int64_t index, int64_t m,
+                  const std::vector<int64_t>& keep_to, int64_t pre_nms_top_n,
+                  int64_t post_nms_top_n, float nms_threshold, const T* proposals, const T* probs,
+                  T* rois, T* roi_probs);
 };
 
 }  // namespace oneflow
