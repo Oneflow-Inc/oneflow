@@ -587,6 +587,21 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
+message ProposalOpConf {
+  required string class_prob = 1;
+  required string bbox_pred = 2;
+  required string image_info = 3;
+  required string rois = 4;
+  required string scores = 5;
+  required int32 feature_map_stride = 6 [default = 16];
+  required int32 min_size = 7;
+  required int32 pre_nms_top_n = 8; 
+  required int32 post_nms_top_n = 9; 
+  required float nms_threshold = 10;
+  repeated float aspect_ratios = 11;
+  repeated int32 anchor_scales = 12;
+}
+
 message RoIPoolingOpConf {
   required string in = 1;
   required string rois = 2;
@@ -649,9 +664,10 @@ message OperatorConf {
     ReduceGlobalAddOpConf reduce_global_add_conf = 402;
     ReduceGatherOpConf reduce_gather_conf = 403;
     RecordLoadOpConf record_load_conf = 404;
-    AccuracyOpConf accuracy_conf=405;
+    AccuracyOpConf accuracy_conf = 405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
     RoIPoolingOpConf roi_pooling_conf = 407;
+    ProposalOpConf proposal_conf = 408;
   }
 }
 
