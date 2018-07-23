@@ -71,11 +71,11 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   keep_blob_desc->set_data_type(DataType::kInt32);
   // rois
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0) * post_nms_top_n, 5});
+  rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0), post_nms_top_n, 4});
   rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
   // roi_probs
   BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp("roi_probs");
-  roi_probs_blob_desc->mut_shape() = Shape({cls_prob_blob_desc->shape().At(0) * post_nms_top_n});
+  roi_probs_blob_desc->mut_shape() = Shape({cls_prob_blob_desc->shape().At(0), post_nms_top_n});
   roi_probs_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
 }
 

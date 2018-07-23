@@ -243,14 +243,14 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
       FOR_RANGE(int64_t, j, i + 1, topn) {
         const T* cand_prop = proposals + (index * num_proposals + j) * 4;
         float iou = InterOverUnion(cur_prop, cand_prop);
-        //float iou = (*cur_prop) + (*cand_prop);
+        // float iou = (*cur_prop) + (*cand_prop);
         if (iou >= nms_threshold) { suppressed[j] = true; }
       }
     }
 
     FOR_RANGE(int64_t, i, 0, std::min(remain.size(), static_cast<size_t>(post_nms_top_n))) {
-      rois[(index * post_nms_top_n + i) * 4] = index;
-      FOR_RANGE(int64_t, j, 1, 5) {
+      // rois[(index * post_nms_top_n + i) * 4] = index;
+      FOR_RANGE(int64_t, j, 0, 4) {
         rois[(index * post_nms_top_n + i) * 4 + j] =
             proposals[(index * num_proposals + remain[i]) * 4 + j];
       }
@@ -258,7 +258,7 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  inline float BBoxArea(const T* box) {
+  inline static float BBoxArea(const T* box) {
     return (box[2] - box[0] + 1) * (box[3] - box[1] + 1);
   }
 
