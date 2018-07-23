@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 
 #include "oneflow/core/graph/graph.h"
+#include <bitset>
 
 namespace oneflow {
 
@@ -12,9 +13,9 @@ struct Chain {
   // nodes belong to this chain
   std::vector<TaskNode*> nodes;
   // ancestors of the nodes in this chain
-  HashSet<TaskNode*> ancestors;
+  std::bitset<MAX_TASK_NODE_NUM> ancestors;
   // ancestors_and_this = nodes + ancestors
-  HashSet<TaskNode*> ancestors_and_this;
+  std::bitset<MAX_TASK_NODE_NUM> ancestors_and_this;
   int64_t stream_id;
   int64_t area_id;
   ChainNode* chain_node;

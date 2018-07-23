@@ -14,26 +14,24 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
     chain_list->emplace_back();
     task2chain_it->insert({task_node, --chain_list->end()});
     Chain& cur_chain = chain_list->back();
-    cur_chain.ancestors.clear();
-    cur_chain.ancestors_and_this.clear();
     cur_chain.nodes = {task_node};
     cur_chain.area_id = task_node->area_id();
     cur_chain.stream_id = task_node->GlobalWorkStreamId();
-    cur_chain.ancestors_and_this.insert(cur_chain.nodes.begin(), cur_chain.nodes.end());
-    cur_chain.ancestors.insert(task_node->ancestors().begin(), task_node->ancestors().end());
-    cur_chain.ancestors_and_this.insert(cur_chain.ancestors.begin(), cur_chain.ancestors.end());
+    for (auto& node : cur_chain.nodes) { cur_chain.ancestors_and_this.set(node->task_uid()); }
+    for (auto& node : task_node->ancestors()) {
+      cur_chain.ancestors.set(node->task_uid());
+      cur_chain.ancestors_and_this.set(node->task_uid());
+    }
   }
 }
 
 bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    HashSet<TaskNode*> merged_ancestors = lhs->ancestors_and_this;
-    merged_ancestors.insert(rhs->ancestors.begin(), rhs->ancestors.end());
-    if (lhs->ancestors_and_this == merged_ancestors) {
+    if (lhs->ancestors_and_this == (lhs->ancestors_and_this | rhs->ancestors)) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
-        lhs->ancestors_and_this.insert(node);
+        lhs->ancestors_and_this.set(node->task_uid());
         task2chain_it->at(node) = lhs;
       }
       return true;

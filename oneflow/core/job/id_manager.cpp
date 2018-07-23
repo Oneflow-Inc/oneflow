@@ -33,6 +33,8 @@ int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work
          | (machine_thrd_id2num_of_tasks_[machine_thrd_id]++);
 }
 
+int64_t IDMgr::NewTaskUId() { return task_uid_cnt_++; }
+
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
   if (thrd_id < GetCudaWorkTypeSize() * gpu_device_num_) {
     return DeviceType::kGPU;
