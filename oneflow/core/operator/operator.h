@@ -92,6 +92,8 @@ class Operator {
   PbRpf<std::string>* mut_##getter_name() { return op_attribute_.mutable_##getter_name(); }
 
   DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
+  DEFINE_BLOB_NAMES_GETTER(fw_buf_bns);
+  DEFINE_BLOB_NAMES_GETTER(bw_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(input_bns);
   DEFINE_BLOB_NAMES_GETTER(input_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
