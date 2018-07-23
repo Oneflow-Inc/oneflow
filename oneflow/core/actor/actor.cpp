@@ -450,9 +450,16 @@ int Actor::ProcessReadableCtrlRegstMsg(const ActorMsg& msg) {
 void Actor::AsyncSendCtrlRegstMsg() {
   for (auto& pair : consumed_ctrl_regst_) {
     CHECK(!pair.second.empty());
-    Regst* regst = pair.second.front();
-    AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
-    pair.second.pop_front();
+    int32_t returned_regst_num =
+        pair.second.front()->regst_desc()->regst_desc_type().ctrl_regst_desc().returned_regst_num();
+    CHECK_GE(returned_regst_num, 1);
+    CHECK_GE(pair.second.size(), returned_regst_num);
+
+    while (returned_regst_num--) {
+      Regst* regst = pair.second.front();
+      AsyncSendMsg(ActorMsg::BuildRegstMsgToProducer(actor_id_, regst->producer_actor_id(), regst));
+      pair.second.pop_front();
+    }
     if (pair.second.empty()) { --readable_ctrl_regst_desc_cnt_; }
   }
   for (auto& pair : writeable_produced_ctrl_regst_) {

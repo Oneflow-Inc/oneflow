@@ -148,12 +148,17 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   }
   const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
+  BuildCtrlRegstDesc(dst_node);
+}
+
+RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();
   auto regst = NewProducedRegst(false, 1, kMaxRegisterNum, regst_desc_type);
   std::string name = "out_ctrl_" + std::to_string(regst->regst_desc_id());
   CHECK(produced_regsts_.emplace(name, regst).second);
   dst_node->ConsumeRegst("in_ctrl", regst);
+  return regst.get();
 }
 
 void TaskNode::BindEdgeWithProducedRegst(TaskEdge* edge, const std::string& name) {
