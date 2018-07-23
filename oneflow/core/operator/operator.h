@@ -30,6 +30,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
+  virtual bool NeedExtraInDiffMemWhenBackward() const { return true; }
   virtual bool NeedOutWhenBackward() const { return true; }
   bool NeedDoActivation() const;
 

@@ -11,6 +11,7 @@ class ConcatOp final : public Operator {
   ConcatOp() = default;
   ~ConcatOp() = default;
 
+  bool NeedExtraInDiffMemWhenBackward() const override { return false; }
   bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
 
