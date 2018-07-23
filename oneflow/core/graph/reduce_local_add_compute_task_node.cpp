@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  min_out_parallel_id_ = MaxVal<int64_t>();
+  min_out_parallel_id_ = std::numeric_limits<int64_t>::max();
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> succ_comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(succ_comp_task_nodes.size(), 1);
@@ -17,7 +17,7 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
-  min_in_parallel_id_ = MaxVal<int64_t>();
+  min_in_parallel_id_ = std::numeric_limits<int64_t>::max();
   for (TaskEdge* edge : in_edges()) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);

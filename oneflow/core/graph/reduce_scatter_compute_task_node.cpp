@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  min_out_parallel_id_ = MaxVal<int64_t>();
+  min_out_parallel_id_ = std::numeric_limits<int64_t>::max();
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);

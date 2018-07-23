@@ -11,7 +11,6 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   consumers_actor_id_ = PbRf2StdVec(proto.consumer_task_id());
   register_num_ = proto.register_num();
   mem_case_ = proto.mem_case();
-  regst_desc_type_ = proto.regst_desc_type();
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
     for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {

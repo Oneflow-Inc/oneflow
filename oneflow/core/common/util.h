@@ -179,7 +179,6 @@ inline double GetCurTime() {
 }
 
 const size_t kCudaAlignSize = 8;
-const size_t kCudaMemAllocAlignSize = 256;
 inline size_t RoundUp(size_t n, size_t align) { return (n + align - 1) / align * align; }
 
 size_t GetAvailableCpuMemSize();
@@ -205,16 +204,6 @@ void Erase(T& container, const std::function<bool(const typename T::value_type&)
 template<typename T>
 void Erase(T& container, const std::function<bool(const typename T::value_type&)>& NeedErase) {
   Erase<T>(container, NeedErase, [](const typename T::value_type&) {});
-}
-
-template<typename T>
-inline T MinVal() {
-  return std::numeric_limits<T>::lowest();
-}
-
-template<typename T>
-inline T MaxVal() {
-  return std::numeric_limits<T>::max();
 }
 
 }  // namespace oneflow
