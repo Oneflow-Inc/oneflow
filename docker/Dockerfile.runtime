@@ -1,0 +1,25 @@
+FROM nvidia/cuda:9.1-cudnn7-runtime-centos7
+LABEL Author="xxmyjk <xxmyj.k@gmail.com>"
+
+USER root
+
+COPY ./bin/hadoop-2.8.1.tar.gz  /opt/
+COPY ./bin/oneflow /opt/bin/
+COPY ./of_submit-1.0-py2-none-any.whl /opt/
+
+RUN yum --disablerepo=cuda install -y epel-release && yum --disablerepo=cuda install -y python2-pip libgomp libibverbs protobuf java-1.8.0-openjdk which && pip install /opt/of_submit-1.0-py2-none-any.whl && tar zxvf /opt/hadoop-2.8.1.tar.gz -C /opt/
+
+RUN rm -f /opt/of_submit-1.0-py2-none-any.whl
+RUN rm -f /opt/hadoop-2.8.1.tar.gz
+RUN yum clean -y all
+
+ENV JAVA_HOME="/etc/alternatives/jre"
+ENV PATH="${PATH}:/opt/hadoop-2.8.1/bin:/opt/bin"
+ENV HADOOP_HOME="/opt/hadoop-2.8.1"
+ENV HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${JAVA_HOME}/lib/amd64/server:${HADOOP_HOME}/lib/native"
+
+COPY ./hadoop/* ${HADOOP_HOME}/etc/hadoop/
+COPY ./start.sh /opt/
+
+WORKDIR /opt
