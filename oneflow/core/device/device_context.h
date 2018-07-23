@@ -1,7 +1,6 @@
 #ifndef ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 #define ONEFLOW_CORE_DEVICE_DEVICE_CONTEXT_H_
 
-#include "unsupported/Eigen/CXX11/Tensor"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
@@ -23,7 +22,6 @@ class DeviceCtx {
   virtual const cublasHandle_t& cublas_pmh_handle() const { UNIMPLEMENTED(); }
   virtual const cublasHandle_t& cublas_pmd_handle() const { UNIMPLEMENTED(); }
   virtual const cudnnHandle_t& cudnn_handle() const { UNIMPLEMENTED(); }
-  virtual const Eigen::GpuDevice& eigen_gpu_device() const { UNIMPLEMENTED(); }
 #endif
 
   virtual void AddCallBack(std::function<void()>) const = 0;

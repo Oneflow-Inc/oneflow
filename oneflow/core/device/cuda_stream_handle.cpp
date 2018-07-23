@@ -41,14 +41,6 @@ const cudnnHandle_t* CudaStreamHandle::cudnn_handle() {
   return cudnn_handle_.get();
 }
 
-const Eigen::GpuDevice* CudaStreamHandle::eigen_gpu_device() {
-  if (!eigen_gpu_device_) {
-    eigen_cuda_stream_.reset(new Eigen::CudaStreamDevice(cuda_stream()));
-    eigen_gpu_device_.reset(new Eigen::GpuDevice(eigen_cuda_stream_.get()));
-  }
-  return eigen_gpu_device_.get();
-}
-
 void CudaStreamHandle::AddCallBack(std::function<void()> callback) {
   CudaCBEvent cb_event;
   cb_event.callback = callback;
@@ -63,8 +55,6 @@ CudaStreamHandle::~CudaStreamHandle() {
   if (cublas_pmh_handle_) { CudaCheck(cublasDestroy(*cublas_pmh_handle_)); }
   if (cublas_pmd_handle_) { CudaCheck(cublasDestroy(*cublas_pmd_handle_)); }
   if (cuda_stream_) { CudaCheck(cudaStreamDestroy(*cuda_stream_)); }
-  eigen_gpu_device_.reset();
-  eigen_cuda_stream_.reset();
 }
 
 #endif  // WITH_CUDA

@@ -62,6 +62,7 @@ class Graph {
   EdgeType* NewEdge();
   void AddAllocatedNode(NodeType*);
   void AddAllocatedEdge(EdgeType*);
+  void DeleteNode(NodeType*);
 
   // ToDot
   template<typename StreamT>
@@ -161,6 +162,12 @@ void Graph<NodeType, EdgeType>::AddAllocatedNode(NodeType* node) {
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::AddAllocatedEdge(EdgeType* edge) {
   edges_.emplace_back(edge);
+}
+
+template<typename NodeType, typename EdgeType>
+void Graph<NodeType, EdgeType>::DeleteNode(NodeType* node) {
+  Erase<std::vector<std::unique_ptr<NodeType>>>(
+      nodes_, [node](const std::unique_ptr<NodeType>& node_ptr) { return node_ptr.get() == node; });
 }
 
 template<typename NodeType, typename EdgeType>

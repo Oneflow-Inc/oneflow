@@ -66,72 +66,60 @@ __global__ void ReluBackwardGpu(const int n, const T* y, const T* dy, T* dx) {
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_0[i]; }
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i]; }
 }
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_0[i] + in_1[i]; }
-}
-
-template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1,
-                               const T* in_2) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_0[i] + in_1[i] + in_2[i]; }
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i]; }
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i]; }
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3, const T* in_4) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
+                        const T* in_3) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i]; }
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3, const T* in_4, const T* in_5) {
-  CUDA_1D_KERNEL_LOOP(i, n) { out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i]; }
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
+                        const T* in_3, const T* in_4) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i]; }
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3, const T* in_4, const T* in_5, const T* in_6) {
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
+                        const T* in_3, const T* in_4, const T* in_5) {
+  CUDA_1D_KERNEL_LOOP(i, n) { out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i]; }
+}
+
+template<typename T>
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
+                        const T* in_3, const T* in_4, const T* in_5, const T* in_6) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i];
+    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i];
   }
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3, const T* in_4, const T* in_5, const T* in_6,
-                               const T* in_7) {
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
+                        const T* in_3, const T* in_4, const T* in_5, const T* in_6, const T* in_7) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i];
+    out[i] = in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i];
   }
 }
 
 template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3, const T* in_4, const T* in_5, const T* in_6,
-                               const T* in_7, const T* in_8) {
+__global__ void gpu_add(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
+                        const T* in_3, const T* in_4, const T* in_5, const T* in_6, const T* in_7,
+                        const T* in_8) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    out[i] +=
+    out[i] =
         in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i] + in_8[i];
-  }
-}
-
-template<typename T>
-__global__ void gpu_add_assign(const int64_t n, T* out, const T* in_0, const T* in_1, const T* in_2,
-                               const T* in_3, const T* in_4, const T* in_5, const T* in_6,
-                               const T* in_7, const T* in_8, const T* in_9) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    out[i] += in_0[i] + in_1[i] + in_2[i] + in_3[i] + in_4[i] + in_5[i] + in_6[i] + in_7[i]
-              + in_8[i] + in_9[i];
   }
 }
 
@@ -312,7 +300,7 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
   char* host_raw_dptr = nullptr;                                    \
   CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
   std::unique_ptr<Blob> host_blob;                                  \
-  host_blob.reset(NewBlob(nullptr, &blob_desc, host_raw_dptr, DeviceType::kGPU));
+  host_blob.reset(new Blob(nullptr, &blob_desc, host_raw_dptr));
 
 // asynchronous copy to device
 #define AFTER_CPU_INITIALIZE()                                                          \
@@ -486,68 +474,58 @@ KU_FLOATING_METHOD ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, con
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
-  gpu_add_assign<T>
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0) {
+  gpu_add<T>
       <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, out, in_0);
 }
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2, const T* in_3) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2, in_3);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2, const T* in_3, const T* in_4) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
-                                  const T* in_5) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2, const T* in_3, const T* in_4, const T* in_5) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
-                                  const T* in_5, const T* in_6) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                            const T* in_6) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
-                                  const T* in_5, const T* in_6, const T* in_7) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                            const T* in_6, const T* in_7) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7);
 }
 
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
-                                  const T* in_5, const T* in_6, const T* in_7, const T* in_8) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+KU_FLOATING_METHOD Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                            const T* in_2, const T* in_3, const T* in_4, const T* in_5,
+                            const T* in_6, const T* in_7, const T* in_8) {
+  gpu_add<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
       n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8);
-}
-
-KU_FLOATING_METHOD AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0,
-                                  const T* in_1, const T* in_2, const T* in_3, const T* in_4,
-                                  const T* in_5, const T* in_6, const T* in_7, const T* in_8,
-                                  const T* in_9) {
-  gpu_add_assign<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      n, out, in_0, in_1, in_2, in_3, in_4, in_5, in_6, in_7, in_8, in_9);
 }
 
 #define KU_INTEGRAL_METHOD \

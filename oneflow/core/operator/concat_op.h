@@ -11,7 +11,6 @@ class ConcatOp final : public Operator {
   ConcatOp() = default;
   ~ConcatOp() = default;
 
-  bool NeedOutWhenBackward() const override { return false; }
   void InitFromOpConf() override;
 
   const PbMessage& GetCustomizedConf() const override;

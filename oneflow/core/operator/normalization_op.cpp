@@ -37,15 +37,6 @@ const PbMessage& NormalizationOp::GetCustomizedConf() const {
   return op_conf().normalization_conf();
 }
 
-bool NormalizationOp::NeedOutWhenBackward() const {
-  ActivationType activation = static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
-  if (activation != ActivationType::kNone) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 void NormalizationOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, std::function<void(OpContext*)> EnrollOpCtx) const {

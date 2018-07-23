@@ -214,6 +214,19 @@ message SparseSoftmaxCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message SmoothL1LossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  required float beta = 4 [default = 1] ;
+  optional float scale = 5 [default = 1];
+  required string inside_weights = 6;
+  required string outside_weights = 7;
+  optional LossReductionType reduction = 8 [default = kSumOverN];
+  optional float weight_scalar = 9 [default = 1.0];
+  optional string weight = 10;
+}
+
 message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -670,7 +683,8 @@ message OperatorConf {
     AccuracyOpConf accuracy_conf = 405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
     RoIPoolingOpConf roi_pooling_conf = 407;
-    ProposalOpConf proposal_conf = 408;
+    SmoothL1LossOpConf smooth_l1_loss_conf = 408;
+    ProposalOpConf proposal_conf = 409;
   }
 }
 
