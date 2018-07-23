@@ -4,3 +4,6 @@
 /benchmark/**/oneflow
 *plan
 core.*
+*.out
+.vs/
+oneflow.mdproj
