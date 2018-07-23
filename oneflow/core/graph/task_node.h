@@ -96,7 +96,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
-  virtual void FixRegisterNumRange();
+  void FixRegisterNumRange();
 
   virtual int64_t AllocateLocalWorkStreamId();
 
