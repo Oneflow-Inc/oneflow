@@ -1,4 +1,4 @@
-FROM nvidia/cuda:9.1-cudnn7-runtime-ubuntu16.04
+FROM nvidia/cuda:9.1-cudnn7-devel-ubuntu16.04
 LABEL Author="xxmyjk <xxmyj.k@gmail.com>"
 
 USER root
@@ -10,26 +10,37 @@ COPY ./of_submit-1.0-py2-none-any.whl /opt/
 RUN apt update && \
     apt install -y \
     python-pip \
-    a
+    git \
+    libibverbs-dev \
+    wget
 
-RUN pip install /opt/of_submit-1.0-py2-none-any.whl && \
-    tar zxvf /opt/hadoop-2.8.1.tar.gz -C /opt/
+# default cmake 3.5.1 has bugs
+RUN cd /tmp && \ 
+    wget https://cmake.org/files/v3.7/cmake-3.7.2.tar.gz && \
+    tar zxvf cmake-3.7.2.tar.gz && \
+    cd cmake-3.7.2 && ./bootstrap && make && make install
 
-RUN rm -f /opt/of_submit-1.0-py2-none-any.whl /opt/hadoop-2.8.1.tar.gz
 
-RUN yum --disablerepo=cuda install -y epel-release && yum --disablerepo=cuda install -y python2-pip libgomp libibverbs protobuf java-1.8.0-openjdk which && pip install /opt/of_submit-1.0-py2-none-any.whl && tar zxvf /opt/hadoop-2.8.1.tar.gz -C /opt/
+# RUN pip install /opt/of_submit-1.0-py2-none-any.whl && \
+#     tar zxvf /opt/hadoop-2.8.1.tar.gz -C /opt/
 
-RUN rm -f /opt/of_submit-1.0-py2-none-any.whl
-RUN rm -f /opt/hadoop-2.8.1.tar.gz
-RUN yum clean -y all
+# RUN rm -f /opt/of_submit-1.0-py2-none-any.whl /opt/hadoop-2.8.1.tar.gz
 
-ENV JAVA_HOME="/etc/alternatives/jre"
-ENV PATH="${PATH}:/opt/hadoop-2.8.1/bin:/opt/bin"
-ENV HADOOP_HOME="/opt/hadoop-2.8.1"
-ENV HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${JAVA_HOME}/lib/amd64/server:${HADOOP_HOME}/lib/native"
+# ENV LD_LIBRARY_PATH="/usr/lib:${LD_LIBRARY_PATH}"
 
-COPY ./hadoop/* ${HADOOP_HOME}/etc/hadoop/
-COPY ./start.sh /opt/
+# RUN yum --disablerepo=cuda install -y epel-release && yum --disablerepo=cuda install -y python2-pip libgomp libibverbs protobuf java-1.8.0-openjdk which && pip install /opt/of_submit-1.0-py2-none-any.whl && tar zxvf /opt/hadoop-2.8.1.tar.gz -C /opt/
+
+# RUN rm -f /opt/of_submit-1.0-py2-none-any.whl
+# RUN rm -f /opt/hadoop-2.8.1.tar.gz
+# RUN yum clean -y all
+
+# ENV JAVA_HOME="/etc/alternatives/jre"
+# ENV PATH="${PATH}:/opt/hadoop-2.8.1/bin:/opt/bin"
+# ENV HADOOP_HOME="/opt/hadoop-2.8.1"
+# ENV HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
+# ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${JAVA_HOME}/lib/amd64/server:${HADOOP_HOME}/lib/native"
+
+# COPY ./hadoop/* ${HADOOP_HOME}/etc/hadoop/
+# COPY ./start.sh /opt/
 
 WORKDIR /opt
