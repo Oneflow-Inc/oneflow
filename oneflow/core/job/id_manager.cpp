@@ -14,16 +14,14 @@ int64_t IDMgr::GetGpuMdUpdtThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
-  return gpu_device_num_ * static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize)
-         + dev_phy_id;
+  return gpu_device_num_ * GetCudaWorkTypeSize() + dev_phy_id;
 }
 int64_t IDMgr::GetPersistenceThrdId(int64_t offset) const {
-  return gpu_device_num_ * static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize)
-         + cpu_device_num_ + offset;
+  return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_ + offset;
 }
 int64_t IDMgr::CommNetThrdId() const {
-  return gpu_device_num_ * static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize)
-         + cpu_device_num_ + Global<JobDesc>::Get()->PersistenceWorkerNum();
+  return gpu_device_num_ * GetCudaWorkTypeSize() + cpu_device_num_
+         + Global<JobDesc>::Get()->PersistenceWorkerNum();
 }
 
 int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
@@ -36,7 +34,7 @@ int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work
 }
 
 DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
-  if (thrd_id < static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize) * gpu_device_num_) {
+  if (thrd_id < GetCudaWorkTypeSize() * gpu_device_num_) {
     return DeviceType::kGPU;
   } else {
     return DeviceType::kCPU;
@@ -44,8 +42,7 @@ DeviceType IDMgr::GetDeviceTypeFromThrdId(int64_t thrd_id) const {
 }
 
 int64_t IDMgr::GetGpuPhyIdFromThrdId(int64_t thrd_id) const {
-  CHECK_LT(thrd_id,
-           static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize) * gpu_device_num_);
+  CHECK_LT(thrd_id, GetCudaWorkTypeSize() * gpu_device_num_);
   return thrd_id % gpu_device_num_;
 }
 
