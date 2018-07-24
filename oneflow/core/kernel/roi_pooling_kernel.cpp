@@ -38,10 +38,12 @@ void RoIPoolingKernel<device_type, T>::ForwardDataId(
   const Blob* rois_blob = BnInOp2Blob("rois");
   Blob* out_blob = BnInOp2Blob("out");
   int32_t roi_num = rois_blob->shape().At(1);
+  size_t size_of_one_data_id = Global<JobDesc>::Get()->SizeOfOneDataId();
   FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
+    int32_t n_roi_num = n * roi_num;
     FOR_RANGE(int64_t, r, 0, roi_num) {
-      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(n * roi_num + r),
-                          in_blob->data_id(n), Global<JobDesc>::Get()->SizeOfOneDataId());
+      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(n_roi_num + r), in_blob->data_id(n),
+                          size_of_one_data_id);
     }
   }
 }
