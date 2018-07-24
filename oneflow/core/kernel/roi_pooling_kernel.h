@@ -18,6 +18,7 @@ class RoIPoolingKernel final : public KernelIf<device_type> {
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
   void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
+  void ForwardColNum(const KernelCtx& ctx, std::function<Blob*(const std::string&)>) const override;
 };
 
 template<DeviceType device_type, typename T>

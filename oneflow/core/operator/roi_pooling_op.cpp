@@ -28,6 +28,7 @@ void RoIPoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
        op_conf().roi_pooling_conf().pooled_h(), op_conf().roi_pooling_conf().pooled_w()});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
   out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
+  out_blob_desc->set_has_col_num_field(in_blob_desc->has_col_num_field());
   // argmax
   BlobDesc* argmax_blob_desc = GetBlobDesc4BnInOp("argmax");
   argmax_blob_desc->mut_shape() = out_blob_desc->shape();

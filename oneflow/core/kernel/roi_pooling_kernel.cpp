@@ -37,10 +37,25 @@ void RoIPoolingKernel<device_type, T>::ForwardDataId(
   const Blob* in_blob = BnInOp2Blob("in");
   const Blob* rois_blob = BnInOp2Blob("rois");
   Blob* out_blob = BnInOp2Blob("out");
+  int32_t roi_num = rois_blob->shape().At(1);
   FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
-    FOR_RANGE(int64_t, r, 0, rois_blob->shape().At(1)) {
-      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(n * rois_blob->shape().At(1) + r),
+    FOR_RANGE(int64_t, r, 0, roi_num) {
+      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(n * roi_num + r),
                           in_blob->data_id(n), Global<JobDesc>::Get()->SizeOfOneDataId());
+    }
+  }
+}
+
+template<DeviceType device_type, typename T>
+void RoIPoolingKernel<device_type, T>::ForwardColNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* out_blob = BnInOp2Blob("out");
+  int32_t roi_num = rois_blob->shape().At(1);
+  FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
+    FOR_RANGE(int64_t, r, 0, roi_num) {
+      out_blob->set_col_num(n * roi_num + r, *in_blob->col_num());
     }
   }
 }
