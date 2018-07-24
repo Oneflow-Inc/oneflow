@@ -2,8 +2,10 @@
 #define ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 
 #include "oneflow/core/graph/graph.h"
+#include <bitset>
 
 namespace oneflow {
+const int64_t MAX_ANCESTOR_NUM = 10000;
 
 class TaskNode;
 class ChainNode;
@@ -12,28 +14,26 @@ struct Chain {
   // nodes belong to this chain
   std::vector<TaskNode*> nodes;
   // ancestors of the nodes in this chain
-  HashSet<TaskNode*> ancestors;
+  std::bitset<MAX_ANCESTOR_NUM> ancestors;
   // ancestors_and_this = nodes + ancestors
-  HashSet<TaskNode*> ancestors_and_this;
+  std::bitset<MAX_ANCESTOR_NUM> ancestors_and_this;
   int64_t stream_id;
   int64_t area_id;
-  ChainNode* chain_node;
 };
 
 using ChainIt = std::list<Chain>::iterator;
-using Task2ChainItMap = HashMap<const TaskNode*, ChainIt>;
 
 class ChainEdge;
 
 class ChainNode final : public Node<ChainNode, ChainEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainNode);
-  explicit ChainNode(ChainIt chain_it) : chain_it_(chain_it), chain_id_(-1) {}
+  explicit ChainNode(const std::vector<TaskNode*>& task_nodes)
+      : task_nodes_(task_nodes), chain_id_(-1) {}
   virtual ~ChainNode() = default;
 
   std::string VisualStr() const override;
-  ChainIt chain_it() const { return chain_it_; }
-  const std::vector<TaskNode*>& ordered_task_nodes() const { return chain_it_->nodes; }
+  const std::vector<TaskNode*>& task_nodes() const { return task_nodes_; }
   int64_t chain_id() const {
     CHECK_NE(chain_id_, -1);
     return chain_id_;
@@ -41,7 +41,7 @@ class ChainNode final : public Node<ChainNode, ChainEdge> {
   void set_chain_id(int64_t val) { chain_id_ = val; }
 
  private:
-  ChainIt chain_it_;
+  std::vector<TaskNode*> task_nodes_;
   int64_t chain_id_;
 };
 
@@ -70,9 +70,13 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
  private:
   ChainNode* ChainNode4TaskNode(TaskNode* task_node) const;
   bool HasChainEdge(ChainNode* src, ChainNode* dst) const;
+  void GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_task_nodes,
+                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks);
+  void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
+                      std::vector<std::vector<TaskNode*>>* chains);
+
   const TaskGraph& task_gph_;
-  std::list<Chain> chain_list_;
-  Task2ChainItMap task_node2chain_it_;
+  HashMap<TaskNode*, ChainNode*> task_node2chain_node_;
   std::vector<ChainNode*> ordered_chain_nodes_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };
