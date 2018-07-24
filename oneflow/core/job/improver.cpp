@@ -513,8 +513,7 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
-                       const std::string& act_event_filepath) {
+void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& naive_plan) {
   amd_ = amd;
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -522,15 +521,33 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
+}
+
+Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
+  InitAvailableMemDesc(amd, naive_plan);
+  Plan mem_shared_plan = ImproveMemSharedId(naive_plan);
+  // Check if there is any zone out of memory even though all register_num == 1
+  MemZoneRegstDescs mz_regst_descs;
+  MakeMemZoneRegstDescs(mem_shared_plan, &mz_regst_descs);
+  HashMap<int64_t, double> zero2one{{0, 1}};
+  auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
+  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  return mem_shared_plan;
+}
+
+Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+                       const std::string& act_event_filepath) {
+  InitAvailableMemDesc(amd, naive_plan);
   std::list<std::unique_ptr<ActEvent>> act_events;
   ParseActEvents(act_event_filepath, &act_events);
   ChainActGraph act_graph(naive_plan, std::move(act_events));
+
   auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
   auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
   Plan mem_unlimited_plan(naive_plan);
   ForEachImprovedRegstNum(act_graph, naive_plan, false, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
-  Plan mem_shared_plan = ImproveMemSharedIdOnly(mem_unlimited_plan);
+  Plan mem_shared_plan = ImproveMemSharedId(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
@@ -538,7 +555,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   return plan;
 }
 
-Plan Improver::ImproveMemSharedIdOnly(const Plan& naive_plan) const {
+Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
   ForEachImprovedMemSharedId(plan_task_graph, MakeSetterSetPlanMemSharedId(&plan));
