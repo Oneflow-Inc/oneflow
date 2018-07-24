@@ -57,6 +57,8 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
   ~ChainActNode() = default;
 
   // ForEach
+  void ForEachInEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
+  void ForEachOutEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
   void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
   void ForEachProducedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
   void ForEachLastConsumedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
@@ -116,10 +118,6 @@ class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge>
           regst_uid2consumer_act_events);
   void InitTaskId2TaskProto();
   void InitNodeLastConsumedRegstActs();
-  void ForEachInEdge(const ChainActNode* node,
-                     const std::function<void(const ChainActEdge*)>& Handler) const;
-  void ForEachOutEdge(const ChainActNode* node,
-                      const std::function<void(const ChainActEdge*)>& Handler) const;
   void TopoForEachChainActNode(const std::function<void(const ChainActNode*)>& Handler) const;
   void ForEachRegstActConsumerPathDuration(
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
