@@ -83,7 +83,7 @@ void ChainMerger::MergeChains() {
 std::string ChainNode::VisualStr() const {
   std::stringstream ss;
   ss << "chain_id:" << chain_id_ << "\\n";
-  for (auto& task_node : chain_it_->nodes) {
+  for (auto& task_node : task_nodes_) {
     ss << TaskType_Name(task_node->GetTaskType()) << ":" << task_node->task_id() << "\\n";
   }
   return ss.str();
@@ -92,6 +92,7 @@ std::string ChainNode::VisualStr() const {
 ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   std::vector<TaskNode*> ordered_task_nodes;
   HashMap<int64_t, std::vector<TaskNode*>> machine2tasks;
+  std::vector<std::vector<TaskNode*>> chains;
 
   task_gph.AcyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
   GroupTaskNodesByMachine(ordered_task_nodes, &machine2tasks);
@@ -109,7 +110,7 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
         auto& cur_chain_list = merger.GetChains();
         {
           std::unique_lock<std::mutex> guard(chain_list_mtx);
-          chain_list_.insert(chain_list_.end(), cur_chain_list.cbegin(), cur_chain_list.cend());
+          for (const auto& chain : cur_chain_list) { chains.emplace_back(chain.nodes); }
         }
         counter.Decrease();
       });
@@ -117,9 +118,9 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
     counter.WaitUntilCntEqualZero();
   }
 
-  for (auto chain_it = chain_list_.begin(); chain_it != chain_list_.end(); ++chain_it) {
-    ChainNode* chain_node = new ChainNode(chain_it);
-    for (auto& task_node : chain_it->nodes) {
+  for (auto& task_nodes_in_chain : chains) {
+    ChainNode* chain_node = new ChainNode(task_nodes_in_chain);
+    for (auto& task_node : task_nodes_in_chain) {
       CHECK(task_node2chain_node_.emplace(task_node, chain_node).second);
     }
     AddAllocatedNode(chain_node);
@@ -141,10 +142,10 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
 
   TopoForEachNode([&](ChainNode* chain_node) {
     ordered_chain_nodes_.emplace_back(chain_node);
-    int64_t stream_id = chain_node->chain_it()->nodes.front()->GlobalWorkStreamId();
+    int64_t stream_id = chain_node->task_nodes().front()->GlobalWorkStreamId();
     int64_t chain_id = Global<IDMgr>::Get()->AllocateChainId(stream_id);
     chain_node->set_chain_id(chain_id);
-    for (auto& task_node : chain_node->chain_it()->nodes) {
+    for (auto& task_node : chain_node->task_nodes()) {
       ordered_task_nodes_.emplace_back(task_node);
     }
   });
