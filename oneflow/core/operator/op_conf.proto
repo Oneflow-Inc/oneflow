@@ -605,7 +605,7 @@ message ProposalOpConf {
   required string bbox_pred = 2;
   // required string image_info = 3;
   required string rois = 4;
-  required string scores = 5;
+  required string roi_probs = 5;
   required int32 feature_map_stride = 6 [default = 16];
   required int32 min_size = 7;
   required int32 pre_nms_top_n = 8; 
