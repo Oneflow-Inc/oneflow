@@ -21,7 +21,6 @@ struct Chain {
 };
 
 using ChainIt = std::list<Chain>::iterator;
-using Task2ChainItMap = HashMap<const TaskNode*, ChainIt>;
 
 class ChainEdge;
 
@@ -72,6 +71,9 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
   bool HasChainEdge(ChainNode* src, ChainNode* dst) const;
   void GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_task_nodes,
                                HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks);
+  void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
+                      std::vector<std::vector<TaskNode*>>* chains);
+
   const TaskGraph& task_gph_;
   HashMap<TaskNode*, ChainNode*> task_node2chain_node_;
   std::vector<ChainNode*> ordered_chain_nodes_;

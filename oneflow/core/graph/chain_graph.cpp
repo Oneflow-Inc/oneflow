@@ -96,27 +96,7 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
 
   task_gph.AcyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
   GroupTaskNodesByMachine(ordered_task_nodes, &machine2tasks);
-
-  {
-    int64_t machine_num = machine2tasks.size();
-    int64_t cpu_num = std::thread::hardware_concurrency();
-    int64_t thread_pool_size = std::min(machine_num, cpu_num);
-    std::mutex chain_list_mtx;
-    BlockingCounter counter(machine_num);
-    ThreadPool thread_pool(thread_pool_size);
-    for (auto& pair : machine2tasks) {
-      thread_pool.AddWork([&]() {
-        ChainMerger merger(pair.second);
-        auto& cur_chain_list = merger.GetChains();
-        {
-          std::unique_lock<std::mutex> guard(chain_list_mtx);
-          for (const auto& chain : cur_chain_list) { chains.emplace_back(chain.nodes); }
-        }
-        counter.Decrease();
-      });
-    }
-    counter.WaitUntilCntEqualZero();
-  }
+  MergeTaskNodes(machine2tasks, &chains);
 
   for (auto& task_nodes_in_chain : chains) {
     ChainNode* chain_node = new ChainNode(task_nodes_in_chain);
@@ -165,6 +145,27 @@ void ChainGraph::GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_t
       CHECK(machine2tasks->emplace(machine_id, task_nodes).second);
     }
   }
+}
+void ChainGraph::MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
+                                std::vector<std::vector<TaskNode*>>* chains) {
+  int64_t machine_num = machine2tasks.size();
+  int64_t cpu_num = std::thread::hardware_concurrency();
+  int64_t thread_pool_size = std::min(machine_num, cpu_num);
+  std::mutex chain_list_mtx;
+  BlockingCounter counter(machine_num);
+  ThreadPool thread_pool(thread_pool_size);
+  for (auto& pair : machine2tasks) {
+    thread_pool.AddWork([&]() {
+      ChainMerger merger(pair.second);
+      auto& cur_chain_list = merger.GetChains();
+      {
+        std::unique_lock<std::mutex> guard(chain_list_mtx);
+        for (const auto& chain : cur_chain_list) { chains->emplace_back(chain.nodes); }
+      }
+      counter.Decrease();
+    });
+  }
+  counter.WaitUntilCntEqualZero();
 }
 
 ChainNode* ChainGraph::ChainNode4TaskNode(TaskNode* task_node) const {
