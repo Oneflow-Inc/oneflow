@@ -31,7 +31,7 @@ void ConcatTestCase(OpKernelTestCase* concat_test_case, const std::string& job_t
 
   if (!Global<RegstMgr>::Get()) { Global<RegstMgr>::New(); }
   Regst* blob_regst = nullptr;
-  Global<RegstMgr>::Get()->NewRegsts(regst_desc_proto, device_type, RecordTypeProto::kOFRecord,
+  Global<RegstMgr>::Get()->NewRegsts(regst_desc_proto,
                                      [&blob_regst](Regst* regst) { blob_regst = regst; });
 
   concat_test_case->EnrollBlobRegst("in_0", blob_regst);

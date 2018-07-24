@@ -214,6 +214,19 @@ message SparseSoftmaxCrossEntropyLossOpConf {
   optional string weight = 6;
 }
 
+message SmoothL1LossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  required float beta = 4 [default = 1] ;
+  optional float scale = 5 [default = 1];
+  required string inside_weights = 6;
+  required string outside_weights = 7;
+  optional LossReductionType reduction = 8 [default = kSumOverN];
+  optional float weight_scalar = 9 [default = 1.0];
+  optional string weight = 10;
+}
+
 message SparseCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
@@ -590,9 +603,9 @@ message AccuracyOpConf {
 message ProposalOpConf {
   required string class_prob = 1;
   required string bbox_pred = 2;
-  required string image_info = 3;
+  // required string image_info = 3;
   required string rois = 4;
-  required string scores = 5;
+  required string roi_probs = 5;
   required int32 feature_map_stride = 6 [default = 16];
   required int32 min_size = 7;
   required int32 pre_nms_top_n = 8; 
@@ -600,6 +613,9 @@ message ProposalOpConf {
   required float nms_threshold = 10;
   repeated float aspect_ratios = 11;
   repeated int32 anchor_scales = 12;
+  required bool only_foreground_prob = 13 [default = true];
+  required int32 image_height = 14;
+  required int32 image_width = 15;
 }
 
 message RoIPoolingOpConf {
@@ -667,7 +683,8 @@ message OperatorConf {
     AccuracyOpConf accuracy_conf = 405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
     RoIPoolingOpConf roi_pooling_conf = 407;
-    ProposalOpConf proposal_conf = 408;
+    SmoothL1LossOpConf smooth_l1_loss_conf = 408;
+    ProposalOpConf proposal_conf = 409;
   }
 }
 
