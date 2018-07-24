@@ -11,20 +11,43 @@ namespace {
 class ChainMerger final {
  public:
   ChainMerger(const std::vector<TaskNode*>& task_nodes) : task_nodes_(task_nodes) {
+    InitTaskNode2UId();
     InitChains();
     MergeChains();
   }
   const std::list<Chain>& GetChains() const { return chain_list_; }
 
  private:
+  void InitTaskNode2UId();
   void InitChains();
   bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs);
   bool TryMerge();
   void MergeChains();
+  int64_t get_task_uid(TaskNode* task_node) const {
+    auto uid_it = task_node2uid_.find(task_node);
+    CHECK(uid_it != task_node2uid_.end());
+    return uid_it->second;
+  }
+  void update_task_uid(TaskNode* task_node) {
+    auto uid_it = task_node2uid_.find(task_node);
+    if (uid_it == task_node2uid_.end()) {
+      int64_t new_id = task_node2uid_.size();
+      CHECK(task_node2uid_.emplace(task_node, new_id).second);
+    }
+  }
 
   const std::vector<TaskNode*>& task_nodes_;
   std::list<Chain> chain_list_;
+  HashMap<TaskNode*, int64_t> task_node2uid_;
 };
+
+void ChainMerger::InitTaskNode2UId() {
+  for (auto& task_node : task_nodes_) {
+    update_task_uid(task_node);
+    for (auto& ancestor : task_node->ancestors()) { update_task_uid(ancestor); }
+  }
+  CHECK_LT(task_node2uid_.size(), MAX_ANCESTOR_NUM);
+}
 
 void ChainMerger::InitChains() {
   chain_list_.clear();
@@ -34,10 +57,10 @@ void ChainMerger::InitChains() {
     cur_chain.nodes = {task_node};
     cur_chain.area_id = task_node->area_id();
     cur_chain.stream_id = task_node->GlobalWorkStreamId();
-    for (auto& node : cur_chain.nodes) { cur_chain.ancestors_and_this.set(node->task_uid()); }
+    for (auto& node : cur_chain.nodes) { cur_chain.ancestors_and_this.set(get_task_uid(node)); }
     for (auto& node : task_node->ancestors()) {
-      cur_chain.ancestors.set(node->task_uid());
-      cur_chain.ancestors_and_this.set(node->task_uid());
+      cur_chain.ancestors.set(get_task_uid(node));
+      cur_chain.ancestors_and_this.set(get_task_uid(node));
     }
   }
 }
@@ -48,7 +71,7 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
     if (lhs->ancestors_and_this == (lhs->ancestors_and_this | rhs->ancestors)) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
-        lhs->ancestors_and_this.set(node->task_uid());
+        lhs->ancestors_and_this.set(get_task_uid(node));
       }
       return true;
     }

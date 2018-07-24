@@ -5,6 +5,7 @@
 #include <bitset>
 
 namespace oneflow {
+const int64_t MAX_ANCESTOR_NUM = 10000;
 
 class TaskNode;
 class ChainNode;
@@ -13,9 +14,9 @@ struct Chain {
   // nodes belong to this chain
   std::vector<TaskNode*> nodes;
   // ancestors of the nodes in this chain
-  std::bitset<MAX_TASK_NODE_NUM> ancestors;
+  std::bitset<MAX_ANCESTOR_NUM> ancestors;
   // ancestors_and_this = nodes + ancestors
-  std::bitset<MAX_TASK_NODE_NUM> ancestors_and_this;
+  std::bitset<MAX_ANCESTOR_NUM> ancestors_and_this;
   int64_t stream_id;
   int64_t area_id;
 };

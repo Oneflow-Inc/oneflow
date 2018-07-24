@@ -32,11 +32,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t area_id() const { return area_id_; }
   int64_t chain_id() const { return chain_id_; }
   int64_t order_in_graph() const { return order_in_graph_; }
-  int64_t task_uid() const {
-    CHECK(task_uid_ >= 0);
-    CHECK(task_uid_ < MAX_TASK_NODE_NUM) << task_uid_;
-    return task_uid_;
-  }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
@@ -114,7 +109,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t area_id_;
   int64_t chain_id_;
   int64_t order_in_graph_;
-  int64_t task_uid_;
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;

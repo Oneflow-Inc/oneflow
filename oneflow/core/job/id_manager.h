@@ -23,8 +23,6 @@ class IDMgr final {
   int64_t CommNetThrdId() const;
 
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
-  int64_t NewTaskUId();
-  int64_t TaskUIdNum() const { return task_uid_cnt_; }
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int64_t NewMemSharedId() { return mem_shared_id_count_++; }
 
@@ -72,7 +70,6 @@ class IDMgr final {
   HashMap<int64_t, int64_t> machine_thrd_id2num_of_tasks_;
   HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
   HashMap<int64_t, int64_t> stream_id2chain_cnt_;
-  int64_t task_uid_cnt_;
 
   //  64 bit id design:
   //   sign | machine | thread | local_work_stream | task

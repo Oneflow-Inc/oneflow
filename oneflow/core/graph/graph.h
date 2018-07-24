@@ -7,7 +7,6 @@
 #include "oneflow/core/persistence/persistent_out_stream.h"
 
 namespace oneflow {
-const int64_t MAX_TASK_NODE_NUM = 100000;
 
 template<typename NodeType, typename EdgeType>
 class Graph {
