@@ -18,7 +18,6 @@ struct Chain {
   std::bitset<MAX_TASK_NODE_NUM> ancestors_and_this;
   int64_t stream_id;
   int64_t area_id;
-  ChainNode* chain_node;
 };
 
 using ChainIt = std::list<Chain>::iterator;
@@ -71,9 +70,11 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
  private:
   ChainNode* ChainNode4TaskNode(TaskNode* task_node) const;
   bool HasChainEdge(ChainNode* src, ChainNode* dst) const;
+  void GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_task_nodes,
+                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks);
   const TaskGraph& task_gph_;
   std::list<Chain> chain_list_;
-  Task2ChainItMap task_node2chain_it_;
+  HashMap<TaskNode*, ChainNode*> task_node2chain_node_;
   std::vector<ChainNode*> ordered_chain_nodes_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };

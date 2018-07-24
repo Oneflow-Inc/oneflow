@@ -1,19 +1,36 @@
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/task_node.h"
+#include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/blocking_counter.h"
 
 namespace oneflow {
 
 namespace {
 
-void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* chain_list,
-                Task2ChainItMap* task2chain_it) {
-  chain_list->clear();
-  task2chain_it->clear();
-  for (const auto& task_node : ordered_nodes) {
-    chain_list->emplace_back();
-    task2chain_it->insert({task_node, --chain_list->end()});
-    Chain& cur_chain = chain_list->back();
+class ChainMerger final {
+ public:
+  ChainMerger(const std::vector<TaskNode*>& task_nodes) : task_nodes_(task_nodes) {
+    InitChains();
+    MergeChains();
+  }
+  const std::list<Chain>& GetChains() const { return chain_list_; }
+
+ private:
+  void InitChains();
+  bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs);
+  bool TryMerge();
+  void MergeChains();
+
+  const std::vector<TaskNode*>& task_nodes_;
+  std::list<Chain> chain_list_;
+};
+
+void ChainMerger::InitChains() {
+  chain_list_.clear();
+  for (const auto& task_node : task_nodes_) {
+    chain_list_.emplace_back();
+    Chain& cur_chain = chain_list_.back();
     cur_chain.nodes = {task_node};
     cur_chain.area_id = task_node->area_id();
     cur_chain.stream_id = task_node->GlobalWorkStreamId();
@@ -25,14 +42,13 @@ void InitChains(const std::vector<TaskNode*>& ordered_nodes, std::list<Chain>* c
   }
 }
 
-bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chain_it) {
+bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (lhs->ancestors_and_this == (lhs->ancestors_and_this | rhs->ancestors)) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
         lhs->ancestors_and_this.set(node->task_uid());
-        task2chain_it->at(node) = lhs;
       }
       return true;
     }
@@ -40,18 +56,15 @@ bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs, Task2ChainItMap* task2chai
   return false;
 }
 
-bool TryMerge(
-    std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it,
-    std::function<bool(std::list<ChainIt>& chains, ChainIt cur_it, Task2ChainItMap* task2chain_it)>
-        DoMerge) {
+bool ChainMerger::TryMerge() {
   HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>> stream_area2chains;
   bool merge_happened = false;
-  for (auto cur_chain_it = chain_list->begin(); cur_chain_it != chain_list->end();) {
+  for (auto cur_chain_it = chain_list_.begin(); cur_chain_it != chain_list_.end();) {
     std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
     auto stream_area_it = stream_area2chains.find(stream_area_id);
     if (stream_area_it != stream_area2chains.end()
-        && DoMerge(stream_area_it->second, cur_chain_it, task2chain_it)) {
-      cur_chain_it = chain_list->erase(cur_chain_it);
+        && DoMerge(stream_area_it->second, cur_chain_it)) {
+      cur_chain_it = chain_list_.erase(cur_chain_it);
       merge_happened = true;
     } else {
       stream_area2chains[stream_area_id].push_back(cur_chain_it);
@@ -61,8 +74,8 @@ bool TryMerge(
   return merge_happened;
 }
 
-void MergeChains(std::list<Chain>* chain_list, Task2ChainItMap* task2chain_it) {
-  while (TryMerge(chain_list, task2chain_it, DoMerge)) {}
+void ChainMerger::MergeChains() {
+  while (TryMerge()) {}
 }
 
 }  // namespace
@@ -78,14 +91,37 @@ std::string ChainNode::VisualStr() const {
 
 ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   std::vector<TaskNode*> ordered_task_nodes;
-  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
+  HashMap<int64_t, std::vector<TaskNode*>> machine2tasks;
 
-  InitChains(ordered_task_nodes, &chain_list_, &task_node2chain_it_);
-  MergeChains(&chain_list_, &task_node2chain_it_);
+  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
+  GroupTaskNodesByMachine(ordered_task_nodes, &machine2tasks);
+
+  {
+    int64_t machine_num = machine2tasks.size();
+    int64_t cpu_num = std::thread::hardware_concurrency();
+    int64_t thread_pool_size = std::min(machine_num, cpu_num);
+    std::mutex chain_list_mtx;
+    BlockingCounter counter(machine_num);
+    ThreadPool thread_pool(thread_pool_size);
+    for (auto& pair : machine2tasks) {
+      thread_pool.AddWork([&]() {
+        ChainMerger merger(pair.second);
+        auto& cur_chain_list = merger.GetChains();
+        {
+          std::unique_lock<std::mutex> guard(chain_list_mtx);
+          chain_list_.insert(chain_list_.end(), cur_chain_list.cbegin(), cur_chain_list.cend());
+        }
+        counter.Decrease();
+      });
+    }
+    counter.WaitUntilCntEqualZero();
+  }
 
   for (auto chain_it = chain_list_.begin(); chain_it != chain_list_.end(); ++chain_it) {
     ChainNode* chain_node = new ChainNode(chain_it);
-    chain_it->chain_node = chain_node;
+    for (auto& task_node : chain_it->nodes) {
+      CHECK(task_node2chain_node_.emplace(task_node, chain_node).second);
+    }
     AddAllocatedNode(chain_node);
   }
 
@@ -116,10 +152,24 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   ToDotWithAutoFilePath();
 }
 
+void ChainGraph::GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_task_nodes,
+                                         HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) {
+  for (auto& task_node : ordered_task_nodes) {
+    int64_t machine_id = task_node->machine_id();
+    auto machine_it = machine2tasks->find(machine_id);
+    if (machine_it != machine2tasks->end()) {
+      machine_it->second.push_back(task_node);
+    } else {
+      std::vector<TaskNode*> task_nodes{task_node};
+      CHECK(machine2tasks->emplace(machine_id, task_nodes).second);
+    }
+  }
+}
+
 ChainNode* ChainGraph::ChainNode4TaskNode(TaskNode* task_node) const {
-  auto task2chain_it = task_node2chain_it_.find(task_node);
-  CHECK(task2chain_it != task_node2chain_it_.end());
-  return task2chain_it->second->chain_node;
+  auto task2chain_it = task_node2chain_node_.find(task_node);
+  CHECK(task2chain_it != task_node2chain_node_.end());
+  return task2chain_it->second;
 }
 
 bool ChainGraph::HasChainEdge(ChainNode* src, ChainNode* dst) const {
