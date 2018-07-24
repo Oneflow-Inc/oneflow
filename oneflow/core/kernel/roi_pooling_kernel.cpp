@@ -54,9 +54,8 @@ void RoIPoolingKernel<device_type, T>::ForwardColNum(
   Blob* out_blob = BnInOp2Blob("out");
   int32_t roi_num = rois_blob->shape().At(1);
   FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
-    FOR_RANGE(int64_t, r, 0, roi_num) {
-      out_blob->set_col_num(n * roi_num + r, in_blob->col_num(n));
-    }
+    int32_t col_num = in_blob->col_num(n);
+    FOR_RANGE(int64_t, r, 0, roi_num) { out_blob->set_col_num(n * roi_num + r, col_num); }
   }
 }
 
