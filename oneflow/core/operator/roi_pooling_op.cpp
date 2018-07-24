@@ -24,9 +24,10 @@ void RoIPoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(
-      {in_blob_desc->shape().At(0), rois_blob_desc->shape().At(1), in_blob_desc->shape().At(1),
+      {in_blob_desc->shape().At(0) * rois_blob_desc->shape().At(1), in_blob_desc->shape().At(1),
        op_conf().roi_pooling_conf().pooled_h(), op_conf().roi_pooling_conf().pooled_w()});
   out_blob_desc->set_data_type(in_blob_desc->data_type());
+  out_blob_desc->set_has_data_id_field(in_blob_desc->has_data_id_field());
   // argmax
   BlobDesc* argmax_blob_desc = GetBlobDesc4BnInOp("argmax");
   argmax_blob_desc->mut_shape() = out_blob_desc->shape();
