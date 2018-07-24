@@ -2,9 +2,6 @@
 
 namespace oneflow {
 
-using std::max;
-using std::min;
-
 template<DeviceType device_type, typename T>
 void RoIPoolingKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -34,6 +31,36 @@ void RoIPoolingKernel<device_type, T>::BackwardDataContent(
       ctx, this->op_conf().roi_pooling_conf(), out_diff_blob, rois_blob, argmax_blob, in_diff_blob);
 }
 
+template<DeviceType device_type, typename T>
+void RoIPoolingKernel<device_type, T>::ForwardDataId(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* out_blob = BnInOp2Blob("out");
+  int32_t roi_num = rois_blob->shape().At(1);
+  size_t size_of_one_data_id = Global<JobDesc>::Get()->SizeOfOneDataId();
+  FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
+    int32_t n_roi_num = n * roi_num;
+    FOR_RANGE(int64_t, r, 0, roi_num) {
+      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(n_roi_num + r), in_blob->data_id(n),
+                          size_of_one_data_id);
+    }
+  }
+}
+
+template<DeviceType device_type, typename T>
+void RoIPoolingKernel<device_type, T>::ForwardColNum(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* in_blob = BnInOp2Blob("in");
+  const Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* out_blob = BnInOp2Blob("out");
+  int32_t roi_num = rois_blob->shape().At(1);
+  FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
+    int32_t col_num = in_blob->col_num(n);
+    FOR_RANGE(int64_t, r, 0, roi_num) { out_blob->set_col_num(n * roi_num + r, col_num); }
+  }
+}
+
 template<typename T>
 class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
  public:
@@ -60,17 +87,18 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
       int32_t* argmax_dptr = argmax_blob->mut_dptr<int32_t>() + n_out_size;
       FOR_RANGE(int64_t, r, 0, roi_num) {
         // stay within feature map
-        int64_t roi_start_w =
-            min(max(static_cast<int64_t>(round(rois_dptr[r * 4] * spatial_scale)), 0l), height);
-        int64_t roi_start_h =
-            min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 1] * spatial_scale)), 0l), width);
-        int64_t roi_end_w =
-            min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 2] * spatial_scale)), 0l), height);
-        int64_t roi_end_h =
-            min(max(static_cast<int64_t>(round(rois_dptr[r * 4 + 3] * spatial_scale)), 0l), width);
+        int64_t roi_start_w = std::min(
+            std::max(static_cast<int64_t>(round(rois_dptr[r * 4] * spatial_scale)), 0l), height);
+        int64_t roi_start_h = std::min(
+            std::max(static_cast<int64_t>(round(rois_dptr[r * 4 + 1] * spatial_scale)), 0l), width);
+        int64_t roi_end_w = std::min(
+            std::max(static_cast<int64_t>(round(rois_dptr[r * 4 + 2] * spatial_scale)), 0l),
+            height);
+        int64_t roi_end_h = std::min(
+            std::max(static_cast<int64_t>(round(rois_dptr[r * 4 + 3] * spatial_scale)), 0l), width);
         // no smaller than 1 * 1
-        int64_t roi_height = max<int64_t>(roi_end_h - roi_start_h + 1, 1);
-        int64_t roi_width = max<int64_t>(roi_end_w - roi_start_w + 1, 1);
+        int64_t roi_height = std::max<int64_t>(roi_end_h - roi_start_h + 1, 1);
+        int64_t roi_width = std::max<int64_t>(roi_end_w - roi_start_w + 1, 1);
         const float bin_height = static_cast<float>(roi_height) / static_cast<float>(pooled_height);
         const float bin_width = static_cast<float>(roi_width) / static_cast<float>(pooled_width);
         FOR_RANGE(int64_t, c, 0, in_blob->shape().At(1)) {
@@ -80,10 +108,10 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
               int64_t wstart = floor(static_cast<float>(w) * bin_width);
               int64_t hend = ceil(static_cast<float>(h + 1) * bin_height);
               int64_t wend = ceil(static_cast<float>(w + 1) * bin_width);
-              hstart = min(max(roi_start_h + hstart, 0l), height);
-              wstart = min(max(roi_start_w + wstart, 0l), width);
-              hend = min(max(roi_start_h + hend, 0l), height);
-              wend = min(max(roi_start_w + wend, 0l), width);
+              hstart = std::min(std::max(roi_start_h + hstart, 0l), height);
+              wstart = std::min(std::max(roi_start_w + wstart, 0l), width);
+              hend = std::min(std::max(roi_start_h + hend, 0l), height);
+              wend = std::min(std::max(roi_start_w + wend, 0l), width);
               int64_t out_pos =
                   r * out_blob->shape().Count(2) + c * pooled_area + h * pooled_width + w;
               bool is_bin_empty = (hend <= hstart) || (wend <= wstart);
