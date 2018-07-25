@@ -43,7 +43,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   bool HasOpWithModelOrConstModelBlob() const;
   bool HasOpWithModelBlob() const;
   bool HasOpWithForwardModelBlob() const;
-  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
+  void GenSortedCompTaskNodes(std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
   // model split

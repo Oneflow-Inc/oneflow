@@ -2,7 +2,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/thread/cpu_thread.h"
 #include "oneflow/core/thread/gpu_thread.h"
-#include "oneflow/core/job/thrd_id_distributor.h"
+#include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
 
@@ -35,20 +35,20 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
     threads_.push_back(new CpuThread(thrd_id, info.buf_size(thrd_id)));
     thrd_id += 1;
   }
-
+  threads_.push_back(new CpuThread(thrd_id, 0));  // comm_net
   CreatePersistenceThrd();
-
-  int64_t comm_net_thrd_id = ThrdIdDistributor::get().GenerateThrdId(TaskType::kCopyCommNet, 0);
-  threads_.push_back(new CpuThread(comm_net_thrd_id, 0));  // comm_net
   compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
 
 void ThreadMgr::CreatePersistenceThrd() {
-  auto persistence_types = ThrdIdDistributor::get().PersistenceThrdTypes();
-  for (auto task_type : persistence_types) {
-    auto thrd_ids = ThrdIdDistributor::get().GetThrdIds(task_type);
-    for (auto thrd_id : thrd_ids) { threads_.push_back(new CpuThread(thrd_id, 0)); }
+  const auto& thrd_ids_map = ThrdIdGenerator::get().GetThrdIds();
+  int32_t total = 0;
+  for (const auto& pair : thrd_ids_map) { total += pair.second.size(); }
+  threads_.resize(threads_.size() + total);
+
+  for (const auto& pair : thrd_ids_map) {
+    const auto& thrd_ids = pair.second;
+    for (int64_t thrd_id : thrd_ids) { threads_[thrd_id] = new CpuThread(thrd_id, 0); }
   }
 }
-
 }  // namespace oneflow

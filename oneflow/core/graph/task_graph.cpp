@@ -7,7 +7,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
-#include "oneflow/core/job/thrd_id_distributor.h"
+#include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
 
@@ -25,43 +25,26 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   };
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
-  std::vector<int64_t> mdsave_offset(job_desc->TotalMachineNum(), 0);
-  std::vector<int64_t> record_load_offset(job_desc->TotalMachineNum(), 0);
-  std::vector<int64_t> loss_print_offset(job_desc->TotalMachineNum(), 0);
-  auto& distributor = ThrdIdDistributor::get();
-  auto GenerateThrdId = [&distributor](const TaskNode* task_node, std::vector<int64_t>& offset_vec,
-                                       int64_t& ret) {
-    int64_t& offset = offset_vec.at(task_node->machine_id());
-    ret = distributor.GenerateThrdId(task_node->GetTaskType(), offset);
-    offset = (offset + 1) % distributor.GetThrdNum(task_node->GetTaskType());
-  };
-
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
     int64_t ret = -1;
     if (task_node->IsPersistence() == false) {
       int64_t& offset = cpu_device_offset.at(task_node->machine_id());
       ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
       offset = (offset + 1) % job_desc->CpuDeviceNum();
-    } else {
-      if (task_node->GetTaskType() == TaskType::kRecordLoad) {
-        GenerateThrdId(task_node, record_load_offset, ret);
-      } else if (task_node->GetTaskType() == TaskType::kLossPrint) {
-        GenerateThrdId(task_node, loss_print_offset, ret);
-      } else {
-        GenerateThrdId(task_node, mdsave_offset, ret);
-      }
     }
     return ret;
   };
-  CollectPersistenceNodesNum();
+
+  std::vector<std::pair<int64_t, CompTaskNode*>> persistence_compute_nodes;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
     logical_node->GenSortedCompTaskNodes(
-        AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
+        &persistence_compute_nodes, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
           comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
+  GeneratePersistenceThrdId(persistence_compute_nodes);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
@@ -74,33 +57,37 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
-void TaskGraph::CollectPersistenceNodesNum() {
-  int32_t recordload_nodes_num = 0;
-  int32_t loassprint_nodes_num = 0;
-  int32_t mdsave_nodes_num = 0;
+void TaskGraph::GeneratePersistenceThrdId(
+    const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes) {
+  std::multimap<std::pair<int32_t, int32_t>, int32_t> machine_task_type2thrd_num;
 
-  logical_gph_->ForEachNode([&recordload_nodes_num, &loassprint_nodes_num,
-                             &mdsave_nodes_num](const LogicalNode* logical_node) {
-    auto parallel_desc = logical_node->parallel_desc();
-    for (int64_t machine_id : parallel_desc->sorted_machine_ids()) {
-      auto vec = parallel_desc->sorted_dev_phy_ids(machine_id);
-      std::for_each(vec.begin(), vec.end(), [&](int64_t dev_phy_id) {
-        if (logical_node->TypeName() == "RecordLoad") {
-          recordload_nodes_num++;
-        } else if (logical_node->TypeName() == "LossPrint") {
-          loassprint_nodes_num++;
-        } else if (logical_node->TypeName() == "MdSave") {
-          mdsave_nodes_num++;
-        }
-      });
-    }
-  });
+  // get the thread number in a machine with the task_type
+  const int32_t mdsave_conf_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
+  int32_t mdsave_num = 0;
+  for (const auto pair : persistence_nodes) {
+    int64_t machine_id = pair.first;
+    CompTaskNode* task_node = pair.second;
+    if (task_node->GetTaskType() == TaskType::kMdSave) { mdsave_num++; }
 
-  ThrdIdDistributor::get().AddThrdNum(TaskType::kRecordLoad, recordload_nodes_num);
-  ThrdIdDistributor::get().AddThrdNum(TaskType::kLossPrint, loassprint_nodes_num);
-  const int32_t conf_mdsave_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
-  ThrdIdDistributor::get().AddThrdNum(
-      TaskType::kMdSave, mdsave_nodes_num < conf_mdsave_num ? mdsave_nodes_num : conf_mdsave_num);
+    if (mdsave_num > mdsave_conf_num) continue;
+
+    machine_task_type2thrd_num.emplace(std::make_pair(machine_id, task_node->GetTaskType()), 0);
+  }
+
+  for (auto it = machine_task_type2thrd_num.begin(), end = machine_task_type2thrd_num.end();
+       it != end; it = machine_task_type2thrd_num.upper_bound(it->first)) {
+    auto rng = machine_task_type2thrd_num.equal_range(it->first);
+    int thrd_num_of_machine_task_type = std::distance(rng.first, rng.second);
+    ThrdIdGenerator::get().AddThrdNum(it->first, thrd_num_of_machine_task_type);
+  }
+
+  // generate thread id
+  for (const auto pair : persistence_nodes) {
+    int64_t machine_id = pair.first;
+    CompTaskNode* task_node = pair.second;
+    int64_t thrd_id = ThrdIdGenerator::get().GenerateThrdId(machine_id, task_node->GetTaskType());
+    task_node->set_thrd_id(thrd_id);
+  }
 }
 
 void TaskGraph::FindChainsInSameStream() {
