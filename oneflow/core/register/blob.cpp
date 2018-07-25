@@ -2,7 +2,6 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/job/runtime_context.h"
-#include "oneflow/core/register/blob_implement.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {
@@ -49,21 +48,28 @@ int32_t Blob::max_col_id() const { return regst_->max_col_id(); }
 void Blob::set_max_col_id(int32_t val) { regst_->set_max_col_id(val); }
 const MemoryCase& Blob::mem_case() const { return regst_->regst_desc()->mem_case(); }
 
-#define MAKE_BLOB_ENTRY(data_type_pair, ndims, device_type)                                      \
-  {GetHashKey(OF_PP_PAIR_SECOND(data_type_pair), ndims, device_type),                            \
-   [](Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) {                                  \
-     return new BlobImpl<OF_PP_PAIR_FIRST(data_type_pair), ndims, device_type>(regst, blob_desc, \
-                                                                               mem_ptr);         \
-   }},
+void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  AutoMemcpy(device_ctx, mut_dptr(), rhs->dptr(), ByteSizeOfDataContentField(), mem_case(),
+             rhs->mem_case());
+}
 
-Blob* NewBlob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr, DeviceType device_type) {
-  static const HashMap<
-      std::string, std::function<Blob*(Regst * regst, const BlobDesc* blob_desc, char* mem_ptr)>>
-      creators = {OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_BLOB_ENTRY, ALL_DATA_TYPE_SEQ, DIM_SEQ,
-                                                   DEVICE_TYPE_SEQ)};
-  std::string key = GetHashKey(blob_desc->data_type(),
-                               static_cast<int32_t>(blob_desc->shape().NumAxes()), device_type);
-  return creators.at(key)(regst, blob_desc, mem_ptr);
+void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  AutoMemcpy(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField(), mem_case(),
+             rhs->mem_case());
+}
+
+void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  AutoMemcpy(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField(), mem_case(),
+             rhs->mem_case());
+}
+
+void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs) { return; }
+  AutoMemcpy(device_ctx, mut_memory_ptr(), rhs->memory_ptr(), TotalByteSize(), mem_case(),
+             rhs->mem_case());
 }
 
 }  // namespace oneflow

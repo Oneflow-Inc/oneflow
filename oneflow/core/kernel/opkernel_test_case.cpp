@@ -72,7 +72,7 @@ template<>
 Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return NewBlob(regst, blob_desc, static_cast<char*>(mem_ptr), DeviceType::kCPU);
+  return new Blob(regst, blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<DeviceType src_device_type, DeviceType dst_device_type>
