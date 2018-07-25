@@ -182,7 +182,7 @@ void ChainActGraph::InitEdges(
         const auto& producer_act_event_it = regst_uid2producer_act_event.find(regst_uid);
         if (producer_act_event_it == regst_uid2producer_act_event.end()) { continue; }
         (*regst_uid2consumer_act_events)[regst_uid].push_back(consumer_act_event);
-        CHECK(act_event_with_consumer_.emplace(producer_act_event_it->second).second);
+        act_event_with_consumer_.emplace(producer_act_event_it->second);
         ChainActNode* producer = act_event2chain_node_.at(producer_act_event_it->second);
         if (producer == node) { continue; }
         double& max_stop_time = producer2max_stop_time[producer];
