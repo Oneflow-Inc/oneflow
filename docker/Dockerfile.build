@@ -10,8 +10,10 @@ RUN apt update && \
     git \
     libibverbs-dev \
     nasm \
+    openjdk-8-jdk \
     clang-format-5.0
 
 ENV LD_LIBRARY_PATH="/usr/lib:${LD_LIBRARY_PATH}"
+ENV JAVA_HOME="/etc/alternatives/java-8-openjdk-amd64"
 
 WORKDIR /opt
