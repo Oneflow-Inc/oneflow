@@ -168,7 +168,7 @@ inline uint32_t NewRandomSeed() {
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 
-#define FOR_RANGE(type, i, begin, end) for (type i = begin; i < end; ++i)
+#define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
 #define FOR_EACH(it, container) for (auto it = container.begin(); it != container.end(); ++it)
 
 void RedirectStdoutAndStderrToGlogDir();

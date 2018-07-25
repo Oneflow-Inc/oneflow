@@ -72,9 +72,7 @@ Plan Compiler::DoCompile() {
   plan.set_total_mbn_num(total_mbn_num);
   FOR_RANGE(int64_t, machine_id, 0, job_desc->TotalMachineNum()) {
     plan.mutable_buf_info()->Add()->mutable_buf_size()->Resize(
-        job_desc->GpuDeviceNum() * static_cast<CudaWorkRepType>(CudaWorkType::kCudaWorkTypeSize)
-            + job_desc->CpuDeviceNum(),
-        0);
+        job_desc->GpuDeviceNum() * GetCudaWorkTypeSize() + job_desc->CpuDeviceNum(), 0);
   }
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
