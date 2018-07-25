@@ -11,7 +11,7 @@ void ProposalOp::InitFromOpConf() {
   // EnrollInputBn("height", false);
   // EnrollInputBn("weight", false);
   EnrollOutputBn("rois", false);
-  EnrollOutputBn("roi_probs", false);
+  EnrollDataTmpBn("roi_probs");
   EnrollConstBufBn("anchors");
   if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
   EnrollDataTmpBn("proposals");
@@ -63,8 +63,9 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   *GetBlobDesc4BnInOp("proposals") = *bbox_pred_blob_desc;
   // anchors
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
-  anchors_blob_desc->mut_shape() = Shape({num_of_anchors});
-  anchors_blob_desc->set_data_type(DataType::kInt32);
+  anchors_blob_desc->mut_shape() = Shape(
+      {bbox_pred_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(2), num_of_anchors * 4});
+  anchors_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
   // keep
   BlobDesc* keep_blob_desc = GetBlobDesc4BnInOp("keep");
   keep_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0)});

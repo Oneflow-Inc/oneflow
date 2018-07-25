@@ -5,18 +5,19 @@ namespace oneflow {
 
 namespace {
 
+template<typename T>
 void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
-  // anchors_blob shape (H * W * A, 4)
-  int32_t* anchors_dptr = anchors_blob->mut_dptr<int32_t>();
-  int32_t height = anchors_blob->shape().At(1);
-  int32_t width = anchors_blob->shape().At(2);
+  // anchors_blob shape (H, W, A * 4)
+  int32_t height = anchors_blob->shape().At(0);
+  int32_t width = anchors_blob->shape().At(1);
   int32_t scales_size = conf.anchor_scales_size();
   int32_t ratios_size = conf.aspect_ratios_size();
   int32_t num_anchors = scales_size * ratios_size;
+  CHECK_EQ(num_anchors * 4, anchors_blob->shape().At(2));
   int32_t fm_stride = conf.feature_map_stride();
   float base_ctr = 0.5 * (fm_stride - 1);
 
-  std::vector<int32_t> base_anchors(num_anchors * 4);
+  std::vector<T> base_anchors(num_anchors * 4);
   FOR_RANGE(int32_t, i, 0, scales_size) {
     FOR_RANGE(int32_t, j, 0, ratios_size) {
       int32_t ws = width * conf.anchor_scales(i);
@@ -30,14 +31,15 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
     }
   }
 
+  T* anchors_dptr = anchors_blob->mut_dptr<T>();
   FOR_RANGE(int32_t, h, 0, height) {
     FOR_RANGE(int32_t, w, 0, width) {
-      int32_t* anchors = anchors_dptr + (h * width + w) * num_anchors * 4;
+      int32_t cur = (h * width + w) * num_anchors * 4;
       FOR_RANGE(int32_t, i, 0, base_anchors.size()) {
         if (i % 2 == 0) {
-          *(anchors + i) = base_anchors[i] + w * fm_stride;
+          anchors_dptr[cur + i] = base_anchors[i] + w * fm_stride;
         } else {
-          *(anchors + i) = base_anchors[i] + h * fm_stride;
+          anchors_dptr[cur + i] = base_anchors[i] + h * fm_stride;
         }
       }
     }
@@ -61,7 +63,7 @@ void ProposalKernel<T>::ForwardDataContent(
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
   // const Blob* im_info_blob = BnInOp2Blob("image_info");
   const Blob* anchors_blob = BnInOp2Blob("anchors");
-  Blob* fg_probs_blob = nullptr;
+  Blob* fg_prob_blob = nullptr;
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* keep_blob = BnInOp2Blob("keep");
   Blob* rois_blob = BnInOp2Blob("rois");
@@ -75,18 +77,19 @@ void ProposalKernel<T>::ForwardDataContent(
   int64_t num_proposals = height * width * num_anchors;
   bool input_only_fg_prob = conf.only_foreground_prob();
 
-  if (!input_only_fg_prob) {
-    fg_probs_blob = const_cast<Blob*>(class_prob_blob);
+  if (input_only_fg_prob) {
+    fg_prob_blob = const_cast<Blob*>(class_prob_blob);
   } else {
-    fg_probs_blob = BnInOp2Blob("fg_probs");
+    fg_prob_blob = BnInOp2Blob("fg_prob");
     ProposalKernelUtil<DeviceType::kCPU, T>::TakeFgProbs(ctx.device_ctx, num_batch * height * width,
                                                          num_anchors, class_prob_blob->dptr<T>(),
-                                                         fg_probs_blob->mut_dptr<T>());
+                                                         fg_prob_blob->mut_dptr<T>());
   }
-  ProposalKernelUtil<DeviceType::kCPU, T>::BboxTransformInv(
-      ctx.device_ctx, num_batch * height * width * num_anchors, anchors_blob->dptr<T>(),
-      bbox_pred_blob->dptr<T>(), proposals_blob->mut_dptr<T>());
   FOR_RANGE(int64_t, i, 0, num_batch) {
+    ProposalKernelUtil<DeviceType::kCPU, T>::BboxTransformInv(
+        ctx.device_ctx, num_proposals, anchors_blob->dptr<T>(),
+        bbox_pred_blob->dptr<T>() + i * num_proposals * 4,
+        proposals_blob->mut_dptr<T>() + i * num_proposals * 4);
     // T image_height = im_info_blob->dptr<T>()[i * num_proposals];
     // T image_width = im_info_blob->dptr<T>()[i * num_proposals + 1];
     // T scale = im_info_blob->dptr<T>()[i * num_proposals + 2];
@@ -99,11 +102,11 @@ void ProposalKernel<T>::ForwardDataContent(
         ctx.device_ctx, i, num_proposals, conf.min_size(), scale, keep_blob->mut_dptr<int32_t>(),
         proposals_blob->mut_dptr<T>());
     ProposalKernelUtil<DeviceType::kCPU, T>::SortByScore(
-        ctx.device_ctx, i, num_proposals, keep_blob->dptr<int32_t>(), fg_probs_blob->dptr<T>(),
+        ctx.device_ctx, i, num_proposals, keep_blob->dptr<int32_t>(), fg_prob_blob->dptr<T>(),
         proposals_blob->mut_dptr<T>());
     ProposalKernelUtil<DeviceType::kCPU, T>::Nms(
         ctx.device_ctx, i, num_proposals, conf.pre_nms_top_n(), conf.post_nms_top_n(),
-        conf.nms_threshold(), proposals_blob->dptr<T>(), fg_probs_blob->dptr<T>(),
+        conf.nms_threshold(), proposals_blob->dptr<T>(), fg_prob_blob->dptr<T>(),
         keep_blob->dptr<int32_t>(), rois_blob->mut_dptr<T>(), roi_probs_blob->mut_dptr<T>());
   }
 }
@@ -111,7 +114,7 @@ void ProposalKernel<T>::ForwardDataContent(
 template<typename T>
 void ProposalKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  GenerateAnchors(op_conf().proposal_conf(), BnInOp2Blob("anchors"));
+  GenerateAnchors<T>(op_conf().proposal_conf(), BnInOp2Blob("anchors"));
 }
 
 template<typename T>
@@ -125,8 +128,8 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
 
   static void BboxTransform(DeviceCtx* ctx, int64_t m, const T* bbox, const T* target_bbox,
                             T* deltas) {
-    // m = n * h * w * a
-    // shape: bbox == target_bbox == deltas (n, h, w, a * 4)
+    // m = h * w * a
+    // shape: bbox == target_bbox == deltas (h, w, a * 4)
     FOR_RANGE(int64_t, i, 0, m) {
       float b_w = bbox[i * 4 + 2] - bbox[i * 4] + 1.0f;
       float b_h = bbox[i * 4 + 3] - bbox[i * 4 + 1] + 1.0f;
@@ -147,8 +150,8 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
 
   static void BboxTransformInv(DeviceCtx* ctx, int64_t m, const T* bbox, const T* deltas,
                                T* bbox_pred) {
-    // m = n * h * w * a
-    // shape: bbox == deltas == bbox_pred (n, h, w, a * 4)
+    // m = h * w * a
+    // bbox == deltas == bbox_pred (h * w * a * 4)
     FOR_RANGE(int64_t, i, 0, m) {
       float w = bbox[i * 4 + 2] - bbox[i * 4] + 1.0f;
       float h = bbox[i * 4 + 3] - bbox[i * 1 + 1] + 1.0f;
