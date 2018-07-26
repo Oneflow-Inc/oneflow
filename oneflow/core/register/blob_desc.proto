@@ -10,4 +10,5 @@ message BlobDescProto {
   required bool has_data_id_field = 4;
   required bool has_col_num_field = 5;
   required int32 max_col_num = 6;
+  optional int64 header_byte_size_for_mem_blob = 7 [default = -1];
 }

@@ -18,7 +18,11 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
       auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
-    packed_blob_desc_ = BlobDesc(data_regst_desc.packed_blob_desc());
+    if (data_regst_desc.packed_blob_desc().has_header_byte_size_for_mem_blob()) {
+      packed_blob_desc_.reset(new MemBlobDesc(data_regst_desc.packed_blob_desc()));
+    } else {
+      packed_blob_desc_.reset(new BlobDesc(data_regst_desc.packed_blob_desc()));
+    }
   }
 }
 
@@ -26,7 +30,7 @@ const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const 
   auto it = lbi2blob_desc_.find(lbi);
   if (it == lbi2blob_desc_.end()) {
     CHECK(lbi.is_packed_id());
-    return &packed_blob_desc_;
+    return packed_blob_desc_.get();
   } else {
     return it->second.get();
   }

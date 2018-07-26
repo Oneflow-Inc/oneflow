@@ -23,9 +23,9 @@ class RtRegstDesc {
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
   const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
-  const BlobDesc* packed_blob_desc() const { return &packed_blob_desc_; }
+  const BlobDesc* packed_blob_desc() const { return packed_blob_desc_.get(); }
   size_t TotalByteSize4AllRegst() const {
-    return packed_blob_desc_.TotalByteSize() * register_num_;
+    return packed_blob_desc_->TotalByteSize() * register_num_;
   }
 
  private:
@@ -36,7 +36,7 @@ class RtRegstDesc {
   RegstDescTypeProto regst_desc_type_;
   MemoryCase mem_case_;
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
-  BlobDesc packed_blob_desc_;
+  std::unique_ptr<BlobDesc> packed_blob_desc_;
 };
 
 }  // namespace oneflow
