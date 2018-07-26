@@ -29,6 +29,9 @@ class RoIPoolingKernelUtil {
 
   static void Forward(const KernelCtx& ctx, const RoIPoolingOpConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob, Blob* idx_blob);
+  static void ForwardMultiPart(const KernelCtx& ctx, const RoIPoolingOpConf& conf,
+                               const Blob* in_blob, const Blob* rois_blob, Blob* out_blob,
+                               Blob* idx_blob, int32_t part_id, int32_t part_num);
   static void Backward(const KernelCtx& ctx, const RoIPoolingOpConf& conf,
                        const Blob* out_diff_blob, const Blob* rois_blob, const Blob* idx_blob,
                        Blob* in_diff_blob);

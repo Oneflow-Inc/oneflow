@@ -1,4 +1,6 @@
 #include "oneflow/core/kernel/roi_pooling_kernel.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/thread/thread_manager.h"
 
 namespace oneflow {
 
@@ -13,8 +15,25 @@ void RoIPoolingKernel<device_type, T>::ForwardDataContent(
                       argmax_blob->ByteSizeOfDataContentField());
   Memset<device_type>(ctx.device_ctx, out_blob->mut_dptr<T>(), 0,
                       out_blob->ByteSizeOfDataContentField());
-  RoIPoolingKernelUtil<device_type, T>::Forward(ctx, this->op_conf().roi_pooling_conf(), in_blob,
-                                                rois_blob, out_blob, argmax_blob);
+  RoIPoolingOpConf roi_pooling_conf = this->op_conf().roi_pooling_conf();
+  int32_t part_num = std::min(static_cast<int32_t>(rois_blob->shape().At(1)),
+                              Global<ThreadMgr>::Get()->compute_thread_pool()->thread_num());
+  if (device_type == DeviceType::kCPU && part_num >= 2) {
+    BlockingCounter bc(part_num);
+    FOR_RANGE(int32_t, part_id, 0, part_num) {
+      Global<ThreadMgr>::Get()->compute_thread_pool()->AddWork([&ctx, &roi_pooling_conf, &in_blob,
+                                                                &rois_blob, &out_blob, &argmax_blob,
+                                                                part_id, &part_num, &bc]() {
+        RoIPoolingKernelUtil<DeviceType::kCPU, T>::ForwardMultiPart(
+            ctx, roi_pooling_conf, in_blob, rois_blob, out_blob, argmax_blob, part_id, part_num);
+        bc.Decrease();
+      });
+    }
+    bc.WaitUntilCntEqualZero();
+  } else {
+    RoIPoolingKernelUtil<device_type, T>::Forward(ctx, roi_pooling_conf, in_blob, rois_blob,
+                                                  out_blob, argmax_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
@@ -69,6 +88,11 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
 
   static void Forward(const KernelCtx& ctx, const RoIPoolingOpConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob, Blob* argmax_blob) {
+    ForwardMultiPart(ctx, conf, in_blob, rois_blob, out_blob, argmax_blob, 0, 1);
+  }
+  static void ForwardMultiPart(const KernelCtx& ctx, const RoIPoolingOpConf& conf,
+                               const Blob* in_blob, const Blob* rois_blob, Blob* out_blob,
+                               Blob* argmax_blob, int32_t part_id, int32_t part_num) {
     const T* in_dptr = in_blob->dptr<T>();
     const float spatial_scale = conf.spatial_scale();
     const int64_t height = in_blob->shape().At(2);
@@ -80,15 +104,19 @@ class RoIPoolingKernelUtil<DeviceType::kCPU, T> final {
     const int64_t roi_size = rois_blob->shape().Count(1);  // roi_num * 4
     const int64_t out_size =
         out_blob->shape().Count(1);  // roi_num * channel_num * pooled_h * pooled_w
+
+    BalancedSplitter bs(roi_num, part_num);
+    Range range = bs.At(part_id);
     FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
       const T* rois_dptr = rois_blob->dptr<T>() + roi_size * n;
       int64_t n_out_size = out_size * n;
       T* out_dptr = out_blob->mut_dptr<T>() + n_out_size;
       int32_t* argmax_dptr = argmax_blob->mut_dptr<int32_t>() + n_out_size;
-      FOR_RANGE(int64_t, r, 0, roi_num) {
+      FOR_RANGE(int64_t, r, range.begin(), range.end()) {
         // stay within feature map
         int64_t roi_start_w = std::min(
-            std::max(static_cast<int64_t>(round(rois_dptr[r * 4] * spatial_scale)), 0l), height);
+            std::max(static_cast<int64_t>(round(rois_dptr[r * 4 + 0] * spatial_scale)), 0l),
+            height);
         int64_t roi_start_h = std::min(
             std::max(static_cast<int64_t>(round(rois_dptr[r * 4 + 1] * spatial_scale)), 0l), width);
         int64_t roi_end_w = std::min(
