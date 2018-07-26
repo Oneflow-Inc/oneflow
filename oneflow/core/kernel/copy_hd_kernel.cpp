@@ -19,7 +19,7 @@ void CopyHdKernel::Forward(const KernelCtx& ctx,
   const Blob* in_blob = BnInOp2Blob(op_attribute().input_bns(0));
   Blob* out_blob = BnInOp2Blob(op_attribute().output_bns(0));
 
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_memory_ptr(), in_blob->memory_ptr(),
+  Memcpy<DeviceType::kGPU>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
                            in_blob->TotalByteSize(), cp_kind_);
 }
 

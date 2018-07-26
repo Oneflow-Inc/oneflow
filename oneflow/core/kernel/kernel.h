@@ -62,6 +62,10 @@ class Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
+  virtual void ForwardPackedHeader(const KernelCtx& ctx,
+                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    UNIMPLEMENTED();
+  }
 
   virtual void Backward(const KernelCtx& ctx,
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -119,6 +123,8 @@ class KernelIf : public Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void ForwardColNum(const KernelCtx& ctx,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  virtual void ForwardPackedHeader(
+      const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardDataId(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardColNum(const KernelCtx& ctx,
@@ -127,10 +133,6 @@ class KernelIf : public Kernel {
   void PostBackwardActivation(const KernelCtx& ctx, const Blob* in_blob,
                               Blob* in_diff_blob) const override;
 
-  void CopyDataId(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                  const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
-  void CopyColNum(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
-                  const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
   void CopyField(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                  const Blob* from_blob, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;

@@ -10,7 +10,7 @@ void CloneKernel<device_type, T>::Forward(
   const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
   for (const std::string& obn : this->op_attribute().output_bns()) {
     Blob* out_blob = BnInOp2Blob(obn);
-    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_memory_ptr(), in_blob->memory_ptr(),
+    Memcpy<device_type>(ctx.device_ctx, out_blob->mut_header_ptr(), in_blob->header_ptr(),
                         in_blob->TotalByteSize());
   }
 }
