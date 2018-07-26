@@ -154,9 +154,10 @@ uint64_t CalcMemoryConsumed(
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
-    uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
+    uint64_t total_byte_size = RtRegstDesc(*regst_desc).TotalByteSize4AllRegst();
+    if (regst_desc->mem_shared_id() != -1) { total_byte_size += regst_desc->mem_offset(); }
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
+      mem_consuming += RoundUp(total_byte_size, kCudaMemAllocAlignSize);
     } else {
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();

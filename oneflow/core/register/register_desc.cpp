@@ -133,6 +133,7 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   *(ret->mutable_mem_case()) = mem_case_;
   ret->set_enable_mem_sharing(enable_mem_sharing_);
   ret->set_mem_shared_id(-1);
+  ret->set_mem_offset(mem_offset_);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
@@ -156,6 +157,7 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
   ctrl_regst_proto->set_enable_mem_sharing(false);
   ctrl_regst_proto->set_mem_shared_id(-1);
+  ctrl_regst_proto->set_mem_offset(0);
 }
 
 }  // namespace oneflow
