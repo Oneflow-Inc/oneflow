@@ -49,15 +49,23 @@ void RegstLifetimeGraph::ForEachSameColoredRegstDescs(
     const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) const {
   HashMap<const RegstLifetimeNode*, std::set<int32_t>> node2excluded_color_ids;
   HashMap<const RegstLifetimeNode*, int32_t> node2color_id;
+  HashMap<int32_t, int32_t> group_id2color_id;
   auto ForEachIntersected = &RegstLifetimeNode::ForEachNodeOnInOutEdge;
   ForEachNode([&](const RegstLifetimeNode* start) {
     if (node2color_id.find(start) != node2color_id.end()) { return; }
     BfsForEachNode({start}, ForEachIntersected, [&](const RegstLifetimeNode* node) {
       if (node2color_id.find(node) != node2color_id.end()) { return; }
-      int32_t color_id = 0;
-      const auto& excluded_color_ids = node2excluded_color_ids[node];
-      for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
+      int32_t group_id = node->regst_desc().mem_shared_group_id();
+      int32_t color_id;
+      if (group_id != -1 && group_id2color_id.count(group_id)) {
+        color_id = group_id2color_id[group_id];
+      } else {
+        color_id = 0;
+        const auto& excluded_color_ids = node2excluded_color_ids[node];
+        for (; excluded_color_ids.find(color_id) != excluded_color_ids.end(); ++color_id) {}
+      }
       node2color_id[node] = color_id;
+      group_id2color_id[group_id] = color_id;
       (node->*ForEachIntersected)([&](const RegstLifetimeNode* intersected) {
         if (node2color_id.find(intersected) != node2color_id.end()) { return; }
         node2excluded_color_ids[intersected].insert(color_id);

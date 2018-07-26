@@ -58,6 +58,28 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
+void TaskGraph::SetMemSharingGroup4RegstDesc() {
+  HashMap<int32_t, std::vector<std::shared_ptr<RegstDesc>>> group_id2regst_descs;
+  ForEachNode([&](TaskNode* task_node) {
+    const auto& produced_regsts = task_node->produced_regsts();
+    for (auto& pair : produced_regsts) {
+      if (!pair.second->enable_mem_sharing()) { continue; }
+      int32_t mem_shared_group_id = Global<IDMgr>::Get()->NewMemSharedGroupId();
+      pair.second->set_mem_shared_group_id(mem_shared_group_id);
+      group_id2regst_descs[mem_shared_group_id].emplace_back(pair.second);
+    }
+  });
+  for (auto& pair : group_id2regst_descs) {
+    size_t offset = 0;
+    CHECK_EQ(pair.second.size(), 1);
+    for (auto& regst_desc_ptr : pair.second) {
+      CHECK_EQ(regst_desc_ptr->min_register_num(), 1);
+      regst_desc_ptr->set_mem_offset(offset);
+      offset += regst_desc_ptr->PackedBlobDescSize();
+    }
+  }
+}
+
 void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();
 

@@ -43,6 +43,23 @@ void CopyHdTaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
   }
 }
 
+void CopyHdTaskNode::FixRegisterNumRange() {
+  if (Global<JobDesc>::Get()->IsTrain() && ProvideDataForForward()) {
+    if (GetProducedRegst("copy_out")->max_register_num() >= 2) {
+      GetProducedRegst("copy_out")->UpdtMinRegstNumIfNeed(2);
+    }
+  }
+}
+
+bool CopyHdTaskNode::ProvideDataForForward() const {
+  if (copy_type_ != CopyHdOpConf::H2D) { return false; }
+  if (area_id() == kDataForwardArea) { return true; }
+  for (TaskEdge* out_edge : out_edges()) {
+    if (out_edge->dst_node()->area_id() == kDataForwardArea) { return true; }
+  }
+  return false;
+}
+
 OperatorConf CopyHdTaskNode::NewCopyOpConf() {
   OperatorConf conf;
   conf.set_name("copy_hd_" + NewUniqueId());
