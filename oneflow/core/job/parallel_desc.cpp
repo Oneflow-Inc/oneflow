@@ -55,6 +55,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     }
   }
   ClearUp();
+  CheckValidity();
 }
 
 void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num) {
@@ -125,6 +126,17 @@ void ParallelDesc::ClearUp() {
     parallel_num_ += pair.second.size();
   }
   SortAndRemoveDuplication(&sorted_machine_ids_);
+}
+
+void ParallelDesc::CheckValidity() {
+  device_num_of_each_machine_ = -1;
+  for (auto& pair : machine_id2sorted_dev_phy_ids_) {
+    if (device_num_of_each_machine_ == -1) {
+      device_num_of_each_machine_ = pair.second.size();
+    } else {
+      CHECK_EQ(device_num_of_each_machine_, pair.second.size());
+    }
+  }
 }
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(

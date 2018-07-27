@@ -5,16 +5,7 @@
 namespace oneflow {
 
 void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  int32_t max_model_regst = -1;
-  if (Global<JobDesc>::Get()->IsPredict()) {
-    max_model_regst = 1;
-  } else {
-    if (Global<JobDesc>::Get()->Staleness() == -1) {
-      max_model_regst = kMaxRegisterNum;
-    } else {
-      max_model_regst = Global<JobDesc>::Get()->Staleness() + 1;
-    }
-  }
+  int32_t max_model_regst = 1;
   auto model_regst = ProduceRegst("model", false, 1, max_model_regst);
   auto const_model_regst = ProduceRegst("const_model", false, 1, 1);
   ProduceRegst("data_tmp", false, 1, 1);
