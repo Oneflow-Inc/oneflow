@@ -19,12 +19,13 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
 
   std::vector<T> base_anchors(num_anchors * 4);
   FOR_RANGE(int32_t, i, 0, scales_size) {
+    int32_t ws = conf.anchor_scales(i);
+    int32_t hs = conf.anchor_scales(i);
     FOR_RANGE(int32_t, j, 0, ratios_size) {
-      int32_t ws = width * conf.anchor_scales(i);
-      int32_t hs = height * conf.anchor_scales(i);
       float wr = std::sqrt(hs * ws / conf.aspect_ratios(j));
       float hr = wr * conf.aspect_ratios(j);
-      base_anchors[i * ratios_size * 4 + j * 4] = base_ctr - 0.5 * (wr - 1);
+      LOG(INFO) << "scaled ratio height: " << hr << ", width: " << wr;
+      base_anchors[i * ratios_size * 4 + j * 4 + 0] = base_ctr - 0.5 * (wr - 1);
       base_anchors[i * ratios_size * 4 + j * 4 + 1] = base_ctr - 0.5 * (hr - 1);
       base_anchors[i * ratios_size * 4 + j * 4 + 2] = base_ctr + 0.5 * (wr - 1);
       base_anchors[i * ratios_size * 4 + j * 4 + 3] = base_ctr + 0.5 * (hr - 1);
@@ -35,15 +36,19 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
   FOR_RANGE(int32_t, h, 0, height) {
     FOR_RANGE(int32_t, w, 0, width) {
       int32_t cur = (h * width + w) * num_anchors * 4;
-      FOR_RANGE(int32_t, i, 0, base_anchors.size()) {
-        if (i % 2 == 0) {
-          anchors_dptr[cur + i] = base_anchors[i] + w * fm_stride;
-        } else {
-          anchors_dptr[cur + i] = base_anchors[i] + h * fm_stride;
-        }
+      FOR_RANGE(int32_t, i, 0, num_anchors) {
+        anchors_dptr[cur + i * 4 + 0] = base_anchors[i * 4 + 0] + w * fm_stride;
+        anchors_dptr[cur + i * 4 + 1] = base_anchors[i * 4 + 1] + h * fm_stride;
+        anchors_dptr[cur + i * 4 + 2] = base_anchors[i * 4 + 2] + w * fm_stride;
+        anchors_dptr[cur + i * 4 + 3] = base_anchors[i * 4 + 3] + h * fm_stride;
       }
     }
   }
+}
+
+template<typename T>
+inline bool LtMinSize(T min_size, const T* bbox) {
+  return (bbox[2] - bbox[0] < min_size) || (bbox[3] - bbox[1] < min_size);
 }
 
 }  // namespace
@@ -123,7 +128,7 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
     // m = n * h * w
     // class_prob (n, h, w, a * 2)
     // fg_prob (n, h, w, a)
-    FOR_RANGE(int64_t, i, 0, m * a) { fg_prob[i] = class_prob[i / m * a * 2 + i % m + a]; }
+    UNIMPLEMENTED();
   }
 
   static void BboxTransform(DeviceCtx* ctx, int64_t m, const T* bbox, const T* target_bbox,
@@ -153,20 +158,20 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
     // m = h * w * a
     // bbox == deltas == bbox_pred (h * w * a * 4)
     FOR_RANGE(int64_t, i, 0, m) {
-      float w = bbox[i * 4 + 2] - bbox[i * 4] + 1.0f;
-      float h = bbox[i * 4 + 3] - bbox[i * 1 + 1] + 1.0f;
-      float ctr_x = bbox[i * 4] + 0.5f * w;
+      float w = bbox[i * 4 + 2] - bbox[i * 4 + 0] + 1.0f;
+      float h = bbox[i * 4 + 3] - bbox[i * 4 + 1] + 1.0f;
+      float ctr_x = bbox[i * 4 + 0] + 0.5f * w;
       float ctr_y = bbox[i * 4 + 1] + 0.5f * h;
 
-      float pred_ctr_x = deltas[i * 4] * w + ctr_x;
+      float pred_ctr_x = deltas[i * 4 + 0] * w + ctr_x;
       float pred_ctr_y = deltas[i * 4 + 1] * h + ctr_y;
       float pred_w = std::exp(deltas[i * 4 + 2]) * w;
       float pred_h = std::exp(deltas[i * 4 + 3]) * h;
 
       bbox_pred[i * 4 + 0] = pred_ctr_x - 0.5f * pred_w;
       bbox_pred[i * 4 + 1] = pred_ctr_y - 0.5f * pred_h;
-      bbox_pred[i * 4 + 2] = pred_ctr_x + 0.5f * pred_w;
-      bbox_pred[i * 4 + 3] = pred_ctr_y + 0.5f * pred_h;
+      bbox_pred[i * 4 + 2] = pred_ctr_x + 0.5f * pred_w - 1.f;
+      bbox_pred[i * 4 + 3] = pred_ctr_y + 0.5f * pred_h - 1.f;
     }
   }
 
@@ -183,25 +188,19 @@ struct ProposalKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  static void FilterBoxesByMinSize(DeviceCtx* ctx, int64_t index, int64_t num_proposals,
+  static void FilterBoxesByMinSize(DeviceCtx* ctx, int64_t batch_index, int64_t num_proposals,
                                    int32_t min_size, T scale, int32_t* keep, T* proposals) {
     // m = h * w * a
     T real_min_size = static_cast<T>(min_size * scale);
-    int64_t itor = 0;
-    int64_t filter_from = num_proposals;
-    while (itor != filter_from) {
-      int64_t cur = (index * num_proposals + itor) * 4;
-      if (proposals[cur + 2] - proposals[cur] + 1 < real_min_size
-          || proposals[cur + 3] - proposals[cur + 1] + 1 < real_min_size) {
-        --filter_from;
-        if (itor == filter_from) { break; }
-        std::swap_ranges(proposals + cur, proposals + cur + 4,
-                         proposals + (index * num_proposals + filter_from) * 4);
-      } else {
-        ++itor;
-      }
+    T* cur_img_proposals = proposals + batch_index * num_proposals * 4;
+    T* drop_ptr = cur_img_proposals;
+    T* keep_ptr = cur_img_proposals + (num_proposals - 1) * 4;
+    while (drop_ptr <= keep_ptr) {
+      while (drop_ptr <= keep_ptr && !LtMinSize(real_min_size, drop_ptr)) { drop_ptr += 4; }
+      while (drop_ptr <= keep_ptr && LtMinSize(real_min_size, keep_ptr)) { keep_ptr -= 4; }
+      if (drop_ptr < keep_ptr) { std::swap_ranges(drop_ptr, drop_ptr + 4, keep_ptr); }
     }
-    keep[index] = filter_from;
+    keep[batch_index] = (drop_ptr - cur_img_proposals) / 4;
   }
 
   static void SortByScore(DeviceCtx* ctx, int64_t index, int64_t num_proposals, const int32_t* keep,

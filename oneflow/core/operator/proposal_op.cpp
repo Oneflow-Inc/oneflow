@@ -11,7 +11,7 @@ void ProposalOp::InitFromOpConf() {
   // EnrollInputBn("height", false);
   // EnrollInputBn("weight", false);
   EnrollOutputBn("rois", false);
-  EnrollDataTmpBn("roi_probs");
+  EnrollOutputBn("roi_probs", false);
   EnrollConstBufBn("anchors");
   if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
   EnrollDataTmpBn("proposals");
@@ -27,7 +27,7 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
   int32_t feature_map_stride = GetValFromCustomizedConf<int32_t>("feature_map_stride");
   for (int32_t scale : anchor_scales) {
-    CHECK_GT(scale, feature_map_stride);
+    CHECK_GE(scale, feature_map_stride);
     CHECK_EQ(scale % feature_map_stride, 0);
   }
   int32_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
