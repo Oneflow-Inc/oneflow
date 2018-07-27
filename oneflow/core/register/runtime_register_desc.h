@@ -24,9 +24,10 @@ class RtRegstDesc {
 
   const BlobDesc* GetBlobDescFromLbi(const LogicalBlobId& lbi) const;
   const BlobDesc* packed_blob_desc() const { return packed_blob_desc_.get(); }
-  size_t TotalByteSize4AllRegst() const {
-    return packed_blob_desc_->TotalByteSize() * register_num_;
-  }
+  size_t TotalByteSize4AllRegst() const;
+  size_t TotalMainByteSize4AllRegst() const;
+  size_t TotalSeparatedByteSize4AllRegst() const;
+  size_t MainByteSize4OneRegst() const;
 
  private:
   int64_t regst_desc_id_;

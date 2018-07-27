@@ -36,4 +36,32 @@ const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const 
   }
 }
 
+size_t RtRegstDesc::TotalByteSize4AllRegst() const {
+  return packed_blob_desc_->TotalByteSize() * register_num_;
+}
+
+size_t RtRegstDesc::TotalMainByteSize4AllRegst() const {
+  if (mem_case_.has_device_cuda_mem()) {
+    return packed_blob_desc_->ByteSizeOfDataContentField() * register_num_;
+  } else {
+    return packed_blob_desc_->TotalByteSize() * register_num_;
+  }
+}
+
+size_t RtRegstDesc::MainByteSize4OneRegst() const {
+  if (mem_case_.has_device_cuda_mem()) {
+    return packed_blob_desc_->ByteSizeOfDataContentField();
+  } else {
+    return packed_blob_desc_->TotalByteSize();
+  }
+}
+
+size_t RtRegstDesc::TotalSeparatedByteSize4AllRegst() const {
+  if (mem_case_.has_device_cuda_mem()) {
+    return packed_blob_desc_->ByteSizeOfBlobHeader() * register_num_;
+  } else {
+    return 0;
+  }
+}
+
 }  // namespace oneflow

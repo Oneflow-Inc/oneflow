@@ -6,17 +6,22 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr) : is_continuous_(true) {
+Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr) {
   Init(regst, blob_desc, header_ptr,
        header_ptr + RoundUp(blob_desc->ByteSizeOfBlobHeader(), kCudaAlignSize));
 }
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr)
-    : is_continuous_(false) {
+Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
 void Blob::Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+  if (body_ptr == header_ptr_ + RoundUp(blob_desc->ByteSizeOfBlobHeader(), kCudaAlignSize)) {
+    is_continuous_ = true;
+  } else {
+    is_continuous_ = false;
+  }
+
   regst_ = regst;
   blob_desc_ = blob_desc;
   header_ptr_ = header_ptr;
