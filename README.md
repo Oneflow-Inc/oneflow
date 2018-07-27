@@ -15,6 +15,17 @@ cmake -DBUILD_THIRD_PARTY=OFF .. && make
 find ./build -type f -not -name "*.tar.gz" -delete
 ```
 
+```bash
+# you can also use local file instead
+cd cmake/third_party
+
+ls | xargs sed -i "" "s#http://down.geeek.info/deps/#<local_folder>/#"
+
+# deps in `tar.gz` can be download from `http://down.geeek.info/deps/`
+
+# or make your own use `https://github.com/Oneflow-Inc/deps-archive`
+```
+
 ### docker
 
 #### binary ignore
