@@ -7,8 +7,7 @@
 namespace oneflow {
 
 Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr) {
-  Init(regst, blob_desc, header_ptr,
-       header_ptr + RoundUp(blob_desc->ByteSizeOfBlobHeader(), kCudaAlignSize));
+  Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
 Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
@@ -16,7 +15,7 @@ Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body
 }
 
 void Blob::Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  if (body_ptr == header_ptr_ + RoundUp(blob_desc->ByteSizeOfBlobHeader(), kCudaAlignSize)) {
+  if (body_ptr == header_ptr_ + blob_desc->ByteSizeOfBlobHeader()) {
     is_continuous_ = true;
   } else {
     is_continuous_ = false;
@@ -30,7 +29,7 @@ void Blob::Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char*
   } else {
     data_id_ptr_ = nullptr;
   }
-  char* offset = header_ptr + RoundUp(blob_desc->ByteSizeOfDataIdField(), kCudaAlignSize);
+  char* offset = header_ptr + blob_desc->ByteSizeOfDataIdField();
   if (blob_desc->has_col_num_field()) {
     col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
   } else {
@@ -72,8 +71,7 @@ void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
   CHECK_EQ(ByteSizeOfBlobHeader(), rhs->ByteSizeOfBlobHeader());
-  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(),
-                           ByteSizeOfColNumField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(), ByteSizeOfBlobHeader());
 }
 
 void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {

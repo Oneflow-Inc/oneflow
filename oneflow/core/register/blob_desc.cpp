@@ -31,8 +31,11 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  return RoundUp(ByteSizeOfDataIdField(), kCudaAlignSize)
-         + RoundUp(ByteSizeOfColNumField(), kCudaAlignSize);
+  return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
+}
+
+size_t BlobDesc::ByteSizeOfBlobBody() const {
+  return RoundUp(ByteSizeOfDataContentField(), kCudaAlignSize);
 }
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
@@ -55,9 +58,7 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
   return shape_.elem_cnt() * GetSizeOfDataType(data_type_);
 }
 
-size_t BlobDesc::TotalByteSize() const {
-  return ByteSizeOfBlobHeader() + RoundUp(ByteSizeOfDataContentField(), kCudaAlignSize);
-}
+size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return shape_ == rhs.shape_ && data_type_ == rhs.data_type_
@@ -92,7 +93,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   const BlobDesc* last_blob_desc = nullptr;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     header_byte_size += blob_desc->ByteSizeOfBlobHeader();
-    body_byte_size += RoundUp(blob_desc->ByteSizeOfDataContentField(), kCudaAlignSize);
+    body_byte_size += blob_desc->ByteSizeOfBlobBody();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     if (max_col_num == -1) {
       max_col_num = blob_desc->max_col_num();

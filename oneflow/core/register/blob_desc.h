@@ -37,6 +37,7 @@ class BlobDesc {
 
   virtual void ToProto(BlobDescProto* proto) const;
   virtual size_t ByteSizeOfBlobHeader() const;
+  size_t ByteSizeOfBlobBody() const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;

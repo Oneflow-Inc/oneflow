@@ -118,8 +118,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       } else {
         regst->packed_blob_.reset(new Blob(regst, packed_blob_desc, main_mem_ptr));
         cur_header_pointer = main_mem_ptr;
-        cur_body_pointer =
-            main_mem_ptr + RoundUp(packed_blob_desc->ByteSizeOfBlobHeader(), kCudaAlignSize);
+        cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
       }
       for (const LogicalBlobId& lbi : lbis) {
         const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
@@ -128,7 +127,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
         InitOFRecordBlobIfNeed(blob_ptr.get());
         CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
-        cur_body_pointer += RoundUp(packed_blob_desc->ByteSizeOfDataContentField(), kCudaAlignSize);
+        cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
       }
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
