@@ -16,6 +16,8 @@ void ProposalOp::InitFromOpConf() {
   if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
   EnrollDataTmpBn("proposals");
   EnrollDataTmpBn("keep");
+  EnrollDataTmpBn("sorted_score_index");
+  EnrollDataTmpBn("suppressed_index");
 }
 
 const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().proposal_conf(); }
@@ -24,8 +26,8 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
                                 const ParallelContext* parallel_ctx) const {
   const auto& anchor_scales = GetPbRfFromCustomizedConf<int32_t>("anchor_scales");
   const auto& aspect_ratios = GetPbRfFromCustomizedConf<float>("aspect_ratios");
-  int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
-  int32_t feature_map_stride = GetValFromCustomizedConf<int32_t>("feature_map_stride");
+  const int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
+  const int32_t feature_map_stride = GetValFromCustomizedConf<int32_t>("feature_map_stride");
   for (int32_t scale : anchor_scales) {
     CHECK_GE(scale, feature_map_stride);
     CHECK_EQ(scale % feature_map_stride, 0);
@@ -66,10 +68,13 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   anchors_blob_desc->mut_shape() = Shape(
       {bbox_pred_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(2), num_of_anchors * 4});
   anchors_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
-  // keep
-  BlobDesc* keep_blob_desc = GetBlobDesc4BnInOp("keep");
-  keep_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0)});
-  keep_blob_desc->set_data_type(DataType::kInt32);
+
+  BlobDesc* sorted_score_index_blob_desc = GetBlobDesc4BnInOp("sorted_score_index");
+  sorted_score_index_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().Count(1) / 4});
+  sorted_score_index_blob_desc->set_data_type(DataType::kInt32);
+
+  *GetBlobDesc4BnInOp("suppressed_index") = *sorted_score_index_blob_desc;
+
   // rois
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0), post_nms_top_n, 4});
