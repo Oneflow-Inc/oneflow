@@ -9,6 +9,12 @@ cmake -DBUILD_THIRD_PARTY=ON .. && make
 cmake -DBUILD_THIRD_PARTY=OFF .. && make
 ```
 
+```bash
+# for build clean
+# remove all files in build but not the `tar.gz`
+find ./build -type f -not -name "*.tar.gz" -delete
+```
+
 ### docker
 
 #### binary ignore
@@ -23,3 +29,4 @@ cmake -DBUILD_THIRD_PARTY=OFF .. && make
 
 0 directories, 3 files
 ```
+
