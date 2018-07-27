@@ -58,75 +58,124 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
-/*
-void TaskGraph::SetProducedRegstMemSharedGroupId4ReduceStruct() {
+void TaskGraph::CollectReduceTaskNodes() {
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() == DeviceType::kCPU) { return; }
-    if (task_node->GetTaskType() != TaskType::kReduceScatter
-        && task_node->GetTaskType() != TaskType::kReduceLocalAdd
-        && task_node->GetTaskType() != TaskType::kReduceGlobalAdd
-        && task_node->GetTaskType() != TaskType::kReduceGather) {
-      return;
-    }
-    int32_t mem_shared_group_id = Global<IDMgr>::Get()->NewMemSharedGroupId();
-    const auto& produced_regsts = task_node->produced_regsts();
-    for (auto& pair : produced_regsts) {
-      if (!pair.second->enable_mem_sharing()) { continue; }
-      pair.second->set_mem_shared_group_id(mem_shared_group_id);
-    }
-  });
-}
+    TaskType task_type = task_node->GetTaskType();
+    if (task_type != TaskType::kNormalMdUpdt) { return; }
+    int64_t thrd_id = task_node->thrd_id();
+    DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id);
+    if (device_type != DeviceType::kGPU) { return; }
+    int64_t gpu_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
 
-void TaskGraph::SetConsumedRegstMemSharedGroupId4ReduceStruct() {
-  ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() == DeviceType::kCPU) { return; }
-    if (task_node->GetTaskType() != TaskType::kReduceLocalAdd
-        && task_node->GetTaskType() != TaskType::kReduceGlobalAdd
-        && task_node->GetTaskType() != TaskType::kReduceGather) {
-      return;
-    }
-    int32_t mem_shared_group_id = Global<IDMgr>::Get()->NewMemSharedGroupId();
-    for (auto& in_edge : task_node->in_edges()) {
-      TaskNode* producer = in_edge->src_node();
-      if (producer->GetTaskType() != TaskType::kCopyHd) { continue; }
-      const auto& produced_regsts = producer->produced_regsts();
-      CHECK_EQ(produced_regsts.size(), 1);
-      for (auto& pair : produced_regsts) {
-        if (!pair.second->enable_mem_sharing()) { continue; }
-        pair.second->set_mem_shared_group_id(mem_shared_group_id);
+    const HashSet<TaskNode*>& ancestors = task_node->ancestors();
+    for (auto& ancestor : ancestors) {
+      int64_t ancestor_thrd_id = ancestor->thrd_id();
+      DeviceType ancestor_device_type =
+          Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(ancestor_thrd_id);
+      if (ancestor_device_type != DeviceType::kGPU) { continue; }
+      int64_t ancestor_gpu_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(ancestor_thrd_id);
+      if (ancestor_gpu_id != gpu_id) { continue; }
+      TaskType ancestor_task_type = ancestor->GetTaskType();
+      if (ancestor_task_type == TaskType::kReduceScatter) {
+        mdupdt2reduce_tasks_[task_node].scatter = ancestor;
+      } else if (ancestor_task_type == TaskType::kReduceLocalAdd) {
+        mdupdt2reduce_tasks_[task_node].local_add = ancestor;
+      } else if (ancestor_task_type == TaskType::kReduceGlobalAdd) {
+        mdupdt2reduce_tasks_[task_node].global_add = ancestor;
+      } else if (ancestor_task_type == TaskType::kReduceGather) {
+        mdupdt2reduce_tasks_[task_node].gather = ancestor;
       }
     }
   });
 }
 
-void TaskGraph::SetMemSharingGroup4RegstDesc() {
-  SetProducedRegstMemSharedGroupId4ReduceStruct();
-  SetConsumedRegstMemSharedGroupId4ReduceStruct();
+int64_t parse_id_from_out(const std::string& out_name) {
+  std::string str_id = out_name.substr(4);
+  return std::stol(str_id);
+}
 
-  HashMap<int32_t, std::vector<std::shared_ptr<RegstDesc>>> group_id2regst_descs;
-  ForEachNode([&](TaskNode* task_node) {
-    const auto& produced_regsts = task_node->produced_regsts();
+int64_t parse_id_from_in(const std::string& in_name) {
+  std::string str_id = in_name.substr(3);
+  return std::stol(str_id);
+}
+
+void TaskGraph::ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes) {
+  int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+  if (reduce_task_nodes.scatter) {
+    const auto& produced_regsts = reduce_task_nodes.scatter->produced_regsts();
+    std::shared_ptr<RegstDesc> consumed_regst =
+        reduce_task_nodes.scatter->GetSoleConsumedRegst("in");
+    std::map<int64_t, std::shared_ptr<RegstDesc>> produced_regsts_dict;
     for (auto& pair : produced_regsts) {
-      if (!pair.second->enable_mem_sharing()) { continue; }
-      if (pair.second->min_register_num() > 1) { continue; }
-      int32_t mem_shared_group_id = pair.second->mem_shared_group_id();
-      if (mem_shared_group_id == -1) {
-        mem_shared_group_id = Global<IDMgr>::Get()->NewMemSharedGroupId();
-        pair.second->set_mem_shared_group_id(mem_shared_group_id);
-      }
-      group_id2regst_descs[mem_shared_group_id].emplace_back(pair.second);
+      int64_t pid = parse_id_from_out(pair.first);
+      CHECK(produced_regsts_dict.emplace(pid, pair.second).second);
     }
-  });
-  for (auto& pair : group_id2regst_descs) {
+    consumed_regst->set_mem_shared_id(mem_shared_id);
+    consumed_regst->set_mem_offset(0);
+    int64_t offset = 0;
+    for (auto& pair : produced_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      pair.second->set_mem_offset(offset);
+      offset += pair.second->PackedBlobDescSize();
+    }
+  }
+  if (reduce_task_nodes.local_add) { UNIMPLEMENTED(); }
+  if (reduce_task_nodes.global_add) {
+    std::shared_ptr<RegstDesc> produced_regst =
+        reduce_task_nodes.global_add->GetProducedRegst("out");
+    const auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
+    for (auto& pair : consumed_regsts) {
+      int64_t pid = parse_id_from_in(pair.first);
+      CHECK_EQ(pair.second.size(), 1);
+      std::shared_ptr<RegstDesc> consumed_regst = pair.second.front().lock();
+      CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
+    }
     size_t offset = 0;
-    for (auto& regst_desc_ptr : pair.second) {
-      CHECK_EQ(regst_desc_ptr->min_register_num(), 1);
-      regst_desc_ptr->set_mem_offset(offset);
-      offset += regst_desc_ptr->PackedBlobDescSize();
+    CompTaskNode* global_add = dynamic_cast<CompTaskNode*>(reduce_task_nodes.global_add);
+    CHECK_NOTNULL(global_add);
+    for (auto& pair : consumed_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      if (pair.second->mem_offset() != -1) {
+        CHECK_EQ(offset, pair.second->mem_offset());
+      } else {
+        pair.second->set_mem_offset(offset);
+      }
+
+      if (pair.first == global_add->parallel_id()) { produced_regst->set_mem_offset(offset); }
+      offset += pair.second->PackedBlobDescSize();
+    }
+    produced_regst->set_mem_shared_id(mem_shared_id);
+  }
+  if (reduce_task_nodes.gather) {
+    std::shared_ptr<RegstDesc> produced_regst = reduce_task_nodes.gather->GetProducedRegst("out");
+    produced_regst->set_mem_offset(0);
+    produced_regst->set_mem_shared_id(mem_shared_id);
+    const auto& consumed_regsts = reduce_task_nodes.gather->consumed_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
+    for (auto& pair : consumed_regsts) {
+      int64_t pid = parse_id_from_in(pair.first);
+      CHECK_EQ(pair.second.size(), 1);
+      std::shared_ptr<RegstDesc> consumed_regst = pair.second.front().lock();
+      CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
+    }
+    size_t offset = 0;
+    for (auto& pair : consumed_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      if (pair.second->mem_offset() != -1) {
+        CHECK_EQ(offset, pair.second->mem_offset());
+      } else {
+        pair.second->set_mem_offset(offset);
+      }
+      offset += pair.second->PackedBlobDescSize();
     }
   }
 }
-*/
+
+void TaskGraph::EnableMemSharing4ReduceStruct() {
+  CollectReduceTaskNodes();
+  for (auto& pair : mdupdt2reduce_tasks_) { ProcessOneReduceStruct(pair.second); }
+}
 
 void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();

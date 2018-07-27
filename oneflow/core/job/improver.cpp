@@ -14,7 +14,8 @@ namespace oneflow {
 namespace {
 
 bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.consumer_task_id_size() == 0 && regst_desc.enable_mem_sharing();
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() == 0
+         && regst_desc.enable_mem_sharing();
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
@@ -28,8 +29,8 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
                                  const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  return regst_desc.consumer_task_id_size() > 0 && regst_desc.enable_mem_sharing()
-         && regst_desc.register_num() == 1
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
+         && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
          && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
 }
 
@@ -108,6 +109,7 @@ void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
   const Plan& plan = plan_task_graph.plan();
   auto HandleMemSharedId = [&](const RegstDescs& regst_descs) {
     int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    LOG(INFO) << "improver:" << mem_shared_id;
     for (const RegstDescProto* regst_desc : regst_descs) {
       Handler(regst_desc->regst_desc_id(), mem_shared_id);
     }
@@ -201,6 +203,7 @@ std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
     regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_offset(0);
   };
 }
 
@@ -375,7 +378,7 @@ void ForEachMemSharingCriticalSection(
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
                 int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
-                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
+                // CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
                 return lhs_order_in_graph < rhs_order_in_graph;
               });
     Handler(pair.second);

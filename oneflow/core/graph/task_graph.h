@@ -9,6 +9,14 @@
 
 namespace oneflow {
 
+struct ReduceTaskNodes {
+  TaskNode* scatter;
+  TaskNode* local_add;
+  TaskNode* global_add;
+  TaskNode* gather;
+  ReduceTaskNodes() : scatter(nullptr), local_add(nullptr), global_add(nullptr), gather(nullptr) {}
+};
+
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -19,6 +27,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   //  void SetMemSharingGroup4RegstDesc();
+  void EnableMemSharing4ReduceStruct();
   void AddOrderingCtrlEdgeInSameChain();
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
@@ -62,8 +71,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void CollectAncestorsForEachNode();
   void FindChainsInSameStream();
-  // void SetProducedRegstMemSharedGroupId4ReduceStruct();
-  // void SetConsumedRegstMemSharedGroupId4ReduceStruct();
+  void CollectReduceTaskNodes();
+  void ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes);
 
   template<typename LogicalNodeType, typename TaskNodeType>
   void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
@@ -78,6 +87,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
+  HashMap<TaskNode*, ReduceTaskNodes> mdupdt2reduce_tasks_;
 };
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
