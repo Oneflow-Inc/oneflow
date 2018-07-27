@@ -200,7 +200,6 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
   regst->set_mem_offset(0);
-  regst->set_mem_shared_group_id(-1);
   InitProducedRegstMemCase(regst.get());
   return regst;
 }

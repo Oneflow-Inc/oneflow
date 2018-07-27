@@ -58,6 +58,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
+/*
 void TaskGraph::SetProducedRegstMemSharedGroupId4ReduceStruct() {
   ForEachNode([&](TaskNode* task_node) {
     if (task_node->device_type() == DeviceType::kCPU) { return; }
@@ -125,6 +126,7 @@ void TaskGraph::SetMemSharingGroup4RegstDesc() {
     }
   }
 }
+*/
 
 void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();

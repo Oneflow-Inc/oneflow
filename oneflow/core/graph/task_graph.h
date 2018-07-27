@@ -18,7 +18,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
-  void SetMemSharingGroup4RegstDesc();
+  //  void SetMemSharingGroup4RegstDesc();
   void AddOrderingCtrlEdgeInSameChain();
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
@@ -62,8 +62,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
   void CollectAncestorsForEachNode();
   void FindChainsInSameStream();
-  void SetProducedRegstMemSharedGroupId4ReduceStruct();
-  void SetConsumedRegstMemSharedGroupId4ReduceStruct();
+  // void SetProducedRegstMemSharedGroupId4ReduceStruct();
+  // void SetConsumedRegstMemSharedGroupId4ReduceStruct();
 
   template<typename LogicalNodeType, typename TaskNodeType>
   void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
