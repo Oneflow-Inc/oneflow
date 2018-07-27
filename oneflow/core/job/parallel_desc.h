@@ -38,6 +38,7 @@ class ParallelDesc {
 
  private:
   void ClearUp();
+  void CheckValidity();
 
   DeviceType device_type_;
   ParallelPolicy policy_;
