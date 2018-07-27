@@ -129,12 +129,12 @@ void ParallelDesc::ClearUp() {
 }
 
 void ParallelDesc::CheckValidity() {
-  int32_t device_num_of_each_machine = -1;
+  device_num_of_each_machine_ = -1;
   for (auto& pair : machine_id2sorted_dev_phy_ids_) {
-    if (device_num_of_each_machine == -1) {
-      device_num_of_each_machine = pair.second.size();
+    if (device_num_of_each_machine_ == -1) {
+      device_num_of_each_machine_ = pair.second.size();
     } else {
-      CHECK_EQ(device_num_of_each_machine, pair.second.size());
+      CHECK_EQ(device_num_of_each_machine_, pair.second.size());
     }
   }
 }

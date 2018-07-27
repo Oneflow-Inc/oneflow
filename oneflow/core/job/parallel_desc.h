@@ -24,6 +24,7 @@ class ParallelDesc {
     return machine_id2sorted_dev_phy_ids_.at(machine_id);
   }
   int64_t parallel_num() const { return parallel_num_; }
+  int64_t device_num_of_each_machine() const { return device_num_of_each_machine_; }
 
   // Setters
   void set_policy(ParallelPolicy val) { policy_ = val; }
@@ -45,6 +46,7 @@ class ParallelDesc {
   std::vector<int64_t> sorted_machine_ids_;
   HashMap<int64_t, std::vector<int64_t>> machine_id2sorted_dev_phy_ids_;
   int64_t parallel_num_;
+  int64_t device_num_of_each_machine_;
 };
 
 std::tuple<int32_t, int32_t> GetPartIdAndPartNumFromParallelCtx(
