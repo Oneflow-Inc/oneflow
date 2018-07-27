@@ -23,6 +23,8 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     } else {
       packed_blob_desc_.reset(new BlobDesc(data_regst_desc.packed_blob_desc()));
     }
+  } else {
+    packed_blob_desc_.reset(new BlobDesc());
   }
 }
 
