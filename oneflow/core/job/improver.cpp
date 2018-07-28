@@ -366,7 +366,6 @@ void ForEachMemSharingCriticalSection(
   for (const auto& task : plan.task()) {
     for (const auto& pair : task.produced_regst_desc()) {
       int32_t mem_sharing_id = pair.second.mem_shared_id();
-      if (mem_sharing_id <= Global<IDMgr>::Get()->MaxMemSharedId4ReduceStruct()) { continue; }
       if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
         CHECK(pair.second.enable_mem_sharing());
         mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
