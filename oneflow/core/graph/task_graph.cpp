@@ -100,52 +100,93 @@ int64_t parse_id_from_in(const std::string& in_name) {
 }
 
 void TaskGraph::ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes) {
-  struct ProducerConsumerPair {
-    TaskNode* producer;
-    TaskNode* consumer;
-    ProducerConsumerPair() : producer(nullptr), consumer(nullptr) {}
-  };
-  HashMap<int64_t, ProducerConsumerPair> offset2scatter_ctrl;
+  // struct ProducerConsumerPair {
+  //  TaskNode* producer;
+  //  TaskNode* consumer;
+  //  ProducerConsumerPair() : producer(nullptr), consumer(nullptr) {}
+  // };
+  // HashMap<int64_t, ProducerConsumerPair> offset2scatter_ctrl;
   // HashMap<int64_t, ProducerConsumerPair> offset2localadd_ctrl;
-  LOG(INFO) << "Process one reduce";
-  HashMap<int64_t, ProducerConsumerPair> offset2globaladd_ctrl;
+  // HashMap<int64_t, ProducerConsumerPair> offset2globaladd_ctrl;
+
   int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
   if (reduce_task_nodes.scatter) {
-    const auto& produced_regsts = reduce_task_nodes.scatter->produced_regsts();
     std::shared_ptr<RegstDesc> consumed_regst =
         reduce_task_nodes.scatter->GetSoleConsumedRegst("in");
+    consumed_regst->set_mem_shared_id(mem_shared_id);
+    consumed_regst->set_mem_offset(0);
+
+    const auto& produced_regsts = reduce_task_nodes.scatter->produced_regsts();
     std::map<int64_t, std::shared_ptr<RegstDesc>> produced_regsts_dict;
     for (auto& pair : produced_regsts) {
       int64_t pid = parse_id_from_out(pair.first);
       CHECK(produced_regsts_dict.emplace(pid, pair.second).second);
     }
-    consumed_regst->set_mem_shared_id(mem_shared_id);
-    consumed_regst->set_mem_offset(0);
     int64_t offset = 0;
     for (auto& pair : produced_regsts_dict) {
       pair.second->set_mem_shared_id(mem_shared_id);
       pair.second->set_mem_offset(offset);
-      if (pair.second->GetSoleConsumer()->GetTaskType() == TaskType::kCopyHd) {
-        int64_t copy_task_id = pair.second->GetSoleConsumer()->task_id();
-        offset2scatter_ctrl[offset].producer = task_id2task_node_.at(copy_task_id);
-        LOG(INFO) << "scatter copy out:" << copy_task_id;
-      }
+
+      // if (pair.second->GetSoleConsumer()->GetTaskType() == TaskType::kCopyHd) {
+      //  int64_t copy_task_id = pair.second->GetSoleConsumer()->task_id();
+      //  offset2scatter_ctrl[offset].producer = task_id2task_node_.at(copy_task_id);
+      // }
       offset += pair.second->PackedBlobDescSize();
     }
   }
-  if (reduce_task_nodes.local_add) { UNIMPLEMENTED(); }
+
+  if (reduce_task_nodes.local_add) { 
+    const auto& consumed_regsts = reduce_task_nodes.local_add->consumed_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
+    for (auto& pair : consumed_regsts) {
+      int64_t pid = parse_id_from_in(pair.first);
+      CHECK_EQ(pair.second.size(), 1);
+      std::shared_ptr<RegstDesc> consumed_regst = pair.second.front().lock();
+      CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
+    }
+    CompTaskNode* local_add = dynamic_cast<CompTaskNode*>(reduce_task_nodes.local_add);
+    CHECK_NOTNULL(local_add);
+    int64_t offset = 0;
+    int64_t produced_offset = -1;
+    for (auto& pair : consumed_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      if (pair.second->mem_offset() != -1) {
+        CHECK_EQ(offset, pair.second->mem_offset());
+      } else {
+        pair.second->set_mem_offset(offset);
+      }
+      if (pair.first == local_add->parallel_id()) { produced_offset = offset; }
+      offset += pair.second->PackedBlobDescSize();
+    }
+    CHECK_NE(produced_offset, -1);
+
+    const auto& produced_regsts = reduce_task_nodes.local_add->produced_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> produced_regsts_dict;
+    for (auto& pair : produced_regsts) {
+      int64_t pid = parse_id_from_out(pair.first);
+      CHECK(produced_regsts_dict.emplace(pid, pair.second).second);
+    }
+    offset = produced_offset;
+    for (auto& pair : produced_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      pair.second->set_mem_offset(offset);
+      offset += pair.second->PackedBlobDescSize();
+    }
+  }
+
   if (reduce_task_nodes.global_add) {
     std::shared_ptr<RegstDesc> produced_regst =
         reduce_task_nodes.global_add->GetProducedRegst("out");
     produced_regst->set_mem_shared_id(mem_shared_id);
-    auto& consumers = produced_regst->consumers();
-    TaskNode* global_add_copy_out = nullptr;
-    for (auto& consumer : consumers) {
-      if (consumer->GetTaskType() == TaskType::kCopyHd) {
-        global_add_copy_out = task_id2task_node_.at(consumer->task_id());
-      }
-    }
-    CHECK_NOTNULL(global_add_copy_out);
+
+    // auto& consumers = produced_regst->consumers();
+    // TaskNode* global_add_copy_out = nullptr;
+    // for (auto& consumer : consumers) {
+    //  if (consumer->GetTaskType() == TaskType::kCopyHd) {
+    //    global_add_copy_out = task_id2task_node_.at(consumer->task_id());
+    //  }
+    // }
+    // CHECK_NOTNULL(global_add_copy_out);
 
     const auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
     std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
@@ -165,20 +206,23 @@ void TaskGraph::ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes)
       } else {
         pair.second->set_mem_offset(offset);
       }
-      if (pair.second->producer()->GetTaskType() == TaskType::kCopyHd) {
-        int64_t copy_task_id = pair.second->producer()->task_id();
-        offset2scatter_ctrl[offset].consumer = task_id2task_node_.at(copy_task_id);
-        offset2globaladd_ctrl[offset].producer = global_add_copy_out;
-      }
+
+      // if (pair.second->producer()->GetTaskType() == TaskType::kCopyHd) {
+      //  int64_t copy_task_id = pair.second->producer()->task_id();
+      //  offset2scatter_ctrl[offset].consumer = task_id2task_node_.at(copy_task_id);
+      //  offset2globaladd_ctrl[offset].producer = global_add_copy_out;
+      // }
 
       if (pair.first == global_add->parallel_id()) { produced_regst->set_mem_offset(offset); }
       offset += pair.second->PackedBlobDescSize();
     }
   }
+
   if (reduce_task_nodes.gather) {
     std::shared_ptr<RegstDesc> produced_regst = reduce_task_nodes.gather->GetProducedRegst("out");
     produced_regst->set_mem_offset(0);
     produced_regst->set_mem_shared_id(mem_shared_id);
+
     const auto& consumed_regsts = reduce_task_nodes.gather->consumed_regsts();
     std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
     for (auto& pair : consumed_regsts) {
@@ -188,7 +232,6 @@ void TaskGraph::ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes)
       CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
     }
     size_t offset = 0;
-    LOG(INFO) << "gather consumed size:" << consumed_regsts_dict.size();
     for (auto& pair : consumed_regsts_dict) {
       pair.second->set_mem_shared_id(mem_shared_id);
       if (pair.second->mem_offset() != -1) {
@@ -196,26 +239,23 @@ void TaskGraph::ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes)
       } else {
         pair.second->set_mem_offset(offset);
       }
-      if (pair.second->producer()->GetTaskType() == TaskType::kCopyHd) {
-        int64_t copy_task_id = pair.second->producer()->task_id();
-        offset2globaladd_ctrl[offset].consumer = task_id2task_node_.at(copy_task_id);
-        LOG(INFO) << "gather consumed copy in: " << copy_task_id;
-      }
+      // if (pair.second->producer()->GetTaskType() == TaskType::kCopyHd) {
+      //  int64_t copy_task_id = pair.second->producer()->task_id();
+      //  offset2globaladd_ctrl[offset].consumer = task_id2task_node_.at(copy_task_id);
+      // }
       offset += pair.second->PackedBlobDescSize();
     }
   }
-  LOG(INFO) << "scatter_ctrl size:" << offset2scatter_ctrl.size();
-  for (auto& pair : offset2scatter_ctrl) {
-    CHECK_NOTNULL(pair.second.producer);
-    CHECK_NOTNULL(pair.second.consumer);
-    pair.second.producer->BuildCtrlRegstDescIfNeed(pair.second.consumer);
-  }
-  LOG(INFO) << "global_add_ctrl size:" << offset2globaladd_ctrl.size();
-  for (auto& pair : offset2globaladd_ctrl) {
-    CHECK_NOTNULL(pair.second.producer);
-    CHECK_NOTNULL(pair.second.consumer);
-    pair.second.producer->BuildCtrlRegstDescIfNeed(pair.second.consumer);
-  }
+  // for (auto& pair : offset2scatter_ctrl) {
+  //  CHECK_NOTNULL(pair.second.producer);
+  //  CHECK_NOTNULL(pair.second.consumer);
+  //  pair.second.producer->BuildCtrlRegstDescIfNeed(pair.second.consumer);
+  // }
+  // for (auto& pair : offset2globaladd_ctrl) {
+  //  CHECK_NOTNULL(pair.second.producer);
+  //  CHECK_NOTNULL(pair.second.consumer);
+  //  pair.second.producer->BuildCtrlRegstDescIfNeed(pair.second.consumer);
+  // }
 }
 
 void TaskGraph::EnableMemSharing4ReduceStruct() {
