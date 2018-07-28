@@ -58,15 +58,13 @@ inline float BBoxArea(const T* box) {
 
 template<typename T>
 inline float InterOverUnion(const T* box0, const T* box1) {
-  float iou = 0;
   int32_t iw = std::min(box0[2], box1[2]) - std::max(box0[0], box1[0]) + 1;
   iw = std::max<int32_t>(iw, 0);
   int32_t ih = std::min(box0[3], box1[3]) - std::max(box0[1], box1[1]) + 1;
   ih = std::max<int32_t>(ih, 0);
   float inter = iw * ih;
   float ua = BBoxArea(box0) + BBoxArea(box1) - inter;
-  iou = inter / ua;
-  return iou;
+  return inter / ua;
 }
 
 }  // namespace
@@ -224,14 +222,17 @@ void ProposalKernel<T>::ForwardDataContent(
         img_proposal_num, conf.min_size(), const_img_proposal_ptr, sorted_score_index_ptr);
 
     int32_t pre_nms_num = keep_num;
-    if (conf.pre_nms_top_n() > 0) { pre_nms_num = std::min<int32_t>(keep_num, pre_nms_num); }
-    int32_t post_nms_num =
+    if (conf.pre_nms_top_n() > 0) {
+      pre_nms_num = std::min<int32_t>(keep_num, conf.pre_nms_top_n());
+    }
+    int32_t nms_keep_num =
         ProposalKernelUtil<T>::Nms(const_img_proposal_ptr, conf.nms_threshold(),
                                    sorted_score_index_ptr, pre_nms_num, supressed_index_ptr);
-
+    LOG(INFO) << "nms keep_num: " << nms_keep_num << ", nms_threshold: " << conf.nms_threshold();
     // use duplicated rois if post_nms_num < conf.post_nms_top_n()
-    for (int32_t box_i = 0; post_nms_num < conf.post_nms_top_n(); ++box_i, ++post_nms_num) {
-      sorted_score_index_ptr[post_nms_num] = sorted_score_index_ptr[box_i];
+    int32_t post_nms_num = nms_keep_num;
+    for (int32_t box_i = 0; post_nms_num < conf.post_nms_top_n(); ++box_i) {
+      sorted_score_index_ptr[post_nms_num++] = sorted_score_index_ptr[box_i];
     }
 
     post_nms_num = std::min<int32_t>(post_nms_num, conf.post_nms_top_n());
