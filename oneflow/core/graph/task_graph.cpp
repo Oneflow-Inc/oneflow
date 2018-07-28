@@ -441,9 +441,8 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
       handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
-  // DfsTopoForEachNodeSortByDistanceToSink(starts, ForEachInNode, ForEachOutNode, handler);
+  // DfsTopo will cause inappropriate chain graph
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
-  // DfsTopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
