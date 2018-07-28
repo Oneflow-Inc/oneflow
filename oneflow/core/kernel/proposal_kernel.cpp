@@ -25,10 +25,10 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
       float wr = std::sqrt(hs * ws / conf.aspect_ratios(j));
       float hr = wr * conf.aspect_ratios(j);
       LOG(INFO) << "scaled ratio height: " << hr << ", width: " << wr;
-      base_anchors[i * ratios_size * 4 + j * 4 + 0] = base_ctr - 0.5 * (wr - 1);
-      base_anchors[i * ratios_size * 4 + j * 4 + 1] = base_ctr - 0.5 * (hr - 1);
-      base_anchors[i * ratios_size * 4 + j * 4 + 2] = base_ctr + 0.5 * (wr - 1);
-      base_anchors[i * ratios_size * 4 + j * 4 + 3] = base_ctr + 0.5 * (hr - 1);
+      base_anchors[(i * ratios_size + j) * 4 + 0] = base_ctr - 0.5 * (wr - 1);
+      base_anchors[(i * ratios_size + j) * 4 + 1] = base_ctr - 0.5 * (hr - 1);
+      base_anchors[(i * ratios_size + j) * 4 + 2] = base_ctr + 0.5 * (wr - 1);
+      base_anchors[(i * ratios_size + j) * 4 + 3] = base_ctr + 0.5 * (hr - 1);
     }
   }
 
@@ -175,6 +175,7 @@ struct ProposalKernelUtil {
       const int32_t cur_proposal_offset = sorted_score_index_ptr[i] * 4;
       const T* cur_proposal_ptr = const_img_proposal_ptr + cur_proposal_offset;
       FOR_RANGE(int32_t, j, i + 1, pre_nms_num) {
+        if (supressed_index_ptr[j]) { continue; }
         const int32_t cand_proposal_offset = sorted_score_index_ptr[j] * 4;
         const T* cand_proposal_ptr = const_img_proposal_ptr + cand_proposal_offset;
         if (InterOverUnion(cur_proposal_ptr, cand_proposal_ptr) >= nms_threshold) {
@@ -227,7 +228,12 @@ void ProposalKernel<T>::ForwardDataContent(
     int32_t post_nms_num =
         ProposalKernelUtil<T>::Nms(const_img_proposal_ptr, conf.nms_threshold(),
                                    sorted_score_index_ptr, pre_nms_num, supressed_index_ptr);
-    if (post_nms_num < conf.post_nms_top_n()) { UNIMPLEMENTED(); }
+
+    // use duplicated rois if post_nms_num < conf.post_nms_top_n()
+    for (int32_t box_i = 0; post_nms_num < conf.post_nms_top_n(); ++box_i, ++post_nms_num) {
+      sorted_score_index_ptr[post_nms_num] = sorted_score_index_ptr[box_i];
+    }
+
     post_nms_num = std::min<int32_t>(post_nms_num, conf.post_nms_top_n());
     T* rois_ptr = rois_blob->mut_dptr<T>() + img_proposal_offset;
     ProposalKernelUtil<T>::CopyRoI(sorted_score_index_ptr, post_nms_num, const_img_proposal_ptr,

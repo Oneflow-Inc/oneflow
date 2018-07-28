@@ -24,6 +24,7 @@ const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().propos
 
 void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
+  CHECK_EQ(device_type(), DeviceType::kCPU);
   const auto& anchor_scales = GetPbRfFromCustomizedConf<int32_t>("anchor_scales");
   const auto& aspect_ratios = GetPbRfFromCustomizedConf<float>("aspect_ratios");
   const int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
