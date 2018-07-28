@@ -636,6 +636,7 @@ message RoIAlignOpConf {
   required int32 pooled_h = 4;
   required int32 pooled_w = 5;
   required float spatial_scale = 6 [default = 0.0625]; // 1/16
+  required int32 sampling_ratio = 7 [default = -1]; // adaptive if negative
 }
 
 message OperatorConf {
