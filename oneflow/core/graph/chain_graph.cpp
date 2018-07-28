@@ -117,7 +117,11 @@ ChainGraph::ChainGraph(const TaskGraph& task_gph) : task_gph_(task_gph) {
   HashMap<int64_t, std::vector<TaskNode*>> machine2tasks;
   std::vector<std::vector<TaskNode*>> chains;
 
-  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) { ordered_task_nodes.emplace_back(node); });
+  LOG(INFO) << "task_graph_topo";
+  task_gph.AcyclicTopoForEachNode([&](TaskNode* node) {
+    ordered_task_nodes.emplace_back(node);
+    LOG(INFO) << node->task_id();
+  });
   GroupTaskNodesByMachine(ordered_task_nodes, &machine2tasks);
   MergeTaskNodes(machine2tasks, &chains);
 

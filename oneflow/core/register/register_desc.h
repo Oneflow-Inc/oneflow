@@ -25,6 +25,10 @@ class RegstDesc final {
   const TaskNode* producer() const { return producer_; }
   void set_producer(const TaskNode* val) { producer_ = val; }
   const HashSet<const TaskNode*>& consumers() const { return consumers_; }
+  const TaskNode* GetSoleConsumer() const {
+    CHECK_EQ(consumers_.size(), 1) << regst_desc_id_;
+    return *consumers_.begin();
+  }
   void AddConsumer(const TaskNode*);
 
   // min_register_num_, max_register_num_

@@ -25,6 +25,10 @@ class IDMgr final {
   int64_t NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id);
   int64_t NewRegstDescId() { return regst_desc_id_count_++; }
   int32_t NewMemSharedId() { return mem_shared_id_count_++; }
+  void RecordMaxMemSharedId4ReduceStruct() {
+    max_mem_shared_id_4_reduce_ = mem_shared_id_count_ - 1;
+  }
+  int32_t MaxMemSharedId4ReduceStruct() { return max_mem_shared_id_4_reduce_; }
 
   // MemZoneId
   int64_t CpuMemZoneId() const { return Global<JobDesc>::Get()->GpuDeviceNum(); }
@@ -67,6 +71,7 @@ class IDMgr final {
   int64_t cpu_device_num_;
   int64_t regst_desc_id_count_;
   int32_t mem_shared_id_count_;
+  int32_t max_mem_shared_id_4_reduce_;
   HashMap<int64_t, int64_t> machine_thrd_id2num_of_tasks_;
   HashMap<int64_t, int64_t> machine_thrd_id2stream_id_cnt_;
   HashMap<int64_t, int64_t> stream_id2chain_cnt_;

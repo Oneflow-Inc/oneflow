@@ -88,6 +88,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
   HashMap<TaskNode*, ReduceTaskNodes> mdupdt2reduce_tasks_;
+  HashMap<int64_t, TaskNode*> task_id2task_node_;
 };
 bool IsBackEdge(TaskNode* src, TaskNode* dst);
 
