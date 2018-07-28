@@ -52,7 +52,7 @@ __global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const 
                                 const int32_t sampling_ratio, const int64_t channel_num,
                                 const int64_t height, const int64_t width, const int64_t roi_num,
                                 const int64_t pooled_height, const int64_t pooled_width,
-                                const T* rois_dptr, T* out_dptr, int32_t* argmax_dptr) {
+                                const T* rois_dptr, T* out_dptr) {
   CUDA_1D_KERNEL_LOOP(index, nthreads) {
     const int64_t pooled_area = pooled_width * pooled_height;
     const int64_t w = index % pooled_width;
@@ -113,18 +113,18 @@ class RoIAlignKernelUtil<DeviceType::kGPU, T> final {
   RoIAlignKernelUtil() = delete;
 
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
-                      const Blob* rois_blob, Blob* out_blob, Blob* argmax_blob) {
+                      const Blob* rois_blob, Blob* out_blob) {
     const int64_t count = out_blob->shape().elem_cnt();
     RoIAlignForward<T><<<BlocksNum4ThreadsNum(count), kCudaThreadsNumPerBlock, 0,
                          ctx.device_ctx->cuda_stream()>>>(
         count, in_blob->dptr<T>(), conf.spatial_scale(), conf.sampling_ratio(),
         in_blob->shape().At(1), in_blob->shape().At(2), in_blob->shape().At(3),
         rois_blob->shape().At(1), conf.pooled_h(), conf.pooled_w(), rois_blob->dptr<T>(),
-        out_blob->mut_dptr<T>(), argmax_blob->mut_dptr<int32_t>());
+        out_blob->mut_dptr<T>());
   }
 
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
-                       const Blob* rois_blob, const Blob* argmax_blob, Blob* in_diff_blob) {}
+                       const Blob* rois_blob, Blob* in_diff_blob) {}
 };
 
 #define INSTANTIATE_ROI_ALIGN_KERNEL_UTIL(type_cpp, type_proto) \

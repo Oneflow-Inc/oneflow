@@ -28,9 +28,9 @@ class RoIAlignKernelUtil {
   RoIAlignKernelUtil() = delete;
 
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
-                      const Blob* rois_blob, Blob* out_blob, Blob* idx_blob);
+                      const Blob* rois_blob, Blob* out_blob);
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
-                       const Blob* rois_blob, const Blob* idx_blob, Blob* in_diff_blob);
+                       const Blob* rois_blob, Blob* in_diff_blob);
 };
 
 }  // namespace oneflow
