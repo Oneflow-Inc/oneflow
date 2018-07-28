@@ -608,8 +608,8 @@ message ProposalOpConf {
   required string roi_probs = 5;
   required int32 feature_map_stride = 6 [default = 16];
   required int32 min_size = 7;
-  required int32 pre_nms_top_n = 8; 
-  required int32 post_nms_top_n = 9; 
+  required int32 pre_nms_top_n = 8;
+  required int32 post_nms_top_n = 9;
   required float nms_threshold = 10;
   repeated float aspect_ratios = 11;
   repeated int32 anchor_scales = 12;
@@ -619,6 +619,16 @@ message ProposalOpConf {
 }
 
 message RoIPoolingOpConf {
+  required string in = 1;
+  required string rois = 2;
+  required string out = 3;
+
+  required int32 pooled_h = 4;
+  required int32 pooled_w = 5;
+  required float spatial_scale = 6 [default = 0.0625]; // 1/16
+}
+
+message RoIAlignOpConf {
   required string in = 1;
   required string rois = 2;
   required string out = 3;
@@ -685,6 +695,7 @@ message OperatorConf {
     RoIPoolingOpConf roi_pooling_conf = 407;
     SmoothL1LossOpConf smooth_l1_loss_conf = 408;
     ProposalOpConf proposal_conf = 409;
+    RoIAlignOpConf roi_align_conf = 410;
   }
 }
 
