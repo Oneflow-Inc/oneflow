@@ -13,7 +13,6 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollOutputBn("bbox_outside_weights", false);
   EnrollDataTmpBn("all_rois");
   EnrollDataTmpBn("bbox_overlap");
-  EnrollDataTmpBn("labels_tmp");
   EnrollDataTmpBn("roi_argmax");
   EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("fg_inds");
@@ -53,11 +52,10 @@ void ProposalTargetOp::InferBlobDescs(
   inside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
   outside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
   // tmp blob shape: all_rois (roi_num+gt_max_num,4); overlap (roi_num,gt_num);
-  // labels_tmp(roi_num,1); roi_argmax(roi_num,1)  max_overlaps(roi_num,1); fg_inds(roi_num,1);
+  // roi_argmax(roi_num,1)  max_overlaps(roi_num,1); fg_inds(roi_num,1);
   // bg_inds(roi_num,1); fg_bg_sample_inds(roi_sample,1)
   BlobDesc* all_rois_blob_desc = GetBlobDesc4BnInOp("all_rois");
   BlobDesc* overlap_blob_desc = GetBlobDesc4BnInOp("bbox_overlap");
-  BlobDesc* labels_tmp_blob_desc = GetBlobDesc4BnInOp("labels_tmp");
   BlobDesc* argmax_blob_desc = GetBlobDesc4BnInOp("roi_argmax");
   BlobDesc* max_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
   BlobDesc* fg_inds_blob_desc = GetBlobDesc4BnInOp("fg_inds");
@@ -67,7 +65,6 @@ void ProposalTargetOp::InferBlobDescs(
       Shape({rpn_rois_blob_desc->shape().At(1) + gt_boxes_blob_desc->shape().At(1), 4});
   overlap_blob_desc->mut_shape() =
       Shape({rpn_rois_blob_desc->shape().At(1), gt_boxes_blob_desc->shape().At(1)});
-  labels_tmp_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1), 1});
   argmax_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1), 1});
   max_blob_desc->mut_shape() = Shape(argmax_blob_desc->shape());
   fg_inds_blob_desc->mut_shape() = Shape(max_blob_desc->shape());

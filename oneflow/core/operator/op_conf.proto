@@ -630,6 +630,7 @@ message ProposalTargetOpConf
   required bool bbox_normalize_targets_precomputed = 15;
   optional BboxNormalizeMeansConf bbox_normalize_means = 16;
   optional BboxNormalizeStdsConf bbox_normalize_stds = 17; 
+  required int32 class_num = 18;
 }
 
 

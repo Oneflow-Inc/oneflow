@@ -70,7 +70,7 @@ void RcnnUtil<T>::SampleChoice(T* rois_ptr, const int32_t num, T* sample_ptr,
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(0, num - 1);
-  for (int i = 0; i < sample_num; i++) {
+  FOR_RANGE(int32_t, i, 0, sample_num) {
     int32_t randn = dis(gen);
     if (rois_ptr[randn] == -1) {
       i--;
