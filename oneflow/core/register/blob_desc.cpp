@@ -60,7 +60,7 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_fiel
       header_desc_(false, has_data_id_field, has_col_num_field, max_col_num, -1) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto)
-    : header_desc_(proto.header_desc()), body_desc_(proto.body_desc()) {}
+    : header_desc_(proto.header()), body_desc_(proto.body()) {}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
     : header_desc_(true, false, false, max_col_num, header_byte_size),
@@ -69,8 +69,8 @@ BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
-  header_desc_.ToProto(proto->mutable_header_desc());
-  body_desc_.ToProto(proto->mutable_body_desc());
+  header_desc_.ToProto(proto->mutable_header());
+  body_desc_.ToProto(proto->mutable_body());
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
@@ -108,7 +108,7 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return header_desc_ == rhs.header_desc() && body_desc_ == rhs.body_desc();
+  return header_desc_ == rhs.header() && body_desc_ == rhs.body();
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
@@ -122,11 +122,11 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     header_byte_size += blob_desc->ByteSizeOfBlobHeader();
     body_byte_size += blob_desc->ByteSizeOfBlobBody();
-    data_type_set.insert(static_cast<int>(blob_desc->body_desc().data_type()));
+    data_type_set.insert(static_cast<int>(blob_desc->body().data_type()));
     if (max_col_num == -1) {
-      max_col_num = blob_desc->header_desc().max_col_num();
+      max_col_num = blob_desc->header().max_col_num();
     } else {
-      CHECK_EQ(max_col_num, blob_desc->header_desc().max_col_num());
+      CHECK_EQ(max_col_num, blob_desc->header().max_col_num());
     }
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;

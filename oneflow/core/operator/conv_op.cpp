@@ -78,18 +78,18 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
 
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->body_desc().shape().NumAxes(), NDims + 2);
-  CHECK_EQ(in_blob_desc->body_desc().data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ(in_blob_desc->body().shape().NumAxes(), NDims + 2);
+  CHECK_EQ(in_blob_desc->body().data_type(), Global<JobDesc>::Get()->DefaultDataType());
 
   // out
-  int64_t data_num = in_blob_desc->body_desc().shape().At(0);
+  int64_t data_num = in_blob_desc->body().shape().At(0);
   int32_t filters = GetValFromCustomizedConf<int32_t>("filters");
   if (parallel_ctx->policy() == kModelParallel) {
     BalancedSplitter splitter(filters, parallel_ctx->parallel_num());
     filters = splitter.At(parallel_ctx->parallel_id()).size();
   }
   std::vector<int64_t> out;
-  GetOutAndPad(in_blob_desc->body_desc().shape(), GetCustomizedConf(), &out, nullptr, nullptr);
+  GetOutAndPad(in_blob_desc->body().shape(), GetCustomizedConf(), &out, nullptr, nullptr);
   std::vector<int64_t> out_shape = {data_num, filters};
   size_t dhw_offset = DhwOffset(data_format);
   for (size_t i = 0; i < NDims; ++i) {
@@ -97,23 +97,23 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  out_blob_desc->mut_body_desc().mut_shape() = Shape(out_shape);
+  out_blob_desc->mut_body().mut_shape() = Shape(out_shape);
 
   // weight
-  std::vector<int64_t> weight_shape(in_blob_desc->body_desc().shape().dim_vec());
+  std::vector<int64_t> weight_shape(in_blob_desc->body().shape().dim_vec());
   weight_shape[0] = filters;
   for (size_t i = 0; i < NDims; ++i) {
     weight_shape[dhw_offset + i] = GetPbRfFromCustomizedConf<int32_t>("kernel_size").Get(i);
   }
-  GetBlobDesc4BnInOp("weight")->mut_body_desc().mut_shape() = Shape(weight_shape);
+  GetBlobDesc4BnInOp("weight")->mut_body().mut_shape() = Shape(weight_shape);
 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
-    GetBlobDesc4BnInOp("bias")->mut_body_desc().mut_shape() = Shape({filters, 1});
+    GetBlobDesc4BnInOp("bias")->mut_body().mut_shape() = Shape({filters, 1});
     if (!UseCudnnOnGpu()) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
-      GetBlobDesc4BnInOp("bias_multiplier")->mut_body_desc().mut_shape() = Shape(bias_mul_shape);
+      GetBlobDesc4BnInOp("bias_multiplier")->mut_body().mut_shape() = Shape(bias_mul_shape);
     }
   }
 
@@ -125,7 +125,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
     size_t col_buf_elem_cnt = 1;
     for (size_t i = 0; i != NDims + 1; ++i) { col_buf_elem_cnt *= weight_shape[i + 1]; }
     for (size_t i = 0; i != NDims; ++i) { col_buf_elem_cnt *= out_shape[dhw_offset + i]; }
-    *buf_size = col_buf_elem_cnt * GetSizeOfDataType(in_blob_desc->body_desc().data_type());
+    *buf_size = col_buf_elem_cnt * GetSizeOfDataType(in_blob_desc->body().data_type());
   }
 
 #ifdef WITH_CUDA
@@ -143,8 +143,8 @@ template<int32_t NDims>
 void ConvOp<NDims>::GenKernelConfWithoutCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     ConvKernelConf* conv_conf) const {
-  const Shape& in_shape = GetBlobDesc4BnInOp("in")->body_desc().shape();
-  const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->body_desc().shape();
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->body().shape();
+  const Shape& weight_shape = GetBlobDesc4BnInOp("weight")->body().shape();
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
   std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, NDims),
                              GetInDim(in_shape, data_format, 1, NDims),
@@ -166,7 +166,7 @@ void ConvOp<NDims>::GenKernelConfWithoutCudnn(
     conv_conf->mutable_pad_large_side()->Add(pad_large_side.at(i));
     conv_conf->mutable_dilation_rate()->Add(dilation_rate.at(i));
   }
-  const Shape& out_shape = GetBlobDesc4BnInOp("out")->body_desc().shape();
+  const Shape& out_shape = GetBlobDesc4BnInOp("out")->body().shape();
   if (data_format == "channels_first") {
     Shape({in_shape.At(0), in_shape.At(1), in.at(0), in.at(1), in.at(2)})
         .ToProto(conv_conf->mutable_in());
@@ -191,13 +191,13 @@ template<int32_t NDims>
 void ConvOp<NDims>::GenKernelConfWithCudnn(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, KernelConf* kernel_conf,
     ConvKernelConf* conv_conf, const OpContext* op_ctx) const {
-  GetBlobDesc4BnInOp("in")->body_desc().shape().ToProto(conv_conf->mutable_in());
-  GetBlobDesc4BnInOp("out")->body_desc().shape().ToProto(conv_conf->mutable_out());
-  GetBlobDesc4BnInOp("weight")->body_desc().shape().ToProto(conv_conf->mutable_weight());
+  GetBlobDesc4BnInOp("in")->body().shape().ToProto(conv_conf->mutable_in());
+  GetBlobDesc4BnInOp("out")->body().shape().ToProto(conv_conf->mutable_out());
+  GetBlobDesc4BnInOp("weight")->body().shape().ToProto(conv_conf->mutable_weight());
 
   std::vector<int32_t> pad_small_side;
   std::vector<int32_t> pad_large_side;
-  GetOutAndPad(GetBlobDesc4BnInOp("in")->body_desc().shape(), GetCustomizedConf(), nullptr,
+  GetOutAndPad(GetBlobDesc4BnInOp("in")->body().shape(), GetCustomizedConf(), nullptr,
                &pad_small_side, &pad_large_side);
 
   for (size_t i = 0; i < NDims; ++i) {
@@ -264,14 +264,14 @@ void ConvOp<NDims>::InferCudnnAlgo(
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
 
-  DataType data_type = in_blob_desc->body_desc().data_type();
-  CudnnTensorDesc in_desc(data_type, in_blob_desc->body_desc().shape(),
+  DataType data_type = in_blob_desc->body().data_type();
+  CudnnTensorDesc in_desc(data_type, in_blob_desc->body().shape(),
                           GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnTensorDesc out_desc(data_type, out_blob_desc->body_desc().shape(),
+  CudnnTensorDesc out_desc(data_type, out_blob_desc->body().shape(),
                            GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->body_desc().shape(),
+  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->body().shape(),
                               GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnConvDesc conv_desc(in_blob_desc->body_desc().data_type(), in_blob_desc->body_desc().shape(),
+  CudnnConvDesc conv_desc(in_blob_desc->body().data_type(), in_blob_desc->body().shape(),
                           GetCustomizedConf());
 
   CudaCheck(cudnnGetConvolutionForwardAlgorithm(*cuda_handle.cudnn_handle(), in_desc.Get(),

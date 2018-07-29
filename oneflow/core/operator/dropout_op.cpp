@@ -21,7 +21,7 @@ void DropoutOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   *GetBlobDesc4BnInOp("out") = *GetBlobDesc4BnInOp("in");
   if (Global<JobDesc>::Get()->IsTrain()) {
     *GetBlobDesc4BnInOp("random_mask") = *GetBlobDesc4BnInOp("in");
-    GetBlobDesc4BnInOp("random_mask")->mut_body_desc().set_data_type(DataType::kFloat);
+    GetBlobDesc4BnInOp("random_mask")->mut_body().set_data_type(DataType::kFloat);
   }
 }
 
@@ -29,9 +29,9 @@ void DropoutOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
   DropoutKernelConf* mut_dropout_conf = kernel_conf->mutable_dropout_conf();
-  GetBlobDesc4BnInOp("in")->body_desc().shape().ToProto(mut_dropout_conf->mutable_in());
-  GetBlobDesc4BnInOp("in")->body_desc().shape().ToProto(mut_dropout_conf->mutable_random_mask());
-  GetBlobDesc4BnInOp("out")->body_desc().shape().ToProto(mut_dropout_conf->mutable_out());
+  GetBlobDesc4BnInOp("in")->body().shape().ToProto(mut_dropout_conf->mutable_in());
+  GetBlobDesc4BnInOp("in")->body().shape().ToProto(mut_dropout_conf->mutable_random_mask());
+  GetBlobDesc4BnInOp("out")->body().shape().ToProto(mut_dropout_conf->mutable_out());
 }
 
 REGISTER_OP(OperatorConf::kDropoutConf, DropoutOp);

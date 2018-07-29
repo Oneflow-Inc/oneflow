@@ -10,7 +10,7 @@ DataType GetDataTypeFromBnInOpVec(
     const PbRpf<std::string>& bn_in_ops) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc) { return blob_desc->body_desc().data_type(); }
+    if (blob_desc) { return blob_desc->body().data_type(); }
   }
   return DataType::kInvalidDataType;
 }
@@ -113,7 +113,7 @@ static bool HasBlobDescWithField(
     const PbRpf<std::string>& bn_in_ops, bool (BlobHeaderDesc::*has_field)() const) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc && (blob_desc->header_desc().*has_field)()) { return true; }
+    if (blob_desc && (blob_desc->header().*has_field)()) { return true; }
   }
   return false;
 }

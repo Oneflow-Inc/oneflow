@@ -51,11 +51,11 @@ class Blob final {
 
   const BlobDesc& blob_desc() const { return *blob_desc_; }
   const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
-  const Shape& shape() const { return blob_desc_->body_desc().shape(); }
-  DataType data_type() const { return blob_desc_->body_desc().data_type(); }
-  bool has_data_id_field() const { return blob_desc_->header_desc().has_data_id_field(); }
-  bool has_col_num_field() const { return blob_desc_->header_desc().has_col_num_field(); }
-  int32_t max_col_num() const { return blob_desc_->header_desc().max_col_num(); }
+  const Shape& shape() const { return blob_desc_->body().shape(); }
+  DataType data_type() const { return blob_desc_->body().data_type(); }
+  bool has_data_id_field() const { return blob_desc_->header().has_data_id_field(); }
+  bool has_col_num_field() const { return blob_desc_->header().has_col_num_field(); }
+  int32_t max_col_num() const { return blob_desc_->header().max_col_num(); }
   size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
@@ -80,9 +80,9 @@ class Blob final {
   template<typename T>
   void CheckDataType() const {
     LOG_IF(FATAL, (std::is_same<T, void>::value == false && std::is_same<T, char>::value == false
-                   && blob_desc_->body_desc().data_type() != DataType::kChar
-                   && blob_desc_->body_desc().data_type() != GetDataType<T>::value))
-        << blob_desc_->body_desc().data_type() << " " << GetDataType<T>::value;
+                   && blob_desc_->body().data_type() != DataType::kChar
+                   && blob_desc_->body().data_type() != GetDataType<T>::value))
+        << blob_desc_->body().data_type() << " " << GetDataType<T>::value;
   }
   void Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
@@ -100,7 +100,7 @@ class RecordBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RecordBlob);
   RecordBlob(Blob* records) : records_(records), record_num_(0) {
-    CHECK_EQ(records->blob_desc().body_desc().data_type(), GetDataType<RecordType>::value);
+    CHECK_EQ(records->blob_desc().body().data_type(), GetDataType<RecordType>::value);
     record_num_ = records_->shape().elem_cnt();
   }
   ~RecordBlob() = default;

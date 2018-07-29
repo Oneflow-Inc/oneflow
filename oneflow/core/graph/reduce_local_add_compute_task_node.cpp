@@ -44,7 +44,7 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<RegstDesc> diff_acc_regst =
       pred_task_node->consumed_regsts().begin()->second.front().lock();
   mut_local_add_conf->set_model_elem_cnt(
-      diff_acc_regst->GetBlobDesc(GenPackedLbi())->body_desc().shape().elem_cnt());
+      diff_acc_regst->GetBlobDesc(GenPackedLbi())->body().shape().elem_cnt());
   std::shared_ptr<Operator> reduce_local_add_op = ConstructOp(reduce_local_add_conf);
   node->mut_op() = reduce_local_add_op;
   FOR_RANGE(size_t, i, 0, reduce_local_add_op->input_bns().size()) {

@@ -15,9 +15,9 @@ void MaximumOp::VirtualInferBlobDescs(
   const BlobDesc* in_0_blob_desc = GetBlobDesc4BnInOp(input_bns().Get(0));
   BlobDesc* mask_blob_desc = GetBlobDesc4BnInOp("mask");
   *mask_blob_desc = *in_0_blob_desc;
-  mask_blob_desc->mut_body_desc().set_data_type(DataType::kInt32);
-  mask_blob_desc->mut_header_desc().set_has_data_id_field(false);
-  mask_blob_desc->mut_header_desc().set_has_col_num_field(false);
+  mask_blob_desc->mut_body().set_data_type(DataType::kInt32);
+  mask_blob_desc->mut_header().set_has_data_id_field(false);
+  mask_blob_desc->mut_header().set_has_col_num_field(false);
 }
 
 REGISTER_OP(OperatorConf::kMaximumConf, MaximumOp);

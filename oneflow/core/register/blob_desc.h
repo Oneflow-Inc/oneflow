@@ -106,10 +106,10 @@ class BlobDesc {
   //    return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
   //  }
 
-  const BlobHeaderDesc& header_desc() const { return header_desc_; }
-  const BlobBodyDesc& body_desc() const { return body_desc_; }
-  BlobHeaderDesc& mut_header_desc() { return header_desc_; }
-  BlobBodyDesc& mut_body_desc() { return body_desc_; }
+  const BlobHeaderDesc& header() const { return header_desc_; }
+  const BlobBodyDesc& body() const { return body_desc_; }
+  BlobHeaderDesc& mut_header() { return header_desc_; }
+  BlobBodyDesc& mut_body() { return body_desc_; }
 
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeader() const;

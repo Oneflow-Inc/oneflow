@@ -39,7 +39,7 @@ void ReduceLocalAddOp::InferBlobDescs(
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
     BlobDesc* out_blob_i = GetBlobDesc4BnInOp("out_" + std::to_string(i));
     *out_blob_i = *first_in_blob;
-    out_blob_i->mut_body_desc().mut_shape() = Shape({splitter.At(min_out_parallel_id + i).size()});
+    out_blob_i->mut_body().mut_shape() = Shape({splitter.At(min_out_parallel_id + i).size()});
   }
 }
 
