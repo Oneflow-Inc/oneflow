@@ -3,6 +3,16 @@
 
 namespace oneflow {
 
+BlobBodyDesc::BlobBodyDesc() : BlobBodyDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
+
+BlobBodyDesc::BlobBodyDesc(const Shape& shape, DataType data_type)
+    : shape_(shape), data_type_(data_type) {}
+
+BlobBodyDesc::BlobBodyDesc(const BlobBodyDescProto& proto) {
+  shape_ = Shape(proto.shape());
+  data_type_ = proto.data_type();
+}
+
 BlobDesc::BlobDesc()
     : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, 1) {}
 

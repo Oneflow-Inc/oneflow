@@ -8,6 +8,28 @@
 
 namespace oneflow {
 
+class BlobHeaderDesc {};
+
+class BlobBodyDesc {
+ public:
+  ~BlobBodyDesc() = default;
+
+  BlobBodyDesc();
+  BlobBodyDesc(const Shape& shape, DataType data_type);
+  BlobBodyDesc(const Shape& shape) : BlobBodyDesc() { shape_ = shape; }
+  BlobBodyDesc(const BlobBodyDescProto& proto);
+
+  const Shape& shape() const { return shape_; }
+  Shape& mut_shape() { return shape_; }
+
+  DataType data_type() const { return data_type_; }
+  void set_data_type(DataType val) { data_type_ = val; }
+
+ private:
+  Shape shape_;
+  DataType data_type_;
+};
+
 class BlobDesc {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);

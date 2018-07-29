@@ -4,6 +4,14 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
+message BlobHeaderDescProto {
+}
+
+message BlobBodyDescProto {
+  required ShapeProto shape = 1;
+  required DataType data_type = 2;
+}
+
 message BlobDescProto {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
