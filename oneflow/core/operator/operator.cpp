@@ -10,7 +10,7 @@ DataType GetDataTypeFromBnInOpVec(
     const PbRpf<std::string>& bn_in_ops) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc) { return blob_desc->data_type(); }
+    if (blob_desc) { return blob_desc->body_desc().data_type(); }
   }
   return DataType::kInvalidDataType;
 }
@@ -110,10 +110,10 @@ void Operator::FixLbiWhenShareModel(const std::string& shared_op_name) {
 
 static bool HasBlobDescWithField(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const PbRpf<std::string>& bn_in_ops, bool (BlobDesc::*has_field)() const) {
+    const PbRpf<std::string>& bn_in_ops, bool (BlobHeaderDesc::*has_field)() const) {
   for (const std::string& bn_in_op : bn_in_ops) {
     const BlobDesc* blob_desc = GetBlobDesc4BnInOp(bn_in_op);
-    if (blob_desc && (blob_desc->*has_field)()) { return true; }
+    if (blob_desc && (blob_desc->header_desc().*has_field)()) { return true; }
   }
   return false;
 }
@@ -131,16 +131,16 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
   kernel_conf->set_need_do_data_id(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobHeaderDesc::has_data_id_field)) {
     kernel_conf->set_need_do_data_id(true);
   }
   kernel_conf->set_need_do_col_num(false);
   const PbRpf<std::string>* bns = &output_bns();
   if (IsLossOp()) { bns = &input_bns(); }
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobHeaderDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
   }
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::IsPackedHeader)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobHeaderDesc::is_packed)) {
     kernel_conf->set_need_do_packed_header(true);
   }
 

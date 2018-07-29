@@ -61,8 +61,8 @@ class BlobHeaderDesc {
   bool operator==(const BlobHeaderDesc& rhs) const;
 
   std::string DebugStr() const {
-    return std::to_string(has_data_id_field_) + "," + std::to_string(has_col_num_field_) + ","
-           + std::to_string(max_col_num_);
+    return std::to_string(is_packed_) + "," + std::to_string(has_data_id_field_) + ","
+           + std::to_string(has_col_num_field_) + "," + std::to_string(max_col_num_);
   }
 
  private:
@@ -85,27 +85,31 @@ class BlobDesc {
   BlobDesc(const BlobDescProto& proto);
   BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num);
 
-  const Shape& shape() const { return body_desc_.shape(); }
-  Shape& mut_shape() { return body_desc_.mut_shape(); }
+  /*
+    const Shape& shape() const { return body_desc_.shape(); }
+    Shape& mut_shape() { return body_desc_.mut_shape(); }
 
-  DataType data_type() const { return body_desc_.data_type(); }
-  void set_data_type(DataType val) { body_desc_.set_data_type(val); }
+    DataType data_type() const { return body_desc_.data_type(); }
+    void set_data_type(DataType val) { body_desc_.set_data_type(val); }
 
-  bool has_data_id_field() const { return header_desc_.has_data_id_field(); }
-  void set_has_data_id_field(bool val) { header_desc_.set_has_data_id_field(val); }
+    bool has_data_id_field() const { return header_desc_.has_data_id_field(); }
+    void set_has_data_id_field(bool val) { header_desc_.set_has_data_id_field(val); }
 
-  bool has_col_num_field() const { return header_desc_.has_col_num_field(); }
-  void set_has_col_num_field(bool val) { header_desc_.set_has_col_num_field(val); }
+    bool has_col_num_field() const { return header_desc_.has_col_num_field(); }
+    void set_has_col_num_field(bool val) { header_desc_.set_has_col_num_field(val); }
 
-  int32_t max_col_num() const { return header_desc_.max_col_num(); }
-  void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
+    int32_t max_col_num() const { return header_desc_.max_col_num(); }
+    void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
+  */
 
-  bool has_blob_header() const {
-    return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
-  }
+  //  bool has_blob_header() const {
+  //    return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
+  //  }
 
   const BlobHeaderDesc& header_desc() const { return header_desc_; }
   const BlobBodyDesc& body_desc() const { return body_desc_; }
+  BlobHeaderDesc& mut_header_desc() { return header_desc_; }
+  BlobBodyDesc& mut_body_desc() { return body_desc_; }
 
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeader() const;
@@ -117,8 +121,8 @@ class BlobDesc {
   bool IsPackedHeader() const { return header_desc_.is_packed(); };
   bool operator==(const BlobDesc& rhs) const;
   std::string DebugStr() const {
-    return header_desc_.DebugStr() + "," + body_desc_.DebugStr() + ","
-           + std::to_string(IsPackedHeader());
+    return "header_desc:[" + header_desc_.DebugStr() + "],body_desc:[" + body_desc_.DebugStr()
+           + "]";
   }
 
  private:

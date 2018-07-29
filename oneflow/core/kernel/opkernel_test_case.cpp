@@ -169,8 +169,8 @@ Blob* OpKernelTestUtil<device_type>::CreateBlobWithRandomVal(const BlobDesc* blo
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_real_distribution<double> dis(0, 10);
-  std::vector<T> val_vec(blob_desc->shape().elem_cnt());
-  for (int64_t i = 0; i < blob_desc->shape().elem_cnt(); ++i) {
+  std::vector<T> val_vec(blob_desc->body_desc().shape().elem_cnt());
+  for (int64_t i = 0; i < blob_desc->body_desc().shape().elem_cnt(); ++i) {
     val_vec[i] = static_cast<T>(dis(gen));
   }
   return CreateBlobWithSpecifiedVal<T>(blob_desc, val_vec, regst);
@@ -304,11 +304,12 @@ std::function<Blob*(const std::string&)> OpKernelTestCase::MakeGetterBnInOp2Blob
     if (bn_in_op2blob_[bn_in_op] == nullptr) {
       const auto& it = bn_in_op2blob_desc_.find(bn_in_op);
       if (it == bn_in_op2blob_desc_.end()) { return nullptr; }
-      if (it->second.shape().dim_vec().empty()) { return nullptr; }
+      if (it->second.body_desc().shape().dim_vec().empty()) { return nullptr; }
       DeviceType dev_type = GetBlobDeviceType(bn_in_op);
       const BlobDesc* blob_desc = &it->second;
-      bn_in_op2blob_[bn_in_op] = SwitchCreateBlobWithRandomVal(
-          SwitchCase(dev_type, blob_desc->data_type()), blob_desc, bn_in_op2regst_[bn_in_op]);
+      bn_in_op2blob_[bn_in_op] =
+          SwitchCreateBlobWithRandomVal(SwitchCase(dev_type, blob_desc->body_desc().data_type()),
+                                        blob_desc, bn_in_op2regst_[bn_in_op]);
     }
 
     CHECK(bn_in_op2blob_.find(bn_in_op) != bn_in_op2blob_.end())
@@ -460,8 +461,9 @@ void DiffKernelImplTestCase::RandomInitInputOrigin() {
   for (const auto& bn_in_op : AllInputBlobNames()) {
     const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
     CHECK(blob_desc);
-    Blob* blob = SwitchCreateBlobWithRandomVal(SwitchCase(DeviceType::kCPU, blob_desc->data_type()),
-                                               blob_desc, GetBlobRegst(bn_in_op));
+    Blob* blob = SwitchCreateBlobWithRandomVal(
+        SwitchCase(DeviceType::kCPU, blob_desc->body_desc().data_type()), blob_desc,
+        GetBlobRegst(bn_in_op));
     const std::string& bn = GetOriginInputBlobName(bn_in_op);
     CHECK(mut_bn_in_op2blob()->emplace(bn, blob).second);
     SetBlobSpecializedDeviceType(bn, DeviceType::kCPU);

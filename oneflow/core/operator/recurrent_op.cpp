@@ -27,18 +27,19 @@ void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
                                  const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   DataType data_type = Global<JobDesc>::Get()->DefaultDataType();
-  CHECK_EQ(in_blob_desc->data_type(), data_type);
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(in_blob_desc->has_col_num_field(), true);
-  int64_t data_num = in_blob_desc->shape().At(0);
+  CHECK_EQ(in_blob_desc->body_desc().data_type(), data_type);
+  CHECK_EQ(in_blob_desc->body_desc().shape().NumAxes(), 2);
+  CHECK_EQ(in_blob_desc->header_desc().has_col_num_field(), true);
+  int64_t data_num = in_blob_desc->body_desc().shape().At(0);
   int32_t hidden_size = GetValFromCustomizedConf<int32_t>("hidden_size");
   Shape h0_shape = Shape({data_num, hidden_size});
   if (!GetValFromCustomizedConf<std::string>("init_hidden").empty()) {
     const BlobDesc* h0_blob_desc = GetBlobDesc4BnInOp("h0");
-    CHECK_EQ(h0_blob_desc->data_type(), data_type);
-    CHECK_EQ(h0_blob_desc->shape(), h0_shape);
-    CHECK_EQ(h0_blob_desc->has_data_id_field(), in_blob_desc->has_data_id_field());
-    CHECK_EQ(h0_blob_desc->max_col_num(), 1);
+    CHECK_EQ(h0_blob_desc->body_desc().data_type(), data_type);
+    CHECK_EQ(h0_blob_desc->body_desc().shape(), h0_shape);
+    CHECK_EQ(h0_blob_desc->header_desc().has_data_id_field(),
+             in_blob_desc->header_desc().has_data_id_field());
+    CHECK_EQ(h0_blob_desc->header_desc().max_col_num(), 1);
   } else {
     *GetBlobDesc4BnInOp("h0") = BlobDesc(h0_shape);
   }
@@ -49,11 +50,13 @@ void RecurrentOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  out_blob_desc->mut_shape() = Shape({data_num, hidden_size});
+  out_blob_desc->mut_body_desc().mut_shape() = Shape({data_num, hidden_size});
   // recurrent_out
   BlobDesc* rec_out_blob_desc = GetBlobDesc4BnInOp("rec_out");
   *rec_out_blob_desc = *out_blob_desc;
-  if (parallel_ctx->policy() == kDataParallel) { rec_out_blob_desc->set_max_col_num(1); }
+  if (parallel_ctx->policy() == kDataParallel) {
+    rec_out_blob_desc->mut_header_desc().set_max_col_num(1);
+  }
 
   VirtualInferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }

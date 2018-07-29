@@ -146,8 +146,8 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
 
 void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
   const BlobDesc& blob_desc = blob_ptr->blob_desc();
-  if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.shape().elem_cnt();
+  if (blob_desc.body_desc().data_type() == kOFRecord) {
+    int64_t elem_cnt = blob_desc.body_desc().shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
     }

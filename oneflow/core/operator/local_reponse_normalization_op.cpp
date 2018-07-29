@@ -19,22 +19,23 @@ void LocalResponseNormalizationOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   const LocalResponseNormalizationOpConf conf = op_conf().local_response_normalization_conf();
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  CHECK_EQ(in_blob_desc->body_desc().shape().NumAxes(), 4);
+  CHECK_EQ(in_blob_desc->body_desc().data_type(), Global<JobDesc>::Get()->DefaultDataType());
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
 
   if (device_type() == DeviceType::kCPU) {
     if (conf.data_format() == "channels_last") {
-      GetBlobDesc4BnInOp("padded_square")->mut_shape() =
-          Shape({in_blob_desc->shape().At(3) + 2 * conf.depth_radius()});
+      GetBlobDesc4BnInOp("padded_square")->mut_body_desc().mut_shape() =
+          Shape({in_blob_desc->body_desc().shape().At(3) + 2 * conf.depth_radius()});
     } else if (conf.data_format() == "channels_first") {
-      GetBlobDesc4BnInOp("padded_square")->mut_shape() =
-          Shape({1, in_blob_desc->shape().At(1) + 2 * conf.depth_radius(),
-                 in_blob_desc->shape().At(2), in_blob_desc->shape().At(3)});
+      GetBlobDesc4BnInOp("padded_square")->mut_body_desc().mut_shape() =
+          Shape({1, in_blob_desc->body_desc().shape().At(1) + 2 * conf.depth_radius(),
+                 in_blob_desc->body_desc().shape().At(2), in_blob_desc->body_desc().shape().At(3)});
     } else {
       UNIMPLEMENTED();
     }
-    GetBlobDesc4BnInOp("normalize_coef")->mut_shape() = in_blob_desc->shape();
+    GetBlobDesc4BnInOp("normalize_coef")->mut_body_desc().mut_shape() =
+        in_blob_desc->body_desc().shape();
   } else if (device_type() == DeviceType::kGPU) {
     CHECK_STREQ(conf.data_format().c_str(), "channels_first");
     // cudnn requirements
@@ -50,7 +51,7 @@ void LocalResponseNormalizationOp::InferBlobDescs(
 void LocalResponseNormalizationOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->body_desc().shape();
   in_shape.ToProto(kernel_conf->mutable_local_response_normalization_conf()->mutable_batch());
 }
 

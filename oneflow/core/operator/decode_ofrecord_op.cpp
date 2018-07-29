@@ -33,13 +33,14 @@ void DecodeOFRecordOp::InferBlobDescs(
     BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(output_bns().Get(i));
     const BlobConf& blob_conf = op_conf().decode_ofrecord_conf().blob(i);
     std::vector<int64_t> dim_vec(1 + blob_conf.shape().dim_size());
-    dim_vec[0] = in_blob_desc->shape().At(0);
+    dim_vec[0] = in_blob_desc->body_desc().shape().At(0);
     FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = blob_conf.shape().dim(j - 1); }
-    out_blob_desc->mut_shape() = Shape(dim_vec);
-    out_blob_desc->set_data_type(blob_conf.data_type());
-    out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
-    out_blob_desc->set_has_col_num_field(blob_conf.max_sequence_size() > 1);
-    out_blob_desc->set_max_col_num(blob_conf.max_sequence_size());
+    out_blob_desc->mut_body_desc().mut_shape() = Shape(dim_vec);
+    out_blob_desc->mut_body_desc().set_data_type(blob_conf.data_type());
+    out_blob_desc->mut_header_desc().set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId()
+                                                           > 0);
+    out_blob_desc->mut_header_desc().set_has_col_num_field(blob_conf.max_sequence_size() > 1);
+    out_blob_desc->mut_header_desc().set_max_col_num(blob_conf.max_sequence_size());
   }
 }
 

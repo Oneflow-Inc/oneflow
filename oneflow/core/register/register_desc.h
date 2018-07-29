@@ -53,7 +53,7 @@ class RegstDesc final {
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
 
   // util
-  int32_t MaxColNum() const { return packed_blob_desc_->max_col_num(); }
+  int32_t MaxColNum() const { return packed_blob_desc_->header_desc().max_col_num(); }
   void EraseZeroSizeBlob();
   void ToProto(RegstDescProto*) const;
   bool HasSameBlobDescs(const RegstDesc*);

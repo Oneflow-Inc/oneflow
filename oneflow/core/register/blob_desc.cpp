@@ -86,23 +86,23 @@ size_t BlobDesc::ByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
-  if (has_data_id_field()) {
-    return shape().At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
+  if (header_desc_.has_data_id_field()) {
+    return body_desc_.shape().At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
   } else {
     return 0;
   }
 }
 
 size_t BlobDesc::ByteSizeOfColNumField() const {
-  if (has_col_num_field()) {
-    return shape().At(0) * sizeof(int32_t);
+  if (header_desc_.has_col_num_field()) {
+    return body_desc_.shape().At(0) * sizeof(int32_t);
   } else {
     return 0;
   }
 }
 
 size_t BlobDesc::ByteSizeOfDataContentField() const {
-  return shape().elem_cnt() * GetSizeOfDataType(data_type());
+  return body_desc_.shape().elem_cnt() * GetSizeOfDataType(body_desc_.data_type());
 }
 
 size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
@@ -122,11 +122,11 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
     header_byte_size += blob_desc->ByteSizeOfBlobHeader();
     body_byte_size += blob_desc->ByteSizeOfBlobBody();
-    data_type_set.insert(static_cast<int>(blob_desc->data_type()));
+    data_type_set.insert(static_cast<int>(blob_desc->body_desc().data_type()));
     if (max_col_num == -1) {
-      max_col_num = blob_desc->max_col_num();
+      max_col_num = blob_desc->header_desc().max_col_num();
     } else {
-      CHECK_EQ(max_col_num, blob_desc->max_col_num());
+      CHECK_EQ(max_col_num, blob_desc->header_desc().max_col_num());
     }
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;

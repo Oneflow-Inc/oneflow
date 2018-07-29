@@ -16,7 +16,7 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
   const BlobDesc* in_blob = GetBlobDesc4BnInOp("in");
   std::vector<int64_t> out_dim_vec = {1};
   if (op_conf().reduce_sum_conf().has_axis()) {
-    out_dim_vec = in_blob->shape().dim_vec();
+    out_dim_vec = in_blob->body_desc().shape().dim_vec();
     int32_t axis = GetCorrectAxis(GetBlobDesc4BnInOp);
     if (op_conf().reduce_sum_conf().keepdims() == true) {
       out_dim_vec[axis] = 1;
@@ -25,14 +25,15 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     }
     if (out_dim_vec.empty()) { out_dim_vec.push_back(1); }
   } else {
-    *buf_size = GetTmpSizeForReduceSum(in_blob->data_type(), in_blob->shape().elem_cnt());
+    *buf_size = GetTmpSizeForReduceSum(in_blob->body_desc().data_type(),
+                                       in_blob->body_desc().shape().elem_cnt());
   }
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   *out_blob = *in_blob;
-  out_blob->mut_shape() = Shape(out_dim_vec);
-  out_blob->set_has_data_id_field(in_blob->has_data_id_field()
-                                  && op_conf().reduce_sum_conf().has_axis()
-                                  && GetCorrectAxis(GetBlobDesc4BnInOp) > 0);
+  out_blob->mut_body_desc().mut_shape() = Shape(out_dim_vec);
+  out_blob->mut_header_desc().set_has_data_id_field(in_blob->header_desc().has_data_id_field()
+                                                    && op_conf().reduce_sum_conf().has_axis()
+                                                    && GetCorrectAxis(GetBlobDesc4BnInOp) > 0);
 }
 
 void ReduceSumOp::VirtualGenKernelConf(
@@ -45,7 +46,7 @@ void ReduceSumOp::VirtualGenKernelConf(
 int32_t ReduceSumOp::GetCorrectAxis(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp) const {
   int32_t axis = op_conf().reduce_sum_conf().axis();
-  if (axis < 0) { axis += GetBlobDesc4BnInOp("in")->shape().NumAxes(); }
+  if (axis < 0) { axis += GetBlobDesc4BnInOp("in")->body_desc().shape().NumAxes(); }
   return axis;
 }
 
