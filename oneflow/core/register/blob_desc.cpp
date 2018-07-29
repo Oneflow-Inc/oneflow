@@ -56,26 +56,25 @@ BlobDesc::BlobDesc()
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
-    : body_desc_(shape, data_type),
-      header_desc_(false, has_data_id_field, has_col_num_field, max_col_num, -1) {}
+    : header_(false, has_data_id_field, has_col_num_field, max_col_num, -1),
+      body_(shape, data_type) {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto)
-    : header_desc_(proto.header()), body_desc_(proto.body()) {}
+BlobDesc::BlobDesc(const BlobDescProto& proto) : header_(proto.header()), body_(proto.body()) {}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
-    : header_desc_(true, false, false, max_col_num, header_byte_size),
-      body_desc_(Shape({body_byte_size}), DataType::kChar) {
+    : header_(true, false, false, max_col_num, header_byte_size),
+      body_(Shape({body_byte_size}), DataType::kChar) {
   CHECK_GT(header_byte_size, 0);
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
-  header_desc_.ToProto(proto->mutable_header());
-  body_desc_.ToProto(proto->mutable_body());
+  header_.ToProto(proto->mutable_header());
+  body_.ToProto(proto->mutable_body());
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  if (header_desc_.header_byte_size() > 0) {
-    return header_desc_.header_byte_size();
+  if (header_.header_byte_size() > 0) {
+    return header_.header_byte_size();
   } else {
     return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
   }
@@ -86,29 +85,29 @@ size_t BlobDesc::ByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
-  if (header_desc_.has_data_id_field()) {
-    return body_desc_.shape().At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
+  if (header_.has_data_id_field()) {
+    return body_.shape().At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
   } else {
     return 0;
   }
 }
 
 size_t BlobDesc::ByteSizeOfColNumField() const {
-  if (header_desc_.has_col_num_field()) {
-    return body_desc_.shape().At(0) * sizeof(int32_t);
+  if (header_.has_col_num_field()) {
+    return body_.shape().At(0) * sizeof(int32_t);
   } else {
     return 0;
   }
 }
 
 size_t BlobDesc::ByteSizeOfDataContentField() const {
-  return body_desc_.shape().elem_cnt() * GetSizeOfDataType(body_desc_.data_type());
+  return body_.shape().elem_cnt() * GetSizeOfDataType(body_.data_type());
 }
 
 size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return header_desc_ == rhs.header() && body_desc_ == rhs.body();
+  return header_ == rhs.header() && body_ == rhs.body();
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {

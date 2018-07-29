@@ -27,8 +27,7 @@ void ReduceScatterOp::InferBlobDescs(
     const ParallelContext* parallel_ctx) const {
   int32_t out_num = op_conf().reduce_scatter_conf().out_num();
   const BlobDesc* in_blob = GetBlobDesc4BnInOp(SoleIbn());
-  BalancedSplitter model_splitter(in_blob->body().shape().elem_cnt(),
-                                  parallel_ctx->parallel_num());
+  BalancedSplitter model_splitter(in_blob->body().shape().elem_cnt(), parallel_ctx->parallel_num());
   BalancedSplitter device_splitter(parallel_ctx->parallel_num(), out_num);
   CHECK_GE(out_num, 2);
   for (int32_t i = 0; i < out_num; ++i) {

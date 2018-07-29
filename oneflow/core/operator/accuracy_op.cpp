@@ -27,8 +27,7 @@ void AccuracyOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
            label_blob_desc->header().has_data_id_field());
   CHECK(IsIntegralDataType(label_blob_desc->body().data_type()));
   CHECK_GE(pred_blob_desc->body().shape().NumAxes(), 2);
-  CHECK_EQ(label_blob_desc->body().shape(),
-           Shape({pred_blob_desc->body().shape().At(0)}));
+  CHECK_EQ(label_blob_desc->body().shape(), Shape({pred_blob_desc->body().shape().At(0)}));
 
   // accuracy output blob
   BlobDesc* accuracy_blob_desc = GetBlobDesc4BnInOp("accuracy");

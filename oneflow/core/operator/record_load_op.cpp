@@ -14,8 +14,7 @@ void RecordLoadOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> G
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
   CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
-  out_blob_desc->mut_body().mut_shape() =
-      Shape({global_piece_size / parallel_ctx->parallel_num()});
+  out_blob_desc->mut_body().mut_shape() = Shape({global_piece_size / parallel_ctx->parallel_num()});
   out_blob_desc->mut_body().set_data_type(kOFRecord);
 }
 

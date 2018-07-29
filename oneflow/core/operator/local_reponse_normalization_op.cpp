@@ -34,8 +34,7 @@ void LocalResponseNormalizationOp::InferBlobDescs(
     } else {
       UNIMPLEMENTED();
     }
-    GetBlobDesc4BnInOp("normalize_coef")->mut_body().mut_shape() =
-        in_blob_desc->body().shape();
+    GetBlobDesc4BnInOp("normalize_coef")->mut_body().mut_shape() = in_blob_desc->body().shape();
   } else if (device_type() == DeviceType::kGPU) {
     CHECK_STREQ(conf.data_format().c_str(), "channels_first");
     // cudnn requirements

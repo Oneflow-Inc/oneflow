@@ -461,9 +461,9 @@ void DiffKernelImplTestCase::RandomInitInputOrigin() {
   for (const auto& bn_in_op : AllInputBlobNames()) {
     const BlobDesc* blob_desc = BlobDesc4BnInOp(bn_in_op);
     CHECK(blob_desc);
-    Blob* blob = SwitchCreateBlobWithRandomVal(
-        SwitchCase(DeviceType::kCPU, blob_desc->body().data_type()), blob_desc,
-        GetBlobRegst(bn_in_op));
+    Blob* blob =
+        SwitchCreateBlobWithRandomVal(SwitchCase(DeviceType::kCPU, blob_desc->body().data_type()),
+                                      blob_desc, GetBlobRegst(bn_in_op));
     const std::string& bn = GetOriginInputBlobName(bn_in_op);
     CHECK(mut_bn_in_op2blob()->emplace(bn, blob).second);
     SetBlobSpecializedDeviceType(bn, DeviceType::kCPU);

@@ -35,8 +35,7 @@ void FullyConnectedOp::InferBlobDescs(
   // out
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
-  out_blob_desc->mut_body().mut_shape() =
-      Shape({in_blob_desc->body().shape().At(0), units});
+  out_blob_desc->mut_body().mut_shape() = Shape({in_blob_desc->body().shape().At(0), units});
 
   // weight
   GetBlobDesc4BnInOp("weight")->mut_body().mut_shape() =

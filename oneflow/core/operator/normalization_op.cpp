@@ -60,7 +60,7 @@ void NormalizationOp::InferBlobDescs(
     BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("trans_in");
     transpose_blob_desc->mut_body().mut_shape() = in_blob_desc->body().shape();
     transpose_blob_desc->mut_body().mut_shape().Set(op_ctx->axis,
-                                                         in_blob_desc->body().shape().At(0));
+                                                    in_blob_desc->body().shape().At(0));
     transpose_blob_desc->mut_body().mut_shape().Set(0, op_ctx->transpose_cols);
     transpose_blob_desc->mut_body().set_data_type(in_data_type);
     *GetBlobDesc4BnInOp("trans_out") = *transpose_blob_desc;

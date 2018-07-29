@@ -18,6 +18,6 @@ message CellDescProto {
 }
 
 message BlobDescProto {
-  required BlobHeaderDescProto header_desc = 1;
-  required CellDescProto body_desc= 2;
+  required BlobHeaderDescProto header = 1;
+  required CellDescProto body= 2;
 }

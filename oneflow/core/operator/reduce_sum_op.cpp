@@ -25,15 +25,15 @@ void ReduceSumOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Ge
     }
     if (out_dim_vec.empty()) { out_dim_vec.push_back(1); }
   } else {
-    *buf_size = GetTmpSizeForReduceSum(in_blob->body().data_type(),
-                                       in_blob->body().shape().elem_cnt());
+    *buf_size =
+        GetTmpSizeForReduceSum(in_blob->body().data_type(), in_blob->body().shape().elem_cnt());
   }
   BlobDesc* out_blob = GetBlobDesc4BnInOp("out");
   *out_blob = *in_blob;
   out_blob->mut_body().mut_shape() = Shape(out_dim_vec);
   out_blob->mut_header().set_has_data_id_field(in_blob->header().has_data_id_field()
-                                                    && op_conf().reduce_sum_conf().has_axis()
-                                                    && GetCorrectAxis(GetBlobDesc4BnInOp) > 0);
+                                               && op_conf().reduce_sum_conf().has_axis()
+                                               && GetCorrectAxis(GetBlobDesc4BnInOp) > 0);
 }
 
 void ReduceSumOp::VirtualGenKernelConf(

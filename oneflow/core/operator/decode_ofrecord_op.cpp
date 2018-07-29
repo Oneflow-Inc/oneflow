@@ -38,7 +38,7 @@ void DecodeOFRecordOp::InferBlobDescs(
     out_blob_desc->mut_body().mut_shape() = Shape(dim_vec);
     out_blob_desc->mut_body().set_data_type(blob_conf.data_type());
     out_blob_desc->mut_header().set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId()
-                                                           > 0);
+                                                      > 0);
     out_blob_desc->mut_header().set_has_col_num_field(blob_conf.max_sequence_size() > 1);
     out_blob_desc->mut_header().set_max_col_num(blob_conf.max_sequence_size());
   }
