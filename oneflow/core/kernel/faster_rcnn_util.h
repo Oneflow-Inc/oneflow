@@ -10,6 +10,7 @@ struct FasterRcnnUtil final {
   static int32_t Nms(const T* img_proposal_ptr, const int32_t* sorted_score_slice_ptr,
                      const int32_t pre_nms_top_n, const int32_t post_nms_top_n,
                      const float nms_threshold, int32_t* area_ptr, int32_t* post_nms_slice_ptr);
+  static void SortByScore(const int64_t num, const T* score_ptr, int32_t* sorted_score_slice_ptr);
 };
 
 }  // namespace oneflow

@@ -17,11 +17,19 @@ inline float InterOverUnion(const T* box0, const int32_t area0, const T* box1,
   if (iw <= 0) { return 0; }
   const int32_t ih = std::min(box0[3], box1[3]) - std::max(box0[1], box1[1]) + 1;
   if (ih <= 0) { return 0; }
-  const int32_t inter = iw * ih;
+  const float inter = iw * ih;
   return inter / (area0 + area1 - inter);
 }
 
 }  // namespace
+
+template<typename T>
+void FasterRcnnUtil<T>::SortByScore(const int64_t num, const T* score_ptr,
+                                    int32_t* sorted_score_slice_ptr) {
+  FOR_RANGE(int64_t, i, 0, num) { sorted_score_slice_ptr[i] = i; }
+  std::sort(sorted_score_slice_ptr, sorted_score_slice_ptr + num,
+            [&](int32_t lhs, int32_t rhs) { return score_ptr[lhs] > score_ptr[rhs]; });
+}
 
 template<typename T>
 int32_t FasterRcnnUtil<T>::Nms(const T* img_proposal_ptr, const int32_t* sorted_score_slice_ptr,

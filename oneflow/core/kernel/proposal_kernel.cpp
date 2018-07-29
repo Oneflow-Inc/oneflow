@@ -19,16 +19,16 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
   float base_ctr = 0.5 * (fm_stride - 1);
 
   std::vector<T> base_anchors(num_anchors * 4);
-  FOR_RANGE(int32_t, i, 0, scales_size) {
-    int32_t ws = conf.anchor_scales(i);
-    int32_t hs = conf.anchor_scales(i);
-    FOR_RANGE(int32_t, j, 0, ratios_size) {
-      float wr = std::sqrt(hs * ws / conf.aspect_ratios(j));
-      float hr = wr * conf.aspect_ratios(j);
-      base_anchors[(i * ratios_size + j) * 4 + 0] = base_ctr - 0.5 * (wr - 1);
-      base_anchors[(i * ratios_size + j) * 4 + 1] = base_ctr - 0.5 * (hr - 1);
-      base_anchors[(i * ratios_size + j) * 4 + 2] = base_ctr + 0.5 * (wr - 1);
-      base_anchors[(i * ratios_size + j) * 4 + 3] = base_ctr + 0.5 * (hr - 1);
+  FOR_RANGE(int32_t, i, 0, ratios_size) {
+    FOR_RANGE(int32_t, j, 0, scales_size) {
+      int32_t size = conf.anchor_scales(j) * conf.anchor_scales(j);
+      float w = std::round(std::sqrt(size / conf.aspect_ratios(i)));
+      float h = w * conf.aspect_ratios(i);
+      int32_t base_offset = (i * scales_size + j) * 4;
+      base_anchors[base_offset + 0] = base_ctr - 0.5 * (w - 1);
+      base_anchors[base_offset + 1] = base_ctr - 0.5 * (h - 1);
+      base_anchors[base_offset + 2] = base_ctr + 0.5 * (w - 1);
+      base_anchors[base_offset + 3] = base_ctr + 0.5 * (h - 1);
     }
   }
 
@@ -138,13 +138,6 @@ struct ProposalKernelUtil {
     }
     return keep_num;
   }
-
-  static void SortScoreIndex(const int64_t img_proposal_num, const T* score_ptr,
-                             int32_t* sorted_score_slice_ptr) {
-    FOR_RANGE(int64_t, i, 0, img_proposal_num) { sorted_score_slice_ptr[i] = i; }
-    std::sort(sorted_score_slice_ptr, sorted_score_slice_ptr + img_proposal_num,
-              [&](int32_t lhs, int32_t rhs) { return score_ptr[lhs] > score_ptr[rhs]; });
-  }
 };
 
 template<typename T>
@@ -168,8 +161,7 @@ void ProposalKernel<T>::ForwardDataContent(
   FOR_RANGE(int64_t, i, 0, class_prob_blob->shape().At(0)) {
     const int32_t img_score_offset = i * img_proposal_num;
     const T* class_score_ptr = class_prob_blob->dptr<T>() + img_score_offset;
-    ProposalKernelUtil<T>::SortScoreIndex(img_proposal_num, class_score_ptr,
-                                          sorted_score_slice_ptr);
+    FasterRcnnUtil<T>::SortByScore(img_proposal_num, class_score_ptr, sorted_score_slice_ptr);
 
     const int32_t img_proposal_offset = i * img_proposal_num * 4;
     const T* const_img_proposal_ptr = proposals_blob->dptr<T>() + img_proposal_offset;
@@ -191,6 +183,7 @@ void ProposalKernel<T>::ForwardDataContent(
     int32_t nms_keep_num = FasterRcnnUtil<T>::Nms(
         const_img_proposal_ptr, sorted_score_slice_ptr, pre_nms_num, conf.post_nms_top_n(),
         conf.nms_threshold(), bbox_area_ptr, post_nms_slice_ptr);
+    LOG(INFO) << "nms keep_num: " << nms_keep_num;
     // use duplicated rois if post_nms_num < conf.post_nms_top_n()
     int32_t post_nms_num = nms_keep_num;
     for (int32_t box_i = 0; post_nms_num < conf.post_nms_top_n(); ++box_i) {

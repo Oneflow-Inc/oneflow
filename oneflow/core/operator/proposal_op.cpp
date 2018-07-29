@@ -11,8 +11,8 @@ void ProposalOp::InitFromOpConf() {
   // EnrollInputBn("height", false);
   // EnrollInputBn("weight", false);
   EnrollOutputBn("rois", false);
-  // EnrollOutputBn("roi_probs", false);
-  EnrollDataTmpBn("roi_probs");
+  EnrollOutputBn("roi_probs", false);
+  // EnrollDataTmpBn("roi_probs");
   EnrollConstBufBn("anchors");
   if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
   EnrollDataTmpBn("proposals");
