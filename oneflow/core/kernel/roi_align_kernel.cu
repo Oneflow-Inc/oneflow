@@ -67,8 +67,9 @@ __global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const 
     const T roi_end_w = offset_rois[2] * spatial_scale;
     const T roi_end_h = offset_rois[3] * spatial_scale;
 
-    const T roi_height = max(roi_end_h - roi_start_h + 1, (T)1.);
-    const T roi_width = max(roi_end_w - roi_start_w + 1, (T)1.);
+    // not rounded, no need to +1
+    const T roi_height = max(roi_end_h - roi_start_h, (T)1.);
+    const T roi_width = max(roi_end_w - roi_start_w, (T)1.);
     const T bin_height = static_cast<float>(roi_height) / static_cast<float>(pooled_height);
     const T bin_width = static_cast<float>(roi_width) / static_cast<float>(pooled_width);
 
