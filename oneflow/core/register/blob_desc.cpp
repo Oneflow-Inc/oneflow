@@ -21,6 +21,16 @@ bool CellDesc::operator==(const CellDesc& rhs) const {
   return shape() == rhs.shape() && data_type() == rhs.data_type();
 }
 
+size_t CellDesc::ByteSizeOfDataContent() const {
+  return shape_.elem_cnt() * GetSizeOfDataType(data_type_);
+}
+
+size_t CellDesc::AlignedByteSizeOfDataContent() const {
+  return RoundUp(ByteSizeOfDataContent(), kCudaAlignSize);
+}
+
+BlobHeaderDesc::BlobHeaderDesc() : BlobHeaderDesc(false, false, false, 1, 0) {}
+
 BlobHeaderDesc::BlobHeaderDesc(bool has_data_id_field, bool has_col_num_field, int32_t max_col_num)
     : BlobHeaderDesc(false, has_data_id_field, has_col_num_field, max_col_num, 0) {}
 
@@ -84,9 +94,9 @@ size_t BlobDesc::ByteSizeOfBlobHeader() const {
   }
 }
 
-size_t BlobDesc::ByteSizeOfBlobBody() const {
-  return RoundUp(ByteSizeOfDataContentField(), kCudaAlignSize);
-}
+size_t BlobDesc::ByteSizeOfBlobBody() const { return body_.AlignedByteSizeOfDataContent(); }
+
+size_t BlobDesc::ByteSizeOfDataContentField() const { return body_.ByteSizeOfDataContent(); }
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
   if (header_.has_data_id_field()) {
@@ -102,10 +112,6 @@ size_t BlobDesc::ByteSizeOfColNumField() const {
   } else {
     return 0;
   }
-}
-
-size_t BlobDesc::ByteSizeOfDataContentField() const {
-  return body_.shape().elem_cnt() * GetSizeOfDataType(body_.data_type());
 }
 
 size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }

@@ -26,6 +26,9 @@ class CellDesc {
   void ToProto(CellDescProto* proto) const;
   bool operator==(const CellDesc& rhs) const;
 
+  size_t ByteSizeOfDataContent() const;
+  size_t AlignedByteSizeOfDataContent() const;
+
   std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
 
  private:
@@ -39,7 +42,7 @@ class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
 
-  BlobHeaderDesc() : BlobHeaderDesc(false, false, false, 1, 0) {}
+  BlobHeaderDesc();
   BlobHeaderDesc(bool has_data_id_field, bool has_col_num_filed, int32_t max_col_num);
   BlobHeaderDesc(int32_t max_col_num, int64_t header_byte_size);
   BlobHeaderDesc(const BlobHeaderDescProto& proto);
@@ -47,10 +50,16 @@ class BlobHeaderDesc {
   bool is_packed() const { return is_packed_; }
 
   bool has_data_id_field() const { return has_data_id_field_; }
-  void set_has_data_id_field(bool val) { has_data_id_field_ = val; }
+  void set_has_data_id_field(bool val) {
+    CHECK(!is_packed_);
+    has_data_id_field_ = val;
+  }
 
   bool has_col_num_field() const { return has_col_num_field_; }
-  void set_has_col_num_field(bool val) { has_col_num_field_ = val; }
+  void set_has_col_num_field(bool val) {
+    CHECK(!is_packed_);
+    has_col_num_field_ = val;
+  }
 
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
@@ -100,7 +109,6 @@ class BlobDesc {
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
-  bool IsPackedHeader() const { return header_.is_packed(); };
   bool operator==(const BlobDesc& rhs) const;
   std::string DebugStr() const {
     return "header_desc:[" + header_.DebugStr() + "],body_desc:[" + body_.DebugStr() + "]";
