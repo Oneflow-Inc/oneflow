@@ -21,6 +21,12 @@ bool CellDesc::operator==(const CellDesc& rhs) const {
   return shape() == rhs.shape() && data_type() == rhs.data_type();
 }
 
+BlobHeaderDesc::BlobHeaderDesc(bool has_data_id_field, bool has_col_num_field, int32_t max_col_num)
+    : BlobHeaderDesc(false, has_data_id_field, has_col_num_field, max_col_num, 0) {}
+
+BlobHeaderDesc::BlobHeaderDesc(int32_t max_col_num, int64_t header_byte_size)
+    : BlobHeaderDesc(true, false, false, max_col_num, header_byte_size) {}
+
 BlobHeaderDesc::BlobHeaderDesc(bool is_packed, bool has_data_id_field, bool has_col_num_field,
                                int32_t max_col_num, int64_t header_byte_size)
     : is_packed_(is_packed),
@@ -56,14 +62,12 @@ BlobDesc::BlobDesc()
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
-    : header_(false, has_data_id_field, has_col_num_field, max_col_num, -1),
-      body_(shape, data_type) {}
+    : header_(has_data_id_field, has_col_num_field, max_col_num), body_(shape, data_type) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto) : header_(proto.header()), body_(proto.body()) {}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
-    : header_(true, false, false, max_col_num, header_byte_size),
-      body_(Shape({body_byte_size}), DataType::kChar) {
+    : header_(max_col_num, header_byte_size), body_(Shape({body_byte_size}), DataType::kChar) {
   CHECK_GT(header_byte_size, 0);
 }
 
