@@ -24,17 +24,16 @@ void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
   if (header_byte_size_ >= 0) { proto->set_header_byte_size(header_byte_size_); }
 }
 
-BlobBodyDesc::BlobBodyDesc() : BlobBodyDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
+CellDesc::CellDesc() : CellDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
 
-BlobBodyDesc::BlobBodyDesc(const Shape& shape, DataType data_type)
-    : shape_(shape), data_type_(data_type) {}
+CellDesc::CellDesc(const Shape& shape, DataType data_type) : shape_(shape), data_type_(data_type) {}
 
-BlobBodyDesc::BlobBodyDesc(const BlobBodyDescProto& proto) {
+CellDesc::CellDesc(const CellDescProto& proto) {
   shape_ = Shape(proto.shape());
   data_type_ = proto.data_type();
 }
 
-void BlobBodyDesc::ToProto(BlobBodyDescProto* proto) const {
+void CellDesc::ToProto(CellDescProto* proto) const {
   shape_.ToProto(proto->mutable_shape());
   proto->set_data_type(data_type_);
 }

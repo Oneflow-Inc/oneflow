@@ -8,6 +8,32 @@
 
 namespace oneflow {
 
+class CellDesc {
+ public:
+  ~CellDesc() = default;
+
+  CellDesc();
+  CellDesc(const Shape& shape, DataType data_type);
+  CellDesc(const Shape& shape) : CellDesc() { shape_ = shape; }
+  CellDesc(const CellDescProto& proto);
+
+  const Shape& shape() const { return shape_; }
+  Shape& mut_shape() { return shape_; }
+
+  DataType data_type() const { return data_type_; }
+  void set_data_type(DataType val) { data_type_ = val; }
+
+  void ToProto(CellDescProto* proto) const;
+
+  std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
+
+ private:
+  Shape shape_;
+  DataType data_type_;
+};
+
+using BlobBodyDesc = CellDesc;
+
 class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
@@ -40,30 +66,6 @@ class BlobHeaderDesc {
   bool has_col_num_field_;
   int64_t max_col_num_;
   int64_t header_byte_size_;
-};
-
-class BlobBodyDesc {
- public:
-  ~BlobBodyDesc() = default;
-
-  BlobBodyDesc();
-  BlobBodyDesc(const Shape& shape, DataType data_type);
-  BlobBodyDesc(const Shape& shape) : BlobBodyDesc() { shape_ = shape; }
-  BlobBodyDesc(const BlobBodyDescProto& proto);
-
-  const Shape& shape() const { return shape_; }
-  Shape& mut_shape() { return shape_; }
-
-  DataType data_type() const { return data_type_; }
-  void set_data_type(DataType val) { data_type_ = val; }
-
-  void ToProto(BlobBodyDescProto* proto) const;
-
-  std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
-
- private:
-  Shape shape_;
-  DataType data_type_;
 };
 
 class BlobDesc {
