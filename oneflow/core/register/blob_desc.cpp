@@ -2,7 +2,23 @@
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
-void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {}
+
+BlobHeaderDesc::BlobHeaderDesc(bool has_data_id_field, bool has_col_num_field, int32_t max_col_num)
+    : has_data_id_field_(has_data_id_field),
+      has_col_num_field_(has_col_num_field),
+      max_col_num_(max_col_num) {}
+
+BlobHeaderDesc::BlobHeaderDesc(const BlobHeaderDescProto& proto) {
+  has_data_id_field_ = proto.has_data_id_field();
+  has_col_num_field_ = proto.has_col_num_field();
+  max_col_num_ = proto.max_col_num();
+}
+
+void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
+  proto->set_has_data_id_field(has_data_id_field_);
+  proto->set_has_col_num_field(has_col_num_field_);
+  proto->set_max_col_num(max_col_num_);
+}
 
 BlobBodyDesc::BlobBodyDesc() : BlobBodyDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
 
@@ -25,22 +41,14 @@ BlobDesc::BlobDesc()
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
     : body_desc_(shape, data_type),
-      has_data_id_field_(has_data_id_field),
-      has_col_num_field_(has_col_num_field),
-      max_col_num_(max_col_num) {}
+      header_desc_(has_data_id_field, has_col_num_field, max_col_num) {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto) : body_desc_(proto.body_desc()) {
-  has_data_id_field_ = proto.has_data_id_field();
-  has_col_num_field_ = proto.has_col_num_field();
-  max_col_num_ = proto.max_col_num();
-}
+BlobDesc::BlobDesc(const BlobDescProto& proto)
+    : body_desc_(proto.body_desc()), header_desc_(proto.header_desc()) {}
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   header_desc_.ToProto(proto->mutable_header_desc());
   body_desc_.ToProto(proto->mutable_body_desc());
-  proto->set_has_data_id_field(has_data_id_field_);
-  proto->set_has_col_num_field(has_col_num_field_);
-  proto->set_max_col_num(max_col_num_);
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
@@ -52,7 +60,7 @@ size_t BlobDesc::ByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::ByteSizeOfDataIdField() const {
-  if (has_data_id_field_) {
+  if (has_data_id_field()) {
     return shape().At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
   } else {
     return 0;
@@ -60,7 +68,7 @@ size_t BlobDesc::ByteSizeOfDataIdField() const {
 }
 
 size_t BlobDesc::ByteSizeOfColNumField() const {
-  if (has_col_num_field_) {
+  if (has_col_num_field()) {
     return shape().At(0) * sizeof(int32_t);
   } else {
     return 0;
@@ -75,8 +83,8 @@ size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSiz
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return shape() == rhs.shape() && data_type() == rhs.data_type()
-         && has_data_id_field_ == rhs.has_data_id_field_
-         && has_col_num_field_ == rhs.has_col_num_field_ && max_col_num_ == rhs.max_col_num_
+         && has_data_id_field() == rhs.has_data_id_field()
+         && has_col_num_field() == rhs.has_col_num_field() && max_col_num() == rhs.max_col_num()
          && IsMemBlobDesc() == rhs.IsMemBlobDesc();
 }
 
@@ -87,13 +95,13 @@ MemBlobDesc::MemBlobDesc(size_t header_byte_size, size_t body_byte_size, int32_t
 }
 
 MemBlobDesc::MemBlobDesc(const BlobDescProto& proto) : BlobDesc(proto) {
-  header_byte_size_ = proto.header_byte_size_for_mem_blob();
+  header_byte_size_ = proto.header_desc().header_byte_size_for_mem_blob();
   CHECK_GT(header_byte_size_, 0);
 }
 
 void MemBlobDesc::ToProto(BlobDescProto* proto) const {
   BlobDesc::ToProto(proto);
-  proto->set_header_byte_size_for_mem_blob(header_byte_size_);
+  proto->mutable_header_desc()->set_header_byte_size_for_mem_blob(header_byte_size_);
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {

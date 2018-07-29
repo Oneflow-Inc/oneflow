@@ -12,9 +12,30 @@ class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
 
+  BlobHeaderDesc() : BlobHeaderDesc(false, false, 1) {}
+  BlobHeaderDesc(bool has_data_id_field, bool has_col_num_filed, int32_t max_col_num);
+  BlobHeaderDesc(const BlobHeaderDescProto& proto);
+
+  bool has_data_id_field() const { return has_data_id_field_; }
+  void set_has_data_id_field(bool val) { has_data_id_field_ = val; }
+
+  bool has_col_num_field() const { return has_col_num_field_; }
+  void set_has_col_num_field(bool val) { has_col_num_field_ = val; }
+
+  int32_t max_col_num() const { return max_col_num_; }
+  void set_max_col_num(int32_t val) { max_col_num_ = val; }
+
   void ToProto(BlobHeaderDescProto* proto) const;
 
+  std::string DebugStr() const {
+    return std::to_string(has_data_id_field_) + "," + std::to_string(has_col_num_field_) + ","
+           + std::to_string(max_col_num_);
+  }
+
  private:
+  bool has_data_id_field_;
+  bool has_col_num_field_;
+  int64_t max_col_num_;
 };
 
 class BlobBodyDesc {
@@ -33,6 +54,8 @@ class BlobBodyDesc {
   void set_data_type(DataType val) { data_type_ = val; }
 
   void ToProto(BlobBodyDescProto* proto) const;
+
+  std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
 
  private:
   Shape shape_;
@@ -56,16 +79,16 @@ class BlobDesc {
   DataType data_type() const { return body_desc_.data_type(); }
   void set_data_type(DataType val) { body_desc_.set_data_type(val); }
 
-  virtual bool has_blob_header() const { return has_data_id_field_ || has_col_num_field_; }
+  virtual bool has_blob_header() const { return has_data_id_field() || has_col_num_field(); }
 
-  bool has_data_id_field() const { return has_data_id_field_; }
-  void set_has_data_id_field(bool val) { has_data_id_field_ = val; }
+  bool has_data_id_field() const { return header_desc_.has_data_id_field(); }
+  void set_has_data_id_field(bool val) { header_desc_.set_has_data_id_field(val); }
 
-  bool has_col_num_field() const { return has_col_num_field_; }
-  void set_has_col_num_field(bool val) { has_col_num_field_ = val; }
+  bool has_col_num_field() const { return header_desc_.has_col_num_field(); }
+  void set_has_col_num_field(bool val) { header_desc_.set_has_col_num_field(val); }
 
-  int32_t max_col_num() const { return max_col_num_; }
-  void set_max_col_num(int32_t val) { max_col_num_ = val; }
+  int32_t max_col_num() const { return header_desc_.max_col_num(); }
+  void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
 
   virtual void ToProto(BlobDescProto* proto) const;
   virtual size_t ByteSizeOfBlobHeader() const;
@@ -76,15 +99,14 @@ class BlobDesc {
   size_t TotalByteSize() const;
   virtual bool IsMemBlobDesc() const { return false; };
   bool operator==(const BlobDesc& rhs) const;
+  std::string DebugStr() const {
+    return header_desc_.DebugStr() + "," + body_desc_.DebugStr() + ","
+           + std::to_string(IsMemBlobDesc());
+  }
 
  private:
-  BlobHeaderDesc header_desc_;
   BlobBodyDesc body_desc_;
-  // Shape shape_;
-  // DataType data_type_;
-  bool has_data_id_field_;
-  bool has_col_num_field_;
-  int64_t max_col_num_;
+  BlobHeaderDesc header_desc_;
 };
 
 class MemBlobDesc : public BlobDesc {
