@@ -8,7 +8,14 @@
 
 namespace oneflow {
 
-class BlobHeaderDesc {};
+class BlobHeaderDesc {
+ public:
+  ~BlobHeaderDesc() = default;
+
+  void ToProto(BlobHeaderDescProto* proto) const;
+
+ private:
+};
 
 class BlobBodyDesc {
  public:
@@ -25,6 +32,8 @@ class BlobBodyDesc {
   DataType data_type() const { return data_type_; }
   void set_data_type(DataType val) { data_type_ = val; }
 
+  void ToProto(BlobBodyDescProto* proto) const;
+
  private:
   Shape shape_;
   DataType data_type_;
@@ -36,15 +45,16 @@ class BlobDesc {
   ~BlobDesc() = default;
 
   BlobDesc();
-  BlobDesc(Shape, DataType, bool has_data_id_field, bool has_col_num_field, int32_t max_col_num);
-  BlobDesc(Shape shape) : BlobDesc() { shape_ = shape; }
+  BlobDesc(const Shape&, DataType, bool has_data_id_field, bool has_col_num_field,
+           int32_t max_col_num);
+  BlobDesc(const Shape& shape) : body_desc_(shape) {}
   BlobDesc(const BlobDescProto& proto);
 
-  const Shape& shape() const { return shape_; }
-  Shape& mut_shape() { return shape_; }
+  const Shape& shape() const { return body_desc_.shape(); }
+  Shape& mut_shape() { return body_desc_.mut_shape(); }
 
-  DataType data_type() const { return data_type_; }
-  void set_data_type(DataType val) { data_type_ = val; }
+  DataType data_type() const { return body_desc_.data_type(); }
+  void set_data_type(DataType val) { body_desc_.set_data_type(val); }
 
   virtual bool has_blob_header() const { return has_data_id_field_ || has_col_num_field_; }
 
@@ -68,8 +78,10 @@ class BlobDesc {
   bool operator==(const BlobDesc& rhs) const;
 
  private:
-  Shape shape_;
-  DataType data_type_;
+  BlobHeaderDesc header_desc_;
+  BlobBodyDesc body_desc_;
+  // Shape shape_;
+  // DataType data_type_;
   bool has_data_id_field_;
   bool has_col_num_field_;
   int64_t max_col_num_;
