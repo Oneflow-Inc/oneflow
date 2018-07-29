@@ -24,6 +24,7 @@ class CellDesc {
   void set_data_type(DataType val) { data_type_ = val; }
 
   void ToProto(CellDescProto* proto) const;
+  bool operator==(const CellDesc& rhs) const;
 
   std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
 
@@ -38,10 +39,12 @@ class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
 
-  BlobHeaderDesc() : BlobHeaderDesc(false, false, 1, -1) {}
-  BlobHeaderDesc(bool has_data_id_field, bool has_col_num_filed, int32_t max_col_num,
-                 int64_t header_byte_size);
+  BlobHeaderDesc() : BlobHeaderDesc(false, false, false, 1, -1) {}
+  BlobHeaderDesc(bool is_packed, bool has_data_id_field, bool has_col_num_filed,
+                 int32_t max_col_num, int64_t header_byte_size);
   BlobHeaderDesc(const BlobHeaderDescProto& proto);
+
+  bool is_packed() const { return is_packed_; }
 
   bool has_data_id_field() const { return has_data_id_field_; }
   void set_has_data_id_field(bool val) { has_data_id_field_ = val; }
@@ -55,6 +58,7 @@ class BlobHeaderDesc {
   int64_t header_byte_size() const { return header_byte_size_; }
 
   void ToProto(BlobHeaderDescProto* proto) const;
+  bool operator==(const BlobHeaderDesc& rhs) const;
 
   std::string DebugStr() const {
     return std::to_string(has_data_id_field_) + "," + std::to_string(has_col_num_field_) + ","
@@ -62,6 +66,7 @@ class BlobHeaderDesc {
   }
 
  private:
+  bool is_packed_;
   bool has_data_id_field_;
   bool has_col_num_field_;
   int64_t max_col_num_;
@@ -99,6 +104,9 @@ class BlobDesc {
     return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
   }
 
+  const BlobHeaderDesc& header_desc() const { return header_desc_; }
+  const BlobBodyDesc& body_desc() const { return body_desc_; }
+
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
@@ -106,11 +114,11 @@ class BlobDesc {
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
-  bool IsMemBlobDesc() const { return header_desc_.header_byte_size() > 0; };
+  bool IsPackedHeader() const { return header_desc_.is_packed(); };
   bool operator==(const BlobDesc& rhs) const;
   std::string DebugStr() const {
     return header_desc_.DebugStr() + "," + body_desc_.DebugStr() + ","
-           + std::to_string(IsMemBlobDesc());
+           + std::to_string(IsPackedHeader());
   }
 
  private:

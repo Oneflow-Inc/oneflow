@@ -5,10 +5,11 @@ import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
 message BlobHeaderDescProto {
-  required bool has_data_id_field = 1;
-  required bool has_col_num_field = 2;
-  required int32 max_col_num = 3;
-  optional int64 header_byte_size = 4 [default = -1];
+  required bool is_packed = 1;
+  required bool has_data_id_field = 2;
+  required bool has_col_num_field = 3;
+  required int32 max_col_num = 4;
+  optional int64 header_byte_size = 5 [default = -1];
 }
 
 message CellDescProto {
