@@ -3,21 +3,25 @@
 
 namespace oneflow {
 
-BlobHeaderDesc::BlobHeaderDesc(bool has_data_id_field, bool has_col_num_field, int32_t max_col_num)
+BlobHeaderDesc::BlobHeaderDesc(bool has_data_id_field, bool has_col_num_field, int32_t max_col_num,
+                               int64_t header_byte_size)
     : has_data_id_field_(has_data_id_field),
       has_col_num_field_(has_col_num_field),
-      max_col_num_(max_col_num) {}
+      max_col_num_(max_col_num),
+      header_byte_size_(header_byte_size) {}
 
 BlobHeaderDesc::BlobHeaderDesc(const BlobHeaderDescProto& proto) {
   has_data_id_field_ = proto.has_data_id_field();
   has_col_num_field_ = proto.has_col_num_field();
   max_col_num_ = proto.max_col_num();
+  header_byte_size_ = proto.header_byte_size();
 }
 
 void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
   proto->set_has_data_id_field(has_data_id_field_);
   proto->set_has_col_num_field(has_col_num_field_);
   proto->set_max_col_num(max_col_num_);
+  if (header_byte_size_ >= 0) { proto->set_header_byte_size(header_byte_size_); }
 }
 
 BlobBodyDesc::BlobBodyDesc() : BlobBodyDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
@@ -41,10 +45,16 @@ BlobDesc::BlobDesc()
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
     : body_desc_(shape, data_type),
-      header_desc_(has_data_id_field, has_col_num_field, max_col_num) {}
+      header_desc_(has_data_id_field, has_col_num_field, max_col_num, -1) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto)
-    : body_desc_(proto.body_desc()), header_desc_(proto.header_desc()) {}
+    : header_desc_(proto.header_desc()), body_desc_(proto.body_desc()) {}
+
+BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
+    : header_desc_(false, false, max_col_num, header_byte_size),
+      body_desc_(Shape({body_byte_size}), DataType::kChar) {
+  CHECK_GT(header_byte_size, 0);
+}
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   header_desc_.ToProto(proto->mutable_header_desc());
@@ -52,7 +62,11 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
+  if (header_desc_.header_byte_size() > 0) {
+    return header_desc_.header_byte_size();
+  } else {
+    return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
+  }
 }
 
 size_t BlobDesc::ByteSizeOfBlobBody() const {
@@ -88,22 +102,6 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && IsMemBlobDesc() == rhs.IsMemBlobDesc();
 }
 
-MemBlobDesc::MemBlobDesc(size_t header_byte_size, size_t body_byte_size, int32_t max_col_num)
-    : BlobDesc(Shape({body_byte_size}), DataType::kChar, false, false, max_col_num),
-      header_byte_size_(header_byte_size) {
-  CHECK_GT(header_byte_size_, 0);
-}
-
-MemBlobDesc::MemBlobDesc(const BlobDescProto& proto) : BlobDesc(proto) {
-  header_byte_size_ = proto.header_desc().header_byte_size_for_mem_blob();
-  CHECK_GT(header_byte_size_, 0);
-}
-
-void MemBlobDesc::ToProto(BlobDescProto* proto) const {
-  BlobDesc::ToProto(proto);
-  proto->mutable_header_desc()->set_header_byte_size_for_mem_blob(header_byte_size_);
-}
-
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
   int64_t header_byte_size = 0;
   int64_t body_byte_size = 0;
@@ -137,7 +135,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
                            max_col_num));
     return ret;
   }
-  ret.reset(new MemBlobDesc(header_byte_size, body_byte_size, max_col_num));
+  ret.reset(new BlobDesc(header_byte_size, body_byte_size, max_col_num));
   return ret;
 }
 

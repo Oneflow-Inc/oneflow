@@ -12,8 +12,9 @@ class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
 
-  BlobHeaderDesc() : BlobHeaderDesc(false, false, 1) {}
-  BlobHeaderDesc(bool has_data_id_field, bool has_col_num_filed, int32_t max_col_num);
+  BlobHeaderDesc() : BlobHeaderDesc(false, false, 1, -1) {}
+  BlobHeaderDesc(bool has_data_id_field, bool has_col_num_filed, int32_t max_col_num,
+                 int64_t header_byte_size);
   BlobHeaderDesc(const BlobHeaderDescProto& proto);
 
   bool has_data_id_field() const { return has_data_id_field_; }
@@ -24,6 +25,8 @@ class BlobHeaderDesc {
 
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
+
+  int64_t header_byte_size() const { return header_byte_size_; }
 
   void ToProto(BlobHeaderDescProto* proto) const;
 
@@ -36,6 +39,7 @@ class BlobHeaderDesc {
   bool has_data_id_field_;
   bool has_col_num_field_;
   int64_t max_col_num_;
+  int64_t header_byte_size_;
 };
 
 class BlobBodyDesc {
@@ -72,14 +76,13 @@ class BlobDesc {
            int32_t max_col_num);
   BlobDesc(const Shape& shape) : body_desc_(shape) {}
   BlobDesc(const BlobDescProto& proto);
+  BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num);
 
   const Shape& shape() const { return body_desc_.shape(); }
   Shape& mut_shape() { return body_desc_.mut_shape(); }
 
   DataType data_type() const { return body_desc_.data_type(); }
   void set_data_type(DataType val) { body_desc_.set_data_type(val); }
-
-  virtual bool has_blob_header() const { return has_data_id_field() || has_col_num_field(); }
 
   bool has_data_id_field() const { return header_desc_.has_data_id_field(); }
   void set_has_data_id_field(bool val) { header_desc_.set_has_data_id_field(val); }
@@ -90,14 +93,18 @@ class BlobDesc {
   int32_t max_col_num() const { return header_desc_.max_col_num(); }
   void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
 
-  virtual void ToProto(BlobDescProto* proto) const;
-  virtual size_t ByteSizeOfBlobHeader() const;
+  bool has_blob_header() const {
+    return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
+  }
+
+  void ToProto(BlobDescProto* proto) const;
+  size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
-  virtual bool IsMemBlobDesc() const { return false; };
+  bool IsMemBlobDesc() const { return header_desc_.header_byte_size() > 0; };
   bool operator==(const BlobDesc& rhs) const;
   std::string DebugStr() const {
     return header_desc_.DebugStr() + "," + body_desc_.DebugStr() + ","
@@ -105,26 +112,8 @@ class BlobDesc {
   }
 
  private:
-  BlobBodyDesc body_desc_;
   BlobHeaderDesc header_desc_;
-};
-
-class MemBlobDesc : public BlobDesc {
- public:
-  // OF_DISALLOW_COPY_AND_MOVE(MemBlobDesc);
-  MemBlobDesc() = delete;
-  ~MemBlobDesc() = default;
-
-  MemBlobDesc(size_t header_byte_size, size_t body_byte_size, int32_t max_col_num);
-  MemBlobDesc(const BlobDescProto& proto);
-
-  void ToProto(BlobDescProto* proto) const override;
-  bool has_blob_header() const override { return true; }
-  size_t ByteSizeOfBlobHeader() const override { return header_byte_size_; }
-  bool IsMemBlobDesc() const override { return true; };
-
- private:
-  size_t header_byte_size_;
+  BlobBodyDesc body_desc_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
