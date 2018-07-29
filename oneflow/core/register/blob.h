@@ -62,7 +62,7 @@ class Blob final {
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
-  bool IsContinuous() const { return is_continuous_; }
+  bool IsContiguous() const { return is_contiguous_; }
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -86,7 +86,7 @@ class Blob final {
   }
   void Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
-  bool is_continuous_;
+  bool is_contiguous_;
   void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
