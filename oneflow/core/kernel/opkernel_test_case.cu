@@ -8,9 +8,19 @@ namespace test {
 
 template<>
 Blob* OpKernelTestUtil<DeviceType::kGPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
+  BlobDescProto blob_desc_proto;
+  blob_desc->ToProto(&blob_desc_proto);
+  RtBlobDesc rt_blob_desc(blob_desc_proto);
   void* mem_ptr = nullptr;
-  CudaCheck(cudaMalloc(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(regst, blob_desc, static_cast<char*>(mem_ptr));
+  CudaCheck(cudaMalloc(&mem_ptr, rt_blob_desc.TotalByteSize()));
+  return new Blob(regst, &rt_blob_desc, static_cast<char*>(mem_ptr));
+}
+
+template<>
+Blob* OpKernelTestUtil<DeviceType::kGPU>::CreateBlob(const RtBlobDesc* rt_blob_desc, Regst* regst) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMalloc(&mem_ptr, rt_blob_desc->TotalByteSize()));
+  return new Blob(regst, rt_blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<>

@@ -28,9 +28,9 @@ DataType RtBlobDesc::data_type(const std::string& field_name) const {
   return field_it->second.data_type();
 }
 
-bool RtBlobDesc::has_data_id() const { return HasField("dara_id"); }
+bool RtBlobDesc::has_data_id_field() const { return HasField("dara_id"); }
 
-bool RtBlobDesc::has_col_num() const { return HasField("col_num"); }
+bool RtBlobDesc::has_col_num_field() const { return HasField("col_num"); }
 
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return ByteSizeOfField("header"); }
 
@@ -44,9 +44,14 @@ size_t RtBlobDesc::ByteSizeOfColNumField() const {
   return HasField("col_num") ? ByteSizeOfField("col_num") : 0;
 }
 
-size_t RtBlobDesc::ByteSizeOfBodyContentField() const { return ByteSizeOfField("body"); }
+size_t RtBlobDesc::ByteSizeOfDataContentField() const { return ByteSizeOfField("body"); }
 
 size_t RtBlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
+
+bool RtBlobDesc::operator==(const RtBlobDesc& rhs) const {
+  PbMd message_diff;
+  return message_diff.Equals(blob_desc_, rhs.blob_desc_proto());
+}
 
 HashMap<std::string, FieldDesc>::const_iterator RtBlobDesc::GetFieldIteratorOrFail(
     const std::string& field_name) const {

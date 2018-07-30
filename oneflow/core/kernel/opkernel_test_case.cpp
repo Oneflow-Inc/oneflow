@@ -70,9 +70,19 @@ DataType DataType4CppTypeString(const std::string& cpp_type_str) {
 
 template<>
 Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
+  BlobDescProto blob_desc_proto;
+  blob_desc->ToProto(&blob_desc_proto);
+  RtBlobDesc rt_blob_desc(blob_desc_proto);
   void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(regst, blob_desc, static_cast<char*>(mem_ptr));
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc.TotalByteSize()));
+  return new Blob(regst, &rt_blob_desc, static_cast<char*>(mem_ptr));
+}
+
+template<>
+Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const RtBlobDesc* rt_blob_desc, Regst* regst) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc->TotalByteSize()));
+  return new Blob(regst, rt_blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<DeviceType src_device_type, DeviceType dst_device_type>
@@ -342,7 +352,9 @@ void OpKernelTestCase::UpdateGlobalJobDesc() { TODO(); }
 
 void OpKernelTestCase::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
-    bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
+    BlobDesc blob_desc(pair.second->blob_desc().blob_desc_proto());
+    bn_in_op2blob_desc_[pair.first] = blob_desc;
+    // bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
   }
   SwitchBuildKernelCtx(SwitchCase(default_device_type()), &kernel_ctx_);
 }

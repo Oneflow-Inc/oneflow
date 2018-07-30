@@ -6,15 +6,15 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
   Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
-void Blob::Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
   if (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader()) {
     is_contiguous_ = true;
   } else {

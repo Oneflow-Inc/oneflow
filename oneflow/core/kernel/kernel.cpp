@@ -51,8 +51,8 @@ void Kernel::Forward(const KernelCtx& ctx,
     PostForwardActivation(ctx, out_blob);
   }
   if (kernel_conf_.need_do_packed_header()) { ForwardPackedHeader(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+  // if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
+  // if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,

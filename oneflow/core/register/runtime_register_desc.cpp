@@ -15,16 +15,19 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
   if (proto.regst_desc_type().has_data_regst_desc()) {
     const DataRegstDesc& data_regst_desc = proto.regst_desc_type().data_regst_desc();
     for (const LbiBlobDescPair& pair : data_regst_desc.lbi2blob_desc()) {
-      auto blob_desc = std::make_unique<BlobDesc>(pair.blob_desc());
+      auto blob_desc = std::make_unique<RtBlobDesc>(pair.blob_desc());
       CHECK(lbi2blob_desc_.emplace(pair.lbi(), std::move(blob_desc)).second);
     }
-    packed_blob_desc_.reset(new BlobDesc(data_regst_desc.packed_blob_desc()));
+    packed_blob_desc_.reset(new RtBlobDesc(data_regst_desc.packed_blob_desc()));
   } else {
-    packed_blob_desc_.reset(new BlobDesc());
+    BlobDesc blob_desc(0, 0, 1);
+    BlobDescProto blob_desc_proto;
+    blob_desc.ToProto(&blob_desc_proto);
+    packed_blob_desc_.reset(new RtBlobDesc(blob_desc_proto));
   }
 }
 
-const BlobDesc* RtRegstDesc::GetBlobDescFromLbi(const LogicalBlobId& lbi) const {
+const RtBlobDesc* RtRegstDesc::GetRtBlobDescFromLbi(const LogicalBlobId& lbi) const {
   auto it = lbi2blob_desc_.find(lbi);
   if (it == lbi2blob_desc_.end()) {
     CHECK(lbi.is_packed_id());

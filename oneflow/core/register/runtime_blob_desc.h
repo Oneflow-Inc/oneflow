@@ -16,13 +16,14 @@ class RtBlobDesc {
 
   RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
+  const BlobDescProto& blob_desc_proto() const { return blob_desc_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
   const Shape& shape(const std::string& field_name) const;
   DataType data_type(const std::string& field_name) const;
 
-  bool has_data_id() const;
-  bool has_col_num() const;
+  bool has_data_id_field() const;
+  bool has_col_num_field() const;
 
   bool IsPackedHeader() const { return header_desc_.is_packed(); }
   int32_t max_col_num() const { return header_desc_.max_col_num(); }
@@ -33,7 +34,9 @@ class RtBlobDesc {
 
   size_t ByteSizeOfDataIdField() const;
   size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfBodyContentField() const;
+  size_t ByteSizeOfDataContentField() const;
+
+  bool operator==(const RtBlobDesc& rhs) const;
 
  private:
   HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
