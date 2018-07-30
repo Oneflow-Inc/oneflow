@@ -57,15 +57,15 @@ class BlobDesc {
   BlobDesc();
   BlobDesc(const Shape&, DataType, bool has_data_id_field, bool has_col_num_field,
            int32_t max_col_num);
-  BlobDesc(const Shape& shape) : body_desc_(shape) {}
+  BlobDesc(const Shape& shape) : body_field_(shape) {}
   BlobDesc(const BlobDescProto& proto);
   BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num);
 
-  const Shape& shape() const { return body_desc_.shape(); }
-  Shape& mut_shape() { return body_desc_.mut_shape(); }
+  const Shape& shape() const { return body_field_.shape(); }
+  Shape& mut_shape() { return body_field_.mut_shape(); }
 
-  DataType data_type() const { return body_desc_.data_type(); }
-  void set_data_type(DataType val) { body_desc_.set_data_type(val); }
+  DataType data_type() const { return body_field_.data_type(); }
+  void set_data_type(DataType val) { body_field_.set_data_type(val); }
 
   bool has_data_id_field() const { return header_desc_.has_data_id_field(); }
   void set_has_data_id_field(bool val) { header_desc_.set_has_data_id_field(val); }
@@ -81,7 +81,7 @@ class BlobDesc {
   }
 
   const BlobHeaderDesc& header_desc() const { return header_desc_; }
-  const BlobBodyDesc& body_desc() const { return body_desc_; }
+  const BlobBodyDesc& body_desc() const { return body_field_; }
 
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeader() const;
@@ -93,13 +93,13 @@ class BlobDesc {
   bool IsPackedHeader() const { return header_desc_.is_packed(); };
   bool operator==(const BlobDesc& rhs) const;
   std::string DebugStr() const {
-    return header_desc_.DebugStr() + "," + body_desc_.DebugStr() + ","
+    return header_desc_.DebugStr() + "," + body_field_.DebugStr() + ","
            + std::to_string(IsPackedHeader());
   }
 
  private:
   BlobHeaderDesc header_desc_;
-  BlobBodyDesc body_desc_;
+  BlobBodyDesc body_field_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);

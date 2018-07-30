@@ -39,20 +39,20 @@ BlobDesc::BlobDesc()
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
     : header_desc_(false, has_data_id_field, has_col_num_field, max_col_num, -1),
-      body_desc_(shape, data_type) {}
+      body_field_(shape, data_type) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto)
-    : header_desc_(proto.header_desc()), body_desc_(proto.body_desc()) {}
+    : header_desc_(proto.header_desc()), body_field_(proto.body_field()) {}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
     : header_desc_(true, false, false, max_col_num, header_byte_size),
-      body_desc_(Shape({body_byte_size}), DataType::kChar) {
+      body_field_(Shape({body_byte_size}), DataType::kChar) {
   CHECK_GT(header_byte_size, 0);
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   header_desc_.ToProto(proto->mutable_header_desc());
-  body_desc_.ToProto(proto->mutable_body_desc());
+  body_field_.ToProto(proto->mutable_body_field());
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
@@ -90,7 +90,7 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return header_desc_ == rhs.header_desc() && body_desc_ == rhs.body_desc();
+  return header_desc_ == rhs.header_desc() && body_field_ == rhs.body_desc();
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {

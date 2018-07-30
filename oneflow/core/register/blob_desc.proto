@@ -13,5 +13,5 @@ message BlobHeaderDescProto {
 
 message BlobDescProto {
   required BlobHeaderDescProto header_desc = 1;
-  required FieldDescProto body_desc= 2;
+  required FieldDescProto body_field= 2;
 }
