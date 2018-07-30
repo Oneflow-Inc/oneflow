@@ -50,6 +50,13 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 void LossKernel<device_type, PredType, LabelType>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("loss")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("prediction"));
+  /*
+  Blob* loss_blob = BnInOp2Blob("loss");
+  for (int i = 0; i < loss_blob->shape().At(0); i++) {
+    std::string data_id(loss_blob->data_id(i), Global<JobDesc>::Get()->SizeOfOneDataId());
+    LOG(INFO) << "cclog loss data_id : " << i << " = " << data_id;
+  }
+  */
 }
 
 template<DeviceType device_type, typename PredType, typename LabelType>
