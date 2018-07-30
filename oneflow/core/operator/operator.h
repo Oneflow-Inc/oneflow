@@ -119,6 +119,10 @@ class Operator {
                               std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*) const {}
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*, const OpContext*) const;
   virtual void InferDiffBlobDescsWithoutFwBlob(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
@@ -184,6 +188,8 @@ class Operator {
 
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
+  void EnrollFwBufBn(const std::string& fbbn);
+  void EnrollBwBufBn(const std::string& bbbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
@@ -206,6 +212,8 @@ class Operator {
 
  private:
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
+  LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
+  LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
 
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
