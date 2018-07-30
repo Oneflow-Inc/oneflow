@@ -9,8 +9,6 @@
 
 namespace oneflow {
 
-using BlobBodyDesc = FieldDesc;
-
 class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
@@ -80,8 +78,8 @@ class BlobDesc {
     return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
   }
 
-  const BlobHeaderDesc& header_desc() const { return header_desc_; }
-  const BlobBodyDesc& body_desc() const { return body_field_; }
+  // const BlobHeaderDesc& header_desc() const { return header_desc_; }
+  // const FieldDesc& body_desc() const { return body_field_; }
 
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeader() const;
@@ -103,7 +101,7 @@ class BlobDesc {
   void HeaderFieldToProto(BlobDescProto* proto) const;
 
   BlobHeaderDesc header_desc_;
-  BlobBodyDesc body_field_;
+  FieldDesc body_field_;
 };
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
