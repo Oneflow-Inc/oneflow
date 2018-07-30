@@ -50,9 +50,29 @@ BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max
   CHECK_GT(header_byte_size, 0);
 }
 
+void BlobDesc::DataIdFieldToProto(BlobDescProto* proto) const {
+  FieldDesc data_id_field(
+      Shape({body_field_.shape().At(0), Global<JobDesc>::Get()->SizeOfOneDataId()}),
+      DataType::kChar);
+  data_id_field.ToProto(proto->mutable_data_id_field());
+}
+
+void BlobDesc::ColNumFieldToProto(BlobDescProto* proto) const {
+  FieldDesc col_num_field(Shape({body_field_.shape().At(0)}), DataType::kInt32);
+  col_num_field.ToProto(proto->mutable_col_num_field());
+}
+
+void BlobDesc::HeaderFieldToProto(BlobDescProto* proto) const {
+  FieldDesc header_field(Shape({ByteSizeOfBlobHeader()}), DataType::kChar);
+  header_field.ToProto(proto->mutable_header_field());
+}
+
 void BlobDesc::ToProto(BlobDescProto* proto) const {
   header_desc_.ToProto(proto->mutable_header_desc());
   body_field_.ToProto(proto->mutable_body_field());
+  HeaderFieldToProto(proto);
+  if (has_data_id_field()) { DataIdFieldToProto(proto); }
+  if (has_col_num_field()) { ColNumFieldToProto(proto); }
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {

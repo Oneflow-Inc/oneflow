@@ -13,5 +13,8 @@ message BlobHeaderDescProto {
 
 message BlobDescProto {
   required BlobHeaderDescProto header_desc = 1;
-  required FieldDescProto body_field= 2;
+  required FieldDescProto body_field = 2;
+  required FieldDescProto header_field = 3;
+  optional FieldDescProto data_id_field = 4;
+  optional FieldDescProto col_num_field = 5;
 }

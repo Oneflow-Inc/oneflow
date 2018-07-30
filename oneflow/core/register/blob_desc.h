@@ -98,6 +98,10 @@ class BlobDesc {
   }
 
  private:
+  void DataIdFieldToProto(BlobDescProto* proto) const;
+  void ColNumFieldToProto(BlobDescProto* proto) const;
+  void HeaderFieldToProto(BlobDescProto* proto) const;
+
   BlobHeaderDesc header_desc_;
   BlobBodyDesc body_field_;
 };
