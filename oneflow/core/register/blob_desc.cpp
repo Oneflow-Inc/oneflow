@@ -38,8 +38,8 @@ BlobDesc::BlobDesc()
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
-    : body_desc_(shape, data_type),
-      header_desc_(false, has_data_id_field, has_col_num_field, max_col_num, -1) {}
+    : header_desc_(false, has_data_id_field, has_col_num_field, max_col_num, -1),
+      body_desc_(shape, data_type) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto)
     : header_desc_(proto.header_desc()), body_desc_(proto.body_desc()) {}

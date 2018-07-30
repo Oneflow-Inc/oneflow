@@ -1,7 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/register/chunk_desc.proto";
+import "oneflow/core/register/field_desc.proto";
 
 message BlobHeaderDescProto {
   required bool is_packed = 1;
@@ -13,5 +13,5 @@ message BlobHeaderDescProto {
 
 message BlobDescProto {
   required BlobHeaderDescProto header_desc = 1;
-  required ChunkDescProto body_desc= 2;
+  required FieldDescProto body_desc= 2;
 }

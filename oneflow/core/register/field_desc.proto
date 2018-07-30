@@ -4,7 +4,7 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
-message ChunkDescProto {
+message FieldDescProto {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
 }
