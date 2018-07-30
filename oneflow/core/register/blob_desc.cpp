@@ -117,9 +117,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
-    BlobDescProto blob_desc_proto;
-    blob_desc->ToProto(&blob_desc_proto);
-    RtBlobDesc rt_blob_desc(blob_desc_proto);
+    RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));

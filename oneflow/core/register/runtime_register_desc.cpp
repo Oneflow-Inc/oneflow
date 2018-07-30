@@ -20,10 +20,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     }
     packed_blob_desc_.reset(new RtBlobDesc(data_regst_desc.packed_blob_desc()));
   } else {
-    BlobDesc blob_desc(0, 0, 1);
-    BlobDescProto blob_desc_proto;
-    blob_desc.ToProto(&blob_desc_proto);
-    packed_blob_desc_.reset(new RtBlobDesc(blob_desc_proto));
+    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc(0, 0, 1)));
   }
 }
 

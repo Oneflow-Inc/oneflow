@@ -14,6 +14,7 @@ class RtBlobDesc {
   RtBlobDesc() = delete;
   ~RtBlobDesc() = default;
 
+  RtBlobDesc(const BlobDesc& blob_desc);
   RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
   const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
@@ -38,6 +39,7 @@ class RtBlobDesc {
   bool operator==(const RtBlobDesc& rhs) const;
 
  private:
+  void InitFromProto(const BlobDescProto& proto);
   HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
       const std::string& field_name) const;
   bool HasField(const std::string& field_name) const;

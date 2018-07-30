@@ -2,8 +2,17 @@
 
 namespace oneflow {
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto)
-    : blob_desc_proto_(blob_desc_proto), body_desc_(blob_desc_proto.body()) {
+RtBlobDesc::RtBlobDesc(const BlobDesc& blob_desc) {
+  BlobDescProto blob_desc_proto;
+  blob_desc.ToProto(&blob_desc_proto);
+  InitFromProto(blob_desc_proto);
+}
+
+RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) { InitFromProto(blob_desc_proto); }
+
+void RtBlobDesc::InitFromProto(const BlobDescProto& blob_desc_proto) {
+  blob_desc_proto_ = blob_desc_proto;
+  body_desc_ = FieldDesc(blob_desc_proto.body());
   if (blob_desc_proto.header().has_opaque_header()) {
     CHECK(header_desc_.emplace("opaque_header", FieldDesc(blob_desc_proto.header().opaque_header()))
               .second);

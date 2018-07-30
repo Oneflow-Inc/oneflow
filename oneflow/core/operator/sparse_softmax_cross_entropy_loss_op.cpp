@@ -23,10 +23,7 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
-  BlobDescProto blob_desc_proto;
-  pred_blob_desc->ToProto(&blob_desc_proto);
-  RtBlobDesc rt_blob_desc(blob_desc_proto);
-  *buf_size = rt_blob_desc.ByteSizeOfDataContentField();
+  *buf_size = RtBlobDesc(*pred_blob_desc).ByteSizeOfDataContentField();
 }
 
 REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf, SparseSoftmaxCrossEntropyLossOp);

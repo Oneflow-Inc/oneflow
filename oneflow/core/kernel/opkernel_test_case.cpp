@@ -70,9 +70,7 @@ DataType DataType4CppTypeString(const std::string& cpp_type_str) {
 
 template<>
 Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
-  BlobDescProto blob_desc_proto;
-  blob_desc->ToProto(&blob_desc_proto);
-  RtBlobDesc rt_blob_desc(blob_desc_proto);
+  RtBlobDesc rt_blob_desc(*blob_desc);
   void* mem_ptr = nullptr;
   CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc.TotalByteSize()));
   return new Blob(regst, &rt_blob_desc, static_cast<char*>(mem_ptr));
@@ -354,7 +352,6 @@ void OpKernelTestCase::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
     BlobDesc blob_desc(pair.second->blob_desc().blob_desc_proto());
     bn_in_op2blob_desc_[pair.first] = blob_desc;
-    // bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
   }
   SwitchBuildKernelCtx(SwitchCase(default_device_type()), &kernel_ctx_);
 }
