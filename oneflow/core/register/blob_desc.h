@@ -75,13 +75,9 @@ class BlobDesc {
   void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
 
   void ToProto(BlobDescProto* proto) const;
-  size_t ByteSizeOfBlobHeader() const;
-  size_t ByteSizeOfBlobBody() const;
-  size_t ByteSizeOfDataIdField() const;
-  size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfDataContentField() const;
-  size_t TotalByteSize() const;
+
   bool IsPackedHeader() const { return header_desc_.is_packed(); };
+
   bool operator==(const BlobDesc& rhs) const;
   std::string DebugStr() const {
     return header_desc_.DebugStr() + "," + body_field_.DebugStr() + ","
@@ -92,6 +88,13 @@ class BlobDesc {
   void DataIdFieldToProto(BlobDescProto* proto) const;
   void ColNumFieldToProto(BlobDescProto* proto) const;
   void HeaderFieldToProto(BlobDescProto* proto) const;
+
+  size_t ByteSizeOfBlobHeader() const;
+  size_t ByteSizeOfBlobBody() const;
+  size_t ByteSizeOfDataIdField() const;
+  size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfDataContentField() const;
+  size_t TotalByteSize() const;
 
   BlobHeaderDesc header_desc_;
   FieldDesc body_field_;

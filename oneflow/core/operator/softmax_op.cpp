@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/softmax_op.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -39,7 +40,10 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
-  *buf_size = in_blob_desc->ByteSizeOfDataContentField();
+  BlobDescProto blob_desc_proto;
+  in_blob_desc->ToProto(&blob_desc_proto);
+  RtBlobDesc rt_blob_desc(blob_desc_proto);
+  *buf_size = rt_blob_desc.ByteSizeOfDataContentField();
 }
 
 void SoftmaxOp::VirtualGenKernelConf(

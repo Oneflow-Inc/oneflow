@@ -1,4 +1,5 @@
 #include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
@@ -122,8 +123,11 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
   while (const BlobDesc* blob_desc = NextBlobDesc()) {
-    header_byte_size += blob_desc->ByteSizeOfBlobHeader();
-    body_byte_size += blob_desc->ByteSizeOfBlobBody();
+    BlobDescProto blob_desc_proto;
+    blob_desc->ToProto(&blob_desc_proto);
+    RtBlobDesc rt_blob_desc(blob_desc_proto);
+    header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
+    body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     if (max_col_num == -1) {
       max_col_num = blob_desc->max_col_num();
