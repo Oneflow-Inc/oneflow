@@ -30,6 +30,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
   TaskType GetTaskType() const override { return TaskType::kCopyHd; }
 
   void Init(CopyHdOpConf::Type, int64_t machine_id, int64_t dev_phy_id);
+  void FixRegisterNumRange() override;
 
   CopyHdOpConf::Type copy_type() const { return copy_type_; }
   int64_t MemZoneId121() const override {
@@ -45,6 +46,7 @@ class CopyHdTaskNode final : public CopyTaskNode {
  private:
   void InitProducedRegstMemCase(MemoryCase*) override;
   OperatorConf NewCopyOpConf() override;
+  bool ProvideDataForForward() const;
 
   CopyHdOpConf::Type copy_type_;
 };

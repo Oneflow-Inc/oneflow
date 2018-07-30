@@ -25,6 +25,10 @@ class RegstDesc final {
   const TaskNode* producer() const { return producer_; }
   void set_producer(const TaskNode* val) { producer_ = val; }
   const HashSet<const TaskNode*>& consumers() const { return consumers_; }
+  const TaskNode* GetSoleConsumer() const {
+    CHECK_EQ(consumers_.size(), 1) << regst_desc_id_;
+    return *consumers_.begin();
+  }
   void AddConsumer(const TaskNode*);
 
   // min_register_num_, max_register_num_
@@ -43,11 +47,19 @@ class RegstDesc final {
   BlobDesc* MutBlobDesc(const LogicalBlobId& lbi);
   void ForEachLbi(std::function<void(const LogicalBlobId&)> func) const;
   size_t NumOfLbi() const { return lbi2blob_desc_.size(); }
+  size_t PackedBlobDescSize() const {
+    CHECK(is_locked_);
+    return packed_blob_desc_->TotalByteSize();
+  }
 
   // mem
   const MemoryCase& mem_case() const { return mem_case_; }
   MemoryCase* mut_mem_case() { return &mem_case_; }
   void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
+  bool enable_mem_sharing() const { return enable_mem_sharing_; }
+  void set_mem_offset(int64_t mem_offset) { mem_offset_ = mem_offset; }
+  int64_t mem_offset() const { return mem_offset_; }
+  void set_mem_shared_id(int64_t mem_shared_id) { mem_shared_id_ = mem_shared_id; }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
@@ -72,6 +84,8 @@ class RegstDesc final {
   MemoryCase mem_case_;
   RegstDescTypeProto regst_desc_type_;
   bool enable_mem_sharing_;
+  int64_t mem_offset_;
+  int64_t mem_shared_id_;
 };
 
 }  // namespace oneflow

@@ -199,6 +199,7 @@ std::shared_ptr<RegstDesc> TaskNode::NewProducedRegst(bool enable_mem_sharing,
   regst->UpdtMinRegstNumIfNeed(min_register_num);
   regst->UpdtMaxRegstNumIfNeed(max_register_num);
   regst->set_enable_mem_sharing(Global<JobDesc>::Get()->enable_mem_sharing() && enable_mem_sharing);
+  regst->set_mem_offset(-1);
   InitProducedRegstMemCase(regst.get());
   return regst;
 }
@@ -253,18 +254,9 @@ void TaskNode::LockRegsts() {
 
 void TaskNode::FixRegisterNumRange() {
   for (auto& pair : produced_regsts_) {
-    RegstDesc* produced_regst = pair.second.get();
-    produced_regst->UpdtMinRegstNumIfNeed(pair.second->MaxColNum());
-    bool in_same_stream = true;
-    for (const TaskNode* consumer : produced_regst->consumers()) {
-      if (consumer->GlobalWorkStreamId() != GlobalWorkStreamId()) {
-        in_same_stream = false;
-        break;
-      }
-    }
-    if (in_same_stream == false
-        && area_id_ != static_cast<int64_t>(kMdUpdtArea)) {  // TODO: delete this hack
-      if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
+    if (device_type() == DeviceType::kCPU) {
+      pair.second->set_enable_mem_sharing(false);
+      if (pair.second->max_register_num() >= 2) { pair.second->UpdtMinRegstNumIfNeed(2); }
     }
   }
 }

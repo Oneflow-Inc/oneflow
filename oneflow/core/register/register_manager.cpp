@@ -58,7 +58,13 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
   auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
-    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
+    if (regst_desc->mem_shared_id() == -1) {
+      return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->TotalByteSize4AllRegst();
+    } else {
+      return regst_desc->mem_offset()
+             + regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
+                   ->TotalByteSize4AllRegst();
+    }
   };
   std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
             [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
@@ -98,6 +104,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     CHECK(!lbis.empty());
     CHECK(mem_ptr != nullptr);
   }
+  if (regst_desc_proto.mem_shared_id() != -1) { mem_ptr += regst_desc_proto.mem_offset(); }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
     regst->set_regst_desc(rt_regst_desc);

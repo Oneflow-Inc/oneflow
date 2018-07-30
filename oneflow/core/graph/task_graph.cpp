@@ -58,6 +58,212 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   ToDotWithAutoFilePath();
 }
 
+void TaskGraph::CollectReduceTaskNodes() {
+  ForEachNode([&](TaskNode* task_node) {
+    TaskType task_type = task_node->GetTaskType();
+    if (task_type != TaskType::kNormalMdUpdt) { return; }
+    int64_t thrd_id = task_node->thrd_id();
+    DeviceType device_type = Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(thrd_id);
+    if (device_type != DeviceType::kGPU) { return; }
+    int64_t gpu_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(thrd_id);
+
+    const HashSet<TaskNode*>& ancestors = task_node->ancestors();
+    for (auto& ancestor : ancestors) {
+      int64_t ancestor_thrd_id = ancestor->thrd_id();
+      DeviceType ancestor_device_type =
+          Global<IDMgr>::Get()->GetDeviceTypeFromThrdId(ancestor_thrd_id);
+      if (ancestor_device_type != DeviceType::kGPU) { continue; }
+      int64_t ancestor_gpu_id = Global<IDMgr>::Get()->GetGpuPhyIdFromThrdId(ancestor_thrd_id);
+      if (ancestor_gpu_id != gpu_id) { continue; }
+      TaskType ancestor_task_type = ancestor->GetTaskType();
+      if (ancestor_task_type == TaskType::kReduceScatter) {
+        mdupdt2reduce_tasks_[task_node].scatter = ancestor;
+      } else if (ancestor_task_type == TaskType::kReduceLocalAdd) {
+        mdupdt2reduce_tasks_[task_node].local_add = ancestor;
+      } else if (ancestor_task_type == TaskType::kReduceGlobalAdd) {
+        mdupdt2reduce_tasks_[task_node].global_add = ancestor;
+      } else if (ancestor_task_type == TaskType::kReduceGather) {
+        mdupdt2reduce_tasks_[task_node].gather = ancestor;
+      }
+    }
+  });
+}
+
+int64_t parse_id_from_out(const std::string& out_name) {
+  std::string str_id = out_name.substr(4);
+  return std::stol(str_id);
+}
+
+int64_t parse_id_from_in(const std::string& in_name) {
+  std::string str_id = in_name.substr(3);
+  return std::stol(str_id);
+}
+
+void TaskGraph::ProcessOneReduceStruct(const ReduceTaskNodes& reduce_task_nodes) {
+  // struct ProducerConsumerPair {
+  //  TaskNode* producer;
+  //  TaskNode* consumer;
+  //  ProducerConsumerPair() : producer(nullptr), consumer(nullptr) {}
+  // };
+  // HashMap<int64_t, ProducerConsumerPair> offset2scatter_ctrl;
+  // HashMap<int64_t, ProducerConsumerPair> offset2localadd_ctrl;
+  // HashMap<int64_t, ProducerConsumerPair> offset2globaladd_ctrl;
+
+  int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+  if (reduce_task_nodes.scatter) {
+    std::shared_ptr<RegstDesc> consumed_regst =
+        reduce_task_nodes.scatter->GetSoleConsumedRegst("in");
+    consumed_regst->set_mem_shared_id(mem_shared_id);
+    consumed_regst->set_mem_offset(0);
+
+    const auto& produced_regsts = reduce_task_nodes.scatter->produced_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> produced_regsts_dict;
+    for (auto& pair : produced_regsts) {
+      int64_t pid = parse_id_from_out(pair.first);
+      CHECK(produced_regsts_dict.emplace(pid, pair.second).second);
+    }
+    int64_t offset = 0;
+    for (auto& pair : produced_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      pair.second->set_mem_offset(offset);
+
+      // if (pair.second->GetSoleConsumer()->GetTaskType() == TaskType::kCopyHd) {
+      //  int64_t copy_task_id = pair.second->GetSoleConsumer()->task_id();
+      //  offset2scatter_ctrl[offset].producer = task_id2task_node_.at(copy_task_id);
+      // }
+      offset += pair.second->PackedBlobDescSize();
+    }
+  }
+
+  if (reduce_task_nodes.local_add) { 
+    const auto& consumed_regsts = reduce_task_nodes.local_add->consumed_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
+    for (auto& pair : consumed_regsts) {
+      int64_t pid = parse_id_from_in(pair.first);
+      CHECK_EQ(pair.second.size(), 1);
+      std::shared_ptr<RegstDesc> consumed_regst = pair.second.front().lock();
+      CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
+    }
+    CompTaskNode* local_add = dynamic_cast<CompTaskNode*>(reduce_task_nodes.local_add);
+    CHECK_NOTNULL(local_add);
+    int64_t offset = 0;
+    int64_t produced_offset = -1;
+    for (auto& pair : consumed_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      if (pair.second->mem_offset() != -1) {
+        CHECK_EQ(offset, pair.second->mem_offset());
+      } else {
+        pair.second->set_mem_offset(offset);
+      }
+      if (pair.first == local_add->parallel_id()) { produced_offset = offset; }
+      offset += pair.second->PackedBlobDescSize();
+    }
+    CHECK_NE(produced_offset, -1);
+
+    const auto& produced_regsts = reduce_task_nodes.local_add->produced_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> produced_regsts_dict;
+    for (auto& pair : produced_regsts) {
+      int64_t pid = parse_id_from_out(pair.first);
+      CHECK(produced_regsts_dict.emplace(pid, pair.second).second);
+    }
+    offset = produced_offset;
+    for (auto& pair : produced_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      pair.second->set_mem_offset(offset);
+      offset += pair.second->PackedBlobDescSize();
+    }
+  }
+
+  if (reduce_task_nodes.global_add) {
+    std::shared_ptr<RegstDesc> produced_regst =
+        reduce_task_nodes.global_add->GetProducedRegst("out");
+    produced_regst->set_mem_shared_id(mem_shared_id);
+
+    // auto& consumers = produced_regst->consumers();
+    // TaskNode* global_add_copy_out = nullptr;
+    // for (auto& consumer : consumers) {
+    //  if (consumer->GetTaskType() == TaskType::kCopyHd) {
+    //    global_add_copy_out = task_id2task_node_.at(consumer->task_id());
+    //  }
+    // }
+    // CHECK_NOTNULL(global_add_copy_out);
+
+    const auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
+    for (auto& pair : consumed_regsts) {
+      int64_t pid = parse_id_from_in(pair.first);
+      CHECK_EQ(pair.second.size(), 1);
+      std::shared_ptr<RegstDesc> consumed_regst = pair.second.front().lock();
+      CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
+    }
+    size_t offset = 0;
+    CompTaskNode* global_add = dynamic_cast<CompTaskNode*>(reduce_task_nodes.global_add);
+    CHECK_NOTNULL(global_add);
+    for (auto& pair : consumed_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      if (pair.second->mem_offset() != -1) {
+        CHECK_EQ(offset, pair.second->mem_offset());
+      } else {
+        pair.second->set_mem_offset(offset);
+      }
+
+      // if (pair.second->producer()->GetTaskType() == TaskType::kCopyHd) {
+      //  int64_t copy_task_id = pair.second->producer()->task_id();
+      //  offset2scatter_ctrl[offset].consumer = task_id2task_node_.at(copy_task_id);
+      //  offset2globaladd_ctrl[offset].producer = global_add_copy_out;
+      // }
+
+      if (pair.first == global_add->parallel_id()) { produced_regst->set_mem_offset(offset); }
+      offset += pair.second->PackedBlobDescSize();
+    }
+  }
+
+  if (reduce_task_nodes.gather) {
+    std::shared_ptr<RegstDesc> produced_regst = reduce_task_nodes.gather->GetProducedRegst("out");
+    produced_regst->set_mem_offset(0);
+    produced_regst->set_mem_shared_id(mem_shared_id);
+
+    const auto& consumed_regsts = reduce_task_nodes.gather->consumed_regsts();
+    std::map<int64_t, std::shared_ptr<RegstDesc>> consumed_regsts_dict;
+    for (auto& pair : consumed_regsts) {
+      int64_t pid = parse_id_from_in(pair.first);
+      CHECK_EQ(pair.second.size(), 1);
+      std::shared_ptr<RegstDesc> consumed_regst = pair.second.front().lock();
+      CHECK(consumed_regsts_dict.emplace(pid, consumed_regst).second);
+    }
+    size_t offset = 0;
+    for (auto& pair : consumed_regsts_dict) {
+      pair.second->set_mem_shared_id(mem_shared_id);
+      if (pair.second->mem_offset() != -1) {
+        CHECK_EQ(offset, pair.second->mem_offset());
+      } else {
+        pair.second->set_mem_offset(offset);
+      }
+      // if (pair.second->producer()->GetTaskType() == TaskType::kCopyHd) {
+      //  int64_t copy_task_id = pair.second->producer()->task_id();
+      //  offset2globaladd_ctrl[offset].consumer = task_id2task_node_.at(copy_task_id);
+      // }
+      offset += pair.second->PackedBlobDescSize();
+    }
+  }
+  // for (auto& pair : offset2scatter_ctrl) {
+  //  CHECK_NOTNULL(pair.second.producer);
+  //  CHECK_NOTNULL(pair.second.consumer);
+  //  pair.second.producer->BuildCtrlRegstDescIfNeed(pair.second.consumer);
+  // }
+  // for (auto& pair : offset2globaladd_ctrl) {
+  //  CHECK_NOTNULL(pair.second.producer);
+  //  CHECK_NOTNULL(pair.second.consumer);
+  //  pair.second.producer->BuildCtrlRegstDescIfNeed(pair.second.consumer);
+  // }
+}
+
+void TaskGraph::EnableMemSharing4ReduceStruct() {
+  CollectReduceTaskNodes();
+  for (auto& pair : mdupdt2reduce_tasks_) { ProcessOneReduceStruct(pair.second); }
+  Global<IDMgr>::Get()->RecordMaxMemSharedId4ReduceStruct();
+}
+
 void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();
 
@@ -71,6 +277,7 @@ void TaskGraph::FindChainsInSameStream() {
       task_node->set_chain_id(chain_id);
       task_node->set_order_in_graph(order_in_graph);
       ordered_task_nodes_.emplace_back(task_node);
+      CHECK(task_id2task_node_.emplace(task_node->task_id(), task_node).second);
       ++order_in_graph;
     }
   }

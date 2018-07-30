@@ -59,7 +59,9 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ClearOutOfDateConsumedRegst, _1));
+  //  task_gph->SetMemSharingGroup4RegstDesc();
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  task_gph->EnableMemSharing4ReduceStruct();
   if (job_desc->IsTrain() && job_desc->other_conf().use_ordered_allreduce_in_mdupdt()) {
     task_gph->AddCtrlEdgeInReduceStruct();
   }
