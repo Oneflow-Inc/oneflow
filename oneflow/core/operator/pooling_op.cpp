@@ -24,10 +24,10 @@ void PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
                                const ParallelContext* parallel_ctx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  const Shape& in_shape = in_blob_desc->shape();
-  CHECK_GE(in_blob_desc->shape().NumAxes(), 3);
-  CHECK_LE(in_blob_desc->shape().NumAxes(), 5);
-  CHECK_EQ(in_blob_desc->data_type(), Global<JobDesc>::Get()->DefaultDataType());
+  const Shape& in_shape = in_blob_desc->body().shape();
+  CHECK_GE(in_blob_desc->body().shape().NumAxes(), 3);
+  CHECK_LE(in_blob_desc->body().shape().NumAxes(), 5);
+  CHECK_EQ(in_blob_desc->body().data_type(), Global<JobDesc>::Get()->DefaultDataType());
   // out
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
   std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
@@ -51,7 +51,7 @@ void PoolingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   } else {
     UNIMPLEMENTED();
   }
-  out_blob_desc->mut_shape() = GetOutShape(in_shape.At(0), in_c, out);
+  out_blob_desc->mut_body().mut_shape() = GetOutShape(in_shape.At(0), in_c, out);
 }
 
 void PoolingOp::CheckPoolSizeAndStrides() const {
@@ -89,7 +89,7 @@ Shape PoolingOp::GetOutShape(int64_t in_n, int64_t in_c, const std::vector<int64
 void PoolingOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  const Shape& in_shape = GetBlobDesc4BnInOp("in")->shape();
+  const Shape& in_shape = GetBlobDesc4BnInOp("in")->body().shape();
   std::string data_format = GetValFromCustomizedConf<std::string>("data_format");
   std::vector<int64_t> in = {GetInDim(in_shape, data_format, 0, GetDim()),
                              GetInDim(in_shape, data_format, 1, GetDim()),

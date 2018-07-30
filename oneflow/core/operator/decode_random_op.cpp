@@ -26,11 +26,11 @@ void DecodeRandomOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);
   dim_vec[0] = global_piece_size / parallel_ctx->parallel_num();
   FOR_RANGE(size_t, j, 1, dim_vec.size()) { dim_vec[j] = conf.shape().dim(j - 1); }
-  out_blob_desc->mut_shape() = Shape(dim_vec);
-  out_blob_desc->set_data_type(conf.data_type());
-  out_blob_desc->set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
-  out_blob_desc->set_has_col_num_field(conf.max_sequence_size() > 1);
-  out_blob_desc->set_max_col_num(conf.max_sequence_size());
+  out_blob_desc->mut_body().mut_shape() = Shape(dim_vec);
+  out_blob_desc->mut_body().set_data_type(conf.data_type());
+  out_blob_desc->mut_header().set_has_data_id_field(Global<JobDesc>::Get()->SizeOfOneDataId() > 0);
+  out_blob_desc->mut_header().set_has_col_num_field(conf.max_sequence_size() > 1);
+  out_blob_desc->mut_header().set_max_col_num(conf.max_sequence_size());
 }
 
 REGISTER_OP(OperatorConf::kDecodeRandomConf, DecodeRandomOp);

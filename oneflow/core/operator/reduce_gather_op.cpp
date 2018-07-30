@@ -22,11 +22,11 @@ void ReduceGatherOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* first_in_blob = GetBlobDesc4BnInOp(input_bns().Get(0));
   BlobDesc* out_blob = GetBlobDesc4BnInOp(SoleObn());
   *out_blob = *first_in_blob;
-  int64_t out_blob_elem_cnt = first_in_blob->shape().elem_cnt();
+  int64_t out_blob_elem_cnt = first_in_blob->body().shape().elem_cnt();
   for (int32_t i = 1; i < in_num; ++i) {
-    out_blob_elem_cnt += GetBlobDesc4BnInOp(input_bns().Get(i))->shape().elem_cnt();
+    out_blob_elem_cnt += GetBlobDesc4BnInOp(input_bns().Get(i))->body().shape().elem_cnt();
   }
-  out_blob->mut_shape() = Shape({out_blob_elem_cnt});
+  out_blob->mut_body().mut_shape() = Shape({out_blob_elem_cnt});
 }
 
 void ReduceGatherOp::VirtualGenKernelConf(

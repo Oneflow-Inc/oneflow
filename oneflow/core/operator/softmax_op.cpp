@@ -22,20 +22,21 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   // out
   *GetBlobDesc4BnInOp("out") = *in_blob_desc;
-  SoftmaxOpCtx* op_ctx = NewSoftmaxOpCtx(in_blob_desc->shape());
+  SoftmaxOpCtx* op_ctx = NewSoftmaxOpCtx(in_blob_desc->body().shape());
   EnrollOpCtx(op_ctx);
 
   // 1D blob store tmp calculate result
   BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("softmax_num");
-  tmp_blob_desc->mut_shape() = Shape({op_ctx->transpose_rows});
-  tmp_blob_desc->set_data_type(in_blob_desc->data_type());
+  tmp_blob_desc->mut_body().mut_shape() = Shape({op_ctx->transpose_rows});
+  tmp_blob_desc->mut_body().set_data_type(in_blob_desc->body().data_type());
   if (op_ctx->need_transpose) {
     // transpose blob
     BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_in");
-    transpose_blob_desc->mut_shape() = in_blob_desc->shape();
-    transpose_blob_desc->mut_shape().Set(op_ctx->axis, in_blob_desc->shape().At(op_ctx->dims - 1));
-    transpose_blob_desc->mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
-    transpose_blob_desc->set_data_type(in_blob_desc->data_type());
+    transpose_blob_desc->mut_body().mut_shape() = in_blob_desc->body().shape();
+    transpose_blob_desc->mut_body().mut_shape().Set(
+        op_ctx->axis, in_blob_desc->body().shape().At(op_ctx->dims - 1));
+    transpose_blob_desc->mut_body().mut_shape().Set(op_ctx->dims - 1, op_ctx->transpose_cols);
+    transpose_blob_desc->mut_body().set_data_type(in_blob_desc->body().data_type());
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }

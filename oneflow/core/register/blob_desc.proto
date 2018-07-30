@@ -4,11 +4,20 @@ package oneflow;
 import "oneflow/core/common/shape.proto";
 import "oneflow/core/common/data_type.proto";
 
-message BlobDescProto {
+message BlobHeaderDescProto {
+  required bool is_packed = 1;
+  required bool has_data_id_field = 2;
+  required bool has_col_num_field = 3;
+  required int32 max_col_num = 4;
+  optional int64 header_byte_size = 5 [default = -1];
+}
+
+message CellDescProto {
   required ShapeProto shape = 1;
   required DataType data_type = 2;
-  required bool has_data_id_field = 4;
-  required bool has_col_num_field = 5;
-  required int32 max_col_num = 6;
-  optional int64 header_byte_size_for_mem_blob = 7 [default = -1];
+}
+
+message BlobDescProto {
+  required BlobHeaderDescProto header = 1;
+  required CellDescProto body= 2;
 }

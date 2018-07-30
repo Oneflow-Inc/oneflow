@@ -24,13 +24,13 @@ void Blob::Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char*
   regst_ = regst;
   blob_desc_ = blob_desc;
   header_ptr_ = header_ptr;
-  if (blob_desc->has_data_id_field()) {
+  if (blob_desc->header().has_data_id_field()) {
     data_id_ptr_ = header_ptr;
   } else {
     data_id_ptr_ = nullptr;
   }
   char* offset = header_ptr + blob_desc->ByteSizeOfDataIdField();
-  if (blob_desc->has_col_num_field()) {
+  if (blob_desc->header().has_col_num_field()) {
     col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
   } else {
     col_num_ptr_ = nullptr;

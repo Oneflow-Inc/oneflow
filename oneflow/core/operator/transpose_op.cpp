@@ -27,14 +27,14 @@ const PbMessage& TransposeOp::GetCustomizedConf() const { return op_conf().trans
 void TransposeOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                  const ParallelContext* parallel_ctx) const {
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
-  const Shape& in_blob_shape = in_blob_desc->shape();
+  const Shape& in_blob_shape = in_blob_desc->body().shape();
   const PbRf<int32_t>& perm = op_conf().transpose_conf().perm();
   CHECK_EQ(perm.size(), in_blob_shape.NumAxes() - 1);
   CheckIsPerm(perm);
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   *out_blob_desc = *in_blob_desc;
   FOR_RANGE(size_t, i, 0, perm.size()) {
-    out_blob_desc->mut_shape().Set(i + 1, in_blob_shape.At(perm[i]));
+    out_blob_desc->mut_body().mut_shape().Set(i + 1, in_blob_shape.At(perm[i]));
   }
 }
 
