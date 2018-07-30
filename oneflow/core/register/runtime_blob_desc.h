@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/register/field_desc.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 
 namespace oneflow {
@@ -23,17 +24,16 @@ class RtBlobDesc {
   bool has_data_id() const;
   bool has_col_num() const;
 
-  bool has_blob_header() const;
-  bool IsPackedHeader() const;
-  int32_t max_col_num() const { return max_col_num_; }
+  bool IsPackedHeader() const { return header_desc_.is_packed(); }
+  int32_t max_col_num() const { return header_desc_.max_col_num(); }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
   size_t TotalByteSize() const;
 
-  size_t ByteSizeOfDataId() const;
-  size_t ByteSizeOfColNum() const;
-  size_t ByteSizeOfBodyContent() const;
+  size_t ByteSizeOfDataIdField() const;
+  size_t ByteSizeOfColNumField() const;
+  size_t ByteSizeOfBodyContentField() const;
 
  private:
   HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
@@ -43,8 +43,10 @@ class RtBlobDesc {
   size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
   BlobDescProto blob_desc_;
-  bool is_packed_header_;
-  int32_t max_col_num_;
+  // bool is_packed_header_;
+  // int32_t max_col_num_;
+
+  BlobHeaderDesc header_desc_;
   HashMap<std::string, FieldDesc> field_name2desc_;
 };
 

@@ -2,7 +2,17 @@
 
 namespace oneflow {
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) : blob_desc_(blob_desc_proto) {}
+RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto)
+    : blob_desc_(blob_desc_proto), header_desc_(blob_desc_proto.header_desc()) {
+  CHECK(field_name2desc_.emplace("body", FieldDesc(blob_desc_proto.body_field())).second);
+  CHECK(field_name2desc_.emplace("header", FieldDesc(blob_desc_proto.header_field())).second);
+  if (blob_desc_proto.has_data_id_field()) {
+    CHECK(field_name2desc_.emplace("data_id", FieldDesc(blob_desc_proto.data_id_field())).second);
+  }
+  if (blob_desc_proto.has_col_num_field()) {
+    CHECK(field_name2desc_.emplace("col_num", FieldDesc(blob_desc_proto.col_num_field())).second);
+  }
+}
 
 const Shape& RtBlobDesc::shape() const { return shape("body"); }
 
@@ -22,29 +32,19 @@ bool RtBlobDesc::has_data_id() const { return HasField("dara_id"); }
 
 bool RtBlobDesc::has_col_num() const { return HasField("col_num"); }
 
-bool RtBlobDesc::has_blob_header() const {
-  // TODO
-  return true;
-}
-
-bool RtBlobDesc::IsPackedHeader() const {
-  // TODO
-  return true;
-}
-
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return ByteSizeOfField("header"); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return AlignedByteSizeOfField("body"); }
 
-size_t RtBlobDesc::ByteSizeOfDataId() const {
+size_t RtBlobDesc::ByteSizeOfDataIdField() const {
   return HasField("data_id") ? ByteSizeOfField("data_id") : 0;
 }
 
-size_t RtBlobDesc::ByteSizeOfColNum() const {
+size_t RtBlobDesc::ByteSizeOfColNumField() const {
   return HasField("col_num") ? ByteSizeOfField("col_num") : 0;
 }
 
-size_t RtBlobDesc::ByteSizeOfBodyContent() const { return ByteSizeOfField("body"); }
+size_t RtBlobDesc::ByteSizeOfBodyContentField() const { return ByteSizeOfField("body"); }
 
 size_t RtBlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
 

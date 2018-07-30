@@ -74,13 +74,6 @@ class BlobDesc {
   int32_t max_col_num() const { return header_desc_.max_col_num(); }
   void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
 
-  bool has_blob_header() const {
-    return has_data_id_field() || has_col_num_field() || header_desc_.header_byte_size() > 0;
-  }
-
-  // const BlobHeaderDesc& header_desc() const { return header_desc_; }
-  // const FieldDesc& body_desc() const { return body_field_; }
-
   void ToProto(BlobDescProto* proto) const;
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
