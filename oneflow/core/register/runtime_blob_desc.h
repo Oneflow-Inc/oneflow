@@ -22,19 +22,22 @@ class RtBlobDesc {
 
   bool has_data_id() const;
   bool has_col_num() const;
+
   bool has_blob_header() const;
   bool IsPackedHeader() const;
   int32_t max_col_num() const { return max_col_num_; }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
+  size_t TotalByteSize() const;
 
   size_t ByteSizeOfDataId() const;
   size_t ByteSizeOfColNum() const;
   size_t ByteSizeOfBodyContent() const;
-  size_t TotalByteSize() const;
 
  private:
+  HashMap<std::string, FieldDesc>::const_iterator GetFieldIteratorOrFail(
+      const std::string& field_name) const;
   bool HasField(const std::string& field_name) const;
   size_t ByteSizeOfField(const std::string& field_name) const;
   size_t AlignedByteSizeOfField(const std::string& field_name) const;
