@@ -2,8 +2,7 @@
 
 namespace oneflow {
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto)
-    : blob_desc_(blob_desc_proto), header_desc_(blob_desc_proto.header_desc()) {
+RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) : blob_desc_(blob_desc_proto) {
   CHECK(field_name2desc_.emplace("body", FieldDesc(blob_desc_proto.body_field())).second);
   CHECK(field_name2desc_.emplace("header", FieldDesc(blob_desc_proto.header_field())).second);
   if (blob_desc_proto.has_data_id_field()) {

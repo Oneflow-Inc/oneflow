@@ -5,19 +5,17 @@
 namespace oneflow {
 
 BlobHeaderDesc::BlobHeaderDesc(bool is_packed, bool has_data_id_field, bool has_col_num_field,
-                               int32_t max_col_num, int64_t header_byte_size)
+                               int32_t max_col_num)
     : is_packed_(is_packed),
       has_data_id_field_(has_data_id_field),
       has_col_num_field_(has_col_num_field),
-      max_col_num_(max_col_num),
-      header_byte_size_(header_byte_size) {}
+      max_col_num_(max_col_num) {}
 
 BlobHeaderDesc::BlobHeaderDesc(const BlobHeaderDescProto& proto) {
   is_packed_ = proto.is_packed();
   has_data_id_field_ = proto.has_data_id_field();
   has_col_num_field_ = proto.has_col_num_field();
   max_col_num_ = proto.max_col_num();
-  header_byte_size_ = proto.header_byte_size();
 }
 
 void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
@@ -25,13 +23,11 @@ void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
   proto->set_has_data_id_field(has_data_id_field_);
   proto->set_has_col_num_field(has_col_num_field_);
   proto->set_max_col_num(max_col_num_);
-  if (header_byte_size_ >= 0) { proto->set_header_byte_size(header_byte_size_); }
 }
 
 bool BlobHeaderDesc::operator==(const BlobHeaderDesc& rhs) const {
   return is_packed_ == rhs.is_packed() && has_data_id_field_ == rhs.has_data_id_field()
-         && has_col_num_field_ == rhs.has_col_num_field() && max_col_num_ == rhs.max_col_num()
-         && header_byte_size_ == rhs.header_byte_size();
+         && has_col_num_field_ == rhs.has_col_num_field() && max_col_num_ == rhs.max_col_num();
 }
 
 BlobDesc::BlobDesc()
@@ -39,14 +35,15 @@ BlobDesc::BlobDesc()
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id_field,
                    bool has_col_num_field, int32_t max_col_num)
-    : header_desc_(false, has_data_id_field, has_col_num_field, max_col_num, -1),
+    : header_desc_(false, has_data_id_field, has_col_num_field, max_col_num),
       body_field_(shape, data_type) {}
 
 BlobDesc::BlobDesc(const BlobDescProto& proto)
     : header_desc_(proto.header_desc()), body_field_(proto.body_field()) {}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
-    : header_desc_(true, false, false, max_col_num, header_byte_size),
+    : header_desc_(true, false, false, max_col_num),
+      header_field_(Shape({header_byte_size}), DataType::kChar),
       body_field_(Shape({body_byte_size}), DataType::kChar) {
   CHECK_GE(header_byte_size, 0);
 }
@@ -64,8 +61,12 @@ void BlobDesc::ColNumFieldToProto(BlobDescProto* proto) const {
 }
 
 void BlobDesc::HeaderFieldToProto(BlobDescProto* proto) const {
-  FieldDesc header_field(Shape({ByteSizeOfBlobHeader()}), DataType::kChar);
-  header_field.ToProto(proto->mutable_header_field());
+  if (!header_desc_.is_packed()) {
+    FieldDesc header_field(Shape({ByteSizeOfBlobHeader()}), DataType::kChar);
+    header_field.ToProto(proto->mutable_header_field());
+  } else {
+    header_field_.ToProto(proto->mutable_header_field());
+  }
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
@@ -77,8 +78,8 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  if (header_desc_.header_byte_size() > 0) {
-    return header_desc_.header_byte_size();
+  if (header_desc_.is_packed()) {
+    return header_field_.ByteSize();
   } else {
     return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
   }

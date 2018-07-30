@@ -25,8 +25,7 @@ class RtBlobDesc {
   bool has_data_id_field() const;
   bool has_col_num_field() const;
 
-  bool IsPackedHeader() const { return header_desc_.is_packed(); }
-  int32_t max_col_num() const { return header_desc_.max_col_num(); }
+  int32_t max_col_num() const { return blob_desc_.header_desc().max_col_num(); }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
@@ -46,10 +45,6 @@ class RtBlobDesc {
   size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
   BlobDescProto blob_desc_;
-  // bool is_packed_header_;
-  // int32_t max_col_num_;
-
-  BlobHeaderDesc header_desc_;
   HashMap<std::string, FieldDesc> field_name2desc_;
 };
 

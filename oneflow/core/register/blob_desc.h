@@ -13,9 +13,9 @@ class BlobHeaderDesc {
  public:
   ~BlobHeaderDesc() = default;
 
-  BlobHeaderDesc() : BlobHeaderDesc(false, false, false, 1, -1) {}
+  BlobHeaderDesc() : BlobHeaderDesc(false, false, false, 1) {}
   BlobHeaderDesc(bool is_packed, bool has_data_id_field, bool has_col_num_filed,
-                 int32_t max_col_num, int64_t header_byte_size);
+                 int32_t max_col_num);
   BlobHeaderDesc(const BlobHeaderDescProto& proto);
 
   bool is_packed() const { return is_packed_; }
@@ -28,8 +28,6 @@ class BlobHeaderDesc {
 
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
-
-  int64_t header_byte_size() const { return header_byte_size_; }
 
   void ToProto(BlobHeaderDescProto* proto) const;
   bool operator==(const BlobHeaderDesc& rhs) const;
@@ -44,7 +42,6 @@ class BlobHeaderDesc {
   bool has_data_id_field_;
   bool has_col_num_field_;
   int64_t max_col_num_;
-  int64_t header_byte_size_;
 };
 
 class BlobDesc {
@@ -97,6 +94,7 @@ class BlobDesc {
   size_t TotalByteSize() const;
 
   BlobHeaderDesc header_desc_;
+  FieldDesc header_field_;
   FieldDesc body_field_;
 };
 
