@@ -42,6 +42,7 @@ class RtBlobDesc {
   size_t ByteSizeOfField(const std::string& field_name) const;
   size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
+  BlobDescProto blob_desc_;
   bool is_packed_header_;
   int32_t max_col_num_;
   HashMap<std::string, FieldDesc> field_name2desc_;

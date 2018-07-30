@@ -2,7 +2,7 @@
 
 namespace oneflow {
 
-RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) {}
+RtBlobDesc::RtBlobDesc(const BlobDescProto& blob_desc_proto) : blob_desc_(blob_desc_proto) {}
 
 const Shape& RtBlobDesc::shape() const { return shape("body"); }
 
@@ -32,27 +32,16 @@ bool RtBlobDesc::IsPackedHeader() const {
   return true;
 }
 
-size_t RtBlobDesc::ByteSizeOfBlobHeader() const {
-  // TODO
-  return 0;
-}
+size_t RtBlobDesc::ByteSizeOfBlobHeader() const { return ByteSizeOfField("header"); }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return AlignedByteSizeOfField("body"); }
 
 size_t RtBlobDesc::ByteSizeOfDataId() const {
-  if (HasField("data_id")) {
-    return ByteSizeOfField("data_id");
-  } else {
-    return 0;
-  }
+  return HasField("data_id") ? ByteSizeOfField("data_id") : 0;
 }
 
 size_t RtBlobDesc::ByteSizeOfColNum() const {
-  if (HasField("col_num")) {
-    return ByteSizeOfField("col_num");
-  } else {
-    return 0;
-  }
+  return HasField("col_num") ? ByteSizeOfField("col_num") : 0;
 }
 
 size_t RtBlobDesc::ByteSizeOfBodyContent() const { return ByteSizeOfField("body"); }
