@@ -12,15 +12,16 @@ const PbMessage& RoIAlignOp::GetCustomizedConf() const { return op_conf().roi_al
 
 void RoIAlignOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
-  // in
+  if (op_conf().roi_align_conf().data_format() != "channels_first") { UNIMPLEMENTED(); }
+  // in: feature map (N, C, H, W)
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   CHECK_EQ(in_blob_desc->shape().NumAxes(), 4);
-  // rois
+  // rois: (N, R, 4)
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   CHECK_EQ(rois_blob_desc->shape().NumAxes(), 3);
   CHECK_EQ(rois_blob_desc->shape().At(0), in_blob_desc->shape().At(0));
   CHECK_EQ(rois_blob_desc->shape().At(2), 4);
-  // out
+  // out: (N * R, C, pool_h, pool_w)
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   out_blob_desc->mut_shape() = Shape(
       {in_blob_desc->shape().At(0) * rois_blob_desc->shape().At(1), in_blob_desc->shape().At(1),

@@ -9,7 +9,7 @@ class RoIAlignOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RoIAlignOp);
   RoIAlignOp() = default;
-  virtual ~RoIAlignOp() = default;
+  ~RoIAlignOp() = default;
 
   const PbMessage& GetCustomizedConf() const override;
 

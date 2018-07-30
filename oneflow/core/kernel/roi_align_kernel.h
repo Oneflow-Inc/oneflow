@@ -22,11 +22,7 @@ class RoIAlignKernel final : public KernelIf<device_type> {
 };
 
 template<DeviceType device_type, typename T>
-class RoIAlignKernelUtil {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(RoIAlignKernelUtil);
-  RoIAlignKernelUtil() = delete;
-
+struct RoIAlignKernelUtil {
   static void Forward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* in_blob,
                       const Blob* rois_blob, Blob* out_blob);
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
