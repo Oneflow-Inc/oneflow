@@ -40,8 +40,13 @@ __device__ T BilinearInterpolate(const T* in_dptr, const int height, const int w
   T v2 = in_dptr[y_low * width + x_high];
   T v3 = in_dptr[y_high * width + x_low];
   T v4 = in_dptr[y_high * width + x_high];
-  T w1 = hy * hx, w2 = hy * lx, w3 = ly * hx, w4 = ly * lx;
 
+  T w1 = hy * hx;
+  T w2 = hy * lx;
+  T w3 = ly * hx;
+  T w4 = ly * lx;
+
+  //  no 1 / (x_high - x_low) * (y_high - y_low) because it will always be 1 in RoI Align
   T val = (w1 * v1 + w2 * v2 + w3 * v3 + w4 * v4);
 
   return val;
@@ -94,7 +99,6 @@ __global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const 
         FOR_RANGE(int64_t, grid_w, 0, bin_grid_width) {
           const T x =
               roi_start_w + w * bin_width + static_cast<T>(grid_w + .5f) * bin_grid_density_w;
-          // pass height and width in case out of the boundary of feat. map
           T val = BilinearInterpolate(offset_in_dptr, height, width, y, x);
           out_val += val;
         }
