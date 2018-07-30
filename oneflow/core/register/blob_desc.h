@@ -9,46 +9,6 @@
 
 namespace oneflow {
 
-class BlobHeaderDesc {
- public:
-  ~BlobHeaderDesc() = default;
-
-  BlobHeaderDesc() : BlobHeaderDesc(false, false, false, 1) {}
-  BlobHeaderDesc(bool heaer_is_packed, bool has_data_id, bool has_col_num, int32_t max_col_num);
-  BlobHeaderDesc(const BlobHeaderDescProto& proto);
-
-  bool header_is_opaque() const { return header_is_opaque_; }
-
-  bool has_data_id() const { return has_data_id_; }
-  void set_has_data_id(bool val) {
-    CHECK(!header_is_opaque_);
-    has_data_id_ = val;
-  }
-
-  bool has_col_num() const { return has_col_num_; }
-  void set_has_col_num(bool val) {
-    CHECK(!header_is_opaque_);
-    has_col_num_ = val;
-  }
-
-  int32_t max_col_num() const { return max_col_num_; }
-  void set_max_col_num(int32_t val) { max_col_num_ = val; }
-
-  void ToProto(BlobHeaderDescProto* proto) const;
-  bool operator==(const BlobHeaderDesc& rhs) const;
-
-  std::string DebugStr() const {
-    return std::to_string(header_is_opaque_) + "," + std::to_string(has_data_id_) + ","
-           + std::to_string(has_col_num_) + "," + std::to_string(max_col_num_);
-  }
-
- private:
-  bool header_is_opaque_;
-  bool has_data_id_;
-  bool has_col_num_;
-  int64_t max_col_num_;
-};
-
 class BlobDesc {
  public:
   // OF_DISALLOW_COPY_AND_MOVE(BlobDesc);
@@ -66,26 +26,31 @@ class BlobDesc {
   DataType data_type() const { return body_field_.data_type(); }
   void set_data_type(DataType val) { body_field_.set_data_type(val); }
 
-  bool has_data_id_field() const { return header_desc_.has_data_id(); }
-  void set_has_data_id_field(bool val) { header_desc_.set_has_data_id(val); }
+  bool has_data_id_field() const { return has_data_id_; }
+  void set_has_data_id_field(bool val) {
+    CHECK(!header_is_opaque_);
+    has_data_id_ = val;
+  }
 
-  bool has_col_num_field() const { return header_desc_.has_col_num(); }
-  void set_has_col_num_field(bool val) { header_desc_.set_has_col_num(val); }
+  bool has_col_num_field() const { return has_col_num_; }
+  void set_has_col_num_field(bool val) {
+    CHECK(!header_is_opaque_);
+    has_col_num_ = val;
+  }
 
-  int32_t max_col_num() const { return header_desc_.max_col_num(); }
-  void set_max_col_num(int32_t val) { header_desc_.set_max_col_num(val); }
+  int32_t max_col_num() const { return max_col_num_; }
+  void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
-  void ToProto(BlobDescProto* proto) const;
-
-  bool IsPackedHeader() const { return header_desc_.header_is_opaque(); };
+  bool IsPackedHeader() const { return header_is_opaque_; };
 
   bool operator==(const BlobDesc& rhs) const;
-  std::string DebugStr() const { return header_desc_.DebugStr() + "," + body_field_.DebugStr(); }
+  void ToProto(BlobDescProto* proto) const;
 
  private:
-  void DataIdFieldToProto(BlobDescProto* proto) const;
-  void ColNumFieldToProto(BlobDescProto* proto) const;
-  void HeaderFieldToProto(BlobDescProto* proto) const;
+  void DataIdFieldToProto(FieldHeaderDesc* proto) const;
+  void ColNumFieldToProto(FieldHeaderDesc* proto) const;
+
+  void HeaderToProto(BlobDescProto* proto) const;
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
@@ -94,8 +59,13 @@ class BlobDesc {
   size_t ByteSizeOfDataContentField() const;
   size_t TotalByteSize() const;
 
-  BlobHeaderDesc header_desc_;
-  FieldDesc header_field_;
+  bool header_is_opaque_;
+  FieldDesc opaque_header_;
+
+  bool has_data_id_;
+  bool has_col_num_;
+  int64_t max_col_num_;
+
   FieldDesc body_field_;
 };
 

@@ -16,7 +16,7 @@ class RtBlobDesc {
 
   RtBlobDesc(const BlobDescProto& blob_desc_proto);
 
-  const BlobDescProto& blob_desc_proto() const { return blob_desc_; }
+  const BlobDescProto& blob_desc_proto() const { return blob_desc_proto_; }
   const Shape& shape() const;  // body shape
   DataType data_type() const;  // body data type
   const Shape& shape(const std::string& field_name) const;
@@ -25,7 +25,7 @@ class RtBlobDesc {
   bool has_data_id_field() const;
   bool has_col_num_field() const;
 
-  int32_t max_col_num() const { return blob_desc_.header_desc().max_col_num(); }
+  int32_t max_col_num() const { return blob_desc_proto_.header().max_col_num(); }
 
   size_t ByteSizeOfBlobHeader() const;
   size_t ByteSizeOfBlobBody() const;
@@ -44,8 +44,9 @@ class RtBlobDesc {
   size_t ByteSizeOfField(const std::string& field_name) const;
   size_t AlignedByteSizeOfField(const std::string& field_name) const;
 
-  BlobDescProto blob_desc_;
-  HashMap<std::string, FieldDesc> field_name2desc_;
+  BlobDescProto blob_desc_proto_;
+  HashMap<std::string, FieldDesc> header_desc_;
+  FieldDesc body_desc_;
 };
 
 }  // namespace oneflow

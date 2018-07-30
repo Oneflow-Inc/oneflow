@@ -4,81 +4,73 @@
 
 namespace oneflow {
 
-BlobHeaderDesc::BlobHeaderDesc(bool header_is_opaque, bool has_data_id, bool has_col_num,
-                               int32_t max_col_num)
-    : header_is_opaque_(header_is_opaque),
-      has_data_id_(has_data_id),
-      has_col_num_(has_col_num),
-      max_col_num_(max_col_num) {}
-
-BlobHeaderDesc::BlobHeaderDesc(const BlobHeaderDescProto& proto) {
-  header_is_opaque_ = proto.header_is_opaque();
-  has_data_id_ = proto.has_data_id();
-  has_col_num_ = proto.has_col_num();
-  max_col_num_ = proto.max_col_num();
-}
-
-void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
-  proto->set_header_is_opaque(header_is_opaque_);
-  proto->set_has_data_id(has_data_id_);
-  proto->set_has_col_num(has_col_num_);
-  proto->set_max_col_num(max_col_num_);
-}
-
-bool BlobHeaderDesc::operator==(const BlobHeaderDesc& rhs) const {
-  return header_is_opaque_ == rhs.header_is_opaque() && has_data_id_ == rhs.has_data_id()
-         && has_col_num_ == rhs.has_col_num() && max_col_num_ == rhs.max_col_num();
-}
-
 BlobDesc::BlobDesc()
     : BlobDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType(), false, false, 1) {}
 
 BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, bool has_col_num,
                    int32_t max_col_num)
-    : header_desc_(false, has_data_id, has_col_num, max_col_num), body_field_(shape, data_type) {}
+    : header_is_opaque_(false),
+      has_data_id_(has_data_id),
+      has_col_num_(has_col_num),
+      max_col_num_(max_col_num),
+      body_field_(shape, data_type) {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto)
-    : header_desc_(proto.header_desc()), body_field_(proto.body_field()) {}
+BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
+  max_col_num_ = proto.header().max_col_num();
+  if (proto.header().has_opaque_header()) {
+    header_is_opaque_ = true;
+    has_data_id_ = false;
+    has_col_num_ = false;
+    opaque_header_ = FieldDesc(proto.header().opaque_header());
+  } else {
+    CHECK(proto.header().has_field_header());
+    header_is_opaque_ = false;
+    has_data_id_ = proto.header().field_header().has_data_id();
+    has_col_num_ = proto.header().field_header().has_col_num();
+  }
+}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
-    : header_desc_(true, false, false, max_col_num),
-      header_field_(Shape({header_byte_size}), DataType::kChar),
+    : header_is_opaque_(true),
+      opaque_header_(Shape({header_byte_size}), DataType::kChar),
+      has_data_id_(false),
+      has_col_num_(false),
+      max_col_num_(max_col_num),
       body_field_(Shape({body_byte_size}), DataType::kChar) {
   CHECK_GE(header_byte_size, 0);
 }
 
-void BlobDesc::DataIdFieldToProto(BlobDescProto* proto) const {
+void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto) const {
   FieldDesc data_id_field(
       Shape({body_field_.shape().At(0), Global<JobDesc>::Get()->SizeOfOneDataId()}),
       DataType::kChar);
-  data_id_field.ToProto(proto->mutable_data_id_field());
+  data_id_field.ToProto(proto->mutable_data_id());
 }
 
-void BlobDesc::ColNumFieldToProto(BlobDescProto* proto) const {
+void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto) const {
   FieldDesc col_num_field(Shape({body_field_.shape().At(0)}), DataType::kInt32);
-  col_num_field.ToProto(proto->mutable_col_num_field());
+  col_num_field.ToProto(proto->mutable_col_num());
 }
 
-void BlobDesc::HeaderFieldToProto(BlobDescProto* proto) const {
-  if (!header_desc_.header_is_opaque()) {
-    FieldDesc header_field(Shape({ByteSizeOfBlobHeader()}), DataType::kChar);
-    header_field.ToProto(proto->mutable_header_field());
+void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
+  proto->mutable_header()->set_max_col_num(max_col_num_);
+  if (!header_is_opaque_) {
+    FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
+    if (has_data_id_field()) { DataIdFieldToProto(field_header); }
+    if (has_col_num_field()) { ColNumFieldToProto(field_header); }
   } else {
-    header_field_.ToProto(proto->mutable_header_field());
+    opaque_header_.ToProto(proto->mutable_header()->mutable_opaque_header());
   }
 }
 
 void BlobDesc::ToProto(BlobDescProto* proto) const {
-  header_desc_.ToProto(proto->mutable_header_desc());
-  body_field_.ToProto(proto->mutable_body_field());
-  HeaderFieldToProto(proto);
-  if (has_data_id_field()) { DataIdFieldToProto(proto); }
-  if (has_col_num_field()) { ColNumFieldToProto(proto); }
+  HeaderToProto(proto);
+  body_field_.ToProto(proto->mutable_body());
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  if (header_desc_.header_is_opaque()) {
-    return header_field_.ByteSize();
+  if (header_is_opaque_) {
+    return opaque_header_.ByteSize();
   } else {
     return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
   }
@@ -111,7 +103,9 @@ size_t BlobDesc::ByteSizeOfDataContentField() const {
 size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return header_desc_ == rhs.header_desc_ && body_field_ == rhs.body_field_;
+  return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
+         && has_data_id_ == rhs.has_data_id_ && has_col_num_ == rhs.has_col_num_
+         && max_col_num_ == rhs.max_col_num_ && body_field_ == rhs.body_field_;
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
