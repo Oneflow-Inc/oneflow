@@ -22,4 +22,8 @@ bool FieldDesc::operator==(const FieldDesc& rhs) const {
   return shape() == rhs.shape() && data_type() == rhs.data_type();
 }
 
+size_t FieldDesc::ByteSize() const { return shape_.elem_cnt() * GetSizeOfDataType(data_type_); }
+
+size_t FieldDesc::AlignedByteSize() const { return RoundUp(ByteSize(), kCudaAlignSize); }
+
 }  // namespace oneflow

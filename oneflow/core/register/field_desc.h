@@ -25,6 +25,9 @@ class FieldDesc {
   void ToProto(FieldDescProto* proto) const;
   bool operator==(const FieldDesc& rhs) const;
 
+  size_t ByteSize() const;
+  size_t AlignedByteSize() const;
+
   std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
 
  private:
