@@ -17,7 +17,6 @@ message TrainConf {
   optional InitializerConf default_initializer_conf = 100;
   optional float l1 = 101 [default = 0];
   optional float l2 = 102 [default = 0];
-  optional int32 staleness = 103 [default = 0]; // -1 means ASP, 0 means BSP, > 0 means SSP
   optional int64 piece_num_of_print_loss = 104 [default = -1];
   optional int64 piece_num_of_print_accuracy = 105 [default = -1];
 }

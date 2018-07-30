@@ -568,7 +568,7 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   LogicalNode* pred_reduce_global_node = reduce_scatter_node;
-  if (src_pd->sorted_machine_ids().size() > 1) {
+  if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
     // Reduce Local Add
     LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
     reduce_local_add_node->mut_parallel_desc() = src_pd;

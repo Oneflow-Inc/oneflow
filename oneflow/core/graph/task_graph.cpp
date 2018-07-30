@@ -65,7 +65,7 @@ void TaskGraph::FindChainsInSameStream() {
   const auto& ordered_chain_nodes = chain_gph.ordered_chain_nodes();
   int64_t order_in_graph = 0;
   for (auto& chain_node : ordered_chain_nodes) {
-    auto& ordered_in_chain = chain_node->chain_it()->nodes;
+    auto& ordered_in_chain = chain_node->task_nodes();
     int64_t chain_id = chain_node->chain_id();
     for (auto& task_node : ordered_in_chain) {
       task_node->set_chain_id(chain_id);
@@ -274,7 +274,8 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
       handler(const_cast<TaskNode*>(node_on_out_edge));
     });
   };
-  DfsTopoForEachNodeSortByDistanceToSink(starts, ForEachInNode, ForEachOutNode, handler);
+  // DfsTopo will cause inappropriate chain graph
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,

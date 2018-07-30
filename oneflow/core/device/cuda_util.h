@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_DEVICE_CUDA_UTIL_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/preprocessor.h"
 
 #ifdef WITH_CUDA
 
@@ -29,7 +30,18 @@ inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-enum class CudaWorkType { kCompute = 0, kCopyH2D, kCopyD2H, kMix };
+#define CUDA_WORK_TYPE_SEQ       \
+  OF_PP_MAKE_TUPLE_SEQ(kCompute) \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyH2D) \
+  OF_PP_MAKE_TUPLE_SEQ(kCopyD2H) \
+  OF_PP_MAKE_TUPLE_SEQ(kMix)     \
+  OF_PP_MAKE_TUPLE_SEQ(kMdUpdt)
+
+enum class CudaWorkType {
+#define DECLARE_CUDA_WORK_TYPE(type) type,
+  OF_PP_FOR_EACH_TUPLE(DECLARE_CUDA_WORK_TYPE, CUDA_WORK_TYPE_SEQ)
+};
+inline size_t GetCudaWorkTypeSize() { return OF_PP_SEQ_SIZE(CUDA_WORK_TYPE_SEQ); }
 
 }  // namespace oneflow
 

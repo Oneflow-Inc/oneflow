@@ -39,7 +39,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   for (const auto& pair : task_proto.produced_regst_desc()) {
     if (pair.second.regst_desc_type().has_ctrl_regst_desc()) {
       non_ctrl_task_proto.mutable_produced_regst_desc()->erase(pair.first);
-      Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+      Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
         produced_ctrl_regst_[regst->regst_desc_id()].emplace_back(regst);
       });
     }
@@ -61,7 +61,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
 
   // non ctrl regst
   for (const auto& pair : non_ctrl_task_proto.produced_regst_desc()) {
-    Global<RegstMgr>::Get()->NewRegsts(pair.second, GetDeviceType(), [this](Regst* regst) {
+    Global<RegstMgr>::Get()->NewRegsts(pair.second, [this](Regst* regst) {
       produced_data_regsts_[regst->regst_desc_id()].emplace_back(regst);
     });
     int64_t regst_desc_id = pair.second.regst_desc_id();
