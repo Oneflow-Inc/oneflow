@@ -3,24 +3,6 @@
 
 namespace oneflow {
 
-CellDesc::CellDesc() : CellDesc(Shape(), Global<JobDesc>::Get()->DefaultDataType()) {}
-
-CellDesc::CellDesc(const Shape& shape, DataType data_type) : shape_(shape), data_type_(data_type) {}
-
-CellDesc::CellDesc(const CellDescProto& proto) {
-  shape_ = Shape(proto.shape());
-  data_type_ = proto.data_type();
-}
-
-void CellDesc::ToProto(CellDescProto* proto) const {
-  shape_.ToProto(proto->mutable_shape());
-  proto->set_data_type(data_type_);
-}
-
-bool CellDesc::operator==(const CellDesc& rhs) const {
-  return shape() == rhs.shape() && data_type() == rhs.data_type();
-}
-
 BlobHeaderDesc::BlobHeaderDesc(bool is_packed, bool has_data_id_field, bool has_col_num_field,
                                int32_t max_col_num, int64_t header_byte_size)
     : is_packed_(is_packed),

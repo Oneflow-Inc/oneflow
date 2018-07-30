@@ -1,8 +1,7 @@
 syntax = "proto2";
 package oneflow;
 
-import "oneflow/core/common/shape.proto";
-import "oneflow/core/common/data_type.proto";
+import "oneflow/core/register/chunk_desc.proto";
 
 message BlobHeaderDescProto {
   required bool is_packed = 1;
@@ -12,12 +11,7 @@ message BlobHeaderDescProto {
   optional int64 header_byte_size = 5 [default = -1];
 }
 
-message CellDescProto {
-  required ShapeProto shape = 1;
-  required DataType data_type = 2;
-}
-
 message BlobDescProto {
   required BlobHeaderDescProto header_desc = 1;
-  required CellDescProto body_desc= 2;
+  required ChunkDescProto body_desc= 2;
 }

@@ -3,37 +3,13 @@
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/register/chunk_desc.h"
 #include "oneflow/core/register/blob_desc.pb.h"
 #include "oneflow/core/job/job_desc.h"
 
 namespace oneflow {
 
-class CellDesc {
- public:
-  ~CellDesc() = default;
-
-  CellDesc();
-  CellDesc(const Shape& shape, DataType data_type);
-  CellDesc(const Shape& shape) : CellDesc() { shape_ = shape; }
-  CellDesc(const CellDescProto& proto);
-
-  const Shape& shape() const { return shape_; }
-  Shape& mut_shape() { return shape_; }
-
-  DataType data_type() const { return data_type_; }
-  void set_data_type(DataType val) { data_type_ = val; }
-
-  void ToProto(CellDescProto* proto) const;
-  bool operator==(const CellDesc& rhs) const;
-
-  std::string DebugStr() const { return shape_.DebugStr() + "," + std::to_string(data_type_); }
-
- private:
-  Shape shape_;
-  DataType data_type_;
-};
-
-using BlobBodyDesc = CellDesc;
+using BlobBodyDesc = ChunkDesc;
 
 class BlobHeaderDesc {
  public:
