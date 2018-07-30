@@ -36,11 +36,11 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
   FOR_RANGE(int32_t, h, 0, height) {
     FOR_RANGE(int32_t, w, 0, width) {
       int32_t cur = (h * width + w) * num_anchors * 4;
-      FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchors_dptr[cur + i * 4 + 0] = base_anchors[i * 4 + 0] + w * fm_stride;
-        anchors_dptr[cur + i * 4 + 1] = base_anchors[i * 4 + 1] + h * fm_stride;
-        anchors_dptr[cur + i * 4 + 2] = base_anchors[i * 4 + 2] + w * fm_stride;
-        anchors_dptr[cur + i * 4 + 3] = base_anchors[i * 4 + 3] + h * fm_stride;
+      for (int32_t i = 0; i < num_anchors * 4; i += 4) {
+        anchors_dptr[cur + i + 0] = base_anchors[i + 0] + w * fm_stride;
+        anchors_dptr[cur + i + 1] = base_anchors[i + 1] + h * fm_stride;
+        anchors_dptr[cur + i + 2] = base_anchors[i + 2] + w * fm_stride;
+        anchors_dptr[cur + i + 3] = base_anchors[i + 3] + h * fm_stride;
       }
     }
   }
