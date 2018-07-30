@@ -83,6 +83,9 @@ class BlobHeaderDesc {
   bool has_col_num_field_;
   int64_t max_col_num_;
   int64_t header_byte_size_;
+
+  // HashMap<std::string, CellDesc> field_name2desc_;
+  // CellDesc packed_desc_;
 };
 
 class BlobDesc {

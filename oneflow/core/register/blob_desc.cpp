@@ -58,7 +58,7 @@ void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
   proto->set_has_data_id_field(has_data_id_field_);
   proto->set_has_col_num_field(has_col_num_field_);
   proto->set_max_col_num(max_col_num_);
-  if (header_byte_size_ >= 0) { proto->set_header_byte_size(header_byte_size_); }
+  proto->set_header_byte_size(header_byte_size_);
 }
 
 bool BlobHeaderDesc::operator==(const BlobHeaderDesc& rhs) const {
