@@ -4,7 +4,7 @@ package oneflow;
 import "oneflow/core/register/field_desc.proto";
 
 message BlobHeaderDescProto {
-  required bool header_is_packed = 1;
+  required bool header_is_opaque = 1;
   required bool has_data_id = 2;
   required bool has_col_num = 3;
   required int32 max_col_num = 4;

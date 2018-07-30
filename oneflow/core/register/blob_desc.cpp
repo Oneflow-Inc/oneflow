@@ -4,29 +4,29 @@
 
 namespace oneflow {
 
-BlobHeaderDesc::BlobHeaderDesc(bool header_is_packed, bool has_data_id, bool has_col_num,
+BlobHeaderDesc::BlobHeaderDesc(bool header_is_opaque, bool has_data_id, bool has_col_num,
                                int32_t max_col_num)
-    : header_is_packed_(header_is_packed),
+    : header_is_opaque_(header_is_opaque),
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
       max_col_num_(max_col_num) {}
 
 BlobHeaderDesc::BlobHeaderDesc(const BlobHeaderDescProto& proto) {
-  header_is_packed_ = proto.header_is_packed();
+  header_is_opaque_ = proto.header_is_opaque();
   has_data_id_ = proto.has_data_id();
   has_col_num_ = proto.has_col_num();
   max_col_num_ = proto.max_col_num();
 }
 
 void BlobHeaderDesc::ToProto(BlobHeaderDescProto* proto) const {
-  proto->set_header_is_packed(header_is_packed_);
+  proto->set_header_is_opaque(header_is_opaque_);
   proto->set_has_data_id(has_data_id_);
   proto->set_has_col_num(has_col_num_);
   proto->set_max_col_num(max_col_num_);
 }
 
 bool BlobHeaderDesc::operator==(const BlobHeaderDesc& rhs) const {
-  return header_is_packed_ == rhs.header_is_packed() && has_data_id_ == rhs.has_data_id()
+  return header_is_opaque_ == rhs.header_is_opaque() && has_data_id_ == rhs.has_data_id()
          && has_col_num_ == rhs.has_col_num() && max_col_num_ == rhs.max_col_num();
 }
 
@@ -60,7 +60,7 @@ void BlobDesc::ColNumFieldToProto(BlobDescProto* proto) const {
 }
 
 void BlobDesc::HeaderFieldToProto(BlobDescProto* proto) const {
-  if (!header_desc_.header_is_packed()) {
+  if (!header_desc_.header_is_opaque()) {
     FieldDesc header_field(Shape({ByteSizeOfBlobHeader()}), DataType::kChar);
     header_field.ToProto(proto->mutable_header_field());
   } else {
@@ -77,7 +77,7 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
 }
 
 size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  if (header_desc_.header_is_packed()) {
+  if (header_desc_.header_is_opaque()) {
     return header_field_.ByteSize();
   } else {
     return ByteSizeOfDataIdField() + ByteSizeOfColNumField();

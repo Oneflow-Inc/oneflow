@@ -17,17 +17,17 @@ class BlobHeaderDesc {
   BlobHeaderDesc(bool heaer_is_packed, bool has_data_id, bool has_col_num, int32_t max_col_num);
   BlobHeaderDesc(const BlobHeaderDescProto& proto);
 
-  bool header_is_packed() const { return header_is_packed_; }
+  bool header_is_opaque() const { return header_is_opaque_; }
 
   bool has_data_id() const { return has_data_id_; }
   void set_has_data_id(bool val) {
-    CHECK(!header_is_packed_);
+    CHECK(!header_is_opaque_);
     has_data_id_ = val;
   }
 
   bool has_col_num() const { return has_col_num_; }
   void set_has_col_num(bool val) {
-    CHECK(!header_is_packed_);
+    CHECK(!header_is_opaque_);
     has_col_num_ = val;
   }
 
@@ -38,12 +38,12 @@ class BlobHeaderDesc {
   bool operator==(const BlobHeaderDesc& rhs) const;
 
   std::string DebugStr() const {
-    return std::to_string(has_data_id_) + "," + std::to_string(has_col_num_) + ","
-           + std::to_string(max_col_num_);
+    return std::to_string(header_is_opaque_) + "," + std::to_string(has_data_id_) + ","
+           + std::to_string(has_col_num_) + "," + std::to_string(max_col_num_);
   }
 
  private:
-  bool header_is_packed_;
+  bool header_is_opaque_;
   bool has_data_id_;
   bool has_col_num_;
   int64_t max_col_num_;
@@ -77,13 +77,10 @@ class BlobDesc {
 
   void ToProto(BlobDescProto* proto) const;
 
-  bool IsPackedHeader() const { return header_desc_.header_is_packed(); };
+  bool IsPackedHeader() const { return header_desc_.header_is_opaque(); };
 
   bool operator==(const BlobDesc& rhs) const;
-  std::string DebugStr() const {
-    return header_desc_.DebugStr() + "," + body_field_.DebugStr() + ","
-           + std::to_string(IsPackedHeader());
-  }
+  std::string DebugStr() const { return header_desc_.DebugStr() + "," + body_field_.DebugStr(); }
 
  private:
   void DataIdFieldToProto(BlobDescProto* proto) const;

@@ -10,11 +10,6 @@ message LbiBlobDescPair {
   required BlobDescProto blob_desc = 2;
 }
 
-//message LbiBlobDescPair {
-//  required LogicalBlobId lbi = 1;
-//  required BlobDescProto blob_desc = 2;
-//}
-
 message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
   required BlobDescProto packed_blob_desc = 2;
