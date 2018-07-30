@@ -27,7 +27,7 @@ DataType RtBlobDesc::data_type(const std::string& field_name) const {
   return field_it->second.data_type();
 }
 
-bool RtBlobDesc::has_data_id_field() const { return HasField("dara_id"); }
+bool RtBlobDesc::has_data_id_field() const { return HasField("data_id"); }
 
 bool RtBlobDesc::has_col_num_field() const { return HasField("col_num"); }
 
