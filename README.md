@@ -19,7 +19,11 @@ find ./build -type f -not -name "*.tar.gz" -delete
 # you can also use local file instead
 cd cmake/third_party
 
+# for macos
 ls | xargs sed -i "" "s#http://down.geeek.info/deps/#<local_folder>/#"
+
+# for linux
+ls | xargs sed -i "s#http://down.geeek.info/deps/#<local_folder>/#"
 
 # deps in `tar.gz` can be download from `http://down.geeek.info/deps/`
 
