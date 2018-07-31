@@ -20,7 +20,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     }
     packed_blob_desc_.reset(new RtBlobDesc(data_regst_desc.packed_blob_desc()));
   } else {
-    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc(0, 0, 1)));
+    packed_blob_desc_.reset(new RtBlobDesc(BlobDesc()));
   }
 }
 

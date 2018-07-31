@@ -30,14 +30,18 @@ BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   }
 }
 
-BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max_col_num)
-    : header_is_opaque_(true),
-      opaque_header_(Shape({header_byte_size}), DataType::kChar),
-      has_data_id_(false),
+BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_type,
+                   int32_t max_col_num)
+    : has_data_id_(false),
       has_col_num_(false),
       max_col_num_(max_col_num),
-      body_field_(Shape({body_byte_size}), DataType::kChar) {
-  CHECK_GE(header_byte_size, 0);
+      body_field_(shape, data_type) {
+  if (header_byte_size > 0) {
+    header_is_opaque_ = true;
+    opaque_header_ = FieldDesc(Shape({header_byte_size}), DataType::kChar);
+  } else {
+    header_is_opaque_ = false;
+  }
 }
 void BlobDesc::set_has_data_id_field(bool val) {
   CHECK(!header_is_opaque_);
@@ -103,20 +107,25 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
   }
-  if (blob_desc_cnt == 0) { return ret; }
-  if (blob_desc_cnt == 1) {
+  if (blob_desc_cnt == 0) {
+    // do nothing
+  } else if (blob_desc_cnt == 1) {
     ret.reset(new BlobDesc(*last_blob_desc));
-    return ret;
-  }
-  if (header_byte_size == 0 && data_type_set.size() == 1) {
+  } else if (data_type_set.size() == 1) {
     DataType sole_data_type = static_cast<DataType>(*(data_type_set.begin()));
     int64_t size_of_one_elem = GetSizeOfDataType(sole_data_type);
     CHECK_EQ(body_byte_size % size_of_one_elem, 0);
-    ret.reset(new BlobDesc(Shape({body_byte_size / size_of_one_elem}), sole_data_type, false, false,
-                           max_col_num));
-    return ret;
+    int64_t total_elem_cnt = body_byte_size / size_of_one_elem;
+    if (header_byte_size == 0) {
+      ret.reset(new BlobDesc(Shape({total_elem_cnt}), sole_data_type, false, false, max_col_num));
+    } else {
+      ret.reset(
+          new BlobDesc(header_byte_size, Shape({total_elem_cnt}), sole_data_type, max_col_num));
+    }
+  } else {
+    ret.reset(
+        new BlobDesc(header_byte_size, Shape({body_byte_size}), DataType::kChar, max_col_num));
   }
-  ret.reset(new BlobDesc(header_byte_size, body_byte_size, max_col_num));
   return ret;
 }
 

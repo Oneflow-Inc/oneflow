@@ -9,15 +9,6 @@ void LossKernel<device_type, PredType, LabelType>::ForwardDataContent(
   const LossKernelConf& conf = GetLossKernelConf(this->kernel_conf());
   int64_t n = BnInOp2Blob("prediction")->shape().At(0);
   Blob* weight_blob = BnInOp2Blob("weight");
-  /*
-  Blob* prediction_blob = BnInOp2Blob("prediction");
-  if (prediction_blob->has_data_id_field()) {
-    for (int i = 0; i < n; ++i) {
-      std::string data_id = prediction_blob->data_id();
-      LOG(INFO) << "data id: " << i << "," << data_id;
-    }
-  }
-  */
   // backward
   // predict_diff *= weight
   Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
