@@ -76,7 +76,8 @@ __global__ void RoIAlignForward(const int64_t nthreads, const T* in_dptr, const 
       // + .5f for center position
       const T y = roi_start_h + h * bin_height + static_cast<T>(grid_i + 0.5f) * bin_grid_density_h;
       FOR_RANGE(int64_t, grid_j, 0, bin_grid_width) {
-        const T x = roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
+        const T x =
+            roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
         out_val += BilinearInterpolate(channel_dptr, height, width, y, x);
       }
     }
