@@ -6,19 +6,19 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
   Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
 }
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
   Init(regst, blob_desc, header_ptr, body_ptr);
 }
 
-void Blob::Init(Regst* regst, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
-  if (body_ptr == header_ptr_ + blob_desc->ByteSizeOfBlobHeader()) {
-    is_continuous_ = true;
+void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+  if (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader()) {
+    is_contiguous_ = true;
   } else {
-    is_continuous_ = false;
+    is_contiguous_ = false;
   }
 
   regst_ = regst;
@@ -88,7 +88,7 @@ void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  if (is_continuous_) {
+  if (is_contiguous_) {
     CHECK_EQ(TotalByteSize(), rhs->TotalByteSize());
     AutoMemcpy(device_ctx, mut_header_ptr(), rhs->header_ptr(), TotalByteSize(), mem_case(),
                rhs->mem_case());
