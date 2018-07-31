@@ -15,21 +15,6 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       max_col_num_(max_col_num),
       body_field_(shape, data_type) {}
 
-BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
-  max_col_num_ = proto.header().max_col_num();
-  if (proto.header().has_opaque_header()) {
-    header_is_opaque_ = true;
-    has_data_id_ = false;
-    has_col_num_ = false;
-    opaque_header_ = FieldDesc(proto.header().opaque_header());
-  } else {
-    CHECK(proto.header().has_field_header());
-    header_is_opaque_ = false;
-    has_data_id_ = proto.header().field_header().has_data_id();
-    has_col_num_ = proto.header().field_header().has_col_num();
-  }
-}
-
 BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_type,
                    int32_t max_col_num)
     : has_data_id_(false),
@@ -53,9 +38,9 @@ void BlobDesc::set_has_col_num_field(bool val) {
   has_col_num_ = val;
 }
 void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto) const {
-  FieldDesc data_id_field(
-      Shape({body_field_.shape().At(0), Global<JobDesc>::Get()->SizeOfOneDataId()}),
-      DataType::kChar);
+  FieldDesc data_id_field(Shape({body_field_.shape().At(0),
+                                 static_cast<int64_t>(Global<JobDesc>::Get()->SizeOfOneDataId())}),
+                          DataType::kChar);
   data_id_field.ToProto(proto->mutable_data_id());
 }
 
