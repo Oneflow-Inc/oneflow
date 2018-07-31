@@ -23,7 +23,7 @@ class ThreadMgr final {
   friend class Global<ThreadMgr>;
   explicit ThreadMgr(const Plan& plan);
 
-  void CreatePersistenceThrd();
+  void CreatePersistenceThrd(const Plan& plan);
 
   std::vector<Thread*> threads_;
   std::unique_ptr<ThreadPool> compute_thread_pool_;

@@ -35,20 +35,38 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
     threads_.push_back(new CpuThread(thrd_id, info.buf_size(thrd_id)));
     thrd_id += 1;
   }
-  threads_.push_back(new CpuThread(thrd_id, 0));  // comm_net
-  CreatePersistenceThrd();
+  threads_.push_back(new CpuThread(thrd_id++, 0));  // comm_net
+  CreatePersistenceThrd(plan);
   compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
 
-void ThreadMgr::CreatePersistenceThrd() {
-  const auto& thrd_ids_map = ThrdIdGenerator::get().GetThrdIds();
-  int32_t total = 0;
-  for (const auto& pair : thrd_ids_map) { total += pair.second.size(); }
-  threads_.resize(threads_.size() + total);
+void ThreadMgr::CreatePersistenceThrd(const Plan& plan) {
+  const int32_t mdsave_conf_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
+  const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num;
+  std::vector<const TaskProto*> persistence_tasks;
+  for (const TaskProto& task : plan.task()) {
+    if (task.machine_id() != this_machine_id) { continue; }
 
-  for (const auto& pair : thrd_ids_map) {
-    const auto& thrd_ids = pair.second;
-    for (int64_t thrd_id : thrd_ids) { threads_[thrd_id] = new CpuThread(thrd_id, 0); }
+    if (task.task_type() == TaskType::kRecordLoad || task.task_type() == TaskType::kLossPrint
+        || task.task_type() == TaskType::kMdSave || task.task_type() == TaskType::kPrint
+        || task.task_type() == TaskType::kAccuracyPrint) {
+      auto key = std::make_pair(this_machine_id, task.task_type());
+
+      if (task.task_type() == TaskType::kMdSave
+          && machine_task_type2thrd_num[key] >= mdsave_conf_num)
+        continue;
+
+      persistence_tasks.push_back(&task);
+      machine_task_type2thrd_num[key]++;
+    }
+  }
+
+  ThrdIdGenerator generator(machine_task_type2thrd_num);
+  for (const TaskProto* task : persistence_tasks) {
+    int64_t thrd_id = generator.GenerateThrdId(this_machine_id, task->task_type());
+    threads_.push_back(new CpuThread(thrd_id, 0));
   }
 }
+
 }  // namespace oneflow

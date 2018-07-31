@@ -12,7 +12,7 @@ int64_t IDMgr::GetGpuMixThrdId(int64_t dev_phy_id) const {
 int64_t IDMgr::GetCpuDeviceThrdId(int64_t dev_phy_id) const {
   return gpu_device_num_ * 4 + dev_phy_id;
 }
-int64_t IDMgr::CommNetThrdId() const { return gpu_device_num_ * 4 + cpu_device_num_ + 1; }
+int64_t IDMgr::CommNetThrdId() const { return gpu_device_num_ * 4 + cpu_device_num_; }
 
 int64_t IDMgr::NewTaskId(int64_t machine_id, int64_t thrd_id, int64_t local_work_stream_id) {
   int64_t machine_thrd_id = GetMachineThrdId(machine_id, thrd_id);

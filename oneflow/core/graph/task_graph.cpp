@@ -59,33 +59,28 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
 void TaskGraph::GeneratePersistenceThrdId(
     const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes) {
-  std::multimap<std::pair<int32_t, int32_t>, int32_t> machine_task_type2thrd_num;
+  HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num;
 
   // get the thread number in a machine with the task_type
   const int32_t mdsave_conf_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
-  int32_t mdsave_num = 0;
   for (const auto pair : persistence_nodes) {
     int64_t machine_id = pair.first;
     CompTaskNode* task_node = pair.second;
-    if (task_node->GetTaskType() == TaskType::kMdSave) { mdsave_num++; }
+    auto key = std::make_pair(machine_id, task_node->GetTaskType());
 
-    if (mdsave_num > mdsave_conf_num) continue;
+    if (task_node->GetTaskType() == TaskType::kMdSave
+        && machine_task_type2thrd_num[key] >= mdsave_conf_num)
+      continue;
 
-    machine_task_type2thrd_num.emplace(std::make_pair(machine_id, task_node->GetTaskType()), 0);
-  }
-
-  for (auto it = machine_task_type2thrd_num.begin(), end = machine_task_type2thrd_num.end();
-       it != end; it = machine_task_type2thrd_num.upper_bound(it->first)) {
-    auto rng = machine_task_type2thrd_num.equal_range(it->first);
-    int thrd_num_of_machine_task_type = std::distance(rng.first, rng.second);
-    ThrdIdGenerator::get().AddThrdNum(it->first, thrd_num_of_machine_task_type);
+    machine_task_type2thrd_num[key]++;
   }
 
   // generate thread id
+  ThrdIdGenerator generator(machine_task_type2thrd_num);
   for (const auto pair : persistence_nodes) {
     int64_t machine_id = pair.first;
     CompTaskNode* task_node = pair.second;
-    int64_t thrd_id = ThrdIdGenerator::get().GenerateThrdId(machine_id, task_node->GetTaskType());
+    int64_t thrd_id = generator.GenerateThrdId(machine_id, task_node->GetTaskType());
     task_node->set_thrd_id(thrd_id);
   }
 }
