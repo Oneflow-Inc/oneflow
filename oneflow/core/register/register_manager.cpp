@@ -85,8 +85,6 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   const int64_t regst_desc_id = regst_desc_proto.regst_desc_id();
   const RegstDescTypeProto& regst_desc_type = regst_desc_proto.regst_desc_type();
   const RtRegstDesc* rt_regst_desc = regst_desc_id2rt_regst_desc_.at(regst_desc_id).get();
-  MemoryCase host_mem_case;
-  host_mem_case.mutable_host_mem();
   char* main_mem_ptr = nullptr;
   if (regst_desc_id2main_mem_ptr_.find(regst_desc_id) != regst_desc_id2main_mem_ptr_.end()) {
     main_mem_ptr = regst_desc_id2main_mem_ptr_.at(regst_desc_id);
@@ -96,6 +94,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
       lbis.push_back(pair.lbi());
     }
+    std::sort(lbis.begin(), lbis.end());
     CHECK(!lbis.empty());
     CHECK(main_mem_ptr != nullptr);
   }
@@ -103,32 +102,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     Regst* regst = new Regst;
     regst->set_regst_desc(rt_regst_desc);
     if (regst_desc_type.has_data_regst_desc()) {
-      std::sort(lbis.begin(), lbis.end());
-      size_t separated_mem_size = rt_regst_desc->SeparatedByteSize4OneRegst();
-      const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
-      char* cur_body_pointer = nullptr;
-      char* cur_header_pointer = nullptr;
-      if (separated_mem_size > 0) {
-        char* separated_mem_ptr =
-            Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_mem_size);
-        regst->packed_blob_.reset(
-            new Blob(regst, packed_blob_desc, separated_mem_ptr, main_mem_ptr));
-        cur_header_pointer = separated_mem_ptr;
-        cur_body_pointer = main_mem_ptr;
-      } else {
-        regst->packed_blob_.reset(new Blob(regst, packed_blob_desc, main_mem_ptr));
-        cur_header_pointer = main_mem_ptr;
-        cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
-      }
-      for (const LogicalBlobId& lbi : lbis) {
-        const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi);
-        std::unique_ptr<Blob> blob_ptr(
-            new Blob(regst, blob_desc, cur_header_pointer, cur_body_pointer));
-        InitOFRecordBlobIfNeed(blob_ptr.get());
-        CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
-        cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
-        cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
-      }
+      NewBlobsInOneRegst(lbis, regst, rt_regst_desc, main_mem_ptr);
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
@@ -141,6 +115,36 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       UNIMPLEMENTED();
     }
     OneRegstDone(regst);
+  }
+}
+
+void RegstMgr::NewBlobsInOneRegst(const std::vector<LogicalBlobId>& lbis, Regst* regst,
+                                  const RtRegstDesc* rt_regst_desc, char* main_mem_ptr) {
+  size_t separated_mem_size = rt_regst_desc->SeparatedByteSize4OneRegst();
+  const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
+  char* cur_body_pointer = nullptr;
+  char* cur_header_pointer = nullptr;
+  if (separated_mem_size > 0) {
+    MemoryCase host_mem_case;
+    host_mem_case.mutable_host_mem();
+    char* separated_mem_ptr =
+        Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_mem_size);
+    regst->packed_blob_.reset(new Blob(regst, packed_blob_desc, separated_mem_ptr, main_mem_ptr));
+    cur_header_pointer = separated_mem_ptr;
+    cur_body_pointer = main_mem_ptr;
+  } else {
+    regst->packed_blob_.reset(new Blob(regst, packed_blob_desc, main_mem_ptr));
+    cur_header_pointer = main_mem_ptr;
+    cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
+  }
+  for (const LogicalBlobId& lbi : lbis) {
+    const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi);
+    std::unique_ptr<Blob> blob_ptr(
+        new Blob(regst, blob_desc, cur_header_pointer, cur_body_pointer));
+    InitOFRecordBlobIfNeed(blob_ptr.get());
+    CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
+    cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
+    cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
   }
 }
 
