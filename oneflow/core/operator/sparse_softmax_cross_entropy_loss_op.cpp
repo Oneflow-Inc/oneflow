@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/sparse_softmax_cross_entropy_loss_op.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -22,7 +23,7 @@ void SparseSoftmaxCrossEntropyLossOp::VirtualInferBlobDescs(
   BlobDesc* prob_blob_desc = GetBlobDesc4BnInOp("prob");
   prob_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   prob_blob_desc->set_data_type(pred_blob_desc->data_type());
-  *buf_size = pred_blob_desc->ByteSizeOfDataContentField();
+  *buf_size = RtBlobDesc(*pred_blob_desc).ByteSizeOfDataContentField();
 }
 
 REGISTER_OP(OperatorConf::kSparseSoftmaxCrossEntropyLossConf, SparseSoftmaxCrossEntropyLossOp);

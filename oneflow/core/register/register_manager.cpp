@@ -105,7 +105,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     if (regst_desc_type.has_data_regst_desc()) {
       std::sort(lbis.begin(), lbis.end());
       size_t separated_mem_size = rt_regst_desc->TotalSeparatedByteSize4AllRegst();
-      const BlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
+      const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
       char* cur_body_pointer = nullptr;
       char* cur_header_pointer = nullptr;
       if (separated_mem_size > 0) {
@@ -121,7 +121,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
         cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
       }
       for (const LogicalBlobId& lbi : lbis) {
-        const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
+        const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi);
         std::unique_ptr<Blob> blob_ptr(
             new Blob(regst, blob_desc, cur_header_pointer, cur_body_pointer));
         InitOFRecordBlobIfNeed(blob_ptr.get());
@@ -145,7 +145,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
 }
 
 void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
-  const BlobDesc& blob_desc = blob_ptr->blob_desc();
+  const RtBlobDesc& blob_desc = blob_ptr->blob_desc();
   if (blob_desc.data_type() == kOFRecord) {
     int64_t elem_cnt = blob_desc.shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
