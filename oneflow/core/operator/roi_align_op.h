@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_ROI_POOLING_OP_H_
-#define ONEFLOW_CORE_OPERATOR_ROI_POOLING_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_ROI_ALIGN_OP_H_
+#define ONEFLOW_CORE_OPERATOR_ROI_ALIGN_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class RoIPoolingOp final : public Operator {
+class RoIAlignOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(RoIPoolingOp);
-  RoIPoolingOp() = default;
-  ~RoIPoolingOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(RoIAlignOp);
+  RoIAlignOp() = default;
+  ~RoIAlignOp() = default;
 
   const PbMessage& GetCustomizedConf() const override;
 
@@ -21,4 +21,4 @@ class RoIPoolingOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_ROI_POOLING_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_ROI_ALIGN_OP_H_
