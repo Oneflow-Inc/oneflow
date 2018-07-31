@@ -68,40 +68,6 @@ void BlobDesc::ToProto(BlobDescProto* proto) const {
   body_field_.ToProto(proto->mutable_body());
 }
 
-size_t BlobDesc::ByteSizeOfBlobHeader() const {
-  if (header_is_opaque_) {
-    return opaque_header_.ByteSize();
-  } else {
-    return ByteSizeOfDataIdField() + ByteSizeOfColNumField();
-  }
-}
-
-size_t BlobDesc::ByteSizeOfBlobBody() const {
-  return RoundUp(ByteSizeOfDataContentField(), kCudaAlignSize);
-}
-
-size_t BlobDesc::ByteSizeOfDataIdField() const {
-  if (has_data_id_field()) {
-    return shape().At(0) * Global<JobDesc>::Get()->SizeOfOneDataId();
-  } else {
-    return 0;
-  }
-}
-
-size_t BlobDesc::ByteSizeOfColNumField() const {
-  if (has_col_num_field()) {
-    return shape().At(0) * sizeof(int32_t);
-  } else {
-    return 0;
-  }
-}
-
-size_t BlobDesc::ByteSizeOfDataContentField() const {
-  return shape().elem_cnt() * GetSizeOfDataType(data_type());
-}
-
-size_t BlobDesc::TotalByteSize() const { return ByteSizeOfBlobHeader() + ByteSizeOfBlobBody(); }
-
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
   return header_is_opaque_ == rhs.header_is_opaque_ && opaque_header_ == rhs.opaque_header_
          && has_data_id_ == rhs.has_data_id_ && has_col_num_ == rhs.has_col_num_

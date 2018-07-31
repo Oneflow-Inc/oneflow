@@ -47,17 +47,9 @@ class BlobDesc {
   void ToProto(BlobDescProto* proto) const;
 
  private:
+  void HeaderToProto(BlobDescProto* proto) const;
   void DataIdFieldToProto(FieldHeaderDesc* proto) const;
   void ColNumFieldToProto(FieldHeaderDesc* proto) const;
-
-  void HeaderToProto(BlobDescProto* proto) const;
-
-  size_t ByteSizeOfBlobHeader() const;
-  size_t ByteSizeOfBlobBody() const;
-  size_t ByteSizeOfDataIdField() const;
-  size_t ByteSizeOfColNumField() const;
-  size_t ByteSizeOfDataContentField() const;
-  size_t TotalByteSize() const;
 
   bool header_is_opaque_;
   FieldDesc opaque_header_;

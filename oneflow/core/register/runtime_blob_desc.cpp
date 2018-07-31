@@ -50,13 +50,9 @@ bool RtBlobDesc::has_data_id_field() const { return HasField("data_id"); }
 bool RtBlobDesc::has_col_num_field() const { return HasField("col_num"); }
 
 size_t RtBlobDesc::ByteSizeOfBlobHeader() const {
-  if (HasField("opaque_header")) {
-    return ByteSizeOfField("opaque_header");
-  } else {
-    size_t header_size = 0;
-    for (auto& pair : header_desc_) { header_size += ByteSizeOfField(pair.first); }
-    return header_size;
-  }
+  size_t header_size = 0;
+  for (auto& pair : header_desc_) { header_size += ByteSizeOfField(pair.first); }
+  return header_size;
 }
 
 size_t RtBlobDesc::ByteSizeOfBlobBody() const { return body_desc_.AlignedByteSize(); }
