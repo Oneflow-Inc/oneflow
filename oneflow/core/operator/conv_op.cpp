@@ -289,6 +289,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
                               GetValFromCustomizedConf<std::string>("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(), GetCustomizedConf());
 
+  // find best algorithm for forward
   auto GetFwdAlgoMaxCnt = [&](int* num) {
     CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(*cuda_handle.cudnn_handle(), num));
   };
@@ -301,6 +302,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
   FindBestConvAlgo<cudnnConvolutionFwdAlgoPerf_t, decltype(conv_ctx->fwd_algo)>(
       GetFwdAlgoMaxCnt, FindFwdAlgoHandler, &conv_ctx->fwd_algo);
 
+  // find best algorithm for backward filter
   auto GetBwdFilterAlgoMaxCnt = [&](int* num) {
     CudaCheck(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(*cuda_handle.cudnn_handle(), num));
   };
@@ -313,6 +315,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
   FindBestConvAlgo<cudnnConvolutionBwdFilterAlgoPerf_t, decltype(conv_ctx->bwd_filter_algo)>(
       GetBwdFilterAlgoMaxCnt, FindBwdFilterAlgoHandler, &conv_ctx->bwd_filter_algo);
 
+  // find best algorithm for backward data
   auto GetBwdDataAlgoMaxCnt = [&](int* num) {
     CudaCheck(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(*cuda_handle.cudnn_handle(), num));
   };
@@ -325,10 +328,6 @@ void ConvOp<NDims>::InferCudnnAlgo(
   FindBestConvAlgo<cudnnConvolutionBwdDataAlgoPerf_t, decltype(conv_ctx->bwd_data_algo)>(
       GetBwdDataAlgoMaxCnt, FindBwdDataAlgoHandler, &conv_ctx->bwd_data_algo);
 
-  CudaCheck(cudnnGetConvolutionBackwardDataAlgorithm(
-      *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(), conv_desc.Get(),
-      in_desc.Get(), CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT, cudnn_buf_limit_byte(),
-      &conv_ctx->bwd_data_algo));
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(), conv_desc.Get(),
       out_desc.Get(), conv_ctx->fwd_algo, &conv_ctx->fwd_ws_size));
