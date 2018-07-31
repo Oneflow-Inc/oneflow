@@ -3,17 +3,43 @@ LABEL Author="xxmyjk <xxmyj.k@gmail.com>"
 
 USER root
 
+COPY ./bin /opt/bin
+COPY ./hadoop /opt/conf/
+COPY ./start.sh /opt/
+
 RUN apt update && \
     apt install -y \
+    python \
     python-pip \
+    wget \
+    curl \
     cmake \
     git \
     libibverbs-dev \
     nasm \
     openjdk-8-jdk \
-    clang-format-5.0
+    clang-format-5.0 \
+    vim \
+    openssh-client \
+    openssh-server
+
+
+RUN pip install /opt/bin/of_submit-1.0-py2-none-any.whl && \
+    tar zxvf /opt/bin/hadoop-2.8.1.tar.gz -C /opt/
+
+RUN rm -f /opt/of_submit-1.0-py2-none-any.whl /opt/hadoop-2.8.1.tar.gz
+RUN apt-get clean
+
+RUN ssh-keygen -C "root" -N "" -f /root/.ssh/id_rsa && cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
 
 ENV LD_LIBRARY_PATH="/usr/lib:${LD_LIBRARY_PATH}"
-ENV JAVA_HOME="/etc/alternatives/java-8-openjdk-amd64"
+ENV JAVA_HOME="/usr/lib/jvm/java-1.8.0-openjdk-amd64"
+ENV PATH="${PATH}:/opt/hadoop-2.8.1/bin:/opt/bin"
+ENV HADOOP_HOME="/opt/hadoop-2.8.1"
+ENV HADOOP_CONF_DIR="${HADOOP_HOME}/etc/hadoop"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${JAVA_HOME}/lib/amd64/server:${HADOOP_HOME}/lib/native"
+
+COPY ./hadoop/* ${HADOOP_HOME}/etc/hadoop/
+COPY ./start.sh /opt/
 
 WORKDIR /opt
