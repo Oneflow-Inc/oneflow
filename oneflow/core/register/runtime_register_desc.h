@@ -27,6 +27,7 @@ class RtRegstDesc {
   size_t TotalByteSize4AllRegst() const;
   size_t TotalMainByteSize4AllRegst() const;
   size_t TotalSeparatedByteSize4AllRegst() const;
+  size_t SeparatedByteSize4OneRegst() const;
   size_t MainByteSize4OneRegst() const;
 
  private:

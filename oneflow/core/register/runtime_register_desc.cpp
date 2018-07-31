@@ -51,8 +51,12 @@ size_t RtRegstDesc::MainByteSize4OneRegst() const {
 }
 
 size_t RtRegstDesc::TotalSeparatedByteSize4AllRegst() const {
+  return SeparatedByteSize4OneRegst() * register_num_;
+}
+
+size_t RtRegstDesc::SeparatedByteSize4OneRegst() const {
   if (mem_case_.has_device_cuda_mem()) {
-    return packed_blob_desc_->ByteSizeOfBlobHeader() * register_num_;
+    return packed_blob_desc_->ByteSizeOfBlobHeader();
   } else {
     return 0;
   }

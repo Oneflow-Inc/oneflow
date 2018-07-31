@@ -104,7 +104,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     regst->set_regst_desc(rt_regst_desc);
     if (regst_desc_type.has_data_regst_desc()) {
       std::sort(lbis.begin(), lbis.end());
-      size_t separated_mem_size = rt_regst_desc->TotalSeparatedByteSize4AllRegst();
+      size_t separated_mem_size = rt_regst_desc->SeparatedByteSize4OneRegst();
       const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
       char* cur_body_pointer = nullptr;
       char* cur_header_pointer = nullptr;
