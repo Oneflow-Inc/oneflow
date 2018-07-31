@@ -140,7 +140,7 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
     kernel_conf->set_need_do_col_num(true);
   }
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::IsPackedHeader)) {
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_packed_header(true);
   }
 

@@ -39,7 +39,15 @@ BlobDesc::BlobDesc(int64_t header_byte_size, int64_t body_byte_size, int32_t max
       body_field_(Shape({body_byte_size}), DataType::kChar) {
   CHECK_GE(header_byte_size, 0);
 }
+void BlobDesc::set_has_data_id_field(bool val) {
+  CHECK(!header_is_opaque_);
+  has_data_id_ = val;
+}
 
+void BlobDesc::set_has_col_num_field(bool val) {
+  CHECK(!header_is_opaque_);
+  has_col_num_ = val;
+}
 void BlobDesc::DataIdFieldToProto(FieldHeaderDesc* proto) const {
   FieldDesc data_id_field(
       Shape({body_field_.shape().At(0), Global<JobDesc>::Get()->SizeOfOneDataId()}),
