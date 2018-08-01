@@ -101,7 +101,8 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
       if (TryAddLbiToB121RegstAndBindIt(cur_node, obn, "out") == false) {
-        CHECK(found_lbis.find(lbi) != found_lbis.end());
+        CHECK(found_lbis.find(lbi) != found_lbis.end())
+            << "op name: " << lbi.op_name() << " blob name: " << lbi.blob_name();
       }
     }
   });
