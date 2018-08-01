@@ -50,7 +50,6 @@ void RegstDesc::Lock() {
     }
     return ret;
   });
-  ;
 }
 
 void RegstDesc::CopyBlobDescFrom(const RegstDesc* rhs) {
