@@ -25,7 +25,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   int64_t FilterSortedIndexByThreshold(const T* scores_ptr, const float score_thresh,
                                        const int32_t* pre_nms_index_slice, const int64_t num) const;
   void BboxVoting(int64_t class_index, int32_t voter_num,
-                  std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                  std::function<Blob*(const std::string&)> BnInOp2Blob, bool need_calc_area) const;
   void NmsAndTryVote(int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   int64_t Limit(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void WriteOutputToOFRecord(int64_t image_index, int64_t limit_num,

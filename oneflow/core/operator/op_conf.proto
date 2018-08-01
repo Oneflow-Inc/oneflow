@@ -645,6 +645,7 @@ message ProposalTargetOpConf
   optional BboxNormalizeStdsConf bbox_normalize_stds = 17; 
   required int32 class_num = 18;
 }
+
 enum ScoringMethod {
  kIdentity = 0;
  kTempAvg = 1;
@@ -653,13 +654,14 @@ enum ScoringMethod {
  kGeneralizedAvg = 4;
  kQuasiSum = 5;
 }
+
 message BboxVoteConf {
  optional float beta = 1 [default = 1.0];
  optional int32 thresh = 2 [default = 1];
  optional ScoringMethod scoring_method = 3 [default = kIdentity];
 }
-message BboxNmsAndLimitOpConf
-{
+
+message BboxNmsAndLimitOpConf {
   required string rois = 1;
   required string bbox_delta = 2;
   required string scores = 3;
@@ -756,10 +758,10 @@ message OperatorConf {
     RecordLoadOpConf record_load_conf = 404;
     AccuracyOpConf accuracy_conf = 405;
     AccuracyPrintOpConf accuracy_print_conf = 406;
-    ProposalTargetOpConf proposal_target_conf=410;
     RoIPoolingOpConf roi_pooling_conf = 407;
     SmoothL1LossOpConf smooth_l1_loss_conf = 408;
     ProposalOpConf proposal_conf = 409;
+    ProposalTargetOpConf proposal_target_conf=411;
     BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
   }
 }

@@ -1,7 +1,7 @@
 #include "oneflow/core/kernel/bbox_nms_and_limit_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/data_type.h"
-//#include "oneflow/core/kernel/faster_rcnn_util.h"
+#include "oneflow/core/kernel/faster_rcnn_util.h"
 #include <math.h>
 
 namespace oneflow {
@@ -80,6 +80,7 @@ void BboxNmsAndLimitKernel<T>::SortClassBoxIndexByScore(const T* score_ptr, cons
   std::sort(pre_nms_index_slice, pre_nms_index_slice + box_num,
             [&](int32_t lhs, int32_t rhs) { return score_ptr[lhs] > score_ptr[rhs]; });
 }
+
 template<typename T>
 void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
     const int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -137,11 +138,87 @@ int64_t BboxNmsAndLimitKernel<T>::FilterSortedIndexByThreshold(const T* scores_p
   }
   return num;
 }
+
 template<typename T>
-void BboxNmsAndLimitKernel<T>::BboxVoting(
-    int64_t class_index, int32_t voter_num,
-    std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t class_index, int32_t voter_num,
+                                          std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                          bool need_calc_area) const {
+  Blob* bbox_blob = BnInOp2Blob("bbox");
+  int64_t bbox_num = bbox_blob->shape().At(1);
+  const int32_t votee_num = BnInOp2Blob("post_nms_keep_num")->dptr<int32_t>()[class_index];
+  const int32_t* voter_index_ptr =
+      BnInOp2Blob("pre_nms_index_slice")->dptr<int32_t>() + class_index * bbox_num;
+  const int32_t* votee_index_ptr =
+      BnInOp2Blob("post_nms_index_slice")->dptr<int32_t>() + class_index * bbox_num;
+  const BboxVoteConf& vote_conf = op_conf().bbox_nms_and_limit_conf().bbox_vote();
+  float voting_thresh = vote_conf.thresh();
+  float beta = vote_conf.beta();
+  ScoringMethod scoring_method = vote_conf.scoring_method();
+  // calc area as needed
+  int32_t* area_ptr = BnInOp2Blob("nms_area_tmp")->mut_dptr<int32_t>();
+  const T* const_bbox_ptr = bbox_blob->dptr<T>();
+  if (need_calc_area) {
+    FOR_RANGE(int32_t, i, 0, voter_num) {
+      int32_t index = voter_index_ptr[i];
+      const T* bbox = const_bbox_ptr + index * 4;
+      area_ptr[i] = (bbox[2] - bbox[0] + 1) * (bbox[3] - bbox[1] + 1);
+    }
+  }
+  // voting bbox and score
+  const T* score_ptr = BnInOp2Blob("scores")->dptr<T>();
+  T* voting_score_ptr = BnInOp2Blob("voting_score")->mut_dptr<T>();
+  T* bbox_ptr = bbox_blob->mut_dptr<T>();
+  FOR_RANGE(int64_t, i, 0, votee_num) {
+    const int32_t votee_index = votee_index_ptr[i];
+    T* votee_bbox = bbox_ptr + votee_index * 4;
+    const int32_t votee_area =
+        (votee_bbox[2] - votee_bbox[0] + 1) * (votee_bbox[3] - votee_bbox[1] + 1);
+    int32_t valid_voter_num = 0;
+    T score_weighted_bbox_sum[4] = {0, 0, 0, 0};
+    T score_sum = 0;
+    // used by iou avg scoring
+    float iou_weighted_score_sum = 0;
+    float iou_sum = 0;
+    // used by generalized avg scoring
+    float generalized_score_sum = 0;
+    FOR_RANGE(int64_t, j, 0, voter_num) {
+      const int32_t voter_index = voter_index_ptr[j];
+      const int32_t voter_area = area_ptr[j];
+      const T voter_score = score_ptr[voter_index];
+      const T* voter_bbox = const_bbox_ptr + voter_index * 4;
+      const float iou =
+          FasterRcnnUtil<T>::InterOverUnion(votee_bbox, votee_area, voter_bbox, voter_area);
+      if (iou >= voting_thresh) {
+        ++valid_voter_num;
+        FOR_RANGE(int32_t, k, 0, 4) { score_weighted_bbox_sum[k] += voter_bbox[k] * voter_score; }
+        score_sum += voter_score;
+        if (scoring_method == kIouAvg) {
+          iou_weighted_score_sum += voter_score * iou;
+          iou_sum += iou;
+        } else if (scoring_method == kGeneralizedAvg) {
+          generalized_score_sum += std::pow<float>(voter_score, beta);
+        }
+      }
+    }
+    FOR_RANGE(int32_t, k, 0, 4) { votee_bbox[k] += score_weighted_bbox_sum[k] / score_sum; }
+    T voting_score = score_ptr[votee_index];
+    switch (scoring_method) {
+      case kIdentity:
+        // do nothing
+        break;
+      case kTempAvg: TODO(); break;
+      case kAvg: voting_score = score_sum / valid_voter_num; break;
+      case kIouAvg: voting_score = static_cast<T>(iou_weighted_score_sum / iou_sum); break;
+      case kGeneralizedAvg:
+        voting_score = std::pow<T>(generalized_score_sum / valid_voter_num, 1.f / beta);
+        break;
+      case kQuasiSum:
+        voting_score = static_cast<T>(score_sum / std::pow<float>(valid_voter_num, beta));
+        break;
+      default: UNIMPLEMENTED(); break;
+    }
+    voting_score_ptr[votee_index] = voting_score;
+  }
 }
 
 template<typename T>
@@ -176,7 +253,7 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     post_nms_keep_num_ptr[i] =
         Nms(bbox_ptr, pre_nms_index_slice_ptr, pre_nms_keep_num, pre_nms_keep_num,
             conf.nms_threshold(), nms_area_tmp_ptr, post_nms_index_slice_ptr);
-    if (conf.bbox_vote_enabled()) { BboxVoting(i, post_nms_keep_num_ptr[i], BnInOp2Blob); }
+    if (conf.bbox_vote_enabled()) { BboxVoting(i, post_nms_keep_num_ptr[i], BnInOp2Blob, false); }
   }
 }
 
