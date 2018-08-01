@@ -24,7 +24,7 @@ class LossOp : public Operator {
   virtual void VirtualInitFromOpConf() {}
   virtual void VirtualInferBlobDescs(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx, size_t* buf_size) const {}
+      const ParallelContext* parallel_ctx) const {}
   virtual LossKernelConf* GetMutLossKernelConf(KernelConf*) const = 0;
 
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
