@@ -262,8 +262,8 @@ void TaskNode::FixRegisterNumRange() {
         break;
       }
     }
-    if (in_same_stream == false
-        && area_id_ != static_cast<int64_t>(kMdUpdtArea)) {  // TODO: delete this hack
+    if (in_same_stream == false && area_id_ != static_cast<int64_t>(kMdUpdtArea)
+        && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
