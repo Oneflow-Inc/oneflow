@@ -14,6 +14,20 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_col_num_(has_col_num),
       max_col_num_(max_col_num),
       body_field_(shape, data_type) {}
+BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
+  max_col_num_ = proto.header().max_col_num();
+  if (proto.header().has_opaque_header()) {
+    header_is_opaque_ = true;
+    has_data_id_ = false;
+    has_col_num_ = false;
+    opaque_header_ = FieldDesc(proto.header().opaque_header());
+  } else {
+    CHECK(proto.header().has_field_header());
+    header_is_opaque_ = false;
+    has_data_id_ = proto.header().field_header().has_data_id();
+    has_col_num_ = proto.header().field_header().has_col_num();
+  }
+}
 
 BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_type,
                    int32_t max_col_num)

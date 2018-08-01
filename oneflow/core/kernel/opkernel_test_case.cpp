@@ -349,13 +349,10 @@ void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
 void OpKernelTestCase::UpdateGlobalJobDesc() { TODO(); }
 
 void OpKernelTestCase::InitBeforeRun() {
-  TODO();
-  /*
   for (const auto& pair : bn_in_op2blob_) {
     BlobDesc blob_desc(pair.second->blob_desc().blob_desc_proto());
     bn_in_op2blob_desc_[pair.first] = blob_desc;
   }
-  */
   SwitchBuildKernelCtx(SwitchCase(default_device_type()), &kernel_ctx_);
 }
 
