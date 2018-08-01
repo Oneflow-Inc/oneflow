@@ -31,8 +31,6 @@ class Operator {
   virtual bool IsElemWiseOp() const { return false; }
 
   ActivationType GetActivationType() const;
-  // void SetBackwardActivation(const ActivationType activation) { backward_activation_ =
-  // activation; }
 
   virtual LogicalNode* NewProperLogicalNode();
 
