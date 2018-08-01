@@ -10,7 +10,7 @@ class RoIResizeKernel : public KernelIf<device_type> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RoIResizeKernel);
   RoIResizeKernel() = default;
-  ~RoIResizeKernel() = default;
+  virtual ~RoIResizeKernel() = default;
 
  private:
   void ForwardDataId(const KernelCtx& ctx,
