@@ -215,7 +215,7 @@ bool NormalBackwardCompTaskNode::IsBwClone() const {
 void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   CHECK(model_diff_regst->IsLocked());
-  Shape& shape = model_diff_regst->MutPackedBlobDesc()->mut_shape();
+  Shape& shape = model_diff_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
   CHECK_EQ(1, shape.NumAxes());
   shape = Shape({RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num())});
 }
