@@ -1,17 +1,17 @@
 #include "oneflow/core/kernel/bbox_nms_and_limit_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/faster_rcnn_util.h"
 #include <math.h>
 
 namespace oneflow {
 
 namespace {
 
-void IndexMemContinuous(int32_t* post_nms_index_slice_ptr,int32_t* post_nms_keep_num_ptr,int32_t class_num,int32_t box_num)
-{
+void IndexMemContinuous(int32_t* post_nms_index_slice_ptr, const int32_t class_num, const int32_t box_num, const int32_t* post_nms_keep_num_ptr) {
   int32_t keep_index = 0;
-  FOR_RANGE(int32_t, i, 1, class_num){
-    FOR_RANGE(int32_t, j, 0, post_nms_keep_num_ptr[i]){
-      post_nms_index_slice_ptr[keep_index++] = post_nms_index_slice_ptr[i*box_num+j];
+  FOR_RANGE(int32_t, i, 1, class_num) {
+    FOR_RANGE(int32_t, j, 0, post_nms_keep_num_ptr[i]) {
+      post_nms_index_slice_ptr[keep_index++] = post_nms_index_slice_ptr[i * box_num + j];
     }
   }
 }
@@ -21,12 +21,13 @@ void IndexMemContinuous(int32_t* post_nms_index_slice_ptr,int32_t* post_nms_keep
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FOR_RANGE(int32_t, i, 0, images_num) {
-    BroadCastBboxTransform(i,BnInOp2Blob);
+  int32_t image_num = BnInOp2Blob("bbox")->shape().At(0);    
+  FOR_RANGE(int32_t, i, 0, image_num) {
+    BroadCastBboxTransform(i, BnInOp2Blob);
     ClipBox(BnInOp2Blob("bbox"));
-    NmsAndTryVote(i,BnInOp2Blob);
-    Limit(i,BnInOp2Blob);
-    WriteOutputToOFRecord(i,BnInOp2Blob);
+    NmsAndTryVote(i, BnInOp2Blob);
+    int32_t keep_num_per_im = Limit(i, BnInOp2Blob);
+    WriteOutputToOFRecord(i, keep_num_per_im, BnInOp2Blob);
   }
 }
 template<typename T>
@@ -95,20 +96,17 @@ int32_t BboxNmsAndLimitKernel<T>::FilterSortedIndexByThreshold(const T* scores_p
 template<typename T>
 void BboxNmsAndLimitKernel<T>::NmsAndTryVote(int32_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob){
   int32_t score_offset = im_index * box_num * class_num;
-  // scores_blob: (im, box_num, class_num)
+  // scores_blob: (im, box_num, class_num)  pre_nms_index_slice_blob: (cls_num, roi)
+  // post_nms_index_slice_blob: (cls_num, roi) post_nms_keep_num_blob: (cls_num) nms_area_tmp_blob: (cls_num)
   const Blob* scores_blob = BnInOp2Blob("scores");
   const T* scores_ptr = scores_blob->dptr<T>() + score_offset;  
-  // pre_nms_index_slice_blob: (cls_num, roi)
   Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice"); 
-  // post_nms_index_slice_blob: (cls_num, roi)
   Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice"); 
-  // post_nms_keep_num_blob: (cls_num)
   int32_t* post_nms_keep_num_ptr = BnInOp2Blob("post_nms_keep_num")->mut_dptr<int32_t>();
-  // nms_area_tmp_blob: (cls_num)
   int32_t* nms_area_tmp_ptr = BnInOp2Blob("nms_area_tmp")->mut_dptr<int32_t>();
   int32_t box_num = scores_blob->shape().At(1);
   int32_t class_num = scores_blob->shape().At(2);
-  FOR_RANGE(int32_t, i, 1, class_num) {  // just foreground
+  FOR_RANGE(int32_t, i, 1, class_num) {  // just foreground, class index start from 1
     int32_t index_offset = i * box_num;
     int32_t* pre_nms_index_slice_ptr = pre_nms_index_slice_blob->mut_dptr<int32_t>() + index_offset;
     int32_t* post_nms_index_slice_ptr = post_nms_index_slice_blob->mut_dptr<int32_t>() + index_offset;      
@@ -123,11 +121,11 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(int32_t im_index, std::function<Blo
   }
 }
 template<typename T>
-void BboxNmsAndLimitKernel<T>::Limit(std::function<Blob*(const std::string&)> BnInOp2Blob){  
+int32_t BboxNmsAndLimitKernel<T>::Limit(std::function<Blob*(const std::string&)> BnInOp2Blob){  
   int32_t class_num = BnInOp2Blob("post_nms_keep_num")->shape().elem_cnt();
   int32_t* post_nms_keep_num_ptr = BnInOp2Blob("post_nms_keep_num")->mut_dptr<int32_t>();
   // votting_score_blob: (im, box_num, class_num)
-  T* scores_ptr = BnInOp2Blob("votting_score")->mut_dptr<T>();
+  T* votting_score_ptr = BnInOp2Blob("votting_score")->mut_dptr<T>();
   int32_t keep_num_per_im = 0;
   FOR_RANGE(int32_t, i, 1, class_num) {
     keep_num_per_im += post_nms_keep_num_ptr[i];
@@ -136,8 +134,13 @@ void BboxNmsAndLimitKernel<T>::Limit(std::function<Blob*(const std::string&)> Bn
       int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->mut_dptr<int32_t>();
       IndexMemContinuous(post_nms_index_slice_ptr, post_nms_keep_num_ptr, class_num, box_num);
       std::sort(pre_nms_index_slice, pre_nms_index_slice + keep_num_per_im,
-            [&](int32_t lhs, int32_t rhs) { return score_ptr[lhs] > score_ptr[rhs]; });
+            [&](int32_t lhs, int32_t rhs) { return votting_score_ptr[lhs] > votting_score_ptr[rhs]; });
+      keep_num_per_im = conf.detections_per_im();
   }
+  return keep_num_per_im;
+}
+void ResultsWithNmsKernel<T>::WriteOutputToOFRecord(int64_t image_index, in32_t limit_num, std::function<Blob*(const std::string&)> BnInOp2Blob){
+
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBboxNmsAndLimitConf, BboxNmsAndLimitKernel,
