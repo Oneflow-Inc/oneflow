@@ -366,7 +366,6 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
       BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
     }
   }
