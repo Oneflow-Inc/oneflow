@@ -38,10 +38,10 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   FOR_RANGE(size_t, i, 0, reduce_scatter_op->output_bns().size()) {
     int64_t dst_dev_index_of_this_machine = i % dev_num_of_each_machine;
     int64_t edge_index_of_this_dst_dev = i / dev_num_of_each_machine;
-
     std::shared_ptr<RegstDesc> out_regst =
         GetProducedRegst("out_" + std::to_string(dst_dev_index_of_this_machine) + "_"
                          + std::to_string(edge_index_of_this_dst_dev));
+    CHECK(out_regst.get());
     const std::string& obn = reduce_scatter_op->output_bns().Get(i);
     out_regst->AddLbi(reduce_scatter_op->BnInOp2Lbi(obn));
     node->BindBnWithRegst(obn, out_regst);
