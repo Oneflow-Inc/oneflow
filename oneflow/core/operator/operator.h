@@ -30,8 +30,9 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  ActivationType GetForwardActivationType() const;
-  void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
+  ActivationType GetActivationType() const;
+  // void SetBackwardActivation(const ActivationType activation) { backward_activation_ =
+  // activation; }
 
   virtual LogicalNode* NewProperLogicalNode();
 
@@ -210,7 +211,7 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
-  ActivationType backward_activation_;
+  ActivationType activation_;
 };
 
 std::string GenDiffBn(const std::string& bn);

@@ -132,8 +132,7 @@ message KernelConf {
   required bool need_do_col_num = 3;
   required bool is_forward = 4;
   required DataType data_type = 5;
-  optional ActivationType forward_activation = 6 [default = kNone];
-  optional ActivationType backward_activation = 7 [default = kNone];
+  required ActivationType activation = 6 [default = kNone];
 
   oneof kernel_type {
     SparseSoftmaxCrossEntropyLossKernelConf sparse_softmax_cross_entropy_loss_conf = 101;
