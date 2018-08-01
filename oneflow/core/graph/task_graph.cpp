@@ -354,10 +354,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
+  int64_t edge_duplicate_num =
+      sorted_src_comp_tasks.front()->logical_node()->parallel_desc()->sorted_machine_ids().size();
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
-        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        for (int64_t i = 0; i < edge_duplicate_num; ++i) {
+          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        }
       }
     }
   }
