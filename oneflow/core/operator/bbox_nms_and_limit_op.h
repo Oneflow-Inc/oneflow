@@ -1,15 +1,15 @@
-#ifndef ONEFLOW_CORE_OPERATOR_RESULTS_WITH_NMS_OP_H_
-#define ONEFLOW_CORE_OPERATOR_RESULTS_WITH_NMS_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_BBOX_NMS_AND_LIMIT_OP_H_
+#define ONEFLOW_CORE_OPERATOR_BBOX_NMS_AND_LIMIT_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
-class ResultsWithNmsOp final : public Operator {
+class BboxNmsAndLimitOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ResultsWithNmsOp);
-  ResultsWithNmsOp() = default;
-  ~ResultsWithNmsOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(BboxNmsAndLimitOp);
+  BboxNmsAndLimitOp() = default;
+  ~BboxNmsAndLimitOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -19,4 +19,4 @@ class ResultsWithNmsOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_RESULTS_WITH_NMS_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_BBOX_NMS_AND_LIMIT_OP_H_
