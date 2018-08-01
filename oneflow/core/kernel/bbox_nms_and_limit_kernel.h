@@ -15,21 +15,22 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void SortClassBoxIndexByScore(const T* score_ptr, const int64_t box_num, const int64_t class_num,
-                                const int64_t class_index, int32_t* pre_nms_index_slice) const;
   void BroadCastBboxTransform(const int64_t im_index,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void ClipBox(Blob* bbox_blob) const;
-  void IndexMemContinuous(const int32_t* post_nms_keep_num_ptr, const int64_t class_num,
-                          const int64_t box_num, int32_t* post_nms_index_slice_ptr) const;
-  int64_t FilterSortedIndexByThreshold(const T* scores_ptr, const float score_thresh,
-                                       const int32_t* pre_nms_index_slice, const int64_t num) const;
-  void BboxVoting(int64_t class_index, int32_t voter_num,
-                  std::function<Blob*(const std::string&)> BnInOp2Blob, bool need_calc_area) const;
   void NmsAndTryVote(int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   int64_t Limit(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   void WriteOutputToOFRecord(int64_t image_index, int64_t limit_num,
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void SortClassBoxIndexByScore(const T* scores_ptr, const int64_t boxes_num,
+                                const int64_t class_num, const int64_t class_index,
+                                int32_t* indics) const;
+  int64_t FilterSortedIndexByThreshold(const int64_t num, const T* scores_ptr,
+                                       const int32_t* indics, const float thresh) const;
+  void BboxVoting(int64_t class_index, int32_t voter_num,
+                  std::function<Blob*(const std::string&)> BnInOp2Blob, bool need_calc_area) const;
+  void IndexMemContinuous(const int32_t* post_nms_keep_num_ptr, const int64_t class_num,
+                          const int64_t box_num, int32_t* post_nms_index_slice_ptr) const;
 };
 
 }  // namespace oneflow

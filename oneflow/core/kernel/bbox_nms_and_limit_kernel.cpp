@@ -6,57 +6,6 @@
 
 namespace oneflow {
 
-namespace {
-
-template<typename T>
-inline int32_t BBoxArea(const T* box) {
-  return (box[2] - box[0] + 1) * (box[3] - box[1] + 1);
-}
-template<typename T>
-inline float InterOverUnion(const T* box0, const int32_t area0, const T* box1,
-                            const int32_t area1) {
-  const int32_t iw = std::min(box0[2], box1[2]) - std::max(box0[0], box1[0]) + 1;
-  if (iw <= 0) { return 0; }
-  const int32_t ih = std::min(box0[3], box1[3]) - std::max(box0[1], box1[1]) + 1;
-  if (ih <= 0) { return 0; }
-  const float inter = iw * ih;
-  return inter / (area0 + area1 - inter);
-}
-// to delete
-template<typename T>
-int32_t Nms(const T* img_proposal_ptr, const int32_t* sorted_score_slice_ptr,
-            const int32_t pre_nms_top_n, const int32_t post_nms_top_n, const float nms_threshold,
-            int32_t* area_ptr, int32_t* post_nms_slice_ptr) {
-  CHECK_NE(sorted_score_slice_ptr, post_nms_slice_ptr);
-  FOR_RANGE(int32_t, i, 0, pre_nms_top_n) {
-    area_ptr[i] = BBoxArea(img_proposal_ptr + sorted_score_slice_ptr[i] * 4);
-  }
-  int32_t keep_num = 0;
-  auto IsSuppressed = [&](int32_t index) -> bool {
-    FOR_RANGE(int32_t, post_nms_slice_i, 0, keep_num) {
-      const int32_t keep_index = post_nms_slice_ptr[post_nms_slice_i];
-      const int32_t area0 = area_ptr[keep_index];
-      const int32_t area1 = area_ptr[index];
-      if (area0 >= area1 * nms_threshold && area1 >= area0 * nms_threshold) {
-        const T* box0 = img_proposal_ptr + sorted_score_slice_ptr[keep_index] * 4;
-        const T* box1 = img_proposal_ptr + sorted_score_slice_ptr[index] * 4;
-        if (InterOverUnion(box0, area0, box1, area1) >= nms_threshold) { return true; }
-      }
-    }
-    return false;
-  };
-  FOR_RANGE(int32_t, sorted_score_slice_i, 0, pre_nms_top_n) {
-    if (IsSuppressed(sorted_score_slice_i)) { continue; }
-    post_nms_slice_ptr[keep_num++] = sorted_score_slice_i;
-    if (keep_num == post_nms_top_n) { break; }
-  }
-  FOR_RANGE(int32_t, i, 0, keep_num) {
-    post_nms_slice_ptr[i] = sorted_score_slice_ptr[post_nms_slice_ptr[i]];
-  }
-  return keep_num;
-}
-}  // namespace
-
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -69,72 +18,88 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     WriteOutputToOFRecord(i, keep_num_per_im, BnInOp2Blob);
   }
 }
-template<typename T>
-void BboxNmsAndLimitKernel<T>::SortClassBoxIndexByScore(const T* score_ptr, const int64_t box_num,
-                                                        const int64_t class_num,
-                                                        const int64_t class_index,
-                                                        int32_t* pre_nms_index_slice) const {
-  // score_ptr : roi_num * class_num, stores score
-  // pre_nms_index_slice : class_num * roi_num, stores index in score_ptr
-  FOR_RANGE(int64_t, i, 0, box_num) { pre_nms_index_slice[i] = class_index + i * class_num; }
-  std::sort(pre_nms_index_slice, pre_nms_index_slice + box_num,
-            [&](int32_t lhs, int32_t rhs) { return score_ptr[lhs] > score_ptr[rhs]; });
-}
 
 template<typename T>
 void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
     const int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // bbox_delta_blob: (im, box_num, class*4)
+  const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
-  int64_t box_num = bbox_delta_blob->shape().At(1);
-  int64_t class_num = bbox_delta_blob->shape().At(2) / 4;
-  int64_t rois_offset_per_im = im_index * box_num * 4;
-  int64_t delta_offset_per_im = im_index * box_num * class_num * 4;
-  // rois_blob: (im, box_num, 4)
-  const T* rois_ptr = BnInOp2Blob("rois")->dptr<T>() + rois_offset_per_im;
-  const T* bbox_delta_ptr = BnInOp2Blob("bbox_delta")->dptr<T>() + delta_offset_per_im;
-  // bbox_blob: (box_num, class*4)
+  const int64_t class_num = BnInOp2Blob("scores")->shape().At(2);
+  const int64_t rois_num = rois_blob->shape().At(1);
+  // data ptr
+  int64_t rois_offset_per_im = im_index * rois_num * 4;
+  int64_t delta_offset_per_im = im_index * rois_num * class_num * 4;
+  const T* rois_ptr = rois_blob->dptr<T>() + rois_offset_per_im;
+  const T* bbox_delta_ptr = bbox_delta_blob->dptr<T>() + delta_offset_per_im;
+  // bbox broadcast
   T* bbox_ptr = BnInOp2Blob("bbox")->mut_dptr<T>();
-  FOR_RANGE(int64_t, i, 1, box_num) {
-    int64_t rois_offset = i * 4;
-    float w = rois_ptr[rois_offset + 2] - rois_ptr[rois_offset + 0] + 1.0f;
-    float h = rois_ptr[rois_offset + 3] - rois_ptr[rois_offset + 1] + 1.0f;
-    float ctr_x = rois_ptr[rois_offset + 0] + 0.5f * w;
-    float ctr_y = rois_ptr[rois_offset + 1] + 0.5f * h;
+  FOR_RANGE(int64_t, i, 1, rois_num) {
+    const T* cur_roi_ptr = rois_ptr + i * 4;
     FOR_RANGE(int64_t, j, 1, class_num) {
-      int64_t delta_offset = (i * class_num + j) * 4;
-      float pred_ctr_x = bbox_delta_ptr[delta_offset + 0] * w + ctr_x;
-      float pred_ctr_y = bbox_delta_ptr[delta_offset + 1] * h + ctr_y;
-      float pred_w = std::exp(bbox_delta_ptr[delta_offset + 2]) * w;
-      float pred_h = std::exp(bbox_delta_ptr[delta_offset + 3]) * h;
-      bbox_ptr[delta_offset + 0] = pred_ctr_x - 0.5f * pred_w;
-      bbox_ptr[delta_offset + 1] = pred_ctr_y - 0.5f * pred_h;
-      bbox_ptr[delta_offset + 2] = pred_ctr_x + 0.5f * pred_w - 1.f;
-      bbox_ptr[delta_offset + 3] = pred_ctr_y + 0.5f * pred_h - 1.f;
+      int64_t bbox_offset = (i * class_num + j) * 4;
+      const T* cur_bbox_delta_ptr = bbox_delta_ptr + bbox_offset;
+      T* cur_bbox_ptr = bbox_ptr + bbox_offset;
+      FasterRcnnUtil<T>::BboxTransform(1, cur_roi_ptr, cur_bbox_delta_ptr, cur_bbox_ptr);
     }
   }
 }
+
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ClipBox(Blob* bbox_blob) const {
-  // bbox_blob: (box_num, class * 4)
   T* bbox_ptr = bbox_blob->mut_dptr<T>();
+  const int64_t boxes_num = bbox_blob->shape().elem_cnt() / 4;
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  const int64_t bbox_buf_size = bbox_blob->shape().elem_cnt();
-  for (int64_t i = 0; i < bbox_buf_size; i += 4) {
-    bbox_ptr[i + 0] = std::max<T>(std::min<T>(bbox_ptr[i + 0], conf.image_width()), 0);
-    bbox_ptr[i + 1] = std::max<T>(std::min<T>(bbox_ptr[i + 1], conf.image_height()), 0);
-    bbox_ptr[i + 2] = std::max<T>(std::min<T>(bbox_ptr[i + 2], conf.image_width()), 0);
-    bbox_ptr[i + 3] = std::max<T>(std::min<T>(bbox_ptr[i + 3], conf.image_height()), 0);
+  FasterRcnnUtil<T>::ClipBoxes(boxes_num, conf.image_height(), conf.image_width(), bbox_ptr);
+}
+
+template<typename T>
+void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
+    int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* scores_blob = BnInOp2Blob("scores");
+  int64_t boxes_num = scores_blob->shape().At(1);
+  int64_t class_num = scores_blob->shape().At(2);
+  int64_t score_offset = im_index * boxes_num * class_num;
+  const T* scores_ptr = scores_blob->dptr<T>() + score_offset;
+  T* bbox_ptr = BnInOp2Blob("bbox")->mut_dptr<T>();
+  int32_t* pre_nms_index_slice_ptr = BnInOp2Blob("pre_nms_index_slice")->mut_dptr<int32_t>();
+  int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->mut_dptr<int32_t>();
+  int32_t* post_nms_keep_num_ptr = BnInOp2Blob("post_nms_keep_num")->mut_dptr<int32_t>();
+  int32_t* nms_area_tmp_ptr = BnInOp2Blob("nms_area_tmp")->mut_dptr<int32_t>();
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+
+  FOR_RANGE(int64_t, i, 1, class_num) {
+    int64_t cur_class_offset = i * boxes_num;
+    int32_t* pre_nms_indics = pre_nms_index_slice_ptr + cur_class_offset;
+    int32_t* post_nms_indics = post_nms_index_slice_ptr + cur_class_offset;
+    SortClassBoxIndexByScore(scores_ptr, boxes_num, class_num, i, pre_nms_indics);
+    int64_t pre_nms_keep_num =
+        FilterSortedIndexByThreshold(boxes_num, scores_ptr, pre_nms_indics, conf.score_thresh());
+    post_nms_keep_num_ptr[i] =
+        FasterRcnnUtil<T>::Nms(bbox_ptr, pre_nms_indics, pre_nms_keep_num, pre_nms_keep_num,
+                               conf.nms_threshold(), nms_area_tmp_ptr, post_nms_indics);
+    if (conf.bbox_vote_enabled()) { BboxVoting(i, post_nms_keep_num_ptr[i], BnInOp2Blob, false); }
   }
 }
+
 template<typename T>
-int64_t BboxNmsAndLimitKernel<T>::FilterSortedIndexByThreshold(const T* scores_ptr,
-                                                               const float score_thresh,
-                                                               const int32_t* pre_nms_index_slice,
-                                                               const int64_t num) const {
+void BboxNmsAndLimitKernel<T>::SortClassBoxIndexByScore(const T* scores_ptr,
+                                                        const int64_t boxes_num,
+                                                        const int64_t class_num,
+                                                        const int64_t class_index,
+                                                        int32_t* indics) const {
+  FOR_RANGE(int64_t, i, 0, boxes_num) { indics[i] = class_index + i * class_num; }
+  std::sort(indics, indics + boxes_num,
+            [&](int32_t lhs, int32_t rhs) { return scores_ptr[lhs] > scores_ptr[rhs]; });
+}
+
+template<typename T>
+int64_t BboxNmsAndLimitKernel<T>::FilterSortedIndexByThreshold(const int64_t num,
+                                                               const T* scores_ptr,
+                                                               const int32_t* indics,
+                                                               const float thresh) const {
   FOR_RANGE(int64_t, i, 0, num) {
-    int64_t scores_index = pre_nms_index_slice[i];
-    if (scores_ptr[scores_index] <= score_thresh) { return i; }
+    int64_t index = indics[i];
+    if (scores_ptr[index] <= thresh) { return i; }
   }
   return num;
 }
@@ -161,7 +126,7 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t class_index, int32_t voter_num
     FOR_RANGE(int32_t, i, 0, voter_num) {
       int32_t index = voter_index_ptr[i];
       const T* bbox = const_bbox_ptr + index * 4;
-      area_ptr[i] = (bbox[2] - bbox[0] + 1) * (bbox[3] - bbox[1] + 1);
+      area_ptr[i] = FasterRcnnUtil<T>::BBoxArea(bbox);
     }
   }
   // voting bbox and score
@@ -171,8 +136,7 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t class_index, int32_t voter_num
   FOR_RANGE(int64_t, i, 0, votee_num) {
     const int32_t votee_index = votee_index_ptr[i];
     T* votee_bbox = bbox_ptr + votee_index * 4;
-    const int32_t votee_area =
-        (votee_bbox[2] - votee_bbox[0] + 1) * (votee_bbox[3] - votee_bbox[1] + 1);
+    const int32_t votee_area = FasterRcnnUtil<T>::BBoxArea(votee_bbox);
     int32_t valid_voter_num = 0;
     T score_weighted_bbox_sum[4] = {0, 0, 0, 0};
     T score_sum = 0;
@@ -222,42 +186,6 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t class_index, int32_t voter_num
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
-    int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // scores_blob: (im, box_num, class_num)  pre_nms_index_slice_blob: (cls_num, roi)
-  // post_nms_index_slice_blob: (cls_num, roi) post_nms_keep_num_blob: (cls_num) nms_area_tmp_blob:
-  // (cls_num)
-  const Blob* scores_blob = BnInOp2Blob("scores");
-  int64_t box_num = scores_blob->shape().At(1);
-  int64_t class_num = scores_blob->shape().At(2);
-  int64_t score_offset = im_index * box_num * class_num;
-  const T* scores_ptr = scores_blob->dptr<T>() + score_offset;
-  T* bbox_ptr = BnInOp2Blob("bbox")->mut_dptr<T>();
-  Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice");
-  Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice");
-  int32_t* post_nms_keep_num_ptr = BnInOp2Blob("post_nms_keep_num")->mut_dptr<int32_t>();
-  int32_t* nms_area_tmp_ptr = BnInOp2Blob("nms_area_tmp")->mut_dptr<int32_t>();
-
-  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  FOR_RANGE(int64_t, i, 1, class_num) {  // just foreground, class index start from 1
-    int64_t index_offset = i * box_num;
-    int32_t* pre_nms_index_slice_ptr = pre_nms_index_slice_blob->mut_dptr<int32_t>() + index_offset;
-    int32_t* post_nms_index_slice_ptr =
-        post_nms_index_slice_blob->mut_dptr<int32_t>() + index_offset;
-    SortClassBoxIndexByScore(scores_ptr, box_num, class_num, i, pre_nms_index_slice_ptr);
-    int64_t pre_nms_keep_num = FilterSortedIndexByThreshold(scores_ptr, conf.score_thresh(),
-                                                            pre_nms_index_slice_ptr, box_num);
-    // post_nms_keep_num_ptr[i] = FasterRcnnUtil<T>::Nms(
-    //     boxes_ptr, pre_nms_index_slice_ptr, pre_nms_keep_num, pre_nms_keep_num,
-    //     conf.nms_threshold(), nms_area_tmp_ptr, post_nms_index_slice_ptr);
-    post_nms_keep_num_ptr[i] =
-        Nms(bbox_ptr, pre_nms_index_slice_ptr, pre_nms_keep_num, pre_nms_keep_num,
-            conf.nms_threshold(), nms_area_tmp_ptr, post_nms_index_slice_ptr);
-    if (conf.bbox_vote_enabled()) { BboxVoting(i, post_nms_keep_num_ptr[i], BnInOp2Blob, false); }
-  }
-}
-
-template<typename T>
 void BboxNmsAndLimitKernel<T>::IndexMemContinuous(const int32_t* post_nms_keep_num_ptr,
                                                   const int64_t class_num, const int64_t box_num,
                                                   int32_t* post_nms_index_slice_ptr) const {
@@ -290,6 +218,7 @@ int64_t BboxNmsAndLimitKernel<T>::Limit(
   }
   return keep_num_per_im;
 }
+
 template<typename T>
 void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(
     int64_t image_index, int64_t limit_num,
