@@ -11,14 +11,15 @@ void ProposalOp::InitFromOpConf() {
   // EnrollInputBn("height", false);
   // EnrollInputBn("weight", false);
   EnrollOutputBn("rois", false);
-  // EnrollOutputBn("roi_probs", false);
-  EnrollDataTmpBn("roi_probs");
+  EnrollOutputBn("roi_probs", false);
+  // EnrollDataTmpBn("roi_probs");
   EnrollConstBufBn("anchors");
   if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
   EnrollDataTmpBn("proposals");
   EnrollDataTmpBn("keep");
-  EnrollDataTmpBn("sorted_score_index");
-  EnrollDataTmpBn("suppressed_index");
+  EnrollDataTmpBn("sorted_score_slice");
+  EnrollDataTmpBn("bbox_area");
+  EnrollDataTmpBn("post_nms_slice");
 }
 
 const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().proposal_conf(); }
@@ -26,6 +27,8 @@ const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().propos
 void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
   CHECK_EQ(device_type(), DeviceType::kCPU);
+  const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
+  const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
   const auto& anchor_scales = GetPbRfFromCustomizedConf<int32_t>("anchor_scales");
   const auto& aspect_ratios = GetPbRfFromCustomizedConf<float>("aspect_ratios");
   const int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
@@ -34,12 +37,12 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
     CHECK_GE(scale, feature_map_stride);
     CHECK_EQ(scale % feature_map_stride, 0);
   }
-  int32_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
-  int32_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
+  int64_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
+  int64_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
   CHECK_GT(post_nms_top_n, 0);
   CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
-  const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
-  const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
+  CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);
+  if (pre_nms_top_n == -1) { pre_nms_top_n = bbox_pred_blob_desc->shape().Count(1) / 4; }
   // const BlobDesc* im_info_blob_desc = GetBlobDesc4BnInOp("image_info");
   // bactch
   CHECK_EQ(cls_prob_blob_desc->shape().At(0), bbox_pred_blob_desc->shape().At(0));
@@ -71,11 +74,17 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
       {bbox_pred_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(2), num_of_anchors * 4});
   anchors_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
 
-  BlobDesc* sorted_score_index_blob_desc = GetBlobDesc4BnInOp("sorted_score_index");
-  sorted_score_index_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().Count(1) / 4});
-  sorted_score_index_blob_desc->set_data_type(DataType::kInt32);
+  BlobDesc* sorted_score_slice_blob_desc = GetBlobDesc4BnInOp("sorted_score_slice");
+  sorted_score_slice_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().Count(1) / 4});
+  sorted_score_slice_blob_desc->set_data_type(DataType::kInt32);
 
-  *GetBlobDesc4BnInOp("suppressed_index") = *sorted_score_index_blob_desc;
+  BlobDesc* post_nms_slice_desc = GetBlobDesc4BnInOp("post_nms_slice");
+  post_nms_slice_desc->mut_shape() = Shape({post_nms_top_n});
+  post_nms_slice_desc->set_data_type(DataType::kInt32);
+
+  BlobDesc* bbox_area_blob_desc = GetBlobDesc4BnInOp("bbox_area");
+  bbox_area_blob_desc->mut_shape() = Shape({pre_nms_top_n});
+  bbox_area_blob_desc->set_data_type(DataType::kInt32);
 
   // rois
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");

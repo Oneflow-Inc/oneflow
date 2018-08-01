@@ -1,5 +1,6 @@
 #include "oneflow/core/kernel/proposal_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/faster_rcnn_util.h"
 
 namespace oneflow {
 
@@ -18,17 +19,16 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
   float base_ctr = 0.5 * (fm_stride - 1);
 
   std::vector<T> base_anchors(num_anchors * 4);
-  FOR_RANGE(int32_t, i, 0, scales_size) {
-    int32_t ws = conf.anchor_scales(i);
-    int32_t hs = conf.anchor_scales(i);
-    FOR_RANGE(int32_t, j, 0, ratios_size) {
-      float wr = std::sqrt(hs * ws / conf.aspect_ratios(j));
-      float hr = wr * conf.aspect_ratios(j);
-      LOG(INFO) << "scaled ratio height: " << hr << ", width: " << wr;
-      base_anchors[(i * ratios_size + j) * 4 + 0] = base_ctr - 0.5 * (wr - 1);
-      base_anchors[(i * ratios_size + j) * 4 + 1] = base_ctr - 0.5 * (hr - 1);
-      base_anchors[(i * ratios_size + j) * 4 + 2] = base_ctr + 0.5 * (wr - 1);
-      base_anchors[(i * ratios_size + j) * 4 + 3] = base_ctr + 0.5 * (hr - 1);
+  FOR_RANGE(int32_t, i, 0, ratios_size) {
+    FOR_RANGE(int32_t, j, 0, scales_size) {
+      int32_t size = conf.anchor_scales(j) * conf.anchor_scales(j);
+      float w = std::round(std::sqrt(size / conf.aspect_ratios(i)));
+      float h = w * conf.aspect_ratios(i);
+      int32_t base_offset = (i * scales_size + j) * 4;
+      base_anchors[base_offset + 0] = base_ctr - 0.5 * (w - 1);
+      base_anchors[base_offset + 1] = base_ctr - 0.5 * (h - 1);
+      base_anchors[base_offset + 2] = base_ctr + 0.5 * (w - 1);
+      base_anchors[base_offset + 3] = base_ctr + 0.5 * (h - 1);
     }
   }
 
@@ -36,11 +36,11 @@ void GenerateAnchors(const ProposalOpConf& conf, Blob* anchors_blob) {
   FOR_RANGE(int32_t, h, 0, height) {
     FOR_RANGE(int32_t, w, 0, width) {
       int32_t cur = (h * width + w) * num_anchors * 4;
-      FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchors_dptr[cur + i * 4 + 0] = base_anchors[i * 4 + 0] + w * fm_stride;
-        anchors_dptr[cur + i * 4 + 1] = base_anchors[i * 4 + 1] + h * fm_stride;
-        anchors_dptr[cur + i * 4 + 2] = base_anchors[i * 4 + 2] + w * fm_stride;
-        anchors_dptr[cur + i * 4 + 3] = base_anchors[i * 4 + 3] + h * fm_stride;
+      for (int32_t i = 0; i < num_anchors * 4; i += 4) {
+        anchors_dptr[cur + i + 0] = base_anchors[i + 0] + w * fm_stride;
+        anchors_dptr[cur + i + 1] = base_anchors[i + 1] + h * fm_stride;
+        anchors_dptr[cur + i + 2] = base_anchors[i + 2] + w * fm_stride;
+        anchors_dptr[cur + i + 3] = base_anchors[i + 3] + h * fm_stride;
       }
     }
   }
@@ -51,31 +51,15 @@ inline bool LtMinSize(const int32_t min_size, const T* bbox) {
   return (bbox[2] - bbox[0] + 1 < min_size) || (bbox[3] - bbox[1] + 1 < min_size);
 }
 
-template<typename T>
-inline float BBoxArea(const T* box) {
-  return (box[2] - box[0] + 1) * (box[3] - box[1] + 1);
-}
-
-template<typename T>
-inline float InterOverUnion(const T* box0, const T* box1) {
-  int32_t iw = std::min(box0[2], box1[2]) - std::max(box0[0], box1[0]) + 1;
-  iw = std::max<int32_t>(iw, 0);
-  int32_t ih = std::min(box0[3], box1[3]) - std::max(box0[1], box1[1]) + 1;
-  ih = std::max<int32_t>(ih, 0);
-  float inter = iw * ih;
-  float ua = BBoxArea(box0) + BBoxArea(box1) - inter;
-  return inter / ua;
-}
-
 }  // namespace
 
 template<typename T>
 struct ProposalKernelUtil {
-  static void CopyRoI(const int32_t* sorted_score_index_ptr, const int32_t post_nms_num,
+  static void CopyRoI(const int32_t* sorted_score_slice_ptr, const int32_t post_nms_num,
                       const T* const_img_proposal_ptr, T* rois_ptr) {
     FOR_RANGE(int32_t, roi_idx, 0, post_nms_num) {
       int32_t roi_offset = roi_idx * 4;
-      int32_t proposal_offset = sorted_score_index_ptr[roi_idx] * 4;
+      int32_t proposal_offset = sorted_score_slice_ptr[roi_idx] * 4;
       rois_ptr[roi_offset + 0] = const_img_proposal_ptr[proposal_offset + 0];
       rois_ptr[roi_offset + 1] = const_img_proposal_ptr[proposal_offset + 1];
       rois_ptr[roi_offset + 2] = const_img_proposal_ptr[proposal_offset + 2];
@@ -143,42 +127,13 @@ struct ProposalKernelUtil {
   }
 
   static int32_t FilterBoxesByMinSize(const int64_t im_proposal_num, const int32_t min_size,
-                                      const T* img_proposal_ptr, int32_t* sorted_score_index_ptr) {
+                                      const T* img_proposal_ptr, int32_t* sorted_score_slice_ptr) {
     int32_t keep_num = 0;
     FOR_RANGE(int32_t, i, 0, im_proposal_num) {
-      const int32_t index = sorted_score_index_ptr[i];
+      const int32_t index = sorted_score_slice_ptr[i];
       const int32_t img_proposal_offset = index * 4;
       if (!LtMinSize(min_size, img_proposal_ptr + img_proposal_offset)) {
-        sorted_score_index_ptr[keep_num++] = index;
-      }
-    }
-    return keep_num;
-  }
-
-  static void SortScoreIndex(const int64_t img_proposal_num, const T* score_ptr,
-                             int32_t* sorted_score_index_ptr) {
-    FOR_RANGE(int64_t, i, 0, img_proposal_num) { sorted_score_index_ptr[i] = i; }
-    std::sort(sorted_score_index_ptr, sorted_score_index_ptr + img_proposal_num,
-              [&](int32_t lhs, int32_t rhs) { return score_ptr[lhs] > score_ptr[rhs]; });
-  }
-
-  static int32_t Nms(const T* const_img_proposal_ptr, const float nms_threshold,
-                     int32_t* sorted_score_index_ptr, const int32_t pre_nms_num,
-                     int32_t* supressed_index_ptr) {
-    FOR_RANGE(int32_t, i, 0, pre_nms_num) { supressed_index_ptr[i] = false; }
-    int32_t keep_num = 0;
-    FOR_RANGE(int32_t, i, 0, pre_nms_num) {
-      if (supressed_index_ptr[i]) { continue; }
-      sorted_score_index_ptr[keep_num++] = sorted_score_index_ptr[i];
-      const int32_t cur_proposal_offset = sorted_score_index_ptr[i] * 4;
-      const T* cur_proposal_ptr = const_img_proposal_ptr + cur_proposal_offset;
-      FOR_RANGE(int32_t, j, i + 1, pre_nms_num) {
-        if (supressed_index_ptr[j]) { continue; }
-        const int32_t cand_proposal_offset = sorted_score_index_ptr[j] * 4;
-        const T* cand_proposal_ptr = const_img_proposal_ptr + cand_proposal_offset;
-        if (InterOverUnion(cur_proposal_ptr, cand_proposal_ptr) >= nms_threshold) {
-          supressed_index_ptr[j] = true;
-        }
+        sorted_score_slice_ptr[keep_num++] = index;
       }
     }
     return keep_num;
@@ -190,12 +145,13 @@ void ProposalKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
   const Blob* class_prob_blob = BnInOp2Blob("class_prob");
-  const Blob* anchors_blob = BnInOp2Blob("anchors");
+  const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>();
   Blob* proposals_blob = BnInOp2Blob("proposals");
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
-  int32_t* sorted_score_index_ptr = BnInOp2Blob("sorted_score_index")->mut_dptr<int32_t>();
-  int32_t* supressed_index_ptr = BnInOp2Blob("suppressed_index")->mut_dptr<int32_t>();
+  int32_t* sorted_score_slice_ptr = BnInOp2Blob("sorted_score_slice")->mut_dptr<int32_t>();
+  int32_t* bbox_area_ptr = BnInOp2Blob("bbox_area")->mut_dptr<int32_t>();
+  int32_t* post_nms_slice_ptr = BnInOp2Blob("post_nms_slice")->mut_dptr<int32_t>();
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const int64_t height = class_prob_blob->shape().At(1);
   const int64_t width = class_prob_blob->shape().At(2);
@@ -205,13 +161,12 @@ void ProposalKernel<T>::ForwardDataContent(
   FOR_RANGE(int64_t, i, 0, class_prob_blob->shape().At(0)) {
     const int32_t img_score_offset = i * img_proposal_num;
     const T* class_score_ptr = class_prob_blob->dptr<T>() + img_score_offset;
-    ProposalKernelUtil<T>::SortScoreIndex(img_proposal_num, class_score_ptr,
-                                          sorted_score_index_ptr);
+    FasterRcnnUtil<T>::SortByScore(img_proposal_num, class_score_ptr, sorted_score_slice_ptr);
 
     const int32_t img_proposal_offset = i * img_proposal_num * 4;
     const T* const_img_proposal_ptr = proposals_blob->dptr<T>() + img_proposal_offset;
     T* mut_img_proposal_ptr = proposals_blob->mut_dptr<T>() + img_proposal_offset;
-    ProposalKernelUtil<T>::BboxTransform(img_proposal_num, anchors_blob->dptr<T>(),
+    ProposalKernelUtil<T>::BboxTransform(img_proposal_num, anchors_ptr,
                                          bbox_pred_blob->dptr<T>() + img_proposal_offset,
                                          mut_img_proposal_ptr);
 
@@ -219,30 +174,30 @@ void ProposalKernel<T>::ForwardDataContent(
                                      mut_img_proposal_ptr);
 
     int32_t keep_num = ProposalKernelUtil<T>::FilterBoxesByMinSize(
-        img_proposal_num, conf.min_size(), const_img_proposal_ptr, sorted_score_index_ptr);
+        img_proposal_num, conf.min_size(), const_img_proposal_ptr, sorted_score_slice_ptr);
 
     int32_t pre_nms_num = keep_num;
     if (conf.pre_nms_top_n() > 0) {
       pre_nms_num = std::min<int32_t>(keep_num, conf.pre_nms_top_n());
     }
-    int32_t nms_keep_num =
-        ProposalKernelUtil<T>::Nms(const_img_proposal_ptr, conf.nms_threshold(),
-                                   sorted_score_index_ptr, pre_nms_num, supressed_index_ptr);
-    LOG(INFO) << "nms keep_num: " << nms_keep_num << ", nms_threshold: " << conf.nms_threshold();
+    int32_t nms_keep_num = FasterRcnnUtil<T>::Nms(
+        const_img_proposal_ptr, sorted_score_slice_ptr, pre_nms_num, conf.post_nms_top_n(),
+        conf.nms_threshold(), bbox_area_ptr, post_nms_slice_ptr);
+    LOG(INFO) << "nms keep_num: " << nms_keep_num;
     // use duplicated rois if post_nms_num < conf.post_nms_top_n()
     int32_t post_nms_num = nms_keep_num;
     for (int32_t box_i = 0; post_nms_num < conf.post_nms_top_n(); ++box_i) {
-      sorted_score_index_ptr[post_nms_num++] = sorted_score_index_ptr[box_i];
+      post_nms_slice_ptr[post_nms_num++] = post_nms_slice_ptr[box_i];
     }
 
     post_nms_num = std::min<int32_t>(post_nms_num, conf.post_nms_top_n());
     T* rois_ptr = rois_blob->mut_dptr<T>() + img_proposal_offset;
-    ProposalKernelUtil<T>::CopyRoI(sorted_score_index_ptr, post_nms_num, const_img_proposal_ptr,
+    ProposalKernelUtil<T>::CopyRoI(post_nms_slice_ptr, post_nms_num, const_img_proposal_ptr,
                                    rois_ptr);
 
     T* roi_probs_ptr = roi_probs_blob->mut_dptr<T>() + img_score_offset;
     FOR_RANGE(int32_t, rois_idx, 0, post_nms_num) {
-      roi_probs_ptr[rois_idx] = class_score_ptr[sorted_score_index_ptr[rois_idx]];
+      roi_probs_ptr[rois_idx] = class_score_ptr[post_nms_slice_ptr[rois_idx]];
     }
   }
 }

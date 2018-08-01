@@ -1,6 +1,7 @@
 #include "oneflow/core/record/ofrecord_decoder.h"
 #include "oneflow/core/record/ofrecord_raw_decoder.h"
 #include "oneflow/core/record/ofrecord_jpeg_decoder.h"
+#include "oneflow/core/record/ofrecord_identity_decoder.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 
