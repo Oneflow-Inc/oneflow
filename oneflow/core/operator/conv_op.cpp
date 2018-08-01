@@ -76,7 +76,7 @@ void ConvOp<NDims>::InitFromOpConf() {
 
 template<int32_t NDims>
 void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, size_t* buf_size,
+                                   const ParallelContext* parallel_ctx,
                                    std::function<void(OpContext*)> EnrollOpCtx) const {
   const std::string& data_format = GetValFromCustomizedConf<std::string>("data_format");
 
