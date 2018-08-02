@@ -50,11 +50,11 @@ void Kernel::Forward(const KernelCtx& ctx,
     Blob* out_blob = BnInOp2Blob(obns[0]);
     PostForwardActivation(ctx, out_blob);
   }
-  if (kernel_conf_.header_is_opaque()) {
+  if (kernel_conf_.need_do_opaque_header()) {
     ForwardPackedHeader(ctx, BnInOp2Blob);
   } else {
-    if (kernel_conf_.has_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-    if (kernel_conf_.has_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
   }
 }
 
@@ -73,8 +73,8 @@ void Kernel::Backward(const KernelCtx& ctx,
     PostBackwardActivation(ctx, in_blob, in_diff_blob);
   }
 
-  if (kernel_conf_.has_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.has_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
 
 template<DeviceType device_type, typename T>
