@@ -19,9 +19,6 @@ class ReduceLocalAddCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-
-  int64_t min_in_parallel_id_;
-  int64_t min_out_parallel_id_;
 };
 
 }  // namespace oneflow

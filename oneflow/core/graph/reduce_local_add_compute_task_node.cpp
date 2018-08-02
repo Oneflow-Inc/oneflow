@@ -4,26 +4,34 @@
 namespace oneflow {
 
 void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  min_out_parallel_id_ = MaxVal<int64_t>();
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> succ_comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(succ_comp_task_nodes.size(), 1);
-    int64_t parallel_id = succ_comp_task_nodes.front()->parallel_id();
-    min_out_parallel_id_ = std::min(min_out_parallel_id_, parallel_id);
-    std::string regst_name = "out_" + std::to_string(parallel_id);
+    std::string regst_name = "out_" + std::to_string(succ_comp_task_nodes.front()->machine_id());
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name, false);
     edge->AddRegst(regst_name, out_regst);
   }
 }
 
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
-  min_in_parallel_id_ = MaxVal<int64_t>();
+  int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   for (TaskEdge* edge : in_edges()) {
+    std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
+    CHECK_EQ(1, regst->NumOfLbi());
+    int32_t index_of_lbi = -1;
+    regst->ForEachLbi([&index_of_lbi](const LogicalBlobId& lbi) {
+      index_of_lbi = oneflow_cast<int32_t>(lbi.blob_name().substr(4));
+    });
+    int64_t index_of_lbi_from_this_machine = index_of_lbi / dev_num_of_each_machine;
+
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
     int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
-    min_in_parallel_id_ = std::min(min_in_parallel_id_, parallel_id);
-    ConsumeRegst("in_" + std::to_string(parallel_id), edge->GetSoleRegst());
+    int64_t src_dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
+
+    int64_t in_regst_index =
+        index_of_lbi_from_this_machine * dev_num_of_each_machine + src_dev_index_of_this_machine;
+    ConsumeRegst("in_" + std::to_string(in_regst_index), edge->GetSoleRegst());
   }
 }
 
@@ -35,26 +43,15 @@ void ReduceLocalAddCompTaskNode::BuildExecGphAndRegst() {
   ReduceLocalAddOpConf* mut_local_add_conf = reduce_local_add_conf.mutable_reduce_local_add_conf();
   mut_local_add_conf->set_in_num(in_edges().size());
   mut_local_add_conf->set_out_num(out_edges().size());
-  mut_local_add_conf->set_min_in_parallel_id(min_in_parallel_id_);
-  mut_local_add_conf->set_min_out_parallel_id(min_out_parallel_id_);
-  TaskNode* pred_task_node = (*in_edges().begin())->src_node();
-  while (pred_task_node->GetTaskType() != TaskType::kReduceScatter) {
-    pred_task_node = pred_task_node->SoleInEdge()->src_node();
-  }
-  std::shared_ptr<RegstDesc> diff_acc_regst =
-      pred_task_node->consumed_regsts().begin()->second.front().lock();
-  mut_local_add_conf->set_model_elem_cnt(
-      diff_acc_regst->GetBlobDesc(GenPackedLbi())->shape().elem_cnt());
   std::shared_ptr<Operator> reduce_local_add_op = ConstructOp(reduce_local_add_conf);
   node->mut_op() = reduce_local_add_op;
+
   FOR_RANGE(size_t, i, 0, reduce_local_add_op->input_bns().size()) {
-    std::shared_ptr<RegstDesc> in_regst =
-        GetSoleConsumedRegst("in_" + std::to_string(i + min_in_parallel_id_));
+    std::shared_ptr<RegstDesc> in_regst = GetSoleConsumedRegst("in_" + std::to_string(i));
     node->BindBnWithRegst(reduce_local_add_op->input_bns().Get(i), in_regst);
   }
   FOR_RANGE(size_t, i, 0, reduce_local_add_op->output_bns().size()) {
-    std::shared_ptr<RegstDesc> out_regst =
-        GetProducedRegst("out_" + std::to_string(i + min_out_parallel_id_));
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     out_regst->AddLbi(reduce_local_add_op->BnInOp2Lbi(reduce_local_add_op->output_bns().Get(i)));
     node->BindBnWithRegst(reduce_local_add_op->output_bns().Get(i), out_regst);
   }
