@@ -16,21 +16,24 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
 void ReduceLocalAddCompTaskNode::ConsumeAllRegsts() {
   int64_t dev_num_of_each_machine = logical_node()->parallel_desc()->device_num_of_each_machine();
   for (TaskEdge* edge : in_edges()) {
-    std::shared_ptr<RegstDesc> regst = edge->GetSoleRegst();
-    CHECK_EQ(1, regst->NumOfLbi());
-    int32_t index_of_lbi = -1;
-    regst->ForEachLbi([&index_of_lbi](const LogicalBlobId& lbi) {
-      index_of_lbi = oneflow_cast<int32_t>(lbi.blob_name().substr(4));
-    });
-    int64_t index_of_lbi_from_this_machine = index_of_lbi / dev_num_of_each_machine;
+    TaskNode* src_node = edge->src_node();
+    TaskEdge* in_edge = edge;
+    while (in_edge->src_node()->GetTaskType() != TaskType::kReduceScatter) {
+      in_edge = in_edge->src_node()->SoleInEdge();
+    }
+    const auto& name_in_producer2regst = in_edge->name_in_producer2regst();
+    CHECK_EQ(1, name_in_producer2regst.size());
+    const std::string& name_in_scatter = name_in_producer2regst.begin()->first;
 
-    std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
-    CHECK_EQ(pred_comp_task_nodes.size(), 1);
-    int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
+    int64_t index_of_the_out_regst = oneflow_cast<int64_t>(name_in_scatter.substr(4));
+    int64_t index_of_the_out_regst_from_this_scatter =
+        index_of_the_out_regst / dev_num_of_each_machine;
+
+    int64_t parallel_id = in_edge->src_node()->parallel_ctx()->parallel_id();
     int64_t src_dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
 
-    int64_t in_regst_index =
-        index_of_lbi_from_this_machine * dev_num_of_each_machine + src_dev_index_of_this_machine;
+    int64_t in_regst_index = index_of_the_out_regst_from_this_scatter * dev_num_of_each_machine
+                             + src_dev_index_of_this_machine;
     ConsumeRegst("in_" + std::to_string(in_regst_index), edge->GetSoleRegst());
   }
 }
