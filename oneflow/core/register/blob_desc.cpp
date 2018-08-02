@@ -125,9 +125,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
                   .second);
       } else {
         CHECK_EQ(mem_shared_id2blob_desc_mem_bytes[mem_shared_id],
-                 rt_blob_desc.ByteSizeOfBlobBody())
-            << pair.first.op_name() << "," << pair.first.blob_name() << ","
-            << rt_blob_desc.shape().DebugStr();
+                 rt_blob_desc.ByteSizeOfBlobBody());
       }
     }
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
@@ -140,7 +138,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     last_blob_desc = blob_desc;
   }
   for (const auto& pair : mem_shared_id2blob_desc_mem_bytes) {
-    LOG(INFO) << "blob_mem_shared_size:" << pair.second;
     body_byte_size += pair.second;
   }
 

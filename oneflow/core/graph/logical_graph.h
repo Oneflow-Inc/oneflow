@@ -33,11 +33,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     std::vector<LogicalEdge*> edges_boxing;
     std::vector<LogicalEdge*> edges_121;
   };
-  struct BackwardCloneInfo {
-    LogicalNode* succ_node;
-    LogicalBlobId lbi;
-    std::vector<LogicalEdge*> edges;
-  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
@@ -55,8 +50,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void SetMainModelParallel();
   void BuildBwStruct();
   void NaiveBuildBwStruct();
-  void AddBackwardClone();
-  void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
 
   void MergeEdge();
   void SetNodeDataLbi();
