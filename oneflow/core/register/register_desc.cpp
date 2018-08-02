@@ -2,6 +2,7 @@
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -41,8 +42,7 @@ void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
   auto it = lbi2blob_desc_.begin();
-  packed_blob_desc_.reset(new BlobDesc);
-  *packed_blob_desc_ = ComputePackedBlobDesc([&]() {
+  packed_blob_desc_ = ComputePackedBlobDesc([&]() {
     const BlobDesc* ret = nullptr;
     if (it != lbi2blob_desc_.end()) {
       ret = it->second.get();
@@ -104,7 +104,7 @@ void RegstDesc::ForEachLbi(std::function<void(const LogicalBlobId&)> func) const
 void RegstDesc::EraseZeroSizeBlob() {
   EraseIf<LogicalBlobId, std::unique_ptr<BlobDesc>>(
       &lbi2blob_desc_, [](HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>::iterator it) {
-        return it->second->ByteSizeOfDataContentField() == 0;
+        return RtBlobDesc(*(it->second)).ByteSizeOfDataContentField() == 0;
       });
 }
 

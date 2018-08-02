@@ -6,22 +6,36 @@
 
 namespace oneflow {
 
-Blob::Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr) {
-  mem_ptr_ = mem_ptr;
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr) {
+  Init(regst, blob_desc, header_ptr, header_ptr + blob_desc->ByteSizeOfBlobHeader());
+}
+
+Blob::Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+  Init(regst, blob_desc, header_ptr, body_ptr);
+}
+
+void Blob::Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr) {
+  if (body_ptr == header_ptr + blob_desc->ByteSizeOfBlobHeader()) {
+    is_contiguous_ = true;
+  } else {
+    is_contiguous_ = false;
+  }
+
+  regst_ = regst;
+  blob_desc_ = blob_desc;
+  header_ptr_ = header_ptr;
   if (blob_desc->has_data_id_field()) {
-    data_id_ptr_ = mem_ptr;
+    data_id_ptr_ = header_ptr;
   } else {
     data_id_ptr_ = nullptr;
   }
-  char* offset = mem_ptr + RoundUp(blob_desc->ByteSizeOfDataIdField(), kCudaAlignSize);
+  char* offset = header_ptr + blob_desc->ByteSizeOfDataIdField();
   if (blob_desc->has_col_num_field()) {
     col_num_ptr_ = reinterpret_cast<int32_t*>(offset);
   } else {
     col_num_ptr_ = nullptr;
   }
-  dptr_ = offset + RoundUp(blob_desc->ByteSizeOfColNumField(), kCudaAlignSize);
-  blob_desc_ = blob_desc;
-  regst_ = regst;
+  dptr_ = body_ptr;
 }
 
 const char* Blob::data_id(int32_t no) const {
@@ -54,22 +68,34 @@ void Blob::CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs) {
              rhs->mem_case());
 }
 
+void Blob::CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs) {
+  if (this == rhs || ByteSizeOfBlobHeader() == 0) { return; }
+  CHECK_EQ(ByteSizeOfBlobHeader(), rhs->ByteSizeOfBlobHeader());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_header_ptr(), rhs->header_ptr(), ByteSizeOfBlobHeader());
+}
+
 void Blob::CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField(), mem_case(),
-             rhs->mem_case());
+  if (this == rhs || ByteSizeOfDataIdField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfDataIdField(), rhs->ByteSizeOfDataIdField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_data_id(), rhs->data_id(), ByteSizeOfDataIdField());
 }
 
 void Blob::CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs) {
-  if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField(), mem_case(),
-             rhs->mem_case());
+  if (this == rhs || ByteSizeOfColNumField() == 0) { return; }
+  CHECK_EQ(ByteSizeOfColNumField(), rhs->ByteSizeOfColNumField());
+  Memcpy<DeviceType::kCPU>(device_ctx, mut_col_num(), rhs->col_num(), ByteSizeOfColNumField());
 }
 
 void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
   if (this == rhs) { return; }
-  AutoMemcpy(device_ctx, mut_memory_ptr(), rhs->memory_ptr(), TotalByteSize(), mem_case(),
-             rhs->mem_case());
+  if (is_contiguous_) {
+    CHECK_EQ(TotalByteSize(), rhs->TotalByteSize());
+    AutoMemcpy(device_ctx, mut_header_ptr(), rhs->header_ptr(), TotalByteSize(), mem_case(),
+               rhs->mem_case());
+  } else {
+    CopyHeaderFrom(device_ctx, rhs);
+    CopyDataContentFrom(device_ctx, rhs);
+  }
 }
 
 }  // namespace oneflow

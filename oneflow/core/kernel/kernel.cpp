@@ -50,8 +50,12 @@ void Kernel::Forward(const KernelCtx& ctx,
     Blob* out_blob = BnInOp2Blob(obns[0]);
     ForwardActivation(ctx, out_blob);
   }
-  if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_opaque_header()) {
+    ForwardPackedHeader(ctx, BnInOp2Blob);
+  } else {
+    if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+  }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
@@ -99,6 +103,13 @@ void KernelIf<device_type>::ForwardColNum(
 }
 
 template<DeviceType device_type>
+void KernelIf<device_type>::ForwardPackedHeader(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
+            &Blob::CopyHeaderFrom);
+}
+
+template<DeviceType device_type>
 void KernelIf<device_type>::BackwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   // do nothing
@@ -109,22 +120,6 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
             op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyDataId(DeviceCtx* ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                       const Blob* from_blob,
-                                       const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyDataIdFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyColNum(DeviceCtx* ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                       const Blob* from_blob,
-                                       const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>

@@ -26,9 +26,11 @@ class RegstMgr final {
   explicit RegstMgr(const std::list<const RegstDescProto*>& regst_protos);
   void InitFromRegstProtoList(const std::list<const RegstDescProto*>& regst_protos);
   void InitOFRecordBlobIfNeed(Blob* blob_ptr);
+  void NewBlobsInOneRegst(const std::vector<LogicalBlobId>& lbis, Regst*, const RtRegstDesc*,
+                          char* main_mem_ptr);
 
   HashMap<int64_t, std::unique_ptr<const RtRegstDesc>> regst_desc_id2rt_regst_desc_;
-  HashMap<int64_t, char*> regst_desc_id2mem_ptr_;
+  HashMap<int64_t, char*> regst_desc_id2main_mem_ptr_;
 };
 
 }  // namespace oneflow

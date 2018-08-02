@@ -296,7 +296,7 @@ size_t GetTmpSizeForReduceSum(DataType data_type, int64_t sum_elem_num) {
 
 // create temporary host blob store initializer result
 #define BEFORE_CPU_INITIALIZE()                                     \
-  BlobDesc blob_desc = BlobDesc(blob->blob_desc());                 \
+  RtBlobDesc blob_desc(blob->blob_desc().blob_desc_proto());        \
   char* host_raw_dptr = nullptr;                                    \
   CudaCheck(cudaMallocHost(&host_raw_dptr, blob->TotalByteSize())); \
   std::unique_ptr<Blob> host_blob;                                  \
