@@ -36,7 +36,6 @@ void ReduceScatterCompTaskNode::BuildExecGphAndRegst() {
   OperatorConf reduce_scatter_op_conf;
   reduce_scatter_op_conf.set_name("reduce_scatter_" + NewUniqueId());
   reduce_scatter_op_conf.set_device_type(this->device_type());
-  reduce_scatter_op_conf.mutable_reduce_scatter_conf()->set_out_num(this->out_edges().size());
 
   std::shared_ptr<Operator> reduce_scatter_op = ConstructOp(reduce_scatter_op_conf);
   node->mut_op() = reduce_scatter_op;

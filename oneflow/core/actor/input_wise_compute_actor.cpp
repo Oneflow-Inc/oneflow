@@ -58,31 +58,46 @@ void InputWiseCompActor::ForEachCurCustomizedReadableRegst(
 void InputWiseCompActor::Act() {
   std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
   Regst* cur_regst = regst_q.front();
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
 
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
   SetKernelCtxOther(&(kernel_ctx.other));
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     CHECK_EQ(cur_processed_regst_desc_id_, regst_desc_id);
     return cur_regst;
   });
 
+  UpdateMemberStatusAfterAct();
+  if (NeedSendRegstMsgToConsumer()) { UpdateMemberStatusAfterSendRegstMsgToConsumer(); }
+  AsyncSendRegstMsgToProducer(cur_regst);
+}
+
+void InputWiseCompActor::UpdateMemberStatusAfterAct() {
+  std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
   regst_q.pop();
   if (regst_q.empty()) { readable_regst_desc_cnt_ -= 1; }
   regst_desc_id2is_processed_.at(cur_processed_regst_desc_id_) = true;
   processed_regst_desc_id_cnt_ += 1;
   cur_processed_regst_desc_id_ = -1;
-  if (processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size()) {
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-      regst->set_piece_id(cur_regst->piece_id());
-      return true;
-    });
-    for (auto& pair : regst_desc_id2is_processed_) {
-      CHECK(pair.second);
-      pair.second = false;
-    }
-    processed_regst_desc_id_cnt_ = 0;
+  VirtualUpdateMemberStatusAfterAct();
+}
+
+bool InputWiseCompActor::NeedSendRegstMsgToConsumer() {
+  return processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size();
+}
+
+void InputWiseCompActor::UpdateMemberStatusAfterSendRegstMsgToConsumer() {
+  std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
+  Regst* cur_regst = regst_q.front();
+  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+    regst->set_piece_id(cur_regst->piece_id());
+    return true;
+  });
+  for (auto& pair : regst_desc_id2is_processed_) {
+    CHECK(pair.second);
+    pair.second = false;
   }
-  AsyncSendRegstMsgToProducer(cur_regst);
+  processed_regst_desc_id_cnt_ = 0;
+  VirtualUpdateMemberStatusAfterSendRegstMsgToConsumer();
 }
 
 void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
