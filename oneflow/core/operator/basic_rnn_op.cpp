@@ -8,6 +8,7 @@ void BasicRnnOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("plus_op_out");
   EnrollModelBn("i2h_weight");
   EnrollModelBn("h2h_weight");
+  EnrollBwBufBn(k_bw_activation_blob_name);
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
@@ -30,6 +31,12 @@ void BasicRnnOp::VirtualInferBlobDescs(
     *GetBlobDesc4BnInOp("bias") = BlobDesc(Shape({1, hidden_size}));
     *GetBlobDesc4BnInOp("bias_multiplier") = BlobDesc(Shape({data_num, 1}));
   }
+}
+
+void BasicRnnOp::InferBwBufBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    const OpContext* op_ctx) const {
+  *GetBlobDesc4BnInOp(k_bw_activation_blob_name) = *GetBlobDesc4BnInOp("out");
 }
 
 REGISTER_OP(OperatorConf::kBasicRnnConf, BasicRnnOp);

@@ -9,6 +9,7 @@ void FullyConnectedOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
   EnrollModelBn("weight");
+  EnrollBwBufBn(k_bw_activation_blob_name);
 
   if (op_conf().fully_connected_conf().use_bias()) {
     EnrollModelBn("bias");
@@ -47,6 +48,12 @@ void FullyConnectedOp::InferBlobDescs(
     // bias_multiplier
     GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape({in_blob_desc->shape().At(0), 1});
   }
+}
+
+void FullyConnectedOp::InferBwBufBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    const OpContext* op_ctx) const {
+  *GetBlobDesc4BnInOp(k_bw_activation_blob_name) = *GetBlobDesc4BnInOp("out");
 }
 
 REGISTER_OP(OperatorConf::kFullyConnectedConf, FullyConnectedOp);

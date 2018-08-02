@@ -30,8 +30,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  ActivationType GetForwardActivationType() const;
-  void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
+  ActivationType GetActivationType() const;
 
   virtual LogicalNode* NewProperLogicalNode();
 
@@ -216,7 +215,7 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
-  ActivationType backward_activation_;
+  ActivationType activation_;
 };
 
 std::string GenDiffBn(const std::string& bn);
@@ -247,6 +246,8 @@ inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   lbi.set_blob_name(lbn.substr(pos + 1));
   return lbi;
 }
+
+const std::string k_bw_activation_blob_name = "bw_activation";
 
 }  // namespace oneflow
 

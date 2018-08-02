@@ -11,6 +11,8 @@ class BasicRnnOp final : public RecurrentOp {
   BasicRnnOp() = default;
   ~BasicRnnOp() = default;
   const PbMessage& GetCustomizedConf() const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext*, const OpContext*) const override;
 
  private:
   void VirtualInitFromOpConf();
