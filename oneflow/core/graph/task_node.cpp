@@ -151,6 +151,8 @@ void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   BuildCtrlRegstDesc(dst_node);
 }
 
+void TaskNode::ConsumeRegstAsIn(std::shared_ptr<RegstDesc> regst) { ConsumeRegst("in", regst); }
+
 RegstDesc* TaskNode::BuildCtrlRegstDesc(TaskNode* dst_node) {
   RegstDescTypeProto regst_desc_type;
   regst_desc_type.mutable_ctrl_regst_desc();

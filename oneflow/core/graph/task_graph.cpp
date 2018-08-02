@@ -76,6 +76,39 @@ void TaskGraph::FindChainsInSameStream() {
   }
 }
 
+void TaskGraph::EnableMemSharing4FwClone() {
+  ForEachNode([&](TaskNode* task_node) {
+    if (task_node->area_id() != kDataForwardArea) { return; }
+    int32_t pred_fw_num = 0;
+    TaskNode* pred_fw_node = nullptr;
+    std::shared_ptr<RegstDesc> clone_regst;
+    for (auto& in_edge : task_node->in_edges()) {
+      if (in_edge->src_node()->area_id() == kDataForwardArea) {
+        pred_fw_num++;
+        pred_fw_node = in_edge->src_node();
+        clone_regst = in_edge->GetSoleRegst();  // TODO: refine
+      }
+    }
+    if (pred_fw_num != 1) { return; }
+    int32_t succ_fw_num = 0;
+    std::vector<TaskNode*> succ_fw_nodes;
+    std::vector<std::shared_ptr<RegstDesc>> cloned_regsts;
+    for (auto& out_edge : task_node->out_edges()) {
+      if (out_edge->dst_node()->area_id() == kDataForwardArea) {
+        succ_fw_num++;
+        succ_fw_nodes.push_back(out_edge->dst_node());
+        cloned_regsts.push_back(out_edge->GetSoleRegst());
+      }
+    }
+    if (succ_fw_num <= 1) { return; }
+    LOG(INFO) << "found fw_clone:" << task_node->task_id();
+    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+    for (auto& consumer : succ_fw_nodes) { consumer->ConsumeRegstAsIn(clone_regst); }
+    clone_regst->set_mem_shared_id(mem_shared_id);
+    for (auto& cloned_regst : cloned_regsts) { cloned_regst->set_mem_shared_id(mem_shared_id); }
+  });
+}
+
 void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
   FindChainsInSameStream();
 
