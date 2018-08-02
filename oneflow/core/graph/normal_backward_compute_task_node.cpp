@@ -7,6 +7,7 @@ namespace oneflow {
 void NormalBackwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceB121Regst("in_diff");
   ProduceRegst("activation_diff", true, 1, 1);
+  ProduceRegst("bw_buf", true, 1, 1);
   for (TaskEdge* edge : out_edges()) {
     const LogicalNode* succ_logical = GetOneSuccLogicalNodeOnEdge(edge);
     if (succ_logical->TypeName() == "MdDiffAcc" || succ_logical->TypeName() == "NormalMdUpdt"
@@ -156,12 +157,14 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
 
 void NormalBackwardCompTaskNode::BindModelDiffRegst() {
   std::shared_ptr<RegstDesc> data_tmp_regst = GetSoleConsumedRegst("data_tmp");
+  std::shared_ptr<RegstDesc> bw_buf_regst = GetProducedRegst("bw_buf");
   std::shared_ptr<RegstDesc> const_model_regst = GetSoleConsumedRegst("const_model");
   std::shared_ptr<RegstDesc> model_regst = GetSoleConsumedRegst("model");
   std::shared_ptr<RegstDesc> const_buf_regst = GetSoleConsumedRegst("const_buf");
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     node->BindBnsWithRegst(&Operator::data_tmp_bns, data_tmp_regst);
+    node->AddBnToRegstAndBindIt(&Operator::bw_buf_bns, bw_buf_regst);
     node->BindBnsWithRegst(&Operator::const_model_bns, const_model_regst);
     node->BindBnsWithRegst(&Operator::const_buf_bns, const_buf_regst);
     node->BindBnsWithRegst(&Operator::model_diff_bns, model_diff_regst);
@@ -195,6 +198,8 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   } else {
     mut_exec_gph().SoleNode()->InferDiffBlobDescsWithoutFwNode(parallel_ctx());
   }
+  mut_exec_gph().TopoForEachNode(
+      [this](ExecNode* node) { node->InferBwBufBlobDescs(parallel_ctx()); });
 }
 
 CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {
