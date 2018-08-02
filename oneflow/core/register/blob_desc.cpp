@@ -126,7 +126,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
       } else {
         CHECK_EQ(mem_shared_id2blob_desc_mem_bytes[mem_shared_id],
                  rt_blob_desc.ByteSizeOfBlobBody())
-            << pair.first.op_name() << "," << pair.first.blob_name();
+            << pair.first.op_name() << "," << pair.first.blob_name() << ","
+            << rt_blob_desc.shape().DebugStr();
       }
     }
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
