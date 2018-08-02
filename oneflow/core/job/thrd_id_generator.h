@@ -18,18 +18,41 @@ struct hash<std::pair<int64_t, int64_t>> {
 
 namespace oneflow {
 
-class ThrdIdGenerator {
+class ThrdIdGenerator final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ThrdIdGenerator);
 
-  ThrdIdGenerator(HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num)
-      : machine_task_type2thrd_num_(machine_task_type2thrd_num) {
-    for (auto pair : machine_task_type2thrd_num_) { InitThrdIdPool(pair.first, pair.second); }
+  ThrdIdGenerator(HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num,
+                  int64_t base_thrd_id)
+      : machine_task_type2thrd_num_(machine_task_type2thrd_num), base_thrd_id_(base_thrd_id) {
+    machine_task_type2lowerbound_.resize(machine_task_type2thrd_num.size());
+
+    for (auto pair : machine_task_type2thrd_num_) {
+      int64_t task_type = pair.first.second;
+      AdjustThrdNum(task_type, pair.second);
+      InitThrdIdPool(pair.first, pair.second);
+    }
   }
 
   int64_t GenerateThrdId(int64_t machine_id, int64_t task_type);
 
+  static bool IsPesistence(int64_t task_type) {
+    bool is_persistence = (task_type == TaskType::kRecordLoad || task_type == TaskType::kLossPrint
+                           || task_type == TaskType::kMdSave || task_type == TaskType::kPrint
+                           || task_type == TaskType::kAccuracyPrint);
+    return is_persistence;
+  }
+
  private:
+  void AdjustThrdNum(int64_t task_type, int32_t& thrd_num) {
+    CHECK(IsPesistence(task_type));
+    if (task_type == TaskType::kMdSave) {
+      JobDesc* job_desc = Global<JobDesc>::Get();
+      const int32_t mdsave_conf_num = job_desc ? job_desc->MdSaveWorkerNum() : 64;
+      thrd_num = thrd_num > mdsave_conf_num ? mdsave_conf_num : thrd_num;
+    }
+  }
+
   void InitThrdIdPool(std::pair<int64_t, int64_t> machine_task_type, int32_t thrd_num) {
     std::vector<int64_t> thrd_id_pool(thrd_num);
     std::iota(thrd_id_pool.begin(), thrd_id_pool.end(), 0);
@@ -60,10 +83,11 @@ class ThrdIdGenerator {
     return it->second;
   }
 
-  int32_t GetPreThrdId(int64_t machine_id, int64_t task_type);
+  int64_t GetPreThrdId(int64_t machine_id, int64_t task_type);
 
   HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num_;
-  HashMap<std::pair<int64_t, int64_t>, bool> machine_task_type2assigned_;
+  int64_t base_thrd_id_;
+  std::vector<HashMap<int64_t, int32_t>> machine_task_type2lowerbound_;
   HashMap<std::pair<int64_t, int64_t>, std::vector<int64_t>> machine_task_type2thrd_id_pool_;
 };
 }  // namespace oneflow

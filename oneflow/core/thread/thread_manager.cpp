@@ -41,32 +41,34 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
 }
 
 void ThreadMgr::CreatePersistenceThrd(const Plan& plan) {
-  const int32_t mdsave_conf_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
   const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num;
-  std::vector<const TaskProto*> persistence_tasks;
+  std::vector<int64_t> persistence_thrd_ids;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != this_machine_id) { continue; }
 
-    if (task.task_type() == TaskType::kRecordLoad || task.task_type() == TaskType::kLossPrint
-        || task.task_type() == TaskType::kMdSave || task.task_type() == TaskType::kPrint
-        || task.task_type() == TaskType::kAccuracyPrint) {
-      auto key = std::make_pair(this_machine_id, task.task_type());
-
-      if (task.task_type() == TaskType::kMdSave
-          && machine_task_type2thrd_num[key] >= mdsave_conf_num)
-        continue;
-
-      persistence_tasks.push_back(&task);
-      machine_task_type2thrd_num[key]++;
+    if (ThrdIdGenerator::IsPesistence(task.task_type())) {
+      persistence_thrd_ids.push_back(task.thrd_id());
     }
   }
 
-  ThrdIdGenerator generator(machine_task_type2thrd_num);
-  for (const TaskProto* task : persistence_tasks) {
-    int64_t thrd_id = generator.GenerateThrdId(this_machine_id, task->task_type());
-    threads_.push_back(new CpuThread(thrd_id, 0));
-  }
+  auto unique = [](std::vector<int64_t>& vec) {
+    std::set<int64_t> temp;
+
+    auto removed_start = std::remove_if(vec.begin(), vec.end(), [&temp](const int64_t& value) {
+      if (temp.find(value) != std::end(temp)) return true;
+
+      temp.insert(value);
+      return false;
+    });
+
+    vec.erase(removed_start, vec.end());
+
+    return vec.size();
+  };
+  unique(persistence_thrd_ids);
+
+  threads_.resize(threads_.size() + persistence_thrd_ids.size());
+  for (int64_t thrd_id : persistence_thrd_ids) { threads_[thrd_id] = new CpuThread(thrd_id, 0); }
 }
 
 }  // namespace oneflow

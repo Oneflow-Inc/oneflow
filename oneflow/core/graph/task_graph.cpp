@@ -62,21 +62,15 @@ void TaskGraph::GeneratePersistenceThrdId(
   HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num;
 
   // get the thread number in a machine with the task_type
-  const int32_t mdsave_conf_num = Global<JobDesc>::Get()->MdSaveWorkerNum();
   for (const auto pair : persistence_nodes) {
     int64_t machine_id = pair.first;
     CompTaskNode* task_node = pair.second;
     auto key = std::make_pair(machine_id, task_node->GetTaskType());
-
-    if (task_node->GetTaskType() == TaskType::kMdSave
-        && machine_task_type2thrd_num[key] >= mdsave_conf_num)
-      continue;
-
     machine_task_type2thrd_num[key]++;
   }
 
   // generate thread id
-  ThrdIdGenerator generator(machine_task_type2thrd_num);
+  ThrdIdGenerator generator(machine_task_type2thrd_num, Global<IDMgr>::Get()->CommNetThrdId());
   for (const auto pair : persistence_nodes) {
     int64_t machine_id = pair.first;
     CompTaskNode* task_node = pair.second;
