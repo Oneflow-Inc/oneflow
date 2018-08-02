@@ -6,7 +6,7 @@ namespace oneflow {
 void ReduceSumOp::InitFromOpConf() {
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("fw_tmp");
+  EnrollFwBufBn("fw_tmp");
 }
 
 const PbMessage& ReduceSumOp::GetCustomizedConf() const { return op_conf().reduce_sum_conf(); }
