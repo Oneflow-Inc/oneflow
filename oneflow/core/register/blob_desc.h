@@ -37,6 +37,9 @@ class BlobDesc {
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
+  int32_t mem_shared_id() const { return mem_shared_id_; }
+  void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
+
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
 
@@ -52,10 +55,13 @@ class BlobDesc {
   bool has_col_num_;
   int64_t max_col_num_;
 
+  int32_t mem_shared_id_;
+
   FieldDesc body_field_;
 };
 
-std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc);
+std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
+    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc);
 
 }  // namespace oneflow
 

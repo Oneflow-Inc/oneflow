@@ -13,9 +13,11 @@ BlobDesc::BlobDesc(const Shape& shape, DataType data_type, bool has_data_id, boo
       has_data_id_(has_data_id),
       has_col_num_(has_col_num),
       max_col_num_(max_col_num),
+      mem_shared_id_(-1),
       body_field_(shape, data_type) {}
 BlobDesc::BlobDesc(const BlobDescProto& proto) : body_field_(proto.body()) {
   max_col_num_ = proto.header().max_col_num();
+  mem_shared_id_ = proto.header().mem_shared_id();
   if (proto.header().has_opaque_header()) {
     header_is_opaque_ = true;
     has_data_id_ = false;
@@ -34,6 +36,7 @@ BlobDesc::BlobDesc(int64_t header_byte_size, const Shape& shape, DataType data_t
     : has_data_id_(false),
       has_col_num_(false),
       max_col_num_(max_col_num),
+      mem_shared_id_(-1),
       body_field_(shape, data_type) {
   if (header_byte_size > 0) {
     header_is_opaque_ = true;
@@ -65,6 +68,7 @@ void BlobDesc::ColNumFieldToProto(FieldHeaderDesc* proto) const {
 
 void BlobDesc::HeaderToProto(BlobDescProto* proto) const {
   proto->mutable_header()->set_max_col_num(max_col_num_);
+  proto->mutable_header()->set_mem_shared_id(mem_shared_id_);
   if (!header_is_opaque_) {
     FieldHeaderDesc* field_header = proto->mutable_header()->mutable_field_header();
     if (has_data_id_field()) { DataIdFieldToProto(field_header); }
@@ -85,7 +89,8 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && max_col_num_ == rhs.max_col_num_ && body_field_ == rhs.body_field_;
 }
 
-std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()> NextBlobDesc) {
+std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
+    const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
   int64_t header_byte_size = 0;
   int64_t body_byte_size = 0;
   HashSet<int> data_type_set;
@@ -93,7 +98,9 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(std::function<const BlobDesc*()>
   int32_t blob_desc_cnt = 0;
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
-  while (const BlobDesc* blob_desc = NextBlobDesc()) {
+
+  for (auto& pair : lbi2blob_desc) {
+    BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
     header_byte_size += rt_blob_desc.ByteSizeOfBlobHeader();
     body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
