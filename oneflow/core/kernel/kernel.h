@@ -47,7 +47,7 @@ class Kernel {
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
-  ActivationType GetActivationType() const;
+  virtual ActivationType GetActivationType() const { return ActivationType::kNone; }
 
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
@@ -61,14 +61,12 @@ class Kernel {
                              std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
+  virtual void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
 
   virtual void Backward(const KernelCtx& ctx,
                         std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void BackwardDataContent(const KernelCtx& ctx,
                                    std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
-  virtual void PostForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {}
-  virtual void PostBackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
-                                      const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
   virtual void BackwardDataId(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
@@ -77,6 +75,8 @@ class Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
     UNIMPLEMENTED();
   }
+  virtual void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
+                                  const Blob* out_diff_blob, Blob* bw_activation_blob) const {}
 
   virtual const PbMessage& GetCustomizedOpConf() const { UNIMPLEMENTED(); }
   virtual const PbMessage& GetCustomizedKernelConf() const { UNIMPLEMENTED(); }
@@ -122,9 +122,6 @@ class KernelIf : public Kernel {
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   virtual void BackwardColNum(const KernelCtx& ctx,
                               std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void PostForwardActivation(const KernelCtx& ctx, Blob* out_blob) const override;
-  void PostBackwardActivation(const KernelCtx& ctx, const Blob* out_blob, const Blob* out_diff_blob,
-                              Blob* bw_activation_blob) const override;
 
   void CopyDataId(DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
                   const Blob* from_blob, const PbRpf<std::string>& to_bns) const;
@@ -149,6 +146,21 @@ class KernelIfWithModel : virtual public KernelIf<device_type> {
 
  protected:
   KernelIfWithModel() = default;
+};
+
+template<DeviceType device_type, typename T>
+class KernelIfWithActivation : virtual public KernelIf<device_type> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(KernelIfWithActivation);
+  virtual ~KernelIfWithActivation() = default;
+
+ protected:
+  KernelIfWithActivation() = default;
+
+  ActivationType GetActivationType() const override;
+  void ForwardActivation(const KernelCtx& ctx, Blob* out_blob) const override;
+  void BackwardActivation(const KernelCtx& ctx, const Blob* out_blob, const Blob* out_diff_blob,
+                          Blob* bw_activation_blob) const override;
 };
 
 #define REGISTER_KERNEL(k, KernelType) \

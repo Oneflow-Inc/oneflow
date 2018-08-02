@@ -71,23 +71,36 @@ const std::string& Operator::SoleBbbn() const {
   return bw_buf_bns().Get(0);
 }
 
+void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx,
+                                std::function<void(OpContext*)> EnrollOpCtx) const {
+  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
+}
+
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, const OpContext*) const {
-  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                              const ParallelContext* parallel_ctx) const {
+  UNIMPLEMENTED() << typeid(*this).name();
+}
+
+void Operator::InferBwBufBlobDescsIf(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const OpContext* op_ctx) const {
+  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, op_ctx);
   if (GetActivationType() != ActivationType::kNone) {
     *GetBlobDesc4BnInOp("bw_activation") = *GetBlobDesc4BnInOp(SoleOdbn());
   }
 }
 
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx) const {
-  UNIMPLEMENTED() << typeid(*this).name();
+void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx,
+                                   const OpContext* op_ctx) const {
+  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
