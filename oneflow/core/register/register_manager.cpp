@@ -96,7 +96,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     }
     std::sort(lbi_pairs.begin(), lbi_pairs.end(),
               [&](const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
-                return lhs.lbi() < rhs.lbi();
+                return lhs.blob_desc().header().mem_shared_id()
+                           < rhs.blob_desc().header().mem_shared_id()
+                       || lhs.lbi() < rhs.lbi();
               });
     CHECK(!lbi_pairs.empty());
     CHECK(main_mem_ptr != nullptr);
@@ -140,6 +142,8 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     cur_header_pointer = main_mem_ptr;
     cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
   }
+  int32_t last_mem_shared_id = -1;
+  size_t body_offset = 0;
   for (const LbiBlobDescPair& lbi : lbis) {
     const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
     std::unique_ptr<Blob> blob_ptr(
@@ -147,7 +151,11 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
     InitOFRecordBlobIfNeed(blob_ptr.get());
     CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
     cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
-    cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
+    int32_t cur_mem_shared_id = lbi.blob_desc().header().mem_shared_id();
+    if (cur_mem_shared_id == -1 || cur_mem_shared_id != last_mem_shared_id) {
+      cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
+    }
+    last_mem_shared_id = cur_mem_shared_id;
   }
 }
 
