@@ -16,7 +16,7 @@ class SparseSoftmaxCrossEntropyLossOp final : public LossOp {
  private:
   void VirtualInitFromOpConf() override;
   void VirtualInferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                             const ParallelContext* parallel_ctx, size_t* buf_size) const override;
+                             const ParallelContext* parallel_ctx) const override;
   LossKernelConf* GetMutLossKernelConf(KernelConf*) const override;
 };
 

@@ -17,7 +17,7 @@ class AccuracyOp final : public Operator {
 
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                      const ParallelContext* parallel_ctx, size_t* buf_size,
+                      const ParallelContext* parallel_ctx,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const;

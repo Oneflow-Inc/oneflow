@@ -62,22 +62,30 @@ const std::string& Operator::SoleDtbn() const {
   CHECK_EQ(data_tmp_bns().size(), 1);
   return data_tmp_bns().Get(0);
 }
+const std::string& Operator::SoleFbbn() const {
+  CHECK_EQ(fw_buf_bns().size(), 1);
+  return fw_buf_bns().Get(0);
+}
+const std::string& Operator::SoleBbbn() const {
+  CHECK_EQ(bw_buf_bns().size(), 1);
+  return bw_buf_bns().Get(0);
+}
 
 void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx, size_t* buf_size,
+                                const ParallelContext* parallel_ctx,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
-  InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
-}
-
-void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext* parallel_ctx, size_t* buf_size,
-                              std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, EnrollOpCtx);
 }
+
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx,
                               std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
+}
+
+void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx, const OpContext*) const {
+  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -212,6 +220,17 @@ void Operator::EnrollDataTmpBn(const std::string& dtbn) {
   *(mut_data_tmp_bns()->Add()) = dtbn;
   CHECK(mut_bn_in_op2lbi()->insert({dtbn, dtbn2lbi(dtbn)}).second);
 }
+
+void Operator::EnrollFwBufBn(const std::string& fbbn) {
+  *(mut_fw_buf_bns()->Add()) = fbbn;
+  CHECK(mut_bn_in_op2lbi()->insert({fbbn, fbbn2lbi(fbbn)}).second);
+}
+
+void Operator::EnrollBwBufBn(const std::string& bbbn) {
+  *(mut_bw_buf_bns()->Add()) = bbbn;
+  CHECK(mut_bn_in_op2lbi()->insert({bbbn, bbbn2lbi(bbbn)}).second);
+}
+
 void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
   LogicalBlobId lbi = ibn2lbi(ibn);
   *(mut_input_bns()->Add()) = ibn;
