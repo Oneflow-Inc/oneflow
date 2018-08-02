@@ -16,21 +16,23 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void BroadCastBboxTransform(const int64_t im_index,
-                              std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                              const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ClipBox(Blob* bbox_blob) const;
-  void NmsAndTryVote(int64_t im_index, std::function<Blob*(const std::string&)> BnInOp2Blob) const;
-  int64_t Limit(std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  void NmsAndTryVote(const int64_t im_index,
+                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  int64_t Limit(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void WriteOutputToOFRecord(int64_t image_index, int64_t limit_num,
-                             std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void SortClassBoxIndexByScore(const T* scores_ptr, const int64_t boxes_num,
                                 const int64_t class_num, const int64_t class_index,
-                                int32_t* indics) const;
+                                int32_t* idx_ptr) const;
   int64_t FilterSortedIndexByThreshold(const int64_t num, const T* scores_ptr,
-                                       const int32_t* indics, const float thresh) const;
-  void BboxVoting(int64_t class_index, int32_t voter_num,
-                  std::function<Blob*(const std::string&)> BnInOp2Blob, bool need_calc_area) const;
-  void IndexMemContinuous(const int32_t* post_nms_keep_num_ptr, const int64_t class_num,
-                          const int64_t box_num, int32_t* post_nms_index_slice_ptr) const;
+                                       const int32_t* idx_ptr, const float thresh) const;
+  void BboxVoting(int64_t im_index, int64_t class_index, int32_t voter_num, int32_t votee_num,
+                  const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  int64_t IndexMemContinuous(const int64_t class_num, const int64_t box_num,
+                             const int32_t* post_nms_keep_num_ptr,
+                             int32_t* post_nms_index_slice_ptr) const;
 };
 
 }  // namespace oneflow
