@@ -14,9 +14,10 @@ const PbMessage& CloneOp::GetCustomizedConf() const { return op_conf().clone_con
 void CloneOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
   const BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
+  int64_t mem_shared_id = std::stol(NewUniqueId());
   for (std::string obn : output_bns()) {
     *GetBlobDesc4BnInOp(obn) = *input_blob_desc;
-    GetBlobDesc4BnInOp(obn)->set_mem_shared_id(0);
+    GetBlobDesc4BnInOp(obn)->set_mem_shared_id(mem_shared_id);
   }
 }
 

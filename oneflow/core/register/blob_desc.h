@@ -40,6 +40,7 @@ class BlobDesc {
   int32_t mem_shared_id() const { return mem_shared_id_; }
   void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
 
+  BlobDesc& operator=(const BlobDesc& blob_desc);
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
 

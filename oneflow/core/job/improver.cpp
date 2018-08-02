@@ -165,6 +165,7 @@ uint64_t CalcMemoryConsumed(
     }
   }
   for (const auto& pair : mem_shared_id2max_regst_desc_mem_bytes) {
+    LOG(INFO) << "regst_size:" << pair.second;
     mem_consuming += RoundUp(pair.second, kCudaMemAllocAlignSize);
   }
   return mem_consuming;
