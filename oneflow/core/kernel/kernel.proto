@@ -130,9 +130,9 @@ message OpAttribute {
 
 message KernelConf {
   required OpAttribute op_attribute = 1; 
-  required bool need_do_data_id = 2;
-  required bool need_do_col_num = 3;
-  optional bool need_do_packed_header = 4 [default = false];
+  optional bool need_do_data_id = 2 [default = false];
+  optional bool need_do_col_num = 3 [default = false];
+  optional bool need_do_opaque_header = 4 [default = false];
   required bool is_forward = 5;
   required DataType data_type = 6;
   optional ActivationType forward_activation = 7 [default = kNone];
