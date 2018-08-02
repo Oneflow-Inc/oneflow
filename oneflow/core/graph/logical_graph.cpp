@@ -275,9 +275,7 @@ void LogicalGraph::SetMainModelParallel() {
   });
 }
 
-void LogicalGraph::BuildBwStruct() {
-  NaiveBuildBwStruct();
-}
+void LogicalGraph::BuildBwStruct() { NaiveBuildBwStruct(); }
 
 void LogicalGraph::NaiveBuildBwStruct() {
   HashSet<LogicalNode*> nodes_need_bw;

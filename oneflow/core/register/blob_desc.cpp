@@ -137,9 +137,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
   }
-  for (const auto& pair : mem_shared_id2blob_desc_mem_bytes) {
-    body_byte_size += pair.second;
-  }
+  for (const auto& pair : mem_shared_id2blob_desc_mem_bytes) { body_byte_size += pair.second; }
 
   if (blob_desc_cnt == 0) {
     // do nothing
