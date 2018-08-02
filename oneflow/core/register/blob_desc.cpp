@@ -98,7 +98,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   int32_t blob_desc_cnt = 0;
   std::unique_ptr<BlobDesc> ret(new BlobDesc());
   const BlobDesc* last_blob_desc = nullptr;
-  HashMap<int32_t, size_t> mem_shared_id2max_blob_desc_mem_bytes;
+  HashMap<int32_t, size_t> mem_shared_id2blob_desc_mem_bytes;
 
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
@@ -108,8 +108,15 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     if (mem_shared_id == -1) {
       body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
     } else {
-      auto& max_bytes = mem_shared_id2max_blob_desc_mem_bytes[mem_shared_id];
-      max_bytes = std::max(max_bytes, rt_blob_desc.ByteSizeOfBlobBody());
+      auto mem_shared_it = mem_shared_id2blob_desc_mem_bytes.find(mem_shared_id);
+      if (mem_shared_it == mem_shared_id2blob_desc_mem_bytes.end()) {
+        CHECK(mem_shared_id2blob_desc_mem_bytes
+                  .emplace(mem_shared_id, rt_blob_desc.ByteSizeOfBlobBody())
+                  .second);
+      } else {
+        CHECK_EQ(mem_shared_id2blob_desc_mem_bytes[mem_shared_id],
+                 rt_blob_desc.ByteSizeOfBlobBody());
+      }
     }
     data_type_set.insert(static_cast<int>(blob_desc->data_type()));
     if (max_col_num == -1) {
@@ -120,7 +127,7 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
   }
-  for (const auto& pair : mem_shared_id2max_blob_desc_mem_bytes) { body_byte_size += pair.second; }
+  for (const auto& pair : mem_shared_id2blob_desc_mem_bytes) { body_byte_size += pair.second; }
 
   if (blob_desc_cnt == 0) {
     // do nothing
