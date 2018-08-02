@@ -22,6 +22,11 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
+  struct ForwardCloneInfo {
+    LogicalNode* pred_node;
+    LogicalBlobId lbi;
+    std::vector<LogicalEdge*> edges;
+  };
   struct B121CloneInfo {
     LogicalNode* pred_node;
     LogicalBlobId lbi;
@@ -44,6 +49,9 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void AddOneB121CloneNode(const B121CloneInfo& clone_info);
   void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
                           const std::vector<LogicalEdge*>& edges, const std::string& obn);
+  void AddForwardClone();
+  void AddOneForwardClone(const ForwardCloneInfo& clone_info);
+
   void SetMainModelParallel();
   void BuildBwStruct();
   void NaiveBuildBwStruct();
