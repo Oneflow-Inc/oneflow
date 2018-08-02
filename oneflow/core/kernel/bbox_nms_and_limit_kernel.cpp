@@ -206,11 +206,11 @@ int64_t BboxNmsAndLimitKernel<T>::Limit(
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   // votting_score_blob: (box_num, class_num)
   T* votting_score_ptr = BnInOp2Blob("votting_score")->mut_dptr<T>();
+  int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->mut_dptr<int32_t>();
+  IndexMemContinuous(post_nms_index_slice_ptr, class_num, box_num, post_nms_keep_num_ptr);
   int32_t keep_num_per_im = 0;
   FOR_RANGE(int64_t, i, 1, class_num) { keep_num_per_im += post_nms_keep_num_ptr[i]; }
   if (conf.detections_per_im() > 0 && keep_num_per_im > conf.detections_per_im()) {
-    int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->mut_dptr<int32_t>();
-    IndexMemContinuous(post_nms_index_slice_ptr, class_num, box_num, post_nms_keep_num_ptr);
     std::sort(
         post_nms_index_slice_ptr, post_nms_index_slice_ptr + keep_num_per_im,
         [&](int32_t lhs, int32_t rhs) { return votting_score_ptr[lhs] > votting_score_ptr[rhs]; });
