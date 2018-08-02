@@ -30,8 +30,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  ActivationType GetForwardActivationType() const;
-  void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
+  ActivationType GetActivationType() const;
 
   virtual LogicalNode* NewProperLogicalNode();
 
@@ -115,10 +114,12 @@ class Operator {
                               std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
-  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext*) const {}
+  void InferBwBufBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext*, const OpContext*) const;
   virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext*, const OpContext*) const;
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*) const {}
   virtual void InferDiffBlobDescsWithoutFwBlob(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
@@ -216,7 +217,6 @@ class Operator {
   }
 
   OpAttribute op_attribute_;
-  ActivationType backward_activation_;
 };
 
 std::string GenDiffBn(const std::string& bn);
