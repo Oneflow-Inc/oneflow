@@ -39,7 +39,7 @@ void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
       int64_t bbox_offset = (i * class_num + j) * 4;
       const T* cur_bbox_delta_ptr = bbox_delta_ptr + bbox_offset;
       T* cur_bbox_ptr = bbox_ptr + bbox_offset;
-      FasterRcnnUtil<T>::BboxTransform(1, cur_roi_ptr, cur_bbox_delta_ptr, cur_bbox_ptr);
+      FasterRcnnUtil<T>::BboxTransform(cur_roi_ptr, cur_bbox_delta_ptr, cur_bbox_ptr);
     }
   }
 }

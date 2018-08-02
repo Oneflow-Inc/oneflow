@@ -20,7 +20,7 @@ struct FasterRcnnUtil final {
     const float inter = iw * ih;
     return inter / (area0 + area1 - inter);
   }
-
+  static void BboxTransform(const T* bbox, const T* deltas, T* bbox_pred);
   static void BboxTransform(int64_t boxes_num, const T* bbox, const T* deltas, T* bbox_pred);
   static void BboxTransformInv(int64_t boxes_num, const T* bbox, const T* target_bbox, T* deltas);
   static void ClipBoxes(int64_t boxes_num, const int64_t image_height, const int64_t image_width,

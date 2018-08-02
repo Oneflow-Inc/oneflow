@@ -4,23 +4,28 @@
 namespace oneflow {
 
 template<typename T>
+void FasterRcnnUtil<T>::BboxTransform(const T* bbox, const T* deltas, T* bbox_pred) {
+  const float w = bbox[2] - bbox[0] + 1.0f;
+  const float h = bbox[3] - bbox[1] + 1.0f;
+  const float ctr_x = bbox[0] + 0.5f * w;
+  const float ctr_y = bbox[1] + 0.5f * h;
+
+  const float pred_ctr_x = deltas[0] * w + ctr_x;
+  const float pred_ctr_y = deltas[1] * h + ctr_y;
+  const float pred_w = std::exp(deltas[2]) * w;
+  const float pred_h = std::exp(deltas[3]) * h;
+
+  bbox_pred[0] = pred_ctr_x - 0.5f * pred_w;
+  bbox_pred[1] = pred_ctr_y - 0.5f * pred_h;
+  bbox_pred[2] = pred_ctr_x + 0.5f * pred_w - 1.f;
+  bbox_pred[3] = pred_ctr_y + 0.5f * pred_h - 1.f;
+}
+
+template<typename T>
 void FasterRcnnUtil<T>::BboxTransform(int64_t boxes_num, const T* bbox, const T* deltas,
                                       T* bbox_pred) {
   for (int64_t i = 0; i < boxes_num * 4; i += 4) {
-    float w = bbox[i + 2] - bbox[i + 0] + 1.0f;
-    float h = bbox[i + 3] - bbox[i + 1] + 1.0f;
-    float ctr_x = bbox[i + 0] + 0.5f * w;
-    float ctr_y = bbox[i + 1] + 0.5f * h;
-
-    float pred_ctr_x = deltas[i + 0] * w + ctr_x;
-    float pred_ctr_y = deltas[i + 1] * h + ctr_y;
-    float pred_w = std::exp(deltas[i + 2]) * w;
-    float pred_h = std::exp(deltas[i + 3]) * h;
-
-    bbox_pred[i + 0] = pred_ctr_x - 0.5f * pred_w;
-    bbox_pred[i + 1] = pred_ctr_y - 0.5f * pred_h;
-    bbox_pred[i + 2] = pred_ctr_x + 0.5f * pred_w - 1.f;
-    bbox_pred[i + 3] = pred_ctr_y + 0.5f * pred_h - 1.f;
+    BboxTransform(bbox + i, deltas + i, bbox_pred + i);
   }
 }
 
