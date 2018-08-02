@@ -148,15 +148,17 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  kernel_conf->set_need_do_data_id(false);
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
-    kernel_conf->set_need_do_data_id(true);
-  }
-  kernel_conf->set_need_do_col_num(false);
-  const PbRpf<std::string>* bns = &output_bns();
-  if (IsLossOp()) { bns = &input_bns(); }
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
-    kernel_conf->set_need_do_col_num(true);
+  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
+    kernel_conf->set_need_do_opaque_header(true);
+  } else {
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
+      kernel_conf->set_need_do_data_id(true);
+    }
+    const PbRpf<std::string>* bns = &output_bns();
+    if (IsLossOp()) { bns = &input_bns(); }
+    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
+      kernel_conf->set_need_do_col_num(true);
+    }
   }
 
   kernel_conf->set_is_forward(is_forward);

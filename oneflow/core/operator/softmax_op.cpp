@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/softmax_op.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -35,7 +36,7 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   // temp storage for RowMax etc.
   BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");
   fw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(in_blob_desc->ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfDataContentField())});
   fw_buf_blob_desc->set_data_type(DataType::kChar);
   if (op_ctx->need_transpose) {
     // transpose blob
@@ -60,7 +61,7 @@ void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)>
   // temp storage for RowMax etc.
   BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
   bw_buf_blob_desc->mut_shape() =
-      Shape({static_cast<int64_t>(in_blob_desc->ByteSizeOfDataContentField())});
+      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfDataContentField())});
   bw_buf_blob_desc->set_data_type(DataType::kChar);
 }
 
