@@ -31,6 +31,7 @@ void NormalizationOp::InitFromOpConf() {
   EnrollDataTmpBn("trans_out");
   EnrollDataTmpBn("cache_mean_for_cudnn_bw");
   EnrollDataTmpBn("cache_inv_variance_for_cudnn_bw");
+  EnrollBwBufBn(k_bw_activation_blob_name);
 }
 
 const PbMessage& NormalizationOp::GetCustomizedConf() const {
@@ -107,6 +108,12 @@ void NormalizationOp::InferParamBlobDescs(
     blob_names.push_back("inv_var");
   }
   for (const auto& bn_in_op : blob_names) { *GetBlobDesc4BnInOp(bn_in_op) = blob_desc; }
+}
+
+void NormalizationOp::InferBwBufBlobDescs(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
+    const OpContext* op_ctx) const {
+  *GetBlobDesc4BnInOp(k_bw_activation_blob_name) = *GetBlobDesc4BnInOp("out");
 }
 
 void NormalizationOp::VirtualGenKernelConf(

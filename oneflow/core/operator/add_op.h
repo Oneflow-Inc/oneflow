@@ -13,6 +13,8 @@ class AddOp final : public CWiseOp {
 
   void VirtualInitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+  void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                           const ParallelContext*, const OpContext*) const override;
 };
 }  // namespace oneflow
 

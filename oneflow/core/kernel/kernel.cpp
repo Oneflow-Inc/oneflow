@@ -64,11 +64,19 @@ void Kernel::Backward(const KernelCtx& ctx,
     CHECK_EQ(odbns.size(), 1);
 
     const Blob* out_blob = BnInOp2Blob(obns[0]);
-    Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
-    // BackwardActivation(ctx, out_blob, out_diff_blob);
+    const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
+    Blob* bw_activation_blob = BnInOp2Blob(k_bw_activation_blob_name);
+    BackwardActivation(ctx, out_blob, out_diff_blob, bw_activation_blob);
+    BackwardDataContent(ctx, [&](const std::string& bn) -> Blob* {
+      if (bn == odbns[0]) {
+        return bw_activation_blob;
+      } else {
+        return BnInOp2Blob(bn);
+      }
+    });
+  } else {
+    BackwardDataContent(ctx, BnInOp2Blob);
   }
-
-  BackwardDataContent(ctx, BnInOp2Blob);
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
 }
@@ -120,15 +128,16 @@ void KernelIf<device_type>::ForwardActivation(const KernelCtx& ctx, Blob* out_bl
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::BackwardActivation(const KernelCtx& ctx, const Blob* in_blob,
-                                               Blob* in_diff_blob) const {
-  int64_t elem_cnt = in_blob->shape().elem_cnt();
-  switch (in_blob->data_type()) {
-#define BACKWARD_ACTIVATION_ENTRY(T, type_proto)                                              \
-  case type_proto:                                                                            \
-    ActivationBackward<device_type, T>(this->GetActivationType(), ctx.device_ctx, elem_cnt,   \
-                                       in_blob->dptr<T>(), in_blob->dptr<T>(),                \
-                                       in_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>()); \
+void KernelIf<device_type>::BackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
+                                               const Blob* out_diff_blob,
+                                               Blob* bw_activation_blob) const {
+  int64_t elem_cnt = out_blob->shape().elem_cnt();
+  switch (out_blob->data_type()) {
+#define BACKWARD_ACTIVATION_ENTRY(T, type_proto)                                           \
+  case type_proto:                                                                         \
+    ActivationBackward<device_type, T>(                                                    \
+        this->GetActivationType(), ctx.device_ctx, elem_cnt, out_blob->dptr<T>(),          \
+        out_blob->dptr<T>(), out_diff_blob->dptr<T>(), bw_activation_blob->mut_dptr<T>()); \
     break;
     OF_PP_FOR_EACH_TUPLE(BACKWARD_ACTIVATION_ENTRY, FLOATING_DATA_TYPE_SEQ);
     default: UNIMPLEMENTED();

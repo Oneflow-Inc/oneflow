@@ -68,6 +68,7 @@ void ConvOp<NDims>::InitFromOpConf() {
   EnrollBwBufBn("bw_cudnn_buf");
   EnrollFwBufBn("fw_col_buf");
   EnrollBwBufBn("bw_col_buf");
+  EnrollBwBufBn(k_bw_activation_blob_name);
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     EnrollModelBn("bias");
     EnrollConstBufBn("bias_multiplier");
@@ -169,6 +170,7 @@ void ConvOp<NDims>::InferBwBufBlobDescs(
     bw_cudnn_buf->set_data_type(DataType::kChar);
   }
 #endif  // WITH_CUDA
+  *GetBlobDesc4BnInOp(k_bw_activation_blob_name) = *GetBlobDesc4BnInOp("out");
 }
 
 template<int32_t NDims>

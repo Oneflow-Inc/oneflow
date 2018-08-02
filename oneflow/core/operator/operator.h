@@ -247,6 +247,8 @@ inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   return lbi;
 }
 
+const std::string k_bw_activation_blob_name = "bw_activation";
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_
