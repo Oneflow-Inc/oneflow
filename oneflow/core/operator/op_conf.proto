@@ -661,7 +661,7 @@ enum ScoringMethod {
 
 message BboxVoteConf {
  required float beta = 1 [default = 1.0];
- required int32 threshold = 2 [default = 1];
+ required float threshold = 2 [default = 1];
  required ScoringMethod scoring_method = 3 [default = kIdentity];
 }
 

@@ -4,6 +4,115 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+class IdentityScoringMethod final : public ScoringMethodIf<T> {
+ public:
+  virtual T scoring(const T* score_ptr,
+                    const std::function<void(int32_t, float)>& ForEach) const override {
+    T score = 0;
+    ForEach([&](int32_t index, float iou) { score = score_ptr[index]; });
+    return score;
+  }
+};
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kIdentity, IdentityScoringMethod,
+                            FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+class AvgScoringMethod final : public ScoringMethodIf<T> {
+ public:
+  virtual T scoring(const T* score_ptr,
+                    const std::function<void(int32_t, float)>& ForEach) const override {
+    T score_sum = 0;
+    int32_t num = 0;
+    ForEach([&](int32_t index, float iou) {
+      score_sum += score_ptr[index];
+      ++num;
+    });
+    return score_sum / num;
+  }
+};
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kAvg, AvgScoringMethod, FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+class IouAvgScoringMethod final : public ScoringMethodIf<T> {
+ public:
+  virtual T scoring(const T* score_ptr,
+                    const std::function<void(int32_t, float)>& ForEach) const override {
+    float iou_weighted_score_sum = 0;
+    float iou_sum = 0;
+    ForEach([&](int32_t index, float iou) {
+      iou_weighted_score_sum += score_ptr[index] * iou;
+      iou_sum += iou;
+    });
+    return static_cast<T>(iou_weighted_score_sum / iou_sum);
+  }
+};
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kIouAvg, IouAvgScoringMethod, FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+class GeneralizedAvgScoringMethod final : public ScoringMethodIf<T> {
+ public:
+  virtual T scoring(const T* score_ptr,
+                    const std::function<void(int32_t, float)>& ForEach) const override {
+    const float beta = conf().beta();
+    float generalized_score_sum = 0;
+    int32_t num = 0;
+    ForEach([&](int32_t index, float iou) {
+      generalized_score_sum += std::pow<float>(score_ptr[index], beta);
+      ++num;
+    });
+    return std::pow<T>(generalized_score_sum / num, 1.f / beta);
+  }
+};
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kGeneralizedAvg, GeneralizedAvgScoringMethod,
+                            FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+class QuasiSumScoringMethod final : public ScoringMethodIf<T> {
+ public:
+  virtual T scoring(const T* score_ptr,
+                    const std::function<void(int32_t, float)>& ForEach) const override {
+    const float beta = conf().beta();
+    T score_sum = 0;
+    int32_t num = 0;
+    ForEach([&](int32_t index, float iou) {
+      score_sum += score_ptr[index];
+      ++num;
+    });
+    return static_cast<T>(score_sum / std::pow<float>(num, beta));
+  }
+};
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kQuasiSum, QuasiSumScoringMethod,
+                            FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+class TempAvgScoringMethod final : public ScoringMethodIf<T> {
+ public:
+  virtual T scoring(const T* score_ptr,
+                    const std::function<void(int32_t, float)>& ForEach) const override {
+    TODO();
+    return 0;
+  }
+};
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kTempAvg, TempAvgScoringMethod, FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+std::unique_ptr<ScoringMethodIf<T>> NewScoringMethod(const BboxVoteConf& vote_conf) {
+  auto* ptr = NewObj<ScoringMethodIf<T>>();
+  ptr->Init(vote_conf);
+  return std::make_unique(ptr);
+}
+
+}  // namespace
+
+template<typename T>
+void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+  if (conf.has_bbox_vote()) { scoring_method_.swap(NewScoringMethod<T>(conf.bbox_vote())); }
+}
+
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
@@ -76,7 +185,9 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
         bbox_blob->dptr<T>(), cls_pre_nms_idx_ptr, pre_nms_keep_num, pre_nms_keep_num,
         conf.nms_threshold(), nms_area_tmp_ptr, cls_post_nms_idx_ptr);
     if (conf.bbox_vote_enabled()) {
-      BboxVoting(im_index, i, pre_nms_keep_num, post_nms_keep_num_ptr[i], BnInOp2Blob);
+      BboxVoting(im_index, i, pre_nms_keep_num, post_nms_keep_num_ptr[i], pre_nms_index_slice_ptr,
+                 post_nms_index_slice_ptr, nms_area_tmp_ptr, scores_blob,
+                 BnInOp2Blob("voting_score"), bbox_blob);
     }
   }
 }
@@ -104,74 +215,49 @@ int64_t BboxNmsAndLimitKernel<T>::FilterSortedIndexByThreshold(const int64_t num
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::BboxVoting(
-    int64_t im_index, int64_t class_index, int32_t voter_num, int32_t votee_num,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  Blob* bbox_blob = BnInOp2Blob("bbox");
+void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t im_index, int64_t class_index, int32_t voter_num,
+                                          int32_t votee_num, const int32_t* pre_nms_index_slice_ptr,
+                                          const int32_t* post_nms_index_slice_ptr,
+                                          const int32_t* area_ptr, const Blob* score_blob,
+                                          Blob* voting_score_blob, Blob* bbox_blob) const {
   const int64_t bbox_num = bbox_blob->shape().At(0);
-  const int64_t class_num = bbox_blob->shape().At(1) / 4;
-  const int32_t* voter_index_ptr =
-      BnInOp2Blob("pre_nms_index_slice")->dptr<int32_t>() + class_index * bbox_num;
-  const int32_t* votee_index_ptr =
-      BnInOp2Blob("post_nms_index_slice")->dptr<int32_t>() + class_index * bbox_num;
-  const BboxVoteConf& vote_conf = op_conf().bbox_nms_and_limit_conf().bbox_vote();
-  const float voting_thresh = vote_conf.threshold();
-  const float beta = vote_conf.beta();
-  const ScoringMethod scoring_method = vote_conf.scoring_method();
-  const int32_t* area_ptr = BnInOp2Blob("nms_area_tmp")->dptr<int32_t>();
-  const T* score_ptr = BnInOp2Blob("scores")->dptr<T>() + im_index * bbox_num * class_num;
-  T* voting_score_ptr = BnInOp2Blob("voting_score")->mut_dptr<T>();
-  T* bbox_ptr = bbox_blob->mut_dptr<T>();
+  const int64_t class_num = voting_score_blob->shape().At(1);
+  const int32_t* voter_index_ptr = pre_nms_index_slice_ptr + class_index * bbox_num;
+  const int32_t* votee_index_ptr = post_nms_index_slice_ptr + class_index * bbox_num;
+  const float voting_thresh = op_conf().bbox_nms_and_limit_conf().bbox_vote().threshold();
+
+  const T* const_bbox_ptr = bbox_blob->dptr<T>();
   FOR_RANGE(int64_t, i, 0, votee_num) {
     const int32_t votee_index = votee_index_ptr[i];
-    T* votee_bbox = bbox_ptr + votee_index * 4;
-    const int32_t votee_area = FasterRcnnUtil<T>::BBoxArea(votee_bbox);
-    // init voter statistics
-    int32_t valid_voter_num = 0;
+    const int32_t bbox_offset = votee_index * 4;
+    auto ForEachNearBy = [&](const std::function<void(int32_t, float)>& Handler) {
+      const T* const_votee_bbox = const_bbox_ptr + bbox_offset;
+      const int32_t votee_area = FasterRcnnUtil<T>::BBoxArea(const_votee_bbox);
+      FOR_RANGE(int64_t, j, 0, voter_num) {
+        const int32_t voter_index = voter_index_ptr[j];
+        const int32_t voter_area = area_ptr[j];
+        const T* const_voter_bbox = const_bbox_ptr + bbox_offset;
+        const float iou = FasterRcnnUtil<T>::InterOverUnion(const_votee_bbox, votee_area,
+                                                            const_voter_bbox, voter_area);
+        if (iou >= voting_thresh) { Handler(voter_index, iou); }
+      }
+    };
+    // voting new bbox
+    const T* score_ptr = BnInOp2Blob("scores")->dptr<T>() + im_index * bbox_num * class_num;
     T score_weighted_bbox_sum[4] = {0, 0, 0, 0};
     T score_sum = 0;
-    // used by iou avg scoring
-    float iou_weighted_score_sum = 0;
-    float iou_sum = 0;
-    // used by generalized avg scoring
-    float generalized_score_sum = 0;
-    FOR_RANGE(int64_t, j, 0, voter_num) {
-      const int32_t voter_index = voter_index_ptr[j];
-      const int32_t voter_area = area_ptr[j];
+    ForEachNearBy([&](int32_t voter_index, float iou) {
       const T voter_score = score_ptr[voter_index];
-      T* voter_bbox = bbox_ptr + voter_index * 4;
-      const float iou =
-          FasterRcnnUtil<T>::InterOverUnion(votee_bbox, votee_area, voter_bbox, voter_area);
-      if (iou >= voting_thresh) {
-        ++valid_voter_num;
-        FOR_RANGE(int32_t, k, 0, 4) { score_weighted_bbox_sum[k] += voter_bbox[k] * voter_score; }
-        score_sum += voter_score;
-        if (scoring_method == kIouAvg) {
-          iou_weighted_score_sum += voter_score * iou;
-          iou_sum += iou;
-        } else if (scoring_method == kGeneralizedAvg) {
-          generalized_score_sum += std::pow<float>(voter_score, beta);
-        }
-      }
-    }
-    FOR_RANGE(int32_t, k, 0, 4) { votee_bbox[k] += score_weighted_bbox_sum[k] / score_sum; }
-    T voting_score = score_ptr[votee_index];
-    switch (scoring_method) {
-      case kIdentity:
-        // do nothing
-        break;
-      case kTempAvg: TODO(); break;
-      case kAvg: voting_score = score_sum / valid_voter_num; break;
-      case kIouAvg: voting_score = static_cast<T>(iou_weighted_score_sum / iou_sum); break;
-      case kGeneralizedAvg:
-        voting_score = std::pow<T>(generalized_score_sum / valid_voter_num, 1.f / beta);
-        break;
-      case kQuasiSum:
-        voting_score = static_cast<T>(score_sum / std::pow<float>(valid_voter_num, beta));
-        break;
-      default: UNIMPLEMENTED(); break;
-    }
-    voting_score_ptr[votee_index] = voting_score;
+      T* voter_bbox = bbox_ptr + bbox_offset;
+      FOR_RANGE(int32_t, k, 0, 4) { score_weighted_bbox_sum[k] += voter_bbox[k] * voter_score; }
+      score_sum += voter_score;
+    });
+    T* votee_bbox = bbox_blob->mut_dptr<T>() + bbox_offset;
+    FOR_RANGE(int32_t, k, 0, 4) { votee_bbox[k] = score_weighted_bbox_sum[k] / score_sum; }
+    // voting new score
+    T voting_score =
+        scoring_method_->scoring(BnInOp2Blob("voting_score")->dptr<T>(), ForEachNearBy);
+    BnInOp2Blob("voting_score")->mut_dptr<T>()[votee_index] = voting_score;
   }
 }
 
@@ -215,7 +301,8 @@ template<typename T>
 void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(
     const int64_t im_index, const int64_t limit_num,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const T* bbox_ptr = BnInOp2Blob("bbox")->dptr<T>();
+  const Blob* bbox_blob = BnInOp2Blob("bbox");
+  const T* bbox_ptr = bbox_blob->dptr<T>();
   const T* score_ptr = BnInOp2Blob("voting_score")->dptr<T>();
   const int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->dptr<int32_t>();
   OFRecord* labeled_bbox_record = BnInOp2Blob("labeled_bbox")->mut_dptr<OFRecord>() + im_index;
@@ -228,6 +315,7 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(
     labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 1]);
     labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 2]);
     labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 3]);
+    labeled_bbox_feature.mutable_int32_list()->add_value(index % bbox_blob->shape().At(0));
     score_feature.mutable_float_list()->add_value(score_ptr[index]);
   }
 }
