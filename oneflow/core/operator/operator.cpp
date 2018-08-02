@@ -18,12 +18,12 @@ DataType GetDataTypeFromBnInOpVec(
 }  // namespace
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
-  backward_activation_ = ActivationType::kNone;
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
   if (this_op_conf->has_use_cudnn_on_gpu() == false) {
     this_op_conf->set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
   }
+  if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
   InitFromOpConf();
 }
 
@@ -83,14 +83,24 @@ void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBl
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
-void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                   const ParallelContext* parallel_ctx, const OpContext*) const {
-  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
-}
-
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext* parallel_ctx) const {
   UNIMPLEMENTED() << typeid(*this).name();
+}
+
+void Operator::InferBwBufBlobDescsIf(
+    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, const OpContext* op_ctx) const {
+  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, op_ctx);
+  if (GetActivationType() != ActivationType::kNone) {
+    *GetBlobDesc4BnInOp("bw_activation") = *GetBlobDesc4BnInOp(SoleOdbn());
+  }
+}
+
+void Operator::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext* parallel_ctx,
+                                   const OpContext* op_ctx) const {
+  InferBwBufBlobDescs(GetBlobDesc4BnInOp, parallel_ctx);
 }
 
 void Operator::FixParallelDesc(ParallelDesc* pr_desc) const {
@@ -126,7 +136,7 @@ static bool HasBlobDescWithField(
   return false;
 }
 
-ActivationType Operator::GetForwardActivationType() const {
+ActivationType Operator::GetActivationType() const {
   if (HasFieldInCustomizedConf("activation")) {
     return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
   } else {
@@ -159,8 +169,6 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
 
-  kernel_conf->set_forward_activation(GetForwardActivationType());
-  kernel_conf->set_backward_activation(backward_activation_);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 
