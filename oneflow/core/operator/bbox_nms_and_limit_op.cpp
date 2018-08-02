@@ -10,6 +10,7 @@ void BboxNmsAndLimitOp::InitFromOpConf() {
   EnrollOutputBn("labeled_bbox", false);
   EnrollOutputBn("bbox_score", false);
   EnrollDataTmpBn("bbox");
+  EnrollDataTmpBn("voting_score");
   EnrollDataTmpBn("pre_nms_index_slice");
   EnrollDataTmpBn("post_nms_index_slice");
   EnrollDataTmpBn("post_nms_keep_num");
@@ -20,26 +21,32 @@ const PbMessage& BboxNmsAndLimitOp::GetCustomizedConf() const {
   return op_conf().bbox_nms_and_limit_conf();
 }
 
+void BboxNmsAndLimitOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("bbox_delta")->data_type());
+}
+
 void BboxNmsAndLimitOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   CHECK_EQ(device_type(), DeviceType::kCPU);
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
+  if (conf.bbox_vote_enabled()) { CHECK(conf.has_bbox_vote()); }
   // input blob shape
-  // bbox_delta (n, r, c * 4)
-  // scores (n, r, c)
+  // bbox_delta (n * r, c * 4)
+  // scores (n * r, c)
   // rois (n, r, 4)
   const BlobDesc* bbox_delta_blob_desc = GetBlobDesc4BnInOp("bbox_delta");
   const BlobDesc* scores_blob_desc = GetBlobDesc4BnInOp("scores");
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  int32_t class_num = scores_blob_desc->shape().At(2);
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(0), scores_blob_desc->shape().At(0));
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(0), rois_blob_desc->shape().At(0));
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(1), scores_blob_desc->shape().At(1));
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(1), rois_blob_desc->shape().At(1));
-  CHECK_EQ(bbox_delta_blob_desc->shape().At(2), class_num * 4);
-  CHECK_EQ(rois_blob_desc->shape().At(2), 4);
-  int64_t images_num = bbox_delta_blob_desc->shape().At(0);
+  int64_t images_num = rois_blob_desc->shape().At(0);
   int64_t rois_num = rois_blob_desc->shape().At(1);
+  int32_t class_num = scores_blob_desc->shape().At(1);
+  CHECK_EQ(bbox_delta_blob_desc->shape().At(0), scores_blob_desc->shape().At(0));
+  CHECK_EQ(bbox_delta_blob_desc->shape().At(0), images_num * rois_num);
+  CHECK_EQ(bbox_delta_blob_desc->shape().At(1), class_num * 4);
+  CHECK_EQ(rois_blob_desc->shape().At(2), 4);
   // out blob
   BlobDesc* labeled_bbox_blob_desc = GetBlobDesc4BnInOp("labeled_bbox");
   labeled_bbox_blob_desc->mut_shape() = Shape({images_num});
@@ -49,13 +56,13 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   bbox_score_blob_desc->set_data_type(DataType::kOFRecord);
   // data tmp blob shape
   // bbox (r, c * 4)
-  // votting_score (r, c)
+  // voting_score (r, c)
   BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
   bbox_blob_desc->mut_shape() = Shape({rois_num, class_num * 4});
   bbox_blob_desc->set_data_type(bbox_delta_blob_desc->data_type());
-  BlobDesc* votting_score_blob_desc = GetBlobDesc4BnInOp("votting_score");
-  votting_score_blob_desc->mut_shape() = Shape({rois_num, class_num});
-  votting_score_blob_desc->set_data_type(scores_blob_desc->data_type());
+  BlobDesc* voting_score_blob_desc = GetBlobDesc4BnInOp("voting_score");
+  voting_score_blob_desc->mut_shape() = Shape({rois_num, class_num});
+  voting_score_blob_desc->set_data_type(scores_blob_desc->data_type());
   // pre_nms_index_slice (c, r)
   // post_nms_index_slice (c, r)
   // post_nms_keep_num (c)

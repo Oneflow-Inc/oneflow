@@ -7,7 +7,7 @@ namespace oneflow {
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const int64_t image_num = BnInOp2Blob("bbox")->shape().At(0);
+  const int64_t image_num = BnInOp2Blob("rois")->shape().At(0);
   FOR_RANGE(int64_t, i, 0, image_num) {
     BroadCastBboxTransform(i, BnInOp2Blob);
     ClipBox(BnInOp2Blob("bbox"));
@@ -22,10 +22,10 @@ void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
-  const int64_t class_num = BnInOp2Blob("bbox_delta")->shape().At(2) / 4;
+  const int64_t class_num = BnInOp2Blob("bbox_delta")->shape().At(1) / 4;
   const int64_t rois_num = rois_blob->shape().At(1);
   CHECK_EQ(bbox_delta_blob->shape().elem_cnt(), rois_blob->shape().elem_cnt() * class_num);
-  CHECK_EQ(bbox_delta_blob->shape().At(0), rois_blob->shape().At(0));
+  CHECK_EQ(bbox_delta_blob->shape().At(0), rois_blob->shape().At(0) * rois_num);
   // data ptr
   const int64_t im_rois_offset = im_index * rois_num * 4;
   const int64_t im_delta_offset = im_index * rois_num * class_num * 4;
@@ -54,11 +54,11 @@ template<typename T>
 void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* scores_blob = BnInOp2Blob("scores");
-  const int64_t boxes_num = scores_blob->shape().At(1);
-  const int64_t class_num = scores_blob->shape().At(2);
+  Blob* bbox_blob = BnInOp2Blob("bbox");
+  const int64_t boxes_num = bbox_blob->shape().At(0);
+  const int64_t class_num = scores_blob->shape().At(1);
   const int64_t score_offset = im_index * boxes_num * class_num;
   const T* scores_ptr = scores_blob->dptr<T>() + score_offset;
-  T* bbox_ptr = BnInOp2Blob("bbox")->mut_dptr<T>();
   int32_t* pre_nms_index_slice_ptr = BnInOp2Blob("pre_nms_index_slice")->mut_dptr<int32_t>();
   int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->mut_dptr<int32_t>();
   int32_t* post_nms_keep_num_ptr = BnInOp2Blob("post_nms_keep_num")->mut_dptr<int32_t>();
@@ -71,10 +71,10 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     int32_t* cls_post_nms_idx_ptr = post_nms_index_slice_ptr + cur_class_offset;
     SortClassBoxIndexByScore(scores_ptr, boxes_num, class_num, i, cls_pre_nms_idx_ptr);
     const int64_t pre_nms_keep_num = FilterSortedIndexByThreshold(
-        boxes_num, scores_ptr, cls_pre_nms_idx_ptr, conf.score_thresh());
-    post_nms_keep_num_ptr[i] =
-        FasterRcnnUtil<T>::Nms(bbox_ptr, cls_pre_nms_idx_ptr, pre_nms_keep_num, pre_nms_keep_num,
-                               conf.nms_threshold(), nms_area_tmp_ptr, cls_post_nms_idx_ptr);
+        boxes_num, scores_ptr, cls_pre_nms_idx_ptr, conf.score_threshold());
+    post_nms_keep_num_ptr[i] = FasterRcnnUtil<T>::Nms(
+        bbox_blob->dptr<T>(), cls_pre_nms_idx_ptr, pre_nms_keep_num, pre_nms_keep_num,
+        conf.nms_threshold(), nms_area_tmp_ptr, cls_post_nms_idx_ptr);
     if (conf.bbox_vote_enabled()) {
       BboxVoting(im_index, i, pre_nms_keep_num, post_nms_keep_num_ptr[i], BnInOp2Blob);
     }
@@ -115,7 +115,7 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(
   const int32_t* votee_index_ptr =
       BnInOp2Blob("post_nms_index_slice")->dptr<int32_t>() + class_index * bbox_num;
   const BboxVoteConf& vote_conf = op_conf().bbox_nms_and_limit_conf().bbox_vote();
-  const float voting_thresh = vote_conf.thresh();
+  const float voting_thresh = vote_conf.threshold();
   const float beta = vote_conf.beta();
   const ScoringMethod scoring_method = vote_conf.scoring_method();
   const int32_t* area_ptr = BnInOp2Blob("nms_area_tmp")->dptr<int32_t>();
@@ -193,11 +193,11 @@ int64_t BboxNmsAndLimitKernel<T>::IndexMemContinuous(const int64_t class_num, co
 template<typename T>
 int64_t BboxNmsAndLimitKernel<T>::Limit(
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  const Blob* votting_score_blob = BnInOp2Blob("votting_score");
-  const int64_t boxes_num = votting_score_blob->shape().At(0);
-  const int64_t class_num = votting_score_blob->shape().At(1);
+  const Blob* voting_score_blob = BnInOp2Blob("voting_score");
+  const int64_t boxes_num = voting_score_blob->shape().At(0);
+  const int64_t class_num = voting_score_blob->shape().At(1);
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  const T* votting_score_ptr = votting_score_blob->dptr<T>();
+  const T* voting_score_ptr = voting_score_blob->dptr<T>();
   int32_t* post_nms_keep_num_ptr = BnInOp2Blob("post_nms_keep_num")->mut_dptr<int32_t>();
   int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->mut_dptr<int32_t>();
   int32_t keep_num_per_im =
@@ -205,7 +205,7 @@ int64_t BboxNmsAndLimitKernel<T>::Limit(
   if (conf.detections_per_im() > 0 && keep_num_per_im > conf.detections_per_im()) {
     std::sort(
         post_nms_index_slice_ptr, post_nms_index_slice_ptr + keep_num_per_im,
-        [&](int32_t lhs, int32_t rhs) { return votting_score_ptr[lhs] > votting_score_ptr[rhs]; });
+        [&](int32_t lhs, int32_t rhs) { return voting_score_ptr[lhs] > voting_score_ptr[rhs]; });
     keep_num_per_im = conf.detections_per_im();
   }
   return keep_num_per_im;
@@ -219,10 +219,9 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(
   const T* score_ptr = BnInOp2Blob("voting_score")->dptr<T>();
   const int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->dptr<int32_t>();
   OFRecord* labeled_bbox_record = BnInOp2Blob("labeled_bbox")->mut_dptr<OFRecord>() + im_index;
-  Feature& labeled_bbox_feature =
-      labeled_bbox_record->mutable_feature()->at(kOFRecordMapDefaultKey);
+  Feature& labeled_bbox_feature = (*labeled_bbox_record->mutable_feature())[kOFRecordMapDefaultKey];
   OFRecord* score_record = BnInOp2Blob("bbox_score")->mut_dptr<OFRecord>() + im_index;
-  Feature& score_feature = score_record->mutable_feature()->at(kOFRecordMapDefaultKey);
+  Feature& score_feature = (*score_record->mutable_feature())[kOFRecordMapDefaultKey];
   FOR_RANGE(int64_t, i, 0, limit_num) {
     int32_t index = post_nms_index_slice_ptr[i];
     labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 0]);

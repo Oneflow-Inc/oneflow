@@ -11,7 +11,7 @@ OFRecordEncoderIf* GetOFRecordEncoder(EncodeCase encode_case, DataType data_type
 #define MAKE_ENTRY(et, dt) \
   {GetHashKey(et, OF_PP_PAIR_SECOND(dt)), new OFRecordEncoderImpl<et, OF_PP_PAIR_FIRST(dt)>},
 
-      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_CASE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
+      OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, ENCODE_CASE_SEQ, ENCODE_DATA_TYPE_SEQ)
 
   };
   return obj.at(GetHashKey(encode_case, data_type));

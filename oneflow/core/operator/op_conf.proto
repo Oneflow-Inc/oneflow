@@ -660,9 +660,9 @@ enum ScoringMethod {
 }
 
 message BboxVoteConf {
- optional float beta = 1 [default = 1.0];
- optional int32 thresh = 2 [default = 1];
- optional ScoringMethod scoring_method = 3 [default = kIdentity];
+ required float beta = 1 [default = 1.0];
+ required int32 threshold = 2 [default = 1];
+ required ScoringMethod scoring_method = 3 [default = kIdentity];
 }
 
 message BboxNmsAndLimitOpConf {
@@ -671,13 +671,13 @@ message BboxNmsAndLimitOpConf {
   required string scores = 3;
   required string labeled_bbox = 4;
   required string bbox_score = 5;
-  required float score_thresh = 6;
+  required float score_threshold = 6;
   required float nms_threshold = 7;
-  required bool bbox_vote_enabled = 8;
-  required BboxVoteConf bbox_vote = 9;
   required int32 detections_per_im = 10;
   required int32 image_height = 11;
   required int32 image_width = 12;
+  required bool bbox_vote_enabled = 8;
+  optional BboxVoteConf bbox_vote = 9;
 }
 
 message ProposalOpConf {
@@ -778,7 +778,7 @@ message OperatorConf {
     SmoothL1LossOpConf smooth_l1_loss_conf = 408;
     ProposalOpConf proposal_conf = 409;
     RoIAlignOpConf roi_align_conf = 410;
-    ProposalTargetOpConf proposal_target_conf=411;
+    ProposalTargetOpConf proposal_target_conf = 411;
     BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
   }
 }
