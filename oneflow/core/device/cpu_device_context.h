@@ -8,13 +8,10 @@ namespace oneflow {
 class CpuDeviceCtx final : public DeviceCtx {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceCtx);
-  CpuDeviceCtx() = delete;
+  CpuDeviceCtx() = default;
   ~CpuDeviceCtx() = default;
 
-  CpuDeviceCtx(void* buf_ptr, size_t buf_size) : DeviceCtx(buf_ptr, buf_size) {}
-  std::unique_ptr<DeviceCtx> Copy() const {
-    return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx(buf_ptr(), buf_size()));
-  }
+  std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
   void AddCallBack(std::function<void()> callback) const override { callback(); }
 

@@ -117,14 +117,14 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
       CHECK_EQ(GetLocalWorkStreamId(), 0);
-      device_ctx_.reset(new CpuDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size));
+      device_ctx_.reset(new CpuDeviceCtx());
       break;
     }
     case DeviceType::kGPU: {
       CudaStreamHandle* cuda_handle = nullptr;
       CHECK_EQ(GetLocalWorkStreamId(), 0);
       cuda_handle = thread_ctx.g_cuda_stream.get();
-      device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, cuda_handle));
+      device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
     }
     default: { UNIMPLEMENTED(); }
