@@ -47,8 +47,7 @@ class Kernel {
                                      const std::string& model_load_dir,
                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
 
-  ActivationType GetForwardActivationType() const { return kernel_conf().forward_activation(); }
-  ActivationType GetBackwardActivationType() const { return kernel_conf().backward_activation(); }
+  ActivationType GetActivationType() const;
 
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;

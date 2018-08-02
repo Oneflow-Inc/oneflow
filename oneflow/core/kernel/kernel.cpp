@@ -120,8 +120,8 @@ void KernelIf<device_type>::PostForwardActivation(const KernelCtx& ctx, Blob* ou
 }
 
 template<DeviceType device_type>
-void KernelIf<device_type>::PostBackwardActivation(const KernelCtx& ctx, const Blob* in_blob,
-                                                   Blob* in_diff_blob) const {
+void KernelIf<device_type>::PostBackwardActivation(const KernelCtx& ctx, const Blob* out_blob,
+                                                   const Blob* out_diff_blob, Blob* bw_activation_blob) const {
   int64_t elem_cnt = in_blob->shape().elem_cnt();
   switch (in_blob->data_type()) {
 #define BACKWARD_ACTIVATION_ENTRY(T, type_proto)                                              \
