@@ -210,7 +210,7 @@ void BoxingKernel<T>::VirtualKernelInit(const ParallelContext*) {
   const std::string& obn_0 = op_attribute().output_bns(0);
   ibn_0_ = ConstructPbRpf(ibn_0);
   obn_0_ = ConstructPbRpf(obn_0);
-  CHECK(kernel_conf().need_do_packed_header() == false);
+  CHECK(kernel_conf().header_is_opaque() == false);
 }
 
 template<typename T>
