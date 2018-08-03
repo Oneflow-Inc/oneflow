@@ -11,9 +11,10 @@ class ScoringMethodIf {
  public:
   ScoringMethodIf(const BboxVoteConf& vote_conf) : vote_conf_(vote_conf) { }
   virtual ~ScoringMethodIf() = default;
-  //void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
-  const BboxVoteConf& conf() { return vote_conf_; }
-  virtual float scoring(const T*, const std::function<void(int32_t, float)>&) const = 0;
+  void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
+  const BboxVoteConf& conf() const { return vote_conf_; }
+  virtual T scoring(const T*,
+                    const std::function<void(const std::function<void(int32_t, float)>&)>&) const = 0;
 
  private:
   BboxVoteConf vote_conf_;
@@ -53,19 +54,6 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };
-
-// #define SCORING_METHOD_REGISTER_VAR_NAME(k, data_type) g_registry_var##k##data_type
-
-// #define REGISTER_SCORING_METHOD(k, Class, data_type_pair)                             \
-//   static AutoRegistrationFactory<ScoringMethodIf<OF_PP_PAIR_FIRST(data_type_pair)>>:: \
-//       RawRegisterType<Class<OF_PP_PAIR_FIRST(data_type_pair)>>                        \
-//           SCORING_METHOD_REGISTER_VAR_NAME(k, OF_PP_PAIR_SECOND(data_type_pair))
-
-// #define MAKE_SCORING_METHOD_REGISTER(k, class, data_type_pair) \
-//   REGISTER_SCORING_METHOD(k, class, OF_PP_PAIR_FIRST(data_type_pair));
-
-// #define ADD_SCORING_METHOD_REGISTER(k, method_class, data_type_seq) \
-//   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCORING_METHOD, (k), (method_class), data_type_seq);
 
 }  // namespace oneflow
 
