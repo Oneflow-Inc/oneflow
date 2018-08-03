@@ -33,12 +33,12 @@ void FindBestConvAlgo(
     std::function<void(int* num)> GetAlgoMaxCnt,
     std::function<void(int req_num, int* returned_num, AlgoPerfType* results, void* ws)>
         FindAlgoHandler,
-    AlgoType* algo, void* ws, size_t avail_ws_sz) {
+    AlgoType* algo, void* work_space) {
   int max_algo_num;
   int returned_algo_num;
   GetAlgoMaxCnt(&max_algo_num);
   AlgoPerfType* perf_results = new AlgoPerfType[max_algo_num];
-  FindAlgoHandler(max_algo_num, &returned_algo_num, perf_results, ws);
+  FindAlgoHandler(max_algo_num, &returned_algo_num, perf_results, work_space);
   *algo = perf_results[0].algo;
   delete[] perf_results;
 }
@@ -345,7 +345,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
         avail_ws_sz));
   };
   FindBestConvAlgo<cudnnConvolutionFwdAlgoPerf_t, decltype(conv_ctx->fwd_algo)>(
-      GetFwdAlgoMaxCnt, FindFwdAlgoHandler, &conv_ctx->fwd_algo, work_space, avail_ws_sz);
+      GetFwdAlgoMaxCnt, FindFwdAlgoHandler, &conv_ctx->fwd_algo, work_space);
 
   // find best algorithm for backward filter
   auto GetBwdFilterAlgoMaxCnt = [&](int* num) {
@@ -359,8 +359,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
         avail_ws_sz));
   };
   FindBestConvAlgo<cudnnConvolutionBwdFilterAlgoPerf_t, decltype(conv_ctx->bwd_filter_algo)>(
-      GetBwdFilterAlgoMaxCnt, FindBwdFilterAlgoHandler, &conv_ctx->bwd_filter_algo, work_space,
-      avail_ws_sz);
+      GetBwdFilterAlgoMaxCnt, FindBwdFilterAlgoHandler, &conv_ctx->bwd_filter_algo, work_space);
 
   // find best algorithm for backward data
   auto GetBwdDataAlgoMaxCnt = [&](int* num) {
@@ -373,8 +372,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
         conv_desc.Get(), in_desc.Get(), in_dptr, req_num, returned_num, results, ws, avail_ws_sz));
   };
   FindBestConvAlgo<cudnnConvolutionBwdDataAlgoPerf_t, decltype(conv_ctx->bwd_data_algo)>(
-      GetBwdDataAlgoMaxCnt, FindBwdDataAlgoHandler, &conv_ctx->bwd_data_algo, work_space,
-      avail_ws_sz);
+      GetBwdDataAlgoMaxCnt, FindBwdDataAlgoHandler, &conv_ctx->bwd_data_algo, work_space);
   CudaCheck(cudaFree(in_dptr));
   CudaCheck(cudaFree(out_dptr));
   CudaCheck(cudaFree(filter_dptr));
