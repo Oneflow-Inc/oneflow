@@ -97,6 +97,7 @@ BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
   max_col_num_ = blob_desc.max_col_num_;
   mem_shared_id_ = -1;
   body_field_ = blob_desc.body_field_;
+  return *this;
 }
 
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
