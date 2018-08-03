@@ -65,7 +65,7 @@ class ConvOp : public Operator {
                               const OpContext*) const;
 #ifdef WITH_CUDA
   void InferCudnnAlgo(std::function<const BlobDesc*(const std::string)> GetBlobDesc4BnInOp,
-                      CudnnConvAlgoCtx* conv_ctx) const;
+                      CudnnConvAlgoCtx* conv_ctx, const int64_t device_id) const;
 #endif  // WITH_CUDA
 };
 
