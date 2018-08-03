@@ -18,10 +18,10 @@ void InputWiseCompActor::Init(const TaskProto& task_proto) {
   }
 
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    CHECK_EQ(1, pair.second.regst_desc_id_size());
-    int64_t regst_desc_id = pair.second.regst_desc_id().Get(0);
-    CHECK(readable_regsts_.emplace(regst_desc_id, std::queue<Regst*>()).second);
-    CHECK(regst_desc_id2is_processed_.emplace(regst_desc_id, false).second);
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      CHECK(readable_regsts_.emplace(regst_desc_id, std::queue<Regst*>()).second);
+      CHECK(regst_desc_id2is_processed_.emplace(regst_desc_id, false).second);
+    }
   }
   cur_processed_regst_desc_id_ = -1;
   readable_regst_desc_cnt_ = 0;
