@@ -1,4 +1,5 @@
 #include "oneflow/core/operator/softmax_op.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -7,16 +8,19 @@ void SoftmaxOp::InitFromOpConf() {
 
   EnrollInputBn("in");
   EnrollOutputBn("out");
-  EnrollDataTmpBn("softmax_num");
   EnrollDataTmpBn("transpose_in");
   EnrollDataTmpBn("transpose_out");
   EnrollDataTmpBn("transpose_out_diff");
+  EnrollFwBufBn("fw_softmax_num");
+  EnrollFwBufBn("fw_buf");
+  EnrollBwBufBn("bw_buf");
+  EnrollBwBufBn("bw_softmax_num");
 }
 
 const PbMessage& SoftmaxOp::GetCustomizedConf() const { return op_conf().softmax_conf(); }
 
 void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                               const ParallelContext* parallel_ctx, size_t* buf_size,
+                               const ParallelContext* parallel_ctx,
                                std::function<void(OpContext*)> EnrollOpCtx) const {
   // in
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
@@ -26,9 +30,14 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
   EnrollOpCtx(op_ctx);
 
   // 1D blob store tmp calculate result
-  BlobDesc* tmp_blob_desc = GetBlobDesc4BnInOp("softmax_num");
-  tmp_blob_desc->mut_shape() = Shape({op_ctx->transpose_rows});
-  tmp_blob_desc->set_data_type(in_blob_desc->data_type());
+  BlobDesc* fw_tmp_blob_desc = GetBlobDesc4BnInOp("fw_softmax_num");
+  fw_tmp_blob_desc->mut_shape() = Shape({op_ctx->transpose_rows});
+  fw_tmp_blob_desc->set_data_type(in_blob_desc->data_type());
+  // temp storage for RowMax etc.
+  BlobDesc* fw_buf_blob_desc = GetBlobDesc4BnInOp("fw_buf");
+  fw_buf_blob_desc->mut_shape() =
+      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfDataContentField())});
+  fw_buf_blob_desc->set_data_type(DataType::kChar);
   if (op_ctx->need_transpose) {
     // transpose blob
     BlobDesc* transpose_blob_desc = GetBlobDesc4BnInOp("transpose_in");
@@ -39,7 +48,21 @@ void SoftmaxOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetB
     *GetBlobDesc4BnInOp("transpose_out") = *transpose_blob_desc;
     *GetBlobDesc4BnInOp("transpose_out_diff") = *transpose_blob_desc;
   }
-  *buf_size = in_blob_desc->ByteSizeOfDataContentField();
+}
+
+void SoftmaxOp::InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                    const ParallelContext*, const OpContext* op_ctx) const {
+  const SoftmaxOpCtx* softmax_op_ctx = static_cast<const SoftmaxOpCtx*>(op_ctx);
+  const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
+  // 1D blob store tmp calculate result
+  BlobDesc* bw_tmp_blob_desc = GetBlobDesc4BnInOp("bw_softmax_num");
+  bw_tmp_blob_desc->mut_shape() = Shape({softmax_op_ctx->transpose_rows});
+  bw_tmp_blob_desc->set_data_type(in_blob_desc->data_type());
+  // temp storage for RowMax etc.
+  BlobDesc* bw_buf_blob_desc = GetBlobDesc4BnInOp("bw_buf");
+  bw_buf_blob_desc->mut_shape() =
+      Shape({static_cast<int64_t>(RtBlobDesc(*in_blob_desc).ByteSizeOfDataContentField())});
+  bw_buf_blob_desc->set_data_type(DataType::kChar);
 }
 
 void SoftmaxOp::VirtualGenKernelConf(
