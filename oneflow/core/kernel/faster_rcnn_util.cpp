@@ -53,11 +53,12 @@ void FasterRcnnUtil<T>::BboxTransformInv(int64_t boxes_num, const T* bbox, const
 template<typename T>
 void FasterRcnnUtil<T>::ClipBoxes(int64_t boxes_num, const int64_t image_height,
                                   const int64_t image_width, T* bbox) {
-  for (int64_t i = 0; i < boxes_num * 4; i += 4) {
-    bbox[i + 0] = std::max<T>(std::min<T>(bbox[i + 0], image_width), 0);
-    bbox[i + 1] = std::max<T>(std::min<T>(bbox[i + 1], image_height), 0);
-    bbox[i + 2] = std::max<T>(std::min<T>(bbox[i + 2], image_width), 0);
-    bbox[i + 3] = std::max<T>(std::min<T>(bbox[i + 3], image_height), 0);
+  BBox<T>* bbox_ptr = BBox<T>::MutCast(bbox);
+  FOR_RANGE(int64_t, i, 0, boxes_num) {
+    bbox_ptr[i].set_x1(std::max<T>(std::min<T>(bbox_ptr[i].x1(), image_width), 0));
+    bbox_ptr[i].set_y1(std::max<T>(std::min<T>(bbox_ptr[i].y1(), image_height), 0));
+    bbox_ptr[i].set_x2(std::max<T>(std::min<T>(bbox_ptr[i].x2(), image_width), 0));
+    bbox_ptr[i].set_y2(std::max<T>(std::min<T>(bbox_ptr[i].y2(), image_height), 0));
   }
 }
 
@@ -117,6 +118,7 @@ void ScoredBBoxSlice<T>::SortByScore(bool init_index) {
 template<typename T>
 void ScoredBBoxSlice<T>::Nms(float nms_threshold, ScoredBBoxSlice* post_nms_slice) const {
   CHECK_NE(index_slice(), post_nms_slice->index_slice());
+  CHECK_LE(post_nms_slice->available_len(), available_len());
   CHECK_EQ(bbox_ptr(), post_nms_slice->bbox_ptr());
   CHECK_EQ(score_ptr(), post_nms_slice->score_ptr());
   int32_t* second_level_index_tmp_ptr = post_nms_slice->mut_index_slice();
@@ -132,12 +134,15 @@ void ScoredBBoxSlice<T>::Nms(float nms_threshold, ScoredBBoxSlice* post_nms_slic
   FOR_RANGE(int32_t, sorted_score_slice_i, 0, available_len()) {
     if (IsSuppressed(sorted_score_slice_i)) { continue; }
     second_level_index_tmp_ptr[keep_num++] = sorted_score_slice_i;
-    if (keep_num == post_nms_slice->avaliable_len()) { break; }
+    if (keep_num == post_nms_slice->available_len()) { break; }
   }
   FOR_RANGE(int32_t, i, 0, keep_num) {
     post_nms_slice->mut_index_slice()[i] = index_slice()[second_level_index_tmp_ptr[i]];
   }
   post_nms_slice->Truncate(keep_num);
 }
+
+#define INITIATE_SCORED_BBOX_SLICE(T, type_cpp) template class ScoredBBoxSlice<T>;
+OF_PP_FOR_EACH_TUPLE(INITIATE_SCORED_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

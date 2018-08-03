@@ -79,7 +79,7 @@ class ScoredBBoxSlice final {
     if (len < available_len_) { available_len_ = len; }
   }
   inline const BBox<T>* GetBBox(int64_t i) const {
-    return BBox<T>::Cast(bbox_ptr_ + index_slice_[i] * 4);
+    return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
   }
 
   // Getters
