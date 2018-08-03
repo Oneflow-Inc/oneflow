@@ -15,100 +15,78 @@ namespace {
   OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCORING_METHOD_CLASS, (k), (class_name), \
                                    FLOATING_DATA_TYPE_SEQ)
 
-template<typename T>
-class IdentityScoringMethod final : public ScoringMethodIf<T> {
- public:
-  virtual T scoring(
-      const T* score_ptr,
-      const std::function<void(const std::function<void(int32_t, T)>&)>& ForEach) const override {
-    T score = 0;
-    ForEach([&](int32_t index, T iou) { score = score_ptr[index]; });
-    return score;
-  }
-};
-REGISTER_SCORING_METHOD(ScoringMethod::kId, IdentityScoringMethod);
+using ForEachType = std::function<void(const std::function<void(int32_t, float)>&)>;
+
+// clang-format off
+#define DEFINE_SCORING_METHOD(k, score_ptr, for_each_nearby)                             \
+class OF_PP_CAT(ScoreMethod, __LINE__) final : public ScoringMethodIf<T> {               \
+   public:                                                                               \
+    T scoring(const T* score_ptr, const ForEachType& for_each_nearby) const override; \
+};                                                                                       \
+REGISTER_SCORING_METHOD(k, OF_PP_CAT(ScoreMethod, __LINE__));                            \
+template<typename T>                                                                     \
+T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const T* score_ptr,                       \
+                                               const ForEachType& for_each_nearby) const
+// clang-format on
 
 template<typename T>
-class AvgScoringMethod final : public ScoringMethodIf<T> {
- public:
-  virtual T scoring(
-      const T* score_ptr,
-      const std::function<void(const std::function<void(int32_t, T)>&)>& ForEach) const override {
-    T score_sum = 0;
-    int32_t num = 0;
-    ForEach([&](int32_t index, T iou) {
-      score_sum += score_ptr[index];
-      ++num;
-    });
-    return score_sum / num;
-  }
-};
-REGISTER_SCORING_METHOD(ScoringMethod::kAvg, AvgScoringMethod);
+DEFINE_SCORING_METHOD(ScoringMethod::kIdentity, score_ptr, ForEach) {
+  T score = 0;
+  ForEach([&](int32_t index, float iou) { score = score_ptr[index]; });
+  return score;
+}
 
 template<typename T>
-class IouAvgScoringMethod final : public ScoringMethodIf<T> {
- public:
-  virtual T scoring(
-      const T* score_ptr,
-      const std::function<void(const std::function<void(int32_t, T)>&)>& ForEach) const override {
-    T iou_weighted_score_sum = 0;
-    T iou_sum = 0;
-    ForEach([&](int32_t index, T iou) {
-      iou_weighted_score_sum += score_ptr[index] * iou;
-      iou_sum += iou;
-    });
-    return static_cast<T>(iou_weighted_score_sum / iou_sum);
-  }
-};
-REGISTER_SCORING_METHOD(ScoringMethod::kIouAvg, IouAvgScoringMethod);
+DEFINE_SCORING_METHOD(ScoringMethod::kAvg, score_ptr, ForEach) {
+  T score_sum = 0;
+  int32_t num = 0;
+  ForEach([&](int32_t index, float iou) {
+    score_sum += score_ptr[index];
+    ++num;
+  });
+  return score_sum / num;
+}
 
 template<typename T>
-class GeneralizedAvgScoringMethod final : public ScoringMethodIf<T> {
- public:
-  virtual T scoring(
-      const T* score_ptr,
-      const std::function<void(const std::function<void(int32_t, T)>&)>& ForEach) const override {
-    const float beta = this->conf().beta();
-    T generalized_score_sum = 0;
-    int32_t num = 0;
-    ForEach([&](int32_t index, T iou) {
-      generalized_score_sum += std::pow<T>(score_ptr[index], beta);
-      ++num;
-    });
-    return std::pow<T>(generalized_score_sum / num, 1.f / beta);
-  }
-};
-REGISTER_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, GeneralizedAvgScoringMethod);
+DEFINE_SCORING_METHOD(ScoringMethod::kIouAvg, score_ptr, ForEach) {
+  T iou_weighted_score_sum = 0;
+  T iou_sum = 0;
+  ForEach([&](int32_t index, float iou) {
+    iou_weighted_score_sum += score_ptr[index] * iou;
+    iou_sum += iou;
+  });
+  return static_cast<T>(iou_weighted_score_sum / iou_sum);
+}
 
 template<typename T>
-class QuasiSumScoringMethod final : public ScoringMethodIf<T> {
- public:
-  virtual T scoring(
-      const T* score_ptr,
-      const std::function<void(const std::function<void(int32_t, T)>&)>& ForEach) const override {
-    const float beta = this->conf().beta();
-    T score_sum = 0;
-    int32_t num = 0;
-    ForEach([&](int32_t index, T iou) {
-      score_sum += score_ptr[index];
-      ++num;
-    });
-    return static_cast<T>(score_sum / std::pow<T>(num, beta));
-  }
-};
-REGISTER_SCORING_METHOD(ScoringMethod::kQuasiSum, QuasiSumScoringMethod);
+DEFINE_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, score_ptr, ForEach) {
+  const float beta = this->conf().beta();
+  T generalized_score_sum = 0;
+  int32_t num = 0;
+  ForEach([&](int32_t index, float iou) {
+    generalized_score_sum += std::pow<T>(score_ptr[index], beta);
+    ++num;
+  });
+  return std::pow<T>(generalized_score_sum / num, 1.f / beta);
+}
 
 template<typename T>
-class TempAvgScoringMethod final : public ScoringMethodIf<T> {
- public:
-  virtual T scoring(
-      const T* score_ptr,
-      const std::function<void(const std::function<void(int32_t, T)>&)>& ForEach) const override {
-    TODO();
-    return 0;
-  }
-};
-REGISTER_SCORING_METHOD(ScoringMethod::kTempAvg, TempAvgScoringMethod);
+DEFINE_SCORING_METHOD(ScoringMethod::kQuasiSum, score_ptr, ForEach) {
+  const float beta = this->conf().beta();
+  T score_sum = 0;
+  int32_t num = 0;
+  ForEach([&](int32_t index, float iou) {
+    score_sum += score_ptr[index];
+    ++num;
+  });
+  return static_cast<T>(score_sum / std::pow<T>(num, beta));
+}
+
+template<typename T>
+DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, score_ptr, ForEach) {
+  TODO();
+  return 0;
+}
 
 }  // namespace
 
@@ -241,15 +219,15 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t im_index, int64_t class_index,
   FOR_RANGE(int64_t, i, 0, votee_num) {
     const int32_t votee_index = votee_index_ptr[i];
     const int32_t bbox_offset = votee_index * 4;
-    auto ForEachNearBy = [&](const std::function<void(int32_t, T)>& Handler) {
+    auto ForEachNearBy = [&](const std::function<void(int32_t, float)>& Handler) {
       const T* const_votee_bbox = const_bbox_ptr + bbox_offset;
       const int32_t votee_area = FasterRcnnUtil<T>::BBoxArea(const_votee_bbox);
       FOR_RANGE(int64_t, j, 0, voter_num) {
         const int32_t voter_index = voter_index_ptr[j];
         const int32_t voter_area = area_ptr[j];
         const T* const_voter_bbox = const_bbox_ptr + bbox_offset;
-        const T iou = FasterRcnnUtil<T>::InterOverUnion(const_votee_bbox, votee_area,
-                                                        const_voter_bbox, voter_area);
+        const float iou = FasterRcnnUtil<T>::InterOverUnion(const_votee_bbox, votee_area,
+                                                            const_voter_bbox, voter_area);
         if (iou >= voting_thresh) { Handler(voter_index, iou); }
       }
     };
@@ -257,7 +235,7 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t im_index, int64_t class_index,
     const T* score_ptr = score_blob->dptr<T>() + im_index * bbox_num * class_num;
     T score_weighted_bbox_sum[4] = {0, 0, 0, 0};
     T score_sum = 0;
-    ForEachNearBy([&](int32_t voter_index, T iou) {
+    ForEachNearBy([&](int32_t voter_index, float iou) {
       const T voter_score = score_ptr[voter_index];
       const T* voter_bbox = const_bbox_ptr + voter_index * 4;
       FOR_RANGE(int32_t, k, 0, 4) { score_weighted_bbox_sum[k] += voter_bbox[k] * voter_score; }
