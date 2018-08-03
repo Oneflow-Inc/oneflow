@@ -22,6 +22,6 @@ void OFRecordEncoderImpl<EncodeCase::kIdentity, OFRecord>::EncodeOneCol(
 #define INSTANTIATE_OFRECORD_IDENTITY_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kIdentity, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_IDENTITY_ENCODER, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_IDENTITY_ENCODER, ENCODE_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

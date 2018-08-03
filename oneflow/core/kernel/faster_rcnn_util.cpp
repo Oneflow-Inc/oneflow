@@ -3,25 +3,63 @@
 
 namespace oneflow {
 
-namespace {
-
 template<typename T>
-inline int32_t BBoxArea(const T* box) {
-  return (box[2] - box[0] + 1) * (box[3] - box[1] + 1);
+void FasterRcnnUtil<T>::BboxTransform(const T* bbox, const T* deltas, T* bbox_pred) {
+  const float w = bbox[2] - bbox[0] + 1.0f;
+  const float h = bbox[3] - bbox[1] + 1.0f;
+  const float ctr_x = bbox[0] + 0.5f * w;
+  const float ctr_y = bbox[1] + 0.5f * h;
+
+  const float pred_ctr_x = deltas[0] * w + ctr_x;
+  const float pred_ctr_y = deltas[1] * h + ctr_y;
+  const float pred_w = std::exp(deltas[2]) * w;
+  const float pred_h = std::exp(deltas[3]) * h;
+
+  bbox_pred[0] = pred_ctr_x - 0.5f * pred_w;
+  bbox_pred[1] = pred_ctr_y - 0.5f * pred_h;
+  bbox_pred[2] = pred_ctr_x + 0.5f * pred_w - 1.f;
+  bbox_pred[3] = pred_ctr_y + 0.5f * pred_h - 1.f;
 }
 
 template<typename T>
-inline float InterOverUnion(const T* box0, const int32_t area0, const T* box1,
-                            const int32_t area1) {
-  const int32_t iw = std::min(box0[2], box1[2]) - std::max(box0[0], box1[0]) + 1;
-  if (iw <= 0) { return 0; }
-  const int32_t ih = std::min(box0[3], box1[3]) - std::max(box0[1], box1[1]) + 1;
-  if (ih <= 0) { return 0; }
-  const float inter = iw * ih;
-  return inter / (area0 + area1 - inter);
+void FasterRcnnUtil<T>::BboxTransform(int64_t boxes_num, const T* bbox, const T* deltas,
+                                      T* bbox_pred) {
+  for (int64_t i = 0; i < boxes_num * 4; i += 4) {
+    BboxTransform(bbox + i, deltas + i, bbox_pred + i);
+  }
 }
 
-}  // namespace
+template<typename T>
+void FasterRcnnUtil<T>::BboxTransformInv(int64_t boxes_num, const T* bbox, const T* target_bbox,
+                                         T* deltas) {
+  for (int64_t i = 0; i < boxes_num * 4; i += 4) {
+    float b_w = bbox[i + 2] - bbox[i + 0] + 1.0f;
+    float b_h = bbox[i + 3] - bbox[i + 1] + 1.0f;
+    float b_ctr_x = bbox[i + 0] + 0.5f * b_w;
+    float b_ctr_y = bbox[i + 1] + 0.5f * b_h;
+
+    float t_w = target_bbox[i + 2] - target_bbox[i + 0] + 1.0f;
+    float t_h = target_bbox[i + 3] - target_bbox[i + 1] + 1.0f;
+    float t_ctr_x = target_bbox[i + 0] + 0.5f * t_w;
+    float t_ctr_y = target_bbox[i + 1] + 0.5f * t_h;
+
+    deltas[i + 0] = (t_ctr_x - b_ctr_x) / b_w;
+    deltas[i + 1] = (t_ctr_y - b_ctr_y) / b_h;
+    deltas[i + 2] = std::log(t_w / b_w);
+    deltas[i + 3] = std::log(t_h / b_h);
+  }
+}
+
+template<typename T>
+void FasterRcnnUtil<T>::ClipBoxes(int64_t boxes_num, const int64_t image_height,
+                                  const int64_t image_width, T* bbox) {
+  for (int64_t i = 0; i < boxes_num * 4; i += 4) {
+    bbox[i + 0] = std::max<T>(std::min<T>(bbox[i + 0], image_width), 0);
+    bbox[i + 1] = std::max<T>(std::min<T>(bbox[i + 1], image_height), 0);
+    bbox[i + 2] = std::max<T>(std::min<T>(bbox[i + 2], image_width), 0);
+    bbox[i + 3] = std::max<T>(std::min<T>(bbox[i + 3], image_height), 0);
+  }
+}
 
 template<typename T>
 void FasterRcnnUtil<T>::SortByScore(const int64_t num, const T* score_ptr,
@@ -67,6 +105,6 @@ int32_t FasterRcnnUtil<T>::Nms(const T* img_proposal_ptr, const int32_t* sorted_
 }
 
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, ARITHMETIC_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow
