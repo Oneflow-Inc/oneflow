@@ -9,9 +9,9 @@ namespace oneflow {
 template<typename T>
 class ScoringMethodIf {
  public:
-  ScoringMethodIf() = default;
+  ScoringMethodIf(const BboxVoteConf& vote_conf) : vote_conf_(vote_conf) { }
   virtual ~ScoringMethodIf() = default;
-  void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
+  //void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
   const BboxVoteConf& conf() { return vote_conf_; }
   virtual float scoring(const T*, const std::function<void(int32_t, float)>&) const = 0;
 

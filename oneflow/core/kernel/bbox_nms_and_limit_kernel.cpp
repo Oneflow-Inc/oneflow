@@ -16,8 +16,7 @@ class IdentityScoringMethod final : public ScoringMethodIf<T> {
     return score;
   }
 };
-ADD_SCORING_METHOD_REGISTER(ScoringMethod::kIdentity, IdentityScoringMethod,
-                            FLOATING_DATA_TYPE_SEQ);
+ADD_SCORING_METHOD_REGISTER(ScoringMethod::kId, IdentityScoringMethod, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
 class AvgScoringMethod final : public ScoringMethodIf<T> {
@@ -99,10 +98,10 @@ class TempAvgScoringMethod final : public ScoringMethodIf<T> {
 ADD_SCORING_METHOD_REGISTER(ScoringMethod::kTempAvg, TempAvgScoringMethod, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
-std::unique_ptr<ScoringMethodIf<T>> NewScoringMethod(const BboxVoteConf& vote_conf) {
+ScoringMethodIf<T>* NewScoringMethod(const BboxVoteConf& vote_conf) {
   auto* ptr = NewObj<ScoringMethodIf<T>>();
   ptr->Init(vote_conf);
-  return std::make_unique(ptr);
+  return ptr;
 }
 
 }  // namespace
@@ -110,7 +109,7 @@ std::unique_ptr<ScoringMethodIf<T>> NewScoringMethod(const BboxVoteConf& vote_co
 template<typename T>
 void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  if (conf.has_bbox_vote()) { scoring_method_.swap(NewScoringMethod<T>(conf.bbox_vote())); }
+  if (conf.has_bbox_vote()) { scoring_method_.reset(NewScoringMethod<T>(conf.bbox_vote())); }
 }
 
 template<typename T>
@@ -164,6 +163,7 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* scores_blob = BnInOp2Blob("scores");
   Blob* bbox_blob = BnInOp2Blob("bbox");
+  Blob* voting_score_blob = BnInOp2Blob("voting_score");
   const int64_t boxes_num = bbox_blob->shape().At(0);
   const int64_t class_num = scores_blob->shape().At(1);
   const int64_t score_offset = im_index * boxes_num * class_num;
@@ -187,7 +187,9 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     if (conf.bbox_vote_enabled()) {
       BboxVoting(im_index, i, pre_nms_keep_num, post_nms_keep_num_ptr[i], pre_nms_index_slice_ptr,
                  post_nms_index_slice_ptr, nms_area_tmp_ptr, scores_blob,
-                 BnInOp2Blob("voting_score"), bbox_blob);
+                 voting_score_blob, bbox_blob);
+    } else {
+      std::memcpy(voting_score_blob->dptr<T>(), scores_ptr, boxes_num * class_num);
     }
   }
 }
