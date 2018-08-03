@@ -30,27 +30,9 @@ class ThrdIdGenerator final {
     return mod_thrd_id;
   }
 
-  template<typename T>
-  size_t Unique(std::vector<T>& vec) {
-    std::set<T> temp;
-
-    auto removed_start = std::remove_if(vec.begin(), vec.end(), [&temp](const T& value) {
-      if (temp.find(value) != std::end(temp)) return true;
-
-      temp.insert(value);
-      return false;
-    });
-
-    vec.erase(removed_start, vec.end());
-
-    return vec.size();
-  }
-
   bool EqualConf(int64_t task_type, int32_t thrd_num) {
     if (task_type == TaskType::kMdSave) {
-      JobDesc* job_desc = Global<JobDesc>::Get();
-      const int32_t mdsave_conf_num = job_desc ? job_desc->MdSaveWorkerNum() : 64;
-      if (thrd_num == mdsave_conf_num) return true;
+      if (thrd_num == Global<JobDesc>::Get()->MaxMdSaveWorkerNum()) return true;
     }
 
     return false;

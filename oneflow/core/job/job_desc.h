@@ -33,7 +33,7 @@ class JobDesc final {
   int32_t GpuDeviceNum() const { return job_conf_.resource().gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t CommNetWorkerNum() const { return job_conf_.resource().comm_net_worker_num(); }
-  int32_t MdSaveWorkerNum() const { return job_conf_.resource().persistence_worker_num(); }
+  int32_t MaxMdSaveWorkerNum() const { return job_conf_.resource().max_mdsave_worker_num(); }
   bool IsTrain() const { return job_conf_.other().has_train_conf(); }
   bool IsPredict() const { return job_conf_.other().has_predict_conf(); }
   int64_t PieceSize() const { return job_conf_.other().piece_size(); }

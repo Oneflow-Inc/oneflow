@@ -26,12 +26,11 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
+    CHECK(!task_node->IsPersistence());
     int64_t ret = -1;
-    if (task_node->IsPersistence() == false) {
-      int64_t& offset = cpu_device_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-      offset = (offset + 1) % job_desc->CpuDeviceNum();
-    }
+    int64_t& offset = cpu_device_offset.at(task_node->machine_id());
+    ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
+    offset = (offset + 1) % job_desc->CpuDeviceNum();
     return ret;
   };
 
