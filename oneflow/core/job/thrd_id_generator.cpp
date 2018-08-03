@@ -24,18 +24,12 @@ void ThrdIdGenerator::InitLowerboundOfTaskType(
   for (const auto& pair : machine2task_type_seq) {
     int64_t machine_id = pair.first;
     auto& task_type_seq = pair.second;
-    int64_t lowerbound = base_thrd_id_;
-    for (int i = 0; i < task_type_seq.size(); ++i) {
-      int64_t task_type = task_type_seq[i];
-      auto key = std::make_pair(machine_id, task_type);
-      if (i == 0) {
-        machine_task_type2lowerbound_[key] = lowerbound;
-        continue;
-      }
-
+    machine_task_type2lowerbound_[std::make_pair(machine_id, task_type_seq[0])] = base_thrd_id_;
+    for (int i = 1; i < task_type_seq.size(); ++i) {
       auto last_key = std::make_pair(machine_id, task_type_seq[i - 1]);
-      lowerbound += machine_task_type2thrd_num_[last_key];
-      machine_task_type2lowerbound_[key] = lowerbound;
+      auto key = std::make_pair(machine_id, task_type_seq[i]);
+      machine_task_type2lowerbound_[key] =
+          machine_task_type2lowerbound_[last_key] + machine_task_type2thrd_num_[last_key];
     }
   }
 }

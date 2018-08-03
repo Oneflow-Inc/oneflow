@@ -1,20 +1,9 @@
-
 #ifndef ONEFLOW_CORE_JOB_THRD_ID_GENERATOR_H_
 #define ONEFLOW_CORE_JOB_THRD_ID_GENERATOR_H_
 
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/job/job_desc.h"
-
-namespace std {
-
-template<>
-struct hash<std::pair<int64_t, int64_t>> {
-  size_t operator()(const std::pair<int64_t, int64_t>& pair) const {
-    return std::hash<size_t>()(pair.first) ^ std::hash<size_t>()(pair.second);
-  }
-};
-
-}  // namespace std
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -27,31 +16,18 @@ class ThrdIdGenerator final {
 
   int64_t GenerateThrdId(int64_t machine_id, int64_t task_type) {
     auto key = std::make_pair(machine_id, task_type);
-    return machine_task_type2lowerbound_[key] + GetThrdIdFromPool(key);
+    return machine_task_type2lowerbound_[key] + GetModThrdId(key);
   }
 
  private:
   void InitLowerboundOfTaskType(
       const HashMap<int64_t, std::vector<TaskType>>& machine2task_type_seq);
 
-  int64_t GetThrdIdFromPool(std::pair<int64_t, int64_t> machine_task_type) {
-    if (machine_task_type2thrd_id_pool_[machine_task_type].empty()) {
-      InitThrdIdPool(machine_task_type);
-    }
-
-    auto& thrd_ids_in_pool = machine_task_type2thrd_id_pool_[machine_task_type];
-    int64_t thrd_id_from_pool = thrd_ids_in_pool.back();
-    thrd_ids_in_pool.pop_back();
-    return thrd_id_from_pool;
-  }
-
-  void InitThrdIdPool(std::pair<int64_t, int64_t> machine_task_type) {
-    int32_t thrd_num = machine_task_type2thrd_num_[machine_task_type];
-
-    std::vector<int64_t> thrd_id_pool(thrd_num);
-    std::iota(thrd_id_pool.begin(), thrd_id_pool.end(), 0);
-    std::reverse(thrd_id_pool.begin(), thrd_id_pool.end());  // such as [3,2,1,0]
-    machine_task_type2thrd_id_pool_[machine_task_type] = std::move(thrd_id_pool);
+  int64_t GetModThrdId(std::pair<int64_t, int64_t> machine_task_type) {
+    int64_t& offset = machine_task_type2offset_[machine_task_type];
+    int64_t mod_thrd_id = offset % machine_task_type2thrd_num_[machine_task_type];
+    offset++;
+    return mod_thrd_id;
   }
 
   template<typename T>
@@ -82,7 +58,7 @@ class ThrdIdGenerator final {
 
   int64_t base_thrd_id_;
   HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num_;
-  HashMap<std::pair<int64_t, int64_t>, std::vector<int64_t>> machine_task_type2thrd_id_pool_;
+  HashMap<std::pair<int64_t, int64_t>, int64_t> machine_task_type2offset_;
   HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2lowerbound_;
 };
 }  // namespace oneflow

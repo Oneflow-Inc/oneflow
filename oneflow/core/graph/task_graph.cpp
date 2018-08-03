@@ -35,15 +35,16 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     return ret;
   };
 
-  std::vector<std::pair<int64_t, CompTaskNode*>> machine_task_type_vec;
+  std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
-    logical_node->GenSortedCompTaskNodes(&machine_task_type_vec, [&](CompTaskNode* comp_task_node) {
-      AddAllocatedNode(comp_task_node);
-      logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-      comp_task_node->set_area_id(logical_node->GetAreaId());
-    });
+    logical_node->GenSortedCompTaskNodes(
+        &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
+          AddAllocatedNode(comp_task_node);
+          logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
+          comp_task_node->set_area_id(logical_node->GetAreaId());
+        });
   });
-  GeneratePersistenceThrdId(machine_task_type_vec);
+  GeneratePersistenceThrdId(machine_persistence_task_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
@@ -65,10 +66,8 @@ void TaskGraph::GeneratePersistenceThrdId(
 
   ThrdIdGenerator generator(machine_task_type_vec, Global<IDMgr>::Get()->BasePersistenceThrdId());
   for (const auto pair : persistence_nodes) {
-    int64_t machine_id = pair.first;
-    CompTaskNode* task_node = pair.second;
-    int64_t thrd_id = generator.GenerateThrdId(machine_id, task_node->GetTaskType());
-    task_node->set_thrd_id(thrd_id);
+    int64_t thrd_id = generator.GenerateThrdId(pair.first, pair.second->GetTaskType());
+    pair.second->set_thrd_id(thrd_id);
   }
 }
 
