@@ -138,22 +138,6 @@ void EraseIf(HashMap<K, V>* hash_map, std::function<bool(typename HashMap<K, V>:
 }
 
 template<typename T>
-size_t Unique(std::vector<T>& vec) {
-  std::set<T> temp;
-
-  auto removed_start = std::remove_if(vec.begin(), vec.end(), [&temp](const T& value) {
-    if (temp.find(value) != std::end(temp)) return true;
-
-    temp.insert(value);
-    return false;
-  });
-
-  vec.erase(removed_start, vec.end());
-
-  return vec.size();
-}
-
-template<typename T>
 typename std::enable_if<std::is_enum<T>::value, std::ostream&>::type operator<<(
     std::ostream& out_stream, const T& x) {
   out_stream << static_cast<int>(x);

@@ -40,13 +40,13 @@ TEST(ThrdIdGenerator, ordered) {
     thrd_ids[pair.first].push_back(thrd_id);
   }
 
-  std::vector<int64_t> machine0_thrd_ids{/*MdSave*/ 17,     18, 19, 20,
-                                         /*Print*/ 21,      22,
-                                         /*RecordLoad*/ 23, 24, 25,
-                                         /*LossPrint*/ 26,  27};
-  std::vector<int64_t> machine1_thrd_ids{/*MdSave*/ 17,    18, 19,
-                                         /*Print*/ 20,     21, 22,
-                                         /*LossPrint*/ 23, 24};
+  std::vector<int64_t> machine0_thrd_ids{/*MdSave*/ 19,     20, 21, 22,
+                                         /*Print*/ 23,      24,
+                                         /*RecordLoad*/ 25, 26, 27,
+                                         /*LossPrint*/ 17,  18};
+  std::vector<int64_t> machine1_thrd_ids{/*MdSave*/ 19,    20, 21,
+                                         /*Print*/ 22,     23, 24,
+                                         /*LossPrint*/ 17, 18};
 
   CHECK_EQ(thrd_ids[0].size(), machine0_thrd_ids.size());
   CHECK(std::equal(thrd_ids[0].begin(), thrd_ids[0].end(), machine0_thrd_ids.begin()));
@@ -88,8 +88,8 @@ TEST(ThrdIdGenerator, disordered) {
     thrd_ids[pair.first].push_back(thrd_id);
   }
 
-  std::vector<int64_t> machine0_thrd_ids{17, 18, 21, 22, 19, 23, 20, 24, 26, 25, 27};
-  std::vector<int64_t> machine1_thrd_ids{17, 20, 18, 23, 21, 24, 22, 19};
+  std::vector<int64_t> machine0_thrd_ids{19, 20, 23, 24, 21, 25, 22, 26, 17, 27, 18};
+  std::vector<int64_t> machine1_thrd_ids{19, 22, 20, 17, 23, 18, 24, 21};
 
   CHECK_EQ(thrd_ids[0].size(), machine0_thrd_ids.size());
   CHECK(std::equal(thrd_ids[0].begin(), thrd_ids[0].end(), machine0_thrd_ids.begin()));
@@ -141,13 +141,8 @@ TEST(ThrdIdGenerator, ordered_mdsave_num_more_than_config) {
     thrd_ids[pair.first].push_back(thrd_id);
   }
 
-  std::vector<int64_t> machine0_thrd_ids{/*Print*/ 17,      18,
-                                         /*MdSave*/ 19,     20, 21, 22, 19, 20,
-                                         /*RecordLoad*/ 23, 24, 25,
-                                         /*LossPrint*/ 26,  27};
-  std::vector<int64_t> machine1_thrd_ids{/*MdSave*/ 17,    18, 19, 20, 17,
-                                         /*Print*/ 21,     22, 23,
-                                         /*LossPrint*/ 24, 25};
+  std::vector<int64_t> machine0_thrd_ids{23, 24, 19, 20, 21, 22, 19, 20, 25, 26, 27, 17, 18};
+  std::vector<int64_t> machine1_thrd_ids{19, 20, 21, 22, 19, 23, 24, 25, 17, 18};
 
   CHECK_EQ(thrd_ids[0].size(), machine0_thrd_ids.size());
   CHECK(std::equal(thrd_ids[0].begin(), thrd_ids[0].end(), machine0_thrd_ids.begin()));
@@ -202,8 +197,8 @@ TEST(ThrdIdGenerator, disordered_mdsave_num_more_than_config) {
     thrd_ids[pair.first].push_back(thrd_id);
   }
 
-  std::vector<int64_t> machine0_thrd_ids{17, 19, 18, 20, 21, 22, 23, 19, 20, 24, 26, 21, 25, 27};
-  std::vector<int64_t> machine1_thrd_ids{17, 21, 18, 24, 22, 19, 25, 20, 23, 17};
+  std::vector<int64_t> machine0_thrd_ids{23, 19, 24, 20, 21, 22, 25, 19, 20, 26, 17, 21, 27, 18};
+  std::vector<int64_t> machine1_thrd_ids{19, 23, 20, 17, 24, 21, 18, 22, 25, 19};
   CHECK_EQ(thrd_ids[0].size(), machine0_thrd_ids.size());
   CHECK(std::equal(thrd_ids[0].begin(), thrd_ids[0].end(), machine0_thrd_ids.begin()));
 
