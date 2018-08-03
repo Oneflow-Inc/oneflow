@@ -27,23 +27,12 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     LogicalBlobId lbi;
     std::vector<LogicalEdge*> edges;
   };
-  struct B121CloneInfo {
-    LogicalNode* pred_node;
-    LogicalBlobId lbi;
-    std::vector<LogicalEdge*> edges_boxing;
-    std::vector<LogicalEdge*> edges_121;
-  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void AddB121Clone();
-  void CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos);
-  void AddOneB121CloneNode(const B121CloneInfo& clone_info);
-  void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
-                          const std::vector<LogicalEdge*>& edges, const std::string& obn);
   void AddForwardClone();
   void AddOneForwardClone(const ForwardCloneInfo& clone_info);
 

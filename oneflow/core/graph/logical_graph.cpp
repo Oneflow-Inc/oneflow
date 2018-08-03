@@ -35,7 +35,6 @@ void LogicalGraph::BuildFwStruct() {
   NaiveBuildFwStruct(&op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
   AddForwardClone();
-  AddB121Clone();
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     total_mbn_num_ +=
@@ -179,84 +178,6 @@ void LogicalGraph::AddOneForwardClone(const ForwardCloneInfo& clone_info) {
     *(dst_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2ibn_.at(edge)))) = lbi_clone_i;
     DisConnect(edge);
     Connect(clone_node, edge, dst_node);
-    UpdateEdge2Obn(edge, obn);
-  }
-}
-
-void LogicalGraph::AddB121Clone() {
-  std::vector<B121CloneInfo> clone_infos;
-  CollectB121CloneInfos(&clone_infos);
-  for (const B121CloneInfo& clone_info : clone_infos) { AddOneB121CloneNode(clone_info); }
-}
-
-void LogicalGraph::CollectB121CloneInfos(std::vector<B121CloneInfo>* clone_infos) {
-  ForEachNode([&](LogicalNode* cur_node) {
-    HashMap<LogicalBlobId, B121CloneInfo> lbi2clone_info;
-    for (LogicalEdge* edge : cur_node->out_edges()) {
-      B121CloneInfo& clone_info = lbi2clone_info[edge->SoleLbi()];
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(cur_node, edge->dst_node());
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        clone_info.edges_boxing.push_back(edge);
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        clone_info.edges_121.push_back(edge);
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-    for (auto& pair : lbi2clone_info) {
-      if (pair.second.edges_boxing.empty()) { continue; }
-      if (pair.second.edges_121.empty()) { continue; }
-      pair.second.pred_node = cur_node;
-      pair.second.lbi = pair.first;
-      clone_infos->push_back(pair.second);
-    }
-  });
-}
-
-void LogicalGraph::AddOneB121CloneNode(const B121CloneInfo& clone_info) {
-  // lbi_boxing, lbi_121
-  LogicalBlobId lbi_boxing = clone_info.lbi;
-  lbi_boxing.set_b121_id(0);
-  LogicalBlobId lbi_121 = clone_info.lbi;
-  lbi_121.set_b121_id(1);
-  // Clone Op
-  OperatorConf clone_op_conf;
-  clone_op_conf.set_name("b121_clone_" + NewUniqueId());
-  clone_op_conf.set_device_type(clone_info.pred_node->SoleOp()->device_type());
-  clone_op_conf.mutable_clone_conf()->set_out_num(2);
-  std::shared_ptr<Operator> clone_op = ConstructOp(clone_op_conf);
-  *(clone_op->MutBnInOp2Lbi(clone_op->SoleIbn())) = clone_info.lbi;
-  *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
-  *(clone_op->MutBnInOp2Lbi(clone_op->output_bns().Get(0))) = lbi_boxing;
-  *(clone_op->MutBnInOp2Lbi(clone_op->output_diff_bns().Get(0))) = lbi_boxing;
-  *(clone_op->MutBnInOp2Lbi(clone_op->output_bns().Get(1))) = lbi_121;
-  *(clone_op->MutBnInOp2Lbi(clone_op->output_diff_bns().Get(1))) = lbi_121;
-
-  // Clone LogicalNode
-  LogicalNode* clone_node = NewNode<NormalForwardLogicalNode>();
-  clone_node->mut_op_vec() = {clone_op};
-  clone_node->mut_parallel_desc() = clone_info.pred_node->parallel_desc();
-  // Connect
-  LogicalEdge* edge = NewEdge();
-  edge->mut_lbis() = {clone_info.lbi};
-  Connect(clone_info.pred_node, edge, clone_node);
-  UpdateEdge2Ibn(edge, clone_op->SoleIbn());
-  ReConnectToFwClone(clone_node, lbi_boxing, clone_info.edges_boxing,
-                     clone_op->output_bns().Get(0));
-  ReConnectToFwClone(clone_node, lbi_121, clone_info.edges_121, clone_op->output_bns().Get(1));
-}
-
-void LogicalGraph::ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
-                                      const std::vector<LogicalEdge*>& edges,
-                                      const std::string& obn) {
-  for (LogicalEdge* edge : edges) {
-    LogicalNode* dst_node = edge->dst_node();
-    const std::string& ibn = edge2ibn_.at(edge);
-    *(dst_node->SoleOp()->MutBnInOp2Lbi(ibn)) = lbi;
-    *(dst_node->SoleOp()->MutBnInOp2Lbi(GenDiffBn(ibn))) = lbi;
-    DisConnect(edge);
-    Connect(clone_node, edge, dst_node);
-    edge->mut_lbis() = {lbi};
     UpdateEdge2Obn(edge, obn);
   }
 }
