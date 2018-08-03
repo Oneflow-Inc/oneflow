@@ -35,10 +35,10 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   if (conf.bbox_vote_enabled()) { CHECK(conf.has_bbox_vote()); }
   // input blob shape
   // bbox_delta (n * r, c * 4)
-  // scores (n * r, c)
-  // rois (n, r, 4)
   const BlobDesc* bbox_delta_blob_desc = GetBlobDesc4BnInOp("bbox_delta");
+  // scores (n * r, c)
   const BlobDesc* scores_blob_desc = GetBlobDesc4BnInOp("scores");
+  // rois (n, r, 4)
   const BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   int64_t images_num = rois_blob_desc->shape().At(0);
   int64_t rois_num = rois_blob_desc->shape().At(1);
@@ -47,7 +47,7 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK_EQ(bbox_delta_blob_desc->shape().At(0), images_num * rois_num);
   CHECK_EQ(bbox_delta_blob_desc->shape().At(1), class_num * 4);
   CHECK_EQ(rois_blob_desc->shape().At(2), 4);
-  // out blob
+  // out blob (n) ofrecord
   BlobDesc* labeled_bbox_blob_desc = GetBlobDesc4BnInOp("labeled_bbox");
   labeled_bbox_blob_desc->mut_shape() = Shape({images_num});
   labeled_bbox_blob_desc->set_data_type(DataType::kOFRecord);
@@ -55,21 +55,21 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   bbox_score_blob_desc->mut_shape() = Shape({images_num});
   bbox_score_blob_desc->set_data_type(DataType::kOFRecord);
   // data tmp blob shape
-  // bbox (r, c * 4)
-  // voting_score (r, c)
+  // bbox (r, c, 4)
   BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
-  bbox_blob_desc->mut_shape() = Shape({rois_num, class_num * 4});
+  bbox_blob_desc->mut_shape() = Shape({rois_num, class_num, 4});
   bbox_blob_desc->set_data_type(bbox_delta_blob_desc->data_type());
+  // voting_score (r, c)
   BlobDesc* voting_score_blob_desc = GetBlobDesc4BnInOp("voting_score");
   voting_score_blob_desc->mut_shape() = Shape({rois_num, class_num});
   voting_score_blob_desc->set_data_type(scores_blob_desc->data_type());
   // pre_nms_index_slice (c, r)
-  // post_nms_index_slice (c, r)
-  // post_nms_keep_num (c)
   BlobDesc* pre_nms_index_blob_desc = GetBlobDesc4BnInOp("pre_nms_index_slice");
   pre_nms_index_blob_desc->mut_shape() = Shape({class_num, rois_num});
   pre_nms_index_blob_desc->set_data_type(DataType::kInt32);
+  // post_nms_index_slice (c, r)
   *GetBlobDesc4BnInOp("post_nms_index_slice") = *pre_nms_index_blob_desc;
+  // post_nms_keep_num (c)
   BlobDesc* post_nms_keep_num_blob_desc = GetBlobDesc4BnInOp("post_nms_keep_num");
   post_nms_keep_num_blob_desc->mut_shape() = Shape({class_num});
   post_nms_keep_num_blob_desc->set_data_type(DataType::kInt32);
