@@ -36,39 +36,21 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
     thrd_id += 1;
   }
   threads_.push_back(new CpuThread(thrd_id++, 0));  // comm_net
-  CreatePersistenceThrd(plan);
+  CreatePersistenceThrd(plan, thrd_id);
   compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
 
-void ThreadMgr::CreatePersistenceThrd(const Plan& plan) {
+void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
   const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
-  std::vector<int64_t> persistence_thrd_ids;
-  for (const TaskProto& task : plan.task()) {
-    if (task.machine_id() != this_machine_id) { continue; }
 
-    if (ThrdIdGenerator::IsPesistence(task.task_type())) {
-      persistence_thrd_ids.push_back(task.thrd_id());
+  int64_t max_thrd_id = 0;
+  for (const TaskProto& task : plan.task()) {
+    if (task.machine_id() == this_machine_id) {
+      if (max_thrd_id < task.thrd_id()) max_thrd_id = task.thrd_id();
     }
   }
 
-  auto unique = [](std::vector<int64_t>& vec) {
-    std::set<int64_t> temp;
-
-    auto removed_start = std::remove_if(vec.begin(), vec.end(), [&temp](const int64_t& value) {
-      if (temp.find(value) != std::end(temp)) return true;
-
-      temp.insert(value);
-      return false;
-    });
-
-    vec.erase(removed_start, vec.end());
-
-    return vec.size();
-  };
-  unique(persistence_thrd_ids);
-
-  threads_.resize(threads_.size() + persistence_thrd_ids.size());
-  for (int64_t thrd_id : persistence_thrd_ids) { threads_[thrd_id] = new CpuThread(thrd_id, 0); }
+  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i, 0)); }
 }
 
 }  // namespace oneflow

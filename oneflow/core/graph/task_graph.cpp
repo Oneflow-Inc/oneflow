@@ -35,16 +35,15 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     return ret;
   };
 
-  std::vector<std::pair<int64_t, CompTaskNode*>> persistence_compute_nodes;
+  std::vector<std::pair<int64_t, CompTaskNode*>> machine_task_type_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
-    logical_node->GenSortedCompTaskNodes(
-        &persistence_compute_nodes, [&](CompTaskNode* comp_task_node) {
-          AddAllocatedNode(comp_task_node);
-          logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
-          comp_task_node->set_area_id(logical_node->GetAreaId());
-        });
+    logical_node->GenSortedCompTaskNodes(&machine_task_type_vec, [&](CompTaskNode* comp_task_node) {
+      AddAllocatedNode(comp_task_node);
+      logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
+      comp_task_node->set_area_id(logical_node->GetAreaId());
+    });
   });
-  GeneratePersistenceThrdId(persistence_compute_nodes);
+  GeneratePersistenceThrdId(machine_task_type_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
@@ -59,18 +58,12 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
 
 void TaskGraph::GeneratePersistenceThrdId(
     const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes) {
-  HashMap<std::pair<int64_t, int64_t>, int32_t> machine_task_type2thrd_num;
-
-  // get the thread number in a machine with the task_type
-  for (const auto pair : persistence_nodes) {
-    int64_t machine_id = pair.first;
-    CompTaskNode* task_node = pair.second;
-    auto key = std::make_pair(machine_id, task_node->GetTaskType());
-    machine_task_type2thrd_num[key]++;
+  std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
+  for (auto pair : persistence_nodes) {
+    machine_task_type_vec.emplace_back(std::make_pair(pair.first, pair.second->GetTaskType()));
   }
 
-  // generate thread id
-  ThrdIdGenerator generator(machine_task_type2thrd_num, Global<IDMgr>::Get()->CommNetThrdId());
+  ThrdIdGenerator generator(machine_task_type_vec, Global<IDMgr>::Get()->CommNetThrdId() + 1);
   for (const auto pair : persistence_nodes) {
     int64_t machine_id = pair.first;
     CompTaskNode* task_node = pair.second;

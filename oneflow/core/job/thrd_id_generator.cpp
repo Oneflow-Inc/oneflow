@@ -2,37 +2,42 @@
 
 namespace oneflow {
 
-int64_t ThrdIdGenerator::GenerateThrdId(int64_t machine_id, int64_t task_type) {
-  auto key = std::make_pair(machine_id, task_type);
-  const int64_t pre_thrd_id = GetPreThrdId(machine_id, task_type);
-  int64_t thrd_id = pre_thrd_id + GetThrdIdFromPool(key) + 1;
+ThrdIdGenerator::ThrdIdGenerator(std::vector<std::pair<int64_t, TaskType>>& machine_task_type_vec,
+                                 int64_t base_thrd_id)
+    : base_thrd_id_(base_thrd_id) {
+  HashMap<int64_t, std::vector<TaskType>> machine2task_type_seq;
+  for (const auto pair : machine_task_type_vec) {
+    int64_t machine_id = pair.first;
+    auto key = std::make_pair(machine_id, pair.second);
+    if (EqualConf(pair.second, machine_task_type2thrd_num_[key])) continue;
+    machine_task_type2thrd_num_[key]++;
 
-  return thrd_id;
-}
-
-int64_t ThrdIdGenerator::GetPreThrdId(int64_t machine_id, int64_t task_type) {
-  if (machine_task_type2lowerbound_[machine_id].empty()) {
-    machine_task_type2lowerbound_[machine_id][task_type] = base_thrd_id_;
-    return base_thrd_id_;
+    machine2task_type_seq[machine_id].push_back(pair.second);
   }
 
-  if (machine_task_type2lowerbound_[machine_id][task_type] == 0) {
-    int64_t latest_thrd_id = 0;
-    int64_t distance = 0;
-    for (auto pair : machine_task_type2lowerbound_[machine_id]) {
-      if (pair.first == task_type) { continue; }
+  for (auto& pair : machine2task_type_seq) Unique(pair.second);
+  InitLowerboundOfTaskType(machine2task_type_seq);
+}
 
-      if (latest_thrd_id < pair.second) {
-        latest_thrd_id = pair.second;
-        distance = machine_task_type2thrd_num_[std::make_pair(machine_id, pair.first)];
+void ThrdIdGenerator::InitLowerboundOfTaskType(
+    const HashMap<int64_t, std::vector<TaskType>>& machine2task_type_seq) {
+  for (const auto& pair : machine2task_type_seq) {
+    int64_t machine_id = pair.first;
+    auto& task_type_seq = pair.second;
+    int64_t lowerbound = base_thrd_id_;
+    for (int i = 0; i < task_type_seq.size(); ++i) {
+      int64_t task_type = task_type_seq[i];
+      auto key = std::make_pair(machine_id, task_type);
+      if (i == 0) {
+        machine_task_type2lowerbound_[key] = lowerbound;
+        continue;
       }
-    }
 
-    int64_t pre_thrd_id = latest_thrd_id + distance;
-    machine_task_type2lowerbound_[machine_id][task_type] = pre_thrd_id;
-    return pre_thrd_id;
-  } else {
-    return machine_task_type2lowerbound_[machine_id][task_type];
+      auto last_key = std::make_pair(machine_id, task_type_seq[i - 1]);
+      lowerbound += machine_task_type2thrd_num_[last_key];
+      machine_task_type2lowerbound_[key] = lowerbound;
+    }
   }
 }
+
 }  // namespace oneflow
