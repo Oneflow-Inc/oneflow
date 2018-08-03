@@ -99,7 +99,6 @@ void TaskGraph::EnableMemSharing4FwClone() {
       }
     }
     if (succ_fw_num <= 1) { return; }
-    LOG(INFO) << "found fw_clone:" << task_node->task_id();
     int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
     for (auto& consumer : succ_fw_nodes) { consumer->ConsumeRegstAsIn(clone_regst); }
     clone_regst->set_mem_shared_id(mem_shared_id);
