@@ -67,7 +67,13 @@ void InputWiseCompActor::Act() {
   });
 
   UpdateMemberStatusAfterAct();
-  if (NeedSendRegstMsgToConsumer()) { UpdateMemberStatusAfterSendRegstMsgToConsumer(); }
+  if (NeedSendRegstMsgToConsumer()) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_piece_id(cur_regst->piece_id());
+      return true;
+    });
+    UpdateMemberStatusAfterSendRegstMsgToConsumer();
+  }
   AsyncSendRegstMsgToProducer(cur_regst);
 }
 
@@ -86,12 +92,6 @@ bool InputWiseCompActor::NeedSendRegstMsgToConsumer() {
 }
 
 void InputWiseCompActor::UpdateMemberStatusAfterSendRegstMsgToConsumer() {
-  std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
-  Regst* cur_regst = regst_q.front();
-  AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-    regst->set_piece_id(cur_regst->piece_id());
-    return true;
-  });
   for (auto& pair : regst_desc_id2is_processed_) {
     CHECK(pair.second);
     pair.second = false;
