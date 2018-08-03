@@ -33,17 +33,14 @@ void FindBestConvAlgo(
     std::function<void(int* num)> GetAlgoMaxCnt,
     std::function<void(int req_num, int* returned_num, AlgoPerfType* results, void* ws)>
         FindAlgoHandler,
-    AlgoType* algo, size_t avail_ws_sz) {
+    AlgoType* algo, void* ws, size_t avail_ws_sz) {
   int max_algo_num;
   int returned_algo_num;
-  void* ws = nullptr;
-  if (avail_ws_sz > 0) { CudaCheck(cudaMalloc(&ws, avail_ws_sz)); }
   GetAlgoMaxCnt(&max_algo_num);
   AlgoPerfType* perf_results = new AlgoPerfType[max_algo_num];
   FindAlgoHandler(max_algo_num, &returned_algo_num, perf_results, ws);
   *algo = perf_results[0].algo;
   delete[] perf_results;
-  if (ws) { CudaCheck(cudaFree(ws)); }
 }
 #endif  // WITH_CUDA
 
@@ -326,14 +323,16 @@ void ConvOp<NDims>::InferCudnnAlgo(
                               GetValFromCustomizedConf<std::string>("data_format"));
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(), GetCustomizedConf());
 
+  size_t avail_ws_sz = cudnn_buf_limit_byte();
   void* in_dptr = nullptr;
   void* out_dptr = nullptr;
   void* filter_dptr = nullptr;
+  void* work_space = nullptr;
   CudaCheck(cudaSetDevice(device_id));
   CudaCheck(cudaMalloc(&in_dptr, RtBlobDesc(*in_blob_desc).ByteSizeOfBlobBody()));
   CudaCheck(cudaMalloc(&out_dptr, RtBlobDesc(*out_blob_desc).ByteSizeOfBlobBody()));
   CudaCheck(cudaMalloc(&filter_dptr, RtBlobDesc(*weight_blob_desc).ByteSizeOfBlobBody()));
-  size_t avail_ws_sz = cudnn_buf_limit_byte();
+  CudaCheck(cudaMalloc(&work_space, avail_ws_sz));
   // find best algorithm for forward
   auto GetFwdAlgoMaxCnt = [&](int* num) {
     CudaCheck(cudnnGetConvolutionForwardAlgorithmMaxCount(*cuda_handle.cudnn_handle(), num));
@@ -346,7 +345,7 @@ void ConvOp<NDims>::InferCudnnAlgo(
         avail_ws_sz));
   };
   FindBestConvAlgo<cudnnConvolutionFwdAlgoPerf_t, decltype(conv_ctx->fwd_algo)>(
-      GetFwdAlgoMaxCnt, FindFwdAlgoHandler, &conv_ctx->fwd_algo, avail_ws_sz);
+      GetFwdAlgoMaxCnt, FindFwdAlgoHandler, &conv_ctx->fwd_algo, work_space, avail_ws_sz);
 
   // find best algorithm for backward filter
   auto GetBwdFilterAlgoMaxCnt = [&](int* num) {
@@ -360,7 +359,8 @@ void ConvOp<NDims>::InferCudnnAlgo(
         avail_ws_sz));
   };
   FindBestConvAlgo<cudnnConvolutionBwdFilterAlgoPerf_t, decltype(conv_ctx->bwd_filter_algo)>(
-      GetBwdFilterAlgoMaxCnt, FindBwdFilterAlgoHandler, &conv_ctx->bwd_filter_algo, avail_ws_sz);
+      GetBwdFilterAlgoMaxCnt, FindBwdFilterAlgoHandler, &conv_ctx->bwd_filter_algo, work_space,
+      avail_ws_sz);
 
   // find best algorithm for backward data
   auto GetBwdDataAlgoMaxCnt = [&](int* num) {
@@ -373,13 +373,16 @@ void ConvOp<NDims>::InferCudnnAlgo(
         conv_desc.Get(), in_desc.Get(), in_dptr, req_num, returned_num, results, ws, avail_ws_sz));
   };
   FindBestConvAlgo<cudnnConvolutionBwdDataAlgoPerf_t, decltype(conv_ctx->bwd_data_algo)>(
-      GetBwdDataAlgoMaxCnt, FindBwdDataAlgoHandler, &conv_ctx->bwd_data_algo, avail_ws_sz);
+      GetBwdDataAlgoMaxCnt, FindBwdDataAlgoHandler, &conv_ctx->bwd_data_algo, work_space,
+      avail_ws_sz);
   CudaCheck(cudaFree(in_dptr));
   CudaCheck(cudaFree(out_dptr));
   CudaCheck(cudaFree(filter_dptr));
+  CudaCheck(cudaFree(work_space));
   in_dptr = nullptr;
   out_dptr = nullptr;
   filter_dptr = nullptr;
+  work_space = nullptr;
 
   CudaCheck(cudnnGetConvolutionForwardWorkspaceSize(
       *cuda_handle.cudnn_handle(), in_desc.Get(), filter_desc.Get(), conv_desc.Get(),
