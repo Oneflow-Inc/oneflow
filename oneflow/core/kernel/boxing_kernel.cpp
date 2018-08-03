@@ -3,6 +3,7 @@
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
+#include "oneflow/core/common/data_type.h"
 
 namespace oneflow {
 
@@ -215,6 +216,7 @@ void BoxingKernel<T>::VirtualKernelInit(const ParallelContext*) {
 template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  static_assert(!IsRecordType<T>::value, "should not be record type");
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
@@ -240,6 +242,32 @@ void BoxingKernel<T>::ForwardDataContent(
                                 DataContentIterator::GetCopyBlobFieldMthd());
     } else {
       UNIMPLEMENTED();
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<>
+void BoxingKernel<OFRecord>::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
+      && boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+    CHECK_EQ(boxing_conf.concat_box().axis(), boxing_conf.split_box().axis());
+    RecordContentIterator<OFRecord> in_ter(BnInOp2Blob, &op_attribute().input_bns(),
+                                           boxing_conf.concat_box().axis());
+    RecordContentIterator<OFRecord> out_ter(BnInOp2Blob, &op_attribute().output_bns(),
+                                            boxing_conf.split_box().axis());
+    while (true) {
+      OFRecord* in_record = in_ter.GetNext();
+      OFRecord* out_record = out_ter.GetNext();
+      if (in_record == nullptr && out_record == nullptr) { break; }
+      if (in_record != nullptr && out_record != nullptr) {
+        *out_record = *in_record;
+      } else {
+        UNIMPLEMENTED();
+      }
     }
   } else {
     UNIMPLEMENTED();
@@ -325,6 +353,7 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
   }
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel, ARITHMETIC_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel,
+                               ARITHMETIC_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

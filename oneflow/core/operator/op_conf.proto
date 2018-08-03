@@ -651,7 +651,7 @@ message ProposalTargetOpConf
 }
 
 enum ScoringMethod {
- kIdentity = 0;
+ kId = 0;
  kTempAvg = 1;
  kAvg = 2;
  kIouAvg = 3;
@@ -662,7 +662,7 @@ enum ScoringMethod {
 message BboxVoteConf {
  required float beta = 1 [default = 1.0];
  required float threshold = 2 [default = 1];
- required ScoringMethod scoring_method = 3 [default = kIdentity];
+ required ScoringMethod scoring_method = 3 [default = kId];
 }
 
 message BboxNmsAndLimitOpConf {

@@ -11,7 +11,7 @@ class BBox final {
   OF_DISALLOW_COPY_AND_MOVE(BBox);
   BBox() = delete;
   ~BBox() = delete;
-  
+
   static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
   static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
 
@@ -19,7 +19,7 @@ class BBox final {
   inline T y1() const { return bbox_[1]; }
   inline T x2() const { return bbox_[2]; }
   inline T y2() const { return bbox_[3]; }
-  
+
   inline void set_x1(T x1) { bbox_[0] = x1; }
   inline void set_y1(T y1) { bbox_[1] = y1; }
   inline void set_x2(T x2) { bbox_[2] = x2; }
@@ -35,7 +35,7 @@ class BBoxDelta final {
   OF_DISALLOW_COPY_AND_MOVE(BBoxDelta);
   BBoxDelta() = delete;
   ~BBoxDelta() = delete;
-  
+
   static const BBoxDelta* Cast(const T* ptr) { return reinterpret_cast<const BBoxDelta*>(ptr); }
   static BBoxDelta* MutCast(T* ptr) { return reinterpret_cast<BBoxDelta*>(ptr); }
 
