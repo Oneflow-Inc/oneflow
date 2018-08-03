@@ -41,7 +41,7 @@ void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
   int64_t max_thrd_id = 0;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() == this_machine_id) {
-      if (max_thrd_id < task.thrd_id()) max_thrd_id = task.thrd_id();
+      if (max_thrd_id < task.thrd_id()) { max_thrd_id = task.thrd_id(); }
     }
   }
 
