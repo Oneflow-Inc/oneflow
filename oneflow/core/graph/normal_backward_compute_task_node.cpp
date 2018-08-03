@@ -198,13 +198,6 @@ CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {
   return nullptr;
 }
 
-bool NormalBackwardCompTaskNode::IsBwClone() const {
-  const BackwardLogicalNode* bw_logical_node =
-      dynamic_cast<const BackwardLogicalNode*>(logical_node());
-  CHECK_NOTNULL(bw_logical_node);
-  return bw_logical_node->fw_node() == nullptr;
-}
-
 void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
   if (model_diff_regst == nullptr) { return; }
