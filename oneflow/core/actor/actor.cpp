@@ -56,6 +56,7 @@ void Actor::Init(const TaskProto& task_proto, const ThreadCtx& thread_ctx) {
   for (const auto& pair : produced_ctrl_regst_) {
     for (const auto& regst : pair.second) {
       writeable_produced_ctrl_regst_[regst->regst_desc_id()].push_back(regst.get());
+      produced_ctrl_regst2reading_cnt_[regst.get()] = 0;
     }
   }
 
@@ -116,14 +117,14 @@ void Actor::InitDeviceCtx(const ThreadCtx& thread_ctx) {
   switch (GetDeviceType()) {
     case DeviceType::kCPU: {
       CHECK_EQ(GetLocalWorkStreamId(), 0);
-      device_ctx_.reset(new CpuDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size));
+      device_ctx_.reset(new CpuDeviceCtx());
       break;
     }
     case DeviceType::kGPU: {
       CudaStreamHandle* cuda_handle = nullptr;
       CHECK_EQ(GetLocalWorkStreamId(), 0);
       cuda_handle = thread_ctx.g_cuda_stream.get();
-      device_ctx_.reset(new CudaDeviceCtx(thread_ctx.buf_ptr, thread_ctx.buf_size, cuda_handle));
+      device_ctx_.reset(new CudaDeviceCtx(cuda_handle));
       break;
     }
     default: { UNIMPLEMENTED(); }
@@ -313,11 +314,11 @@ void Actor::AsyncSendRegstMsgToConsumer(std::function<bool(Regst*)> RegstPreProc
     if (RegstPreProcess(regst) == false) { continue; }
     auto regst_reading_cnt_it = produced_data_regst2reading_cnt_.find(regst);
     CHECK_EQ(regst_reading_cnt_it->second, 0);
+    regst->set_act_id(act_id_);
     for (int64_t consumer : regst->consumers_actor_id()) {
       if (!IsAllowedActor(consumer)) { continue; }
       total_reading_data_cnt_ += 1;
       regst_reading_cnt_it->second += 1;
-      regst->set_act_id(act_id_);
       AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
     }
     if (!regst->consumers_actor_id().empty()) { pair.second.pop_front(); }
@@ -425,15 +426,19 @@ bool Actor::IsCtrlReady() {
 }
 
 int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
-  int64_t regst_desc_id = msg.regst_desc_id();
-  auto produced_it = writeable_produced_ctrl_regst_.find(regst_desc_id);
-  if (produced_it != writeable_produced_ctrl_regst_.end()) {
-    if (produced_it->second.empty()) { writeable_ctrl_regst_desc_cnt_ += 1; }
-    produced_it->second.push_back(msg.regst());
-    --total_reading_ctrl_cnt_;
-    return 0;
-  }
-  return -1;
+  Regst* regst = msg.regst();
+  auto reading_cnt_it = produced_ctrl_regst2reading_cnt_.find(regst);
+  if (reading_cnt_it == produced_ctrl_regst2reading_cnt_.end()) { return -1; }
+  CHECK(produced_ctrl_regst_.find(regst->regst_desc_id()) != produced_ctrl_regst_.end());
+  CHECK_GE(reading_cnt_it->second, 1);
+  reading_cnt_it->second -= 1;
+  total_reading_ctrl_cnt_ -= 1;
+  if (reading_cnt_it->second != 0) { return 0; }
+  auto writeable_it = writeable_produced_ctrl_regst_.find(regst->regst_desc_id());
+  CHECK(writeable_it != writeable_produced_ctrl_regst_.end());
+  if (writeable_it->second.empty()) { writeable_ctrl_regst_desc_cnt_ += 1; }
+  writeable_it->second.push_back(msg.regst());
+  return 0;
 }
 
 int Actor::ProcessReadableCtrlRegstMsg(const ActorMsg& msg) {
@@ -466,9 +471,12 @@ void Actor::AsyncSendCtrlRegstMsg() {
     CHECK(!pair.second.empty());
     Regst* regst = pair.second.front();
     regst->set_act_id(act_id_);
+    auto regst_reading_cnt_it = produced_ctrl_regst2reading_cnt_.find(regst);
+    CHECK_EQ(regst_reading_cnt_it->second, 0);
     for (int64_t consumer : regst->consumers_actor_id()) {
       AsyncSendMsg(ActorMsg::BuildRegstMsgToConsumer(actor_id_, consumer, regst));
       ++total_reading_ctrl_cnt_;
+      regst_reading_cnt_it->second += 1;
     }
     pair.second.pop_front();
     if (pair.second.empty()) { --writeable_ctrl_regst_desc_cnt_; }
@@ -503,7 +511,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   total_reading_data_cnt_ -= 1;
   if (reading_cnt_it->second != 0) { return 0; }
   auto writeable_it = writeable_produced_data_regst_.find(regst->regst_desc_id());
-  if (writeable_it == writeable_produced_data_regst_.end()) { return 0; }
+  CHECK(writeable_it != writeable_produced_data_regst_.end());
   if (writeable_it->second.empty()) { writeable_produced_data_regst_desc_cnt_ += 1; }
   writeable_it->second.push_back(regst);
   return 0;

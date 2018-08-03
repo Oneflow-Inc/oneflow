@@ -70,9 +70,17 @@ DataType DataType4CppTypeString(const std::string& cpp_type_str) {
 
 template<>
 Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const BlobDesc* blob_desc, Regst* regst) {
+  RtBlobDesc rt_blob_desc(*blob_desc);
   void* mem_ptr = nullptr;
-  CudaCheck(cudaMallocHost(&mem_ptr, blob_desc->TotalByteSize()));
-  return new Blob(regst, blob_desc, static_cast<char*>(mem_ptr));
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc.TotalByteSize()));
+  return new Blob(regst, &rt_blob_desc, static_cast<char*>(mem_ptr));
+}
+
+template<>
+Blob* OpKernelTestUtil<DeviceType::kCPU>::CreateBlob(const RtBlobDesc* rt_blob_desc, Regst* regst) {
+  void* mem_ptr = nullptr;
+  CudaCheck(cudaMallocHost(&mem_ptr, rt_blob_desc->TotalByteSize()));
+  return new Blob(regst, rt_blob_desc, static_cast<char*>(mem_ptr));
 }
 
 template<DeviceType src_device_type, DeviceType dst_device_type>
@@ -115,14 +123,14 @@ DEFINE_STATIC_SWITCH_FUNC(void, BlobCopy, MAKE_TWO_DEVICE_SWITCH_ENTRY,
 
 template<>
 void OpKernelTestUtil<DeviceType::kCPU>::BuildKernelCtx(KernelCtx* ctx) {
-  ctx->device_ctx = new CpuDeviceCtx(nullptr, 0);
+  ctx->device_ctx = new CpuDeviceCtx();
 }
 
 template<>
 void OpKernelTestUtil<DeviceType::kGPU>::BuildKernelCtx(KernelCtx* ctx) {
   if (!Global<CudaStreamHandle>::Get()) { Global<CudaStreamHandle>::New(nullptr); }
   CudaStreamHandle* cuda_handle = Global<CudaStreamHandle>::Get();
-  ctx->device_ctx = new CudaDeviceCtx(nullptr, 0, cuda_handle);
+  ctx->device_ctx = new CudaDeviceCtx(cuda_handle);
 }
 
 template<>
@@ -342,7 +350,8 @@ void OpKernelTestCase::UpdateGlobalJobDesc() { TODO(); }
 
 void OpKernelTestCase::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
-    bn_in_op2blob_desc_[pair.first] = pair.second->blob_desc();
+    BlobDesc blob_desc(pair.second->blob_desc().blob_desc_proto());
+    bn_in_op2blob_desc_[pair.first] = blob_desc;
   }
   SwitchBuildKernelCtx(SwitchCase(default_device_type()), &kernel_ctx_);
 }
