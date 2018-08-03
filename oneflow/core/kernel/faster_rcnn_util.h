@@ -6,6 +6,54 @@
 namespace oneflow {
 
 template<typename T>
+class BBox final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BBox);
+  BBox() = delete;
+  ~BBox() = delete;
+
+  static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
+  static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
+
+  inline T x1() const { return bbox_[0]; }
+  inline T y1() const { return bbox_[1]; }
+  inline T x2() const { return bbox_[2]; }
+  inline T y2() const { return bbox_[3]; }
+
+  inline void set_x1(T x1) { bbox_[0] = x1; }
+  inline void set_y1(T y1) { bbox_[1] = y1; }
+  inline void set_x2(T x2) { bbox_[2] = x2; }
+  inline void set_y2(T y2) { bbox_[3] = y2; }
+
+ private:
+  std::array<T, 4> bbox_;
+};
+
+template<typename T>
+class BBoxDelta final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BBoxDelta);
+  BBoxDelta() = delete;
+  ~BBoxDelta() = delete;
+
+  static const BBoxDelta* Cast(const T* ptr) { return reinterpret_cast<const BBoxDelta*>(ptr); }
+  static BBoxDelta* MutCast(T* ptr) { return reinterpret_cast<BBoxDelta*>(ptr); }
+
+  inline T dx() const { return delta_[0]; }
+  inline T dy() const { return delta_[1]; }
+  inline T dw() const { return delta_[2]; }
+  inline T dh() const { return delta_[3]; }
+
+  inline void set_dx(T dx) { delta_[0] = dx; }
+  inline void set_dy(T dy) { delta_[1] = dy; }
+  inline void set_dw(T dw) { delta_[2] = dw; }
+  inline void set_dh(T dh) { delta_[3] = dh; }
+
+ private:
+  std::array<T, 4> delta_;
+};
+
+template<typename T>
 struct FasterRcnnUtil final {
   inline static int32_t BBoxArea(const T* box) {
     return (box[2] - box[0] + 1) * (box[3] - box[1] + 1);
