@@ -55,7 +55,6 @@ class JobDesc final {
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
   int32_t NumOfBatchesInSnapshot() const;
-  int32_t Staleness() const;
   int64_t TotalBatchNum() const;
   const InitializerConf* DefaultInitializerConf() const;
   int32_t PieceNumOfPrintLoss() const;

@@ -7,10 +7,11 @@ void ReduceSumKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* in_blob = BnInOp2Blob("in");
   Blob* out_blob = BnInOp2Blob("out");
+  Blob* fw_tmp_blob = BnInOp2Blob("fw_tmp");
   if (this->kernel_conf().reduce_sum_conf().has_axis() == false) {
-    KernelUtil<device_type, T>::Sum(
-        ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(), out_blob->mut_dptr<T>(),
-        static_cast<T*>(ctx.device_ctx->buf_ptr()), ctx.device_ctx->buf_size());
+    KernelUtil<device_type, T>::Sum(ctx.device_ctx, in_blob->shape().elem_cnt(), in_blob->dptr<T>(),
+                                    out_blob->mut_dptr<T>(), fw_tmp_blob->mut_dptr<T>(),
+                                    fw_tmp_blob->ByteSizeOfDataContentField());
     return;
   }
   int32_t axis = this->kernel_conf().reduce_sum_conf().axis();

@@ -72,11 +72,15 @@ struct GetDataType;
 template<>
 struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 
-#define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto) \
-  template<>                                           \
-  struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {};
+#define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto)                            \
+  template<>                                                                      \
+  struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
+  inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
+
+template<DataType type>
+using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
 // Type Trait: const var
 

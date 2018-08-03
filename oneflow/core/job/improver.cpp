@@ -154,7 +154,7 @@ uint64_t CalcMemoryConsumed(
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
-    uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
+    uint64_t total_byte_size = RtRegstDesc(*regst_desc).MainByteSize4OneRegst();
     if (regst_desc->mem_shared_id() == -1) {
       mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
     } else {
@@ -204,7 +204,7 @@ std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
 }
 
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
-    const ActGraph& graph) {
+    const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2duration =
       std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
   graph.ForEachRegstDescConsumerPathMeanDuration(
@@ -237,12 +237,12 @@ double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
   return duration;
 }
 
-double CalcBaseII(const ActGraph& act_graph) {
+double CalcBaseII(const ChainActGraph& act_graph) {
   int64_t max_act_cnt = 0;
   HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
-  act_graph.ForEachNode([&](const ActNode* act_node) {
-    int64_t actor_id = act_node->actor_id();
-    if (!act_node->out_edges().empty()) {
+  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
+    int64_t actor_id = act_event->actor_id();
+    if (act_graph.IsActEventWithConsumer(act_event)) {
       ++actor_id2outputed_act_cnt[actor_id];
       max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
     }
@@ -252,14 +252,14 @@ double CalcBaseII(const ActGraph& act_graph) {
     actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
   }
   HashMap<int64_t, double> stream_id2total_calc_time;
-  act_graph.ForEachNode([&](const ActNode* act_node) {
-    int64_t actor_id = act_node->actor_id();
+  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
+    int64_t actor_id = act_event->actor_id();
     auto frequence_it = actor_id2act_frequency.find(actor_id);
     if (frequence_it == actor_id2act_frequency.end()) { return; }
-    int64_t stream_id = act_node->act_event().work_stream_id();
+    int64_t stream_id = act_event->work_stream_id();
     TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
-    stream_id2total_calc_time[stream_id] +=
-        FormalDuration4ExperimentalDuration(task_type, act_node->Duration(), frequence_it->second);
+    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
+        task_type, Duration4ActEvent(*act_event), frequence_it->second);
   });
   double base_ii = 0;
   for (const auto& pair : stream_id2total_calc_time) {
@@ -274,7 +274,7 @@ double IIScale4Actor(TaskType task_type, double default_ii_scale) {
 }
 
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
-    const ActGraph& graph) {
+    const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2ii_scale =
       std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
   graph.ForEachRegstDescConsumerPathIIScale(
@@ -493,7 +493,7 @@ double Improver::BinarySearchII(
 }
 
 void Improver::ForEachImprovedRegstNum(
-    const ActGraph& graph, const Plan& plan, bool is_memory_limited,
+    const ChainActGraph& graph, const Plan& plan, bool is_memory_limited,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
@@ -513,8 +513,7 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
-                       const std::string& act_event_filepath) {
+void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& naive_plan) {
   amd_ = amd;
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -522,15 +521,33 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
       record_load_task_num_.at(Global<IDMgr>::Get()->MachineId4ActorId(task_proto.task_id())) += 1;
     }
   }
-  auto act_events = std::make_unique<std::list<ActEvent>>();
-  ParseActEvents(act_event_filepath, act_events.get());
-  ActGraph act_graph(naive_plan, std::move(act_events));
+}
+
+Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
+  InitAvailableMemDesc(amd, naive_plan);
+  Plan mem_shared_plan = ImproveMemSharedId(naive_plan);
+  // Check if there is any zone out of memory even though all register_num == 1
+  MemZoneRegstDescs mz_regst_descs;
+  MakeMemZoneRegstDescs(mem_shared_plan, &mz_regst_descs);
+  HashMap<int64_t, double> zero2one{{0, 1}};
+  auto Zero2One = [&](int64_t) -> const HashMap<int64_t, double>& { return zero2one; };
+  CHECK(!IsAnyZoneOutOfMemory(mz_regst_descs, Zero2One, Zero2One, 1));
+  return mem_shared_plan;
+}
+
+Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
+                       const std::string& act_event_filepath) {
+  InitAvailableMemDesc(amd, naive_plan);
+  std::list<std::unique_ptr<ActEvent>> act_events;
+  ParseActEvents(act_event_filepath, &act_events);
+  ChainActGraph act_graph(naive_plan, std::move(act_events));
+
   auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
   auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
   Plan mem_unlimited_plan(naive_plan);
   ForEachImprovedRegstNum(act_graph, naive_plan, false, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
-  Plan mem_shared_plan = ImproveMemSharedIdOnly(mem_unlimited_plan);
+  Plan mem_shared_plan = ImproveMemSharedId(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
   ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
@@ -538,7 +555,7 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   return plan;
 }
 
-Plan Improver::ImproveMemSharedIdOnly(const Plan& naive_plan) const {
+Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   Plan plan(naive_plan);
   PlanTaskGraph plan_task_graph(naive_plan);
   ForEachImprovedMemSharedId(plan_task_graph, MakeSetterSetPlanMemSharedId(&plan));

@@ -73,7 +73,7 @@ class ThrdIdGenerator final {
   bool EqualConf(int64_t task_type, int32_t thrd_num) {
     if (task_type == TaskType::kMdSave) {
       JobDesc* job_desc = Global<JobDesc>::Get();
-      const int32_t mdsave_conf_num = job_desc ? job_desc->MdSaveWorkerNum() : 4;
+      const int32_t mdsave_conf_num = job_desc ? job_desc->MdSaveWorkerNum() : 64;
       if (thrd_num == mdsave_conf_num) return true;
     }
 

@@ -217,6 +217,10 @@ void LogicalNode::GenSortedCompTaskNodes(std::vector<std::pair<int64_t, CompTask
             comp_task_node->set_thrd_id(id_mgr->GetGpuMixThrdId(dev_phy_id));
             break;
           }
+          case CudaWorkType::kMdUpdt: {
+            comp_task_node->set_thrd_id(id_mgr->GetGpuMdUpdtThrdId(dev_phy_id));
+            break;
+          }
           default: UNIMPLEMENTED();
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {

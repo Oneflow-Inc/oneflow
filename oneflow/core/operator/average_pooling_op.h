@@ -11,8 +11,6 @@ class AveragePoolingOp : virtual public PoolingOp {
   AveragePoolingOp() = default;
   virtual ~AveragePoolingOp() = default;
 
-  bool NeedOutWhenBackward() const override { return false; }
-
  private:
   PbMessage* MutableCustomizedKernelConf(KernelConf*) const override;
 };

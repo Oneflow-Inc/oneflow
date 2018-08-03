@@ -21,21 +21,17 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
   const JobDesc* job_desc = Global<JobDesc>::Get();
   int64_t thrd_id = 0;
 
-  const OneMachineBufInfo& info = plan.buf_info().Get(Global<MachineCtx>::Get()->this_machine_id());
-
 #ifdef WITH_CUDA
-  FOR_RANGE(int64_t, i, 0, 4) {
+  FOR_RANGE(int64_t, i, 0, GetCudaWorkTypeSize()) {
     FOR_RANGE(int64_t, dev_phy_id, 0, job_desc->GpuDeviceNum()) {
-      threads_.push_back(new GpuThread(thrd_id, dev_phy_id, info.buf_size(thrd_id)));
-      thrd_id += 1;
+      threads_.push_back(new GpuThread(thrd_id++, dev_phy_id));
     }
   }
 #endif
   FOR_RANGE(int64_t, i, 0, job_desc->CpuDeviceNum()) {
-    threads_.push_back(new CpuThread(thrd_id, info.buf_size(thrd_id)));
-    thrd_id += 1;
+    threads_.push_back(new CpuThread(thrd_id++));
   }
-  threads_.push_back(new CpuThread(thrd_id++, 0));  // comm_net
+  threads_.push_back(new CpuThread(thrd_id++));  // comm_net
   CreatePersistenceThrd(plan, thrd_id);
   compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
@@ -50,7 +46,7 @@ void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
     }
   }
 
-  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i, 0)); }
+  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
 }
 
 }  // namespace oneflow

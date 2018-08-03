@@ -21,7 +21,7 @@ Regst* ConstructRegst(OpKernelTestCase* boxing_test_case, DeviceType device_type
 
   if (!Global<RegstMgr>::Get()) { Global<RegstMgr>::New(); }
   Regst* ret_regst = nullptr;
-  Global<RegstMgr>::Get()->NewRegsts(regst_desc_proto, device_type, RecordTypeProto::kOFRecord,
+  Global<RegstMgr>::Get()->NewRegsts(regst_desc_proto,
                                      [&ret_regst](Regst* regst) { ret_regst = regst; });
 
   return ret_regst;

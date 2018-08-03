@@ -3,7 +3,6 @@
 
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/device/cuda_util.h"
-#include "unsupported/Eigen/CXX11/Tensor"
 
 namespace oneflow {
 
@@ -24,7 +23,6 @@ class CudaStreamHandle final {
   const cublasHandle_t* cublas_pmh_handle();
   const cublasHandle_t* cublas_pmd_handle();
   const cudnnHandle_t* cudnn_handle();
-  const Eigen::GpuDevice* eigen_gpu_device();
 
   void AddCallBack(std::function<void()> callback);
 
@@ -36,8 +34,6 @@ class CudaStreamHandle final {
   std::unique_ptr<cublasHandle_t> cublas_pmh_handle_;
   std::unique_ptr<cublasHandle_t> cublas_pmd_handle_;
   std::unique_ptr<cudnnHandle_t> cudnn_handle_;
-  std::unique_ptr<Eigen::GpuDevice> eigen_gpu_device_;
-  std::unique_ptr<Eigen::CudaStreamDevice> eigen_cuda_stream_;
 };
 
 #endif  // WITH_CUDA
