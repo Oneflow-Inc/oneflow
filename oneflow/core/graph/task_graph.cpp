@@ -354,10 +354,14 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphBySelectOneSourceToSoleSink) {
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
+  int64_t edge_duplicate_num =
+      sorted_src_comp_tasks.front()->logical_node()->parallel_desc()->sorted_machine_ids().size();
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
       if (src_comp_task->machine_id() == dst_comp_task->machine_id()) {
-        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        for (int64_t i = 0; i < edge_duplicate_num; ++i) {
+          BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
+        }
       }
     }
   }
@@ -366,29 +370,21 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceLocalAdd) {
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceScatter2ReduceGlobalAdd) {
   for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
     for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-      CHECK_EQ(src_comp_task->machine_id(), dst_comp_task->machine_id());
       BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
     }
   }
 }
 
 DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByReduceLocalAdd2ReduceGlobalAdd) {
-  std::vector<CompTaskNode*> src_nodes_in_same_machine;
-  FOR_RANGE(int32_t, i, 0, sorted_src_comp_tasks.size()) {
-    src_nodes_in_same_machine.push_back(sorted_src_comp_tasks[i]);
-    if (i + 1 == sorted_src_comp_tasks.size()
-        || sorted_src_comp_tasks[i + 1]->machine_id() != sorted_src_comp_tasks[i]->machine_id()) {
-      BalancedSplitter splitter(src_nodes_in_same_machine.front()->parallel_ctx()->parallel_num(),
-                                src_nodes_in_same_machine.size());
-      int32_t splitter_idx = 0;
-      for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
-        if (splitter.At(splitter_idx).end() == dst_comp_task->parallel_ctx()->parallel_id()) {
-          ++splitter_idx;
-        }
-        BuildTaskPath(src_nodes_in_same_machine[splitter_idx], dst_comp_task, MutBufTask, false);
+  int64_t device_num_of_each_machine =
+      sorted_src_comp_tasks.front()->logical_node()->parallel_desc()->device_num_of_each_machine();
+  for (CompTaskNode* src_comp_task : sorted_src_comp_tasks) {
+    int64_t src_id_inside_the_machine = src_comp_task->parallel_id() % device_num_of_each_machine;
+    for (CompTaskNode* dst_comp_task : sorted_dst_comp_tasks) {
+      int64_t dst_id_inside_the_machine = dst_comp_task->parallel_id() % device_num_of_each_machine;
+      if (src_id_inside_the_machine == dst_id_inside_the_machine) {
+        BuildTaskPath(src_comp_task, dst_comp_task, MutBufTask, false);
       }
-      CHECK_EQ(splitter_idx + 1, src_nodes_in_same_machine.size());
-      src_nodes_in_same_machine.clear();
     }
   }
 }
