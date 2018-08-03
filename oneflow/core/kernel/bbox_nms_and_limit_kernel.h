@@ -9,7 +9,7 @@ namespace oneflow {
 template<typename T>
 class ScoringMethodIf {
  public:
-  ScoringMethodIf(const BboxVoteConf& vote_conf) : vote_conf_(vote_conf) { }
+  ScoringMethodIf() = default;
   virtual ~ScoringMethodIf() = default;
   void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
   const BboxVoteConf& conf() const { return vote_conf_; }

@@ -32,7 +32,7 @@ T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const T* score_ptr,              
 // clang-format on
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kIdentity, score_ptr, votee_index, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kId, score_ptr, votee_index, ForEach) {
   return score_ptr[votee_index];
 }
 
@@ -173,10 +173,10 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
         conf.nms_threshold(), nms_area_tmp_ptr, cls_post_nms_idx_ptr);
     if (conf.bbox_vote_enabled()) {
       BboxVoting(im_index, i, pre_nms_keep_num, post_nms_keep_num_ptr[i], pre_nms_index_slice_ptr,
-                 post_nms_index_slice_ptr, nms_area_tmp_ptr, scores_blob,
-                 voting_score_blob, bbox_blob);
+                 post_nms_index_slice_ptr, nms_area_tmp_ptr, scores_blob, voting_score_blob,
+                 bbox_blob);
     } else {
-      std::memcpy(voting_score_blob->dptr<T>(), scores_ptr, boxes_num * class_num);
+      std::memcpy(voting_score_blob->mut_dptr<T>(), scores_ptr, boxes_num * class_num);
     }
   }
 }
