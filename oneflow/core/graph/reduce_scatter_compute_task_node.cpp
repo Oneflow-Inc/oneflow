@@ -17,7 +17,6 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     int64_t dst_dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
     int64_t edge_index_of_this_dst_dev = edge_index4dst_dev.at(dst_dev_index_of_this_machine);
     edge_index4dst_dev.at(dst_dev_index_of_this_machine) += 1;
-    CHECK_LE(edge_index4dst_dev.at(dst_dev_index_of_this_machine), machine_num);
 
     int64_t out_edge_index =
         edge_index_of_this_dst_dev * dev_num_of_each_machine + dst_dev_index_of_this_machine;
@@ -25,6 +24,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false);
     edge->AddRegst(out_regst_name, out_regst);
   }
+  for (int64_t edge_index : edge_index4dst_dev) { CHECK_EQ(edge_index, machine_num); }
 }
 
 void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
