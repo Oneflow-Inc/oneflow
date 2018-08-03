@@ -117,23 +117,19 @@ void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
-  const int64_t class_num = BnInOp2Blob("bbox_delta")->shape().At(1) / 4;
-  const int64_t rois_num = rois_blob->shape().At(1);
+  Blob* bbox_blob = BnInOp2Blob("bbox");
+  const int64_t rois_num = bbox_blob->shape().At(0);
+  const int64_t class_num = bbox_blob->shape().At(1);
+  CHECK_EQ(rois_blob->shape().At(1), rois_num);
   CHECK_EQ(bbox_delta_blob->shape().elem_cnt(), rois_blob->shape().elem_cnt() * class_num);
   CHECK_EQ(bbox_delta_blob->shape().At(0), rois_blob->shape().At(0) * rois_num);
-  // data ptr
-  const int64_t im_rois_offset = im_index * rois_num * 4;
-  const int64_t im_delta_offset = im_index * rois_num * class_num * 4;
-  const T* rois_ptr = rois_blob->dptr<T>() + im_rois_offset;
-  const T* bbox_delta_ptr = bbox_delta_blob->dptr<T>() + im_delta_offset;
   // bbox broadcast
-  T* bbox_ptr = BnInOp2Blob("bbox")->mut_dptr<T>();
   FOR_RANGE(int64_t, i, 1, rois_num) {
-    const T* cur_roi_ptr = rois_ptr + i * 4;
+    const BBox<T>* roi_bbox = BBox<T>::Cast(rois_blob->dptr<T>(im_index, i));
     FOR_RANGE(int64_t, j, 1, class_num) {
-      const int64_t bbox_offset = (i * class_num + j) * 4;
-      FasterRcnnUtil<T>::BboxTransform(cur_roi_ptr, bbox_delta_ptr + bbox_offset,
-                                       bbox_ptr + bbox_offset);
+      const BBoxDelta<T>* delta =
+          BBoxDelta<T>::Cast(bbox_delta_blob->dptr<T>(im_index * rois_num + i, j * 4));
+      BBox<T>::MutCast(bbox_blob->mut_dptr<T>(i, j))->Transform(roi_bbox, delta);
     }
   }
 }
@@ -210,40 +206,35 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t im_index, int64_t class_index,
                                           const int32_t* area_ptr, const Blob* score_blob,
                                           Blob* voting_score_blob, Blob* bbox_blob) const {
   const int64_t bbox_num = bbox_blob->shape().At(0);
-  const int64_t class_num = voting_score_blob->shape().At(1);
   const int32_t* voter_index_ptr = pre_nms_index_slice_ptr + class_index * bbox_num;
   const int32_t* votee_index_ptr = post_nms_index_slice_ptr + class_index * bbox_num;
+  const T* score_ptr = score_blob->dptr<T>(im_index);
   const T voting_thresh = op_conf().bbox_nms_and_limit_conf().bbox_vote().threshold();
 
-  const T* const_bbox_ptr = bbox_blob->dptr<T>();
   FOR_RANGE(int64_t, i, 0, votee_num) {
     const int32_t votee_index = votee_index_ptr[i];
-    const int32_t bbox_offset = votee_index * 4;
+    const BBox<T>* votee_bbox = BBox<T>::Cast(bbox_blob->dptr<T>()) + votee_index;
     auto ForEachNearBy = [&](const std::function<void(int32_t, float)>& Handler) {
-      const T* const_votee_bbox = const_bbox_ptr + bbox_offset;
-      const int32_t votee_area = FasterRcnnUtil<T>::BBoxArea(const_votee_bbox);
       FOR_RANGE(int64_t, j, 0, voter_num) {
         const int32_t voter_index = voter_index_ptr[j];
-        const int32_t voter_area = area_ptr[j];
-        const T* const_voter_bbox = const_bbox_ptr + bbox_offset;
-        const float iou = FasterRcnnUtil<T>::InterOverUnion(const_votee_bbox, votee_area,
-                                                            const_voter_bbox, voter_area);
+        const BBox<T>* voter_bbox = BBox<T>::Cast(bbox_blob->dptr<T>()) + voter_index;
+        float iou = voter_bbox->InterOverUnion(votee_bbox);
         if (iou >= voting_thresh) { Handler(voter_index, iou); }
       }
     };
-    // voting new bbox
-    const T* score_ptr = score_blob->dptr<T>() + im_index * bbox_num * class_num;
+    // stat new bbox
     T score_weighted_bbox_sum[4] = {0, 0, 0, 0};
     T score_sum = 0;
     ForEachNearBy([&](int32_t voter_index, float iou) {
       const T voter_score = score_ptr[voter_index];
-      const T* voter_bbox = const_bbox_ptr + voter_index * 4;
-      FOR_RANGE(int32_t, k, 0, 4) { score_weighted_bbox_sum[k] += voter_bbox[k] * voter_score; }
+      const BBox<T>* voter_bbox = BBox<T>::Cast(bbox_blob->dptr<T>()) + voter_index;
+      FOR_RANGE(int32_t, k, 0, 4) { score_weighted_bbox_sum[k] += (*voter_bbox)[k] * voter_score; }
       score_sum += voter_score;
     });
-    T* votee_bbox = bbox_blob->mut_dptr<T>() + bbox_offset;
-    FOR_RANGE(int32_t, k, 0, 4) { votee_bbox[k] = score_weighted_bbox_sum[k] / score_sum; }
-
+    // new bbox
+    BBox<T>* new_votee_bbox = BBox<T>::MutCast(bbox_blob->mut_dptr<T>()) + votee_index;
+    FOR_RANGE(int32_t, k, 0, 4) { (*new_votee_bbox)[k] = score_weighted_bbox_sum[k] / score_sum; }
+    // new score
     voting_score_blob->mut_dptr<T>()[votee_index] =
         scoring_method_->scoring(voting_score_blob->dptr<T>(), votee_index, ForEachNearBy);
   }
@@ -290,7 +281,6 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(
     const int64_t im_index, const int64_t limit_num,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* bbox_blob = BnInOp2Blob("bbox");
-  const T* bbox_ptr = bbox_blob->dptr<T>();
   const T* score_ptr = BnInOp2Blob("voting_score")->dptr<T>();
   const int32_t* post_nms_index_slice_ptr = BnInOp2Blob("post_nms_index_slice")->dptr<int32_t>();
   OFRecord* labeled_bbox_record = BnInOp2Blob("labeled_bbox")->mut_dptr<OFRecord>() + im_index;
@@ -299,10 +289,11 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(
   Feature& score_feature = (*score_record->mutable_feature())[kOFRecordMapDefaultKey];
   FOR_RANGE(int64_t, i, 0, limit_num) {
     int32_t index = post_nms_index_slice_ptr[i];
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 0]);
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 1]);
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 2]);
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox_ptr[index * 4 + 3]);
+    const BBox<T>* bbox = BBox<T>::Cast(bbox_blob->dptr<T>()) + index;
+    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->x1());
+    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->y1());
+    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->x2());
+    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->y2());
     labeled_bbox_feature.mutable_int32_list()->add_value(index % bbox_blob->shape().At(0));
     score_feature.mutable_float_list()->add_value(score_ptr[index]);
   }
