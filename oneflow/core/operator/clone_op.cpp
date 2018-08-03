@@ -21,13 +21,6 @@ void CloneOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlo
   }
 }
 
-void CloneOp::InferDiffBlobDescsWithoutFwBlob(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(output_diff_bns().Get(0));
-  *GetBlobDesc4BnInOp(SoleIdbn()) = *out_diff_blob_desc;
-}
-
 void CloneOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {

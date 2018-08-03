@@ -42,7 +42,6 @@ void RegstDesc::UpdtMaxRegstNumIfNeed(int32_t val) {
 void RegstDesc::Lock() {
   CHECK_EQ(is_locked_, false);
   is_locked_ = true;
-  auto it = lbi2blob_desc_.begin();
   packed_blob_desc_ = ComputePackedBlobDesc(lbi2blob_desc_);
 }
 

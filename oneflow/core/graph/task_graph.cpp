@@ -80,12 +80,10 @@ void TaskGraph::EnableMemSharing4FwClone() {
   ForEachNode([&](TaskNode* task_node) {
     if (task_node->area_id() != kDataForwardArea) { return; }
     int32_t pred_fw_num = 0;
-    TaskNode* pred_fw_node = nullptr;
     std::shared_ptr<RegstDesc> clone_regst;
     for (auto& in_edge : task_node->in_edges()) {
       if (in_edge->src_node()->area_id() == kDataForwardArea) {
         pred_fw_num++;
-        pred_fw_node = in_edge->src_node();
         clone_regst = in_edge->GetSoleRegst();  // TODO: refine
       }
     }
