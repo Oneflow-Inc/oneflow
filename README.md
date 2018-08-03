@@ -8,3 +8,35 @@ mkdir build && cd build
 cmake -DBUILD_THIRD_PARTY=ON .. && make
 cmake -DBUILD_THIRD_PARTY=OFF .. && make
 ```
+
+
+### deps
+
+#### for libhdfs3
+
+[libhdfs3](https://github.com/apache/incubator-hawq/blob/master/depends/libhdfs3/README.md)
+
+```bash
+    # build
+    cmake (2.8+)                    http://www.cmake.org/
+    boost (tested on 1.53+)         http://www.boost.org/
+    google protobuf                 http://code.google.com/p/protobuf/
+    libxml2                         http://www.xmlsoft.org/
+    kerberos                        http://web.mit.edu/kerberos/
+    libuuid                         http://sourceforge.net/projects/libuuid/
+    libgsasl                        http://www.gnu.org/software/gsasl/
+```
+
+> Note: boost is not required if c++ compiler is g++ 4.6.0+ or clang++ with stdc++
+
+```bash
+    # test
+    gtest (tested on 1.7.0)         already integrated in the source code
+    gmock (tested on 1.7.0)         already integrated in the source code
+```
+
+```bash
+    # cov
+    gcov (included in gcc distribution)
+    lcov (tested on 1.9)            http://ltp.sourceforge.net/coverage/lcov.php
+```

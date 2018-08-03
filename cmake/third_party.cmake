@@ -11,6 +11,7 @@ include(grpc)
 include(libjpeg-turbo)
 include(opencv)
 include(eigen)
+include(libhdfs3)
 if (BUILD_CUDA)
   include(cub)
 endif()
@@ -62,7 +63,8 @@ set(oneflow_third_party_libs
     ${BLAS_LIBRARIES}
     ${LIBJPEG_STATIC_LIBRARIES}
     ${OPENCV_STATIC_LIBRARIES}
-    ${CMAKE_DL_LIBS}
+    ${LIBHDFS3_STATIC_LIBRARIES}
+    #${CMAKE_DL_LIBS}
 )
 message(STATUS "oneflow_third_party_libs: " ${oneflow_third_party_libs})
 
@@ -107,4 +109,5 @@ include_directories(
     ${LIBJPEG_INCLUDE_DIR}
     ${OPENCV_INCLUDE_DIR}
     ${EIGEN_INCLUDE_DIR}
+    ${LIBHDFS3_INCLUDE_DIR}
 )
