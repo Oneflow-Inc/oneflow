@@ -175,9 +175,11 @@ void BboxNmsAndLimitKernel<T>::NmsAndTryVote(
       BboxVoting(im_index, i, pre_nms_keep_num, post_nms_keep_num_ptr[i], pre_nms_index_slice_ptr,
                  post_nms_index_slice_ptr, nms_area_tmp_ptr, scores_blob, voting_score_blob,
                  bbox_blob);
-    } else {
-      std::memcpy(voting_score_blob->mut_dptr<T>(), scores_ptr, boxes_num * class_num);
     }
+  }
+
+  if (!conf.bbox_vote_enabled()) {
+    std::memcpy(voting_score_blob->mut_dptr<T>(), scores_ptr, boxes_num * class_num);
   }
 }
 

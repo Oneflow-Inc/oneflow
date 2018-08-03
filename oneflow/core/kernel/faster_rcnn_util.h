@@ -15,10 +15,21 @@ class BBox final {
   static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
   static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
 
-  inline T x1() const { return bbox_[0]; }
-  inline T y1() const { return bbox_[1]; }
-  inline T x2() const { return bbox_[2]; }
-  inline T y2() const { return bbox_[3]; }
+  inline int32_t x1() const { return bbox_[0]; }
+  inline int32_t y1() const { return bbox_[1]; }
+  inline int32_t x2() const { return bbox_[2]; }
+  inline int32_t y2() const { return bbox_[3]; }
+
+  inline T Area() const { return (x2() - x1() + 1) * (y2() - y1() + 1); }
+
+  inline float InterOverUnion(const BBox* other) const {
+    const int32_t iw = std::min(x2(), other->x2()) - std::max(x1(), other->x1()) + 1;
+    if (iw <= 0) { return 0; }
+    const int32_t ih = std::min(y2(), other->y2()) - std::max(y1(), other->y1()) + 1;
+    if (ih <= 0) { return 0; }
+    const float inter = iw * ih;
+    return inter / (Area() + other->Area() - inter);
+  }
 
   inline void set_x1(T x1) { bbox_[0] = x1; }
   inline void set_y1(T y1) { bbox_[1] = y1; }
@@ -51,6 +62,41 @@ class BBoxDelta final {
 
  private:
   std::array<T, 4> delta_;
+};
+
+template<typename T>
+class ScoredBBoxSlice final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(ScoredBBoxSlice);
+  ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr)
+      : len_(len), bbox_ptr_(bbox_ptr), score_ptr_(score_ptr), available_len_(len) {}
+
+  void SortByScore(bool init_index);
+  void SortByScore() { SortByScore(true); }
+  void Nms(float nms_threshold, ScoredBBoxSlice* post_nms_slice) const;
+  void Truncate(int64_t len) {
+    CHECK_GE(len, 0);
+    if (len < available_len_) { available_len_ = len; }
+  }
+  inline const BBox<T>* GetBBox(int64_t i) const {
+    return BBox<T>::Cast(bbox_ptr_ + index_slice_[i] * 4);
+  }
+
+  // Getters
+  const T* bbox_ptr() const { return bbox_ptr_; }
+  const T* score_ptr() const { return score_ptr_; }
+  const int32_t* index_slice() const { return index_slice_; }
+  int32_t available_len() const { return available_len_; }
+
+  // Setters
+  int32_t* mut_index_slice() { return index_slice_; }
+
+ private:
+  const int32_t len_;
+  const T* bbox_ptr_;
+  const T* score_ptr_;
+  int32_t* index_slice_;
+  int32_t available_len_;
 };
 
 template<typename T>

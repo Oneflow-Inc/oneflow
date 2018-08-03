@@ -107,4 +107,37 @@ int32_t FasterRcnnUtil<T>::Nms(const T* img_proposal_ptr, const int32_t* sorted_
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
+template<typename T>
+void ScoredBBoxSlice<T>::SortByScore(bool init_index) {
+  if (init_index) { std::iota(index_slice_, index_slice_ + available_len_, 0); }
+  std::sort(index_slice_, index_slice_ + available_len_,
+            [&](int32_t lhs, int32_t rhs) { return score_ptr_[lhs] > score_ptr_[rhs]; });
+}
+
+template<typename T>
+void ScoredBBoxSlice<T>::Nms(float nms_threshold, ScoredBBoxSlice* post_nms_slice) const {
+  CHECK_NE(index_slice(), post_nms_slice->index_slice());
+  CHECK_EQ(bbox_ptr(), post_nms_slice->bbox_ptr());
+  CHECK_EQ(score_ptr(), post_nms_slice->score_ptr());
+  int32_t* second_level_index_tmp_ptr = post_nms_slice->mut_index_slice();
+  int32_t keep_num = 0;
+  auto IsSuppressed = [&](int32_t index) -> bool {
+    const BBox<T>* cur_bbox = GetBBox(index);
+    FOR_RANGE(int32_t, post_nms_slice_i, 0, keep_num) {
+      const BBox<T>* keep_bbox = GetBBox(second_level_index_tmp_ptr[post_nms_slice_i]);
+      if (keep_bbox->InterOverUnion(cur_bbox) >= nms_threshold) { return true; }
+    }
+    return false;
+  };
+  FOR_RANGE(int32_t, sorted_score_slice_i, 0, available_len()) {
+    if (IsSuppressed(sorted_score_slice_i)) { continue; }
+    second_level_index_tmp_ptr[keep_num++] = sorted_score_slice_i;
+    if (keep_num == post_nms_slice->avaliable_len()) { break; }
+  }
+  FOR_RANGE(int32_t, i, 0, keep_num) {
+    post_nms_slice->mut_index_slice()[i] = index_slice()[second_level_index_tmp_ptr[i]];
+  }
+  post_nms_slice->Truncate(keep_num);
+}
+
 }  // namespace oneflow
