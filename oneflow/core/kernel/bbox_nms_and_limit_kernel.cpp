@@ -18,26 +18,26 @@ namespace {
 using ForEachType = std::function<void(const std::function<void(int32_t, float)>&)>;
 
 // clang-format off
-#define DEFINE_SCORING_METHOD(k, score_ptr, for_each_nearby)                             \
+#define DEFINE_SCORING_METHOD(k, score_ptr, votee_index, for_each_nearby)                \
 class OF_PP_CAT(ScoreMethod, __LINE__) final : public ScoringMethodIf<T> {               \
    public:                                                                               \
-    T scoring(const T* score_ptr, const ForEachType& for_each_nearby) const override; \
+   T scoring(const T* score_ptr, const int32_t votee_index,                              \
+	     const ForEachType& for_each_nearby) const override;	                 \
 };                                                                                       \
 REGISTER_SCORING_METHOD(k, OF_PP_CAT(ScoreMethod, __LINE__));                            \
 template<typename T>                                                                     \
 T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const T* score_ptr,                       \
+					       const int32_t votee_index,                \
                                                const ForEachType& for_each_nearby) const
 // clang-format on
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kIdentity, score_ptr, ForEach) {
-  T score = 0;
-  ForEach([&](int32_t index, float iou) { score = score_ptr[index]; });
-  return score;
+DEFINE_SCORING_METHOD(ScoringMethod::kIdentity, score_ptr, votee_index, ForEach) {
+  return score_ptr[votee_index];
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kAvg, score_ptr, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kAvg, score_ptr, votee_index, ForEach) {
   T score_sum = 0;
   int32_t num = 0;
   ForEach([&](int32_t index, float iou) {
@@ -48,7 +48,7 @@ DEFINE_SCORING_METHOD(ScoringMethod::kAvg, score_ptr, ForEach) {
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kIouAvg, score_ptr, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kIouAvg, score_ptr, votee_index, ForEach) {
   T iou_weighted_score_sum = 0;
   T iou_sum = 0;
   ForEach([&](int32_t index, float iou) {
@@ -59,7 +59,7 @@ DEFINE_SCORING_METHOD(ScoringMethod::kIouAvg, score_ptr, ForEach) {
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, score_ptr, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, score_ptr, votee_index, ForEach) {
   const float beta = this->conf().beta();
   T generalized_score_sum = 0;
   int32_t num = 0;
@@ -71,7 +71,7 @@ DEFINE_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, score_ptr, ForEach) {
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kQuasiSum, score_ptr, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kQuasiSum, score_ptr, votee_index, ForEach) {
   const float beta = this->conf().beta();
   T score_sum = 0;
   int32_t num = 0;
@@ -83,7 +83,7 @@ DEFINE_SCORING_METHOD(ScoringMethod::kQuasiSum, score_ptr, ForEach) {
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, score_ptr, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, score_ptr, votee_index, ForEach) {
   TODO();
   return 0;
 }
@@ -240,9 +240,9 @@ void BboxNmsAndLimitKernel<T>::BboxVoting(int64_t im_index, int64_t class_index,
     });
     T* votee_bbox = bbox_blob->mut_dptr<T>() + bbox_offset;
     FOR_RANGE(int32_t, k, 0, 4) { votee_bbox[k] = score_weighted_bbox_sum[k] / score_sum; }
-    // voting new score
-    T voting_score = scoring_method_->scoring(voting_score_blob->dptr<T>(), ForEachNearBy);
-    voting_score_blob->mut_dptr<T>()[votee_index] = voting_score;
+
+    voting_score_blob->mut_dptr<T>()[votee_index] =
+        scoring_method_->scoring(voting_score_blob->dptr<T>(), votee_index, ForEachNearBy);
   }
 }
 
