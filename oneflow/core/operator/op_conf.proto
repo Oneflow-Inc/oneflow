@@ -445,6 +445,7 @@ message AddOpConf {
   repeated string in = 1;
   required string out = 2;
   optional ActivationType activation = 3 [default = kNone];
+  optional bool enable_bw_add_mem_sharing = 4 [default = false];
 }
 
 message MaximumOpConf {

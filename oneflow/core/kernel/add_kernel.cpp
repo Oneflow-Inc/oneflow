@@ -30,8 +30,13 @@ template<DeviceType device_type, typename T>
 void AddKernel<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* out_diff_blob = BnInOp2Blob(GenDiffBn("out"));
-  Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(0));
-  in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
+  bool enable_bw_add_mem_sharing =
+      this->template GetValFromCustomizedOpConf<bool>("enable_bw_add_mem_sharing");
+  size_t copy_cnt = enable_bw_add_mem_sharing ? 1 : this->op_attribute().input_diff_bns().size();
+  FOR_RANGE(size_t, i, 0, copy_cnt) {
+    Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(i));
+    in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);
+  }
 }
 
 template<DeviceType device_type, typename T>
