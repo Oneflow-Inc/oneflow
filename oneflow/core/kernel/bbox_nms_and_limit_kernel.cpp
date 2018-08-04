@@ -167,7 +167,7 @@ ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
 
     int32_t* cls_post_nms_idx_ptr = post_nms_index_slice_blob->mut_dptr<int32_t>(i);
     ScoredBBoxSlice<T> post_nms_slice(boxes_num, bbox_ptr, scores_ptr, cls_post_nms_idx_ptr);
-    pre_nms_slice.Nms(conf.nms_threshold(), &post_nms_slice);
+    post_nms_slice.NmsFrom(conf.nms_threshold(), pre_nms_slice);
 
     if (conf.bbox_vote_enabled()) {
       VoteBboxAndScore(pre_nms_slice, post_nms_slice, voting_score_blob, bbox_blob);

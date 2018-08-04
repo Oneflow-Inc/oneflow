@@ -122,34 +122,18 @@ class ScoredBBoxSlice final {
 
   void DescSortByScore(bool init_index);
   void DescSortByScore() { DescSortByScore(true); }
-  void Nms(float nms_threshold, ScoredBBoxSlice* post_nms_slice) const;
-  void Truncate(int64_t len) {
-    CHECK_GE(len, 0);
-    if (len < available_len_) { available_len_ = len; }
-  }
-  void TruncateByThreshold(float thresh) {
-    int64_t keep_num = available_len_;
-    FOR_RANGE(int64_t, i, 0, available_len_) {
-      if (score_ptr_[index_slice_[i]] <= thresh) {
-        keep_num = i;
-        break;
-      }
-    }
-    Truncate(keep_num);
-  }
-  void Concat(const ScoredBBoxSlice& other) {
-    CHECK_LE(other.available_len(), len_ - available_len_);
-    FOR_RANGE(int32_t, i, 0, other.available_len()) {
-      index_slice_[available_len_ + i] = other.index_slice()[i];
-    }
-    available_len_ += other.available_len();
-  }
+  void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
+
+  void Truncate(int64_t len);
+  void TruncateByThreshold(float thresh);
+  void Concat(const ScoredBBoxSlice& other);
+
   inline int32_t GetSlice(int64_t i) const {
     CHECK_LE(i, available_len_);
     return index_slice_[i];
   }
-  inline const BBox<T>* GetBBox() const { return BBox<T>::Cast(bbox_ptr_); }
   inline const BBox<T>* GetBBox(int64_t i) const {
+    CHECK_LE(i, available_len_);
     return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
   }
   inline T GetScore(int64_t i) const {
@@ -158,12 +142,11 @@ class ScoredBBoxSlice final {
   }
 
   // Getters
+  int32_t len() const { return len_; }
   const T* bbox_ptr() const { return bbox_ptr_; }
   const T* score_ptr() const { return score_ptr_; }
   const int32_t* index_slice() const { return index_slice_; }
   int32_t available_len() const { return available_len_; }
-  int32_t len() const { return len_; }
-
   // Setters
   int32_t* mut_index_slice() { return index_slice_; }
 
