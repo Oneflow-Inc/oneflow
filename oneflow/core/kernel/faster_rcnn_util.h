@@ -2,6 +2,8 @@
 #define ONEFLOW_CORE_KERNEL_FASTER_RCNN_UTIL_H_
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/register/blob.h"
+#include "oneflow/core/operator/op_conf.pb.h"
 
 namespace oneflow {
 
@@ -161,6 +163,7 @@ class ScoredBBoxSlice final {
 
 template<typename T>
 struct FasterRcnnUtil final {
+  static void GenerateAnchors(const AnchorsGeneratorConf& conf, Blob* anchors_blob);
   static void BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas, T* pred_bboxes);
   static void BboxTransformInv(int64_t boxes_num, const T* bboxes, const T* target_bboxes,
                                T* deltas);

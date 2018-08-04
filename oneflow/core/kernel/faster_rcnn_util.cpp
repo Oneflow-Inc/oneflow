@@ -4,6 +4,46 @@
 namespace oneflow {
 
 template<typename T>
+void FasterRcnnUtil<T>::GenerateAnchors(const AnchorsGeneratorConf& conf, Blob* anchors_blob) {
+  // anchors_blob shape (h, w, a, 4)
+  const int32_t height = anchors_blob->shape().At(0);
+  const int32_t width = anchors_blob->shape().At(1);
+  const int32_t scales_size = conf.anchor_scales_size();
+  const int32_t ratios_size = conf.aspect_ratios_size();
+  const int32_t fm_stride = conf.feature_map_stride();
+  const int32_t num_anchors = scales_size * ratios_size;
+  CHECK_EQ(num_anchors, anchors_blob->shape().At(2));
+
+  const float base_ctr = 0.5 * (fm_stride - 1);
+  std::vector<T> base_anchors(num_anchors * 4);
+  FOR_RANGE(int32_t, i, 0, ratios_size) {
+    FOR_RANGE(int32_t, j, 0, scales_size) {
+      const int32_t size = conf.anchor_scales(j) * conf.anchor_scales(j);
+      const int32_t w = std::round(std::sqrt(size / conf.aspect_ratios(i)));
+      const int32_t h = std::round(w * conf.aspect_ratios(i));
+      int32_t base_offset = (i * scales_size + j) * 4;
+      base_anchors[base_offset + 0] = std::round(base_ctr - 0.5 * (w - 1));
+      base_anchors[base_offset + 1] = std::round(base_ctr - 0.5 * (h - 1));
+      base_anchors[base_offset + 2] = std::round(base_ctr + 0.5 * (w - 1));
+      base_anchors[base_offset + 3] = std::round(base_ctr + 0.5 * (h - 1));
+    }
+  }
+
+  T* anchors_dptr = anchors_blob->mut_dptr<T>();
+  FOR_RANGE(int32_t, h, 0, height) {
+    FOR_RANGE(int32_t, w, 0, width) {
+      BBox<T>* anchor_bbox = BBox<T>::MutCast(anchors_blob->mut_dptr<T>(h, w));
+      FOR_RANGE(int32_t, i, 0, num_anchors) {
+        anchor_bbox[i].set_x1(base_anchors[i + 0] + w * fm_stride);
+        anchor_bbox[i].set_y1(base_anchors[i + 1] + h * fm_stride);
+        anchor_bbox[i].set_x2(base_anchors[i + 2] + w * fm_stride);
+        anchor_bbox[i].set_y2(base_anchors[i + 3] + h * fm_stride);
+      }
+    }
+  }
+}
+
+template<typename T>
 void FasterRcnnUtil<T>::BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas,
                                       T* pred_bboxes) {
   FOR_RANGE(int64_t, i, 0, boxes_num) {
@@ -123,7 +163,7 @@ void ScoredBBoxSlice<T>::FilterBy(const std::function<bool(const T, const BBox<T
   int32_t keep_num = 0;
   FOR_RANGE(int64_t, i, 0, available_len_) {
     const int64_t index = index_slice_[i];
-    if (!Filter(GetScore(i), GetBBox(i)) {
+    if (!Filter(GetScore(i), GetBBox(i))) {
       // keep_num <= i so index_slice_ never be written before read
       index_slice_[keep_num++] = index_slice_[i];
     }
