@@ -138,9 +138,17 @@ class ScoredBBoxSlice final {
     }
     Truncate(keep_num);
   }
+  inline int32_t GetSlice(int64_t i) const {
+    CHECK_LE(i, available_len_);
+    return index_slice_[i];
+  }
   inline const BBox<T>* GetBBox() const { return BBox<T>::Cast(bbox_ptr_); }
   inline const BBox<T>* GetBBox(int64_t i) const {
     return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
+  }
+  inline T GetScore(int64_t i) const {
+    CHECK_LE(i, available_len_);
+    return score_ptr_[index_slice_[i]];
   }
 
   // Getters

@@ -20,70 +20,70 @@ using ForEachType = std::function<void(const std::function<void(int32_t, float)>
 // clang-format off
 #define DEFINE_SCORING_METHOD(k, score_ptr, default_score, for_each_nearby)              \
 class OF_PP_CAT(ScoreMethod, __LINE__) final : public ScoringMethodIf<T> {               \
-   public:                                                                               \
-   T scoring(const T* score_ptr, const T default_score,                                  \
-	     const ForEachType& for_each_nearby) const override;	                 \
+  public:                                                                                \
+   T scoring(const ScoredBBoxSlice<T>& slice, const T default_score,                     \
+             const ForEachType& for_each_nearby) const override;                         \
 };                                                                                       \
 REGISTER_SCORING_METHOD(k, OF_PP_CAT(ScoreMethod, __LINE__));                            \
 template<typename T>                                                                     \
-T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const T* score_ptr,                       \
-					       const T default_score,                    \
+T OF_PP_CAT(ScoreMethod, __LINE__)<T>::scoring(const ScoredBBoxSlice<T>& slice,          \
+                                               const T default_score,                    \
                                                const ForEachType& for_each_nearby) const
 // clang-format on
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kId, score_ptr, default_score, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kId, slice, default_score, ForEach) {
   return default_score;
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kAvg, score_ptr, default_score, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kAvg, slice, default_score, ForEach) {
   T score_sum = 0;
   int32_t num = 0;
-  ForEach([&](int32_t index, float iou) {
-    score_sum += score_ptr[index];
+  ForEach([&](int32_t slice_index, float iou) {
+    score_sum += slice.GetScore(slice_index);
     ++num;
   });
   return score_sum / num;
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kIouAvg, score_ptr, default_score, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kIouAvg, slice, default_score, ForEach) {
   T iou_weighted_score_sum = 0;
   T iou_sum = 0;
-  ForEach([&](int32_t index, float iou) {
-    iou_weighted_score_sum += score_ptr[index] * iou;
+  ForEach([&](int32_t slice_index, float iou) {
+    iou_weighted_score_sum += slice.GetScore(slice_index) * iou;
     iou_sum += iou;
   });
   return static_cast<T>(iou_weighted_score_sum / iou_sum);
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, score_ptr, default_score, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kGeneralizedAvg, slice, default_score, ForEach) {
   const float beta = this->conf().beta();
   T generalized_score_sum = 0;
   int32_t num = 0;
-  ForEach([&](int32_t index, float iou) {
-    generalized_score_sum += std::pow<T>(score_ptr[index], beta);
+  ForEach([&](int32_t slice_index, float iou) {
+    generalized_score_sum += std::pow<T>(slice.GetScore(slice_index), beta);
     ++num;
   });
   return std::pow<T>(generalized_score_sum / num, 1.f / beta);
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kQuasiSum, score_ptr, default_score, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kQuasiSum, slice, default_score, ForEach) {
   const float beta = this->conf().beta();
   T score_sum = 0;
   int32_t num = 0;
-  ForEach([&](int32_t index, float iou) {
-    score_sum += score_ptr[index];
+  ForEach([&](int32_t slice_index, float iou) {
+    score_sum += slice.GetScore(slice_index);
     ++num;
   });
   return static_cast<T>(score_sum / std::pow<T>(num, beta));
 }
 
 template<typename T>
-DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, score_ptr, default_score, ForEach) {
+DEFINE_SCORING_METHOD(ScoringMethod::kTempAvg, slice, default_score, ForEach) {
   TODO();
   return 0;
 }
@@ -184,21 +184,21 @@ void BboxNmsAndLimitKernel<T>::VoteBboxAndScore(const ScoredBBoxSlice<T>& pre_nm
   CHECK_EQ(pre_nms_slice.bbox_ptr(), post_nms_slice.bbox_ptr());
   const T voting_thresh = op_conf().bbox_nms_and_limit_conf().bbox_vote().threshold();
   BBox<T>* ret_voting_bbox_ptr = BBox<T>::MutCast(voting_bbox_blob->mut_dptr<T>());
+
   FOR_RANGE(int64_t, i, 0, post_nms_slice.available_len()) {
-    const int32_t votee_index = post_nms_slice.index_slice()[i];
     const BBox<T>* votee_bbox = post_nms_slice.GetBBox(i);
     auto ForEachNearBy = [&](const std::function<void(int32_t, float)>& Handler) {
       FOR_RANGE(int64_t, j, 0, pre_nms_slice.available_len()) {
         const BBox<T>* voter_bbox = pre_nms_slice.GetBBox(j);
         float iou = voter_bbox->InterOverUnion(votee_bbox);
-        if (iou >= voting_thresh) { Handler(pre_nms_slice.index_slice()[j], iou); }
+        if (iou >= voting_thresh) { Handler(j, iou); }
       }
     };
     // new bbox
-    VoteBbox(pre_nms_slice, ForEachNearBy, ret_voting_bbox_ptr + votee_index);
+    VoteBbox(pre_nms_slice, ForEachNearBy, ret_voting_bbox_ptr + post_nms_slice.GetSlice(i));
     // new score
-    voting_score_blob->mut_dptr<T>()[votee_index] = scoring_method_->scoring(
-        pre_nms_slice.score_ptr(), post_nms_slice.score_ptr()[votee_index], ForEachNearBy);
+    voting_score_blob->mut_dptr<T>()[post_nms_slice.GetSlice(i)] =
+        scoring_method_->scoring(pre_nms_slice, post_nms_slice.GetScore(i), ForEachNearBy);
   }
 }
 
@@ -206,20 +206,17 @@ template<typename T>
 void BboxNmsAndLimitKernel<T>::VoteBbox(
     const ScoredBBoxSlice<T>& pre_nms_slice,
     const std::function<void(const std::function<void(int32_t, float)>&)>& ForEachNearBy,
-    BBox<T>* ret_votee_bbox) const {
+    BBox<T>* ret_bbox_ptr) const {
   std::array<T, 4> score_weighted_bbox = {0, 0, 0, 0};
   T score_sum = 0;
-  const BBox<T>* bbox_ptr = pre_nms_slice.GetBBox();
-  ForEachNearBy([&](int32_t voter_index, float iou) {
-    const T voter_score = pre_nms_slice.score_ptr()[voter_index];
+  ForEachNearBy([&](int32_t voter_slice_index, float iou) {
+    const T voter_score = pre_nms_slice.GetScore(voter_slice_index);
     FOR_RANGE(int32_t, k, 0, 4) {
-      score_weighted_bbox[k] += bbox_ptr[voter_index].bbox()[k] * voter_score;
+      score_weighted_bbox[k] += pre_nms_slice.GetBBox(voter_slice_index)->bbox()[k] * voter_score;
     }
     score_sum += voter_score;
   });
-  FOR_RANGE(int32_t, k, 0, 4) {
-    ret_votee_bbox->mut_bbox()[k] = score_weighted_bbox[k] / score_sum;
-  }
+  FOR_RANGE(int32_t, k, 0, 4) { ret_bbox_ptr->mut_bbox()[k] = score_weighted_bbox[k] / score_sum; }
 }
 
 template<typename T>

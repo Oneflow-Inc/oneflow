@@ -15,7 +15,7 @@ class ScoringMethodIf {
   void Init(const BboxVoteConf& vote_conf) { vote_conf_ = vote_conf; }
   const BboxVoteConf& conf() const { return vote_conf_; }
   virtual T scoring(
-      const T*, const T default_score,
+      const ScoredBBoxSlice<T>&, const T default_score,
       const std::function<void(const std::function<void(int32_t, float)>&)>&) const = 0;
 
  private:
