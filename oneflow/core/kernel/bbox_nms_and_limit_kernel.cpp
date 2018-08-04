@@ -108,7 +108,7 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     BroadCastBboxTransform(i, BnInOp2Blob);
     ClipBox(bbox_blob);
     ScoredBBoxSlice<T> slice = NmsAndTryVote(i, BnInOp2Blob);
-    slice.DescSortByScore(false);
+    Limit(op_conf().bbox_nms_and_limit_conf().detections_per_im(), slice);
     WriteOutputToOFRecord(i, bbox_blob->shape().At(0), slice, BnInOp2Blob("labeled_bbox"),
                           BnInOp2Blob("bbox_score"));
   }
@@ -156,10 +156,8 @@ ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
   Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice");
   Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice");
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-
-  SlicesDefragment<T> defragement(boxes_num, boxes_num * class_num, bbox_ptr,
-                                  voting_score_blob->dptr<T>(),
-                                  post_nms_index_slice_blob->mut_dptr<int32_t>());
+  ScoredBBoxSlice<T> all_class_slice(boxes_num * class_num, bbox_ptr, voting_score_blob->dptr<T>(),
+                                     post_nms_index_slice_blob->mut_dptr<int32_t>());
   FOR_RANGE(int64_t, i, 1, class_num) {
     int32_t* cls_pre_nms_idx_ptr = pre_nms_index_slice_blob->mut_dptr<int32_t>(i);
     FOR_RANGE(int64_t, j, 0, boxes_num) { cls_pre_nms_idx_ptr[i] = i + j * class_num; }
@@ -175,12 +173,12 @@ ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
       VoteBboxAndScore(pre_nms_slice, post_nms_slice, voting_score_blob, bbox_blob);
     }
 
-    defragement.Swallow(post_nms_slice);
+    all_class_slice.Concat(post_nms_slice);
   }
   if (!conf.bbox_vote_enabled()) {
     std::memcpy(voting_score_blob->mut_dptr<T>(), scores_ptr, boxes_num * class_num);
   }
-  return defragement.DefragmentSlice();
+  return all_class_slice;
 }
 
 template<typename T>
@@ -225,6 +223,12 @@ void BboxNmsAndLimitKernel<T>::VoteBbox(
     score_sum += voter_score;
   });
   FOR_RANGE(int32_t, k, 0, 4) { ret_bbox_ptr->mut_bbox()[k] = score_weighted_bbox[k] / score_sum; }
+}
+
+template<typename T>
+void BboxNmsAndLimitKernel<T>::Limit(const int32_t limit_num, ScoredBBoxSlice<T>& slice) const {
+  slice.DescSortByScore(false);
+  if (limit_num < slice.available_len()) { slice.Truncate(limit_num); }
 }
 
 template<typename T>

@@ -137,10 +137,12 @@ class ScoredBBoxSlice final {
     }
     Truncate(keep_num);
   }
-  void Expand(int64_t len) {
-    CHECK_GE(len, 0);
-    CHECK_LE(len + available_len_, len_);
-    available_len_ += len;
+  void Concat(const ScoredBBoxSlice& other) {
+    CHECK_LE(other.available_len(), len_ - available_len_);
+    FOR_RANGE(int32_t, i, 0, other.available_len()) {
+      index_slice_[available_len_ + i] = other.index_slice()[i];
+    }
+    available_len_ += other.available_len();
   }
   inline int32_t GetSlice(int64_t i) const {
     CHECK_LE(i, available_len_);
@@ -171,28 +173,6 @@ class ScoredBBoxSlice final {
   const T* score_ptr_;
   int32_t* index_slice_;
   int32_t available_len_;
-};
-
-template<typename T>
-class SlicesDefragment final {
- public:
-  SlicesDefragment(int32_t col_len, int32_t len, const T* bbox_ptr, const T* score_ptr,
-                   int32_t* index_slice)
-      : col_len_(col_len), slice_(len, bbox_ptr, score_ptr, index_slice) {
-    slice_.Truncate(0);
-  }
-  void Swallow(const ScoredBBoxSlice<T>& other) {
-    CHECK_EQ(col_len_, other.len());
-    FOR_RANGE(int32_t, i, 0, other.available_len()) {
-      slice_.mut_index_slice()[slice_.available_len() + i] = other.index_slice()[i];
-      slice_.Expand(other.available_len());
-    }
-  }
-  ScoredBBoxSlice<T> DefragmentSlice() { return slice_; }
-
- private:
-  const int32_t col_len_;
-  ScoredBBoxSlice<T> slice_;
 };
 
 template<typename T>
