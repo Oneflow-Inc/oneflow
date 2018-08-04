@@ -440,10 +440,8 @@ int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
   CHECK(writeable_it != writeable_produced_ctrl_regst_.end());
   if (writeable_it->second.empty()) { writeable_ctrl_regst_desc_cnt_ += 1; }
   int64_t& max_act_id = produced_ctrl_regst2max_act_id_[regst->regst_desc_id()];
-  if (max_act_id >= 0) {
+  if (regst->act_id() >= 0) {
     CHECK_GT(regst->act_id(), max_act_id);
-    max_act_id = regst->act_id();
-  } else if (regst->act_id() >= 0) {
     max_act_id = regst->act_id();
   }
   writeable_it->second.push_back(regst);
@@ -523,10 +521,8 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   CHECK(writeable_it != writeable_produced_data_regst_.end());
   if (writeable_it->second.empty()) { writeable_produced_data_regst_desc_cnt_ += 1; }
   int64_t& max_act_id = produced_data_regst2max_act_id_[regst->regst_desc_id()];
-  if (max_act_id >= 0) {
+  if (regst->act_id() >= 0) {
     CHECK_GT(regst->act_id(), max_act_id);
-    max_act_id = regst->act_id();
-  } else if (regst->act_id() >= 0) {
     max_act_id = regst->act_id();
   }
   writeable_it->second.push_back(regst);
