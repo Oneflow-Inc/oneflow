@@ -149,6 +149,7 @@ class Actor {
   // Status of Produced Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
+  HashMap<int64_t, int64_t> produced_data_regst2max_act_id_;
   HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
   int64_t actual_writeable_produced_data_regst_desc_num_;
   int64_t writeable_produced_data_regst_desc_cnt_;
@@ -162,6 +163,7 @@ class Actor {
   // Status of Control Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
+  HashMap<int64_t, int64_t> produced_ctrl_regst2max_act_id_;
   HashMap<Regst*, int64_t> produced_ctrl_regst2reading_cnt_;
   HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
   int64_t total_reading_ctrl_cnt_;
