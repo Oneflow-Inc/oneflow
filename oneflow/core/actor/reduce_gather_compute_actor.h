@@ -5,7 +5,7 @@
 
 namespace oneflow {
 
-class ReduceGatherCompActor : public InputWiseCompActor {
+class ReduceGatherCompActor final : public InputWiseCompActor {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceGatherCompActor);
   ReduceGatherCompActor() = default;
