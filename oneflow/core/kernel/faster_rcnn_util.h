@@ -113,7 +113,6 @@ class BBoxDelta final {
 template<typename T>
 class ScoredBBoxSlice final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(ScoredBBoxSlice);
   ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice)
       : len_(len),
         bbox_ptr_(bbox_ptr),
@@ -138,6 +137,11 @@ class ScoredBBoxSlice final {
     }
     Truncate(keep_num);
   }
+  void Expand(int64_t len) {
+    CHECK_GE(len, 0);
+    CHECK_LE(len + available_len_, len_);
+    available_len_ += len;
+  }
   inline int32_t GetSlice(int64_t i) const {
     CHECK_LE(i, available_len_);
     return index_slice_[i];
@@ -156,6 +160,7 @@ class ScoredBBoxSlice final {
   const T* score_ptr() const { return score_ptr_; }
   const int32_t* index_slice() const { return index_slice_; }
   int32_t available_len() const { return available_len_; }
+  int32_t len() const { return len_; }
 
   // Setters
   int32_t* mut_index_slice() { return index_slice_; }
@@ -166,6 +171,28 @@ class ScoredBBoxSlice final {
   const T* score_ptr_;
   int32_t* index_slice_;
   int32_t available_len_;
+};
+
+template<typename T>
+class SlicesDefragment final {
+ public:
+  SlicesDefragment(int32_t col_len, int32_t len, const T* bbox_ptr, const T* score_ptr,
+                   int32_t* index_slice)
+      : col_len_(col_len), slice_(len, bbox_ptr, score_ptr, index_slice) {
+    slice_.Truncate(0);
+  }
+  void Swallow(const ScoredBBoxSlice<T>& other) {
+    CHECK_EQ(col_len_, other.len());
+    FOR_RANGE(int32_t, i, 0, other.available_len()) {
+      slice_.mut_index_slice()[slice_.available_len() + i] = other.index_slice()[i];
+      slice_.Expand(other.available_len());
+    }
+  }
+  ScoredBBoxSlice<T> DefragmentSlice() { return slice_; }
+
+ private:
+  const int32_t col_len_;
+  ScoredBBoxSlice<T> slice_;
 };
 
 template<typename T>

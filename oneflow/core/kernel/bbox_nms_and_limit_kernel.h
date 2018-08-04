@@ -36,21 +36,17 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   void BroadCastBboxTransform(const int64_t im_index,
                               const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   void ClipBox(Blob* bbox_blob) const;
-  void NmsAndTryVote(const int64_t im_index,
-                     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  int64_t Limit(const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void WriteOutputToOFRecord(int64_t image_index, int64_t limit_num,
-                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  int64_t FilterSortedIndexByThreshold(const int64_t num, const T* scores_ptr,
-                                       const int32_t* idx_ptr, const float thresh) const;
+  ScoredBBoxSlice<T> NmsAndTryVote(
+      const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void WriteOutputToOFRecord(const int64_t im_index, const int64_t boxes_num,
+                             const ScoredBBoxSlice<T>& slice, Blob* labeled_bbox_blob,
+                             Blob* bbox_score_blob) const;
   void VoteBboxAndScore(const ScoredBBoxSlice<T>& pre_nms_slice,
                         const ScoredBBoxSlice<T>& post_nms_slice, Blob* voting_score_blob,
                         Blob* bbox_blob) const;
   void VoteBbox(const ScoredBBoxSlice<T>& pre_nms_slice,
                 const std::function<void(const std::function<void(int32_t, float)>&)>&,
                 BBox<T>* ret_votee_bbox) const;
-  int64_t Defragment(const int64_t class_num, const int64_t box_num,
-                     const int32_t* post_nms_keep_num_ptr, int32_t* post_nms_index_slice_ptr) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };
