@@ -538,7 +538,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
                                                    LogicalNode* need_save_logical) {
   OperatorConf md_save_op_conf;
   md_save_op_conf.set_name("md_save_" + NewUniqueId());
-  md_save_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());
+  md_save_op_conf.set_device_type(DeviceType::kCPU);
   md_save_op_conf.mutable_model_save_conf();
   auto model_save_op = ConstructOp(md_save_op_conf);
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
