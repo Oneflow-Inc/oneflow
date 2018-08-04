@@ -127,6 +127,7 @@ class ScoredBBoxSlice final {
   void Truncate(int64_t len);
   void TruncateByThreshold(float thresh);
   void Concat(const ScoredBBoxSlice& other);
+  void FilterBy(const std::function<bool(const T, const BBox<T>*)>& Filter);
 
   inline int32_t GetSlice(int64_t i) const {
     CHECK_LE(i, available_len_);

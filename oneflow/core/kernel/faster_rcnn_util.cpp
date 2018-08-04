@@ -119,6 +119,19 @@ void ScoredBBoxSlice<T>::DescSortByScore(bool init_index) {
 }
 
 template<typename T>
+void ScoredBBoxSlice<T>::FilterBy(const std::function<bool(const T, const BBox<T>*)>& Filter) {
+  int32_t keep_num = 0;
+  FOR_RANGE(int64_t, i, 0, available_len_) {
+    const int64_t index = index_slice_[i];
+    if (!Filter(GetScore(i), GetBBox(i)) {
+      // keep_num <= i so index_slice_ never be written before read
+      index_slice_[keep_num++] = index_slice_[i];
+    }
+  }
+  available_len_ = keep_num;
+}
+
+template<typename T>
 void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice) {
   CHECK_NE(index_slice(), pre_nms_slice.index_slice());
   CHECK_EQ(bbox_ptr(), pre_nms_slice.bbox_ptr());

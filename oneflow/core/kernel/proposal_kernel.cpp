@@ -150,46 +150,33 @@ void ProposalKernel<T>::ForwardDataContent(
   Blob* rois_blob = BnInOp2Blob("rois");
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
   int32_t* sorted_score_slice_ptr = BnInOp2Blob("sorted_score_slice")->mut_dptr<int32_t>();
-  int32_t* bbox_area_ptr = BnInOp2Blob("bbox_area")->mut_dptr<int32_t>();
   int32_t* post_nms_slice_ptr = BnInOp2Blob("post_nms_slice")->mut_dptr<int32_t>();
   const ProposalOpConf& conf = op_conf().proposal_conf();
+  const int32 min_size = conf.min_size();
+  const int64_t num_images = class_prob_blob->shape().At(0);
   const int64_t height = class_prob_blob->shape().At(1);
   const int64_t width = class_prob_blob->shape().At(2);
   const int64_t num_anchors = conf.aspect_ratios_size() * conf.anchor_scales_size();
+  const int64_t num_proposals = height * width * num_anchors;
 
-  const int64_t img_proposal_num = height * width * num_anchors;
-  FOR_RANGE(int64_t, i, 0, class_prob_blob->shape().At(0)) {
-    const int32_t img_score_offset = i * img_proposal_num;
-    const T* class_score_ptr = class_prob_blob->dptr<T>() + img_score_offset;
-    FasterRcnnUtil<T>::SortByScore(img_proposal_num, class_score_ptr, sorted_score_slice_ptr);
+  FOR_RANGE(int64_t, i, 0, num_images) {
+    const T* bbox_pred_blob = bbox_pred_blob->dptr<T>(i);
+    const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
 
-    const int32_t img_proposal_offset = i * img_proposal_num * 4;
-    const T* const_img_proposal_ptr = proposals_blob->dptr<T>() + img_proposal_offset;
-    T* mut_img_proposal_ptr = proposals_blob->mut_dptr<T>() + img_proposal_offset;
-    ProposalKernelUtil<T>::BboxTransform(img_proposal_num, anchors_ptr,
-                                         bbox_pred_blob->dptr<T>() + img_proposal_offset,
-                                         mut_img_proposal_ptr);
+    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, deltas_ptr, proposals_blob->mut_dptr<T>());
+    FasterRcnnUtil<T>::ClipBoxes(num_proposals, conf.image_height(), conf.image_width(), proposals_blob->mut_dptr<T>());
 
-    ProposalKernelUtil<T>::ClipBoxes(img_proposal_num, conf.image_height(), conf.image_width(),
-                                     mut_img_proposal_ptr);
+    ScoredBBoxSlice<T> pre_nms_slice(num_proposals, proposals_blob->dptr<T>(), class_prob_ptr, pre_nms_slice_ptr);
+    pre_nms_slice.DescSortByScore();
+    pre_nms_slice.FilterBy([&](const T score, const BBox<T>* bbox) {
+      return (bbox.x2() - bbox.x1() + 1 < min_size) || (bbox.y2() - bbox.y1() + 1 < min_size);
+    });
+    pre_nms_slice.Truncate(pre_nms_num);
 
-    int32_t keep_num = ProposalKernelUtil<T>::FilterBoxesByMinSize(
-        img_proposal_num, conf.min_size(), const_img_proposal_ptr, sorted_score_slice_ptr);
+    ScoredBBoxSlice<T> post_nms_slice(post_nms_num, proposals_blob->dptr<T>(), class_prob_ptr, post_nms_slice_ptr);
+    post_nms_slice.NmsFrom(conf.nms_threshold(), pre_nms_slice);
 
-    int32_t pre_nms_num = keep_num;
-    if (conf.pre_nms_top_n() > 0) {
-      pre_nms_num = std::min<int32_t>(keep_num, conf.pre_nms_top_n());
-    }
-    int32_t nms_keep_num = FasterRcnnUtil<T>::Nms(
-        const_img_proposal_ptr, sorted_score_slice_ptr, pre_nms_num, conf.post_nms_top_n(),
-        conf.nms_threshold(), bbox_area_ptr, post_nms_slice_ptr);
-    LOG(INFO) << "nms keep_num: " << nms_keep_num;
-    // use duplicated rois if post_nms_num < conf.post_nms_top_n()
-    int32_t post_nms_num = nms_keep_num;
-    for (int32_t box_i = 0; post_nms_num < conf.post_nms_top_n(); ++box_i) {
-      post_nms_slice_ptr[post_nms_num++] = post_nms_slice_ptr[box_i];
-    }
-
+    /*
     post_nms_num = std::min<int32_t>(post_nms_num, conf.post_nms_top_n());
     T* rois_ptr = rois_blob->mut_dptr<T>() + img_proposal_offset;
     ProposalKernelUtil<T>::CopyRoI(post_nms_slice_ptr, post_nms_num, const_img_proposal_ptr,
@@ -199,6 +186,7 @@ void ProposalKernel<T>::ForwardDataContent(
     FOR_RANGE(int32_t, rois_idx, 0, post_nms_num) {
       roi_probs_ptr[rois_idx] = class_score_ptr[post_nms_slice_ptr[rois_idx]];
     }
+    */
   }
 }
 
