@@ -39,6 +39,7 @@ class Operator {
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
   virtual bool IsCloneOp() const { return false; }
+  virtual bool IsAddOp() const { return false; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;

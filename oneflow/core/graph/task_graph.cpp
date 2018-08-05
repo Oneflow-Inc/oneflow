@@ -91,21 +91,45 @@ void TaskGraph::EnableMemSharing4FwClone() {
     }
     CHECK_EQ(pred_fw_num, 1);
     int32_t succ_fw_num = 0;
-    std::vector<TaskNode*> succ_fw_nodes;
     std::vector<std::shared_ptr<RegstDesc>> produced_regsts;
     for (auto& out_edge : task_node->out_edges()) {
       if (out_edge->dst_node()->area_id() == kDataForwardArea) {
         succ_fw_num++;
-        succ_fw_nodes.push_back(out_edge->dst_node());
         produced_regsts.push_back(out_edge->GetSoleRegst());
       }
     }
     CHECK_GT(succ_fw_num, 1);
-    int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
-    for (auto& consumer : succ_fw_nodes) { consumer->ConsumeRegstAsIn(consumed_regst); }
-    consumed_regst->set_mem_shared_id(mem_shared_id);
     for (auto& produced_regst : produced_regsts) {
-      produced_regst->set_mem_shared_id(mem_shared_id);
+      produced_regst->set_reference_regst_desc_id(consumed_regst->regst_desc_id());
+    }
+  });
+}
+
+void TaskGraph::EnableMemSharing4BwAdd() {
+  ForEachNode([&](TaskNode* task_node) {
+    if (task_node->area_id() != kDataBackwardArea) { return; }
+    if (task_node->exec_gph().node_num() != 1) { return; }
+    if (!task_node->exec_gph().SoleNode()->op()->IsAddOp()) { return; }
+    int32_t pred_bw_num = 0;
+    std::shared_ptr<RegstDesc> consumed_regst;
+    for (auto& in_edge : task_node->in_edges()) {
+      if (in_edge->src_node()->area_id() == kDataBackwardArea) {
+        pred_bw_num++;
+        consumed_regst = in_edge->GetSoleRegst();
+      }
+    }
+    CHECK_EQ(pred_bw_num, 1);
+    int32_t succ_bw_num = 0;
+    std::vector<std::shared_ptr<RegstDesc>> produced_regsts;
+    for (auto& out_edge : task_node->out_edges()) {
+      if (out_edge->dst_node()->area_id() == kDataBackwardArea) {
+        succ_bw_num++;
+        produced_regsts.push_back(out_edge->GetSoleRegst());
+      }
+    }
+    CHECK_GT(succ_bw_num, 1);
+    for (auto& produced_regst : produced_regsts) {
+      produced_regst->set_reference_regst_desc_id(consumed_regst->regst_desc_id());
     }
   });
 }

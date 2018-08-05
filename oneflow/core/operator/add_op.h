@@ -11,6 +11,7 @@ class AddOp final : public CWiseOp {
   AddOp() = default;
   ~AddOp() = default;
 
+  bool IsAddOp() const override { return true; }
   void VirtualInitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
   virtual void RefineDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
