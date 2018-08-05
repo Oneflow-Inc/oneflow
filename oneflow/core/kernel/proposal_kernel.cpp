@@ -203,6 +203,14 @@ void ProposalKernel<T>::ForwardDataContent(
 }
 
 template<typename T>
+void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
+                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  LOG(INFO) << "ProposalKernel ForwardDataId";
+  BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
+  BnInOp2Blob("roi_probs")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
+}
+
+template<typename T>
 void ProposalKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   GenerateAnchors<T>(op_conf().proposal_conf(), BnInOp2Blob("anchors"));
