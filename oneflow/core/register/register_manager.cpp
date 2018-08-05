@@ -53,11 +53,15 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
+    // TODO(jiyuan): remove the following check to support multiple regst mem sharing
     if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
   auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
     return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
         ->TotalMainByteSize4AllRegst();
+  };
+  auto GetSingleRegstSize = [&](const RegstDescProto* regst_desc) {
+    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->MainByteSize4OneRegst();
   };
   std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
             [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
@@ -67,6 +71,7 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
             });
   int32_t last_mem_shared_id = -1;
   char* main_mem_ptr = nullptr;
+  size_t last_mem_ptr_offset = 0;
   for (const RegstDescProto* regst_desc : sorted_regst_protos) {
     if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
     CHECK_GT(GetRegstSize(regst_desc), 0);
@@ -74,9 +79,16 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
       main_mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
                                                               GetRegstSize(regst_desc));
+      CHECK(regst_desc_id2mem_ptr_offset_
+                .emplace(regst_desc->regst_desc_id(), GetSingleRegstSize(regst_desc))
+                .second);
+    } else if (current_mem_shared_id == last_mem_shared_id) {
+      CHECK(regst_desc_id2mem_ptr_offset_.emplace(regst_desc->regst_desc_id(), last_mem_ptr_offset)
+                .second);
     }
     CHECK(regst_desc_id2main_mem_ptr_.emplace(regst_desc->regst_desc_id(), main_mem_ptr).second);
     last_mem_shared_id = current_mem_shared_id;
+    last_mem_ptr_offset = regst_desc_id2mem_ptr_offset_.at(regst_desc->regst_desc_id());
   }
 }
 
@@ -113,7 +125,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
             main_mem_ptr, rt_regst_desc->MainByteSize4OneRegst());
       }
-      main_mem_ptr += rt_regst_desc->MainByteSize4OneRegst();
+      main_mem_ptr += regst_desc_id2mem_ptr_offset_.at(rt_regst_desc->regst_desc_id());
     } else if (regst_desc_type.has_ctrl_regst_desc()) {
       // do nothing
     } else {
