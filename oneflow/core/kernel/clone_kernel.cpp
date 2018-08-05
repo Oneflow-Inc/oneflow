@@ -40,6 +40,10 @@ void CloneKernel<device_type, T>::BackwardDataContent(
                              out_diff(r + 5), out_diff(r + 6), out_diff(r + 7));
   }
 }
+template<DeviceType device_type, typename T>
+const PbMessage& CloneKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().clone_conf();
+}
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel, POD_DATA_TYPE_SEQ);
 

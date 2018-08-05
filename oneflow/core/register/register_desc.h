@@ -49,6 +49,7 @@ class RegstDesc final {
   MemoryCase* mut_mem_case() { return &mem_case_; }
   void set_enable_mem_sharing(bool enable_mem_sharing) { enable_mem_sharing_ = enable_mem_sharing; }
   void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
+  void set_reference_regst_desc_id(int64_t val) { reference_regst_desc_id_ = val; }
 
   RegstDescTypeProto* mut_regst_desc_type() { return &regst_desc_type_; }
   const RegstDescTypeProto& regst_desc_type() const { return regst_desc_type_; }
@@ -66,6 +67,7 @@ class RegstDesc final {
   int32_t min_register_num_;
   int32_t max_register_num_;
   int32_t mem_shared_id_;
+  int64_t reference_regst_desc_id_;
 
   HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>> lbi2blob_desc_;
   std::unique_ptr<BlobDesc> packed_blob_desc_;
