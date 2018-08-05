@@ -24,6 +24,8 @@ class BBox final {
   inline int32_t y1() const { return bbox_[1]; }
   inline int32_t x2() const { return bbox_[2]; }
   inline int32_t y2() const { return bbox_[3]; }
+  inline int32_t width() const { return x2() - x1() + 1; }
+  inline int32_t height() const { return y2() - y1() + 1; }
 
   const std::array<T, 4>& bbox() const { return bbox_; }
   std::array<T, 4>& mut_bbox() { return bbox_; }
@@ -163,7 +165,7 @@ class ScoredBBoxSlice final {
 
 template<typename T>
 struct FasterRcnnUtil final {
-  static void GenerateAnchors(const AnchorsGeneratorConf& conf, Blob* anchors_blob);
+  static void GenerateAnchors(const AnchorGeneratorConf& conf, Blob* anchors_blob);
   static void BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas, T* pred_bboxes);
   static void BboxTransformInv(int64_t boxes_num, const T* bboxes, const T* target_bboxes,
                                T* deltas);

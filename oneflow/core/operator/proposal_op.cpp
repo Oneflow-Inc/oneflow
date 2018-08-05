@@ -22,18 +22,22 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK_EQ(device_type(), DeviceType::kCPU);
   const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
   const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
-  const auto* anchors_conf =
-      GetMsgPtrFromPbMessage<AnchorsGeneratorConf>(GetCustomizedConf(), "anchors_generator_conf");
-  const auto& anchor_scales = GetPbRfFromPbMessage<int32_t>(*anchors_conf, "anchor_scales");
-  const auto& aspect_ratios = GetPbRfFromPbMessage<float>(*anchors_conf, "aspect_ratios");
+  const auto* anchor_generator_conf =
+      GetMsgPtrFromPbMessage<AnchorGeneratorConf>(GetCustomizedConf(), "anchors_generator_conf");
+  const auto& anchor_scales =
+      GetPbRfFromPbMessage<int32_t>(*anchor_generator_conf, "anchor_scales");
+  const auto& aspect_ratios = GetPbRfFromPbMessage<float>(*anchor_generator_conf, "aspect_ratios");
   const int32_t num_anchors = anchor_scales.size() * aspect_ratios.size();
-  const int32_t fm_stride = GetValFromPbMessage<int32_t>(*anchors_conf, "feature_map_stride");
+  const int32_t fm_stride =
+      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "feature_map_stride");
   for (int32_t scale : anchor_scales) {
     CHECK_GE(scale, fm_stride);
     CHECK_EQ(scale % fm_stride, 0);
   }
-  const int32_t pre_nms_top_n = GetValFromPbMessage<int32_t>(*anchors_conf, "pre_nms_top_n");
-  const int32_t post_nms_top_n = GetValFromPbMessage<int32_t>(*anchors_conf, "post_nms_top_n");
+  const int32_t pre_nms_top_n =
+      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "pre_nms_top_n");
+  const int32_t post_nms_top_n =
+      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "post_nms_top_n");
   CHECK_GT(post_nms_top_n, 0);
   CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
   CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);

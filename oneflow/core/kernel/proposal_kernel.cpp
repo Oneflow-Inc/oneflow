@@ -22,11 +22,12 @@ void ProposalKernel<T>::ForwardDataContent(
   Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
   Blob* proposals_blob = BnInOp2Blob("proposals");
   const ProposalOpConf& conf = op_conf().proposal_conf();
-  const AnchorsGeneratorConf& anchors_conf = conf.anchors_generator_conf();
+  const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
   const int64_t num_images = class_prob_blob->shape().At(0);
   const int64_t height = class_prob_blob->shape().At(1);
   const int64_t width = class_prob_blob->shape().At(2);
-  const int64_t num_anchors = anchors_conf.aspect_ratios_size() * anchors_conf.anchor_scales_size();
+  const int64_t num_anchors =
+      anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
   const int64_t num_proposals = height * width * num_anchors;
 
   const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>();
@@ -37,16 +38,15 @@ void ProposalKernel<T>::ForwardDataContent(
   FOR_RANGE(int64_t, i, 0, num_images) {
     const T* deltas_ptr = bbox_pred_blob->dptr<T>(i);
     FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, deltas_ptr, proposals_ptr);
-    FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchors_conf.image_height(),
-                                 anchors_conf.image_width(), proposals_ptr);
+    FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
+                                 anchor_generator_conf.image_width(), proposals_ptr);
 
     const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
     ScoredBBoxSlice<T> pre_nms_slice(num_proposals, const_proposals_ptr, class_prob_ptr,
                                      pre_nms_slice_ptr);
     pre_nms_slice.DescSortByScore();
     pre_nms_slice.FilterBy([&](const T score, const BBox<T>* bbox) {
-      return (bbox->x2() - bbox->x1() + 1 < conf.min_size())
-             || (bbox->y2() - bbox->y1() + 1 < conf.min_size());
+      return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
     pre_nms_slice.Truncate(conf.pre_nms_top_n());
 

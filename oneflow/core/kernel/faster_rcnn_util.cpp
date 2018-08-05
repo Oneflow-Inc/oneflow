@@ -4,7 +4,7 @@
 namespace oneflow {
 
 template<typename T>
-void FasterRcnnUtil<T>::GenerateAnchors(const AnchorsGeneratorConf& conf, Blob* anchors_blob) {
+void FasterRcnnUtil<T>::GenerateAnchors(const AnchorGeneratorConf& conf, Blob* anchors_blob) {
   // anchors_blob shape (h, w, a, 4)
   const int32_t height = anchors_blob->shape().At(0);
   const int32_t width = anchors_blob->shape().At(1);
@@ -21,23 +21,23 @@ void FasterRcnnUtil<T>::GenerateAnchors(const AnchorsGeneratorConf& conf, Blob* 
       const int32_t size = conf.anchor_scales(j) * conf.anchor_scales(j);
       const int32_t w = std::round(std::sqrt(size / conf.aspect_ratios(i)));
       const int32_t h = std::round(w * conf.aspect_ratios(i));
-      int32_t base_offset = (i * scales_size + j) * 4;
-      base_anchors[base_offset + 0] = std::round(base_ctr - 0.5 * (w - 1));
-      base_anchors[base_offset + 1] = std::round(base_ctr - 0.5 * (h - 1));
-      base_anchors[base_offset + 2] = std::round(base_ctr + 0.5 * (w - 1));
-      base_anchors[base_offset + 3] = std::round(base_ctr + 0.5 * (h - 1));
+      BBox<T>* base_anchor_bbox = BBox<T>::MutCast(&base_anchors[(i * scales_size + j) * 4]);
+      base_anchor_bbox->set_x1(std::round(base_ctr - 0.5 * (w - 1)));
+      base_anchor_bbox->set_y1(std::round(base_ctr - 0.5 * (h - 1)));
+      base_anchor_bbox->set_x2(std::round(base_ctr + 0.5 * (w - 1)));
+      base_anchor_bbox->set_y2(std::round(base_ctr + 0.5 * (h - 1)));
     }
   }
 
-  T* anchors_dptr = anchors_blob->mut_dptr<T>();
+  const BBox<T>* base_anchor_bbox = BBox<T>::Cast(&base_anchors[0]);
   FOR_RANGE(int32_t, h, 0, height) {
     FOR_RANGE(int32_t, w, 0, width) {
       BBox<T>* anchor_bbox = BBox<T>::MutCast(anchors_blob->mut_dptr<T>(h, w));
       FOR_RANGE(int32_t, i, 0, num_anchors) {
-        anchor_bbox[i].set_x1(base_anchors[i + 0] + w * fm_stride);
-        anchor_bbox[i].set_y1(base_anchors[i + 1] + h * fm_stride);
-        anchor_bbox[i].set_x2(base_anchors[i + 2] + w * fm_stride);
-        anchor_bbox[i].set_y2(base_anchors[i + 3] + h * fm_stride);
+        anchor_bbox[i].set_x1(base_anchor_bbox[i].x1() + w * fm_stride);
+        anchor_bbox[i].set_y1(base_anchor_bbox[i].y1() + h * fm_stride);
+        anchor_bbox[i].set_x2(base_anchor_bbox[i].x2() + w * fm_stride);
+        anchor_bbox[i].set_y2(base_anchor_bbox[i].y2() + h * fm_stride);
       }
     }
   }
@@ -162,7 +162,6 @@ template<typename T>
 void ScoredBBoxSlice<T>::FilterBy(const std::function<bool(const T, const BBox<T>*)>& Filter) {
   int32_t keep_num = 0;
   FOR_RANGE(int64_t, i, 0, available_len_) {
-    const int64_t index = index_slice_[i];
     if (!Filter(GetScore(i), GetBBox(i))) {
       // keep_num <= i so index_slice_ never be written before read
       index_slice_[keep_num++] = index_slice_[i];
