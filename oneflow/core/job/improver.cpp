@@ -184,9 +184,19 @@ uint64_t CalcMemoryConsumed(
     double ii) {
   uint64_t mem_consuming = 0;
   HashMap<int64_t, uint64_t> mem_shared_id2max_regst_desc_mem_bytes;
+  HashMap<int64_t, int64_t> regst_desc_id2regst_num;
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
+    CHECK(regst_desc_id2regst_num.emplace(regst_desc->regst_desc_id(), regst_num).second);
+  }
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    uint64_t regst_num;
+    if (regst_desc->reference_regst_desc_id() != -1) {
+      regst_num = regst_desc_id2regst_num.at(regst_desc->reference_regst_desc_id());
+    } else {
+      regst_num = regst_desc_id2regst_num.at(regst_desc->regst_desc_id());
+    }
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).MainByteSize4OneRegst();
     if (regst_desc->mem_shared_id() == -1) {
       mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
@@ -539,10 +549,22 @@ void Improver::ForEachImprovedRegstNum(
     ii = BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs);
   }
   LOG(INFO) << "memory " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
+  HashMap<int64_t, uint64_t> regst_desc_id2regst_num;
   for (const auto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t regst_num =
           CalcRegstNum(pair.second, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
+      CHECK(regst_desc_id2regst_num.emplace(pair.second.regst_desc_id(), regst_num).second);
+    }
+  }
+  for (const auto& task_proto : plan.task()) {
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      uint64_t regst_num;
+      if (pair.second.reference_regst_desc_id() != -1) {
+        regst_num = regst_desc_id2regst_num.at(pair.second.reference_regst_desc_id());
+      } else {
+        regst_num = regst_desc_id2regst_num.at(pair.second.regst_desc_id());
+      }
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }
