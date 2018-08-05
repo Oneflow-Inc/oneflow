@@ -61,6 +61,7 @@ message OtherConf {
   optional bool use_ordered_allreduce_in_mdupdt = 115 [default = false];
   optional bool use_synthetic_data =  116 [default = false];
   optional bool enable_bw_add_mem_sharing = 117 [default=true];
+  optional bool enable_fw_clone_mem_sharing = 118 [default=true];
 
   oneof JobType {
     TrainConf train_conf = 200;

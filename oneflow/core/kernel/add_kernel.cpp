@@ -33,6 +33,7 @@ void AddKernel<device_type, T>::BackwardDataContent(
   bool enable_bw_add_mem_sharing =
       this->template GetValFromCustomizedOpConf<bool>("enable_bw_add_mem_sharing");
   size_t copy_cnt = enable_bw_add_mem_sharing ? 1 : this->op_attribute().input_diff_bns().size();
+  // TODO(jiyuan): reference, copy_cnt = 0;
   FOR_RANGE(size_t, i, 0, copy_cnt) {
     Blob* in_diff_blob = BnInOp2Blob(this->op_attribute().input_diff_bns(i));
     in_diff_blob->CopyDataContentFrom(ctx.device_ctx, out_diff_blob);

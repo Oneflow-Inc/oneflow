@@ -242,6 +242,7 @@ message CopyHdOpConf {
 
 message CloneOpConf {
   required int32 out_num = 1;
+  optional bool enable_fw_clone_mem_sharing = 2 [default = false];
 }
 
 message BoxConcatConf {
