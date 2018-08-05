@@ -3,8 +3,9 @@
 namespace oneflow {
 
 namespace {
-__global__ void ElementwiseMaxKernel(const int n, float* data, const float a) {
-  CUDA_1D_KERNEL_LOOP(index, n) { data[index] = (data[index] > a) ? data[index] : a; }
+template<typename PredType>
+__global__ void ElementwiseMax(const int n, PredType* x, const float floor_val) {
+  CUDA_1D_KERNEL_LOOP(index, n) { x[index] = (x[index] > floor_val) ? x[index] : floor_val; }
 }
 
 template<typename PredType, typename LabelType>
@@ -13,13 +14,13 @@ __global__ void SigmoidCrossEntropyLossForward(const int64_t n, const PredType* 
                                                PredType* count) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     if (label[index] == -1) {
-      loss[index] = 0.;
-      count[index] = 0.;
+      loss[index] = 0.f;
+      count[index] = 0.f;
     } else {
       loss[index] =
-          -1. * prediction[index] * (label[index] - (prediction[index] >= 0))
+          -1.f * prediction[index] * (label[index] - (prediction[index] >= 0))
           + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
-      count[index] = 1.;
+      count[index] = 1.f;
     }
   }
 }
@@ -30,11 +31,11 @@ __global__ void SigmoidCrossEntropyLossBackward(const int64_t n, const PredType*
                                                 PredType* count) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     if (label[index] == -1) {
-      pred_diff[index] = 0.;
-      count[index] = 0.;
+      pred_diff[index] = 0.f;
+      count[index] = 0.f;
     } else {
-      pred_diff[index] = 1. / (1. + expf(-prediction[index])) - label[index];
-      count[index] = 1.;
+      pred_diff[index] = 1.f / (1.f + expf(-prediction[index])) - label[index];
+      count[index] = 1.f;
     }
   }
 }
