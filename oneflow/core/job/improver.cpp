@@ -27,6 +27,10 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
   return true;
 }
 
+bool IsSharableReferenceRegst(const RegstDescProto& regst_desc) {
+  return regst_desc.mem_shared_id() == -1 && regst_desc.reference_regst_desc_id() != -1;
+}
+
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
                                  const std::function<int64_t(int64_t)>& ChainId4TaskId) {
   return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
@@ -47,6 +51,33 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
   }
   for (const auto& pair : global_work_stream_id2regst_descs) {
     if (pair.second.size() > 1) { Handler(pair.second); }
+  }
+}
+
+void ForEachSharableReferenceRegst(
+    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  HashMap<int64_t, std::vector<int64_t>> regst_desc_id2referencing_regst_desc_ids;
+  HashMap<int64_t, const RegstDescProto*> regst_desc_id2regst_desc;
+  for (const auto& task : plan.task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      CHECK(regst_desc_id2regst_desc.emplace(pair.second.regst_desc_id(), &pair.second).second);
+      if (IsSharableReferenceRegst(pair.second)) {
+        regst_desc_id2referencing_regst_desc_ids[pair.second.reference_regst_desc_id()]
+            .emplace_back(pair.second.regst_desc_id());
+      }
+    }
+  }
+  for (const auto& pair : regst_desc_id2referencing_regst_desc_ids) {
+    std::list<const RegstDescProto*> regst_descs;
+    auto regst_desc_it = regst_desc_id2regst_desc.find(pair.first);
+    CHECK(regst_desc_it != regst_desc_id2regst_desc.end());
+    regst_descs.emplace_back(regst_desc_it->second);
+    for (auto ref_regst_desc_id : pair.second) {
+      auto ref_regst_desc_it = regst_desc_id2regst_desc.find(ref_regst_desc_id);
+      CHECK(ref_regst_desc_it != regst_desc_id2regst_desc.end());
+      regst_descs.emplace_back(ref_regst_desc_it->second);
+    }
+    Handler(regst_descs);
   }
 }
 
@@ -115,6 +146,7 @@ void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
   };
   ForEachSameColoredStreamRegstDescWithoutConsumer(plan, HandleMemSharedId);
   ForEachSameColoredChainRegstDescWithConsumer(plan_task_graph, HandleMemSharedId);
+  ForEachSharableReferenceRegst(plan, HandleMemSharedId);
 }
 
 double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
@@ -200,7 +232,9 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
 std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
-    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    if (regst_desc_id2regst_desc->at(regst_desc_id)->mem_shared_id() == -1) {
+      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    }
   };
 }
 

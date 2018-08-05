@@ -9,7 +9,7 @@ void CloneKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   bool enable_fw_clone_mem_sharing =
       this->template GetValFromCustomizedOpConf<bool>("enable_fw_clone_mem_sharing");
-  size_t copy_cnt = enable_fw_clone_mem_sharing ? 1 : this->op_attribute().output_bns().size();
+  size_t copy_cnt = enable_fw_clone_mem_sharing ? 0 : this->op_attribute().output_bns().size();
   const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
   FOR_RANGE(size_t, i, 0, copy_cnt) {
     Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(i));
