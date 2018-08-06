@@ -24,7 +24,7 @@ RegstDesc::RegstDesc() {
   is_locked_ = false;
   enable_mem_sharing_ = false;
   mem_shared_id_ = -1;
-  mem_shared_offset_ = 0;
+  mem_shared_offset_ = -1;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -159,7 +159,7 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
   ctrl_regst_proto->set_enable_mem_sharing(false);
   ctrl_regst_proto->set_mem_shared_id(-1);
-  ctrl_regst_proto->set_mem_shared_offset(0);
+  ctrl_regst_proto->set_mem_shared_offset(-1);
 }
 
 }  // namespace oneflow
