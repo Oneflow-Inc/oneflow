@@ -158,6 +158,7 @@ ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   ScoredBBoxSlice<T> all_class_slice(boxes_num * class_num, bbox_ptr, voting_score_blob->dptr<T>(),
                                      post_nms_index_slice_blob->mut_dptr<int32_t>());
+  all_class_slice.Truncate(0);
   FOR_RANGE(int64_t, i, 1, class_num) {
     int32_t* cls_pre_nms_idx_ptr = pre_nms_index_slice_blob->mut_dptr<int32_t>(i);
     FOR_RANGE(int64_t, j, 0, boxes_num) { cls_pre_nms_idx_ptr[i] = i + j * class_num; }

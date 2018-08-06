@@ -123,13 +123,12 @@ void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& 
   CHECK_NE(index_slice(), pre_nms_slice.index_slice());
   CHECK_EQ(bbox_ptr(), pre_nms_slice.bbox_ptr());
   CHECK_EQ(score_ptr(), pre_nms_slice.score_ptr());
-  CHECK_LE(available_len(), pre_nms_slice.available_len());
 
   int32_t keep_num = 0;
   auto IsSuppressed = [&](int32_t pre_nms_slice_index) -> bool {
-    const BBox<T>* cur_bbox = GetBBox(pre_nms_slice_index);
+    const BBox<T>* cur_bbox = pre_nms_slice.GetBBox(pre_nms_slice_index);
     FOR_RANGE(int32_t, post_nms_slice_i, 0, keep_num) {
-      const BBox<T>* keep_bbox = GetBBox(index_slice_[post_nms_slice_i]);
+      const BBox<T>* keep_bbox = GetBBox(post_nms_slice_i);
       if (keep_bbox->InterOverUnion(cur_bbox) >= nms_threshold) { return true; }
     }
     return false;
@@ -143,6 +142,8 @@ void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& 
     index_slice_[i] = pre_nms_slice.index_slice()[index_slice_[i]];
   }
   Truncate(keep_num);
+
+  CHECK_LE(available_len(), pre_nms_slice.available_len());
 }
 
 #define INITIATE_SCORED_BBOX_SLICE(T, type_cpp) template class ScoredBBoxSlice<T>;

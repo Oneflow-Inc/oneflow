@@ -56,7 +56,7 @@ void ProposalKernel<T>::ForwardDataContent(
 
     CopyRoI(i, post_nms_slice, rois_blob);
     FOR_RANGE(int32_t, j, 0, post_nms_slice.available_len()) {
-      *roi_probs_blob->mut_dptr<T>(i, j) = post_nms_slice.GetScore(j);
+      roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
     }
   }
 }
