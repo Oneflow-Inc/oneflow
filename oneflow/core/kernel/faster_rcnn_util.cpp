@@ -22,11 +22,11 @@ void FasterRcnnUtil<T>::GenerateAnchors(const AnchorGeneratorConf& conf, Blob* a
       const int32_t size = conf.anchor_scales(j) * conf.anchor_scales(j);
       const int32_t w = std::round(std::sqrt(size / conf.aspect_ratios(i)));
       const int32_t h = std::round(w * conf.aspect_ratios(i));
-      BBox<T>& cur_anchor_bbox = base_anchor_bbox[i * scales_size + j];
-      cur_anchor_bbox.set_x1(std::round(base_ctr - 0.5 * (w - 1)));
-      cur_anchor_bbox.set_y1(std::round(base_ctr - 0.5 * (h - 1)));
-      cur_anchor_bbox.set_x2(std::round(base_ctr + 0.5 * (w - 1)));
-      cur_anchor_bbox.set_y2(std::round(base_ctr + 0.5 * (h - 1)));
+      BBox<T>* cur_anchor_bbox = base_anchor_bbox + i * scales_size + j;
+      cur_anchor_bbox->set_x1(std::round(base_ctr - 0.5 * (w - 1)));
+      cur_anchor_bbox->set_y1(std::round(base_ctr - 0.5 * (h - 1)));
+      cur_anchor_bbox->set_x2(std::round(base_ctr + 0.5 * (w - 1)));
+      cur_anchor_bbox->set_y2(std::round(base_ctr + 0.5 * (h - 1)));
     }
   }
 
@@ -135,11 +135,8 @@ void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& 
   };
   FOR_RANGE(int32_t, pre_nms_slice_i, 0, pre_nms_slice.available_len()) {
     if (IsSuppressed(pre_nms_slice_i)) { continue; }
-    index_slice_[keep_num++] = pre_nms_slice_i;
+    index_slice_[keep_num++] = pre_nms_slice.GetSlice(pre_nms_slice_i);
     if (keep_num == available_len_) { break; }
-  }
-  FOR_RANGE(int32_t, i, 0, keep_num) {
-    index_slice_[i] = pre_nms_slice.index_slice()[index_slice_[i]];
   }
   Truncate(keep_num);
 

@@ -36,12 +36,21 @@ void ProposalKernel<T>::ForwardDataContent(
   int32_t* pre_nms_slice_ptr = BnInOp2Blob("pre_nms_slice")->mut_dptr<int32_t>();
   int32_t* post_nms_slice_ptr = BnInOp2Blob("post_nms_slice")->mut_dptr<int32_t>();
   FOR_RANGE(int64_t, i, 0, num_images) {
-    const T* deltas_ptr = bbox_pred_blob->dptr<T>(i);
-    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, deltas_ptr, proposals_ptr);
+    const T* bbox_pred_ptr = bbox_pred_blob->dptr<T>(i);
+    const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
+
+    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, proposals_ptr);
+
+    // LOG(INFO) << "transformed proposal start log: " << i;
+    // FOR_RANGE(int64_t, k, 0, num_proposals) {
+    //   const BBox<T>* bbox = BBox<T>::Cast(proposals_ptr) + k;
+    //   LOG(INFO) << "transformed proposal: x1=" << bbox->x1() << " y1=" << bbox->y1()
+    //             << " x2=" << bbox->x2() << " y2=" << bbox->y2();
+    // }
+
     FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
                                  anchor_generator_conf.image_width(), proposals_ptr);
 
-    const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
     ScoredBBoxSlice<T> pre_nms_slice(num_proposals, const_proposals_ptr, class_prob_ptr,
                                      pre_nms_slice_ptr);
     pre_nms_slice.DescSortByScore();
@@ -49,6 +58,13 @@ void ProposalKernel<T>::ForwardDataContent(
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
     pre_nms_slice.Truncate(conf.pre_nms_top_n());
+
+    // LOG(INFO) << "pre nms bbox start log: " << i;
+    // FOR_RANGE(int64_t, k, 0, pre_nms_slice.available_len()) {
+    //   const BBox<T>* bbox = pre_nms_slice.GetBBox(k);
+    //   LOG(INFO) << "pre nms bbox: x1=" << bbox->x1() << " y1=" << bbox->y1() << " x2=" << bbox->x2()
+    //             << " y2=" << bbox->y2() << " score: " << pre_nms_slice.GetScore(k);
+    // }
 
     ScoredBBoxSlice<T> post_nms_slice(conf.post_nms_top_n(), const_proposals_ptr, class_prob_ptr,
                                       post_nms_slice_ptr);
@@ -72,6 +88,13 @@ void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBBoxSlice<T>
     roi_bbox->set_x2(proposal_bbox->x2());
     roi_bbox->set_y2(proposal_bbox->y2());
   }
+}
+
+template<typename T>
+void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
+                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
+  BnInOp2Blob("roi_probs")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalConf, ProposalKernel, FLOATING_DATA_TYPE_SEQ);

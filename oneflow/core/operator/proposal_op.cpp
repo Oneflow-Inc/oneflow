@@ -67,10 +67,12 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   rois_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n, 4});
   rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
+  rois_blob_desc->set_has_data_id_field(bbox_pred_blob_desc->has_data_id_field());
   // out: roi_probs (n, r)
   BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp("roi_probs");
   roi_probs_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n});
   roi_probs_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
+  roi_probs_blob_desc->set_has_data_id_field(cls_prob_blob_desc->has_data_id_field());
 }
 
 REGISTER_OP(OperatorConf::kProposalConf, ProposalOp);

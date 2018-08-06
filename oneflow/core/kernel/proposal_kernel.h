@@ -14,6 +14,7 @@ class ProposalKernel final : public KernelIf<DeviceType::kCPU> {
   ~ProposalKernel() = default;
 
  private:
+  void ForwardDataId(const KernelCtx&, std::function<Blob*(const std::string&)>) const override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
