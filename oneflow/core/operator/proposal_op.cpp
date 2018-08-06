@@ -34,10 +34,8 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
     CHECK_GE(scale, fm_stride);
     CHECK_EQ(scale % fm_stride, 0);
   }
-  const int32_t pre_nms_top_n =
-      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "pre_nms_top_n");
-  const int32_t post_nms_top_n =
-      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "post_nms_top_n");
+  const int32_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
+  const int32_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
   CHECK_GT(post_nms_top_n, 0);
   CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
   CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);
