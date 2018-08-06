@@ -7,6 +7,10 @@ void CloneOp::InitFromOpConf() {
   for (int64_t i = 0; i < op_conf().clone_conf().out_num(); ++i) {
     EnrollOutputBn("out_" + std::to_string(i));
   }
+  if (op_conf().clone_conf().has_enable_fw_clone_mem_sharing() == false) {
+    mut_op_conf()->mutable_clone_conf()->set_enable_fw_clone_mem_sharing(
+        Global<JobDesc>::Get()->enable_fw_clone_mem_sharing());
+  }
 }
 
 const PbMessage& CloneOp::GetCustomizedConf() const { return op_conf().clone_conf(); }
@@ -14,14 +18,13 @@ const PbMessage& CloneOp::GetCustomizedConf() const { return op_conf().clone_con
 void CloneOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              const ParallelContext* parallel_ctx) const {
   const BlobDesc* input_blob_desc = GetBlobDesc4BnInOp(SoleIbn());
-  for (std::string obn : output_bns()) { *GetBlobDesc4BnInOp(obn) = *input_blob_desc; }
-}
-
-void CloneOp::InferDiffBlobDescsWithoutFwBlob(
-    std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx) const {
-  const BlobDesc* out_diff_blob_desc = GetBlobDesc4BnInOp(output_diff_bns().Get(0));
-  *GetBlobDesc4BnInOp(SoleIdbn()) = *out_diff_blob_desc;
+  int64_t mem_shared_id = std::stol(NewUniqueId());
+  for (std::string obn : output_bns()) {
+    *GetBlobDesc4BnInOp(obn) = *input_blob_desc;
+    if (op_conf().clone_conf().enable_fw_clone_mem_sharing()) {
+      GetBlobDesc4BnInOp(obn)->set_mem_shared_id(mem_shared_id);
+    }
+  }
 }
 
 void CloneOp::VirtualGenKernelConf(

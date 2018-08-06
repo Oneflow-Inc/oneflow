@@ -17,6 +17,7 @@ class CloneKernel final : public KernelIf<device_type> {
                           std::function<Blob*(const std::string&)>) const override;
   void BackwardDataContent(const KernelCtx&,
                            std::function<Blob*(const std::string&)>) const override;
+  const PbMessage& GetCustomizedOpConf() const override;
 
   decltype(make_tuple_from_sequence<7>()) tp_;
 };

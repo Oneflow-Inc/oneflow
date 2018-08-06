@@ -12,12 +12,10 @@ class CloneOp final : public Operator {
   ~CloneOp() = default;
 
   void InitFromOpConf() override;
+  bool IsCloneOp() const override { return true; }
   const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
-  void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext* parallel_ctx) const override;
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return LogicalBlobId(); }

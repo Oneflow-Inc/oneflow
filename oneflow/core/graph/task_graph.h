@@ -18,6 +18,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph);
 
   const char* TypeName() const override { return "TaskGraph"; }
+  void EnableMemSharing4FwClone();
+  void EnableMemSharing4BwAdd();
   void AddOrderingCtrlEdgeInSameChain();
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();

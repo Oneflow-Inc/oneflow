@@ -7,9 +7,12 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void CloneKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  bool enable_fw_clone_mem_sharing =
+      this->template GetValFromCustomizedOpConf<bool>("enable_fw_clone_mem_sharing");
+  size_t copy_cnt = enable_fw_clone_mem_sharing ? 0 : this->op_attribute().output_bns().size();
   const Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns(0));
-  for (const std::string& obn : this->op_attribute().output_bns()) {
-    Blob* out_blob = BnInOp2Blob(obn);
+  FOR_RANGE(size_t, i, 0, copy_cnt) {
+    Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns(i));
     out_blob->CopyDataContentFrom(ctx.device_ctx, in_blob);
   }
 }
@@ -36,6 +39,10 @@ void CloneKernel<device_type, T>::BackwardDataContent(
                              out_diff(r + 1), out_diff(r + 2), out_diff(r + 3), out_diff(r + 4),
                              out_diff(r + 5), out_diff(r + 6), out_diff(r + 7));
   }
+}
+template<DeviceType device_type, typename T>
+const PbMessage& CloneKernel<device_type, T>::GetCustomizedOpConf() const {
+  return this->op_conf().clone_conf();
 }
 
 ADD_DEFAULT_KERNEL_CREATOR(OperatorConf::kCloneConf, CloneKernel, POD_DATA_TYPE_SEQ);

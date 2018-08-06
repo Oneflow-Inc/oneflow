@@ -38,6 +38,8 @@ class Operator {
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
+  virtual bool IsCloneOp() const { return false; }
+  virtual bool IsAddOp() const { return false; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -120,11 +122,8 @@ class Operator {
                                    const ParallelContext*, const OpContext*) const;
   virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext*) const {}
-  virtual void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const {
-    UNIMPLEMENTED();
-  }
+  virtual void RefineDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*) const {}
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);

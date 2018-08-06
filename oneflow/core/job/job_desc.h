@@ -47,6 +47,10 @@ class JobDesc final {
   size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
+  bool enable_bw_add_mem_sharing() const { return job_conf_.other().enable_bw_add_mem_sharing(); }
+  bool enable_fw_clone_mem_sharing() const {
+    return job_conf_.other().enable_fw_clone_mem_sharing();
+  }
 
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;

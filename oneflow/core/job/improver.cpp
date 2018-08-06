@@ -14,7 +14,8 @@ namespace oneflow {
 namespace {
 
 bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.consumer_task_id_size() == 0 && regst_desc.enable_mem_sharing();
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() == 0
+         && regst_desc.enable_mem_sharing();
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
@@ -26,10 +27,14 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
   return true;
 }
 
+bool IsSharableReferenceRegst(const RegstDescProto& regst_desc) {
+  return regst_desc.mem_shared_id() == -1 && regst_desc.reference_regst_desc_id() != -1;
+}
+
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
                                  const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  return regst_desc.consumer_task_id_size() > 0 && regst_desc.enable_mem_sharing()
-         && regst_desc.register_num() == 1
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
+         && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
          && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
 }
 
@@ -46,6 +51,33 @@ void ForEachSharableStreamRegstDescsWithoutConsumer(
   }
   for (const auto& pair : global_work_stream_id2regst_descs) {
     if (pair.second.size() > 1) { Handler(pair.second); }
+  }
+}
+
+void ForEachSharableReferenceRegst(
+    const Plan& plan, const std::function<void(const std::list<const RegstDescProto*>&)>& Handler) {
+  HashMap<int64_t, std::vector<int64_t>> regst_desc_id2referencing_regst_desc_ids;
+  HashMap<int64_t, const RegstDescProto*> regst_desc_id2regst_desc;
+  for (const auto& task : plan.task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      CHECK(regst_desc_id2regst_desc.emplace(pair.second.regst_desc_id(), &pair.second).second);
+      if (IsSharableReferenceRegst(pair.second)) {
+        regst_desc_id2referencing_regst_desc_ids[pair.second.reference_regst_desc_id()]
+            .emplace_back(pair.second.regst_desc_id());
+      }
+    }
+  }
+  for (const auto& pair : regst_desc_id2referencing_regst_desc_ids) {
+    std::list<const RegstDescProto*> regst_descs;
+    auto regst_desc_it = regst_desc_id2regst_desc.find(pair.first);
+    CHECK(regst_desc_it != regst_desc_id2regst_desc.end());
+    regst_descs.emplace_back(regst_desc_it->second);
+    for (auto ref_regst_desc_id : pair.second) {
+      auto ref_regst_desc_it = regst_desc_id2regst_desc.find(ref_regst_desc_id);
+      CHECK(ref_regst_desc_it != regst_desc_id2regst_desc.end());
+      regst_descs.emplace_back(ref_regst_desc_it->second);
+    }
+    Handler(regst_descs);
   }
 }
 
@@ -114,6 +146,7 @@ void ForEachImprovedMemSharedId(const PlanTaskGraph& plan_task_graph,
   };
   ForEachSameColoredStreamRegstDescWithoutConsumer(plan, HandleMemSharedId);
   ForEachSameColoredChainRegstDescWithConsumer(plan_task_graph, HandleMemSharedId);
+  ForEachSharableReferenceRegst(plan, HandleMemSharedId);
 }
 
 double CalcRegstNum(double regst_desc_duration, double ii, double ii_scale) {
@@ -151,9 +184,19 @@ uint64_t CalcMemoryConsumed(
     double ii) {
   uint64_t mem_consuming = 0;
   HashMap<int64_t, uint64_t> mem_shared_id2max_regst_desc_mem_bytes;
+  HashMap<int64_t, int64_t> regst_desc_id2regst_num;
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
+    CHECK(regst_desc_id2regst_num.emplace(regst_desc->regst_desc_id(), regst_num).second);
+  }
+  for (const RegstDescProto* regst_desc : regst_descs) {
+    uint64_t regst_num;
+    if (regst_desc->reference_regst_desc_id() != -1) {
+      regst_num = regst_desc_id2regst_num.at(regst_desc->reference_regst_desc_id());
+    } else {
+      regst_num = regst_desc_id2regst_num.at(regst_desc->regst_desc_id());
+    }
     uint64_t total_byte_size = RtRegstDesc(*regst_desc).MainByteSize4OneRegst();
     if (regst_desc->mem_shared_id() == -1) {
       mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
@@ -199,7 +242,9 @@ std::function<void(int64_t, uint64_t)> MakeSetterSetPlanRegstNum(Plan* plan) {
 std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
-    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    if (regst_desc_id2regst_desc->at(regst_desc_id)->mem_shared_id() == -1) {
+      regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    }
   };
 }
 
@@ -295,9 +340,12 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4R
   };
 }
 
-void TryConnectWithMemSafeGuardCtrlRegstDesc(TaskProto* src_task_proto, TaskProto* dst_task_proto) {
+void TryConnectWithMemSafeGuardCtrlRegstDesc(int64_t reliant_regst_desc_id,
+                                             TaskProto* src_task_proto, TaskProto* dst_task_proto) {
   RegstDescProto* ctrl_regst_desc =
       FindOrCreateProducedCtrlRegstDesc(src_task_proto, "out_ctrl_shared_mem_safe_guard");
+  ctrl_regst_desc->mutable_regst_desc_type()->mutable_ctrl_regst_desc()->set_reliant_regst_desc_id(
+      reliant_regst_desc_id);
   int64_t dst_task_id = dst_task_proto->task_id();
   if (!IsInRepeatedField(ctrl_regst_desc->consumer_task_id(), dst_task_id)) {
     ctrl_regst_desc->add_consumer_task_id(dst_task_id);
@@ -344,6 +392,7 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
           IsReachable](const std::vector<const RegstDescProto*>& shared_mem_regsts) {
     if (shared_mem_regsts.size() == 1) { return; }
     int64_t header_task_id = shared_mem_regsts.front()->producer_task_id();
+    int64_t reliant_regst_desc_id = shared_mem_regsts.front()->regst_desc_id();
     TaskProto* header_task_proto = task_id2task_proto->at(header_task_id);
     HashSet<int64_t> tail_regsts_consumer_task_ids;
     CollectTailRegstConsumerTaskIds(shared_mem_regsts, &tail_regsts_consumer_task_ids);
@@ -351,7 +400,8 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
     CollectSinkTaskIds(tail_regsts_consumer_task_ids, IsReachable, &sink_task_ids);
     for (int64_t sink_task_id : sink_task_ids) {
       TaskProto* sink_task_proto = task_id2task_proto->at(sink_task_id);
-      TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
+      TryConnectWithMemSafeGuardCtrlRegstDesc(reliant_regst_desc_id, header_task_proto,
+                                              sink_task_proto);
     }
   };
 }
@@ -383,16 +433,26 @@ void ForEachMemSharingCriticalSection(
 
 void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
                             const std::function<void(int64_t, uint64_t)>& SetRegstNum) {
+  HashMap<int64_t, const TaskProto*> task_id2task_proto;
+  for (const auto& task_proto : plan.task()) {
+    CHECK(task_id2task_proto.emplace(task_proto.task_id(), &task_proto).second);
+  }
   for (const auto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       const RegstDescProto& regst = pair.second;
       const RegstDescTypeProto& regst_type = regst.regst_desc_type();
       if (regst_type.has_ctrl_regst_desc()
           && regst_type.ctrl_regst_desc().has_reliant_regst_desc_id()) {
-        // set ctrl regst num between copyHd and MdUpdt
-        CHECK(task_proto.task_type() == kCopyHd);
-        uint64_t regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id())
-                             + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1;
+        uint64_t regst_num;
+        if (task_proto.task_type() == kCopyHd && regst.consumer_task_id_size() == 1
+            && task_id2task_proto.at(regst.consumer_task_id(0))->task_type() == kNormalMdUpdt) {
+          // set ctrl regst num between copyHd and MdUpdt
+          CHECK(task_proto.task_type() == kCopyHd);
+          regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id())
+                      + Global<JobDesc>::Get()->NumOfPiecesInBatch() - 1;
+        } else {
+          regst_num = GetRegstNum(regst_type.ctrl_regst_desc().reliant_regst_desc_id());
+        }
         SetRegstNum(regst.regst_desc_id(), regst_num);
       }
     }
@@ -504,10 +564,22 @@ void Improver::ForEachImprovedRegstNum(
     ii = BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs);
   }
   LOG(INFO) << "memory " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
+  HashMap<int64_t, uint64_t> regst_desc_id2regst_num;
   for (const auto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t regst_num =
           CalcRegstNum(pair.second, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
+      CHECK(regst_desc_id2regst_num.emplace(pair.second.regst_desc_id(), regst_num).second);
+    }
+  }
+  for (const auto& task_proto : plan.task()) {
+    for (const auto& pair : task_proto.produced_regst_desc()) {
+      uint64_t regst_num;
+      if (pair.second.reference_regst_desc_id() != -1) {
+        regst_num = regst_desc_id2regst_num.at(pair.second.reference_regst_desc_id());
+      } else {
+        regst_num = regst_desc_id2regst_num.at(pair.second.regst_desc_id());
+      }
       Handler(pair.second.regst_desc_id(), regst_num);
     }
   }

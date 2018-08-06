@@ -53,11 +53,15 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
         regst_desc_id2rt_regst_desc_
             .emplace(regst_desc->regst_desc_id(), std::make_unique<const RtRegstDesc>(*regst_desc))
             .second);
+    // TODO(jiyuan): remove the following check to support multiple regst mem sharing
     if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
   auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
     return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
         ->TotalMainByteSize4AllRegst();
+  };
+  auto GetSingleRegstSize = [&](const RegstDescProto* regst_desc) {
+    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())->MainByteSize4OneRegst();
   };
   std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
             [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
@@ -67,6 +71,7 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
             });
   int32_t last_mem_shared_id = -1;
   char* main_mem_ptr = nullptr;
+  size_t last_mem_ptr_offset = 0;
   for (const RegstDescProto* regst_desc : sorted_regst_protos) {
     if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
     CHECK_GT(GetRegstSize(regst_desc), 0);
@@ -74,9 +79,16 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
     if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
       main_mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
                                                               GetRegstSize(regst_desc));
+      CHECK(regst_desc_id2mem_ptr_offset_
+                .emplace(regst_desc->regst_desc_id(), GetSingleRegstSize(regst_desc))
+                .second);
+    } else if (current_mem_shared_id == last_mem_shared_id) {
+      CHECK(regst_desc_id2mem_ptr_offset_.emplace(regst_desc->regst_desc_id(), last_mem_ptr_offset)
+                .second);
     }
     CHECK(regst_desc_id2main_mem_ptr_.emplace(regst_desc->regst_desc_id(), main_mem_ptr).second);
     last_mem_shared_id = current_mem_shared_id;
+    last_mem_ptr_offset = regst_desc_id2mem_ptr_offset_.at(regst_desc->regst_desc_id());
   }
 }
 
@@ -89,26 +101,31 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   if (regst_desc_id2main_mem_ptr_.find(regst_desc_id) != regst_desc_id2main_mem_ptr_.end()) {
     main_mem_ptr = regst_desc_id2main_mem_ptr_.at(regst_desc_id);
   }
-  std::vector<LogicalBlobId> lbis;
+  std::vector<LbiBlobDescPair> lbi_pairs;
   if (regst_desc_type.has_data_regst_desc()) {
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
-      lbis.push_back(pair.lbi());
+      lbi_pairs.push_back(pair);
     }
-    std::sort(lbis.begin(), lbis.end());
-    CHECK(!lbis.empty());
+    std::sort(lbi_pairs.begin(), lbi_pairs.end(),
+              [&](const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
+                return lhs.blob_desc().header().mem_shared_id()
+                           < rhs.blob_desc().header().mem_shared_id()
+                       || lhs.lbi() < rhs.lbi();
+              });
+    CHECK(!lbi_pairs.empty());
     CHECK(main_mem_ptr != nullptr);
   }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;
     regst->set_regst_desc(rt_regst_desc);
     if (regst_desc_type.has_data_regst_desc()) {
-      NewBlobsInOneRegst(lbis, regst, rt_regst_desc, main_mem_ptr);
+      NewBlobsInOneRegst(lbi_pairs, regst, rt_regst_desc, main_mem_ptr);
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
             main_mem_ptr, rt_regst_desc->MainByteSize4OneRegst());
       }
-      main_mem_ptr += rt_regst_desc->MainByteSize4OneRegst();
+      main_mem_ptr += regst_desc_id2mem_ptr_offset_.at(rt_regst_desc->regst_desc_id());
     } else if (regst_desc_type.has_ctrl_regst_desc()) {
       // do nothing
     } else {
@@ -118,7 +135,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   }
 }
 
-void RegstMgr::NewBlobsInOneRegst(const std::vector<LogicalBlobId>& lbis, Regst* regst,
+void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst* regst,
                                   const RtRegstDesc* rt_regst_desc, char* main_mem_ptr) {
   size_t separated_mem_size = rt_regst_desc->SeparatedByteSize4OneRegst();
   const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
@@ -137,14 +154,25 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LogicalBlobId>& lbis, Regst*
     cur_header_pointer = main_mem_ptr;
     cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
   }
-  for (const LogicalBlobId& lbi : lbis) {
-    const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi);
+  int32_t last_mem_shared_id = -1;
+  char* last_body_pointer = cur_body_pointer;
+  size_t last_size = 0;
+  for (const LbiBlobDescPair& lbi : lbis) {
+    const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
+    int32_t cur_mem_shared_id = lbi.blob_desc().header().mem_shared_id();
+    if (cur_mem_shared_id != -1 && cur_mem_shared_id == last_mem_shared_id) {
+      cur_body_pointer = last_body_pointer;
+    } else {
+      cur_body_pointer = last_body_pointer + last_size;
+    }
     std::unique_ptr<Blob> blob_ptr(
         new Blob(regst, blob_desc, cur_header_pointer, cur_body_pointer));
     InitOFRecordBlobIfNeed(blob_ptr.get());
-    CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
+    CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
     cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
-    cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
+    last_mem_shared_id = cur_mem_shared_id;
+    last_body_pointer = cur_body_pointer;
+    last_size = blob_desc->ByteSizeOfBlobBody();
   }
 }
 
