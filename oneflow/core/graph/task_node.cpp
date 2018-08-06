@@ -84,6 +84,7 @@ void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
+  FixPackedBlobDescOfProducedRegst();
 }
 
 void TaskNode::EraseEmptyProducedRegst() {

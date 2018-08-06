@@ -198,4 +198,12 @@ CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {
   return nullptr;
 }
 
+void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {
+  std::shared_ptr<RegstDesc> model_diff_regst = GetProducedRegst("model_diff");
+  if (model_diff_regst == nullptr) { return; }
+  CHECK(model_diff_regst->IsLocked());
+  Shape& shape = model_diff_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
+  shape = Shape({RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num())});
+}
+
 }  // namespace oneflow
