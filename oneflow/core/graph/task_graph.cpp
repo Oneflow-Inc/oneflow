@@ -7,6 +7,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
 
@@ -24,28 +25,25 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   };
 
   std::vector<int64_t> cpu_device_offset(job_desc->TotalMachineNum(), 0);
-  std::vector<int64_t> persistence_offset(job_desc->TotalMachineNum(), 0);
   auto AllocateCpuThrdIdEvenly = [&](const TaskNode* task_node) {
+    CHECK(!task_node->IsPersistence());
     int64_t ret = -1;
-    if (task_node->IsPersistence() == false) {
-      int64_t& offset = cpu_device_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
-      offset = (offset + 1) % job_desc->CpuDeviceNum();
-    } else {
-      int64_t& offset = persistence_offset.at(task_node->machine_id());
-      ret = Global<IDMgr>::Get()->GetPersistenceThrdId(offset);
-      offset = (offset + 1) % job_desc->PersistenceWorkerNum();
-    }
+    int64_t& offset = cpu_device_offset.at(task_node->machine_id());
+    ret = Global<IDMgr>::Get()->GetCpuDeviceThrdId(offset);
+    offset = (offset + 1) % job_desc->CpuDeviceNum();
     return ret;
   };
+
+  std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
     logical_node->GenSortedCompTaskNodes(
-        AllocateCpuThrdIdEvenly, [&](CompTaskNode* comp_task_node) {
+        &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
           comp_task_node->set_area_id(logical_node->GetAreaId());
         });
   });
+  GeneratePersistenceThrdId(machine_persistence_task_vec);
   logical_gph_->ForEachEdge([&](const LogicalEdge* logical_edge) {
     BldSubTskGphMthd method =
         GetMthdForBldSubTskGph(logical_edge->src_node(), logical_edge->dst_node());
@@ -56,6 +54,20 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
   ToDotWithAutoFilePath();
+}
+
+void TaskGraph::GeneratePersistenceThrdId(
+    const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes) {
+  std::vector<std::pair<int64_t, TaskType>> machine_task_type_vec;
+  for (auto pair : persistence_nodes) {
+    machine_task_type_vec.emplace_back(std::make_pair(pair.first, pair.second->GetTaskType()));
+  }
+
+  ThrdIdGenerator generator(machine_task_type_vec, Global<IDMgr>::Get()->BasePersistenceThrdId());
+  for (const auto pair : persistence_nodes) {
+    int64_t thrd_id = generator.GenerateThrdId(pair.first, pair.second->GetTaskType());
+    pair.second->set_thrd_id(thrd_id);
+  }
 }
 
 void TaskGraph::FindChainsInSameStream() {
