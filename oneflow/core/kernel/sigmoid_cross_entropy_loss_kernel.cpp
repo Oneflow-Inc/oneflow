@@ -11,7 +11,7 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
   // average_loss is the final result
-  Blob* loss = BnInOp2Blob("total_loss");
+  Blob* loss = BnInOp2Blob("original_loss");
   Blob* average_loss = BnInOp2Blob("loss");
   Blob* count = BnInOp2Blob("count");
   Blob* normalize = BnInOp2Blob("normalize");
