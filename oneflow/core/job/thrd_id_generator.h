@@ -20,7 +20,7 @@ class ThrdIdGenerator final {
   }
 
  private:
-  void InitLowerboundOfTaskType(const HashMap<int64_t, std::vector<TaskType>>& machine2task_types);
+  void InitLowerboundOfTaskType(const HashMap<int64_t, std::set<TaskType>>& machine2task_types);
 
   int64_t GetModThrdId(std::pair<int64_t, int64_t> machine_task_type) {
     int64_t& offset = machine_task_type2offset_[machine_task_type];
