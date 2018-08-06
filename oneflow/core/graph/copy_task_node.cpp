@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/copy_task_node.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/job/thrd_id_generator.h"
 
 namespace oneflow {
 
