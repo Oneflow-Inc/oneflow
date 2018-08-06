@@ -30,11 +30,21 @@ ThreadMgr::ThreadMgr(const Plan& plan) {
   FOR_RANGE(int64_t, i, 0, job_desc->CpuDeviceNum()) {
     threads_.push_back(new CpuThread(thrd_id++));
   }
-  FOR_RANGE(int64_t, i, 0, job_desc->PersistenceWorkerNum()) {
-    threads_.push_back(new CpuThread(thrd_id++));
-  }
   threads_.push_back(new CpuThread(thrd_id++));  // comm_net
+  CreatePersistenceThrd(plan, thrd_id);
   compute_thread_pool_.reset(new ThreadPool(job_desc->CpuDeviceNum()));
 }
 
+void ThreadMgr::CreatePersistenceThrd(const Plan& plan, int64_t thrd_id) {
+  const int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+
+  int64_t max_thrd_id = 0;
+  for (const TaskProto& task : plan.task()) {
+    if (task.machine_id() == this_machine_id) {
+      if (max_thrd_id < task.thrd_id()) { max_thrd_id = task.thrd_id(); }
+    }
+  }
+
+  for (int64_t i = thrd_id; i <= max_thrd_id; i++) { threads_.push_back(new CpuThread(i)); }
+}
 }  // namespace oneflow

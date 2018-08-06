@@ -73,6 +73,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   template<typename TaskNodeType>
   bool IsEndingTaskType(TaskType type);
 
+  void GeneratePersistenceThrdId(
+      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
+
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;
 };
