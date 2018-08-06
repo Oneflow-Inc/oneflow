@@ -88,6 +88,31 @@ void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
   }
 }
 
+double ChainActGraph::CalcBaseII() const {
+  int64_t max_act_cnt = 0;
+  HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
+  ForEachActEvent([&](const ActEvent* act_event) {
+    int64_t actor_id = act_event->actor_id();
+    if (IsActEventWithConsumer(act_event)) {
+      ++actor_id2outputed_act_cnt[actor_id];
+      max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
+    }
+  });
+  HashMap<int64_t, double> stream_id2total_calc_time;
+  ForEachActEvent([&](const ActEvent* act_event) {
+    int64_t actor_id = act_event->actor_id();
+    auto frequence_it = actor_id2outputed_act_cnt.find(actor_id);
+    if (frequence_it == actor_id2outputed_act_cnt.end()) { return; }
+    int64_t stream_id = act_event->work_stream_id();
+    stream_id2total_calc_time[stream_id] += Duration4ActEvent(*act_event);
+  });
+  double base_ii = 0;
+  for (const auto& pair : stream_id2total_calc_time) {
+    base_ii = std::max(base_ii, pair.second / max_act_cnt);
+  }
+  return base_ii;
+}
+
 void ChainActGraph::ForEachRegstActConsumerPathDuration(
     const std::function<void(int64_t, int64_t, double)>& Handler) const {
   HashSet<std::shared_ptr<RegstActCtx>> regst_act_ctx_window;
@@ -264,6 +289,10 @@ void ChainActGraph::TopoForEachChainActNode(
 
 void ChainActGraph::ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const {
   ForEachNode([&](const ChainActNode* node) { node->ForEachActEvent(Handler); });
+}
+
+bool ChainActGraph::IsActEventWithConsumer(const ActEvent* act_event) const {
+  return act_event_with_consumer_.find(act_event) != act_event_with_consumer_.end();
 }
 
 ChainActGraph::ChainActGraph(const Plan& plan, std::list<std::unique_ptr<ActEvent>>&& act_events)

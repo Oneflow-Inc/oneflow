@@ -86,23 +86,23 @@ class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge>
   ChainActGraph(const Plan& plan, std::list<std::unique_ptr<ActEvent>>&& act_events);
   ~ChainActGraph() = default;
 
+  // Getters
+  const TaskProto& GetTaskProto(int64_t actor_id) const {
+    return *task_id2task_proto_.at(actor_id);
+  }
+
   // ForEach
   void ForEachRegstDescConsumerPathMeanDuration(
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
   void ForEachRegstDescConsumerPathIIScale(
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
-  void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
 
-  // Getters
-  const TaskProto& GetTaskProto(int64_t actor_id) const {
-    return *task_id2task_proto_.at(actor_id);
-  }
-  bool IsActEventWithConsumer(const ActEvent* act_event) const {
-    return act_event_with_consumer_.find(act_event) != act_event_with_consumer_.end();
-  }
+  double CalcBaseII() const;
 
  private:
+  bool IsActEventWithConsumer(const ActEvent* act_event) const;
   const ChainActNode* Node4ActEvent(const ActEvent* act_event) const;
+  void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
   std::function<int64_t(const ChainActNode*)> MakeGetterTopoOrderValue4Node() const;
 
   void InitNodes(
