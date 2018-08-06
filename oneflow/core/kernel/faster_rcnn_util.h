@@ -18,13 +18,13 @@ class BBox final {
   static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
   static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
 
-  inline T x1() const { return bbox_[0]; }
-  inline T y1() const { return bbox_[1]; }
-  inline T x2() const { return bbox_[2]; }
-  inline T y2() const { return bbox_[3]; }
+  inline int32_t x1() const { return bbox_[0]; }
+  inline int32_t y1() const { return bbox_[1]; }
+  inline int32_t x2() const { return bbox_[2]; }
+  inline int32_t y2() const { return bbox_[3]; }
 
-  inline T& operator[](int32_t i) { return bbox_[i]; }
-  inline const T& operator[](int32_t i) const { return bbox_[i]; }
+  const std::array<T, 4>& bbox() const { return bbox_; }
+  std::array<T, 4>& mut_bbox() { return bbox_; }
 
   inline void set_x1(T x1) { bbox_[0] = x1; }
   inline void set_y1(T y1) { bbox_[1] = y1; }
@@ -32,8 +32,7 @@ class BBox final {
   inline void set_y2(T y2) { bbox_[3] = y2; }
 
   inline int32_t Area() const { return (x2() - x1() + 1) * (y2() - y1() + 1); }
-
-  inline float InterOverUnion(const BBox<T>* other) const {
+  inline float InterOverUnion(const BBox* other) const {
     const int32_t iw = std::min(x2(), other->x2()) - std::max(x1(), other->x1()) + 1;
     if (iw <= 0) { return 0; }
     const int32_t ih = std::min(y2(), other->y2()) - std::max(y1(), other->y1()) + 1;
@@ -109,6 +108,54 @@ class BBoxDelta final {
 
  private:
   std::array<T, 4> delta_;
+};
+
+template<typename T>
+class ScoredBBoxSlice final {
+ public:
+  ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice)
+      : len_(len),
+        bbox_ptr_(bbox_ptr),
+        score_ptr_(score_ptr),
+        index_slice_(index_slice),
+        available_len_(len) {}
+
+  void DescSortByScore(bool init_index);
+  void DescSortByScore() { DescSortByScore(true); }
+  void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
+
+  void Truncate(int64_t len);
+  void TruncateByThreshold(float thresh);
+  void Concat(const ScoredBBoxSlice& other);
+
+  inline int32_t GetSlice(int64_t i) const {
+    CHECK_LE(i, available_len_);
+    return index_slice_[i];
+  }
+  inline const BBox<T>* GetBBox(int64_t i) const {
+    CHECK_LE(i, available_len_);
+    return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
+  }
+  inline T GetScore(int64_t i) const {
+    CHECK_LE(i, available_len_);
+    return score_ptr_[index_slice_[i]];
+  }
+
+  // Getters
+  int32_t len() const { return len_; }
+  const T* bbox_ptr() const { return bbox_ptr_; }
+  const T* score_ptr() const { return score_ptr_; }
+  const int32_t* index_slice() const { return index_slice_; }
+  int32_t available_len() const { return available_len_; }
+  // Setters
+  int32_t* mut_index_slice() { return index_slice_; }
+
+ private:
+  const int32_t len_;
+  const T* bbox_ptr_;
+  const T* score_ptr_;
+  int32_t* index_slice_;
+  int32_t available_len_;
 };
 
 template<typename T>
