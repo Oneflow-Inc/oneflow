@@ -20,10 +20,12 @@ class SigmoidCrossEntropyLossKernel final : public LossKernel<device_type, PredT
 
 template<DeviceType device_type, typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil {
-  static void Forward(DeviceCtx* ctx, const int64_t n, const PredType* prediction,
-                      const LabelType* label, PredType* loss, PredType* count);
-  static void Backward(DeviceCtx* ctx, const int64_t n, const PredType* prediction,
-                       const LabelType* label, PredType* in_diff, PredType* count);
+  static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
+                      const PredType* prediction, const LabelType* label, PredType* loss,
+                      PredType* count, PredType* normalize, PredType* average_loss);
+  static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
+                       const PredType* prediction, const LabelType* label, PredType* in_diff,
+                       PredType* count, PredType* normalize, PredType* average_loss);
 };
 
 }  // namespace oneflow

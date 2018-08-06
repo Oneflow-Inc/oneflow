@@ -7,23 +7,29 @@ namespace oneflow {
 template<DeviceType device_type, typename PredType, typename LabelType>
 void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const SigmoidCrossEntropyLossOpConf& conf = this->op_conf().sigmoid_cross_entropy_loss_conf();
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
-  Blob* loss = BnInOp2Blob("loss");
+  // average_loss is the final result
+  Blob* loss = BnInOp2Blob("total_loss");
+  Blob* average_loss = BnInOp2Blob("loss");
   Blob* count = BnInOp2Blob("count");
+  Blob* normalize = BnInOp2Blob("normalize");
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
 
   SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, prediction->shape().At(0), prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), loss->mut_dptr<PredType>(), count->mut_dptr<PredType>());
+      ctx.device_ctx, conf, prediction->shape().At(0), prediction->dptr<PredType>(),
+      label->dptr<LabelType>(), loss->mut_dptr<PredType>(), count->mut_dptr<PredType>(),
+      normalize->mut_dptr<PredType>(), average_loss->mut_dptr<PredType>());
 
   if (prediction_diff != nullptr) {
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(), 0,
                         prediction_diff->ByteSizeOfDataContentField());
     SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Backward(
-        ctx.device_ctx, prediction->shape().At(0), prediction->dptr<PredType>(),
+        ctx.device_ctx, conf, prediction->shape().At(0), prediction->dptr<PredType>(),
         label->dptr<LabelType>(), prediction_diff->mut_dptr<PredType>(),
-        count->mut_dptr<PredType>());
+        count->mut_dptr<PredType>(), normalize->mut_dptr<PredType>(),
+        average_loss->mut_dptr<PredType>());
   }
 }
 
@@ -36,13 +42,15 @@ SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::GetLossKernelCo
 
 template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
-  static void Forward(DeviceCtx* ctx, const int64_t n, const PredType* prediction,
-                      const LabelType* label, PredType* loss, PredType* count) {
+  static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
+                      const PredType* prediction, const LabelType* label, PredType* loss,
+                      PredType* count, PredType* normalize, PredType* average_loss) {
     UNIMPLEMENTED();
   }
 
-  static void Backward(DeviceCtx* ctx, const int64_t n, const PredType* prediction,
-                       const LabelType* label, PredType* in_diff, PredType* count) {
+  static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
+                       const PredType* prediction, const LabelType* label, PredType* pred_diff,
+                       PredType* count, PredType* normalize, PredType* average_loss) {
     UNIMPLEMENTED();
   }
 };

@@ -4,7 +4,7 @@ namespace oneflow {
 
 namespace {
 template<typename PredType>
-__global__ void ElementwiseMax(const int n, PredType* x, const float floor_val) {
+__global__ void ElementwiseNoSmallerThan(const int n, PredType* x, const float floor_val) {
   CUDA_1D_KERNEL_LOOP(index, n) { x[index] = (x[index] > floor_val) ? x[index] : floor_val; }
 }
 
@@ -17,6 +17,7 @@ __global__ void SigmoidCrossEntropyLossForward(const int64_t n, const PredType* 
       loss[index] = 0.f;
       count[index] = 0.f;
     } else {
+      // this computation is to avoid overflow
       loss[index] =
           -1.f * prediction[index] * (label[index] - (prediction[index] >= 0))
           + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
@@ -43,15 +44,28 @@ __global__ void SigmoidCrossEntropyLossBackward(const int64_t n, const PredType*
 
 template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
-  static void Forward(DeviceCtx* ctx, const int64_t n, const PredType* prediction,
-                      const LabelType* label, PredType* loss, PredType* count) {
+  static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
+                      const PredType* prediction, const LabelType* label, PredType* loss,
+                      PredType* count, PredType* normalize, PredType* average_loss) {
     SigmoidCrossEntropyLossForward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, prediction, label, loss, count);
+    KernelUtil<DeviceType::kGPU, PredType>::Sum(
+        ctx, n, loss, average_loss, static_cast<PredType*>(ctx->buf_ptr()), ctx->buf_size());
+    if (conf.normalize()) {
+      KernelUtil<DeviceType::kGPU, PredType>::Sum(
+          ctx, n, count, normalize, static_cast<PredType*>(ctx->buf_ptr()), ctx->buf_size());
+      ElementwiseNoSmallerThan<PredType>
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+              n, normalize, 1e-5);
+      KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, n, average_loss, normalize);
+    }
+    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, average_loss, average_loss, conf.scale());
   }
 
-  static void Backward(DeviceCtx* ctx, const int64_t n, const PredType* prediction,
-                       const LabelType* label, PredType* pred_diff, PredType* count) {
+  static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
+                       const PredType* prediction, const LabelType* label, PredType* pred_diff,
+                       PredType* count, PredType* normalize, PredType* average_loss) {
     SigmoidCrossEntropyLossBackward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, prediction, label, pred_diff, count);
