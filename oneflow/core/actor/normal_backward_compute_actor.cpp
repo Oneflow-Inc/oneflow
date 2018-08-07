@@ -96,17 +96,6 @@ void NormalBackwardCompActor::AsyncReturnAllCustomizedReadableRegst() {
   }
 }
 
-void NormalBackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id) {
-  if (model_regst_desc_id_ == -1) { return; }
-  while (model_regst_queue_.empty() == false) {
-    int64_t model_vid = model_regst_queue_.front()->model_version_id();
-    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_vid);
-    if (last_piece_id > piece_id) { return; }
-    AsyncSendRegstMsgToProducer(model_regst_queue_.front());
-    model_regst_queue_.pop();
-  }
-}
-
 void NormalBackwardCompActor::AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_vid) {
   if (model_regst_desc_id_ == -1) { return; }
   while (!model_regst_queue_.empty()
@@ -116,6 +105,17 @@ void NormalBackwardCompActor::AsyncReturnModelRegstUntilModelVersionIdEqual(int6
   }
   if (!model_regst_queue_.empty()) {
     CHECK_EQ(model_regst_queue_.front()->model_version_id(), model_vid);
+  }
+}
+
+void NormalBackwardCompActor::AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id) {
+  if (model_regst_desc_id_ == -1) { return; }
+  while (model_regst_queue_.empty() == false) {
+    int64_t model_vid = model_regst_queue_.front()->model_version_id();
+    int64_t last_piece_id = GetLastPieceIdForModelVersionId(model_vid);
+    if (last_piece_id > piece_id) { return; }
+    AsyncSendRegstMsgToProducer(model_regst_queue_.front());
+    model_regst_queue_.pop();
   }
 }
 
