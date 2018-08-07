@@ -240,8 +240,11 @@ message SigmoidCrossEntropyLossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  optional bool normalize = 4 [default = true]; // loss / label_num
-  optional int32 scale = 5 [default = 1]; // loss * scale
+  optional bool normalize = 4 [default = true];
+  optional int32 scale = 5 [default = 1];
+  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional float weight_scalar = 7 [default = 1.0];
+  optional string weight = 8;
 }
 
 message ConcatOpConf {
