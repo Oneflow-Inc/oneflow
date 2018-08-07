@@ -4,11 +4,11 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/persistence/file_system.h"
-#include "oneflow/core/persistence/hadoop/hdfs.h"
+#include "hdfs/hdfs.h"
 
 extern "C" {
-struct hdfs_internal;
-typedef hdfs_internal* hdfsFS;
+struct HdfsFileSystemInternalWrapper;
+typedef HdfsFileSystemInternalWrapper* hdfsFS;
 }
 
 namespace oneflow {
@@ -18,43 +18,29 @@ namespace fs {
 class LibHDFS {
  public:
   static LibHDFS* Load() {
-    static LibHDFS* lib = []() -> LibHDFS* {
-      LibHDFS* lib = new LibHDFS;
-      lib->LoadAndBind();
-      return lib;
-    }();
+    LibHDFS* lib = new LibHDFS();
     return lib;
   }
 
-  // The status, if any, from failure to load.
-  // true is OK
-  // false is non-OK
-  bool status() { return status_; }
-
-  std::function<hdfsFS(hdfsBuilder*)> hdfsBuilderConnect;
-  std::function<hdfsBuilder*()> hdfsNewBuilder;
-  std::function<void(hdfsBuilder*, const char*)> hdfsBuilderSetNameNode;
-  std::function<int(const char*, char**)> hdfsConfGetStr;
+  std::function<hdfsFS(hdfsBuilder*)> hdfsBuilderConnect = hdfsBuilderConnect;
+  std::function<hdfsBuilder*()> hdfsNewBuilder = hdfsNewBuilder;
+  std::function<void(hdfsBuilder*, const char*)> hdfsBuilderSetNameNode = hdfsBuilderSetNameNode;
+  std::function<int(const char*, char**)> hdfsConfGetStr = hdfsConfGetStr;
   std::function<void(hdfsBuilder*, const char* kerbTicketCachePath)>
-      hdfsBuilderSetKerbTicketCachePath;
-  std::function<int(hdfsFS, hdfsFile)> hdfsCloseFile;
-  std::function<tSize(hdfsFS, hdfsFile, tOffset, void*, tSize)> hdfsPread;
-  std::function<tSize(hdfsFS, hdfsFile, const void*, tSize)> hdfsWrite;
-  std::function<int(hdfsFS, hdfsFile)> hdfsHFlush;
-  std::function<int(hdfsFS, hdfsFile)> hdfsHSync;
-  std::function<hdfsFile(hdfsFS, const char*, int, int, short, tSize)> hdfsOpenFile;
-  std::function<int(hdfsFS, const char*)> hdfsExists;
-  std::function<hdfsFileInfo*(hdfsFS, const char*, int*)> hdfsListDirectory;
-  std::function<void(hdfsFileInfo*, int)> hdfsFreeFileInfo;
-  std::function<int(hdfsFS, const char*, int recursive)> hdfsDelete;
-  std::function<int(hdfsFS, const char*)> hdfsCreateDirectory;
-  std::function<hdfsFileInfo*(hdfsFS, const char*)> hdfsGetPathInfo;
-  std::function<int(hdfsFS, const char*, const char*)> hdfsRename;
-
- private:
-  void LoadAndBind();
-  bool status_;
-  void* handle_ = nullptr;
+      hdfsBuilderSetKerbTicketCachePath = hdfsBuilderSetKerbTicketCachePath;
+  std::function<int(hdfsFS, hdfsFile)> hdfsCloseFile = hdfsCloseFile;
+  std::function<tSize(hdfsFS, hdfsFile, tOffset, void*, tSize)> hdfsPread = hdfsPread;
+  std::function<tSize(hdfsFS, hdfsFile, const void*, tSize)> hdfsWrite = hdfsWrite;
+  std::function<int(hdfsFS, hdfsFile)> hdfsHFlush = hdfsHFlush;
+  std::function<int(hdfsFS, hdfsFile)> hdfsHSync = hdfsHSync;
+  std::function<hdfsFile(hdfsFS, const char*, int, int, short, tSize)> hdfsOpenFile = hdfsOpenFile;
+  std::function<int(hdfsFS, const char*)> hdfsExists = hdfsExists;
+  std::function<hdfsFileInfo*(hdfsFS, const char*, int*)> hdfsListDirectory = hdfsListDirectory;
+  std::function<void(hdfsFileInfo*, int)> hdfsFreeFileInfo = hdfsFreeFileInfo;
+  std::function<int(hdfsFS, const char*, int recursive)> hdfsDelete = hdfsDelete;
+  std::function<int(hdfsFS, const char*)> hdfsCreateDirectory = hdfsCreateDirectory;
+  std::function<hdfsFileInfo*(hdfsFS, const char*)> hdfsGetPathInfo = hdfsGetPathInfo;
+  std::function<int(hdfsFS, const char*, const char*)> hdfsRename = hdfsRename;
 };
 
 class HadoopFileSystem final : public FileSystem {

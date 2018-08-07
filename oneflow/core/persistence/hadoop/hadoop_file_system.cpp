@@ -3,134 +3,14 @@
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/persistence/windows/windows_file_system.h"
 
-#ifdef PLATFORM_WINDOWS
-
-#undef LoadLibrary
-
-#endif  // PLATFORM_WINDOWS
-
-#ifdef PLATFORM_POSIX
-
-#include <dlfcn.h>
-
-#endif  // PLATFORM_POSIX
-
-#define FS_RETURN_FALSE_IF_FALSE(val) \
-  if (!val) {                         \
-    PLOG(WARNING);                    \
-    return false;                     \
-  }
-
 namespace oneflow {
 
 namespace fs {
-
-namespace internal {
-
-#ifdef PLATFORM_POSIX
-
-bool GetSymbolFromLibrary(void* handle, const char* symbol_name, void** symbol) {
-  *symbol = dlsym(handle, symbol_name);
-  if (!*symbol) {
-    PLOG(WARNING) << dlerror();
-    return false;
-  }
-  return true;
-}
-
-bool LoadLibrary(const char* library_filename, void** handle) {
-  *handle = dlopen(library_filename, RTLD_NOW | RTLD_LOCAL);
-  if (!*handle) {
-    PLOG(WARNING) << dlerror();
-    return false;
-  }
-  return true;
-}
-
-#endif  // PLATFORM_POSIX
-
-#ifdef PLATFORM_WINDOWS
-
-bool LoadLibrary(const char* library_filename, void** handle) {
-  std::string file_name = library_filename;
-  std::replace(file_name.begin(), file_name.end(), '/', '\\');
-
-  std::wstring ws_file_name(WindowsFileSystem::Utf8ToWideChar(file_name));
-
-  HMODULE hModule = LoadLibraryExW(ws_file_name.c_str(), NULL, LOAD_WITH_ALTERED_SEARCH_PATH);
-  if (!hModule) {
-    PLOG(WARNING) << file_name + "not found";
-    return false;
-  }
-  *handle = hModule;
-  return true;
-}
-
-bool GetSymbolFromLibrary(void* handle, const char* symbol_name, void** symbol) {
-  FARPROC found_symbol;
-  found_symbol = GetProcAddress((HMODULE)handle, symbol_name);
-  if (found_symbol == NULL) {
-    PLOG(WARNING) << std::string(symbol_name) + "not found";
-    return false;
-  }
-  *symbol = (void**)found_symbol;
-  return true;
-}
-
-#endif  // PLATFORM_WINDOWS
-
-}  // namespace internal
-
-template<typename R, typename... Args>
-bool BindFunc(void* handle, const char* name, std::function<R(Args...)>* func) {
-  void* symbol_ptr = nullptr;
-  FS_RETURN_FALSE_IF_FALSE(internal::GetSymbolFromLibrary(handle, name, &symbol_ptr));
-  *func = reinterpret_cast<R (*)(Args...)>(symbol_ptr);
-  return true;
-}
-
-void LibHDFS::LoadAndBind() {
-  auto TryLoadAndBind = [this](const char* name, void** handle) -> bool {
-    FS_RETURN_FALSE_IF_FALSE(internal::LoadLibrary(name, handle));
-#define BIND_HDFS_FUNC(function) FS_RETURN_FALSE_IF_FALSE(BindFunc(*handle, #function, &function));
-
-    BIND_HDFS_FUNC(hdfsBuilderConnect);
-    BIND_HDFS_FUNC(hdfsNewBuilder);
-    BIND_HDFS_FUNC(hdfsBuilderSetNameNode);
-    BIND_HDFS_FUNC(hdfsConfGetStr);
-    BIND_HDFS_FUNC(hdfsBuilderSetKerbTicketCachePath);
-    BIND_HDFS_FUNC(hdfsCloseFile);
-    BIND_HDFS_FUNC(hdfsPread);
-    BIND_HDFS_FUNC(hdfsWrite);
-    BIND_HDFS_FUNC(hdfsHFlush);
-    BIND_HDFS_FUNC(hdfsHSync);
-    BIND_HDFS_FUNC(hdfsOpenFile);
-    BIND_HDFS_FUNC(hdfsExists);
-    BIND_HDFS_FUNC(hdfsListDirectory);
-    BIND_HDFS_FUNC(hdfsFreeFileInfo);
-    BIND_HDFS_FUNC(hdfsDelete);
-    BIND_HDFS_FUNC(hdfsCreateDirectory);
-    BIND_HDFS_FUNC(hdfsGetPathInfo);
-    BIND_HDFS_FUNC(hdfsRename);
-#undef BIND_HDFS_FUNC
-    return true;
-  };
-
-// libhdfs.so won't be in the standard locations. Use the path as specified
-// in the libhdfs documentation.
-#if defined(PLATFORM_WINDOWS)
-  const char* kLibHdfsDso = "hdfs3.dll";
-#else
-  const char* kLibHdfsDso = "libhdfs3.so";
-#endif
-  status_ = TryLoadAndBind(kLibHdfsDso, &handle_);
-}
 
 HadoopFileSystem::HadoopFileSystem(const HdfsConf& hdfs_conf)
     : namenode_(hdfs_conf.namenode()), hdfs_(LibHDFS::Load()) {}
 
 bool HadoopFileSystem::Connect(hdfsFS* fs) {
-  FS_RETURN_FALSE_IF_FALSE(hdfs_->status());
   hdfsBuilder* builder = hdfs_->hdfsNewBuilder();
   hdfs_->hdfsBuilderSetNameNode(builder, namenode_.c_str());
   // KERB_TICKET_CACHE_PATH will be deleted in the future, Because KRB5CCNAME
