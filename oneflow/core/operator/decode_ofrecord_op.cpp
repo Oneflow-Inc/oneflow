@@ -7,7 +7,11 @@ void DecodeOFRecordOp::InitFromOpConf() {
   EnrollInputBn("in", false);
   const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
   for (int32_t i = 0; i < conf.blob_size(); ++i) {
-    EnrollOutputBn("out_" + std::to_string(i), false);
+    if (IsRecordDataType(conf.blob(i).data_type())) {
+      EnrollFwPbOutputBn("out_" + std::to_string(i));
+    } else {
+      EnrollOutputBn("out_" + std::to_string(i), false);
+    }
   }
   if (conf.part_name_suffix_length() != -1) {
     CHECK_GE(conf.part_name_suffix_length(),

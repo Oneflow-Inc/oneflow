@@ -19,6 +19,15 @@ bool IsFloatingDataType(DataType data_type) {
   }
 }
 
+bool IsRecordDataType(DataType data_type) {
+  switch (data_type) {
+#define RECORD_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(RECORD_CASE, RECORD_DATA_TYPE_SEQ)
+    default: return false;
+  }
+}
+
 size_t GetSizeOfDataType(DataType data_type) {
   switch (data_type) {
 #define MAKE_CASE(type_cpp, type_proto) \

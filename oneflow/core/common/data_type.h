@@ -109,6 +109,7 @@ TRAIT_CONST_VAR(One, 1);
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsRecordDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
 }  // namespace oneflow

@@ -399,9 +399,10 @@ void LogicalGraph::RemoveOneBackwardAdd(
 
 void LogicalGraph::MergeEdge() {
   ForEachNode([](LogicalNode* node) {
-    HashMap<LogicalNode*, std::vector<LogicalEdge*>> dst2edges;
+    HashMap<std::pair<LogicalNode*, bool>, std::vector<LogicalEdge*>> dst2edges;
     for (LogicalEdge* out_edge : node->out_edges()) {
-      dst2edges[out_edge->dst_node()].push_back(out_edge);
+      const auto& key = std::make_pair(out_edge->dst_node(), out_edge->SoleLbi().is_fw_pb());
+      dst2edges[key].push_back(out_edge);
     }
     for (const auto& pair : dst2edges) {
       std::vector<LogicalBlobId>& lbi_all = pair.second.at(0)->mut_lbis();
