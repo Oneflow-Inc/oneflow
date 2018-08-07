@@ -27,15 +27,12 @@ __global__ void SigmoidCrossEntropyLossForward(const int64_t n, const PredType* 
 
 template<typename PredType, typename LabelType>
 __global__ void SigmoidCrossEntropyLossBackward(const int64_t n, const PredType* prediction,
-                                                const LabelType* label, PredType* pred_diff,
-                                                PredType* count) {
+                                                const LabelType* label, PredType* pred_diff) {
   CUDA_1D_KERNEL_LOOP(index, n) {
     if (label[index] == -1) {
       pred_diff[index] = 0.f;
-      count[index] = 0.f;
     } else {
       pred_diff[index] = 1.f / (1.f + expf(-prediction[index])) - label[index];
-      count[index] = 1.f;
     }
   }
 }
@@ -57,20 +54,20 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
       NoSmallerThan<PredType>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
               n, normalize, 1e-5);
-      KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, n, average_loss, normalize);
+      KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, 1, average_loss, normalize);
     }
-    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, average_loss, average_loss, conf.scale());
+    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, 1, average_loss, average_loss, conf.scale());
   }
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* pred_diff,
-                       PredType* count, PredType* normalize, PredType* average_loss) {
+                       PredType* normalize) {
     SigmoidCrossEntropyLossBackward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, prediction, label, pred_diff, count);
+            n, prediction, label, pred_diff);
     KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, pred_diff, pred_diff, conf.scale());
     if (conf.normalize()) {
-      KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, n, pred_diff, normalize);
+      KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, pred_diff, pred_diff, 1 / *normalize);
     }
   }
 };

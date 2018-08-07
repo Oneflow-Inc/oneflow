@@ -25,7 +25,7 @@ struct SigmoidCrossEntropyLossKernelUtil {
                       PredType* count, PredType* normalize, PredType* average_loss);
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* in_diff,
-                       PredType* count, PredType* normalize, PredType* average_loss);
+                       PredType* normalize);
 };
 
 }  // namespace oneflow

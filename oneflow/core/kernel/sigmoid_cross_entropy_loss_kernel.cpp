@@ -28,8 +28,7 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
     SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Backward(
         ctx.device_ctx, conf, prediction->shape().At(0), prediction->dptr<PredType>(),
         label->dptr<LabelType>(), prediction_diff->mut_dptr<PredType>(),
-        count->mut_dptr<PredType>(), normalize->mut_dptr<PredType>(),
-        average_loss->mut_dptr<PredType>());
+        normalize->mut_dptr<PredType>());
   }
 }
 
@@ -50,7 +49,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* pred_diff,
-                       PredType* count, PredType* normalize, PredType* average_loss) {
+                       PredType* normalize) {
     UNIMPLEMENTED();
   }
 };
