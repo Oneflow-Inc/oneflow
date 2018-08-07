@@ -44,6 +44,6 @@ void OFRecordEncoderImpl<EncodeCase::kJpeg, T>::EncodeOneCol(DeviceCtx* ctx, con
 #define INSTANTIATE_OFRECORD_JPEG_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kJpeg, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_JPEG_ENCODER, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_JPEG_ENCODER, ENCODE_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

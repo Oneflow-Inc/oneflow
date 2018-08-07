@@ -612,6 +612,82 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
+message BboxWeightConf
+{
+  optional float weight_x=1 [default = 1.0];
+  optional float weight_y=2 [default = 1.0];
+  optional float weight_w=3 [default = 1.0];
+  optional float weight_h=4 [default = 1.0];
+}
+
+message BboxNormalizeMeansConf
+{
+  optional float means_x = 1[default = 0.0];
+  optional float means_y = 2[default = 0.0];
+  optional float means_w = 3[default = 0.0];
+  optional float means_h = 4[default = 0.0];
+}
+
+message BboxNormalizeStdsConf
+{
+  optional float stds_x = 1[default = 1.0];
+  optional float stds_y = 2[default = 1.0];
+  optional float stds_w = 3[default = 1.0];
+  optional float stds_h = 4[default = 1.0];
+}
+
+message ProposalTargetOpConf
+{
+  required string rpn_rois = 1;
+  required string gt_boxes = 2;
+  required string gt_num=3;
+  required string rois = 4;
+  required string labels = 5;
+  required string bbox_targets = 6;
+  required string bbox_inside_weights = 7;
+  required string bbox_outside_weights = 8;
+  required int32 num_roi_per_image = 9 [default = 256];
+  required float fg_fraction = 10 [default = 0.5];
+  required BboxWeightConf bbox_inside_weight_conf=11;
+  required int32 fg_thresh = 12;
+  required int32 bg_thresh_lo = 13;
+  required int32 bg_thresh_hi = 14;
+  required bool bbox_normalize_targets_precomputed = 15;
+  optional BboxNormalizeMeansConf bbox_normalize_means = 16;
+  optional BboxNormalizeStdsConf bbox_normalize_stds = 17;
+  required int32 class_num = 18;
+}
+
+enum ScoringMethod {
+ kId = 0;
+ kTempAvg = 1;
+ kAvg = 2;
+ kIouAvg = 3;
+ kGeneralizedAvg = 4;
+ kQuasiSum = 5;
+}
+
+message BboxVoteConf {
+ required float beta = 1 [default = 1.0];
+ required float threshold = 2 [default = 1];
+ required ScoringMethod scoring_method = 3 [default = kId];
+}
+
+message BboxNmsAndLimitOpConf {
+  required string rois = 1;
+  required string bbox_delta = 2;
+  required string scores = 3;
+  required string labeled_bbox = 4;
+  required string bbox_score = 5;
+  required float score_threshold = 6;
+  required float nms_threshold = 7;
+  required int32 detections_per_im = 10;
+  required int32 image_height = 11;
+  required int32 image_width = 12;
+  required bool bbox_vote_enabled = 8;
+  optional BboxVoteConf bbox_vote = 9;
+}
+
 message ProposalOpConf {
   required string class_prob = 1;
   required string bbox_pred = 2;
@@ -710,7 +786,9 @@ message OperatorConf {
     SmoothL1LossOpConf smooth_l1_loss_conf = 408;
     ProposalOpConf proposal_conf = 409;
     RoIAlignOpConf roi_align_conf = 410;
-    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 411;
+    ProposalTargetOpConf proposal_target_conf = 411;
+    BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
+    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 413;
   }
 }
 

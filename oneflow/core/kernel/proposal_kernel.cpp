@@ -208,7 +208,6 @@ void ProposalKernel<T>::InitConstBufBlobs(
   GenerateAnchors<T>(op_conf().proposal_conf(), BnInOp2Blob("anchors"));
 }
 
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalConf, ProposalKernel,
-                               ARITHMETIC_DATA_TYPE_SEQ);
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalConf, ProposalKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

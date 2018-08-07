@@ -31,6 +31,6 @@ void OFRecordEncoderImpl<EncodeCase::kRaw, T>::EncodeOneCol(DeviceCtx* ctx, cons
 #define INSTANTIATE_OFRECORD_RAW_ENCODER(type_cpp, type_proto) \
   template class OFRecordEncoderImpl<EncodeCase::kRaw, type_cpp>;
 
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_ENCODER, ARITHMETIC_DATA_TYPE_SEQ)
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_RAW_ENCODER, ENCODE_DATA_TYPE_SEQ)
 
 }  // namespace oneflow
