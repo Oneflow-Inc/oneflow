@@ -46,7 +46,7 @@ void ProposalKernel<T>::ForwardDataContent(
     ScoredBBoxSlice<T> pre_nms_slice(num_proposals, const_proposals_ptr, class_prob_ptr,
                                      pre_nms_slice_ptr);
     pre_nms_slice.DescSortByScore();
-    pre_nms_slice.FilterBy([&](const T score, const BBox<T>* bbox) {
+    pre_nms_slice.Filter([&](const T score, const BBox<T>* bbox) {
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
     pre_nms_slice.Truncate(conf.pre_nms_top_n());
