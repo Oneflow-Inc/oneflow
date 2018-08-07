@@ -20,26 +20,25 @@ class BBox final {
   static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
   static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
 
-  inline int32_t x1() const { return bbox_[0]; }
-  inline int32_t y1() const { return bbox_[1]; }
-  inline int32_t x2() const { return bbox_[2]; }
-  inline int32_t y2() const { return bbox_[3]; }
-  inline int32_t width() const { return x2() - x1() + 1; }
-  inline int32_t height() const { return y2() - y1() + 1; }
-
   const std::array<T, 4>& bbox() const { return bbox_; }
   std::array<T, 4>& mut_bbox() { return bbox_; }
 
+  inline T x1() const { return bbox_[0]; }
+  inline T y1() const { return bbox_[1]; }
+  inline T x2() const { return bbox_[2]; }
+  inline T y2() const { return bbox_[3]; }
   inline void set_x1(T x1) { bbox_[0] = x1; }
   inline void set_y1(T y1) { bbox_[1] = y1; }
   inline void set_x2(T x2) { bbox_[2] = x2; }
   inline void set_y2(T y2) { bbox_[3] = y2; }
 
-  inline int32_t Area() const { return (x2() - x1() + 1) * (y2() - y1() + 1); }
+  inline int32_t width() const { return static_cast<int32_t>(x2() - x1() + 1); }
+  inline int32_t height() const { return static_cast<int32_t>(y2() - y1() + 1); }
+  inline int32_t Area() const { return width() * height(); }
   inline float InterOverUnion(const BBox* other) const {
-    const int32_t iw = std::min(x2(), other->x2()) - std::max(x1(), other->x1()) + 1;
+    const float iw = std::min<float>(x2(), other->x2()) - std::max<float>(x1(), other->x1()) + 1.f;
     if (iw <= 0) { return 0; }
-    const int32_t ih = std::min(y2(), other->y2()) - std::max(y1(), other->y1()) + 1;
+    const float ih = std::min<float>(y2(), other->y2()) - std::max<float>(y1(), other->y1()) + 1.f;
     if (ih <= 0) { return 0; }
     const float inter = iw * ih;
     return inter / (Area() + other->Area() - inter);
@@ -57,15 +56,15 @@ class BBox final {
     const float pred_h = std::exp(delta->dh()) * h;
 
     set_x1(pred_ctr_x - 0.5f * pred_w);
-    set_x2(pred_ctr_y - 0.5f * pred_h);
-    set_y1(pred_ctr_x + 0.5f * pred_w - 1.f);
+    set_y1(pred_ctr_y - 0.5f * pred_h);
+    set_x2(pred_ctr_x + 0.5f * pred_w - 1.f);
     set_y2(pred_ctr_y + 0.5f * pred_h - 1.f);
   }
 
   void Clip(const int64_t height, const int64_t width) {
     set_x1(std::max<T>(std::min<T>(x1(), width), 0));
-    set_x2(std::max<T>(std::min<T>(x2(), height), 0));
-    set_y1(std::max<T>(std::min<T>(y1(), width), 0));
+    set_y1(std::max<T>(std::min<T>(y1(), height), 0));
+    set_x2(std::max<T>(std::min<T>(x2(), width), 0));
     set_y2(std::max<T>(std::min<T>(y2(), height), 0));
   }
 
