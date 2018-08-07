@@ -39,7 +39,11 @@ class Operator {
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
 
+  bool NeedOutBlobWhenBackwardIf() const {
+    return NeedOutBlobWhenBackward() || (GetActivationType() != ActivationType::kNone);
+  }
   virtual bool NeedOutBlobWhenBackward() const { return true; }
+  bool NeedInBlobWhenBackwardIf() const { return NeedInBlobWhenBackward(); }
   virtual bool NeedInBlobWhenBackward() const { return true; }
 
   // bn_in_op <-> lbi

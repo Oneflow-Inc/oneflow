@@ -211,23 +211,27 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
   bool need_out_blob = false;
   mut_exec_gph().ForEachNode([&](ExecNode* node) {
     if (node->in_edges().empty()) {
-      need_in_blob = need_in_blob || node->op()->NeedInBlobWhenBackward();
+      need_in_blob = need_in_blob || node->op()->NeedInBlobWhenBackwardIf();
     }
     if (node->out_edges().empty()) {
-      need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackward();
+      need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackwardIf();
     }
   });
   if (need_in_blob == false) {
-    LOG(INFO) << "cclog: task_id " << task_id() << " erase in regst:";
-    for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-      LOG(INFO) << "cclog: in regst desc id = " << regst.lock()->regst_desc_id();
+    if (GetRelatedFwTaskNode()) {
+      LOG(INFO) << "cclog: task_id " << task_id() << " erase in regst:";
+      for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
+        LOG(INFO) << "cclog: in regst desc id = " << regst.lock()->regst_desc_id();
+      }
     }
     EraseConsumedRegstsByName("in");
   }
   if (need_out_blob == false) {
-    LOG(INFO) << "cclog: task_id " << task_id() << " erase out regst:";
-    for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("121_out")) {
-      LOG(INFO) << "cclog: out regst desc id = " << regst.lock()->regst_desc_id();
+    if (GetRelatedFwTaskNode()) {
+      LOG(INFO) << "cclog: task_id " << task_id() << " erase out regst:";
+      for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("121_out")) {
+        LOG(INFO) << "cclog: out regst desc id = " << regst.lock()->regst_desc_id();
+      }
     }
     EraseConsumedRegstsByName("boxing_out");
     EraseConsumedRegstsByName("121_out");
