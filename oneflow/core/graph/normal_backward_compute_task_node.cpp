@@ -203,7 +203,7 @@ void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   if (model_diff_regst == nullptr) { return; }
   CHECK(model_diff_regst->IsLocked());
   Shape& shape = model_diff_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
-  shape = Shape({RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num())});
+  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
 }
 
 void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
@@ -217,22 +217,8 @@ void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
       need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackwardIf();
     }
   });
-  if (need_in_blob == false) {
-    if (GetRelatedFwTaskNode()) {
-      LOG(INFO) << "cclog: task_id " << task_id() << " erase in regst:";
-      for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("in")) {
-        LOG(INFO) << "cclog: in regst desc id = " << regst.lock()->regst_desc_id();
-      }
-    }
-    EraseConsumedRegstsByName("in");
-  }
+  if (need_in_blob == false) { EraseConsumedRegstsByName("in"); }
   if (need_out_blob == false) {
-    if (GetRelatedFwTaskNode()) {
-      LOG(INFO) << "cclog: task_id " << task_id() << " erase out regst:";
-      for (std::weak_ptr<RegstDesc> regst : GetConsumedRegst("121_out")) {
-        LOG(INFO) << "cclog: out regst desc id = " << regst.lock()->regst_desc_id();
-      }
-    }
     EraseConsumedRegstsByName("boxing_out");
     EraseConsumedRegstsByName("121_out");
   }

@@ -7,7 +7,7 @@ void MdDiffAccCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   CHECK(md_diff_acc_regst->IsLocked());
   Shape& shape = md_diff_acc_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
   CHECK_EQ(1, shape.NumAxes());
-  shape = Shape({RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num())});
+  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
 }
 
 }  // namespace oneflow
