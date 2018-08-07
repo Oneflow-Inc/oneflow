@@ -680,22 +680,24 @@ message BboxNmsAndLimitOpConf {
   optional BboxVoteConf bbox_vote = 9;
 }
 
+message AnchorGeneratorConf {
+  required int32 feature_map_stride = 1 [default = 16];
+  repeated float aspect_ratios = 2;
+  repeated int32 anchor_scales = 3;
+  required int32 image_height = 4;
+  required int32 image_width = 5;
+}
+
 message ProposalOpConf {
   required string class_prob = 1;
   required string bbox_pred = 2;
-  // required string image_info = 3;
-  required string rois = 4;
-  required string roi_probs = 5;
-  required int32 feature_map_stride = 6 [default = 16];
-  required int32 min_size = 7;
-  required int32 pre_nms_top_n = 8;
-  required int32 post_nms_top_n = 9;
-  required float nms_threshold = 10;
-  repeated float aspect_ratios = 11;
-  repeated int32 anchor_scales = 12;
-  required bool only_foreground_prob = 13 [default = true];
-  required int32 image_height = 14;
-  required int32 image_width = 15;
+  required string rois = 3;
+  required string roi_probs = 4;
+  required AnchorGeneratorConf anchors_generator_conf = 5;
+  required int32 min_size = 6;
+  required int32 pre_nms_top_n = 7;
+  required int32 post_nms_top_n = 8;
+  required float nms_threshold = 9;
 }
 
 message RoIPoolingOpConf {
