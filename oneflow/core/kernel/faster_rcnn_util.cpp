@@ -113,9 +113,6 @@ void ScoredBBoxSlice<T>::FilterBy(const std::function<bool(const T, const BBox<T
     if (!Filter(GetScore(i), GetBBox(i))) {
       // keep_num <= i so index_slice_ never be written before read
       index_slice_[keep_num++] = index_slice_[i];
-    } else {
-      LOG(INFO) << "filter by min size: index=" << i << " keep_num=" << keep_num
-                << " origin index=" << index_slice_[i];
     }
   }
   available_len_ = keep_num;

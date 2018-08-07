@@ -40,14 +40,6 @@ void ProposalKernel<T>::ForwardDataContent(
     const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
 
     FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, proposals_ptr);
-
-    LOG(INFO) << "transformed proposal start log: " << i;
-    FOR_RANGE(int64_t, k, 0, num_proposals) {
-      const BBox<T>* bbox = BBox<T>::Cast(proposals_ptr) + k;
-      LOG(INFO) << "transformed proposal: x1=" << bbox->x1() << " y1=" << bbox->y1()
-                << " x2=" << bbox->x2() << " y2=" << bbox->y2();
-    }
-
     FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
                                  anchor_generator_conf.image_width(), proposals_ptr);
 
@@ -58,14 +50,6 @@ void ProposalKernel<T>::ForwardDataContent(
       return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
     });
     pre_nms_slice.Truncate(conf.pre_nms_top_n());
-
-    LOG(INFO) << "pre nms bbox start log: " << i;
-    FOR_RANGE(int64_t, k, 0, pre_nms_slice.available_len()) {
-      const BBox<T>* bbox = pre_nms_slice.GetBBox(k);
-      LOG(INFO) << "pre nms bbox: x1=" << bbox->x1() << " y1=" << bbox->y1() << " x2=" << bbox->x2()
-                << " y2=" << bbox->y2() << " score= " << pre_nms_slice.GetScore(k)
-                << " index=" << pre_nms_slice.GetSlice(k);
-    }
 
     ScoredBBoxSlice<T> post_nms_slice(conf.post_nms_top_n(), const_proposals_ptr, class_prob_ptr,
                                       post_nms_slice_ptr);
