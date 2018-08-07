@@ -23,6 +23,7 @@ void ProposalKernel<T>::ForwardDataContent(
   Blob* proposals_blob = BnInOp2Blob("proposals");
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_ws();
   const int64_t num_images = class_prob_blob->shape().At(0);
   const int64_t height = class_prob_blob->shape().At(1);
   const int64_t width = class_prob_blob->shape().At(2);
@@ -39,7 +40,8 @@ void ProposalKernel<T>::ForwardDataContent(
     const T* bbox_pred_ptr = bbox_pred_blob->dptr<T>(i);
     const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
 
-    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, proposals_ptr);
+    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, bbox_reg_ws,
+                                     proposals_ptr);
     FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
                                  anchor_generator_conf.image_width(), proposals_ptr);
 
