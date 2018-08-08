@@ -14,27 +14,24 @@ inline double Duration4ActEvent(const ActEvent& act_event) {
 
 class ChainActNode;
 
-struct RegstAct {
-  RegstAct(int64_t input_regst_desc_id, const ActEvent* input_producer_act_event,
-           const std::list<const ActEvent*>& input_consumer_act_events)
-      : regst_desc_id(input_regst_desc_id),
-        producer_act_event(input_producer_act_event),
-        consumer_act_events(input_consumer_act_events) {}
+struct ConsumerRegstInfos {
+  ConsumerRegstInfos(const ActEvent* input_consumer,
+                     const std::list<std::pair<int64_t, const ActEvent*>>& input_regst_id7producer)
+      : consumer(input_consumer), regst_id7producer(input_regst_id7producer) {}
 
-  int64_t regst_desc_id;
-  const ActEvent* producer_act_event;
-  std::list<const ActEvent*> consumer_act_events;
-  HashSet<const ChainActNode*> fake_producer_outs;
+  const ActEvent* consumer;
+  std::list<std::pair<int64_t, const ActEvent*>> regst_id7producer;
 };
 
-struct RegstActCtx {
-  RegstActCtx(const RegstAct* input_regst_act, const ChainActNode* producer)
-      : regst_act(input_regst_act) {
-    node2duration_to_producer[producer] = 0;
+struct ConsumerRegstInfosCtx {
+  ConsumerRegstInfosCtx(const ConsumerRegstInfos* input_consumer_regst_infos,
+                        const ChainActNode* consumer_node)
+      : consumer_regst_infos(input_consumer_regst_infos) {
+    node2duration_to_consumer[consumer_node] = 0;
   }
 
-  const RegstAct* regst_act;
-  HashMap<const ChainActNode*, double> node2duration_to_producer;
+  const ConsumerRegstInfos* consumer_regst_infos;
+  HashMap<const ChainActNode*, double> node2duration_to_consumer;
 };
 
 class ChainActEdge final : public Edge<ChainActNode, ChainActEdge> {
@@ -60,24 +57,26 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
   void ForEachInEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
   void ForEachOutEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
   void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
-  void ForEachProducedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
-  void ForEachLastConsumedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
+  void ForEachStartConsumerRegstInfos(
+      const std::function<void(const ConsumerRegstInfos*)>& Handler) const;
+  void ForEachStopConsumerRegstInfos(
+      const std::function<void(const ConsumerRegstInfos*)>& Handler) const;
 
   // Getters
   int64_t act_id() const { return act_events_.front()->act_id(); }
 
   // Setters
-  void AddProducedRegstActs(std::unique_ptr<RegstAct>&& regst_act) {
-    produced_regst_acts_.push_back(std::move(regst_act));
+  void AddStartConsumerRegstInfos(std::unique_ptr<ConsumerRegstInfos>&& consumed_regst_infos) {
+    start_consumed_regst_infos_.push_back(std::move(consumed_regst_infos));
   }
-  void AddLastConsumedRegstActs(const RegstAct* regst_act) {
-    last_consumed_regst_acts_.push_back(regst_act);
+  void AddStopConsumerRegstInfos(const ConsumerRegstInfos* consumed_regst_infos) {
+    stop_consumed_regst_infos_.push_back(consumed_regst_infos);
   }
 
  private:
   std::list<std::unique_ptr<ActEvent>> act_events_;
-  std::list<std::unique_ptr<RegstAct>> produced_regst_acts_;
-  std::list<const RegstAct*> last_consumed_regst_acts_;
+  std::list<std::unique_ptr<ConsumerRegstInfos>> start_consumed_regst_infos_;
+  std::list<const ConsumerRegstInfos*> stop_consumed_regst_infos_;
 };
 
 class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge> {
@@ -100,32 +99,34 @@ class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge>
   double CalcBaseII() const;
 
  private:
-  bool IsActEventWithConsumer(const ActEvent* act_event) const;
+  bool IsActorWithConsumer(const ActEvent* act_event) const;
   const ChainActNode* Node4ActEvent(const ActEvent* act_event) const;
   void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
   std::function<int64_t(const ChainActNode*)> MakeGetterTopoOrderValue4Node() const;
 
-  void InitNodes(
-      std::list<std::unique_ptr<ActEvent>>&& act_events,
-      HashMap<std::pair<int64_t, int64_t>, const ActEvent*>* regst_uid2producer_act_event);
-  void InitEdges(
-      const HashMap<std::pair<int64_t, int64_t>, const ActEvent*>& regst_uid2producer_act_event,
-      HashMap<std::pair<int64_t, int64_t>, std::list<const ActEvent*>>*
-          regst_uid2consumer_act_events);
-  void InitNodeProducedRegstActs(
-      const HashMap<std::pair<int64_t, int64_t>, const ActEvent*>& regst_uid2producer_act_event,
-      const HashMap<std::pair<int64_t, int64_t>, std::list<const ActEvent*>>&
-          regst_uid2consumer_act_events);
+  void InitNodes(std::list<std::unique_ptr<ActEvent>>&& act_events,
+                 HashMap<std::pair<int64_t, int64_t>, const ActEvent*>* regst_uid2producer);
+  void InitEdges(const HashMap<std::pair<int64_t, int64_t>, const ActEvent*>& regst_uid2producer,
+                 HashMap<const ActEvent*, std::list<std::pair<int64_t, const ActEvent*>>>*
+                     consumer2regst_id7producer);
+  void InitNodeStartConsumerRegstInfos(
+      const HashMap<const ActEvent*, std::list<std::pair<int64_t, const ActEvent*>>>&
+          consumer2regst_id7producer) const;
+  void InitTopoNodes();
   void InitTaskId2TaskProto();
-  void InitNodeLastConsumedRegstActs();
-  void TopoForEachChainActNode(const std::function<void(const ChainActNode*)>& Handler) const;
+  void InitNodeStopConsumerRegstInfos() const;
+  void DfsTopoForEachChainActNode(const std::function<void(const ChainActNode*)>& Handler) const;
+  void ReverseDfsTopoForEachChainActNode(
+      const std::function<void(const ChainActNode*)>& Handler) const;
   void ForEachRegstActConsumerPathDuration(
       const std::function<void(int64_t, int64_t, double)>& Handler) const;
-  void CalcRegstActNodePathDuration(RegstActCtx* regst_act_ctx, const ChainActNode* node) const;
+  void CalcRegstActNodePathDuration(ConsumerRegstInfosCtx* ctx, const ChainActNode* node) const;
+  void ForEachRegstDescDuration(const ConsumerRegstInfosCtx& ctx,
+                                const std::function<void(int64_t, int64_t, double)>& Handler) const;
 
   const Plan* plan_;
   HashMap<int64_t, const TaskProto*> task_id2task_proto_;
-  HashSet<const ActEvent*> act_event_with_consumer_;
+  HashSet<const ActEvent*> actor_with_consumer_;
   HashMap<const ActEvent*, ChainActNode*> act_event2chain_node_;
 };
 
