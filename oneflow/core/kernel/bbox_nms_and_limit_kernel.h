@@ -50,7 +50,7 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
   void WriteOutputToOFRecord(const int64_t im_index, const int64_t boxes_num,
                              const ScoredBBoxSlice<T>& slice, Blob* labeled_bbox_blob,
                              Blob* bbox_score_blob) const;
-  void WriteToOutput(const int64_t im_index, const int64_t boxes_num, const int64_t limit_num,
+  void WriteToOutput(const int64_t im_index, const int64_t boxes_num, const int32_t limit_num,
                      const ScoredBBoxSlice<T>& slice, Blob* fixed_labeled_bbox_blob,
                      Blob* fixed_bbox_score_blob) const;
 

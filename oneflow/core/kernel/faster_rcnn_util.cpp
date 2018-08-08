@@ -73,15 +73,15 @@ void FasterRcnnUtil<T>::ClipBoxes(int64_t boxes_num, const int64_t image_height,
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
-void ScoredBBoxSlice<T>::Truncate(int64_t len) {
+void ScoredBBoxSlice<T>::Truncate(int32_t len) {
   CHECK_GE(len, 0);
   if (len < available_len_) { available_len_ = len; }
 }
 
 template<typename T>
 void ScoredBBoxSlice<T>::TruncateByThreshold(float thresh) {
-  int64_t keep_num = available_len_;
-  FOR_RANGE(int64_t, i, 0, available_len_) {
+  int32_t keep_num = available_len_;
+  FOR_RANGE(int32_t, i, 0, available_len_) {
     if (score_ptr_[index_slice_[i]] <= thresh) {
       keep_num = i;
       break;
@@ -118,7 +118,7 @@ void ScoredBBoxSlice<T>::Sort(
 template<typename T>
 void ScoredBBoxSlice<T>::Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered) {
   int32_t keep_num = 0;
-  FOR_RANGE(int64_t, i, 0, available_len_) {
+  FOR_RANGE(int32_t, i, 0, available_len_) {
     if (!IsFiltered(GetScore(i), GetBBox(i))) {
       // keep_num <= i so index_slice_ never be written before read
       index_slice_[keep_num++] = index_slice_[i];

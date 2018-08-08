@@ -135,20 +135,20 @@ class ScoredBBoxSlice final {
   void DescSortByScore() { DescSortByScore(true); }
   void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
 
-  void Truncate(int64_t len);
+  void Truncate(int32_t len);
   void TruncateByThreshold(float thresh);
   void Concat(const ScoredBBoxSlice& other);
   void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
 
-  inline int32_t GetSlice(int64_t i) const {
+  inline int32_t GetSlice(int32_t i) const {
     CHECK_LT(i, available_len_);
     return index_slice_[i];
   }
-  inline const BBox<T>* GetBBox(int64_t i) const {
+  inline const BBox<T>* GetBBox(int32_t i) const {
     CHECK_LT(i, available_len_);
     return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
   }
-  inline T GetScore(int64_t i) const {
+  inline T GetScore(int32_t i) const {
     CHECK_LT(i, available_len_);
     return score_ptr_[index_slice_[i]];
   }
