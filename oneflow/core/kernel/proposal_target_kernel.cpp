@@ -28,66 +28,36 @@ void RoisNearestGtAndMaxIou(const int64_t rois_num, const int64_t gt_num, const 
 }
 
 template<typename T>
-void SortRoisIndexByIou(const int64_t rois_num, const T* roi_max_overlap_ptr,
-                        int32_t* rois_index_ptr) {
-  FOR_RANGE(int64_t, i, 0, rois_num) { rois_index_ptr[i] = i; }
-  std::sort(rois_index_ptr, rois_index_ptr + rois_num, [&](int32_t lhs, int32_t rhs) {
-    return roi_max_overlap_ptr[lhs] > roi_max_overlap_ptr[rhs];
-  });
-}
-void SampleChoice(const int64_t startIdx, const int64_t endIdx, int32_t* rois_index_ptr,
-                  const int32_t sample_size) {
-  if (endIdx - startIdx == sample_size) { return; }
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::shuffle(rois_index_ptr + startIdx, rois_index_ptr + endIdx, gen);
-}
-template<typename T>
-void FilterAndChoiceFgBg(const ProposalTargetOpConf& conf, const int64_t rois_num,
-                         const T* roi_max_overlap_ptr, int32_t* rois_index_ptr,
-                         int64_t& fg_start_idx, int64_t& bg_start_idx) {
-  // const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
+ScoredBBoxSlice<T> ForegroundChoice(const ProposalTargetOpConf& conf, const ScoredBBoxSlice<T> rois_slice, int64_t& fg_sample_size) {
   const int64_t fg_thresh = conf.fg_thresh();
+  int64_t fg_end_index = rois_slice.FindByThreshold(conf.fg_thresh());
+  ScoredBBoxSlice<T> fg_rois_slice = rois_slice.Slice(0, fg_end_index);
+  const int64_t num_roi_per_image = conf.num_roi_per_image();
+  const float fg_fraction = conf.fg_fraction();
+  fg_sample_size = std::min(fg_end_index + 1, (int64_t)std::round(num_roi_per_image * fg_fraction));
+  if(fg_sample_size < fg_end_index + 1){
+      fg_rois_slice.Shuffle();
+      fg_rois_slice.Truncate(fg_sample_size);
+  }
+  return fg_rois_slice;
+}
+
+template<typename T>
+ScoredBBoxSlice<T> BackgroundChoice(const ProposalTargetOpConf& conf, const ScoredBBoxSlice<T> rois_slice, const int64_t fg_sample_size) {
   const int64_t bg_thresh_hi = conf.bg_thresh_hi();
   const int64_t bg_thresh_lo = conf.bg_thresh_lo();
   CHECK_GT(bg_thresh_hi, bg_thresh_lo);
-  int64_t fg_end_index = 0;
-  int64_t bg_start_index = 0;
-  int64_t bg_end_index = 0;
-  // include start not include end
-  FOR_RANGE(int64_t, i, 0, rois_num) {
-    int64_t rois_idx = rois_index_ptr[i];
-    if (roi_max_overlap_ptr[rois_idx] >= fg_thresh) {
-      if ((i + 1 < rois_num && roi_max_overlap_ptr[rois_index_ptr[i + 1]] < fg_thresh)
-          || (i + 1 == rois_num)) {
-        fg_end_index = i + 1;
-      }
-    }
-    if (roi_max_overlap_ptr[rois_idx] >= bg_thresh_hi) {
-      if ((i + 1 < rois_num && roi_max_overlap_ptr[rois_index_ptr[i + 1]] < bg_thresh_hi)
-          || (i + 1 == rois_num)) {
-        bg_start_index = i + 1;
-      }
-    }
-    if (roi_max_overlap_ptr[rois_idx] >= bg_thresh_lo) {
-      if ((i + 1 < rois_num && roi_max_overlap_ptr[rois_index_ptr[i + 1]] < bg_thresh_lo)
-          || (i + 1 == rois_num)) {
-        bg_end_index = i + 1;
-      }
-    }
-  }
+  int64_t bg_start_index = rois_slice.FindByThreshold(conf.bg_thresh_hi());
+  int64_t bg_end_index = rois_slice.FindByThreshold(conf.bg_thresh_lo());
+  ScoredBBoxSlice<T> bg_rois_slice = rois_slice.Slice(bg_start_index, bg_end_index);
   const int64_t num_roi_per_image = conf.num_roi_per_image();
-  const float fg_fraction = conf.fg_fraction();
-  const int64_t fg_sample_size =
-      std::min(fg_end_index + 1, (int64_t)std::round(num_roi_per_image * fg_fraction));
-  SampleChoice(
-      0, fg_end_index, rois_index_ptr,
-      fg_sample_size);  // fg_sample: rois_index_ptr(fg_start_index,fg_start_index+fg_sample_size)
   const int64_t bg_sample_size =
       std::min(bg_end_index - bg_start_index + 1, num_roi_per_image - fg_sample_size);
-  SampleChoice(
-      bg_start_index, bg_end_index, rois_index_ptr,
-      bg_sample_size);  // bg_sample: rois_index_ptr(bg_start_index,bg_start_index+bg_sample_size)
+    if(bg_sample_size < bg_end_index - bg_start_index + 1){
+      bg_rois_slice.Shuffle();
+      bg_rois_slice.Truncate(bg_sample_size);
+    }
+  return bg_rois_slice;
 }
 
 template<typename T>
@@ -121,6 +91,7 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   int64_t roi_num = rpn_rois_blob->shape().At(1);
   // int64_t gt_max_num = gt_boxes_blob->shape().At(1);
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
+
   FOR_RANGE(int64_t, i, 0, im_num) {
     const T* rpn_rois_ptr = rois_blob->dptr<T>(i);
     const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>(i);
@@ -131,15 +102,15 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     T* bbox_targets_ptr = bbox_targets_blob->mut_dptr<T>(i);
     T* inside_weights_ptr = inside_weights_blob->mut_dptr<T>(i);
     T* outside_weights_ptr = outside_weights_blob->mut_dptr<T>(i);
+
     RoisNearestGtAndMaxIou(roi_num, gt_num, rpn_rois_ptr, gt_boxes_ptr, roi_nearest_gt_index_ptr,
                            roi_max_overlap_ptr);
-    SortRoisIndexByIou(roi_num, roi_max_overlap_ptr, rois_index_ptr);
-    int64_t fg_start_index = 0;
-    int64_t bg_start_index = 0;
-    FilterAndChoiceFgBg(conf, roi_num, roi_max_overlap_ptr, rois_index_ptr, fg_start_index,
-                        bg_start_index);
-    ComputeTargetAndWriteOut(rois_index_ptr, roi_nearest_gt_index_ptr, rpn_rois_ptr, gt_boxes_ptr,
-                             gt_labels_ptr, rois_ptr, labels_ptr, bbox_targets_ptr,
+    ScoredBBoxSlice<T> rois_slice(roi_num, rpn_rois_ptr, roi_max_overlap_ptr, rois_index_ptr); 
+    rois_slice.DescSortByScore();
+    int64_t fg_sample_size = 0;
+    ScoredBBoxSlice<T> fg_slice = ForegroundChoice(conf, rois_slice, fd_sample_size);
+    ScoredBBoxSlice<T> bg_slice = BackgroundChoice(conf, rois_slice, fd_sample_size);
+    ComputeTargetAndWriteOut(roi_nearest_gt_index_ptr, gt_boxes_ptr, gt_labels_ptr, rois_ptr, labels_ptr, bbox_targets_ptr,
                              inside_weights_ptr, outside_weights_ptr);
   }
 }
