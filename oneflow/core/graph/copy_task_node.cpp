@@ -5,7 +5,17 @@ namespace oneflow {
 
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::string name("copy_out");
-  auto out_regst = ProduceRegst(name, true);
+  TaskType dst_node_task_type = SoleOutEdge()->dst_node()->GetTaskType();
+  std::shared_ptr<RegstDesc> out_regst;
+  CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
+  if (copy_hd != nullptr && copy_hd->copy_type() == CopyHdOpConf::H2D
+      && (dst_node_task_type == TaskType::kReduceLocalAdd
+          || dst_node_task_type == TaskType::kReduceGlobalAdd
+          || dst_node_task_type == TaskType::kReduceGather)) {
+    out_regst = ProduceRegst(name, true);
+  } else {
+    out_regst = ProduceRegst(name, false);
+  }
   for (TaskEdge* edge : out_edges()) { edge->AddRegst(name, out_regst); }
 }
 
