@@ -5,7 +5,7 @@ namespace oneflow {
 
 void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
   std::string name("copy_out");
-  TaskType dst_node_task_type = SoleOutEdge()->dst_node()->GetTaskType();
+  TaskType dst_node_task_type = (*out_edges().begin())->dst_node()->GetTaskType();
   std::shared_ptr<RegstDesc> out_regst;
   CopyHdTaskNode* copy_hd = dynamic_cast<CopyHdTaskNode*>(this);
   if (copy_hd != nullptr && copy_hd->copy_type() == CopyHdOpConf::H2D
