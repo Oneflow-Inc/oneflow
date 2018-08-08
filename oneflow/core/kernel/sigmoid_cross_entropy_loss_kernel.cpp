@@ -11,16 +11,16 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
   // average_loss is the final result
-  Blob* loss = BnInOp2Blob("original_loss");
-  Blob* average_loss = BnInOp2Blob("loss");
+  Blob* loss_buf = BnInOp2Blob("loss_buf");
+  Blob* loss = BnInOp2Blob("loss");
   Blob* count = BnInOp2Blob("count");
   Blob* normalize = BnInOp2Blob("normalize");
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
 
   SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, conf, prediction->shape().At(0), prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), loss->mut_dptr<PredType>(), count->mut_dptr<PredType>(),
-      normalize->mut_dptr<PredType>(), average_loss->mut_dptr<PredType>());
+      label->dptr<LabelType>(), loss_buf->mut_dptr<PredType>(), count->mut_dptr<PredType>(),
+      normalize->mut_dptr<PredType>(), loss->mut_dptr<PredType>());
 
   if (prediction_diff != nullptr) {
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(), 0,
@@ -42,8 +42,8 @@ SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::GetLossKernelCo
 template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
-                      const PredType* prediction, const LabelType* label, PredType* loss,
-                      PredType* count, PredType* normalize, PredType* average_loss) {
+                      const PredType* prediction, const LabelType* label, PredType* loss_buf,
+                      PredType* count, PredType* normalize, PredType* loss) {
     UNIMPLEMENTED();
   }
 
