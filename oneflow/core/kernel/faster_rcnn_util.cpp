@@ -107,6 +107,15 @@ void ScoredBBoxSlice<T>::DescSortByScore(bool init_index) {
 }
 
 template<typename T>
+void ScoredBBoxSlice<T>::Sort(
+    const std::function<bool(const T, const T, const BBox<T>&, const BBox<T>&)>& Compare) {
+  std::sort(index_slice_, index_slice_ + available_len_, [&](int32_t l_idx, int32_t r_idx) {
+    const BBox<T>* bbox = BBox<T>::Cast(bbox_ptr_);
+    return Compare(score_ptr_[l_idx], score_ptr_[r_idx], bbox[l_idx], bbox[r_idx]);
+  });
+}
+
+template<typename T>
 void ScoredBBoxSlice<T>::Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered) {
   int32_t keep_num = 0;
   FOR_RANGE(int64_t, i, 0, available_len_) {
@@ -140,7 +149,7 @@ void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& 
   }
   Truncate(keep_num);
 
-  CHECK_LE(available_len(), pre_nms_slice.available_len());
+  CHECK_LE(available_len_, pre_nms_slice.available_len());
 }
 
 #define INITIATE_SCORED_BBOX_SLICE(T, type_cpp) template class ScoredBBoxSlice<T>;

@@ -680,6 +680,7 @@ message BboxNmsAndLimitOpConf {
   required int32 image_width = 12;
   required bool bbox_vote_enabled = 8;
   optional BboxVoteConf bbox_vote = 9;
+  required float threshold = 13;
 }
 
 message AnchorGeneratorConf {

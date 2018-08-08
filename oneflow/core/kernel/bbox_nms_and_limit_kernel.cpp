@@ -108,23 +108,24 @@ void BboxNmsAndLimitKernel<T>::ForwardDataId(
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
   const int64_t image_num = BnInOp2Blob("rois")->shape().At(0);
   Blob* bbox_blob = BnInOp2Blob("bbox");
+  Blob* scores_blob = BnInOp2Blob("scores");
   FOR_RANGE(int64_t, i, 0, image_num) {
-    BroadCastBboxTransform(i, BnInOp2Blob);
+    BroadcastBboxTransform(i, BnInOp2Blob);
     ClipBox(bbox_blob);
     ScoredBBoxSlice<T> slice = NmsAndTryVote(i, BnInOp2Blob);
-    Limit(op_conf().bbox_nms_and_limit_conf().detections_per_im(), slice);
+    Limit(conf.detections_per_im(), conf.threshold(), slice);
     // WriteOutputToOFRecord(i, bbox_blob->shape().At(0), slice, BnInOp2Blob("labeled_bbox"),
     //                       BnInOp2Blob("bbox_score"));
-    WriteToOutput(i, bbox_blob->shape().At(0),
-                  op_conf().bbox_nms_and_limit_conf().detections_per_im(), slice,
+    WriteToOutput(i, bbox_blob->shape().At(1), conf.detections_per_im(), slice,
                   BnInOp2Blob("fixed_labeled_bbox"), BnInOp2Blob("fixed_bbox_score"));
   }
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
+void BboxNmsAndLimitKernel<T>::BroadcastBboxTransform(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* rois_blob = BnInOp2Blob("rois");
   const Blob* bbox_delta_blob = BnInOp2Blob("bbox_delta");
@@ -155,13 +156,16 @@ void BboxNmsAndLimitKernel<T>::ClipBox(Blob* bbox_blob) const {
 template<typename T>
 ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     const int64_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  // input: scores (n * r, c) <=> (n, r * c)
   const Blob* scores_blob = BnInOp2Blob("scores");
+  // datatmp: bbox (r, c, 4)
   Blob* bbox_blob = BnInOp2Blob("bbox");
+  // datatmp: voting_score_blob (r, c)
   Blob* voting_score_blob = BnInOp2Blob("voting_score");
   const int64_t boxes_num = bbox_blob->shape().At(0);
   const int64_t class_num = scores_blob->shape().At(1);
   const T* bbox_ptr = bbox_blob->dptr<T>();
-  const T* scores_ptr = scores_blob->dptr<T>(im_index * boxes_num);
+  const T* scores_ptr = scores_blob->dptr<T>(im_index * boxes_num * class_num);
   Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice");
   Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice");
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
@@ -186,7 +190,7 @@ ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
     all_class_slice.Concat(post_nms_slice);
   }
   if (!conf.bbox_vote_enabled()) {
-    std::memcpy(voting_score_blob->mut_dptr<T>(), scores_ptr, boxes_num * class_num);
+    std::memcpy(voting_score_blob->mut_dptr<T>(), scores_ptr, boxes_num * class_num * sizeof(T));
   }
   return all_class_slice;
 }
@@ -236,9 +240,15 @@ void BboxNmsAndLimitKernel<T>::VoteBbox(
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::Limit(const int32_t limit_num, ScoredBBoxSlice<T>& slice) const {
+void BboxNmsAndLimitKernel<T>::Limit(const int32_t limit_num, const float thresh,
+                                     ScoredBBoxSlice<T>& slice) const {
   slice.DescSortByScore(false);
   slice.Truncate(limit_num);
+  slice.Filter([&](const T score, const BBox<T>* bbox) { return score < thresh; });
+  // slice.Sort([&](const T l_score, const T r_score, const BBox<T>& l_bbox, const BBox<T>& r_bbox)
+  // {
+  //   return l_bbox.Area() > r_bbox.Area();
+  // });
 }
 
 template<typename T>
@@ -263,11 +273,32 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(const int64_t im_index,
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::WriteToOutput(const int64_t im_index, const int64_t boxes_num,
+void BboxNmsAndLimitKernel<T>::WriteToOutput(const int64_t im_index, const int64_t class_num,
                                              const int64_t limit_num,
                                              const ScoredBBoxSlice<T>& slice,
                                              Blob* fixed_labeled_bbox_blob,
                                              Blob* fixed_bbox_score_blob) const {
+  if (slice.available_len() == 0) {
+    CHECK_GT(limit_num, 0);
+    const int32_t index = slice.index_slice()[0];
+    const BBox<T>* bbox = &(BBox<T>::Cast(slice.bbox_ptr())[index]);
+    const T score = slice.score_ptr()[index];
+    FOR_RANGE(int64_t, i, 0, limit_num) {
+      // labeled_bbox
+      int32_t* labeled_bbox_ptr = fixed_labeled_bbox_blob->mut_dptr<int32_t>(im_index, i);
+      BBox<int32_t>* labeled_bbox = BBox<int32_t>::MutCast(labeled_bbox_ptr);
+      labeled_bbox->set_x1(bbox->x1());
+      labeled_bbox->set_y1(bbox->y1());
+      labeled_bbox->set_x2(bbox->x2());
+      labeled_bbox->set_y2(bbox->y2());
+      labeled_bbox_ptr[4] = index % class_num;
+      // bbox_score
+      T* bbox_score_ptr = fixed_bbox_score_blob->mut_dptr<T>(im_index);
+      bbox_score_ptr[i] = score;
+    }
+    return;
+  }
+
   CHECK_GT(slice.available_len(), 0);
   CHECK_GT(limit_num, 0);
   FOR_RANGE(int64_t, i, 0, limit_num) {
@@ -280,7 +311,7 @@ void BboxNmsAndLimitKernel<T>::WriteToOutput(const int64_t im_index, const int64
     labeled_bbox->set_y1(bbox->y1());
     labeled_bbox->set_x2(bbox->x2());
     labeled_bbox->set_y2(bbox->y2());
-    labeled_bbox_ptr[4] = slice.GetSlice(slice_i) % boxes_num;
+    labeled_bbox_ptr[4] = slice.GetSlice(slice_i) % class_num;
     // bbox_score
     T* bbox_score_ptr = fixed_bbox_score_blob->mut_dptr<T>(im_index);
     bbox_score_ptr[i] = slice.GetScore(slice_i);
