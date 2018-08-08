@@ -140,7 +140,7 @@ class ScoredBBoxSlice final {
   void Concat(const ScoredBBoxSlice& other);
   void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
   ScoredBBoxSlice<T> Slice(const int64_t begin, const int64_t end);
-  void Sample(const int64_t sample_size);
+  void Shuffle();
 
   inline int32_t GetSlice(int64_t i) const {
     CHECK_LE(i, available_len_);

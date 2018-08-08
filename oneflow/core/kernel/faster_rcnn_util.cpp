@@ -129,12 +129,10 @@ ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int64_t begin, const int64_t 
 }
 
 template<typename T>
-void ScoredBBoxSlice<T>::Sample(const int64_t sample_size) {
-  if (available_len_ <= sample_size) { return; }
+void ScoredBBoxSlice<T>::Shuffle() {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::shuffle(index_slice_, index_slice_ + available_len_, gen);
-  available_len_ = sample_size;
 }
 
 template<typename T>
