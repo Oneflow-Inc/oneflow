@@ -125,6 +125,8 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
+  void ForEachRegst(const std::function<void(std::shared_ptr<RegstDesc>)>& Handler) const;
+  std::list<std::weak_ptr<RegstDesc>> GetAllRegsts() const;
 
   void AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst);
 

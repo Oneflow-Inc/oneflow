@@ -6,7 +6,10 @@ namespace oneflow {
 void SinkCompTaskNode::ProduceAllRegstsAndBindEdges() {}
 
 void SinkCompTaskNode::ConsumeAllRegsts() {
-  for (TaskEdge* edge : in_edges()) { ConsumeRegst("in", edge->GetSoleRegst()); }
+  for (TaskEdge* edge : in_edges()) {
+    edge->ForEachRegst(
+        [&](std::shared_ptr<RegstDesc> regst_desc) { ConsumeRegst("in", regst_desc); });
+  }
 }
 
 void SinkCompTaskNode::BuildExecGphAndRegst() {
