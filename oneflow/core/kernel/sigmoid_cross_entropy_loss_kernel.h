@@ -22,10 +22,10 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil {
   static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                       const PredType* prediction, const LabelType* label, PredType* loss_buf,
-                      PredType* count, PredType* normalize, PredType* loss);
+                      PredType* count, PredType* label_num, PredType* loss);
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
-                       const PredType* prediction, const LabelType* label, PredType* pred_diff,
-                       const PredType* normalize);
+                       const PredType* prediction, const LabelType* label,
+                       const PredType* label_num, PredType* pred_diff);
 };
 
 }  // namespace oneflow
