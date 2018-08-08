@@ -251,7 +251,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
 
   // gather
   {
-    auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
+    auto& consumed_regsts = reduce_task_nodes.gather->consumed_regsts();
     CHECK_EQ(parallel_num, consumed_regsts.size());
     for (const auto& kv : consumed_regsts) {
       int64_t in_paralle_id = oneflow_cast<int64_t>(kv.first.substr(3));
@@ -266,8 +266,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
       }
     }
 
-    std::shared_ptr<RegstDesc> produced_regst =
-        reduce_task_nodes.global_add->GetProducedRegst("out");
+    std::shared_ptr<RegstDesc> produced_regst = reduce_task_nodes.gather->GetProducedRegst("out");
     produced_regst->set_mem_shared_id(mem_shared_id);
     produced_regst->set_mem_shared_offset(0);
   }
@@ -284,7 +283,7 @@ void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_
                                          parallel_num - 1);
   } else {
     BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.scatter, reduce_task_nodes.local_add,
-                                         parallel_num - 1);
+                                         parallel_num - machine_num);
     BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.local_add, reduce_task_nodes.global_add,
                                          machine_num - 1);
   }
