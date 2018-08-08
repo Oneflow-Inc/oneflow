@@ -346,7 +346,11 @@ void OpKernelTestCase::set_default_data_type(DataType default_data_type) {
   });
 }
 
-void OpKernelTestCase::UpdateGlobalJobDesc() { TODO(); }
+void OpKernelTestCase::UpdateGlobalJobDesc() {
+  if (Global<JobDesc>::Get()) { Global<JobDesc>::Delete(); }
+  Global<JobDesc>::New();
+  Global<JobDesc>::Get()->SetJobConf(job_conf_);
+}
 
 void OpKernelTestCase::InitBeforeRun() {
   for (const auto& pair : bn_in_op2blob_) {
