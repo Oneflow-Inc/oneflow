@@ -23,7 +23,7 @@ void ProposalKernel<T>::ForwardDataContent(
   Blob* proposals_blob = BnInOp2Blob("proposals");
   const ProposalOpConf& conf = op_conf().proposal_conf();
   const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
-  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_ws();
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
   const int64_t num_images = class_prob_blob->shape().At(0);
   const int64_t height = class_prob_blob->shape().At(1);
   const int64_t width = class_prob_blob->shape().At(2);

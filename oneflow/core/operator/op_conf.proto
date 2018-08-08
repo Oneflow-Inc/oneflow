@@ -672,7 +672,7 @@ message BboxNmsAndLimitOpConf {
   required string labeled_bbox = 4;
   required string bbox_score = 5;
   required float score_threshold = 6;
-  required BBoxRegressionWeights bbox_reg_ws = 7;
+  required BBoxRegressionWeights bbox_reg_weights = 7;
   required float nms_threshold = 8;
   required int32 detections_per_im = 9;
   required int32 image_height = 10;
@@ -695,7 +695,7 @@ message ProposalOpConf {
   required string rois = 3;
   required string roi_probs = 4;
   required AnchorGeneratorConf anchors_generator_conf = 5;
-  required BBoxRegressionWeights bbox_reg_ws = 6;
+  required BBoxRegressionWeights bbox_reg_weights = 6;
   required int32 min_size = 7;
   required int32 pre_nms_top_n = 8;
   required int32 post_nms_top_n = 9;

@@ -125,7 +125,7 @@ void BboxNmsAndLimitKernel<T>::BroadCastBboxTransform(
   CHECK_EQ(rois_blob->shape().At(1), rois_num);
   CHECK_EQ(bbox_delta_blob->shape().elem_cnt(), rois_blob->shape().elem_cnt() * class_num);
   CHECK_EQ(bbox_delta_blob->shape().At(0), rois_blob->shape().At(0) * rois_num);
-  const BBoxRegressionWeights& bbox_reg_ws = op_conf().bbox_nms_and_limit_conf().bbox_reg_ws();
+  const BBoxRegressionWeights& bbox_reg_ws = op_conf().bbox_nms_and_limit_conf().bbox_reg_weights();
   // bbox broadcast
   FOR_RANGE(int64_t, i, 1, rois_num) {
     const BBox<T>* roi_bbox = BBox<T>::Cast(rois_blob->dptr<T>(im_index, i));
