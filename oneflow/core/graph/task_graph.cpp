@@ -93,10 +93,22 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
   }
 }
 
+struct ReduceTaskNodes {
+  CompTaskNode* scatter;
+  CompTaskNode* local_add;
+  CompTaskNode* global_add;
+  CompTaskNode* gather;
+
+  ReduceTaskNodes() : scatter(nullptr), local_add(nullptr), global_add(nullptr), gather(nullptr) {}
+};
+
 void TaskGraph::EnableMemSharingInReduceStruct() {
   HashMap<CompTaskNode*, ReduceTaskNodes> bw2reduce_tasks;
   CollectReduceTaskNodes(&bw2reduce_tasks);
-  for (auto& pair : bw2reduce_tasks) { EnableMemSharingInOneReduce(pair.second); }
+  for (auto& pair : bw2reduce_tasks) {
+    EnableMemSharingInOneReduce(pair.second);
+    AddCtrlEdge4MemSharingInOneReduce(pair.second);
+  }
 }
 
 void TaskGraph::CollectReduceTaskNodes(
@@ -213,7 +225,11 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   // global add
   {
     auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
-    CHECK_EQ(machine_num, consumed_regsts.size());
+    if (reduce_task_nodes.local_add) {
+      CHECK_EQ(machine_num, consumed_regsts.size());
+    } else {
+      CHECK_EQ(parallel_num, consumed_regsts.size());
+    }
     for (const auto& kv : consumed_regsts) {
       int64_t in_paralle_id = oneflow_cast<int64_t>(kv.first.substr(3));
       CHECK_EQ(1, kv.second.size());
@@ -254,6 +270,69 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
         reduce_task_nodes.global_add->GetProducedRegst("out");
     produced_regst->set_mem_shared_id(mem_shared_id);
     produced_regst->set_mem_shared_offset(0);
+  }
+}
+
+void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      reduce_task_nodes.scatter->logical_node()->parallel_desc();
+  int64_t parallel_num = parallel_desc->parallel_num();
+  int64_t machine_num = parallel_desc->sorted_machine_ids().size();
+
+  if (reduce_task_nodes.local_add == nullptr) {
+    BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.scatter, reduce_task_nodes.global_add,
+                                         parallel_num - 1);
+  } else {
+    BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.scatter, reduce_task_nodes.local_add,
+                                         parallel_num - 1);
+    BuildCtrlRegstBetweenReduceCopyNodes(reduce_task_nodes.local_add, reduce_task_nodes.global_add,
+                                         machine_num - 1);
+  }
+
+  // global_add -> gather
+  CHECK_EQ(2, reduce_task_nodes.global_add->out_edges().size());
+  TaskNode* global_add_copy_d2h = nullptr;
+  for (TaskEdge* out_edge : reduce_task_nodes.global_add->out_edges()) {
+    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
+      global_add_copy_d2h = out_edge->dst_node();
+    }
+  }
+
+  for (TaskEdge* in_edge : reduce_task_nodes.gather->in_edges()) {
+    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
+      global_add_copy_d2h->BuildCtrlRegstDesc(in_edge->src_node());
+    }
+  }
+}
+
+void TaskGraph::BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
+                                                     const CompTaskNode* dst_reduce,
+                                                     int64_t copy_node_num) {
+  struct ReduceCopyNodePair {
+    TaskNode* copy_h2d;
+    TaskNode* copy_d2h;
+    ReduceCopyNodePair() : copy_h2d(nullptr), copy_d2h(nullptr) {}
+  };
+  HashMap<int64_t, ReduceCopyNodePair> mem_shared_offset2copy_nodes;
+
+  for (TaskEdge* out_edge : src_reduce->out_edges()) {
+    if (out_edge->dst_node()->GetTaskType() == TaskType::kCopyHd) {
+      int64_t offset = out_edge->GetSoleRegst()->mem_shared_offset();
+      mem_shared_offset2copy_nodes[offset].copy_d2h = out_edge->dst_node();
+    }
+  }
+  CHECK_EQ(copy_node_num, mem_shared_offset2copy_nodes.size());
+
+  for (TaskEdge* in_edge : dst_reduce->in_edges()) {
+    if (in_edge->src_node()->GetTaskType() == TaskType::kCopyHd) {
+      int64_t offset = in_edge->GetSoleRegst()->mem_shared_offset();
+      CHECK(mem_shared_offset2copy_nodes.find(offset) != mem_shared_offset2copy_nodes.end());
+      mem_shared_offset2copy_nodes.at(offset).copy_h2d = in_edge->src_node();
+    }
+  }
+
+  for (const auto& kv : mem_shared_offset2copy_nodes) {
+    kv.second.copy_d2h->BuildCtrlRegstDesc(kv.second.copy_h2d);
   }
 }
 
