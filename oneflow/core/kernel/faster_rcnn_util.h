@@ -44,16 +44,22 @@ class BBox final {
     return inter / (Area() + other->Area() - inter);
   }
 
-  void Transform(const BBox<T>* bbox, const BBoxDelta<T>* delta) {
+  void Transform(const BBox<T>* bbox, const BBoxDelta<T>* delta,
+                 const BBoxRegressionWeights& bbox_reg_ws) {
     const float w = bbox->x2() - bbox->x1() + 1.0f;
     const float h = bbox->y2() - bbox->y1() + 1.0f;
     const float ctr_x = bbox->x1() + 0.5f * w;
     const float ctr_y = bbox->y1() + 0.5f * h;
 
-    const float pred_ctr_x = delta->dx() * w + ctr_x;
-    const float pred_ctr_y = delta->dy() * h + ctr_y;
-    const float pred_w = std::exp(delta->dw()) * w;
-    const float pred_h = std::exp(delta->dh()) * h;
+    const float dx = delta->dx() / bbox_reg_ws.weight_x();
+    const float dy = delta->dy() / bbox_reg_ws.weight_y();
+    const float dw = delta->dw() / bbox_reg_ws.weight_w();
+    const float dh = delta->dh() / bbox_reg_ws.weight_h();
+
+    const float pred_ctr_x = dx * w + ctr_x;
+    const float pred_ctr_y = dy * h + ctr_y;
+    const float pred_w = std::exp(dw) * w;
+    const float pred_h = std::exp(dh) * h;
 
     set_x1(pred_ctr_x - 0.5f * pred_w);
     set_y1(pred_ctr_y - 0.5f * pred_h);
@@ -92,7 +98,8 @@ class BBoxDelta final {
   inline void set_dw(T dw) { delta_[2] = dw; }
   inline void set_dh(T dh) { delta_[3] = dh; }
 
-  void TransformInverse(const BBox<T>* bbox, const BBox<T>* target_bbox) {
+  void TransformInverse(const BBox<T>* bbox, const BBox<T>* target_bbox,
+                        const BBoxRegressionWeights& bbox_reg_ws) {
     float w = bbox->x2() - bbox->x1() + 1.0f;
     float h = bbox->y2() - bbox->y1() + 1.0f;
     float ctr_x = bbox->x1() + 0.5f * w;
@@ -103,10 +110,10 @@ class BBoxDelta final {
     float t_ctr_x = target_bbox->x1() + 0.5f * t_w;
     float t_ctr_y = target_bbox->y1() + 0.5f * t_h;
 
-    set_dx((t_ctr_x - ctr_x) / w);
-    set_dy((t_ctr_y - ctr_y) / h);
-    set_dw(std::log(t_w / w));
-    set_dh(std::log(t_h / h));
+    set_dx(bbox_reg_ws.weight_x() * (t_ctr_x - ctr_x) / w);
+    set_dy(bbox_reg_ws.weight_y() * (t_ctr_y - ctr_y) / h);
+    set_dw(bbox_reg_ws.weight_w() * std::log(t_w / w));
+    set_dh(bbox_reg_ws.weight_h() * std::log(t_h / h));
   }
 
  private:
@@ -129,8 +136,11 @@ class ScoredBBoxSlice final {
 
   void Truncate(int64_t len);
   void TruncateByThreshold(float thresh);
+  int64_t FindByThreshold(const float thresh);
   void Concat(const ScoredBBoxSlice& other);
   void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
+  ScoredBBoxSlice<T> Slice(const int64_t begin, const int64_t end);
+  void Shuffle();
 
   inline int32_t GetSlice(int64_t i) const {
     CHECK_LE(i, available_len_);
@@ -165,9 +175,10 @@ class ScoredBBoxSlice final {
 template<typename T>
 struct FasterRcnnUtil final {
   static void GenerateAnchors(const AnchorGeneratorConf& conf, Blob* anchors_blob);
-  static void BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas, T* pred_bboxes);
+  static void BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas,
+                            const BBoxRegressionWeights& bbox_reg_ws, T* pred_bboxes);
   static void BboxTransformInv(int64_t boxes_num, const T* bboxes, const T* target_bboxes,
-                               T* deltas);
+                               const BBoxRegressionWeights& bbox_reg_ws, T* deltas);
   static void ClipBoxes(int64_t boxes_num, const int64_t image_height, const int64_t image_width,
                         T* bboxes);
 };

@@ -672,12 +672,13 @@ message BboxNmsAndLimitOpConf {
   required string labeled_bbox = 4;
   required string bbox_score = 5;
   required float score_threshold = 6;
-  required float nms_threshold = 7;
-  required int32 detections_per_im = 10;
-  required int32 image_height = 11;
-  required int32 image_width = 12;
-  required bool bbox_vote_enabled = 8;
-  optional BboxVoteConf bbox_vote = 9;
+  required BBoxRegressionWeights bbox_reg_weights = 7;
+  required float nms_threshold = 8;
+  required int32 detections_per_im = 9;
+  required int32 image_height = 10;
+  required int32 image_width = 11;
+  required bool bbox_vote_enabled = 12;
+  optional BboxVoteConf bbox_vote = 13;
 }
 
 message AnchorGeneratorConf {
@@ -694,10 +695,18 @@ message ProposalOpConf {
   required string rois = 3;
   required string roi_probs = 4;
   required AnchorGeneratorConf anchors_generator_conf = 5;
-  required int32 min_size = 6;
-  required int32 pre_nms_top_n = 7;
-  required int32 post_nms_top_n = 8;
-  required float nms_threshold = 9;
+  required BBoxRegressionWeights bbox_reg_weights = 6;
+  required int32 min_size = 7;
+  required int32 pre_nms_top_n = 8;
+  required int32 post_nms_top_n = 9;
+  required float nms_threshold = 10;
+}
+
+message BBoxRegressionWeights {
+  required float weight_x = 1 [default = 1.0]; 
+  required float weight_y = 2 [default = 1.0];
+  required float weight_w = 3 [default = 1.0];
+  required float weight_h = 4 [default = 1.0];
 }
 
 message RoIPoolingOpConf {
