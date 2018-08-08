@@ -246,13 +246,13 @@ typename std::enable_if<IsRecordType<T>::value>::type ForwardBoxingDataContent(
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
       && boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
     CHECK_EQ(boxing_conf.concat_box().axis(), boxing_conf.split_box().axis());
-    RecordContentIterator<OFRecord> in_ter(BnInOp2Blob, &op_attribute.input_bns(),
-                                           boxing_conf.concat_box().axis());
-    RecordContentIterator<OFRecord> out_ter(BnInOp2Blob, &op_attribute.output_bns(),
-                                            boxing_conf.split_box().axis());
+    RecordContentIterator<T> in_ter(BnInOp2Blob, &op_attribute.input_bns(),
+                                    boxing_conf.concat_box().axis());
+    RecordContentIterator<T> out_ter(BnInOp2Blob, &op_attribute.output_bns(),
+                                     boxing_conf.split_box().axis());
     while (true) {
-      OFRecord* in_record = in_ter.GetNext();
-      OFRecord* out_record = out_ter.GetNext();
+      T* in_record = in_ter.GetNext();
+      T* out_record = out_ter.GetNext();
       if (in_record == nullptr && out_record == nullptr) { break; }
       if (in_record != nullptr && out_record != nullptr) {
         *out_record = *in_record;
