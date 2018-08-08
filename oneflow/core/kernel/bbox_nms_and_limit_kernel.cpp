@@ -167,7 +167,7 @@ ScoredBBoxSlice<T> BboxNmsAndLimitKernel<T>::NmsAndTryVote(
   const int64_t boxes_num = bbox_blob->shape().At(0);
   const int64_t class_num = scores_blob->shape().At(1);
   const T* bbox_ptr = bbox_blob->dptr<T>();
-  const T* scores_ptr = scores_blob->dptr<T>(im_index * boxes_num * class_num);
+  const T* scores_ptr = scores_blob->dptr<T>(im_index * boxes_num);
   Blob* pre_nms_index_slice_blob = BnInOp2Blob("pre_nms_index_slice");
   Blob* post_nms_index_slice_blob = BnInOp2Blob("post_nms_index_slice");
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
