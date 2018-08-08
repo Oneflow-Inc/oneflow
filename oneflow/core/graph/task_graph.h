@@ -9,6 +9,15 @@
 
 namespace oneflow {
 
+struct ReduceTaskNodes {
+  CompTaskNode* scatter;
+  CompTaskNode* local_add;
+  CompTaskNode* global_add;
+  CompTaskNode* gather;
+
+  ReduceTaskNodes() : scatter(nullptr), local_add(nullptr), global_add(nullptr), gather(nullptr) {}
+};
+
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -19,6 +28,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void AddOrderingCtrlEdgeInSameChain();
+
+  void EnableMemSharingInReduceStruct();
+  void CollectReduceTaskNodes(HashMap<CompTaskNode*, ReduceTaskNodes>*) const;
+  CompTaskNode* FindSuccReduceTaskNode(CompTaskNode*, TaskType) const;
+  void EnableMemSharingInOneReduce(const ReduceTaskNodes&);
+
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();

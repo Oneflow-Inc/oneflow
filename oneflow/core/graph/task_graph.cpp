@@ -7,6 +7,7 @@
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/reduce_global_add_compute_task_node.h"
 #include "oneflow/core/graph/reduce_gather_compute_task_node.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 
 namespace oneflow {
 
@@ -89,6 +90,170 @@ void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
       iter->second->BuildCtrlRegstDescIfNeed(node);
       iter->second = node;
     }
+  }
+}
+
+void TaskGraph::EnableMemSharingInReduceStruct() {
+  HashMap<CompTaskNode*, ReduceTaskNodes> bw2reduce_tasks;
+  CollectReduceTaskNodes(&bw2reduce_tasks);
+  for (auto& pair : bw2reduce_tasks) { EnableMemSharingInOneReduce(pair.second); }
+}
+
+void TaskGraph::CollectReduceTaskNodes(
+    HashMap<CompTaskNode*, ReduceTaskNodes>* bw2reduce_tasks) const {
+  ForEachNode([&](TaskNode* task_node) {
+    if (IsBackwardTaskType(task_node->GetTaskType()) == false) { return; }
+    if (task_node->device_type() != DeviceType::kGPU) { return; }
+    CompTaskNode* bw_task_node = dynamic_cast<CompTaskNode*>(task_node);
+    CHECK(bw_task_node != nullptr);
+    if (bw_task_node->logical_node()->HasOpWithModelBlob() == false) { return; }
+    if (bw_task_node->parallel_ctx()->policy() != kDataParallel
+        || bw_task_node->parallel_ctx()->parallel_num() < 2) {
+      return;
+    }
+
+    ReduceTaskNodes& reduce_task_nodes = (*bw2reduce_tasks)[bw_task_node];
+    CompTaskNode* tmp_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
+    if (tmp_task_node != nullptr) {
+      reduce_task_nodes.scatter = FindSuccReduceTaskNode(tmp_task_node, TaskType::kReduceScatter);
+    } else {
+      reduce_task_nodes.scatter = FindSuccReduceTaskNode(bw_task_node, TaskType::kReduceScatter);
+    }
+    tmp_task_node = FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
+    if (tmp_task_node != nullptr) {
+      reduce_task_nodes.local_add = tmp_task_node;
+      reduce_task_nodes.global_add =
+          FindSuccReduceTaskNode(reduce_task_nodes.local_add, TaskType::kReduceGlobalAdd);
+    } else {
+      reduce_task_nodes.global_add =
+          FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceGlobalAdd);
+    }
+    reduce_task_nodes.gather =
+        FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather);
+
+    CHECK(reduce_task_nodes.scatter != nullptr);
+    CHECK(reduce_task_nodes.global_add != nullptr);
+    CHECK(reduce_task_nodes.gather != nullptr);
+  });
+}
+
+CompTaskNode* TaskGraph::FindSuccReduceTaskNode(CompTaskNode* task_node, TaskType type) const {
+  for (TaskEdge* out_edge : task_node->out_edges()) {
+    TaskNode* dst_node = out_edge->dst_node();
+    if (dst_node->GetTaskType() == type) { return dynamic_cast<CompTaskNode*>(dst_node); }
+  }
+  return nullptr;
+}
+
+void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
+  std::shared_ptr<const ParallelDesc> parallel_desc =
+      reduce_task_nodes.scatter->logical_node()->parallel_desc();
+  int64_t parallel_num = parallel_desc->parallel_num();
+  int64_t dev_num_of_each_machine = parallel_desc->device_num_of_each_machine();
+  int64_t machine_num = parallel_desc->sorted_machine_ids().size();
+  CHECK_EQ(parallel_num, machine_num * dev_num_of_each_machine);
+  int64_t parallel_id = reduce_task_nodes.scatter->parallel_ctx()->parallel_id();
+
+  int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
+  std::vector<int64_t> blob_index2offset(parallel_num, 0);
+
+  // scatter
+  {
+    std::shared_ptr<RegstDesc> consumed_regst =
+        reduce_task_nodes.scatter->GetSoleConsumedRegst("in");
+    consumed_regst->set_mem_shared_id(mem_shared_id);
+    consumed_regst->set_mem_shared_offset(0);
+    int64_t total_model_byte_size =
+        RtBlobDesc(*(consumed_regst->GetBlobDesc(GenPackedLbi()))).ByteSizeOfDataContentField();
+    CHECK_EQ(0, total_model_byte_size % parallel_num);
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      blob_index2offset.at(i) = total_model_byte_size / parallel_num * i;
+    }
+
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      std::shared_ptr<RegstDesc> produced_regst =
+          reduce_task_nodes.scatter->GetProducedRegst("out_" + std::to_string(i));
+      produced_regst->set_mem_shared_id(mem_shared_id);
+      produced_regst->set_mem_shared_offset(blob_index2offset.at(i));
+    }
+  }
+
+  // local_add
+  if (reduce_task_nodes.local_add) {
+    HashSet<int64_t> in_place_blob_ids;
+    int64_t dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
+    for (int64_t i = dev_index_of_this_machine; i < parallel_num; i += dev_num_of_each_machine) {
+      in_place_blob_ids.emplace(i);
+    }
+
+    ExecNode* local_add_exec_node = reduce_task_nodes.local_add->exec_gph().SoleNode();
+    CHECK_EQ(parallel_num, local_add_exec_node->op()->input_bns().size());
+    for (int64_t i = 0; i < parallel_num; ++i) {
+      RegstDesc* in_regst =
+          local_add_exec_node->RegstDesc4BnInOp(local_add_exec_node->op()->input_bns().Get(i));
+      auto it = in_place_blob_ids.find(i);
+      if (it == in_place_blob_ids.end()) {
+        in_regst->set_mem_shared_id(mem_shared_id);
+        in_regst->set_mem_shared_offset(blob_index2offset.at(i));
+      } else {
+        CHECK_EQ(mem_shared_id, in_regst->mem_shared_id());
+        CHECK_EQ(blob_index2offset.at(i), in_regst->mem_shared_offset());
+      }
+    }
+
+    for (int64_t i = 0; i < machine_num; ++i) {
+      std::shared_ptr<RegstDesc> produced_regst =
+          reduce_task_nodes.local_add->GetProducedRegst("out_" + std::to_string(i));
+      produced_regst->set_mem_shared_id(mem_shared_id);
+      produced_regst->set_mem_shared_offset(
+          blob_index2offset.at(i * dev_num_of_each_machine + dev_index_of_this_machine));
+    }
+  }
+
+  // global add
+  {
+    auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
+    CHECK_EQ(machine_num, consumed_regsts.size());
+    for (const auto& kv : consumed_regsts) {
+      int64_t in_paralle_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      CHECK_EQ(1, kv.second.size());
+      RegstDesc* in_regst = kv.second.front().lock().get();
+      if (in_paralle_id != parallel_id) {
+        in_regst->set_mem_shared_id(mem_shared_id);
+        in_regst->set_mem_shared_offset(blob_index2offset.at(in_paralle_id));
+      } else {
+        CHECK_EQ(mem_shared_id, in_regst->mem_shared_id());
+        CHECK_EQ(blob_index2offset.at(parallel_id), in_regst->mem_shared_offset());
+      }
+    }
+
+    std::shared_ptr<RegstDesc> produced_regst =
+        reduce_task_nodes.global_add->GetProducedRegst("out");
+    produced_regst->set_mem_shared_id(mem_shared_id);
+    produced_regst->set_mem_shared_offset(blob_index2offset.at(parallel_id));
+  }
+
+  // gather
+  {
+    auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
+    CHECK_EQ(parallel_num, consumed_regsts.size());
+    for (const auto& kv : consumed_regsts) {
+      int64_t in_paralle_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      CHECK_EQ(1, kv.second.size());
+      RegstDesc* in_regst = kv.second.front().lock().get();
+      if (in_paralle_id != parallel_id) {
+        in_regst->set_mem_shared_id(mem_shared_id);
+        in_regst->set_mem_shared_offset(blob_index2offset.at(in_paralle_id));
+      } else {
+        CHECK_EQ(mem_shared_id, in_regst->mem_shared_id());
+        CHECK_EQ(blob_index2offset.at(parallel_id), in_regst->mem_shared_offset());
+      }
+    }
+
+    std::shared_ptr<RegstDesc> produced_regst =
+        reduce_task_nodes.global_add->GetProducedRegst("out");
+    produced_regst->set_mem_shared_id(mem_shared_id);
+    produced_regst->set_mem_shared_offset(0);
   }
 }
 

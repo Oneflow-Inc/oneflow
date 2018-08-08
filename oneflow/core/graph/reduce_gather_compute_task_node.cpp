@@ -13,7 +13,7 @@ void ReduceGatherCompTaskNode::ConsumeAllRegsts() {
     while (src_node->GetTaskType() != TaskType::kReduceGlobalAdd) {
       src_node = src_node->SoleInEdge()->src_node();
     }
-    CompTaskNode* reduce_global_add_node = static_cast<CompTaskNode*>(src_node);
+    CompTaskNode* reduce_global_add_node = dynamic_cast<CompTaskNode*>(src_node);
     ConsumeRegst("in_" + std::to_string(reduce_global_add_node->parallel_id()),
                  edge->GetSoleRegst());
   }
