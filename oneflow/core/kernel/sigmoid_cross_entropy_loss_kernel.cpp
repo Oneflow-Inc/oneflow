@@ -49,7 +49,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* pred_diff,
-                       PredType* normalize) {
+                       const PredType* normalize) {
     UNIMPLEMENTED();
   }
 };

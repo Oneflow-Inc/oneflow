@@ -61,7 +61,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label, PredType* pred_diff,
-                       PredType* normalize) {
+                       const PredType* normalize) {
     SigmoidCrossEntropyLossBackward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, prediction, label, pred_diff);
