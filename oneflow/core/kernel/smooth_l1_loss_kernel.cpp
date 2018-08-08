@@ -60,7 +60,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
       } else {
         in_diff[i] = x > 0 ? 1 : -1;
       }
-      in_diff[i] *= outside_weights[i];
+      in_diff[i] *= scale / instance_num;
     }
   }
 };
