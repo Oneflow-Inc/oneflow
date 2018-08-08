@@ -79,15 +79,17 @@ void ScoredBBoxSlice<T>::Truncate(int64_t len) {
 }
 
 template<typename T>
-void ScoredBBoxSlice<T>::TruncateByThreshold(float thresh) {
-  int64_t keep_num = available_len_;
+void ScoredBBoxSlice<T>::TruncateByThreshold(const float thresh) {
+  Truncate(FindByThreshold(thresh));
+}
+
+// Find first index which score less than threshold.
+template<typename T>
+int64_t ScoredBBoxSlice<T>::FindByThreshold(const float thresh) {
   FOR_RANGE(int64_t, i, 0, available_len_) {
-    if (score_ptr_[index_slice_[i]] <= thresh) {
-      keep_num = i;
-      break;
-    }
+    if (score_ptr_[index_slice_[i]] < thresh) { return i; }
   }
-  Truncate(keep_num);
+  return available_len_;
 }
 
 template<typename T>
@@ -116,6 +118,21 @@ void ScoredBBoxSlice<T>::Filter(const std::function<bool(const T, const BBox<T>*
     }
   }
   available_len_ = keep_num;
+}
+
+template<typename T>
+ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int64_t begin, const int64_t end) {
+  CHECK_GT(end, begin);
+  CHECK_GE(begin, 0);
+  CHECK_LE(end, available_len_);
+  return ScoredBBoxSlice(end - begin, bbox_ptr_, score_ptr_, index_slice_ + begin);
+}
+
+template<typename T>
+void ScoredBBoxSlice<T>::Shuffle() {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::shuffle(index_slice_, index_slice_ + available_len_, gen);
 }
 
 template<typename T>
