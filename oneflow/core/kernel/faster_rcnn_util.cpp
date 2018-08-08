@@ -46,19 +46,19 @@ void FasterRcnnUtil<T>::GenerateAnchors(const AnchorGeneratorConf& conf, Blob* a
 
 template<typename T>
 void FasterRcnnUtil<T>::BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas,
-                                      T* pred_bboxes) {
+                                      const BBoxRegressionWeights& bbox_reg_ws, T* pred_bboxes) {
   FOR_RANGE(int64_t, i, 0, boxes_num) {
     BBox<T>::MutCast(pred_bboxes)[i].Transform(BBox<T>::Cast(bboxes) + i,
-                                               BBoxDelta<T>::Cast(deltas) + i);
+                                               BBoxDelta<T>::Cast(deltas) + i, bbox_reg_ws);
   }
 }
 
 template<typename T>
 void FasterRcnnUtil<T>::BboxTransformInv(int64_t boxes_num, const T* bboxes, const T* target_bboxes,
-                                         T* deltas) {
+                                         const BBoxRegressionWeights& bbox_reg_ws, T* deltas) {
   FOR_RANGE(int64_t, i, 0, boxes_num) {
-    BBoxDelta<T>::MutCast(deltas)[i].TransformInverse(BBox<T>::Cast(bboxes) + i,
-                                                      BBox<T>::Cast(target_bboxes) + i);
+    BBoxDelta<T>::MutCast(deltas)[i].TransformInverse(
+        BBox<T>::Cast(bboxes) + i, BBox<T>::Cast(target_bboxes) + i, bbox_reg_ws);
   }
 }
 
