@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/record/record.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 
@@ -23,7 +23,13 @@ class OFRecord;
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 
-#define RECORD_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
+#define EXTRACT_RECORD_DATA_TYPE_SEQ(type_cpp, type_proto, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(type_cpp, type_proto)
+#define FEATURE_DATA_TYPE_SEQ \
+  OF_PP_FOR_EACH_TUPLE(EXTRACT_RECORD_DATA_TYPE_SEQ, FEATURE_DATA_TYPE_FEATURE_FIELD_SEQ)
+
+#define RECORD_DATA_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord) FEATURE_DATA_TYPE_SEQ
 
 #define ARITHMETIC_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ         \
