@@ -51,10 +51,10 @@ class BBox final {
     const float ctr_x = bbox->x1() + 0.5f * w;
     const float ctr_y = bbox->y1() + 0.5f * h;
 
-    const float dx = delta->dx() / bbox_reg_ws.wx();
-    const float dy = delta->dy() / bbox_reg_ws.wy();
-    const float dw = delta->dw() / bbox_reg_ws.ww();
-    const float dh = delta->dh() / bbox_reg_ws.wh();
+    const float dx = delta->dx() / bbox_reg_ws.weight_x();
+    const float dy = delta->dy() / bbox_reg_ws.weight_y();
+    const float dw = delta->dw() / bbox_reg_ws.weight_w();
+    const float dh = delta->dh() / bbox_reg_ws.weight_h();
 
     const float pred_ctr_x = dx * w + ctr_x;
     const float pred_ctr_y = dy * h + ctr_y;
@@ -110,10 +110,10 @@ class BBoxDelta final {
     float t_ctr_x = target_bbox->x1() + 0.5f * t_w;
     float t_ctr_y = target_bbox->y1() + 0.5f * t_h;
 
-    set_dx(bbox_reg_ws.wx() * (t_ctr_x - ctr_x) / w);
-    set_dy(bbox_reg_ws.wy() * (t_ctr_y - ctr_y) / h);
-    set_dw(bbox_reg_ws.ww() * std::log(t_w / w));
-    set_dh(bbox_reg_ws.wh() * std::log(t_h / h));
+    set_dx(bbox_reg_ws.weight_x() * (t_ctr_x - ctr_x) / w);
+    set_dy(bbox_reg_ws.weight_y() * (t_ctr_y - ctr_y) / h);
+    set_dw(bbox_reg_ws.weight_w() * std::log(t_w / w));
+    set_dh(bbox_reg_ws.weight_h() * std::log(t_h / h));
   }
 
  private:

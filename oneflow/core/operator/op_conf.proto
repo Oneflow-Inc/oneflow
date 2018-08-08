@@ -703,10 +703,10 @@ message ProposalOpConf {
 }
 
 message BBoxRegressionWeights {
-  required float wx = 1 [default = 1.0]; 
-  required float wy = 2 [default = 1.0];
-  required float ww = 3 [default = 1.0];
-  required float wh = 4 [default = 1.0];
+  required float weight_x = 1 [default = 1.0]; 
+  required float weight_y = 2 [default = 1.0];
+  required float weight_w = 3 [default = 1.0];
+  required float weight_h = 4 [default = 1.0];
 }
 
 message RoIPoolingOpConf {
