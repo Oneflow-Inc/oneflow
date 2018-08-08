@@ -164,10 +164,12 @@ inline uint32_t NewRandomSeed() {
 
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
-#define ENCODE_CASE_SEQ                       \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kIdentity) \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw)      \
+#define ENCODE_CASE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
+#define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                      \
+  OF_PP_SEQ_PRODUCT(ENCODE_CASE_SEQ, ARITHMETIC_DATA_TYPE_SEQ) \
+  OF_PP_SEQ_PRODUCT((EncodeCase::kIdentity), RECORD_DATA_TYPE_SEQ)
 const std::string kOFRecordMapDefaultKey = "__kOFRecordMapDefaultKey__";
 
 #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)

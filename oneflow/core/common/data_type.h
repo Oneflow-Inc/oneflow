@@ -33,8 +33,6 @@ class OFRecord;
 
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
 
-#define ENCODE_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
-
 // Type Trait: IsFloating
 
 template<typename T>
