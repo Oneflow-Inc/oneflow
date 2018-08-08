@@ -6,18 +6,16 @@ void ProposalTargetOp::InitFromOpConf() {
   CHECK(op_conf().has_proposal_target_conf());
   EnrollInputBn("rpn_rois", false);
   EnrollInputBn("gt_boxes", false);
+  EnrollInputBn("gt_label", false);
+  EnrollInputBn("im_info", false);
   EnrollOutputBn("rois", false);
   EnrollOutputBn("labels", false);
   EnrollOutputBn("bbox_targets", false);
   EnrollOutputBn("bbox_inside_weights", false);
   EnrollOutputBn("bbox_outside_weights", false);
-  EnrollDataTmpBn("all_rois");
-  EnrollDataTmpBn("bbox_overlap");
-  EnrollDataTmpBn("roi_argmax");
-  EnrollDataTmpBn("max_overlaps");
-  EnrollDataTmpBn("fg_inds");
-  EnrollDataTmpBn("bg_inds");
-  EnrollDataTmpBn("fg_bg_sample_inds");
+  EnrollDataTmpBn("roi_nearest_gt_index");
+  EnrollDataTmpBn("roi_max_overlap");
+  EnrollDataTmpBn("rois_index");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -30,46 +28,38 @@ void ProposalTargetOp::InferBlobDescs(
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
   const BlobDesc* rpn_rois_blob_desc = GetBlobDesc4BnInOp("rpn_rois");
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
-  const BlobDesc* gt_num_blob_desc = GetBlobDesc4BnInOp("gt_num");
+  const BlobDesc* im_info_blob_desc = GetBlobDesc4BnInOp("im_info");
+  const BlobDesc* gt_label_blob_desc = GetBlobDesc4BnInOp("gt_label");
   CHECK_EQ(rpn_rois_blob_desc->shape().NumAxes(), 3);
   CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 3);
   CHECK_EQ(rpn_rois_blob_desc->shape().At(0), gt_boxes_blob_desc->shape().At(0));
-  CHECK_EQ(gt_num_blob_desc->shape().At(0), gt_boxes_blob_desc->shape().At(0));
-  CHECK_EQ(rpn_rois_blob_desc->shape().At(2), 4);
-  CHECK_EQ(gt_boxes_blob_desc->shape().At(2), 5);
-  // blob shape: rpn_rois (n,roi_num,4); gt_boxes(n,gt_max_num,5); gt_num(n,1);
-  // rois(n,roi_sample,4); labels(n,roi_sample,1); bbox_target(n,roi_sample,4);
-  // bbox_inside_weights(n,roi_sample,4);
+  CHECK_EQ(im_info_blob_desc->shape().At(0), gt_boxes_blob_desc->shape().At(0));
+  CHECK_EQ(rpn_rois_blob_desc->shape().At(2), gt_boxes_blob_desc->shape().At(2));
+  CHECK_EQ(gt_label_blob_desc->shape().At(1), gt_boxes_blob_desc->shape().At(1));
+  // blob shape: rpn_rois (n,roi_num,4); gt_boxes(n,gt_max_num,4); im_info(n,3);
+  // rois(n,roi_sample,4); labels(n*roi_sample); bbox_target(n*roi_sample,4*class);
+  // bbox_inside_weights(n,roi_sample,4*class); bbox_outside_weights (n,roi_sample,4*class);
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   BlobDesc* labels_blob_desc = GetBlobDesc4BnInOp("labels");
   BlobDesc* target_blob_desc = GetBlobDesc4BnInOp("bbox_target");
   BlobDesc* inside_weights_blob_desc = GetBlobDesc4BnInOp("bbox_inside_weights");
   BlobDesc* outside_weights_blob_desc = GetBlobDesc4BnInOp("bbox_outside_weights");
-  int32_t num_roi_per_image = conf.num_roi_per_image();
+  int64_t num_roi_per_image = conf.num_roi_per_image();
+  int64_t class_num = conf.class_num();
   rois_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 4});
-  labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image, 1});
-  target_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image, 4});
+  labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image});
+  target_blob_desc->mut_shape() =
+      Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image, 4 * class_num});
   inside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
   outside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
-  // tmp blob shape: all_rois (roi_num+gt_max_num,4); overlap (roi_num,gt_num);
-  // roi_argmax(roi_num,1)  max_overlaps(roi_num,1); fg_inds(roi_num,1);
-  // bg_inds(roi_num,1); fg_bg_sample_inds(roi_sample,1)
-  BlobDesc* all_rois_blob_desc = GetBlobDesc4BnInOp("all_rois");
-  BlobDesc* overlap_blob_desc = GetBlobDesc4BnInOp("bbox_overlap");
-  BlobDesc* argmax_blob_desc = GetBlobDesc4BnInOp("roi_argmax");
-  BlobDesc* max_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
-  BlobDesc* fg_inds_blob_desc = GetBlobDesc4BnInOp("fg_inds");
-  BlobDesc* bg_inds_blob_desc = GetBlobDesc4BnInOp("bg_inds");
-  BlobDesc* fg_bg_sample_inds_blob_desc = GetBlobDesc4BnInOp("fg_bg_sample_inds");
-  all_rois_blob_desc->mut_shape() =
-      Shape({rpn_rois_blob_desc->shape().At(1) + gt_boxes_blob_desc->shape().At(1), 4});
-  overlap_blob_desc->mut_shape() =
-      Shape({rpn_rois_blob_desc->shape().At(1), gt_boxes_blob_desc->shape().At(1)});
-  argmax_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1), 1});
-  max_blob_desc->mut_shape() = Shape(argmax_blob_desc->shape());
-  fg_inds_blob_desc->mut_shape() = Shape(max_blob_desc->shape());
-  bg_inds_blob_desc->mut_shape() = Shape(max_blob_desc->shape());
-  fg_bg_sample_inds_blob_desc->mut_shape() = Shape({num_roi_per_image, 1});
+  // tmp blob shape: roi_nearest_gt_index (roi_num); roi_max_overlap(roi_num) rois_index(roi_num)
+  BlobDesc* roi_nearest_gt_index_blob_desc = GetBlobDesc4BnInOp("roi_nearest_gt_index");
+  BlobDesc* roi_max_overlap_blob_desc = GetBlobDesc4BnInOp("roi_max_overlap");
+  BlobDesc* rois_index_blob_desc = GetBlobDesc4BnInOp("rois_index");
+
+  roi_nearest_gt_index_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
+  roi_max_overlap_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
+  rois_index_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
 }
 
 REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
