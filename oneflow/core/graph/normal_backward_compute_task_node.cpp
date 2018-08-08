@@ -203,7 +203,25 @@ void NormalBackwardCompTaskNode::FixPackedBlobDescOfProducedRegst() {
   if (model_diff_regst == nullptr) { return; }
   CHECK(model_diff_regst->IsLocked());
   Shape& shape = model_diff_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
-  shape = Shape({RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num())});
+  shape = Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
+}
+
+void NormalBackwardCompTaskNode::RmUselessConsumeRelationshipToFw() {
+  bool need_in_blob = false;
+  bool need_out_blob = false;
+  mut_exec_gph().ForEachNode([&](ExecNode* node) {
+    if (node->in_edges().empty()) {
+      need_in_blob = need_in_blob || node->op()->NeedInBlobWhenBackwardIf();
+    }
+    if (node->out_edges().empty()) {
+      need_out_blob = need_out_blob || node->op()->NeedOutBlobWhenBackwardIf();
+    }
+  });
+  if (need_in_blob == false) { EraseConsumedRegstsByName("in"); }
+  if (need_out_blob == false) {
+    EraseConsumedRegstsByName("boxing_out");
+    EraseConsumedRegstsByName("121_out");
+  }
 }
 
 }  // namespace oneflow

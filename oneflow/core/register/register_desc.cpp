@@ -29,6 +29,10 @@ void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
   CHECK(consumers_.insert(new_consumer).second);
 }
 
+void RegstDesc::DeleteConsumer(const TaskNode* consumer) {
+  CHECK_EQ(consumers_.erase(consumer), 1);
+}
+
 void RegstDesc::UpdtMinRegstNumIfNeed(int32_t val) {
   CHECK_LE(val, max_register_num_);
   min_register_num_ = std::max(min_register_num_, val);

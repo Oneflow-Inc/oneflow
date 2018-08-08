@@ -15,6 +15,7 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
   TaskType GetTaskType() const override { return TaskType::kNormalBackward; }
+  void RmUselessConsumeRelationshipToFw();
 
  protected:
   void BuildExecGphAndBindOutDiffRegst();

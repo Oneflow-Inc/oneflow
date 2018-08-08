@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/graph/normal_forward_compute_task_node.h"
+#include "oneflow/core/graph/normal_backward_compute_task_node.h"
 #include "oneflow/core/graph/normal_model_update_compute_task_node.h"
 #include "oneflow/core/graph/chain_graph.h"
 #include "oneflow/core/graph/boxing_task_node.h"
@@ -197,6 +198,14 @@ bool TaskGraph::IsEndingTaskType<ReduceGatherCompTaskNode>(TaskType type) {
 }
 
 void TaskGraph::AddMutexCtrlEdgeInSameChain() { UNIMPLEMENTED(); }
+
+void TaskGraph::RmUselessConsumeRelationshipBetweenFwBw() {
+  for (TaskNode* task_node : ordered_task_nodes_) {
+    auto bw_node = dynamic_cast<NormalBackwardCompTaskNode*>(task_node);
+    if (bw_node == nullptr) { continue; }
+    bw_node->RmUselessConsumeRelationshipToFw();
+  }
+}
 
 void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   for (TaskNode* task_node : ordered_task_nodes_) {
