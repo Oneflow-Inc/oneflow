@@ -203,6 +203,68 @@ void ConcatSplitColId(std::function<Blob*(const std::string&)> BnInOp2Blob,
   }
 }
 
+template<typename T>
+typename std::enable_if<!IsRecordType<T>::value>::type ForwardBoxingDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const OpAttribute& op_attribute, const PbRpf<std::string>& obn_0) {
+  const BoxingOpConf& boxing_conf = op_attribute.op_conf().boxing_conf();
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute.input_bns(),
+                             boxing_conf.concat_box().axis(), op_attribute.output_bns(),
+                             boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute.input_bns(),
+                             boxing_conf.concat_box().axis(), obn_0, 0);
+      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute.output_bns(),
+                                DataContentIterator::GetCopyBlobFieldMthd());
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
+    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+      CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute.input_bns(), "middle");
+      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
+                             op_attribute.output_bns(), boxing_conf.split_box().axis());
+    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
+      CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute.input_bns(), obn_0.Get(0));
+      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute.output_bns(),
+                                DataContentIterator::GetCopyBlobFieldMthd());
+    } else {
+      UNIMPLEMENTED();
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+template<typename T>
+typename std::enable_if<IsRecordType<T>::value>::type ForwardBoxingDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob,
+    const OpAttribute& op_attribute, const PbRpf<std::string>& obn_0) {
+  const BoxingOpConf& boxing_conf = op_attribute.op_conf().boxing_conf();
+  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
+      && boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
+    CHECK_EQ(boxing_conf.concat_box().axis(), boxing_conf.split_box().axis());
+    RecordContentIterator<T> in_ter(BnInOp2Blob, &op_attribute.input_bns(),
+                                    boxing_conf.concat_box().axis());
+    RecordContentIterator<T> out_ter(BnInOp2Blob, &op_attribute.output_bns(),
+                                     boxing_conf.split_box().axis());
+    while (true) {
+      T* in_record = in_ter.GetNext();
+      T* out_record = out_ter.GetNext();
+      if (in_record == nullptr && out_record == nullptr) { break; }
+      if (in_record != nullptr && out_record != nullptr) {
+        *out_record = *in_record;
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -216,62 +278,7 @@ void BoxingKernel<T>::VirtualKernelInit(const ParallelContext*) {
 template<typename T>
 void BoxingKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  static_assert(!IsRecordType<T>::value, "should not be record type");
-  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
-  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
-    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
-                             boxing_conf.concat_box().axis(), op_attribute().output_bns(),
-                             boxing_conf.split_box().axis());
-    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(),
-                             boxing_conf.concat_box().axis(), obn_0_, 0);
-      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                DataContentIterator::GetCopyBlobFieldMthd());
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
-    if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
-      ConcatSplitDataContent(ctx.device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
-                             op_attribute().output_bns(), boxing_conf.split_box().axis());
-    } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      CalcSumOfBlobs<T>(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));
-      CopyFromFirstToOtherBlobs(ctx.device_ctx, BnInOp2Blob, op_attribute().output_bns(),
-                                DataContentIterator::GetCopyBlobFieldMthd());
-    } else {
-      UNIMPLEMENTED();
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-template<>
-void BoxingKernel<OFRecord>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
-  if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox
-      && boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-    CHECK_EQ(boxing_conf.concat_box().axis(), boxing_conf.split_box().axis());
-    RecordContentIterator<OFRecord> in_ter(BnInOp2Blob, &op_attribute().input_bns(),
-                                           boxing_conf.concat_box().axis());
-    RecordContentIterator<OFRecord> out_ter(BnInOp2Blob, &op_attribute().output_bns(),
-                                            boxing_conf.split_box().axis());
-    while (true) {
-      OFRecord* in_record = in_ter.GetNext();
-      OFRecord* out_record = out_ter.GetNext();
-      if (in_record == nullptr && out_record == nullptr) { break; }
-      if (in_record != nullptr && out_record != nullptr) {
-        *out_record = *in_record;
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-  } else {
-    UNIMPLEMENTED();
-  }
+  ForwardBoxingDataContent<T>(ctx, BnInOp2Blob, op_attribute(), obn_0_);
 }
 
 template<typename T>
@@ -354,6 +361,6 @@ void BoxingKernel<T>::SetMaxColId(const KernelCtx& ctx,
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kBoxingConf, BoxingKernel,
-                               ARITHMETIC_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ);
+                               ARITHMETIC_DATA_TYPE_SEQ FEATURE_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

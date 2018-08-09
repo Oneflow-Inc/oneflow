@@ -107,7 +107,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
       for (const LogicalBlobId& lbi : lbis) {
         const BlobDesc* blob_desc = rt_regst_desc->GetBlobDescFromLbi(lbi);
         std::unique_ptr<Blob> blob_ptr(new Blob(regst, blob_desc, cur_pointer));
-        InitOFRecordBlobIfNeed(blob_ptr.get());
+        InitPbBlobIfNeed(blob_ptr.get());
         CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
         cur_pointer += blob_desc->TotalByteSize();
       }
@@ -127,13 +127,20 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   }
 }
 
-void RegstMgr::InitOFRecordBlobIfNeed(Blob* blob_ptr) {
-  const BlobDesc& blob_desc = blob_ptr->blob_desc();
-  if (blob_desc.data_type() == kOFRecord) {
-    int64_t elem_cnt = blob_desc.shape().elem_cnt();
-    FOR_RANGE(int64_t, idx, 0, elem_cnt) {
-      Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<OFRecord>()[idx]);
-    }
+void RegstMgr::InitPbBlobIfNeed(Blob* blob_ptr) const {
+  switch (blob_ptr->blob_desc().data_type()) {
+#define INIT_PB_BLOB_CASE(type_cpp, type_proto) \
+  case type_proto: return InitPbBlob<type_cpp>(blob_ptr);
+    OF_PP_FOR_EACH_TUPLE(INIT_PB_BLOB_CASE, RECORD_DATA_TYPE_SEQ);
+
+    default: CHECK_NE(blob_ptr->blob_desc().data_type(), DataType::kInvalidDataType);
+  }
+}
+
+template<typename T>
+void RegstMgr::InitPbBlob(Blob* blob_ptr) const {
+  FOR_RANGE(int64_t, idx, 0, blob_ptr->blob_desc().shape().elem_cnt()) {
+    Global<MemoryAllocator>::Get()->PlacementNew(&blob_ptr->mut_dptr<T>()[idx]);
   }
 }
 

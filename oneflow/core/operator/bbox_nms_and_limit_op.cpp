@@ -7,8 +7,8 @@ void BboxNmsAndLimitOp::InitFromOpConf() {
   EnrollInputBn("rois", false);
   EnrollInputBn("bbox_delta", false);
   EnrollInputBn("scores", false);
-  EnrollOutputBn("labeled_bbox", false);
-  EnrollOutputBn("bbox_score", false);
+  EnrollFwPbOutputBn("labeled_bbox");
+  EnrollFwPbOutputBn("bbox_score");
   EnrollDataTmpBn("bbox");
   EnrollDataTmpBn("voting_score");
   EnrollDataTmpBn("pre_nms_index_slice");
@@ -50,10 +50,10 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   // out blob (n) ofrecord
   BlobDesc* labeled_bbox_blob_desc = GetBlobDesc4BnInOp("labeled_bbox");
   labeled_bbox_blob_desc->mut_shape() = Shape({images_num});
-  labeled_bbox_blob_desc->set_data_type(DataType::kOFRecord);
+  labeled_bbox_blob_desc->set_data_type(DataType::kInt32List16);
   BlobDesc* bbox_score_blob_desc = GetBlobDesc4BnInOp("bbox_score");
   bbox_score_blob_desc->mut_shape() = Shape({images_num});
-  bbox_score_blob_desc->set_data_type(DataType::kOFRecord);
+  bbox_score_blob_desc->set_data_type(DataType::kFloatList16);
   // data tmp blob shape
   // bbox (r, c, 4)
   BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
