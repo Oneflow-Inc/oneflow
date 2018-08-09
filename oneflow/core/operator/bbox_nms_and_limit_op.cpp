@@ -42,7 +42,6 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   const int64_t images_num = rois_blob_desc->shape().At(0);
   const int64_t rois_num = rois_blob_desc->shape().At(1);
   const int64_t class_num = scores_blob_desc->shape().At(1);
-  const int64_t limit_num = conf.detections_per_im();
   CHECK_EQ(bbox_delta_blob_desc->shape().At(0), scores_blob_desc->shape().At(0));
   CHECK_EQ(bbox_delta_blob_desc->shape().At(0), images_num * rois_num);
   CHECK_EQ(bbox_delta_blob_desc->shape().At(1), class_num * 4);
