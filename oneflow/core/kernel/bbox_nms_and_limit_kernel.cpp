@@ -101,8 +101,10 @@ void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("fixed_labeled_bbox")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
-  BnInOp2Blob("fixed_bbox_score")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
+  // BnInOp2Blob("fixed_labeled_bbox")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
+  // BnInOp2Blob("fixed_bbox_score")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
+  BnInOp2Blob("labeled_bbox")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
+  BnInOp2Blob("bbox_score")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
 }
 
 template<typename T>
@@ -110,16 +112,15 @@ void BboxNmsAndLimitKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* bbox_blob = BnInOp2Blob("bbox");
   const BboxNmsAndLimitOpConf& conf = op_conf().bbox_nms_and_limit_conf();
-  const int32_t detections_per_im = conf.detections_per_im();
   const int64_t image_num = BnInOp2Blob("rois")->shape().At(0);
   const int32_t class_num = bbox_blob->shape().At(1);
   FOR_RANGE(int64_t, i, 0, image_num) {
     BroadcastBboxTransform(i, BnInOp2Blob);
     ClipBox(bbox_blob);
     ScoredBBoxSlice<T> slice = NmsAndTryVote(i, BnInOp2Blob);
-    Limit(detections_per_im, conf.threshold(), slice);
-    WriteToOutput(i, class_num, detections_per_im, slice, BnInOp2Blob("fixed_labeled_bbox"),
-                  BnInOp2Blob("fixed_bbox_score"));
+    Limit(conf.detections_per_im(), conf.threshold(), slice);
+    WriteOutputToRecordBlob(i, class_num, slice, BnInOp2Blob("labeled_bbox"),
+                            BnInOp2Blob("bbox_score"));
   }
 }
 
@@ -246,18 +247,17 @@ void BboxNmsAndLimitKernel<T>::Limit(const int32_t limit_num, const float thresh
   slice.DescSortByScore(false);
   slice.Truncate(limit_num);
   slice.Filter([&](const T score, const BBox<T>* bbox) { return score < thresh; });
-  slice.Sort([&](const T l_score, const T r_score, const BBox<T>& l_bbox, const BBox<T>& r_bbox)
-  {
+  slice.Sort([&](const T l_score, const T r_score, const BBox<T>& l_bbox, const BBox<T>& r_bbox) {
     return l_bbox.Area() > r_bbox.Area();
   });
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(const int64_t im_index,
-                                                     const int64_t boxes_num,
-                                                     const ScoredBBoxSlice<T>& slice,
-                                                     Blob* labeled_bbox_blob,
-                                                     Blob* bbox_score_blob) const {
+void BboxNmsAndLimitKernel<T>::WriteOutputToRecordBlob(const int64_t im_index,
+                                                       const int64_t class_num,
+                                                       const ScoredBBoxSlice<T>& slice,
+                                                       Blob* labeled_bbox_blob,
+                                                       Blob* bbox_score_blob) const {
   Int32List16* labeled_bbox_ptr = labeled_bbox_blob->mut_dptr<Int32List16>() + im_index;
   FloatList16* score_ptr = bbox_score_blob->mut_dptr<FloatList16>() + im_index;
   FOR_RANGE(int64_t, i, 0, slice.available_len()) {
@@ -266,17 +266,18 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(const int64_t im_index,
     labeled_bbox_ptr->mutable_value()->add_value(bbox->y1());
     labeled_bbox_ptr->mutable_value()->add_value(bbox->x2());
     labeled_bbox_ptr->mutable_value()->add_value(bbox->y2());
-    labeled_bbox_ptr->mutable_value()->add_value(slice.GetSlice(i) % boxes_num);
+    labeled_bbox_ptr->mutable_value()->add_value(slice.GetSlice(i) % class_num);
     score_ptr->mutable_value()->add_value(slice.GetScore(i));
   }
 }
 
 template<typename T>
-void BboxNmsAndLimitKernel<T>::WriteToOutput(const int64_t im_index, const int64_t class_num,
-                                             const int32_t limit_num,
-                                             const ScoredBBoxSlice<T>& slice,
-                                             Blob* fixed_labeled_bbox_blob,
-                                             Blob* fixed_bbox_score_blob) const {
+void BboxNmsAndLimitKernel<T>::WriteOutputToFixedBlob(const int64_t im_index,
+                                                      const int64_t class_num,
+                                                      const int32_t limit_num,
+                                                      const ScoredBBoxSlice<T>& slice,
+                                                      Blob* fixed_labeled_bbox_blob,
+                                                      Blob* fixed_bbox_score_blob) const {
   CHECK_GT(limit_num, 0);
   int32_t index = -1;
   T score = 0;

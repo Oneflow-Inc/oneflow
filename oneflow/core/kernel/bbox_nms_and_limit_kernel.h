@@ -47,12 +47,12 @@ class BboxNmsAndLimitKernel final : public KernelIf<DeviceType::kCPU> {
                 const std::function<void(const std::function<void(int32_t, float)>&)>&,
                 BBox<T>* ret_votee_bbox) const;
   void Limit(const int32_t limit_num, const float thresh, ScoredBBoxSlice<T>& slice) const;
-  void WriteOutputToOFRecord(const int64_t im_index, const int64_t boxes_num,
-                             const ScoredBBoxSlice<T>& slice, Blob* labeled_bbox_blob,
-                             Blob* bbox_score_blob) const;
-  void WriteToOutput(const int64_t im_index, const int64_t boxes_num, const int32_t limit_num,
-                     const ScoredBBoxSlice<T>& slice, Blob* fixed_labeled_bbox_blob,
-                     Blob* fixed_bbox_score_blob) const;
+  void WriteOutputToRecordBlob(const int64_t im_index, const int64_t boxes_num,
+                               const ScoredBBoxSlice<T>& slice, Blob* labeled_bbox_blob,
+                               Blob* bbox_score_blob) const;
+  void WriteOutputToFixedBlob(const int64_t im_index, const int64_t boxes_num,
+                              const int32_t limit_num, const ScoredBBoxSlice<T>& slice,
+                              Blob* fixed_labeled_bbox_blob, Blob* fixed_bbox_score_blob) const;
 
   std::unique_ptr<ScoringMethodIf<T>> scoring_method_;
 };

@@ -670,10 +670,10 @@ message BboxNmsAndLimitOpConf {
   required string rois = 1;
   required string bbox_delta = 2;
   required string scores = 3;
-  // required string labeled_bbox = 4;
-  // required string bbox_score = 5;
-  required string fixed_labeled_bbox = 4;
-  required string fixed_bbox_score = 5;
+  required string labeled_bbox = 4;
+  required string bbox_score = 5;
+  // required string fixed_labeled_bbox = 4;
+  // required string fixed_bbox_score = 5;
   required BBoxRegressionWeights bbox_reg_weights = 6;
   required float score_threshold = 7;
   required float nms_threshold = 8;
