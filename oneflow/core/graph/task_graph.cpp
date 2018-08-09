@@ -126,6 +126,14 @@ void TaskGraph::EnableMemSharingInReduceStruct() {
 
 void TaskGraph::CollectReduceTaskNodes(
     HashMap<CompTaskNode*, ReduceTaskNodes>* bw2reduce_tasks) const {
+  auto FindSuccReduceTaskNode = [](CompTaskNode* task_node, TaskType type) -> CompTaskNode* {
+    for (TaskEdge* out_edge : task_node->out_edges()) {
+      TaskNode* dst_node = out_edge->dst_node();
+      if (dst_node->GetTaskType() == type) { return dynamic_cast<CompTaskNode*>(dst_node); }
+    }
+    return nullptr;
+  };
+
   ForEachNode([&](TaskNode* task_node) {
     if (IsBackwardTaskType(task_node->GetTaskType()) == false) { return; }
     if (task_node->device_type() != DeviceType::kGPU) { return; }
@@ -160,14 +168,6 @@ void TaskGraph::CollectReduceTaskNodes(
     CHECK(reduce_task_nodes.global_add != nullptr);
     CHECK(reduce_task_nodes.gather != nullptr);
   });
-}
-
-CompTaskNode* TaskGraph::FindSuccReduceTaskNode(CompTaskNode* task_node, TaskType type) const {
-  for (TaskEdge* out_edge : task_node->out_edges()) {
-    TaskNode* dst_node = out_edge->dst_node();
-    if (dst_node->GetTaskType() == type) { return dynamic_cast<CompTaskNode*>(dst_node); }
-  }
-  return nullptr;
 }
 
 void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {

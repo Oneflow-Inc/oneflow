@@ -24,7 +24,6 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   void EnableMemSharingInReduceStruct();
   void CollectReduceTaskNodes(HashMap<CompTaskNode*, ReduceTaskNodes>*) const;
-  CompTaskNode* FindSuccReduceTaskNode(CompTaskNode*, TaskType) const;
   void EnableMemSharingInOneReduce(const ReduceTaskNodes&);
   void AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes&);
   void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
