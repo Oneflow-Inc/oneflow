@@ -101,8 +101,6 @@ void BboxNmsAndLimitKernel<T>::VirtualKernelInit(const ParallelContext* parallel
 template<typename T>
 void BboxNmsAndLimitKernel<T>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // BnInOp2Blob("fixed_labeled_bbox")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
-  // BnInOp2Blob("fixed_bbox_score")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
   BnInOp2Blob("labeled_bbox")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
   BnInOp2Blob("bbox_score")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rois"));
 }
@@ -268,43 +266,6 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToRecordBlob(const int64_t im_index,
     labeled_bbox_ptr->mutable_value()->add_value(bbox->y2());
     labeled_bbox_ptr->mutable_value()->add_value(slice.GetSlice(i) % class_num);
     score_ptr->mutable_value()->add_value(slice.GetScore(i));
-  }
-}
-
-template<typename T>
-void BboxNmsAndLimitKernel<T>::WriteOutputToFixedBlob(const int64_t im_index,
-                                                      const int64_t class_num,
-                                                      const int32_t limit_num,
-                                                      const ScoredBBoxSlice<T>& slice,
-                                                      Blob* fixed_labeled_bbox_blob,
-                                                      Blob* fixed_bbox_score_blob) const {
-  CHECK_GT(limit_num, 0);
-  int32_t index = -1;
-  T score = 0;
-  const BBox<T>* bbox = nullptr;
-  if (slice.available_len() == 0) {
-    index = slice.index_slice()[0];
-    score = slice.score_ptr()[index];
-    bbox = BBox<T>::Cast(slice.bbox_ptr()) + index;
-  }
-  FOR_RANGE(int32_t, i, 0, limit_num) {
-    if (slice.available_len() > 0) {
-      int32_t slice_i = i % slice.available_len();
-      index = slice.GetSlice(slice_i);
-      score = slice.GetScore(slice_i);
-      bbox = slice.GetBBox(slice_i);
-    }
-    // labeled_bbox
-    int32_t* labeled_bbox_ptr = fixed_labeled_bbox_blob->mut_dptr<int32_t>(im_index, i);
-    BBox<int32_t>* labeled_bbox = BBox<int32_t>::MutCast(labeled_bbox_ptr);
-    labeled_bbox->set_x1(bbox->x1());
-    labeled_bbox->set_y1(bbox->y1());
-    labeled_bbox->set_x2(bbox->x2());
-    labeled_bbox->set_y2(bbox->y2());
-    labeled_bbox_ptr[4] = index % class_num;
-    // bbox_score
-    T* bbox_score_ptr = fixed_bbox_score_blob->mut_dptr<T>(im_index);
-    bbox_score_ptr[i] = score;
   }
 }
 

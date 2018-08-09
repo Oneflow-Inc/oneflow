@@ -9,8 +9,6 @@ void BboxNmsAndLimitOp::InitFromOpConf() {
   EnrollInputBn("scores", false);
   EnrollFwPbOutputBn("labeled_bbox");
   EnrollFwPbOutputBn("bbox_score");
-  // EnrollOutputBn("fixed_labeled_bbox", false);
-  // EnrollOutputBn("fixed_bbox_score", false);
   EnrollDataTmpBn("bbox");
   EnrollDataTmpBn("voting_score");
   EnrollDataTmpBn("pre_nms_index_slice");
@@ -46,7 +44,6 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   CHECK_EQ(bbox_delta_blob_desc->shape().At(0), images_num * rois_num);
   CHECK_EQ(bbox_delta_blob_desc->shape().At(1), class_num * 4);
   CHECK_EQ(rois_blob_desc->shape().At(2), 4);
-
   // output: labeled_bbox (n) pb
   BlobDesc* labeled_bbox_blob_desc = GetBlobDesc4BnInOp("labeled_bbox");
   labeled_bbox_blob_desc->mut_shape() = Shape({images_num});
@@ -57,17 +54,6 @@ void BboxNmsAndLimitOp::InferBlobDescs(
   bbox_score_blob_desc->mut_shape() = Shape({images_num});
   bbox_score_blob_desc->set_data_type(DataType::kFloatList16);
   bbox_score_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
-  // // output: fixed_labeled_bbox (n, l, 5)
-  // BlobDesc* fixed_labeled_bbox_blob_desc = GetBlobDesc4BnInOp("fixed_labeled_bbox");
-  // fixed_labeled_bbox_blob_desc->mut_shape() = Shape({images_num, limit_num, 5});
-  // fixed_labeled_bbox_blob_desc->set_data_type(DataType::kInt32);
-  // fixed_labeled_bbox_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
-  // // output: fixed_bbox_score (n, l)
-  // BlobDesc* fixed_bbox_score_blob_desc = GetBlobDesc4BnInOp("fixed_bbox_score");
-  // fixed_bbox_score_blob_desc->mut_shape() = Shape({images_num, limit_num});
-  // fixed_bbox_score_blob_desc->set_data_type(scores_blob_desc->data_type());
-  // fixed_bbox_score_blob_desc->set_has_data_id_field(rois_blob_desc->has_data_id_field());
-
   // datatmp: bbox (r, c, 4)
   BlobDesc* bbox_blob_desc = GetBlobDesc4BnInOp("bbox");
   bbox_blob_desc->mut_shape() = Shape({rois_num, class_num, 4});
