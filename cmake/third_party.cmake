@@ -111,3 +111,22 @@ include_directories(
     ${EIGEN_INCLUDE_DIR}
     ${LIBHDFS3_INCLUDE_DIR}
 )
+
+set(include_directories
+    ${ZLIB_INCLUDE_DIR}
+    ${GFLAGS_INCLUDE_DIR}
+    ${GLOG_INCLUDE_DIR}
+    ${GOOGLETEST_INCLUDE_DIR}
+    ${GOOGLEMOCK_INCLUDE_DIR}
+    ${PROTOBUF_INCLUDE_DIR}
+    ${GRPC_INCLUDE_DIR}
+    ${CUDNN_INCLUDE_DIRS}
+    ${CUB_INCLUDE_DIR}
+    ${LIBJPEG_INCLUDE_DIR}
+    ${OPENCV_INCLUDE_DIR}
+    ${EIGEN_INCLUDE_DIR}
+    ${LIBHDFS3_INCLUDE_DIR}
+)
+
+message(STATUS "oneflow_include_dir: " ${include_directories})
+
