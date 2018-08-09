@@ -6,6 +6,7 @@ namespace oneflow {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceB121Regst("out");
+  ProduceB121Regst("fw_pb_out");
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("forward_model", false);
@@ -22,6 +23,9 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
       BindEdgeWithProducedRegst(edge, "const_buf");
     } else {
       BindEdgeWithProducedB121Regst(edge, "out");
+      if (edge->dst_node()->GetTaskType() != TaskType::kCopyHd) {
+        BindEdgeWithProducedB121Regst(edge, "fw_pb_out");
+      }
     }
   }
 }
@@ -34,7 +38,8 @@ void NormalForwardCompTaskNode::ConsumeAllRegsts() {
       ConsumeRegst("model", edge->GetRegst("model"));
       ConsumeRegst("const_model", edge->GetRegst("const_model"));
     } else {
-      ConsumeRegst("in", edge->GetSoleRegst());
+      edge->ForEachRegst(
+          [&](std::shared_ptr<RegstDesc> regst_desc) { ConsumeRegst("in", regst_desc); });
     }
   }
 }
@@ -100,7 +105,8 @@ void NormalForwardCompTaskNode::BuildOutRegst() {
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (TryAddLbiToB121RegstAndBindIt(cur_node, obn, "out") == false) {
+      const std::string& regst_name = (lbi.is_fw_pb() ? "fw_pb_out" : "out");
+      if (TryAddLbiToB121RegstAndBindIt(cur_node, obn, regst_name) == false) {
         CHECK(found_lbis.find(lbi) != found_lbis.end())
             << "op name: " << lbi.op_name() << " blob name: " << lbi.blob_name();
       }

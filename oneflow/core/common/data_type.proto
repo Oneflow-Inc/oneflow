@@ -9,4 +9,16 @@ enum DataType {
   kInt8 = 4;
   kInt32 = 5;
   kOFRecord = 6;
+  kBytesList8 = 7;
+  kBytesList16 = 8;
+  kBytesList24 = 9;
+  kFloatList8 = 10;
+  kFloatList16 = 11;
+  kFloatList24 = 12;
+  kDoubleList8 = 13;
+  kDoubleList16 = 14;
+  kDoubleList24 = 15;
+  kInt32List8 = 16;
+  kInt32List16 = 17;
+  kInt32List24 = 18;
 }

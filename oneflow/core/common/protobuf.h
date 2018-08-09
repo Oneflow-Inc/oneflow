@@ -153,8 +153,9 @@ inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 }
 
 inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
-  PbMd message_diff;
-  return message_diff.Equivalent(lhs, rhs);
+  return (lhs.op_name() == rhs.op_name()) && (lhs.blob_name() == rhs.blob_name())
+         && (lhs.b121_id() == rhs.b121_id()) && (lhs.clone_id() == rhs.clone_id())
+         && (lhs.is_packed_id() == rhs.is_packed_id());
 }
 
 // Persistent

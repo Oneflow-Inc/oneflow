@@ -243,6 +243,13 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
   EnrollRepeatedInputBn(ibn_prefix, true);
 }
 
+void Operator::EnrollFwPbOutputBn(const std::string& obn) {
+  LogicalBlobId lbi = obn2lbi(obn);
+  lbi.set_is_fw_pb(true);
+  *(mut_output_bns()->Add()) = obn;
+  CHECK(mut_bn_in_op2lbi()->insert({obn, lbi}).second);
+}
+
 void Operator::EnrollOutputBn(const std::string& obn, bool has_diff) {
   LogicalBlobId lbi = obn2lbi(obn);
   *(mut_output_bns()->Add()) = obn;
