@@ -289,6 +289,7 @@ message LogicalBlobId {
   optional int32 b121_id = 3 [default = -1]; // [0, boxing], [1, 121]
   optional int32 clone_id = 4 [default = -1];
   optional bool is_packed_id = 5 [default = false];
+  optional bool is_fw_pb = 6 [default = false];
 }
 
 message BoxingOpConf {

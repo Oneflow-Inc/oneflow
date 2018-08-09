@@ -2,7 +2,7 @@
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
 #include "oneflow/core/common/data_type.pb.h"
-#include "oneflow/core/record/record.pb.h"
+#include "oneflow/core/record/record.h"
 #include "oneflow/core/common/preprocessor.h"
 #include "oneflow/core/common/util.h"
 
@@ -23,7 +23,13 @@ class OFRecord;
 
 #define CHAR_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(char, DataType::kChar)
 
-#define RECORD_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord)
+#define EXTRACT_RECORD_DATA_TYPE_SEQ(type_cpp, type_proto, field_name) \
+  OF_PP_MAKE_TUPLE_SEQ(type_cpp, type_proto)
+#define FEATURE_DATA_TYPE_SEQ \
+  OF_PP_FOR_EACH_TUPLE(EXTRACT_RECORD_DATA_TYPE_SEQ, FEATURE_DATA_TYPE_FEATURE_FIELD_SEQ)
+
+#define RECORD_DATA_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(OFRecord, DataType::kOFRecord) FEATURE_DATA_TYPE_SEQ
 
 #define ARITHMETIC_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ         \
@@ -32,8 +38,6 @@ class OFRecord;
 #define POD_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ CHAR_DATA_TYPE_SEQ
 
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
-
-#define ENCODE_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
 
 // Type Trait: IsFloating
 
@@ -109,6 +113,7 @@ TRAIT_CONST_VAR(One, 1);
 
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
+bool IsRecordDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
 }  // namespace oneflow

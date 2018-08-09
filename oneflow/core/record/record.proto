@@ -26,3 +26,54 @@ message Feature {
 message OFRecord {
   map<string, Feature> feature = 1;
 }
+
+// max length: 256B (2**8)
+message BytesList8 {
+  required BytesList value = 1;
+}
+
+// max length: 64K (2**16)
+message BytesList16 {
+  required BytesList value = 1;
+}
+
+// max length: 16M (2**24)
+message BytesList24 {
+  required BytesList value = 1;
+}
+
+message FloatList8 {
+  required FloatList value = 1;
+}
+
+message FloatList16 {
+  required FloatList value = 1;
+}
+
+message FloatList24 {
+  required FloatList value = 1;
+}
+
+message DoubleList8 {
+  required DoubleList value = 1;
+}
+
+message DoubleList16 {
+  required DoubleList value = 1;
+}
+
+message DoubleList24 {
+  required DoubleList value = 1;
+}
+
+message Int32List8 {
+  required Int32List value = 1;
+}
+
+message Int32List16 {
+  required Int32List value = 1;
+}
+
+message Int32List24 {
+  required Int32List value = 1;
+}
