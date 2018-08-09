@@ -7,18 +7,11 @@ void ProposalOp::InitFromOpConf() {
   CHECK(op_conf().has_proposal_conf());
   EnrollInputBn("class_prob", false);
   EnrollInputBn("bbox_pred", false);
-  // EnrollInputBn("image_info", false);
-  // EnrollInputBn("height", false);
-  // EnrollInputBn("weight", false);
   EnrollOutputBn("rois", false);
   EnrollOutputBn("roi_probs", false);
-  // EnrollDataTmpBn("roi_probs");
   EnrollConstBufBn("anchors");
-  if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
   EnrollDataTmpBn("proposals");
-  EnrollDataTmpBn("keep");
-  EnrollDataTmpBn("sorted_score_slice");
-  EnrollDataTmpBn("bbox_area");
+  EnrollDataTmpBn("pre_nms_slice");
   EnrollDataTmpBn("post_nms_slice");
 }
 
@@ -29,71 +22,57 @@ void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> Get
   CHECK_EQ(device_type(), DeviceType::kCPU);
   const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
   const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
-  const auto& anchor_scales = GetPbRfFromCustomizedConf<int32_t>("anchor_scales");
-  const auto& aspect_ratios = GetPbRfFromCustomizedConf<float>("aspect_ratios");
-  const int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
-  const int32_t feature_map_stride = GetValFromCustomizedConf<int32_t>("feature_map_stride");
+  const auto* anchor_generator_conf =
+      GetMsgPtrFromPbMessage<AnchorGeneratorConf>(GetCustomizedConf(), "anchors_generator_conf");
+  const auto& anchor_scales =
+      GetPbRfFromPbMessage<int32_t>(*anchor_generator_conf, "anchor_scales");
+  const auto& aspect_ratios = GetPbRfFromPbMessage<float>(*anchor_generator_conf, "aspect_ratios");
+  const int32_t num_anchors = anchor_scales.size() * aspect_ratios.size();
+  const int32_t fm_stride =
+      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "feature_map_stride");
   for (int32_t scale : anchor_scales) {
-    CHECK_GE(scale, feature_map_stride);
-    CHECK_EQ(scale % feature_map_stride, 0);
+    CHECK_GE(scale, fm_stride);
+    CHECK_EQ(scale % fm_stride, 0);
   }
-  int64_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
-  int64_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
+  const int32_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
+  const int32_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
   CHECK_GT(post_nms_top_n, 0);
   CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
   CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);
-  if (pre_nms_top_n == -1) { pre_nms_top_n = bbox_pred_blob_desc->shape().Count(1) / 4; }
-  // const BlobDesc* im_info_blob_desc = GetBlobDesc4BnInOp("image_info");
-  // bactch
-  CHECK_EQ(cls_prob_blob_desc->shape().At(0), bbox_pred_blob_desc->shape().At(0));
-  // CHECK_EQ(cls_prob_blob_desc->shape().At(0), im_info_blob_desc->shape().At(0));
-  // H
-  CHECK_EQ(cls_prob_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(1));
-  // W
-  CHECK_EQ(cls_prob_blob_desc->shape().At(2), bbox_pred_blob_desc->shape().At(2));
-  // proposal 4 * 9
-  CHECK_EQ(bbox_pred_blob_desc->shape().At(3), 4 * num_of_anchors);
-  // im_info (n, (origin_height, origin_width, scale))
-  // CHECK_EQ(im_info_blob_desc->shape().At(1), 3);
-  // score 2 * 9
-  if (GetValFromCustomizedConf<bool>("only_foreground_prob")) {
-    CHECK_EQ(cls_prob_blob_desc->shape().At(3), num_of_anchors);
-  } else {
-    CHECK_EQ(cls_prob_blob_desc->shape().At(3), 2 * num_of_anchors);
-    BlobDesc* fg_prob_blob_desc = GetBlobDesc4BnInOp("fg_prob");
-    fg_prob_blob_desc->mut_shape() =
-        Shape({cls_prob_blob_desc->shape().At(0),
-               cls_prob_blob_desc->shape().Count(1, 3) * num_of_anchors, 1});
-    fg_prob_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
+  // in: class_prob (n, h, w, a)
+  // in: bbox_pred (n, h, w, a * 4)
+  FOR_RANGE(int32_t, i, 0, 3) {
+    CHECK_EQ(cls_prob_blob_desc->shape().At(i), bbox_pred_blob_desc->shape().At(i));
   }
-  // proposals
-  *GetBlobDesc4BnInOp("proposals") = *bbox_pred_blob_desc;
-  // anchors
-  BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
-  anchors_blob_desc->mut_shape() = Shape(
-      {bbox_pred_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(2), num_of_anchors * 4});
-  anchors_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
-
-  BlobDesc* sorted_score_slice_blob_desc = GetBlobDesc4BnInOp("sorted_score_slice");
-  sorted_score_slice_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().Count(1) / 4});
-  sorted_score_slice_blob_desc->set_data_type(DataType::kInt32);
-
-  BlobDesc* post_nms_slice_desc = GetBlobDesc4BnInOp("post_nms_slice");
-  post_nms_slice_desc->mut_shape() = Shape({post_nms_top_n});
-  post_nms_slice_desc->set_data_type(DataType::kInt32);
-
-  BlobDesc* bbox_area_blob_desc = GetBlobDesc4BnInOp("bbox_area");
-  bbox_area_blob_desc->mut_shape() = Shape({pre_nms_top_n});
-  bbox_area_blob_desc->set_data_type(DataType::kInt32);
-
-  // rois
+  CHECK_EQ(cls_prob_blob_desc->shape().At(3), num_anchors);
+  CHECK_EQ(bbox_pred_blob_desc->shape().At(3), cls_prob_blob_desc->shape().At(3) * 4);
+  const int64_t num_images = cls_prob_blob_desc->shape().At(0);
+  const int64_t feature_map_h = cls_prob_blob_desc->shape().At(1);
+  const int64_t feature_map_w = cls_prob_blob_desc->shape().At(2);
+  // datatmp: proposals (h, w, a, 4)
+  BlobDesc* proposal_blob_desc = GetBlobDesc4BnInOp("proposals");
+  proposal_blob_desc->mut_shape() = Shape({feature_map_h, feature_map_w, num_anchors, 4});
+  proposal_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
+  // const buf: anchors (h, w, a, 4)
+  *GetBlobDesc4BnInOp("anchors") = *proposal_blob_desc;
+  // datatmp: pre_nms_slice (h * w * a)
+  BlobDesc* pre_nms_slice_blob_desc = GetBlobDesc4BnInOp("pre_nms_slice");
+  pre_nms_slice_blob_desc->mut_shape() = Shape({feature_map_h * feature_map_w * num_anchors});
+  pre_nms_slice_blob_desc->set_data_type(DataType::kInt32);
+  // datatmp: post_nms_slice
+  BlobDesc* post_nms_slice_blob_desc = GetBlobDesc4BnInOp("post_nms_slice");
+  post_nms_slice_blob_desc->mut_shape() = Shape({post_nms_top_n});
+  post_nms_slice_blob_desc->set_data_type(DataType::kInt32);
+  // out: rois (n, r, 4)
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0), post_nms_top_n, 4});
+  rois_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n, 4});
   rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
-  // roi_probs
+  rois_blob_desc->set_has_data_id_field(bbox_pred_blob_desc->has_data_id_field());
+  // out: roi_probs (n, r)
   BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp("roi_probs");
-  roi_probs_blob_desc->mut_shape() = Shape({cls_prob_blob_desc->shape().At(0), post_nms_top_n});
+  roi_probs_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n});
   roi_probs_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
+  roi_probs_blob_desc->set_has_data_id_field(cls_prob_blob_desc->has_data_id_field());
 }
 
 REGISTER_OP(OperatorConf::kProposalConf, ProposalOp);
