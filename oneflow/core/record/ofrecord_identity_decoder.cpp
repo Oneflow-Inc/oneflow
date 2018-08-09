@@ -31,14 +31,6 @@ void OFRecordDecoderImpl<EncodeCase::kIdentity, T>::ReadOneCol(
   CheckRecordValue<T>(*out_dptr);
 }
 
-template<>
-void OFRecordDecoderImpl<EncodeCase::kIdentity, OFRecord>::ReadOneCol(
-    DeviceCtx* ctx, const Feature& feature, const BlobConf& blob_conf, int32_t col_id,
-    OFRecord* out_dptr, int64_t one_col_elem_num,
-    std::function<int32_t(void)> NextRandomInt) const {
-  (*out_dptr->mutable_feature())[kOFRecordMapDefaultKey] = feature;
-}
-
 #define INSTANTIATE_OFRECORD_IDENTITY_DECODER(type_cpp, type_proto) \
   template class OFRecordDecoderImpl<EncodeCase::kIdentity, type_cpp>;
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_OFRECORD_IDENTITY_DECODER, FEATURE_DATA_TYPE_SEQ);

@@ -13,8 +13,6 @@ namespace oneflow {
   OF_PP_SEQ_PRODUCT(ENCODE_CASE_SEQ, ARITHMETIC_DATA_TYPE_SEQ) \
   OF_PP_SEQ_PRODUCT((EncodeCase::kIdentity), FEATURE_DATA_TYPE_SEQ)
 
-const std::string kOFRecordMapDefaultKey = "__kOFRecordMapDefaultKey__";
-
 #define FEATURE_SIZE_SHIFT_SEQ (8)(16)(24)
 
 #define FEATURE_TYPE_FEATURE_FIELD_SEQ          \
