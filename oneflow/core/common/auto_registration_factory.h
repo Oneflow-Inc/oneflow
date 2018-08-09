@@ -39,7 +39,7 @@ struct AutoRegistrationFactory {
   HashMap<int32_t, std::function<Base*(Args&&...)>> creators_;
 };
 
-#define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __LINE__)
+#define REGISTER_VAR_NAME OF_PP_CAT(g_registry_var, __COUNTER__)
 
 #define REGISTER_CLASS(k, Base, Derived) \
   static AutoRegistrationFactory<Base>::RawRegisterType<Derived> REGISTER_VAR_NAME(k)

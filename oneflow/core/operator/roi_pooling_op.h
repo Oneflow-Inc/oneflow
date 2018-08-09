@@ -9,7 +9,7 @@ class RoIPoolingOp final : public Operator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(RoIPoolingOp);
   RoIPoolingOp() = default;
-  virtual ~RoIPoolingOp() = default;
+  ~RoIPoolingOp() = default;
 
   const PbMessage& GetCustomizedConf() const override;
 

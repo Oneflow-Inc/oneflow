@@ -68,5 +68,4 @@ struct SmoothL1LossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
   template struct SmoothL1LossKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                          OF_PP_PAIR_FIRST(label_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
-
 }  // namespace oneflow

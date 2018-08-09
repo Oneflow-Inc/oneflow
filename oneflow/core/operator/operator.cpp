@@ -18,6 +18,7 @@ DataType GetDataTypeFromBnInOpVec(
 }  // namespace
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
+  backward_activation_ = ActivationType::kNone;
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
   if (this_op_conf->has_use_cudnn_on_gpu() == false) {
@@ -66,10 +67,6 @@ void Operator::InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> Get
                                 const ParallelContext* parallel_ctx, size_t* buf_size,
                                 std::function<void(OpContext*)> EnrollOpCtx) const {
   InferBlobDescs(GetBlobDesc4BnInOp, parallel_ctx, buf_size, EnrollOpCtx);
-  if (NeedDoActivation() && Global<JobDesc>::Get()->IsTrain()) {
-    *buf_size +=
-        RoundUp(GetBlobDesc4BnInOp(SoleObn())->ByteSizeOfDataContentField(), kCudaAlignSize);
-  }
 }
 
 void Operator::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -121,13 +118,12 @@ static bool HasBlobDescWithField(
   return false;
 }
 
-bool Operator::NeedDoActivation() const {
-  if (HasFieldInCustomizedConf("activation")
-      && static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"))
-             != ActivationType::kNone) {
-    return true;
+ActivationType Operator::GetForwardActivationType() const {
+  if (HasFieldInCustomizedConf("activation")) {
+    return static_cast<ActivationType>(GetEnumFromCustomizedConf("activation"));
+  } else {
+    return ActivationType::kNone;
   }
-  return false;
 }
 
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
@@ -155,12 +151,8 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   kernel_conf->set_data_type(data_type);
 
-  if (is_forward == false && NeedDoActivation()) {
-    const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(SoleObn());
-    BlobDesc activation_blob_desc(out_blob_desc->shape(), out_blob_desc->data_type(), false, false,
-                                  1);
-    activation_blob_desc.ToProto(kernel_conf->mutable_activation_blob_desc());
-  }
+  kernel_conf->set_forward_activation(GetForwardActivationType());
+  kernel_conf->set_backward_activation(backward_activation_);
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf, op_ctx);
 }
 

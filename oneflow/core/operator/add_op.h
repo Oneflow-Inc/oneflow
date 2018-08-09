@@ -11,10 +11,7 @@ class AddOp final : public CWiseOp {
   AddOp() = default;
   ~AddOp() = default;
 
-  bool NeedOutWhenBackward() const override;
-
   void VirtualInitFromOpConf() override;
-
   const PbMessage& GetCustomizedConf() const override;
 };
 }  // namespace oneflow

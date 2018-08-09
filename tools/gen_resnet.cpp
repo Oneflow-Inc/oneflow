@@ -11,16 +11,15 @@ std::string Conv2DBlock(bool use_relu, const std::string& name, const std::strin
                         const int filters, const std::string& padding = "same",
                         const std::string& data_format = DATA_FORMAT, const int kernel_size = 3,
                         const int strides = 1, const int dilation_rate = 1,
-                        const bool use_bias = false) {
+                        const bool use_bias = true) {
   std::string op_name, op_out;
   op_out = Conv2D(name, in, filters, padding, data_format, {kernel_size, kernel_size}, strides,
                   dilation_rate, use_bias);
+  op_name = name + "_bn";
   if (use_relu) {
-    op_name = "bn_" + name;
     op_out = BatchNorm(op_name, op_out, kRelu, 1, 0.997,
                        0.0000101);  // out of last op is the input of this
   } else {
-    op_name = "bn_" + name;
     op_out = BatchNorm(op_name, op_out, kNone, 1, 0.997,
                        0.0000101);  // out of last op is the input of this
   }
@@ -33,31 +32,31 @@ std::string Conv2DBlock(bool use_relu, const std::string& name, const std::strin
 // residual block name: res(res id)
 // one residual block contains some building blocks
 // building block id in residual block.
-// building_block_name: res*_bb(building block id)
-// e.g. res2a(caffe) -> res2_bb1(of), res3c -> res3_bb3
+// building_block_name: res*_*(building block id)
+// e.g. res2a(caffe) -> branch2a(of)
 // one building block contains 3 conv blocks(>50), 2 conv blocks(18, 34)
-// conv_block_name: res*_bb*_b1a/b/c(main branch), res*_bb*_b2(shortcut branch)
+// conv_block_name: res*_*_branch2a/b/c(main branch), res*_*_branch1(shortcut branch)
 std::string BuildingBlock(const std::string& res_block_name, int building_block_id,
                           const std::string& in, int filter1_2, int filter3,
                           bool down_sampling = true) {
   std::string op_out, building_block_name, name;
   std::string b2_out = in;
   int stride = 1;
-  if (building_block_id == 1 && down_sampling) stride = 2;
-  building_block_name = res_block_name + "_bb" + std::to_string(building_block_id);
+  if (building_block_id == 0 && down_sampling) stride = 2;
+  building_block_name = res_block_name + "_" + std::to_string(building_block_id);
 
-  // shortcup branch - b2
-  if (building_block_id == 1) {
-    name = building_block_name + "_b2";
+  // shortcup branch - branch1
+  if (building_block_id == 0) {
+    name = building_block_name + "_branch1";
     b2_out = Conv2DBlock(false /*no relu*/, name, in, filter3, "same", DATA_FORMAT, 1, stride);
   }
 
-  // main branch - b1
-  name = building_block_name + "_b1a";
+  // main branch - branch2
+  name = building_block_name + "_branch2a";
   op_out = Conv2DBlock(true, name, in, filter1_2, "same", DATA_FORMAT, 1, stride);
-  name = building_block_name + "_b1b";
+  name = building_block_name + "_branch2b";
   op_out = Conv2DBlock(true, name, op_out, filter1_2, "same", DATA_FORMAT, 3, 1);
-  name = building_block_name + "_b1c";
+  name = building_block_name + "_branch2c";
   op_out = Conv2DBlock(false /*no relu*/, name, op_out, filter3, "same", DATA_FORMAT, 1, 1);
   // element wise sum
   std::vector<std::string> v = {op_out, b2_out};
@@ -77,7 +76,7 @@ std::string ResidualBlock(int res_block_id, int building_block_num, const std::s
       ds = true;
     else
       ds = false;
-    op_out = BuildingBlock(res_block_name, i + 1, op_out, filter1_2, filter3, ds);
+    op_out = BuildingBlock(res_block_name, i, op_out, filter1_2, filter3, ds);
   }
   return op_out;
 }

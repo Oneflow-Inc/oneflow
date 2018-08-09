@@ -40,12 +40,12 @@ std::string Conv2D(const std::string& name, const std::string& in, const int fil
   op_conf->add_dilation_rate(dilation_rate);
   op_conf->add_dilation_rate(dilation_rate);
   op_conf->set_use_bias(use_bias);
-  // op_conf->set_activation(activation);
+  op_conf->set_activation(activation);
 
-  // InitializerConf* weight_initializer = new InitializerConf();
+  InitializerConf* weight_initializer = new InitializerConf();
   // InitInitializerConf(weight_initializer, InitializerConf::kRandomNormalConf,
-  // InitInitializerConf(weight_initializer, InitializerConf::kMsraConf, 0.0, 1.0);
-  // op_conf->set_allocated_weight_initializer(weight_initializer);
+  InitInitializerConf(weight_initializer, InitializerConf::kMsraConf, 0.0, 1.0);
+  op_conf->set_allocated_weight_initializer(weight_initializer);
   /* InitializerConf* bias_initializer = new InitializerConf();
   InitInitializerConf(bias_initializer, InitializerConf::kRandomUniformConf,
                       0.0, 1.0);
@@ -53,11 +53,11 @@ std::string Conv2D(const std::string& name, const std::string& in, const int fil
   /*InitInitializerConf(weight_initializer, InitializerConf::kMsraConf,
   0.0, 1.0); op_conf->set_allocated_weight_initializer(weight_initializer);
   */
-  if (use_bias) {
-    InitializerConf* bias_initializer = new InitializerConf();
-    InitInitializerConf(bias_initializer, InitializerConf::kConstantConf, 0.0, 1.0);
-    op_conf->set_allocated_bias_initializer(bias_initializer);
-  }
+  // if (use_bias) {
+  // InitializerConf* bias_initializer = new InitializerConf();
+  // InitInitializerConf(bias_initializer, InitializerConf::kConstantConf, 0.0, 1.0);
+  // op_conf->set_allocated_bias_initializer(bias_initializer);
+  // }
   AddOpToPlacementGroup(name);
   return name + "/" + "out";
 }
@@ -132,15 +132,15 @@ std::string BatchNorm(const std::string& name, const std::string& in, Activation
                       int32_t axis, float momentum, float epsilon, bool center, bool scale,
                       float beta_init, float gamma_init, float mean_init, float variance_init) {
   INIT_OP_CONF(NormalizationOpConf, mutable_normalization_conf)
-  // op_conf->set_momentum(momentum);
-  // op_conf->set_epsilon(epsilon);
-  // op_conf->set_center(center);
-  // op_conf->set_scale(scale);
-  // op_conf->set_beta_init(beta_init);
-  // op_conf->set_gamma_init(gamma_init);
-  // op_conf->set_mean_init(mean_init);
-  // op_conf->set_variance_init(variance_init);
   op_conf->set_axis(axis);
+  op_conf->set_momentum(momentum);
+  op_conf->set_epsilon(epsilon);
+  op_conf->set_center(center);
+  op_conf->set_scale(scale);
+  op_conf->set_beta_init(beta_init);
+  op_conf->set_gamma_init(gamma_init);
+  op_conf->set_mean_init(mean_init);
+  op_conf->set_variance_init(variance_init);
   op_conf->set_activation(activation);
   AddOpToPlacementGroup(name);
   return name + "/" + "out";

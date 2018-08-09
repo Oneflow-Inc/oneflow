@@ -35,7 +35,7 @@ void Memcpy(DeviceCtx*, void* dst, const void* src, size_t sz,
             cudaMemcpyKind kind = GetCudaMemcpyKind<device_type>::val);
 
 void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& src_mem_case, const MemoryCase& dst_mem_case);
+                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case);
 
 template<DeviceType device_type>
 void Memset(DeviceCtx*, void* dst, const char value, size_t sz);
@@ -179,28 +179,27 @@ struct KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::va
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
 
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6, const T* in_7);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6, const T* in_7, const T* in_8);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6, const T* in_7, const T* in_8, const T* in_9);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6,
+                       const T* in_7);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6,
+                       const T* in_7, const T* in_8);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6,
+                       const T* in_7, const T* in_8, const T* in_9);
 
   static void InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
                                  uint32_t random_seed, Blob* blob);
@@ -285,28 +284,24 @@ struct KernelUtil<DeviceType::kGPU, T, typename std::enable_if<IsFloating<T>::va
   static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* x, const T* y, const T* dy,
                            T* dx);
 
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6, const T* in_7);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6, const T* in_7, const T* in_8);
-  static void AdditionAssign(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
-                             const T* in_2, const T* in_3, const T* in_4, const T* in_5,
-                             const T* in_6, const T* in_7, const T* in_8, const T* in_9);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6,
+                       const T* in_7);
+  static void Addition(DeviceCtx* ctx, const int64_t n, T* out, const T* in_0, const T* in_1,
+                       const T* in_2, const T* in_3, const T* in_4, const T* in_5, const T* in_6,
+                       const T* in_7, const T* in_8);
 };
 
 // GPU, Integral
@@ -347,6 +342,51 @@ void CopyFromIterToIter(DeviceCtx* ctx, Iter& src_it, Iter& dst_it) {
     dst_size -= cp_size;
   }
 }
+
+template<typename T>
+class RecordContentIterator final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(RecordContentIterator);
+  RecordContentIterator() = delete;
+  ~RecordContentIterator() = default;
+  RecordContentIterator(std::function<Blob*(const std::string&)> BnInOp2Blob,
+                        const PbRpf<std::string>* bns, int32_t axis) {
+    BnInOp2Blob_ = BnInOp2Blob;
+    seg_num_ = BnInOp2Blob(bns->Get(0))->shape().Count(0, axis);
+    seg_idx_ = 0;
+    bns_ = bns;
+    bn_idx_ = 0;
+    axis_ = axis;
+    index_ = 0;
+  }
+
+  T* GetNext() {
+    T* ret = nullptr;
+    if (seg_idx_ == seg_num_) { return ret; }
+    Blob* blob = BnInOp2Blob_(bns_->Get(bn_idx_));
+    const int64_t elem_num = blob->shape().Count(axis_);
+    if (blob->IsColValid()) { ret = blob->mut_dptr<T>() + seg_idx_ * elem_num + index_; }
+    index_ += 1;
+    if (index_ == elem_num) {
+      index_ = 0;
+      bn_idx_ += 1;
+    }
+    if (bn_idx_ == bns_->size()) {
+      bn_idx_ = 0;
+      seg_idx_ += 1;
+    }
+    return ret;
+  }
+
+ private:
+  std::function<Blob*(const std::string&)> BnInOp2Blob_;
+  int64_t seg_num_;
+  int64_t seg_idx_;
+  const PbRpf<std::string>* bns_;
+  int32_t bn_idx_;
+  int32_t axis_;
+  int32_t index_;
+};
 
 class DataContentIterator final {
  public:

@@ -33,6 +33,8 @@ class OFRecord;
 
 #define ALL_DATA_TYPE_SEQ POD_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
 
+#define ENCODE_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ RECORD_DATA_TYPE_SEQ
+
 // Type Trait: IsFloating
 
 template<typename T>
@@ -55,12 +57,12 @@ struct IsIntegral : std::integral_constant<bool, false> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_INTEGRAL, INT_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
-template<DataType T>
+template<typename T>
 struct IsRecordType : std::integral_constant<bool, false> {};
 
 #define SPECIALIZE_TRUE_RECORD(type_cpp, type_proto) \
   template<>                                         \
-  struct IsRecordType<type_proto> : std::integral_constant<bool, true> {};
+  struct IsRecordType<type_cpp> : std::integral_constant<bool, true> {};
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_TRUE_RECORD, RECORD_DATA_TYPE_SEQ);
 #undef SPECIALIZE_TRUE_INTEGRAL
 
@@ -72,11 +74,15 @@ struct GetDataType;
 template<>
 struct GetDataType<void> : std::integral_constant<DataType, DataType::kChar> {};
 
-#define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto) \
-  template<>                                           \
-  struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {};
+#define SPECIALIZE_GET_DATA_TYPE(type_cpp, type_proto)                            \
+  template<>                                                                      \
+  struct GetDataType<type_cpp> : std::integral_constant<DataType, type_proto> {}; \
+  inline type_cpp GetTypeByDataType(std::integral_constant<DataType, type_proto>) { return {}; }
 OF_PP_FOR_EACH_TUPLE(SPECIALIZE_GET_DATA_TYPE, ALL_DATA_TYPE_SEQ);
 #undef SPECIALIZE_GET_DATA_TYPE
+
+template<DataType type>
+using DataTypeToType = decltype(GetTypeByDataType(std::integral_constant<DataType, type>{}));
 
 // Type Trait: const var
 

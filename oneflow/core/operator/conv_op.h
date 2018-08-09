@@ -46,7 +46,6 @@ class ConvOp : public Operator {
   virtual ~ConvOp() = default;
 
   void InitFromOpConf() override;
-  bool NeedOutWhenBackward() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext*, size_t* buf_size,
                       std::function<void(OpContext*)> EnrollOpCtx) const override;

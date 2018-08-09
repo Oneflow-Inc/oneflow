@@ -3,17 +3,8 @@
 
 #include "Eigen/Core"
 #include "Eigen/Dense"
-#include "unsupported/Eigen/CXX11/Tensor"
 
 namespace oneflow {
-
-template<typename T, int NDIMS = 1, typename IndexType = Eigen::DenseIndex>
-using EigenTensor =
-    Eigen::TensorMap<Eigen::Tensor<T, NDIMS, Eigen::RowMajor, IndexType>, Eigen::Aligned>;
-
-template<typename T, int NDIMS = 1, typename IndexType = Eigen::DenseIndex>
-using EigenConstTensor =
-    Eigen::TensorMap<Eigen::Tensor<const T, NDIMS, Eigen::RowMajor, IndexType>, Eigen::Aligned>;
 
 template<typename T>
 using EigenMatrixMap = Eigen::Map<Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic>>;

@@ -25,7 +25,6 @@ class CudaDeviceCtx final : public DeviceCtx {
   const cublasHandle_t& cublas_pmh_handle() const { return *(cuda_handler_->cublas_pmh_handle()); }
   const cublasHandle_t& cublas_pmd_handle() const { return *(cuda_handler_->cublas_pmd_handle()); }
   const cudnnHandle_t& cudnn_handle() const { return *(cuda_handler_->cudnn_handle()); }
-  const Eigen::GpuDevice& eigen_gpu_device() const { return *(cuda_handler_->eigen_gpu_device()); }
 
   void AddCallBack(std::function<void()> callback) const override {
     cuda_handler_->AddCallBack(callback);
