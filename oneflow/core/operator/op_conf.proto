@@ -731,6 +731,22 @@ message RoIAlignOpConf {
   optional string data_format = 8 [default = "channels_first"];
 }
 
+message AnchorTargetOpConf{
+    required string gt_boxes = 1;
+    required string image_info = 2;
+
+    required string rpn_labels = 3;
+    required string rpn_bbox_targets = 4;
+    required string rpn_bbox_inside_weights = 5;
+    required string rpn_bbox_outside_weights = 6;
+
+    required AnchorGeneratorConf anchors_generator_conf = 7;
+    optional float positive_overlap_threshold = 8 [default = 0.7];
+    optional float negative_overlap_threshold = 9 [default = 0.3];
+    optional int32 batchsize = 10 [default = 256];
+    optional float foreground_fraction = 11 [default = 0.5];
+}
+
 message OperatorConf {
   required string name = 1;
   optional string model_load_dir = 2;
@@ -791,6 +807,7 @@ message OperatorConf {
     RoIAlignOpConf roi_align_conf = 410;
     ProposalTargetOpConf proposal_target_conf = 411;
     BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
+    AnchorTargetOpConf anchor_target_conf = 413;
   }
 }
 
