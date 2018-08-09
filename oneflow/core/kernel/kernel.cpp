@@ -2,6 +2,24 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+void ClearPbBlob(Blob* blob) {
+  FOR_RANGE(int64_t, i, 0, blob->shape().elem_cnt()) { blob->mut_dptr<T>()[i].Clear(); }
+}
+
+void ClearPbBlob(Blob* blob) {
+  switch (blob->data_type()) {
+#define CLEAR_PB_BLOB_CASE(type_cpp, type_proto) \
+  case type_proto: return ClearPbBlob<type_cpp>(blob);
+    OF_PP_FOR_EACH_TUPLE(CLEAR_PB_BLOB_CASE, RECORD_DATA_TYPE_SEQ);
+    default: CHECK_NE(blob->data_type(), DataType::kInvalidDataType);
+  }
+}
+
+}  // namespace
+
 void Kernel::Init(const ParallelContext* parallel_ctx, const KernelConf& kernel_conf,
                   DeviceCtx* device_ctx) {
   kernel_conf_ = kernel_conf;
@@ -42,6 +60,7 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ClearPbBlobIfNeed(ctx, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
   if (this->GetForwardActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -52,6 +71,14 @@ void Kernel::Forward(const KernelCtx& ctx,
   }
   if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+}
+
+void Kernel::ClearPbBlobIfNeed(const KernelCtx& ctx,
+                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const auto& out_bn : op_attribute().output_bns()) {
+    Blob* out_blob = BnInOp2Blob(out_bn);
+    if (out_blob && IsRecordDataType(out_blob->data_type())) { ClearPbBlob(out_blob); }
+  }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
