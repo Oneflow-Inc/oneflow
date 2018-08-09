@@ -182,6 +182,11 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   int64_t mem_shared_id = Global<IDMgr>::Get()->NewMemSharedId();
   std::vector<int64_t> blob_index2offset(parallel_num, 0);
 
+  auto SetMemSharedField4Regst = [&](RegstDesc* regst, int64_t blob_id) {
+    regst->set_mem_shared_id(mem_shared_id);
+    regst->set_mem_shared_offset(blob_index2offset.at(blob_id));
+  };
+
   // scatter
   {
     std::shared_ptr<RegstDesc> consumed_regst =
@@ -196,93 +201,64 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     }
 
     for (int64_t i = 0; i < parallel_num; ++i) {
-      std::shared_ptr<RegstDesc> produced_regst =
-          reduce_task_nodes.scatter->GetProducedRegst("out_" + std::to_string(i));
-      produced_regst->set_mem_shared_id(mem_shared_id);
-      produced_regst->set_mem_shared_offset(blob_index2offset.at(i));
+      SetMemSharedField4Regst(
+          reduce_task_nodes.scatter->GetProducedRegst("out_" + std::to_string(i)).get(), i);
     }
   }
 
+  auto SetOrCheck4ConsumedRegst = [&](RegstDesc* consumed_regst, bool is_inplace_regst,
+                                      int64_t blob_id) {
+    if (is_inplace_regst) {
+      CHECK_EQ(mem_shared_id, consumed_regst->mem_shared_id());
+      CHECK_EQ(blob_index2offset.at(blob_id), consumed_regst->mem_shared_offset());
+    } else {
+      SetMemSharedField4Regst(consumed_regst, blob_id);
+    }
+  };
+
   // local_add
   if (reduce_task_nodes.local_add) {
-    HashSet<int64_t> in_place_blob_ids;
+    HashSet<int64_t> inplace_blob_ids;
     int64_t dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
     for (int64_t i = dev_index_of_this_machine; i < parallel_num; i += dev_num_of_each_machine) {
-      in_place_blob_ids.emplace(i);
+      inplace_blob_ids.emplace(i);
     }
 
     ExecNode* local_add_exec_node = reduce_task_nodes.local_add->exec_gph().SoleNode();
     CHECK_EQ(parallel_num, local_add_exec_node->op()->input_bns().size());
     for (int64_t i = 0; i < parallel_num; ++i) {
-      RegstDesc* in_regst =
+      RegstDesc* consumed_regst =
           local_add_exec_node->RegstDesc4BnInOp(local_add_exec_node->op()->input_bns().Get(i));
-      auto it = in_place_blob_ids.find(i);
-      if (it == in_place_blob_ids.end()) {
-        in_regst->set_mem_shared_id(mem_shared_id);
-        in_regst->set_mem_shared_offset(blob_index2offset.at(i));
-      } else {
-        CHECK_EQ(mem_shared_id, in_regst->mem_shared_id());
-        CHECK_EQ(blob_index2offset.at(i), in_regst->mem_shared_offset());
-      }
+      SetOrCheck4ConsumedRegst(consumed_regst, inplace_blob_ids.find(i) != inplace_blob_ids.end(),
+                               i);
     }
 
     for (int64_t i = 0; i < machine_num; ++i) {
-      std::shared_ptr<RegstDesc> produced_regst =
-          reduce_task_nodes.local_add->GetProducedRegst("out_" + std::to_string(i));
-      produced_regst->set_mem_shared_id(mem_shared_id);
-      produced_regst->set_mem_shared_offset(
-          blob_index2offset.at(i * dev_num_of_each_machine + dev_index_of_this_machine));
+      SetMemSharedField4Regst(
+          reduce_task_nodes.local_add->GetProducedRegst("out_" + std::to_string(i)).get(),
+          i * dev_num_of_each_machine + dev_index_of_this_machine);
     }
   }
 
-  // global add
-  {
-    auto& consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
-    if (reduce_task_nodes.local_add) {
-      CHECK_EQ(machine_num, consumed_regsts.size());
-    } else {
-      CHECK_EQ(parallel_num, consumed_regsts.size());
-    }
+  auto HandleMemSharedFiledOfConsumedRegsts = [&](CompTaskNode* task_node,
+                                                  int64_t consumed_regst_num) {
+    auto& consumed_regsts = task_node->consumed_regsts();
+    CHECK_EQ(consumed_regst_num, consumed_regsts.size());
     for (const auto& kv : consumed_regsts) {
-      int64_t in_paralle_id = oneflow_cast<int64_t>(kv.first.substr(3));
+      int64_t in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
       CHECK_EQ(1, kv.second.size());
-      RegstDesc* in_regst = kv.second.front().lock().get();
-      if (in_paralle_id != parallel_id) {
-        in_regst->set_mem_shared_id(mem_shared_id);
-        in_regst->set_mem_shared_offset(blob_index2offset.at(in_paralle_id));
-      } else {
-        CHECK_EQ(mem_shared_id, in_regst->mem_shared_id());
-        CHECK_EQ(blob_index2offset.at(parallel_id), in_regst->mem_shared_offset());
-      }
+      RegstDesc* consumed_regst = kv.second.front().lock().get();
+      SetOrCheck4ConsumedRegst(consumed_regst, in_parallel_id == parallel_id, in_parallel_id);
     }
-
-    std::shared_ptr<RegstDesc> produced_regst =
-        reduce_task_nodes.global_add->GetProducedRegst("out");
-    produced_regst->set_mem_shared_id(mem_shared_id);
-    produced_regst->set_mem_shared_offset(blob_index2offset.at(parallel_id));
-  }
+  };
+  // global add
+  int consumed_regst_num = reduce_task_nodes.local_add ? machine_num : parallel_num;
+  HandleMemSharedFiledOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
+  SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(), parallel_id);
 
   // gather
-  {
-    auto& consumed_regsts = reduce_task_nodes.gather->consumed_regsts();
-    CHECK_EQ(parallel_num, consumed_regsts.size());
-    for (const auto& kv : consumed_regsts) {
-      int64_t in_paralle_id = oneflow_cast<int64_t>(kv.first.substr(3));
-      CHECK_EQ(1, kv.second.size());
-      RegstDesc* in_regst = kv.second.front().lock().get();
-      if (in_paralle_id != parallel_id) {
-        in_regst->set_mem_shared_id(mem_shared_id);
-        in_regst->set_mem_shared_offset(blob_index2offset.at(in_paralle_id));
-      } else {
-        CHECK_EQ(mem_shared_id, in_regst->mem_shared_id());
-        CHECK_EQ(blob_index2offset.at(parallel_id), in_regst->mem_shared_offset());
-      }
-    }
-
-    std::shared_ptr<RegstDesc> produced_regst = reduce_task_nodes.gather->GetProducedRegst("out");
-    produced_regst->set_mem_shared_id(mem_shared_id);
-    produced_regst->set_mem_shared_offset(0);
-  }
+  HandleMemSharedFiledOfConsumedRegsts(reduce_task_nodes.gather, parallel_num);
+  SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(), 0);
 }
 
 void TaskGraph::AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
