@@ -11,7 +11,7 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 #define ENCODE_CASE_DATA_TYPE_SEQ_PRODUCT                      \
   OF_PP_SEQ_PRODUCT(ENCODE_CASE_SEQ, ARITHMETIC_DATA_TYPE_SEQ) \
-  OF_PP_SEQ_PRODUCT((EncodeCase::kIdentity), FEATURE_DATA_TYPE_SEQ)
+  OF_PP_SEQ_PRODUCT((EncodeCase::kProtobuf), FEATURE_DATA_TYPE_SEQ)
 
 #define FEATURE_SIZE_SHIFT_SEQ (8)(16)(24)
 
