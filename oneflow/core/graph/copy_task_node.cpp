@@ -12,7 +12,7 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
       && (dst_node_task_type == TaskType::kReduceLocalAdd
           || dst_node_task_type == TaskType::kReduceGlobalAdd
           || dst_node_task_type == TaskType::kReduceGather)) {
-    out_regst = ProduceRegst(name, true);
+    out_regst = ProduceRegst(name, true, 1, 1);
   } else {
     out_regst = ProduceRegst(name, false);
   }

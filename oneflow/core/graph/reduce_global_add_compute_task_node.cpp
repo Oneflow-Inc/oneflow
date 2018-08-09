@@ -4,7 +4,7 @@
 namespace oneflow {
 
 void ReduceGlobalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceRegst("out", true);
+  ProduceRegst("out", true, 1, 1);
   for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedRegst(edge, "out"); }
 }
 
