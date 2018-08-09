@@ -28,12 +28,8 @@ struct RegstAct {
 };
 
 struct RegstActCtx {
-  RegstActCtx(const RegstAct* input_regst_act, const ChainActNode* producer)
-      : regst_act(input_regst_act) {
-    node2duration_to_producer[producer] = 0;
-  }
+  RegstActCtx(const ChainActNode* producer) { node2duration_to_producer[producer] = 0; }
 
-  const RegstAct* regst_act;
   HashMap<const ChainActNode*, double> node2duration_to_producer;
 };
 
@@ -60,22 +56,19 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
   void ForEachInEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
   void ForEachOutEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
   void ForEachActEvent(const std::function<void(const ActEvent*)>& Handler) const;
-  void ForEachProducedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
-  void ForEachSharedProducedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
-  void ForEachUnsharedProducedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
+  void ForEachProducedRegstActGroup(
+      const std::function<void(const std::list<const RegstAct*>&)>& Handler) const;
   void ForEachLastConsumedRegstAct(const std::function<void(const RegstAct*)>& Handler) const;
 
   // Getters
   int64_t act_id() const { return act_events_.front()->act_id(); }
-  bool HasSharedProducedRegstActs() const { return !shared_produced_regst_acts_.empty(); }
-  const RegstAct* FirstSharedRegstAct() const { return shared_produced_regst_acts_.front().get(); }
 
   // Adds
-  void AddUnsharedProducedRegstActs(std::unique_ptr<RegstAct>&& regst_act) {
-    unshared_produced_regst_acts_.push_back(std::move(regst_act));
+  void AddProducedRegstActsWithFakeOuts(std::unique_ptr<RegstAct>&& regst_act) {
+    produced_regst_acts_with_fake_outs_.push_back(std::move(regst_act));
   }
-  void AddSharedProducedRegstActs(std::unique_ptr<RegstAct>&& regst_act) {
-    shared_produced_regst_acts_.push_back(std::move(regst_act));
+  void AddProducedRegstActsWithoutFakeOuts(std::unique_ptr<RegstAct>&& regst_act) {
+    produced_regst_acts_without_fake_outs_.push_back(std::move(regst_act));
   }
   void AddLastConsumedRegstActs(const RegstAct* regst_act) {
     last_consumed_regst_acts_.push_back(regst_act);
@@ -83,8 +76,8 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
 
  private:
   std::list<std::unique_ptr<ActEvent>> act_events_;
-  std::list<std::unique_ptr<RegstAct>> unshared_produced_regst_acts_;
-  std::list<std::unique_ptr<RegstAct>> shared_produced_regst_acts_;
+  std::list<std::unique_ptr<RegstAct>> produced_regst_acts_without_fake_outs_;
+  std::list<std::unique_ptr<RegstAct>> produced_regst_acts_with_fake_outs_;
   std::list<const RegstAct*> last_consumed_regst_acts_;
 };
 

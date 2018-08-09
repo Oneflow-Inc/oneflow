@@ -37,23 +37,17 @@ void ChainActNode::ForEachActEvent(const std::function<void(const ActEvent*)>& H
   for (const auto& act_event : act_events_) { Handler(act_event.get()); }
 }
 
-void ChainActNode::ForEachProducedRegstAct(
-    const std::function<void(const RegstAct*)>& Handler) const {
-  ForEachSharedProducedRegstAct(Handler);
-  ForEachUnsharedProducedRegstAct(Handler);
-}
-
-void ChainActNode::ForEachSharedProducedRegstAct(
-    const std::function<void(const RegstAct*)>& Handler) const {
-  for (const auto& produced_regst_act : shared_produced_regst_acts_) {
-    Handler(produced_regst_act.get());
+void ChainActNode::ForEachProducedRegstActGroup(
+    const std::function<void(const std::list<const RegstAct*>&)>& Handler) const {
+  for (const auto& produced_regst_act : produced_regst_acts_with_fake_outs_) {
+    std::list<const RegstAct*> regst_act_group;
+    regst_act_group.push_back(produced_regst_act.get());
+    Handler(regst_act_group);
   }
-}
-
-void ChainActNode::ForEachUnsharedProducedRegstAct(
-    const std::function<void(const RegstAct*)>& Handler) const {
-  for (const auto& produced_regst_act : unshared_produced_regst_acts_) {
-    Handler(produced_regst_act.get());
+  std::list<const RegstAct*> regst_act_group;
+  for (const auto& produced_regst_act : produced_regst_acts_without_fake_outs_) {
+    regst_act_group.push_back(produced_regst_act.get());
+    Handler(regst_act_group);
   }
 }
 
@@ -86,14 +80,16 @@ void ChainActGraph::ForEachRegstDescConsumerPathIIScale(
   std::map<int64_t, uint64_t> regst_desc_id2produced_cnt;
   uint64_t max_cnt = 0;
   ForEachNode([&](const ChainActNode* node) {
-    node->ForEachProducedRegstAct([&](const RegstAct* regst_act) {
-      int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_act->regst_desc_id];
-      if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
-      for (const ActEvent* act_event : regst_act->consumer_act_events) {
-        std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_act->regst_desc_id,
-                                                           act_event->actor_id());
-        int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
-        if (max_cnt < used_cnt) { max_cnt = used_cnt; }
+    node->ForEachProducedRegstActGroup([&](const std::list<const RegstAct*>& regst_act_group) {
+      for (const RegstAct* regst_act : regst_act_group) {
+        int64_t produced_cnt = ++regst_desc_id2produced_cnt[regst_act->regst_desc_id];
+        if (max_cnt < produced_cnt) { max_cnt = produced_cnt; }
+        for (const ActEvent* act_event : regst_act->consumer_act_events) {
+          std::pair<int64_t, int64_t> consumed_regst_desc_id(regst_act->regst_desc_id,
+                                                             act_event->actor_id());
+          int64_t used_cnt = ++regst_desc_id_consumed2used_cnt[consumed_regst_desc_id];
+          if (max_cnt < used_cnt) { max_cnt = used_cnt; }
+        }
       }
     });
   });
@@ -133,25 +129,22 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
     const std::function<void(int64_t, int64_t, double)>& Handler) const {
   HashSet<std::shared_ptr<RegstActCtx>> regst_act_ctx_window;
   HashMap<const RegstAct*, std::shared_ptr<RegstActCtx>> regst_act2regst_act_ctx;
+  HashMap<const RegstActCtx*, const RegstAct*> regst_act_ctx2regst_act;
   TopoForEachChainActNode([&](const ChainActNode* cur_node) {
     for (auto& regst_act_ctx : regst_act_ctx_window) {
-      const auto& fake_producer_outs = regst_act_ctx->regst_act->fake_producer_outs;
+      const auto& fake_producer_outs =
+          regst_act_ctx2regst_act.at(regst_act_ctx.get())->fake_producer_outs;
       if (fake_producer_outs.find(cur_node) != fake_producer_outs.end()) { continue; }
       CalcRegstActNodePathDuration(regst_act_ctx.get(), cur_node);
     }
-    cur_node->ForEachUnsharedProducedRegstAct([&](const RegstAct* regst_act) {
-      std::shared_ptr<RegstActCtx> regst_act_ctx(new RegstActCtx(regst_act, cur_node));
+    cur_node->ForEachProducedRegstActGroup([&](const std::list<const RegstAct*>& regst_act_group) {
+      std::shared_ptr<RegstActCtx> regst_act_ctx(new RegstActCtx(cur_node));
       CHECK(regst_act_ctx_window.emplace(regst_act_ctx).second);
-      CHECK(regst_act2regst_act_ctx.emplace(regst_act, regst_act_ctx).second);
-    });
-    if (cur_node->HasSharedProducedRegstActs()) {
-      std::shared_ptr<RegstActCtx> regst_act_ctx(
-          new RegstActCtx(cur_node->FirstSharedRegstAct(), cur_node));
-      CHECK(regst_act_ctx_window.emplace(regst_act_ctx).second);
-      cur_node->ForEachSharedProducedRegstAct([&](const RegstAct* regst_act) {
+      for (const RegstAct* regst_act : regst_act_group) {
         CHECK(regst_act2regst_act_ctx.emplace(regst_act, regst_act_ctx).second);
-      });
-    }
+        regst_act_ctx2regst_act[regst_act_ctx.get()] = regst_act;
+      }
+    });
     cur_node->ForEachLastConsumedRegstAct([&](const RegstAct* regst_act) {
       for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
         double duration = Duration4RegstActConsumerPath(
@@ -159,9 +152,7 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
             consumer_act_event, Node4ActEvent(consumer_act_event));
         Handler(regst_act->regst_desc_id, consumer_act_event->actor_id(), duration);
       }
-      if (regst_act2regst_act_ctx.at(regst_act).use_count() == 2) {
-        regst_act_ctx_window.erase(regst_act2regst_act_ctx.at(regst_act));
-      }
+      regst_act_ctx_window.erase(regst_act2regst_act_ctx.at(regst_act));
       regst_act2regst_act_ctx.erase(regst_act);
     });
   });
@@ -263,9 +254,9 @@ void ChainActGraph::InitNodeProducedRegstActs(
       }
     });
     if (regst_act->fake_producer_outs.empty()) {
-      producer->AddSharedProducedRegstActs(std::move(regst_act));
+      producer->AddProducedRegstActsWithoutFakeOuts(std::move(regst_act));
     } else {
-      producer->AddUnsharedProducedRegstActs(std::move(regst_act));
+      producer->AddProducedRegstActsWithFakeOuts(std::move(regst_act));
     }
   }
 }
@@ -273,18 +264,22 @@ void ChainActGraph::InitNodeProducedRegstActs(
 void ChainActGraph::InitNodeLastConsumedRegstActs() {
   auto TopoOrderValue4Node = MakeGetterTopoOrderValue4Node();
   ForEachNode([&](const ChainActNode* node) {
-    node->ForEachProducedRegstAct([&](const RegstAct* regst_act) {
+    node->ForEachProducedRegstActGroup([&](const std::list<const RegstAct*>& regst_act_group) {
       int64_t max_consumer_topo_order_value = -1;
       const ActEvent* last_consumer_act_event = nullptr;
-      for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
-        int64_t cur_consumer_topo_order_value =
-            TopoOrderValue4Node(Node4ActEvent(consumer_act_event));
-        if (cur_consumer_topo_order_value > max_consumer_topo_order_value) {
-          max_consumer_topo_order_value = cur_consumer_topo_order_value;
-          last_consumer_act_event = consumer_act_event;
+      for (const RegstAct* regst_act : regst_act_group) {
+        for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
+          int64_t cur_consumer_topo_order_value =
+              TopoOrderValue4Node(Node4ActEvent(consumer_act_event));
+          if (cur_consumer_topo_order_value > max_consumer_topo_order_value) {
+            max_consumer_topo_order_value = cur_consumer_topo_order_value;
+            last_consumer_act_event = consumer_act_event;
+          }
         }
       }
-      act_event2chain_node_.at(last_consumer_act_event)->AddLastConsumedRegstActs(regst_act);
+      for (const RegstAct* regst_act : regst_act_group) {
+        act_event2chain_node_.at(last_consumer_act_event)->AddLastConsumedRegstActs(regst_act);
+      }
     });
   });
 }
