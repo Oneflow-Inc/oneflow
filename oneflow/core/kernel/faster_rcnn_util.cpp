@@ -85,8 +85,8 @@ void ScoredBBoxSlice<T>::TruncateByThreshold(const float thresh) {
 
 // Find first index which score less than threshold.
 template<typename T>
-int64_t ScoredBBoxSlice<T>::FindByThreshold(const float thresh) {
-  FOR_RANGE(int64_t, i, 0, available_len_) {
+int32_t ScoredBBoxSlice<T>::FindByThreshold(const float thresh) {
+  FOR_RANGE(int32_t, i, 0, available_len_) {
     if (score_ptr_[index_slice_[i]] < thresh) { return i; }
   }
   return available_len_;
@@ -130,7 +130,7 @@ void ScoredBBoxSlice<T>::Filter(const std::function<bool(const T, const BBox<T>*
 }
 
 template<typename T>
-ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int64_t begin, const int64_t end) {
+ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int32_t begin, const int32_t end) {
   CHECK_GT(end, begin);
   CHECK_GE(begin, 0);
   CHECK_LE(end, available_len_);

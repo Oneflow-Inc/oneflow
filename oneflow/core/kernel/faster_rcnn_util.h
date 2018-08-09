@@ -137,10 +137,10 @@ class ScoredBBoxSlice final {
 
   void Truncate(int32_t len);
   void TruncateByThreshold(float thresh);
-  int64_t FindByThreshold(const float thresh);
+  int32_t FindByThreshold(const float thresh);
   void Concat(const ScoredBBoxSlice& other);
   void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
-  ScoredBBoxSlice<T> Slice(const int64_t begin, const int64_t end);
+  ScoredBBoxSlice<T> Slice(const int32_t begin, const int32_t end);
   void Shuffle();
 
   inline int32_t GetSlice(int32_t i) const {
