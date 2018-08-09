@@ -746,7 +746,7 @@ message AnchorTargetOpConf{
     optional float negative_overlap_threshold = 9 [default = 0.3];
     optional int32 batchsize = 10 [default = 256];
     optional float foreground_fraction = 11 [default = 0.5];
-    optional BboxWeightConf bbox_inside_weight_conf = 12;
+    optional BBoxRegressionWeights bbox_reg_weights = 12;
 }
 
 message OperatorConf {

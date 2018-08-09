@@ -88,6 +88,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const int32_t image_height = conf.anchors_generator_conf().image_height();
   const int32_t image_width = conf.anchors_generator_conf().image_width();
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
 
   AnchorTargetKernelUtil<T>::SetValue(labels_num, rpn_labels_blob->mut_dptr<int32_t>(), -1);
 
@@ -187,12 +188,12 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     }
 
     // 5. Compute foreground anchors' bounding box regresion target(i.e. deltas).
-    // FOR_RANGE(int32_t, i, 0, fg_cnt) {
-    // const int32_t anchor_idx = fg_inds_ptr[i];
-    // const int32_t gt_boxes_idx = max_overlaps_inds_ptr[anchor_idx];
-    // current_img_target_bbox_delta[anchor_idx].TransformInverse(anchors_bbox + anchor_idx,
-    // current_img_gt_boxes_bbox + gt_boxes_idx);
-    //}
+    FOR_RANGE(int32_t, i, 0, fg_cnt) {
+      const int32_t anchor_idx = fg_inds_ptr[i];
+      const int32_t gt_boxes_idx = max_overlaps_inds_ptr[anchor_idx];
+      current_img_target_bbox_delta[anchor_idx].TransformInverse(
+          anchors_bbox + anchor_idx, current_img_gt_boxes_bbox + gt_boxes_idx, bbox_reg_ws);
+    }
 
     // 6. Set bounding box inside weights and outside weights.
     const float weight_value = 1.0 / (fg_cnt + bg_cnt);
