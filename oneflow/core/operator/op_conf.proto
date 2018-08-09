@@ -218,7 +218,7 @@ message SmoothL1LossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  required float beta = 4 [default = 1] ;
+  optional float beta = 4 [default = 1] ;
   optional float scale = 5 [default = 1];
   required string inside_weights = 6;
   required string outside_weights = 7;
