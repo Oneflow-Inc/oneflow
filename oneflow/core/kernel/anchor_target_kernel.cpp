@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/kernel/anchor_target_kernel.h"
 
@@ -158,7 +159,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     if (fg_cnt > fg_conf_size) {
       // subsample fg
       const int32_t ignored_num = fg_cnt - fg_conf_size;
-      random_generator_->Uniform(ignored_num, 0, fg_cnt, inds_mask_ptr);
+      // random_generator_->Uniform(ignored_num, 0, fg_cnt, inds_mask_ptr);
       FOR_RANGE(int32_t, i, 0, ignored_num) {
         current_img_label_ptr[fg_inds_ptr[inds_mask_ptr[i]]] = -1;
       }
