@@ -25,7 +25,7 @@ message DropoutKernelConf {
   required ShapeProto out = 3;
 };
 
-message LossKernelConf { 
+message LossKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
   required float weight_scalar = 3;
@@ -41,6 +41,10 @@ message SparseCrossEntropyLossKernelConf {
 }
 
 message SmoothL1LossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
+message SigmoidCrossEntropyLossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
@@ -77,7 +81,7 @@ message SoftmaxKernelConf {
 
 message TransposeKernelConf {
   repeated int32 perm = 1;
-  repeated int32 invert_perm = 2; 
+  repeated int32 invert_perm = 2;
 }
 
 message LocalResponseNormalizationKernelConf {
@@ -108,7 +112,7 @@ message ReduceGatherKernelConf {
   repeated int64 data_offset = 1;
 }
 
-message AccuracyKernelConf { 
+message AccuracyKernelConf {
   required DataType prediction_type = 1;
   required DataType label_type = 2;
 }
@@ -116,7 +120,7 @@ message AccuracyKernelConf {
 message OpAttribute {
   required OperatorConf op_conf = 1;
   map<string, LogicalBlobId> bn_in_op2lbi = 2;
-  
+
   repeated string input_bns = 3;
   repeated string input_diff_bns = 4;
   repeated string output_bns = 5;
@@ -126,13 +130,13 @@ message OpAttribute {
   repeated string model_bns = 8;
   repeated string model_diff_bns = 9;
   repeated string const_model_bns = 10;
-  
+
   repeated string forward_model_bns = 11;
   repeated string const_buf_bns = 12;
 }
 
 message KernelConf {
-  required OpAttribute op_attribute = 1; 
+  required OpAttribute op_attribute = 1;
   required bool need_do_data_id = 2;
   required bool need_do_col_num = 3;
   required bool is_forward = 4;
@@ -157,5 +161,6 @@ message KernelConf {
     ReduceGatherKernelConf reduce_gather_conf = 350;
     AccuracyKernelConf accuracy_conf = 401;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
+    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
   }
 }
