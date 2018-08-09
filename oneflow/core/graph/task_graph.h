@@ -33,6 +33,7 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
+  void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
@@ -83,6 +84,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   template<typename TaskNodeType>
   bool IsEndingTaskType(TaskType type);
+
+  void GeneratePersistenceThrdId(
+      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;

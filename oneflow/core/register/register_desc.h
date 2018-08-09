@@ -26,6 +26,7 @@ class RegstDesc final {
   void set_producer(const TaskNode* val) { producer_ = val; }
   const HashSet<const TaskNode*>& consumers() const { return consumers_; }
   void AddConsumer(const TaskNode*);
+  void DeleteConsumer(const TaskNode*);
 
   // min_register_num_, max_register_num_
   int32_t min_register_num() const { return min_register_num_; }
