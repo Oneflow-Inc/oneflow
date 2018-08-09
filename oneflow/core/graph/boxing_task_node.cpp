@@ -11,6 +11,12 @@ void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
     std::string name = "boxing_out_" + std::to_string(out_edge->edge_id());
     auto out_regst = ProduceRegst(name, true);
     out_edge->AddRegst(name, out_regst);
+
+    name = "boxing_out_fw_pb_" + std::to_string(out_edge->edge_id());
+    auto fw_pb_out_regst = ProduceRegst(name, true);
+    if (out_edge->dst_node()->GetTaskType() != TaskType::kCopyHd) {
+      out_edge->AddRegst(name, fw_pb_out_regst);
+    }
   }
   ProduceRegst("middle", true, 1, 1);
 }
@@ -18,8 +24,8 @@ void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
 void BoxingTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* in_edge : in_edges()) {
     std::string name = "boxing_in_" + std::to_string(in_edge->edge_id());
-    auto in_regst = in_edge->GetSoleRegst();
-    ConsumeRegst(name, in_regst);
+    in_edge->ForEachRegst(
+        [&](std::shared_ptr<RegstDesc> regst_desc) { ConsumeRegst("in", regst_desc); });
   }
 }
 
@@ -166,30 +172,26 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
   std::vector<LogicalBlobId> lbis = in_logical->GetLbisTo(out_logical);
   auto middle_regst = GetProducedRegst("middle");
   for (const LogicalBlobId& lbi : lbis) {
+    CHECK_EQ(lbi.is_packed_id(), false);
     ExecNode* node = mut_exec_gph().NewNode();
     node->mut_op() = NewBoxingOp(lbi, in_logical, out_logical, sorted_in_edges, sorted_out_edges);
     for (size_t i = 0; i < node->op()->input_bns().size(); ++i) {
-      auto regst = sorted_in_edges[i].edge->GetSoleRegst();
+      auto regsts = sorted_in_edges[i].edge->GetAllRegsts();
       const std::string& ibn = node->op()->input_bns().Get(i);
-      node->BindBnWithRegst(ibn, regst);
+      node->BindBnWithOneOfTheRegsts(ibn, regsts);
     }
     for (size_t i = 0; i < node->op()->output_bns().size(); ++i) {
-      auto regst = sorted_out_edges[i].edge->GetSoleRegst();
-      const std::string& obn = node->op()->output_bns().Get(i);
-      if (lbi.is_packed_id()) {
-        RegstDesc* in_regst = sorted_in_edges[0].edge->GetSoleRegst().get();
-        if (!regst->HasSameBlobDescs(in_regst)) { regst->CopyBlobDescFrom(in_regst); }
-      } else {
-        regst->AddLbi(lbi);
-      }
-      node->BindBnWithRegst(obn, regst);
+      const TaskEdge* out_edge = sorted_out_edges[i].edge;
+      auto regst = out_edge->GetRegst("boxing_out_" + std::string(lbi.is_fw_pb() ? "fw_pb_" : "")
+                                      + std::to_string(out_edge->edge_id()));
+      regst->AddLbi(lbi);
+      node->BindBnWithRegst(node->op()->output_bns().Get(i), regst);
     }
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      CHECK_EQ(lbi.is_packed_id(), false);
       middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
       node->BindBnWithRegst(dtbn, middle_regst);
     }
-    if (lbi.is_packed_id() == false) { node->InferBlobDescs(nullptr); }
+    node->InferBlobDescs(nullptr);
   }
 }
 

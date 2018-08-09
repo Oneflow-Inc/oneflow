@@ -246,10 +246,10 @@ void BboxNmsAndLimitKernel<T>::Limit(const int32_t limit_num, const float thresh
   slice.DescSortByScore(false);
   slice.Truncate(limit_num);
   slice.Filter([&](const T score, const BBox<T>* bbox) { return score < thresh; });
-  // slice.Sort([&](const T l_score, const T r_score, const BBox<T>& l_bbox, const BBox<T>& r_bbox)
-  // {
-  //   return l_bbox.Area() > r_bbox.Area();
-  // });
+  slice.Sort([&](const T l_score, const T r_score, const BBox<T>& l_bbox, const BBox<T>& r_bbox)
+  {
+    return l_bbox.Area() > r_bbox.Area();
+  });
 }
 
 template<typename T>
@@ -258,18 +258,16 @@ void BboxNmsAndLimitKernel<T>::WriteOutputToOFRecord(const int64_t im_index,
                                                      const ScoredBBoxSlice<T>& slice,
                                                      Blob* labeled_bbox_blob,
                                                      Blob* bbox_score_blob) const {
-  OFRecord* labeled_bbox_record = labeled_bbox_blob->mut_dptr<OFRecord>() + im_index;
-  Feature& labeled_bbox_feature = (*labeled_bbox_record->mutable_feature())[kOFRecordMapDefaultKey];
-  OFRecord* score_record = bbox_score_blob->mut_dptr<OFRecord>() + im_index;
-  Feature& score_feature = (*score_record->mutable_feature())[kOFRecordMapDefaultKey];
+  Int32List16* labeled_bbox_ptr = labeled_bbox_blob->mut_dptr<Int32List16>() + im_index;
+  FloatList16* score_ptr = bbox_score_blob->mut_dptr<FloatList16>() + im_index;
   FOR_RANGE(int64_t, i, 0, slice.available_len()) {
     const BBox<T>* bbox = slice.GetBBox(i);
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->x1());
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->y1());
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->x2());
-    labeled_bbox_feature.mutable_int32_list()->add_value(bbox->y2());
-    labeled_bbox_feature.mutable_int32_list()->add_value(slice.GetSlice(i) % boxes_num);
-    score_feature.mutable_float_list()->add_value(slice.GetScore(i));
+    labeled_bbox_ptr->mutable_value()->add_value(bbox->x1());
+    labeled_bbox_ptr->mutable_value()->add_value(bbox->y1());
+    labeled_bbox_ptr->mutable_value()->add_value(bbox->x2());
+    labeled_bbox_ptr->mutable_value()->add_value(bbox->y2());
+    labeled_bbox_ptr->mutable_value()->add_value(slice.GetSlice(i) % boxes_num);
+    score_ptr->mutable_value()->add_value(slice.GetScore(i));
   }
 }
 

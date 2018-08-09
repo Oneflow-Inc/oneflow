@@ -190,6 +190,7 @@ class Operator {
   void EnrollRepeatedInputBn(const std::string& ibn_prefix);
   void EnrollOutputBn(const std::string& obn, bool has_diff);
   void EnrollOutputBn(const std::string& obn) { EnrollOutputBn(obn, true); }
+  void EnrollFwPbOutputBn(const std::string& obn);
 
   // enroll model blobs
   void EnrollModelBn(const std::string& mbn);
