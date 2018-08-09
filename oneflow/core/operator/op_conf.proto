@@ -480,11 +480,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
-    EncodeIdentity identity = 3;
+    EncodeProtobuf protobuf = 3;
   }
 }
 
-message EncodeIdentity {
+message EncodeProtobuf {
 }
 
 message EncodeRaw {
