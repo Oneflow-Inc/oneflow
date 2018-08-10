@@ -73,7 +73,7 @@ void FasterRcnnUtil<T>::ClipBoxes(int64_t boxes_num, const int64_t image_height,
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
-void ScoredBBoxSlice<T>::Truncate(int64_t len) {
+void ScoredBBoxSlice<T>::Truncate(int32_t len) {
   CHECK_GE(len, 0);
   if (len < available_len_) { available_len_ = len; }
 }
@@ -85,8 +85,8 @@ void ScoredBBoxSlice<T>::TruncateByThreshold(const float thresh) {
 
 // Find first index which score less than threshold.
 template<typename T>
-int64_t ScoredBBoxSlice<T>::FindByThreshold(const float thresh) {
-  FOR_RANGE(int64_t, i, 0, available_len_) {
+int32_t ScoredBBoxSlice<T>::FindByThreshold(const float thresh) {
+  FOR_RANGE(int32_t, i, 0, available_len_) {
     if (score_ptr_[index_slice_[i]] < thresh) { return i; }
   }
   return available_len_;
@@ -109,9 +109,18 @@ void ScoredBBoxSlice<T>::DescSortByScore(bool init_index) {
 }
 
 template<typename T>
+void ScoredBBoxSlice<T>::Sort(
+    const std::function<bool(const T, const T, const BBox<T>&, const BBox<T>&)>& Compare) {
+  std::sort(index_slice_, index_slice_ + available_len_, [&](int32_t l_idx, int32_t r_idx) {
+    const BBox<T>* bbox = BBox<T>::Cast(bbox_ptr_);
+    return Compare(score_ptr_[l_idx], score_ptr_[r_idx], bbox[l_idx], bbox[r_idx]);
+  });
+}
+
+template<typename T>
 void ScoredBBoxSlice<T>::Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered) {
   int32_t keep_num = 0;
-  FOR_RANGE(int64_t, i, 0, available_len_) {
+  FOR_RANGE(int32_t, i, 0, available_len_) {
     if (!IsFiltered(GetScore(i), GetBBox(i))) {
       // keep_num <= i so index_slice_ never be written before read
       index_slice_[keep_num++] = index_slice_[i];
@@ -121,7 +130,7 @@ void ScoredBBoxSlice<T>::Filter(const std::function<bool(const T, const BBox<T>*
 }
 
 template<typename T>
-ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int64_t begin, const int64_t end) {
+ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int32_t begin, const int32_t end) {
   CHECK_GT(end, begin);
   CHECK_GE(begin, 0);
   CHECK_LE(end, available_len_);
@@ -157,7 +166,7 @@ void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& 
   }
   Truncate(keep_num);
 
-  CHECK_LE(available_len(), pre_nms_slice.available_len());
+  CHECK_LE(available_len_, pre_nms_slice.available_len());
 }
 
 #define INITIATE_SCORED_BBOX_SLICE(T, type_cpp) template class ScoredBBoxSlice<T>;

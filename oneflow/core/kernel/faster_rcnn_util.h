@@ -130,28 +130,29 @@ class ScoredBBoxSlice final {
         index_slice_(index_slice),
         available_len_(len) {}
 
+  void Sort(const std::function<bool(const T, const T, const BBox<T>&, const BBox<T>&)>& Compare);
   void DescSortByScore(bool init_index);
   void DescSortByScore() { DescSortByScore(true); }
   void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
 
-  void Truncate(int64_t len);
+  void Truncate(int32_t len);
   void TruncateByThreshold(float thresh);
-  int64_t FindByThreshold(const float thresh);
+  int32_t FindByThreshold(const float thresh);
   void Concat(const ScoredBBoxSlice& other);
   void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
-  ScoredBBoxSlice<T> Slice(const int64_t begin, const int64_t end);
+  ScoredBBoxSlice<T> Slice(const int32_t begin, const int32_t end);
   void Shuffle();
 
-  inline int32_t GetSlice(int64_t i) const {
-    CHECK_LE(i, available_len_);
+  inline int32_t GetSlice(int32_t i) const {
+    CHECK_LT(i, available_len_);
     return index_slice_[i];
   }
-  inline const BBox<T>* GetBBox(int64_t i) const {
-    CHECK_LE(i, available_len_);
+  inline const BBox<T>* GetBBox(int32_t i) const {
+    CHECK_LT(i, available_len_);
     return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
   }
-  inline T GetScore(int64_t i) const {
-    CHECK_LE(i, available_len_);
+  inline T GetScore(int32_t i) const {
+    CHECK_LT(i, available_len_);
     return score_ptr_[index_slice_[i]];
   }
 
