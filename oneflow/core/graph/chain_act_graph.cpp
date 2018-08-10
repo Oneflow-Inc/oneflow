@@ -1,14 +1,36 @@
 #include "oneflow/core/graph/chain_act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 
+namespace std {
+
+template<>
+struct hash<std::list<const oneflow::RegstAct*>> {
+  size_t operator()(const std::list<const oneflow::RegstAct*>& val) const {
+    size_t total = 0;
+    for (const oneflow::RegstAct* regst_act : val) {
+      size_t tmp = std::hash<const oneflow::RegstAct*>{}(regst_act);
+      total += tmp;
+    }
+    return total;
+  }
+};
+
+}  // namespace std
+
 namespace oneflow {
 
-inline double Duration4RegstActConsumerPath(const RegstActCtx& regst_act_ctx,
-                                            const ActEvent* producer_act_event,
+bool operator<(const HashSet<const ChainActNode*>& lhs, const HashSet<const ChainActNode*>& rhs) {
+  size_t lhs_cnt = 0;
+  size_t rhs_cnt = 0;
+  for (const ChainActNode* node_ptr : lhs) { lhs_cnt += (size_t)node_ptr; }
+  for (const ChainActNode* node_ptr : rhs) { rhs_cnt += (size_t)node_ptr; }
+  return lhs_cnt < rhs_cnt;
+}
+
+inline double Duration4RegstActConsumerPath(const ActEvent* producer_act_event,
                                             const ActEvent* consumer_act_event,
-                                            const ChainActNode* consumer_node) {
-  return regst_act_ctx.node2duration_to_producer.at(consumer_node) + consumer_act_event->stop_time()
-         - producer_act_event->start_time();
+                                            double path_duration) {
+  return path_duration + consumer_act_event->stop_time() - producer_act_event->start_time();
 }
 
 ChainActNode::ChainActNode(std::list<std::unique_ptr<ActEvent>>&& act_events)
@@ -39,23 +61,20 @@ void ChainActNode::ForEachActEvent(const std::function<void(const ActEvent*)>& H
 
 void ChainActNode::ForEachProducedRegstActGroup(
     const std::function<void(const std::list<const RegstAct*>&)>& Handler) const {
-  for (const auto& produced_regst_act : produced_regst_acts_with_fake_outs_) {
-    std::list<const RegstAct*> regst_act_group;
-    regst_act_group.push_back(produced_regst_act.get());
-    Handler(regst_act_group);
-  }
-  std::list<const RegstAct*> regst_act_group;
-  for (const auto& produced_regst_act : produced_regst_acts_without_fake_outs_) {
-    regst_act_group.push_back(produced_regst_act.get());
-    Handler(regst_act_group);
+  for (const auto& pair : same_fake_outs_produced_regst_act_group_) { Handler(pair.second); }
+}
+
+void ChainActNode::ForEachLastConsumedRegstActGroup(
+    const std::function<void(const std::list<const RegstAct*>&)>& Handler) const {
+  for (const auto& last_consumed_regst_act_group : last_consumed_regst_acts_group_) {
+    Handler(last_consumed_regst_act_group);
   }
 }
 
-void ChainActNode::ForEachLastConsumedRegstAct(
-    const std::function<void(const RegstAct*)>& Handler) const {
-  for (const auto& last_consumed_regst_act : last_consumed_regst_acts_) {
-    Handler(last_consumed_regst_act);
-  }
+void ChainActNode::AddProducedRegstActs(std::unique_ptr<RegstAct>&& regst_act) {
+  same_fake_outs_produced_regst_act_group_[regst_act->fake_producer_outs].push_back(
+      regst_act.get());
+  produced_regst_acts_.push_back(std::move(regst_act));
 }
 
 void ChainActGraph::ForEachRegstDescConsumerPathMeanDuration(
@@ -127,49 +146,49 @@ double ChainActGraph::CalcBaseII() const {
 
 void ChainActGraph::ForEachRegstActConsumerPathDuration(
     const std::function<void(int64_t, int64_t, double)>& Handler) const {
-  HashSet<std::shared_ptr<RegstActCtx>> regst_act_ctx_window;
-  HashMap<const RegstAct*, std::shared_ptr<RegstActCtx>> regst_act2regst_act_ctx;
-  HashMap<const RegstActCtx*, const RegstAct*> regst_act_ctx2regst_act;
+  HashSet<std::shared_ptr<RegstActGroupCtx>> ctx_window;
+  HashMap<std::list<const RegstAct*>, std::shared_ptr<RegstActGroupCtx>> regst_act_group2ctx;
   TopoForEachChainActNode([&](const ChainActNode* cur_node) {
-    for (auto& regst_act_ctx : regst_act_ctx_window) {
-      const auto& fake_producer_outs =
-          regst_act_ctx2regst_act.at(regst_act_ctx.get())->fake_producer_outs;
+    for (auto& ctx : ctx_window) {
+      const auto& fake_producer_outs = ctx->regst_act_group.front()->fake_producer_outs;
       if (fake_producer_outs.find(cur_node) != fake_producer_outs.end()) { continue; }
-      CalcRegstActNodePathDuration(regst_act_ctx.get(), cur_node);
+      CalcRegstActNodePathDuration(ctx.get(), cur_node);
     }
     cur_node->ForEachProducedRegstActGroup([&](const std::list<const RegstAct*>& regst_act_group) {
-      std::shared_ptr<RegstActCtx> regst_act_ctx(new RegstActCtx(cur_node));
-      CHECK(regst_act_ctx_window.emplace(regst_act_ctx).second);
-      for (const RegstAct* regst_act : regst_act_group) {
-        CHECK(regst_act2regst_act_ctx.emplace(regst_act, regst_act_ctx).second);
-        regst_act_ctx2regst_act[regst_act_ctx.get()] = regst_act;
-      }
+      std::shared_ptr<RegstActGroupCtx> ctx(new RegstActGroupCtx(regst_act_group, cur_node));
+      CHECK(ctx_window.emplace(ctx).second);
+      CHECK(regst_act_group2ctx.emplace(regst_act_group, ctx).second);
     });
-    cur_node->ForEachLastConsumedRegstAct([&](const RegstAct* regst_act) {
-      for (const ActEvent* consumer_act_event : regst_act->consumer_act_events) {
-        double duration = Duration4RegstActConsumerPath(
-            *(regst_act2regst_act_ctx.at(regst_act)), regst_act->producer_act_event,
-            consumer_act_event, Node4ActEvent(consumer_act_event));
-        Handler(regst_act->regst_desc_id, consumer_act_event->actor_id(), duration);
-      }
-      regst_act_ctx_window.erase(regst_act2regst_act_ctx.at(regst_act));
-      regst_act2regst_act_ctx.erase(regst_act);
-    });
+    cur_node->ForEachLastConsumedRegstActGroup(
+        [&](const std::list<const RegstAct*>& regst_act_group) {
+          for (const RegstAct* regst_act : regst_act_group) {
+            const ActEvent* producer = regst_act->producer_act_event;
+            for (const ActEvent* consumer : regst_act->consumer_act_events) {
+              double path_duration = regst_act_group2ctx.at(regst_act_group)
+                                         ->node2duration_to_producer.at(Node4ActEvent(consumer));
+              Handler(regst_act->regst_desc_id, consumer->actor_id(),
+                      Duration4RegstActConsumerPath(producer, consumer, path_duration));
+            }
+          }
+          ctx_window.erase(regst_act_group2ctx.at(regst_act_group));
+          regst_act_group2ctx.erase(regst_act_group);
+        });
   });
 }
 
-void ChainActGraph::CalcRegstActNodePathDuration(RegstActCtx* regst_act_ctx,
+void ChainActGraph::CalcRegstActNodePathDuration(RegstActGroupCtx* regst_act_group_ctx,
                                                  const ChainActNode* node) const {
   double duration = 0;
   node->ForEachInEdge([&](const ChainActEdge* in_edge) {
     const ChainActNode* in_node = in_edge->src_node();
-    if (regst_act_ctx->node2duration_to_producer.find(in_node)
-        != regst_act_ctx->node2duration_to_producer.end()) {
-      duration = std::max(
-          duration, in_edge->duration() + regst_act_ctx->node2duration_to_producer.at(in_node));
+    if (regst_act_group_ctx->node2duration_to_producer.find(in_node)
+        != regst_act_group_ctx->node2duration_to_producer.end()) {
+      duration =
+          std::max(duration, in_edge->duration()
+                                 + regst_act_group_ctx->node2duration_to_producer.at(in_node));
     }
   });
-  if (duration > 0) { regst_act_ctx->node2duration_to_producer[node] = duration; }
+  if (duration > 0) { regst_act_group_ctx->node2duration_to_producer[node] = duration; }
 }
 
 void ChainActGraph::InitTaskId2TaskProto() {
@@ -253,11 +272,7 @@ void ChainActGraph::InitNodeProducedRegstActs(
         CHECK(regst_act->fake_producer_outs.emplace(out_edge->dst_node()).second);
       }
     });
-    if (regst_act->fake_producer_outs.empty()) {
-      producer->AddProducedRegstActsWithoutFakeOuts(std::move(regst_act));
-    } else {
-      producer->AddProducedRegstActsWithFakeOuts(std::move(regst_act));
-    }
+    producer->AddProducedRegstActs(std::move(regst_act));
   }
 }
 
@@ -277,9 +292,8 @@ void ChainActGraph::InitNodeLastConsumedRegstActs() {
           }
         }
       }
-      for (const RegstAct* regst_act : regst_act_group) {
-        act_event2chain_node_.at(last_consumer_act_event)->AddLastConsumedRegstActs(regst_act);
-      }
+      act_event2chain_node_.at(last_consumer_act_event)
+          ->AddLastConsumedRegstActsGroup(regst_act_group);
     });
   });
 }
