@@ -48,7 +48,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
                       const PredType* prediction, const LabelType* label,
                       const int8_t* inside_weights, const int8_t* outside_weights, const float beta,
                       const float scale, PredType* loss) {
-    SmoothL1LossForward<PredType>
+    SmoothL1LossForward<PredType, LabelType>
         <<<BlocksNum4ThreadsNum(instance_num * instance_dim), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(instance_num, instance_dim, prediction, label, inside_weights,
                                  outside_weights, beta, scale, loss);
@@ -57,7 +57,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
                        const PredType* prediction, const LabelType* label,
                        const int8_t* inside_weights, const int8_t* outside_weights,
                        const float beta, const float scale, PredType* in_diff) {
-    SmoothL1LossBackward<PredType>
+    SmoothL1LossBackward<PredType, LabelType>
         <<<BlocksNum4ThreadsNum(instance_num * instance_dim), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(instance_num, instance_dim, prediction, label, inside_weights,
                                  outside_weights, beta, scale, in_diff);
@@ -67,5 +67,5 @@ struct SmoothL1LossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
 #define MAKE_ENTRY(data_type_pair, label_type_pair)                                          \
   template struct SmoothL1LossKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                          OF_PP_PAIR_FIRST(label_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
 }  // namespace oneflow
