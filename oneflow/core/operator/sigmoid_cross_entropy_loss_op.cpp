@@ -5,8 +5,8 @@ namespace oneflow {
 
 void SigmoidCrossEntropyLossOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("count");
-  EnrollDataTmpBn("normalize");
-  EnrollDataTmpBn("original_loss");
+  EnrollDataTmpBn("label_num");
+  EnrollDataTmpBn("loss_buf");
 }
 
 const PbMessage& SigmoidCrossEntropyLossOp::GetCustomizedConf() const {
@@ -23,13 +23,11 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   // label
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   // a label must be in {-1, 0, 1} while -1 indicates ignorance
-  CHECK_EQ(label_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(label_blob_desc->shape().At(1), 1);
+  CHECK_GE(label_blob_desc->shape().NumAxes(), 2);
   // prediction
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->shape().elem_cnt(), label_blob_desc->shape().elem_cnt());
-  CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(pred_blob_desc->shape().At(1), 1);
+  CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   // prediction diff
   BlobDesc* prediction_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
   prediction_diff_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
@@ -38,15 +36,15 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   BlobDesc* count_blob_desc = GetBlobDesc4BnInOp("count");
   count_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
   count_blob_desc->set_data_type(pred_blob_desc->data_type());
-  // normalize
-  BlobDesc* normalize_blob_desc = GetBlobDesc4BnInOp("normalize");
+  // label_num
+  BlobDesc* normalize_blob_desc = GetBlobDesc4BnInOp("label_num");
   normalize_blob_desc->mut_shape() = Shape({1});
   normalize_blob_desc->set_data_type(pred_blob_desc->data_type());
-  // original loss
-  BlobDesc* original_loss_desc = GetBlobDesc4BnInOp("original_loss");
-  original_loss_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  original_loss_desc->set_data_type(pred_blob_desc->data_type());
-  // average loss
+  // loss_buf
+  BlobDesc* loss_buf_desc = GetBlobDesc4BnInOp("loss_buf");
+  loss_buf_desc->mut_shape() = Shape(pred_blob_desc->shape());
+  loss_buf_desc->set_data_type(pred_blob_desc->data_type());
+  // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({1});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
