@@ -1,22 +1,6 @@
 #include "oneflow/core/graph/chain_act_graph.h"
 #include "oneflow/core/common/protobuf.h"
 
-namespace std {
-
-template<>
-struct hash<std::list<const oneflow::RegstAct*>> {
-  size_t operator()(const std::list<const oneflow::RegstAct*>& val) const {
-    size_t total = 0;
-    for (const oneflow::RegstAct* regst_act : val) {
-      size_t tmp = std::hash<const oneflow::RegstAct*>{}(regst_act);
-      total += tmp;
-    }
-    return total;
-  }
-};
-
-}  // namespace std
-
 namespace oneflow {
 
 bool operator<(const HashSet<const ChainActNode*>& lhs, const HashSet<const ChainActNode*>& rhs) {
@@ -147,7 +131,7 @@ double ChainActGraph::CalcBaseII() const {
 void ChainActGraph::ForEachRegstActConsumerPathDuration(
     const std::function<void(int64_t, int64_t, double)>& Handler) const {
   HashSet<std::shared_ptr<RegstActGroupCtx>> ctx_window;
-  HashMap<std::list<const RegstAct*>, std::shared_ptr<RegstActGroupCtx>> regst_act_group2ctx;
+  HashMap<const RegstAct*, std::shared_ptr<RegstActGroupCtx>> regst_act2ctx;
   TopoForEachChainActNode([&](const ChainActNode* cur_node) {
     for (auto& ctx : ctx_window) {
       const auto& fake_producer_outs = ctx->regst_act_group.front()->fake_producer_outs;
@@ -157,21 +141,23 @@ void ChainActGraph::ForEachRegstActConsumerPathDuration(
     cur_node->ForEachProducedRegstActGroup([&](const std::list<const RegstAct*>& regst_act_group) {
       std::shared_ptr<RegstActGroupCtx> ctx(new RegstActGroupCtx(regst_act_group, cur_node));
       CHECK(ctx_window.emplace(ctx).second);
-      CHECK(regst_act_group2ctx.emplace(regst_act_group, ctx).second);
+      for (const RegstAct* regst_act : regst_act_group) {
+        CHECK(regst_act2ctx.emplace(regst_act, ctx).second);
+      }
     });
     cur_node->ForEachLastConsumedRegstActGroup(
         [&](const std::list<const RegstAct*>& regst_act_group) {
           for (const RegstAct* regst_act : regst_act_group) {
             const ActEvent* producer = regst_act->producer_act_event;
             for (const ActEvent* consumer : regst_act->consumer_act_events) {
-              double path_duration = regst_act_group2ctx.at(regst_act_group)
-                                         ->node2duration_to_producer.at(Node4ActEvent(consumer));
+              double path_duration = regst_act2ctx.at(regst_act)->node2duration_to_producer.at(
+                  Node4ActEvent(consumer));
               Handler(regst_act->regst_desc_id, consumer->actor_id(),
                       Duration4RegstActConsumerPath(producer, consumer, path_duration));
             }
+            ctx_window.erase(regst_act2ctx.at(regst_act));
+            regst_act2ctx.erase(regst_act);
           }
-          ctx_window.erase(regst_act_group2ctx.at(regst_act_group));
-          regst_act_group2ctx.erase(regst_act_group);
         });
   });
 }
