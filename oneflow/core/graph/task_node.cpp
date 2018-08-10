@@ -121,7 +121,6 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  ClearOutOfDateConsumedRegst();
   auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
@@ -307,6 +306,13 @@ void TaskNode::ClearOutOfDateConsumedRegst() {
       [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
         return it->second.empty();
       });
+}
+
+void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
+  if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
+    for (auto& regst : consumed_regsts_[name]) { regst.lock()->DeleteConsumer(this); }
+    CHECK_EQ(consumed_regsts_.erase(name), 1);
+  }
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
