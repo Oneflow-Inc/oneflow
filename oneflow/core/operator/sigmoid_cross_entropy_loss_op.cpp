@@ -28,10 +28,6 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->shape().elem_cnt(), label_blob_desc->shape().elem_cnt());
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
-  // prediction diff
-  BlobDesc* prediction_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
-  prediction_diff_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  prediction_diff_blob_desc->set_data_type(pred_blob_desc->data_type());
   // count
   BlobDesc* count_blob_desc = GetBlobDesc4BnInOp("count");
   count_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());

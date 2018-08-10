@@ -32,10 +32,6 @@ void SmoothL1LossOp::VirtualInferBlobDescs(
   loss_blob_desc->mut_shape() = Shape({pred_blob_desc->shape()});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   loss_blob_desc->set_has_data_id_field(pred_blob_desc->has_data_id_field());
-
-  BlobDesc* prediction_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
-  prediction_diff_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  prediction_diff_blob_desc->set_data_type(pred_blob_desc->data_type());
 }
 
 REGISTER_OP(OperatorConf::kSmoothL1LossConf, SmoothL1LossOp);
