@@ -1,5 +1,8 @@
 include (ExternalProject)
 
+set(LIBHDFS3_PATCH_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cmake/patches/libhdfs3)
+set(LIBHDFS3_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/libhdfs3/src/libhdfs3)
+
 set(LIBHDFS3_INCLUDE_DIR ${THIRD_PARTY_DIR}/libhdfs3/include)
 set(LIBHDFS3_LIBRARY_DIR ${THIRD_PARTY_DIR}/libhdfs3/lib)
 
@@ -34,6 +37,7 @@ ExternalProject_Add(libhdfs3
     PREFIX libhdfs3
     DEPENDS protobuf
     URL ${LIBHDFS3_URL}
+    PATCH_COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LIBHDFS3_PATCH_DIR}/CMakeLists.txt ${LIBHDFS3_SOURCE_DIR}
     UPDATE_COMMAND ""
     BUILD_IN_SOURCE 0
     CMAKE_CACHE_ARGS
