@@ -123,19 +123,7 @@ void LibHDFS::LoadAndBind() {
 #else
   const char* kLibHdfsDso = "libhdfs3.so";
 #endif
-  char* hdfs_home = getenv("HADOOP_HOME");
-  if (hdfs_home == nullptr) {
-    PLOG(WARNING) << "Environment variable HADOOP_HOME not set";
-    status_ = false;
-    return;
-  }
-  std::string path = JoinPath(hdfs_home, "lib", "native", kLibHdfsDso);
-  status_ = TryLoadAndBind(path.c_str(), &handle_);
-  if (!status_) {
-    // try load libhdfs.so using dynamic loader's search path in case
-    // libhdfs.so is installed in non-standard location
-    status_ = TryLoadAndBind(kLibHdfsDso, &handle_);
-  }
+  status_ = TryLoadAndBind(kLibHdfsDso, &handle_);
 }
 
 HadoopFileSystem::HadoopFileSystem(const HdfsConf& hdfs_conf)
