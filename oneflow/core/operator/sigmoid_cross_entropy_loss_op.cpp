@@ -23,13 +23,11 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   // label
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   // a label must be in {-1, 0, 1} while -1 indicates ignorance
-  CHECK_EQ(label_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(label_blob_desc->shape().At(1), 1);
+  CHECK_GE(label_blob_desc->shape().NumAxes(), 2);
   // prediction
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->shape().elem_cnt(), label_blob_desc->shape().elem_cnt());
-  CHECK_EQ(pred_blob_desc->shape().NumAxes(), 2);
-  CHECK_EQ(pred_blob_desc->shape().At(1), 1);
+  CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
   // prediction diff
   BlobDesc* prediction_diff_blob_desc = GetBlobDesc4BnInOp("prediction_diff");
   prediction_diff_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
