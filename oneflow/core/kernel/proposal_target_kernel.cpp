@@ -23,11 +23,10 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   int32_t* rois_index_ptr = BnInOp2Blob("rois_index")->mut_dptr<int32_t>();  //(roi)
   int64_t im_num = rpn_rois_blob->shape().At(0);
   int64_t roi_num = rpn_rois_blob->shape().At(1);
-  const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
-
+  
   FOR_RANGE(int64_t, i, 0, im_num) {
     const T* rpn_rois_ptr = rois_blob->dptr<T>(i);
-    const Int32List16* gt_boxes_ptr = gt_boxes_blob->dptr<Int32List16>(i);
+    const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>(i);
     const Int32List16* gt_labels_ptr = gt_label_blob->dptr<Int32List16>(i);
     T* rois_ptr = rois_blob->mut_dptr<T>(i);
     int32_t* labels_ptr = labels_blob->mut_dptr<int32_t>(i);
@@ -49,7 +48,7 @@ void ProposalTargetKernel<T>::ForwardDataContent(
 
 template<typename T>
 void ProposalTargetKernel<T>::RoisNearestGtAndMaxIou(const int64_t rois_num, const T* rpn_rois_ptr,
-                                                     const Int32List16* gt_boxes_ptr,
+                                                     const FloatList16* gt_boxes_ptr,
                                                      int32_t* roi_nearest_gt_index_ptr,
                                                      T* roi_max_overlap_ptr) const {
   const BBox<T>* roi_box = BBox<T>::Cast(rpn_rois_ptr);
@@ -122,7 +121,7 @@ void ProposalTargetKernel<T>::CopyRoIs(const ScoredBBoxSlice<T>& slice, T* rois_
 template<typename T>
 void ProposalTargetKernel<T>::ComputeTargetAndWriteOut(
     const ScoredBBoxSlice<T>& fg_slice, const ScoredBBoxSlice<T>& bg_slice,
-    const int32_t* roi_nearest_gt_index_ptr, const Int32List16* gt_boxes_ptr,
+    const int32_t* roi_nearest_gt_index_ptr, const FloatList16* gt_boxes_ptr,
     const Int32List16* gt_labels_ptr, T* rois_ptr, int32_t* labels_ptr, T* bbox_targets_ptr,
     T* inside_weights_ptr, T* outside_weights_ptr) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
