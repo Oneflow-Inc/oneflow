@@ -648,6 +648,7 @@ message ProposalTargetOpConf
   optional BboxNormalizeMeansConf bbox_normalize_means = 16;
   optional BboxNormalizeStdsConf bbox_normalize_stds = 17; 
   required int32 class_num = 18;
+  required BBoxRegressionWeights bbox_reg_weights = 19;
 }
 
 enum ScoringMethod {

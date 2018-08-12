@@ -1,20 +1,8 @@
 #include "oneflow/core/kernel/proposal_target_kernel.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/common/auto_registration_factory.h"
 
 namespace oneflow {
-
-namespace {
-
-template<typename T>
-void ComputeTargetAndWriteOut(const ScoredBBoxSlice<T>& fg_slice,
-                              const ScoredBBoxSlice<T>& bg_slice,
-                              const int32_t* roi_nearest_gt_index_ptr, const T* gt_boxes_ptr,
-                              const int32_t* gt_labels_ptr, T* rois_ptr, int32_t* labels_ptr,
-                              T* bbox_targets_ptr, T* inside_weights_ptr, T* outside_weights_ptr) {
-  TODO();
-}
-
-}  // namespace
 
 template<typename T>
 void ProposalTargetKernel<T>::ForwardDataContent(
@@ -22,7 +10,6 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   const Blob* rpn_rois_blob = BnInOp2Blob("rpn_rois");               //(im_num, roi, 4)
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");               //(im_num,gt_max_num,4)
   const Blob* gt_label_blob = BnInOp2Blob("gt_label");               //(im_num,gt_max_num,1)
-  const Blob* im_info_blob = BnInOp2Blob("im_info");                 //(im_num,3)
   Blob* rois_blob = BnInOp2Blob("rois");                             //(im_num, sample_num, 4)
   Blob* labels_blob = BnInOp2Blob("labels");                         //(im_num, sample_num, 1)
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");             //(im_num, sample_num, 4*class)
@@ -41,7 +28,8 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   FOR_RANGE(int64_t, i, 0, im_num) {
     const T* rpn_rois_ptr = rois_blob->dptr<T>(i);
     const T* gt_boxes_ptr = gt_boxes_blob->dptr<T>(i);
-    const int32_t* gt_labels_ptr = gt_label_blob->dptr<int32_t>(i);
+
+    const Int32List16* gt_labels_ptr = gt_label_blob->dptr<Int32List16>(i);
     int32_t gt_num = im_info_blob->dptr<int32_t>(i)[2];
     T* rois_ptr = rois_blob->mut_dptr<T>(i);
     int32_t* labels_ptr = labels_blob->mut_dptr<int32_t>(i);
@@ -119,6 +107,50 @@ ScoredBBoxSlice<T> ProposalTargetKernel<T>::BackgroundChoice(const ProposalTarge
     bg_rois_slice.Truncate(bg_sample_size);
   }
   return bg_rois_slice;
+}
+
+template<typename T>
+void ProposalTargetKernel<T>::ComputeTargetAndWriteOut(
+    const ScoredBBoxSlice<T>& fg_slice, const ScoredBBoxSlice<T>& bg_slice,
+    const int32_t* roi_nearest_gt_index_ptr, const FloatList16* gt_boxes_ptr,
+    const Int32List16* gt_labels_ptr, T* rois_ptr, int32_t* labels_ptr, T* bbox_targets_ptr,
+    T* inside_weights_ptr, T* outside_weights_ptr) {
+  const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
+  const BBox<T>* gt_bbox = BBox<T>::Cast(gt_boxes_ptr.value().value().data());
+  BBox<T>* rois_box = BBox<T>::Cast(rois_ptr);
+  BBoxDelta<T>* bbox_targets_box = BBoxDelta<T>::MutCast(bbox_targets_ptr);
+  BBoxWeights<T>* inside_weights_box = BBoxWeights<T>::MutCast(inside_weights_ptr);
+  BBoxWeights<T>* outside_weights_box = BBoxWeights<T>::MutCast(outside_weights_ptr);
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
+  const int32 class_num = conf.class_num();
+  const BboxWeightConf& bbox_inside_weight_conf = conf.bbox_inside_weight_conf();
+  FOR_RANGE(int64_t, i, 0, fg_slice.available_len()) {
+    const BBox<T>* bbox = fg_slice.GetBBox(i);
+    const int32_t roi_index = fg_slice.GetSlice(i);
+    const int32_t gt_index = roi_nearest_gt_index_ptr[roi_index];
+    const int64_t target_index = i * class_num + gt_labels_ptr.value().value(gt_index);
+    rois_box[i].set_x1(bbox.x1());
+    rois_box[i].set_y1(bbox.y1());
+    rois_box[i].set_x2(bbox.x2());
+    rois_box[i].set_y2(bbox.y2());
+    labels_ptr[i] = gt_labels_ptr.value().value(gt_index);
+    bbox_targets_box[target_index].TransformInverse(bbox, gt_bbox[gt_index], bbox_reg_ws);
+    inside_weights_box[target_index].set_weight_x(bbox_inside_weight_conf.weight_x());
+    inside_weights_box[target_index].set_weight_y(bbox_inside_weight_conf.weight_y());
+    inside_weights_box[target_index].set_weight_w(bbox_inside_weight_conf.weight_w());
+    inside_weights_box[target_index].set_weight_h(bbox_inside_weight_conf.weight_h());
+    outside_weights_box[target_index].set_weight_x(bbox_inside_weight_conf.weight_x() > 0 ? 1 : 0);
+    outside_weights_box[target_index].set_weight_y(bbox_inside_weight_conf.weight_y() > 0 ? 1 : 0);
+    outside_weights_box[target_index].set_weight_w(bbox_inside_weight_conf.weight_w() > 0 ? 1 : 0);
+    outside_weights_box[target_index].set_weight_h(bbox_inside_weight_conf.weight_h() > 0 ? 1 : 0);
+  }
+  FOR_RANGE(int64_t, i, 0, bg_slice.available_len()) {
+    const BBox<T>* bbox = fg_slice.GetBBox(i);
+    rois_box[i].set_x1(bbox.x1());
+    rois_box[i].set_y1(bbox.y1());
+    rois_box[i].set_x2(bbox.x2());
+    rois_box[i].set_y2(bbox.y2());
+  }
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalTargetConf, ProposalTargetKernel,
