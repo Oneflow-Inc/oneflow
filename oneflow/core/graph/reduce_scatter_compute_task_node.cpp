@@ -12,19 +12,24 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
   for (TaskEdge* edge : out_edges()) {
     std::vector<CompTaskNode*> comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(comp_task_nodes.size(), 1);
-
     int64_t parallel_id = comp_task_nodes.front()->parallel_ctx()->parallel_id();
-    int64_t dst_dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
-    int64_t edge_index_of_this_dst_dev = edge_index4dst_dev.at(dst_dev_index_of_this_machine);
-    edge_index4dst_dev.at(dst_dev_index_of_this_machine) += 1;
 
-    int64_t out_edge_index =
-        edge_index_of_this_dst_dev * dev_num_of_each_machine + dst_dev_index_of_this_machine;
+    int64_t out_edge_index = -1;
+    if (machine_num == parallel_ctx()->parallel_num()) {
+      out_edge_index = parallel_id;
+    } else {
+      int64_t dst_dev_index_of_this_machine = parallel_id % dev_num_of_each_machine;
+      int64_t edge_index_of_this_dst_dev = edge_index4dst_dev.at(dst_dev_index_of_this_machine);
+      edge_index4dst_dev.at(dst_dev_index_of_this_machine) += 1;
+      CHECK_LE(edge_index4dst_dev.at(dst_dev_index_of_this_machine), machine_num);
+
+      out_edge_index =
+          edge_index_of_this_dst_dev * dev_num_of_each_machine + dst_dev_index_of_this_machine;
+    }
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, true, 1, 1);
     edge->AddRegst(out_regst_name, out_regst);
   }
-  for (int64_t edge_index : edge_index4dst_dev) { CHECK_EQ(edge_index, machine_num); }
 }
 
 void ReduceScatterCompTaskNode::ConsumeAllRegsts() {
