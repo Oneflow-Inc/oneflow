@@ -7,7 +7,13 @@ namespace oneflow {
 void DecodeCompTaskNode::ProduceAllRegstsAndBindEdges() {
   ProduceRegst("data_tmp", true, 1, 1);
   ProduceB121Regst("out");
-  for (TaskEdge* edge : out_edges()) { BindEdgeWithProducedB121Regst(edge, "out"); }
+  ProduceB121Regst("fw_pb_out");
+  for (TaskEdge* edge : out_edges()) {
+    BindEdgeWithProducedB121Regst(edge, "out");
+    if (edge->dst_node()->GetTaskType() != TaskType::kCopyHd) {
+      BindEdgeWithProducedB121Regst(edge, "fw_pb_out");
+    }
+  }
 }
 
 void DecodeCompTaskNode::ConsumeAllRegsts() {
@@ -26,7 +32,7 @@ void DecodeCompTaskNode::BuildExecGphAndRegst() {
   node->BindBnWithRegst(node->op()->SoleIbn(), record_regst);
   for (const std::string& obn : node->op()->output_bns()) {
     const LogicalBlobId& lbi = node->op()->BnInOp2Lbi(obn);
-    if (TryAddLbiToB121RegstAndBindIt(node, obn, "out") == false) {
+    if (TryAddLbiToB121RegstAndBindIt(node, obn, (lbi.is_fw_pb() ? "fw_pb_out" : "out")) == false) {
       data_tmp_regst->AddLbi(lbi);
       node->BindBnWithRegst(obn, data_tmp_regst);
     }

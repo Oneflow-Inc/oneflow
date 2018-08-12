@@ -278,6 +278,7 @@ message LogicalBlobId {
   optional int32 b121_id = 3 [default = -1]; // [0, boxing], [1, 121]
   optional int32 clone_id = 4 [default = -1];
   optional bool is_packed_id = 5 [default = false];
+  optional bool is_fw_pb = 6 [default = false];
 }
 
 message BoxingOpConf {
@@ -479,11 +480,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
-    EncodeIdentity identity = 3;
+    EncodeProtobuf protobuf = 3;
   }
 }
 
-message EncodeIdentity {
+message EncodeProtobuf {
 }
 
 message EncodeRaw {
@@ -672,14 +673,15 @@ message BboxNmsAndLimitOpConf {
   required string scores = 3;
   required string labeled_bbox = 4;
   required string bbox_score = 5;
-  required float score_threshold = 6;
-  required BBoxRegressionWeights bbox_reg_weights = 7;
+  required BBoxRegressionWeights bbox_reg_weights = 6;
+  required float score_threshold = 7;
   required float nms_threshold = 8;
   required int32 detections_per_im = 9;
-  required int32 image_height = 10;
-  required int32 image_width = 11;
-  required bool bbox_vote_enabled = 12;
-  optional BboxVoteConf bbox_vote = 13;
+  required float threshold = 10;
+  required int32 image_height = 11;
+  required int32 image_width = 12;
+  required bool bbox_vote_enabled = 13;
+  optional BboxVoteConf bbox_vote = 14;
 }
 
 message AnchorGeneratorConf {
