@@ -24,6 +24,12 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ScoredBBoxSlice<T> BackgroundChoice(const ProposalTargetOpConf& conf,
                                       ScoredBBoxSlice<T>& rois_slice,
                                       const int64_t fg_sample_size) const;
+  void CopyRoIs(const ScoredBBoxSlice<T>& slice, T* rois_ptr);
+
+  void ComputeTargetAndWriteOut(const ScoredBBoxSlice<T>& fg_slice, const ScoredBBoxSlice<T>& bg_slice,
+    const int32_t* roi_nearest_gt_index_ptr, const FloatList16* gt_boxes_ptr,
+    const Int32List16* gt_labels_ptr, T* rois_ptr, int32_t* labels_ptr, T* bbox_targets_ptr,
+    T* inside_weights_ptr, T* outside_weights_ptr) const;
 };
 
 }  // namespace oneflow
