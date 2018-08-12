@@ -79,6 +79,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   int32_t* gt_max_overlaps_inds_ptr = BnInOp2Blob("gt_max_overlaps_inds")->mut_dptr<int32_t>();
   int32_t* gt_max_overlaps_num_ptr = BnInOp2Blob("gt_max_overlaps_num")->mut_dptr<int32_t>();
   int32_t* inds_mask_ptr = BnInOp2Blob("inds_mask")->mut_dptr<int32_t>();
+  float* gt_boxes_tmp_ptr = BnInOp2Blob("gt_boxes_tmp")->mut_dptr<float>();
 
   // useful vars
   const int32_t image_num = image_info_blob->shape().At(0);  // N
@@ -95,7 +96,13 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
 
     const BBox<T>* anchors_bbox = BBox<T>::Cast(anchors_ptr);
-    const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(gt_boxes_blob->dptr<T>(image_inds));
+
+    FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<loatList16>(image_inds);
+    FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value_size()){
+       gt_boxes_tmp_ptr[i] = gt_boxes_ptr->value(i);
+    }
+
+    const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(gt_boxes_tmp_ptr);
     const int32_t current_img_gt_boxes_num = image_info_blob->dptr<int32_t>(image_inds)[2];
     int32_t* current_img_label_ptr = rpn_labels_blob->mut_dptr<int32_t>(image_inds);
     BBoxDelta<T>* current_img_target_bbox_delta =

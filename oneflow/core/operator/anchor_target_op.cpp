@@ -22,6 +22,7 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("gt_max_overlaps_inds");
   EnrollDataTmpBn("gt_max_overlaps_num");
   EnrollDataTmpBn("inds_mask");
+  EnrollDataTmpBn("gt_boxes_tmp");
 }
 
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
@@ -33,7 +34,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   // useful vars
   const AnchorGeneratorConf& conf = op_conf().anchor_target_conf().anchors_generator_conf();
-  const int32_t per_pixel_anchors_num =
+  const int32_t base_anchors_num =
       conf.anchor_scales().size() * conf.aspect_ratios().size();  // A
   const int32_t fm_stride = conf.feature_map_stride();
   CHECK_GE(fm_stride, 0);
@@ -50,12 +51,12 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_GE(image_num, 0);
   CHECK_EQ(image_info_blob_desc->shape().At(1), 3);
 
-  // gt_boxes: (N, 256, 4)
+  // gt_boxes: (N, 1) 
+  // todo: fix ??
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
-  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 3);
+  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 2);
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), image_num);
-  const int32_t max_per_img_gt_boxes_num = gt_boxes_blob_desc->shape().At(1);  // 256
-  CHECK_EQ(gt_boxes_blob_desc->shape().At(2), 4);
+  CHECK_EQ(gt_boxes_blob_desc->shape().At(1), 1);
 
   // out blobs
   // rpn_labels: (N, H, W, A)
@@ -64,28 +65,28 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   // rpn_bbox_outside_weights: (N, H, W, 4*A)
   BlobDesc* rpn_labels_blob_desc = GetBlobDesc4BnInOp("rpn_labels");
   rpn_labels_blob_desc->set_data_type(DataType::kInt32);
-  rpn_labels_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, per_pixel_anchors_num});
+  rpn_labels_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, base_anchors_num});
 
   BlobDesc* rpn_bbox_targets_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_targets");
   rpn_bbox_targets_blob_desc->set_data_type(DataType::kFloat);
   rpn_bbox_targets_blob_desc->mut_shape() =
-      Shape({image_num, fm_h, fm_w, 4 * per_pixel_anchors_num});
+      Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   BlobDesc* rpn_bbox_inside_weights_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_inside_weights");
   rpn_bbox_inside_weights_blob_desc->set_data_type(DataType::kFloat);
   rpn_bbox_inside_weights_blob_desc->mut_shape() =
-      Shape({image_num, fm_h, fm_w, 4 * per_pixel_anchors_num});
+      Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   BlobDesc* rpn_bbox_outside_weights_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_outside_weights");
   rpn_bbox_outside_weights_blob_desc->set_data_type(DataType::kFloat);
   rpn_bbox_outside_weights_blob_desc->mut_shape() =
-      Shape({image_num, fm_h, fm_w, 4 * per_pixel_anchors_num});
+      Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   // const blob
   // anchors: (H, W, 4*A)
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
   anchors_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
-  anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, 4 * per_pixel_anchors_num});
+  anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, 4 * base_anchors_num});
 
   // data tmp blobs
   // inside_anchors_inds: (H*W*A)
@@ -96,30 +97,31 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   // gt_max_overlaps_inds: (256,H*W*A)
   // gt_max_overlaps_num: (256)
   // inds_mask: (H*W*A)
+  // gt_boxes_tmp: (256,4)
   BlobDesc* inside_anchors_inds_blob_desc = GetBlobDesc4BnInOp("inside_anchors_inds");
   inside_anchors_inds_blob_desc->set_data_type(DataType::kInt32);
-  inside_anchors_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * per_pixel_anchors_num});
+  inside_anchors_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* fg_inds_blob_desc = GetBlobDesc4BnInOp("fg_inds");
   fg_inds_blob_desc->set_data_type(DataType::kInt32);
-  fg_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * per_pixel_anchors_num});
+  fg_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* bg_inds_blob_desc = GetBlobDesc4BnInOp("bg_inds");
   bg_inds_blob_desc->set_data_type(DataType::kInt32);
-  bg_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * per_pixel_anchors_num});
+  bg_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
   max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  max_overlaps_blob_desc->mut_shape() = Shape({fm_h * fm_w * per_pixel_anchors_num});
+  max_overlaps_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* max_overlaps_inds_blob_desc = GetBlobDesc4BnInOp("max_overlaps_inds");
   max_overlaps_inds_blob_desc->set_data_type(DataType::kInt32);
-  max_overlaps_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * per_pixel_anchors_num});
+  max_overlaps_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* gt_max_overlaps_inds_blob_desc = GetBlobDesc4BnInOp("gt_max_overlaps_inds");
   gt_max_overlaps_inds_blob_desc->set_data_type(DataType::kInt32);
   gt_max_overlaps_inds_blob_desc->mut_shape() =
-      Shape({max_per_img_gt_boxes_num, fm_h * fm_w * per_pixel_anchors_num});
+      Shape({max_per_img_gt_boxes_num, fm_h * fm_w * base_anchors_num});
 
   BlobDesc* gt_max_overlaps_num_blob_desc = GetBlobDesc4BnInOp("gt_max_overlaps_num");
   gt_max_overlaps_num_blob_desc->set_data_type(DataType::kInt32);
@@ -127,7 +129,11 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
 
   BlobDesc* inds_mask_blob_desc = GetBlobDesc4BnInOp("inds_mask");
   inds_mask_blob_desc->set_data_type(DataType::kInt32);
-  inds_mask_blob_desc->mut_shape() = Shape({fm_h * fm_w * per_pixel_anchors_num});
+  inds_mask_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
+
+  BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
+  gt_boxex_tmp_blob_desc->set_data_type(DataType::kFloat);
+  gt_boxex_tmp_blob_desc->mut_shape() = Shape({256, 4});
 }
 
 REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
