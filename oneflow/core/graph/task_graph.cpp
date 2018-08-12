@@ -240,7 +240,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     }
   }
 
-  auto HandleMemSharedFiledOfConsumedRegsts = [&](CompTaskNode* task_node,
+  auto HandleMemSharedFieldOfConsumedRegsts = [&](CompTaskNode* task_node,
                                                   int64_t consumed_regst_num) {
     auto& consumed_regsts = task_node->consumed_regsts();
     CHECK_EQ(consumed_regst_num, consumed_regsts.size());
@@ -253,11 +253,11 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   };
   // global add
   int consumed_regst_num = reduce_task_nodes.local_add ? machine_num : parallel_num;
-  HandleMemSharedFiledOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
+  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
   SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(), parallel_id);
 
   // gather
-  HandleMemSharedFiledOfConsumedRegsts(reduce_task_nodes.gather, parallel_num);
+  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, parallel_num);
   SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(), 0);
 }
 

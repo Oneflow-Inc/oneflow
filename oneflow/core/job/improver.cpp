@@ -377,7 +377,6 @@ void ForEachMemSharingCriticalSection(
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
                 int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
-                // CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
                 return lhs_order_in_graph < rhs_order_in_graph;
               });
     Handler(pair.second);
