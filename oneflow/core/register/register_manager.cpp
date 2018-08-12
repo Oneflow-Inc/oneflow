@@ -55,25 +55,31 @@ void RegstMgr::InitFromRegstProtoList(const std::list<const RegstDescProto*>& re
             .second);
     if (regst_desc->mem_shared_id() != -1) { CHECK_EQ(regst_desc->register_num(), 1); }
   }
-  auto GetRegstSize = [&](const RegstDescProto* regst_desc) {
-    return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
-        ->TotalMainByteSize4AllRegst();
+  auto GetMemSize4Regst = [&](const RegstDescProto* regst_desc) {
+    if (regst_desc->mem_shared_id() == -1) {
+      return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
+          ->TotalMainByteSize4AllRegst();
+    } else {
+      return regst_desc_id2rt_regst_desc_.at(regst_desc->regst_desc_id())
+                 ->TotalMainByteSize4AllRegst()
+             + regst_desc->mem_shared_offset();
+    }
   };
   std::sort(sorted_regst_protos.begin(), sorted_regst_protos.end(),
             [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
               return (lhs->mem_shared_id() < rhs->mem_shared_id())
                      || (lhs->mem_shared_id() == rhs->mem_shared_id()
-                         && GetRegstSize(lhs) > GetRegstSize(rhs));
+                         && GetMemSize4Regst(lhs) > GetMemSize4Regst(rhs));
             });
   int32_t last_mem_shared_id = -1;
   char* main_mem_ptr = nullptr;
   for (const RegstDescProto* regst_desc : sorted_regst_protos) {
     if (regst_desc->regst_desc_type().has_data_regst_desc() == false) { continue; }
-    CHECK_GT(GetRegstSize(regst_desc), 0);
+    CHECK_GT(GetMemSize4Regst(regst_desc), 0);
     int32_t current_mem_shared_id = regst_desc->mem_shared_id();
     if (current_mem_shared_id == -1 || (current_mem_shared_id != last_mem_shared_id)) {
       main_mem_ptr = Global<MemoryAllocator>::Get()->Allocate(regst_desc->mem_case(),
-                                                              GetRegstSize(regst_desc));
+                                                              GetMemSize4Regst(regst_desc));
     }
     CHECK(regst_desc_id2main_mem_ptr_.emplace(regst_desc->regst_desc_id(), main_mem_ptr).second);
     last_mem_shared_id = current_mem_shared_id;
@@ -97,6 +103,9 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     std::sort(lbis.begin(), lbis.end());
     CHECK(!lbis.empty());
     CHECK(main_mem_ptr != nullptr);
+  }
+  if (regst_desc_proto.mem_shared_id() != -1) {
+    main_mem_ptr += regst_desc_proto.mem_shared_offset();
   }
   for (int64_t i = 0; i < rt_regst_desc->register_num(); ++i) {
     Regst* regst = new Regst;

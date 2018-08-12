@@ -14,7 +14,8 @@ namespace oneflow {
 namespace {
 
 bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.consumer_task_id_size() == 0 && regst_desc.enable_mem_sharing();
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() == 0
+         && regst_desc.enable_mem_sharing();
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
@@ -28,8 +29,8 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
                                  const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  return regst_desc.consumer_task_id_size() > 0 && regst_desc.enable_mem_sharing()
-         && regst_desc.register_num() == 1
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
+         && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
          && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
 }
 
@@ -154,10 +155,11 @@ uint64_t CalcMemoryConsumed(
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
-    uint64_t total_byte_size = RtRegstDesc(*regst_desc).MainByteSize4OneRegst();
+    uint64_t total_byte_size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
+      mem_consuming += RoundUp(total_byte_size, kCudaMemAllocAlignSize);
     } else {
+      total_byte_size += regst_desc->mem_shared_offset();
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();
       auto& max_bytes = mem_shared_id2max_regst_desc_mem_bytes[mem_shared_id];
@@ -200,6 +202,7 @@ std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
     regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_offset(0);
   };
 }
 
@@ -374,7 +377,6 @@ void ForEachMemSharingCriticalSection(
               [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
                 int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
                 int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
-                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
                 return lhs_order_in_graph < rhs_order_in_graph;
               });
     Handler(pair.second);
