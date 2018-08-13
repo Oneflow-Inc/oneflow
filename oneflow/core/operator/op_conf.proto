@@ -604,7 +604,7 @@ message DotOpConf {
 message MultiplyOpConf {
   required string in = 1;
   required string weight = 2;
-  required string out = 4;
+  required string out = 3;
 }
 
 message OperatorConf {
