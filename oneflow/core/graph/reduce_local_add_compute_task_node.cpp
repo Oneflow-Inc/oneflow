@@ -8,7 +8,7 @@ void ReduceLocalAddCompTaskNode::ProduceAllRegstsAndBindEdges() {
     std::vector<CompTaskNode*> succ_comp_task_nodes = GetSuccCompTaskNodesOnEdge(edge);
     CHECK_EQ(succ_comp_task_nodes.size(), 1);
     std::string regst_name = "out_" + std::to_string(succ_comp_task_nodes.front()->machine_id());
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name, false);
+    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(regst_name, true, 1, 1);
     edge->AddRegst(regst_name, out_regst);
   }
 }
