@@ -5,13 +5,13 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const auto* other_val = static_cast<std::tuple<int64_t, bool, bool>*>(ctx.other);
-  int64_t in_bn_id = std::get<0>(*other_val);
+  const auto* other_val = static_cast<std::tuple<std::string, bool, bool>*>(ctx.other);
+  const std::string& ibn = std::get<0>(*other_val);
   bool is_out_blob_inited = std::get<1>(*other_val);
-  bool is_inplace_in_bn_id = std::get<2>(*other_val);
+  bool is_inplace_in_blob = std::get<2>(*other_val);
 
   if (device_type == DeviceType::kGPU) {
-    if (is_inplace_in_bn_id) {
+    if (is_inplace_in_blob) {
       return;
     } else {
       CHECK(is_out_blob_inited);
@@ -19,7 +19,7 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
   }
 
   Blob* out_blob = BnInOp2Blob("out");
-  Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
+  Blob* in_blob = BnInOp2Blob(ibn);
   if (is_out_blob_inited) {
     int64_t elem_cnt = out_blob->shape().elem_cnt();
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, 1.0, in_blob->dptr<T>(), 1,

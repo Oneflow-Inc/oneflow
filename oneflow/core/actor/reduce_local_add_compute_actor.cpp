@@ -18,9 +18,10 @@ void ReduceLocalAddCompActor::VirtualCompActorInit(const TaskProto& proto) {
 
   out_blob_init_status_.resize(out_num, false);
   int64_t inplace_in_blob_id = parallel_id % dev_num_of_each_machine;
-  for (int64_t i = 0; i < out_num; ++i) {
-    inplace_blob_ids_.emplace(inplace_in_blob_id);
+  inplace_blob_ids_.emplace(inplace_in_blob_id);
+  for (int64_t i = 0; i < out_num - 1; ++i) {
     inplace_in_blob_id += dev_num_of_each_machine;
+    inplace_blob_ids_.emplace(inplace_in_blob_id);
   }
   CHECK_LT(inplace_in_blob_id, parallel_num);
 }
