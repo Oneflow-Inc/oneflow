@@ -22,11 +22,11 @@ template<DeviceType device_type, typename PredType, typename LabelType>
 struct SmoothL1LossKernelUtil {
   static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
                       const PredType* prediction, const LabelType* label,
-                      const int8_t* inside_weights, const int8_t* outside_weights, const float beta,
-                      const float scale, PredType* loss);
+                      const PredType* inside_weights, const PredType* outside_weights,
+                      const float beta, const float scale, PredType* loss);
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
                        const PredType* predict, const LabelType* target,
-                       const int8_t* inside_weights, const int8_t* outside_weights,
+                       const PredType* inside_weights, const PredType* outside_weights,
                        const float beta, const float scale, PredType* in_diff);
 };
 

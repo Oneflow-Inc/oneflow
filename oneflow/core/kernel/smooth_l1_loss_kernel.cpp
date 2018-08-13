@@ -20,12 +20,12 @@ void SmoothL1LossKernel<device_type, PredType, LabelType>::VirtualLossForwardDat
 
   SmoothL1LossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, instance_num, instance_dim, prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), inside_weights->dptr<int8_t>(), outside_weights->dptr<int8_t>(),
+      label->dptr<LabelType>(), inside_weights->dptr<PredType>(), outside_weights->dptr<PredType>(),
       beta, scale, loss->mut_dptr<PredType>());
 
   SmoothL1LossKernelUtil<device_type, PredType, LabelType>::Backward(
       ctx.device_ctx, instance_num, instance_dim, prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), inside_weights->dptr<int8_t>(), outside_weights->dptr<int8_t>(),
+      label->dptr<LabelType>(), inside_weights->dptr<PredType>(), outside_weights->dptr<PredType>(),
       beta, scale, pred_diff_blob->mut_dptr<PredType>());
 }
 
@@ -33,8 +33,8 @@ template<typename PredType, typename LabelType>
 struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
                       const PredType* prediction, const LabelType* label,
-                      const int8_t* inside_weights, const int8_t* outside_weights, const float beta,
-                      const float scale, PredType* loss) {
+                      const PredType* inside_weights, const PredType* outside_weights,
+                      const float beta, const float scale, PredType* loss) {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
       PredType x = inside_weights[i] * (prediction[i] - label[i]);
@@ -49,7 +49,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   }
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
                        const PredType* prediction, const LabelType* label,
-                       const int8_t* inside_weights, const int8_t* outside_weights,
+                       const PredType* inside_weights, const PredType* outside_weights,
                        const float beta, const float scale, PredType* in_diff) {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
