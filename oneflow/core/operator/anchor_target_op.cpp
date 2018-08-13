@@ -25,6 +25,7 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("gt_boxes_tmp");
 }
 
+
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
   return op_conf().anchor_target_conf();
 }
@@ -134,6 +135,12 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
   gt_boxex_tmp_blob_desc->set_data_type(DataType::kFloat);
   gt_boxex_tmp_blob_desc->mut_shape() = Shape({256, 4});
+}
+
+void AnchorTargetOp::VirtualGenKernelConf(
+    std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+    const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
+    kernel_conf->set_data_type(GetBlobDesc4BnInOp("gt_boxes")->data_type());  
 }
 
 REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
