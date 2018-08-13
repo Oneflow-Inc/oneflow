@@ -633,7 +633,7 @@ message ProposalTargetOpConf
 {
   required string rpn_rois = 1;
   required string gt_boxes = 2;
-  required string gt_num=3;
+  required string gt_label = 3;
   required string rois = 4;
   required string labels = 5;
   required string bbox_targets = 6;
@@ -642,9 +642,9 @@ message ProposalTargetOpConf
   required int32 num_roi_per_image = 9 [default = 256];
   required float fg_fraction = 10 [default = 0.5];
   required BboxWeightConf bbox_inside_weight_conf=11;
-  required int32 fg_thresh = 12;
-  required int32 bg_thresh_lo = 13;
-  required int32 bg_thresh_hi = 14;
+  required float fg_thresh = 12;
+  required float bg_thresh_lo = 13;
+  required float bg_thresh_hi = 14;
   required bool bbox_normalize_targets_precomputed = 15;
   optional BboxNormalizeMeansConf bbox_normalize_means = 16;
   optional BboxNormalizeStdsConf bbox_normalize_stds = 17; 

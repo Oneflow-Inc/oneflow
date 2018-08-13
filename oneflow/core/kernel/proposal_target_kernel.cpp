@@ -23,7 +23,7 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   int32_t* rois_index_ptr = BnInOp2Blob("rois_index")->mut_dptr<int32_t>();  //(roi)
   int64_t im_num = rpn_rois_blob->shape().At(0);
   int64_t roi_num = rpn_rois_blob->shape().At(1);
-  
+
   FOR_RANGE(int64_t, i, 0, im_num) {
     const T* rpn_rois_ptr = rois_blob->dptr<T>(i);
     const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>(i);
@@ -52,13 +52,13 @@ void ProposalTargetKernel<T>::RoisNearestGtAndMaxIou(const int64_t rois_num, con
                                                      int32_t* roi_nearest_gt_index_ptr,
                                                      T* roi_max_overlap_ptr) const {
   const BBox<T>* roi_box = BBox<T>::Cast(rpn_rois_ptr);
-  const BBox<T>* gt_bbox = BBox<T>::Cast(gt_boxes_ptr->value().value().data());
+  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes_ptr->value().value().data());
   const int64_t gt_num = gt_boxes_ptr->value().value_size();
   FOR_RANGE(int64_t, i, 0, rois_num) {
     float maxIou = 0;
     int64_t maxIouIdx = 0;
     FOR_RANGE(int64_t, j, 0, gt_num) {
-      float iou = roi_box[j].InterOverUnion(&gt_bbox[j]);
+      float iou = roi_box[j].InterOverUniontmp(&gt_bbox[j]);
       if (iou > maxIou) {
         maxIou = iou;
         maxIouIdx = j;
@@ -72,8 +72,7 @@ void ProposalTargetKernel<T>::RoisNearestGtAndMaxIou(const int64_t rois_num, con
 template<typename T>
 ScoredBBoxSlice<T> ProposalTargetKernel<T>::ForegroundChoice(ScoredBBoxSlice<T>& rois_slice) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
-  const float fg_thresh = conf.fg_thresh();
-  const int64_t fg_end_index = rois_slice.FindByThreshold(fg_thresh);
+  const int64_t fg_end_index = rois_slice.FindByThreshold(conf.fg_thresh());
   ScoredBBoxSlice<T> fg_rois_slice = rois_slice.Slice(0, fg_end_index);
   const int64_t num_roi_per_image = conf.num_roi_per_image();
   const float fg_fraction = conf.fg_fraction();
@@ -90,9 +89,7 @@ template<typename T>
 ScoredBBoxSlice<T> ProposalTargetKernel<T>::BackgroundChoice(ScoredBBoxSlice<T>& rois_slice,
                                                              const int64_t fg_sample_size) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
-  const int64_t bg_thresh_hi = conf.bg_thresh_hi();
-  const int64_t bg_thresh_lo = conf.bg_thresh_lo();
-  CHECK_GT(bg_thresh_hi, bg_thresh_lo);
+  CHECK_GT(conf.bg_thresh_hi(), conf.bg_thresh_lo());
   int64_t bg_start_index = rois_slice.FindByThreshold(conf.bg_thresh_hi());
   int64_t bg_end_index = rois_slice.FindByThreshold(conf.bg_thresh_lo());
   ScoredBBoxSlice<T> bg_rois_slice = rois_slice.Slice(bg_start_index, bg_end_index);
@@ -125,7 +122,7 @@ void ProposalTargetKernel<T>::ComputeTargetAndWriteOut(
     const Int32List16* gt_labels_ptr, T* rois_ptr, int32_t* labels_ptr, T* bbox_targets_ptr,
     T* inside_weights_ptr, T* outside_weights_ptr) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
-  const BBox<T>* gt_bbox = BBox<T>::Cast(gt_boxes_ptr->value().value().data());
+  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes_ptr->value().value().data());
   BBoxDelta<T>* bbox_targets_box = BBoxDelta<T>::MutCast(bbox_targets_ptr);
   BBoxWeights<T>* inside_weights_box = BBoxWeights<T>::MutCast(inside_weights_ptr);
   BBoxWeights<T>* outside_weights_box = BBoxWeights<T>::MutCast(outside_weights_ptr);
@@ -142,7 +139,7 @@ void ProposalTargetKernel<T>::ComputeTargetAndWriteOut(
     const int32_t gt_index = roi_nearest_gt_index_ptr[roi_index];
     const int64_t target_index = i * class_num + gt_labels_ptr->value().value(gt_index);
     labels_ptr[i] = gt_labels_ptr->value().value(gt_index);
-    bbox_targets_box[target_index].TransformInverse(bbox, gt_bbox[gt_index], bbox_reg_ws);
+    bbox_targets_box[target_index].TransformInversetmp(bbox, &gt_bbox[gt_index], bbox_reg_ws);
     inside_weights_box[target_index].set_weight_x(bbox_inside_weight_conf.weight_x());
     inside_weights_box[target_index].set_weight_y(bbox_inside_weight_conf.weight_y());
     inside_weights_box[target_index].set_weight_w(bbox_inside_weight_conf.weight_w());

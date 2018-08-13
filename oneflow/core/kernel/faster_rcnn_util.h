@@ -44,6 +44,15 @@ class BBox final {
     return inter / (Area() + other->Area() - inter);
   }
 
+  inline float InterOverUniontmp(const BBox<float>* other) const {
+    const float iw = std::min<float>(x2(), other->x2()) - std::max<float>(x1(), other->x1()) + 1.f;
+    if (iw <= 0) { return 0; }
+    const float ih = std::min<float>(y2(), other->y2()) - std::max<float>(y1(), other->y1()) + 1.f;
+    if (ih <= 0) { return 0; }
+    const float inter = iw * ih;
+    return inter / (Area() + other->Area() - inter);
+  }
+
   void Transform(const BBox<T>* bbox, const BBoxDelta<T>* delta,
                  const BBoxRegressionWeights& bbox_reg_ws) {
     const float w = bbox->x2() - bbox->x1() + 1.0f;
@@ -100,6 +109,24 @@ class BBoxDelta final {
 
   void TransformInverse(const BBox<T>* bbox, const BBox<T>* target_bbox,
                         const BBoxRegressionWeights& bbox_reg_ws) {
+    float w = bbox->x2() - bbox->x1() + 1.0f;
+    float h = bbox->y2() - bbox->y1() + 1.0f;
+    float ctr_x = bbox->x1() + 0.5f * w;
+    float ctr_y = bbox->y1() + 0.5f * h;
+
+    float t_w = target_bbox->x2() - target_bbox->x1() + 1.0f;
+    float t_h = target_bbox->y2() - target_bbox->y1() + 1.0f;
+    float t_ctr_x = target_bbox->x1() + 0.5f * t_w;
+    float t_ctr_y = target_bbox->y1() + 0.5f * t_h;
+
+    set_dx(bbox_reg_ws.weight_x() * (t_ctr_x - ctr_x) / w);
+    set_dy(bbox_reg_ws.weight_y() * (t_ctr_y - ctr_y) / h);
+    set_dw(bbox_reg_ws.weight_w() * std::log(t_w / w));
+    set_dh(bbox_reg_ws.weight_h() * std::log(t_h / h));
+  }
+
+  void TransformInversetmp(const BBox<T>* bbox, const BBox<float>* target_bbox,
+                           const BBoxRegressionWeights& bbox_reg_ws) {
     float w = bbox->x2() - bbox->x1() + 1.0f;
     float h = bbox->y2() - bbox->y1() + 1.0f;
     float ctr_x = bbox->x1() + 0.5f * w;
