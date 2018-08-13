@@ -2,8 +2,10 @@
 
 namespace oneflow {
 
-void ReduceGatherKernel::ForwardDataContent(
+template<DeviceType device_type>
+void ReduceGatherKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  if (device_type == DeviceType::kGPU) { return; }
   int64_t in_bn_id = *static_cast<int64_t*>(ctx.other);
 
   Blob* out_blob = BnInOp2Blob("out");
@@ -14,6 +16,6 @@ void ReduceGatherKernel::ForwardDataContent(
   Memcpy<DeviceType::kGPU>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
 }
 
-REGISTER_KERNEL(OperatorConf::kReduceGatherConf, ReduceGatherKernel);
+ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceGatherConf, ReduceGatherKernel);
 
 }  // namespace oneflow
