@@ -1,5 +1,5 @@
 build: Dockerfile.build
-	cp ../build/bin/oneflow ./bin/oneflow && docker build -f Dockerfile.build . -t "oneflow-docker-build"
+	docker build -f Dockerfile.build . -t "oneflow-docker-build"
 
 runtime: Dockerfile.runtime
 	cp ../build/bin/oneflow ./bin/oneflow && docker build -f Dockerfile.build . -t "oneflow-docker-runtime"
