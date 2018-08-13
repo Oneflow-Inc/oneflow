@@ -8,20 +8,20 @@ void ReduceLocalAddKernel<device_type, T>::ForwardDataContent(
   const auto* other_val = static_cast<std::tuple<int64_t, int64_t, bool, bool>*>(ctx.other);
   int32_t in_bn_id = std::get<0>(*other_val);
   int32_t out_bn_id = std::get<1>(*other_val);
-  bool is_inited = std::get<2>(*other_val);
+  bool is_out_blob_inited = std::get<2>(*other_val);
   bool is_inplace_in_bn_id = std::get<3>(*other_val);
 
   if (device_type == DeviceType::kGPU) {
     if (is_inplace_in_bn_id) {
       return;
     } else {
-      CHECK(is_inited);
+      CHECK(is_out_blob_inited);
     }
   }
 
   Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
   Blob* out_blob = BnInOp2Blob(this->op_attribute().output_bns().Get(out_bn_id));
-  if (is_inited) {
+  if (is_out_blob_inited) {
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out_blob->shape().elem_cnt(), 1.0,
                                      in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
   } else {

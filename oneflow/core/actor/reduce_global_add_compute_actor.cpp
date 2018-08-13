@@ -3,8 +3,9 @@
 namespace oneflow {
 
 void ReduceGlobalAddCompActor::SetKernelCtxOther(void** other) {
-  other_val_.first = InBnId4RegstDescId(cur_processed_regst_desc_id());
-  other_val_.second = processed_regst_desc_id_cnt() == 0;
+  int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
+  bool is_inited = processed_regst_desc_id_cnt() != 0;
+  bool is_inplace_in_bn_id = in_bn_id == parallel_ctx()->parallel_id();
   *other = static_cast<void*>(&other_val_);
 }
 
