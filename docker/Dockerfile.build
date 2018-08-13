@@ -6,6 +6,7 @@ USER root
 RUN apt update && \
     apt install -y \
     libibverbs-dev \
+    libxml2-dev \
     nasm \
     cmake
 
