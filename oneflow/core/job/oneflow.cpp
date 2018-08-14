@@ -114,8 +114,10 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
+    PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
+  }
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
   // Improve
@@ -130,7 +132,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
+  }
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER();
   // Runtime
