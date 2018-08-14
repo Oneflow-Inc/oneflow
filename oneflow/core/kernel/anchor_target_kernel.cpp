@@ -97,7 +97,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
 
     const BBox<T>* anchors_bbox = BBox<T>::Cast(anchors_ptr);
 
-    const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>[image_inds];  // todo:fix
+    const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>() + image_inds;  // todo:fix
     FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
       gt_boxes_tmp_ptr[i] = gt_boxes_ptr->value().value(i);
     }
