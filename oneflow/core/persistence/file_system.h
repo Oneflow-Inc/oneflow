@@ -153,13 +153,8 @@ class FileSystem {
 
 }  // namespace fs
 
-// fs::FileSystem* LocalFS();
-// fs::FileSystem* NetworkFS();
-// fs::FileSystem* HadoopFS();
-
-// fs::FileSystem* GlobalFS();
-
 fs::FileSystem* LocalFS();
+
 fs::FileSystem* GetFS(const FilePathConf& file_path_conf);
 fs::FileSystem* DataFS();
 fs::FileSystem* PersistenceFS();

@@ -7,14 +7,13 @@ namespace oneflow {
 void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
   const auto& conf = op_conf().print_conf();
   const std::string& root_path = conf.print_dir();
-  fs::FileSystem* persistence_fs = GetFS(Global<JobDesc>::Get()->persistence_path_conf());
-  OfCallOnce(root_path, persistence_fs, &fs::FileSystem::RecursivelyCreateDir);
+  OfCallOnce(root_path, PersistenceFS(), &fs::FileSystem::RecursivelyCreateDir);
   int32_t part_name_suffix_length = conf.part_name_suffix_length();
   std::string num = std::to_string(parallel_ctx->parallel_id());
   int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
   std::string file_path =
       JoinPath(root_path, conf.part_name_prefix() + std::string(zero_count, '0') + num);
-  out_stream_.reset(new PersistentOutStream(persistence_fs, file_path));
+  out_stream_.reset(new PersistentOutStream(PersistenceFS(), file_path));
 }
 
 void PrintKernel::Forward(const KernelCtx& ctx,

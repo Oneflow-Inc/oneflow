@@ -24,7 +24,6 @@ class Snapshot final {
  private:
   void ConcatLbnFile(const LogicalBlobId& lbi, int32_t part_num, const std::string& concat_file);
 
-  fs::FileSystem* persistence_fs_;
   std::string root_path_;
 };
 
