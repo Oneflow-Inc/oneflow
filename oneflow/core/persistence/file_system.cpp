@@ -101,9 +101,7 @@ fs::FileSystem* LocalFS() {
   return fs;
 }
 
-fs::FileSystem* NetworkFS() {
-  return LocalFS();
-}
+fs::FileSystem* NetworkFS() { return LocalFS(); }
 
 fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
   static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
