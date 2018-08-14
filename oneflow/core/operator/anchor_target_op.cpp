@@ -51,12 +51,10 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_GE(image_num, 0);
   CHECK_EQ(image_info_blob_desc->shape().At(1), 3);
 
-  // gt_boxes: (N, 1)
-  // todo: fix ??
+  // gt_boxes: (N)
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
-  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 2);
+  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), image_num);
-  CHECK_EQ(gt_boxes_blob_desc->shape().At(1), 1);
 
   // out blobs
   // rpn_labels: (N, H, W, A)
@@ -68,7 +66,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   rpn_labels_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, base_anchors_num});
 
   BlobDesc* rpn_bbox_targets_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_targets");
-  rpn_bbox_targets_blob_desc->set_data_type(DataType::kFloat);
+  rpn_bbox_targets_blob_desc->set_data_type(DataType::kFloat);  // should be int
   rpn_bbox_targets_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   BlobDesc* rpn_bbox_inside_weights_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_inside_weights");

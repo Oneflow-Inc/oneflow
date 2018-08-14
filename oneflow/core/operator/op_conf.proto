@@ -218,7 +218,7 @@ message SmoothL1LossOpConf {
   required string prediction = 1;
   required string label = 2;
   required string loss = 3;
-  required float beta = 4 [default = 1] ;
+  optional float beta = 4 [default = 1] ;
   optional float scale = 5 [default = 1];
   required string inside_weights = 6;
   required string outside_weights = 7;
@@ -234,6 +234,17 @@ message SparseCrossEntropyLossOpConf {
   optional LossReductionType reduction = 4 [default = kSumOverN];
   optional float weight_scalar = 5 [default = 1.0];
   optional string weight = 6;
+}
+
+message SigmoidCrossEntropyLossOpConf {
+  required string prediction = 1;
+  required string label = 2;
+  required string loss = 3;
+  optional bool normalize = 4 [default = true];
+  optional int32 scale = 5 [default = 1];
+  optional LossReductionType reduction = 6 [default = kSumOverN];
+  optional float weight_scalar = 7 [default = 1.0];
+  optional string weight = 8;
 }
 
 message ConcatOpConf {
@@ -480,11 +491,11 @@ message EncodeConf {
   oneof encode {
     EncodeRaw raw = 1;
     EncodeJpeg jpeg = 2;
-    EncodeIdentity identity = 3;
+    EncodeProtobuf protobuf = 3;
   }
 }
 
-message EncodeIdentity {
+message EncodeProtobuf {
 }
 
 message EncodeRaw {
@@ -613,7 +624,7 @@ message BboxWeightConf
   optional float weight_h=4 [default = 1.0];
 }
 
-message BboxNormalizeMeansConf 
+message BboxNormalizeMeansConf
 {
   optional float means_x = 1[default = 0.0];
   optional float means_y = 2[default = 0.0];
@@ -647,7 +658,7 @@ message ProposalTargetOpConf
   required int32 bg_thresh_hi = 14;
   required bool bbox_normalize_targets_precomputed = 15;
   optional BboxNormalizeMeansConf bbox_normalize_means = 16;
-  optional BboxNormalizeStdsConf bbox_normalize_stds = 17; 
+  optional BboxNormalizeStdsConf bbox_normalize_stds = 17;
   required int32 class_num = 18;
 }
 
@@ -672,14 +683,15 @@ message BboxNmsAndLimitOpConf {
   required string scores = 3;
   required string labeled_bbox = 4;
   required string bbox_score = 5;
-  required float score_threshold = 6;
-  required BBoxRegressionWeights bbox_reg_weights = 7;
+  required BBoxRegressionWeights bbox_reg_weights = 6;
+  required float score_threshold = 7;
   required float nms_threshold = 8;
   required int32 detections_per_im = 9;
-  required int32 image_height = 10;
-  required int32 image_width = 11;
-  required bool bbox_vote_enabled = 12;
-  optional BboxVoteConf bbox_vote = 13;
+  required float threshold = 10;
+  required int32 image_height = 11;
+  required int32 image_width = 12;
+  required bool bbox_vote_enabled = 13;
+  optional BboxVoteConf bbox_vote = 14;
 }
 
 message AnchorGeneratorConf {
@@ -810,6 +822,7 @@ message OperatorConf {
     ProposalTargetOpConf proposal_target_conf = 411;
     BboxNmsAndLimitOpConf bbox_nms_and_limit_conf = 412;
     AnchorTargetOpConf anchor_target_conf = 413;
+    SigmoidCrossEntropyLossOpConf sigmoid_cross_entropy_loss_conf = 414;
   }
 }
 
