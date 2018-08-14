@@ -102,12 +102,7 @@ fs::FileSystem* LocalFS() {
 }
 
 fs::FileSystem* NetworkFS() {
-#ifdef PLATFORM_POSIX
-  static fs::FileSystem* fs = new fs::PosixFileSystem;
-#elif PLATFORM_WINDOWS
-  UNIMPLEMENTED();
-#endif
-  return fs;
+  return LocalFS();
 }
 
 fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
