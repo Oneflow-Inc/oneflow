@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/random_generator.h"
 #include "oneflow/core/kernel/faster_rcnn_util.h"
 #include "oneflow/core/kernel/anchor_target_kernel.h"
 
@@ -96,8 +95,8 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
 
     const BBox<T>* anchors_bbox = BBox<T>::Cast(anchors_ptr);
-
-    const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>() + image_inds;  // todo:fix
+    const FloatList16* gt_boxes_ptr =
+        gt_boxes_blob->dptr<FloatList16>() + image_inds;  // todo: fix it
 
     FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
       gt_boxes_tmp_ptr[i] = gt_boxes_ptr->value().value(i) * 720;
@@ -159,7 +158,6 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
       int32_t anchor_idx = inside_anchors_inds_ptr[i];
       if (current_img_label_ptr[anchor_idx] == 1) {
-
         fg_inds_ptr[fg_cnt++] = anchor_idx;
       } else if (current_img_label_ptr[anchor_idx] == 0) {
         bg_inds_ptr[bg_cnt++] = anchor_idx;
@@ -168,20 +166,19 @@ void AnchorTargetKernel<T>::ForwardDataContent(
 
     const int32_t fg_conf_size = conf.batchsize() * conf.foreground_fraction();
 
-    // LOG(INFO) << "fg_cnt" << fg_cnt << std::endl;
-    // LOG(INFO) << "fg_conf_size" << fg_conf_size << std::endl;
+    LOG(INFO) << "fg_cnt(1): " << fg_cnt << std::endl;
+    LOG(INFO) << "bg_cnt(1): " << bg_cnt << std::endl;
 
     if (fg_cnt > fg_conf_size) {
       // subsample fg
       const int32_t ignored_num = fg_cnt - fg_conf_size;
-      // random_generator_->Uniform(ignored_num, 0, fg_cnt, inds_mask_ptr);
+      // random_generator_->Uniform<int32_t>(ignored_num, 0, fg_cnt, inds_mask_ptr);
       FOR_RANGE(int32_t, i, 0, ignored_num) {
         current_img_label_ptr[fg_inds_ptr[inds_mask_ptr[i]]] = -1;
       }
       fg_cnt = fg_conf_size;
     }
     const int32_t bg_conf_size = conf.batchsize() - fg_cnt;
-    // LOG(INFO) << "bg_conf_size" << bg_conf_size << std::endl;
 
     if (bg_cnt > bg_conf_size) {
       // subsampel bg
@@ -203,6 +200,8 @@ void AnchorTargetKernel<T>::ForwardDataContent(
         bg_inds_ptr[bg_cnt++] = anchor_idx;
       }
     }
+    LOG(INFO) << "fg_cnt(2): " << fg_cnt << std::endl;
+    LOG(INFO) << "bg_cnt(2): " << bg_cnt << std::endl;
 
     // 5. Compute foreground anchors' bounding box regresion target(i.e. deltas).
     FOR_RANGE(int32_t, i, 0, fg_cnt) {
