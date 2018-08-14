@@ -17,7 +17,7 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
 
   SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, conf, prediction->shape().At(0), prediction->dptr<PredType>(),
+      ctx.device_ctx, conf, prediction->shape().elem_cnt(), prediction->dptr<PredType>(),
       label->dptr<LabelType>(), loss_buf->mut_dptr<PredType>(), count->mut_dptr<PredType>(),
       label_num->mut_dptr<PredType>(), loss->mut_dptr<PredType>());
 
@@ -25,9 +25,9 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
     Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(), 0,
                         prediction_diff->ByteSizeOfDataContentField());
     SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Backward(
-        ctx.device_ctx, conf, prediction->shape().At(0), prediction->dptr<PredType>(),
-        label->dptr<LabelType>(), prediction_diff->mut_dptr<PredType>(),
-        label_num->mut_dptr<PredType>());
+        ctx.device_ctx, conf, prediction->shape().elem_cnt(), prediction->dptr<PredType>(),
+        label->dptr<LabelType>(), label_num->dptr<PredType>(),
+        prediction_diff->mut_dptr<PredType>());
   }
 }
 

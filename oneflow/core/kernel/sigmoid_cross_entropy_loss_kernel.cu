@@ -53,7 +53,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
           ctx, n, count, label_num, static_cast<PredType*>(ctx->buf_ptr()), ctx->buf_size());
       NoSmallerThan<PredType>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-              n, label_num, 1e-5);
+              1, label_num, 1e-5);
       KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, 1, loss, label_num);
     }
     KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, 1, loss, loss, conf.scale());
