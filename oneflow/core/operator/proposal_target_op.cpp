@@ -3,6 +3,7 @@
 namespace oneflow {
 
 void ProposalTargetOp::InitFromOpConf() {
+  CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_proposal_target_conf());
   EnrollInputBn("rpn_rois", false);
   EnrollInputBn("gt_boxes", false);
