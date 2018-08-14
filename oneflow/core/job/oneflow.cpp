@@ -163,6 +163,7 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  CHECK_GE(FLAGS_this_machine_id, 0);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
   { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_id); }

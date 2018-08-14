@@ -7,7 +7,7 @@
 #include <sys/sysinfo.h>
 #endif
 
-DEFINE_int64(this_machine_id, 0, "");
+DEFINE_int64(this_machine_id, -1, "");
 
 namespace oneflow {
 
