@@ -12,6 +12,9 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   int64_t next_model_vid = std::get<0>(*tpl);
   const NormalModelUpdateOpUserConf& conf = this->op_conf().normal_mdupdt_conf().user_conf();
   double learning_rate = conf.learning_rate();
+  if (conf.has_warmup_conf()) {
+    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, next_model_vid - 1);
+  }
   if (conf.has_learning_rate_decay()) {
     learning_rate =
         GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, next_model_vid - 1);
@@ -127,7 +130,38 @@ double LinearCosineDecayedLearningRate(const LinearCosineDecayConf& conf, double
   return lr * decayed;
 }
 
+double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr,
+                                  int64_t now_batch_num) {
+  CHECK_GT(conf.warmup_batches(), 0);
+  CHECK_GT(conf.multiplier(), 0);
+  CHECK_LT(conf.multiplier(), 1);
+  return lr * conf.multiplier();
+}
+
+double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t now_batch_num) {
+  CHECK_GT(conf.warmup_batches(), 0);
+  CHECK_GT(conf.start_multiplier(), 0);
+  CHECK_LT(conf.start_multiplier(), 1);
+  double start_multiplier = conf.start_multiplier();
+  double multiplier = 1.0;
+  if (now_batch_num < conf.warmup_batches()) {
+    multiplier =
+        start_multiplier + (1.0 - start_multiplier) * (now_batch_num * 1.0 / conf.warmup_batches());
+  }
+  return lr * multiplier;
+}
+
 }  // namespace
+
+double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t now_batch_num) {
+  if (conf.has_constant_conf()) {
+    return ConstantWarmupLearningRate(conf.constant_conf(), lr, now_batch_num);
+  } else if (conf.has_linear_conf()) {
+    return LinearWarmupLearningRate(conf.linear_conf(), lr, now_batch_num);
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t now_batch_num) {
   if (conf.has_exponential_conf()) {
