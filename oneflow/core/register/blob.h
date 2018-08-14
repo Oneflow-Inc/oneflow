@@ -50,7 +50,7 @@ class Blob final {
 
   template<typename T = void>
   const T* dptr(int64_t dim0) const {
-    CHECK_GT(shape().NumAxes(), 1);
+    CHECK_GE(shape().NumAxes(), 1);
     CHECK_GE(dim0, 0);
     CHECK_LT(dim0, shape().At(0));
     return dptr<T>() + dim0 * shape().Count(1);
@@ -58,7 +58,7 @@ class Blob final {
 
   template<typename T = void>
   const T* dptr(int64_t dim0, int64_t dim1) const {
-    CHECK_GT(shape().NumAxes(), 2);
+    CHECK_GE(shape().NumAxes(), 2);
     CHECK_GE(dim1, 0);
     CHECK_LT(dim1, shape().At(1));
     return dptr<T>(dim0) + dim1 * shape().Count(2);
@@ -66,7 +66,7 @@ class Blob final {
 
   template<typename T = void>
   const T* dptr(int64_t dim0, int64_t dim1, int64_t dim2) const {
-    CHECK_GT(shape().NumAxes(), 3);
+    CHECK_GE(shape().NumAxes(), 3);
     CHECK_GE(dim2, 0);
     CHECK_LT(dim2, shape().At(2));
     return dptr<T>(dim0, dim1) + dim2 * shape().Count(3);
@@ -74,7 +74,7 @@ class Blob final {
 
   template<typename T = void>
   T* mut_dptr(int64_t dim0) {
-    CHECK_GT(shape().NumAxes(), 1);
+    CHECK_GE(shape().NumAxes(), 1);
     CHECK_GE(dim0, 0);
     CHECK_LT(dim0, shape().At(0));
     return mut_dptr<T>() + dim0 * shape().Count(1);
@@ -82,7 +82,7 @@ class Blob final {
 
   template<typename T = void>
   T* mut_dptr(int64_t dim0, int64_t dim1) {
-    CHECK_GT(shape().NumAxes(), 2);
+    CHECK_GE(shape().NumAxes(), 2);
     CHECK_GE(dim1, 0);
     CHECK_LT(dim1, shape().At(1));
     return mut_dptr<T>(dim0) + dim1 * shape().Count(2);
@@ -90,7 +90,7 @@ class Blob final {
 
   template<typename T = void>
   T* mut_dptr(int64_t dim0, int64_t dim1, int64_t dim2) {
-    CHECK_GT(shape().NumAxes(), 3);
+    CHECK_GE(shape().NumAxes(), 3);
     CHECK_GE(dim2, 0);
     CHECK_LT(dim2, shape().At(2));
     return mut_dptr<T>(dim0, dim1) + dim2 * shape().Count(3);
