@@ -87,10 +87,10 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
       || gt_boxes_type == DataType::kFloatList24) {
     anchors_blob_desc->set_data_type(DataType::kFloat);
-    anchors_blob_desc
+
   } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
              || gt_boxes_type == DataType::kDoubleList24) {
-    ->set_data_type(DataType::kDouble);
+    anchors_blob_desc->set_data_type(DataType::kDouble);
 
   } else {
     UNIMPLEMENTED();
@@ -135,7 +135,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
 
   BlobDesc* gt_max_overlaps_num_blob_desc = GetBlobDesc4BnInOp("gt_max_overlaps_num");
   gt_max_overlaps_num_blob_desc->set_data_type(DataType::kInt32);
-  gt_max_overlaps_inds_blob_desc->mut_shape() = Shape({max_per_img_gt_boxes_num});
+  gt_max_overlaps_num_blob_desc->mut_shape() = Shape({max_per_img_gt_boxes_num});
 
   BlobDesc* inds_mask_blob_desc = GetBlobDesc4BnInOp("inds_mask");
   inds_mask_blob_desc->set_data_type(DataType::kInt32);
