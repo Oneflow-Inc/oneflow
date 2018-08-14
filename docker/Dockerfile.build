@@ -6,10 +6,11 @@ USER root
 RUN apt update && \
     apt install -y \
     libibverbs-dev \
-    libxml2-dev \
+    git \
     nasm \
     cmake
 
-ENV LD_LIBRARY_PATH="/usr/lib:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/mnt/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+ENV PATH="${LD_LIBRARY_PATH}:${PATH}"
 
 WORKDIR /opt
