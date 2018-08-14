@@ -80,10 +80,23 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   // const blob
-  // anchors: (H, W, 4*A) T
+  // anchors: (H, W, A, 4) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
-  anchors_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
-  anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, 4 * base_anchors_num});
+
+  const auto gt_boxes_type = GetBlobDesc4BnInOp("gt_boxes")->data_type();
+  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
+      || gt_boxes_type == DataType::kFloatList24) {
+    anchors_blob_desc->set_data_type(DataType::kFloat);
+    anchors_blob_desc
+  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
+             || gt_boxes_type == DataType::kDoubleList24) {
+    ->set_data_type(DataType::kDouble);
+
+  } else {
+    UNIMPLEMENTED();
+  }
+
+  anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, base_anchors_num, 4});
 
   // data tmp blobs
   // inside_anchors_inds: (H*W*A) int
@@ -129,14 +142,34 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   inds_mask_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
-  gt_boxex_tmp_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
+
+  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
+      || gt_boxes_type == DataType::kFloatList24) {
+    gt_boxex_tmp_blob_desc->set_data_type(DataType::kFloat);
+
+  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
+             || gt_boxes_type == DataType::kDoubleList24) {
+    gt_boxex_tmp_blob_desc->set_data_type(DataType::kDouble);
+
+  } else {
+    UNIMPLEMENTED();
+  }
   gt_boxex_tmp_blob_desc->mut_shape() = Shape({256, 4});
 }
 
 void AnchorTargetOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  kernel_conf->set_data_type(GetBlobDesc4BnInOp("gt_boxes")->data_type());
+  const auto gt_boxes_type = GetBlobDesc4BnInOp("gt_boxes")->data_type();
+  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
+      || gt_boxes_type == DataType::kFloatList24) {
+    kernel_conf->set_data_type(DataType::kFloat);
+  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
+             || gt_boxes_type == DataType::kDoubleList24) {
+    kernel_conf->set_data_type(DataType::kDouble);
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
