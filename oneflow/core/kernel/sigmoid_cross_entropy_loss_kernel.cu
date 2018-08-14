@@ -67,7 +67,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
             n, prediction, label, pred_diff);
     KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, pred_diff, pred_diff, conf.scale());
     if (conf.normalize()) {
-      KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, pred_diff, pred_diff, 1 / *label_num);
+      KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, n, pred_diff, label_num);
     }
   }
 };

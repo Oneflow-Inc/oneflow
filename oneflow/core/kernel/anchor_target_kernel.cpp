@@ -79,6 +79,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   int32_t* gt_max_overlaps_inds_ptr = BnInOp2Blob("gt_max_overlaps_inds")->mut_dptr<int32_t>();
   int32_t* gt_max_overlaps_num_ptr = BnInOp2Blob("gt_max_overlaps_num")->mut_dptr<int32_t>();
   int32_t* inds_mask_ptr = BnInOp2Blob("inds_mask")->mut_dptr<int32_t>();
+  T* gt_boxes_tmp_ptr = BnInOp2Blob("gt_boxes_tmp")->mut_dptr<T>();
 
   // useful vars
   const int32_t image_num = image_info_blob->shape().At(0);  // N
@@ -88,13 +89,20 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const int32_t image_height = conf.anchors_generator_conf().image_height();
   const int32_t image_width = conf.anchors_generator_conf().image_width();
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
 
   AnchorTargetKernelUtil<T>::SetValue(labels_num, rpn_labels_blob->mut_dptr<int32_t>(), -1);
 
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
 
     const BBox<T>* anchors_bbox = BBox<T>::Cast(anchors_ptr);
-    const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(gt_boxes_blob->dptr<T>(image_inds));
+
+    const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>() + image_inds;  // todo:fix
+    FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
+      gt_boxes_tmp_ptr[i] = gt_boxes_ptr->value().value(i);
+    }
+
+    const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(gt_boxes_tmp_ptr);
     const int32_t current_img_gt_boxes_num = image_info_blob->dptr<int32_t>(image_inds)[2];
     int32_t* current_img_label_ptr = rpn_labels_blob->mut_dptr<int32_t>(image_inds);
     BBoxDelta<T>* current_img_target_bbox_delta =
@@ -187,12 +195,12 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     }
 
     // 5. Compute foreground anchors' bounding box regresion target(i.e. deltas).
-    // FOR_RANGE(int32_t, i, 0, fg_cnt) {
-    // const int32_t anchor_idx = fg_inds_ptr[i];
-    // const int32_t gt_boxes_idx = max_overlaps_inds_ptr[anchor_idx];
-    // current_img_target_bbox_delta[anchor_idx].TransformInverse(anchors_bbox + anchor_idx,
-    // current_img_gt_boxes_bbox + gt_boxes_idx);
-    //}
+    FOR_RANGE(int32_t, i, 0, fg_cnt) {
+      const int32_t anchor_idx = fg_inds_ptr[i];
+      const int32_t gt_boxes_idx = max_overlaps_inds_ptr[anchor_idx];
+      current_img_target_bbox_delta[anchor_idx].TransformInverse(
+          anchors_bbox + anchor_idx, current_img_gt_boxes_bbox + gt_boxes_idx, bbox_reg_ws);
+    }
 
     // 6. Set bounding box inside weights and outside weights.
     const float weight_value = 1.0 / (fg_cnt + bg_cnt);
