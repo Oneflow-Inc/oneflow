@@ -83,16 +83,16 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name);
+  Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
+Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<MachineCtx>::New(this_mchn_name);
+  Global<MachineCtx>::New(this_mchn_id);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
@@ -157,7 +157,6 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
 }  // namespace oneflow
 
 DEFINE_string(job_conf, "", "");
-DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
@@ -166,7 +165,7 @@ int main(int argc, char** argv) {
   gflags::ParseCommandLineFlags(&argc, &argv, true);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_name); }
+  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_id); }
   CloseStdoutAndStderr();
   return 0;
 }
