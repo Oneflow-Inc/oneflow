@@ -25,7 +25,6 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("gt_boxes_tmp");
 }
 
-
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
   return op_conf().anchor_target_conf();
 }
@@ -35,14 +34,14 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   // useful vars
   const AnchorGeneratorConf& conf = op_conf().anchor_target_conf().anchors_generator_conf();
-  const int32_t base_anchors_num =
-      conf.anchor_scales().size() * conf.aspect_ratios().size();  // A
+  const int32_t base_anchors_num = conf.anchor_scales().size() * conf.aspect_ratios().size();  // A
   const int32_t fm_stride = conf.feature_map_stride();
   CHECK_GE(fm_stride, 0);
   const int32_t fm_h = conf.image_height() / fm_stride;  // H
   const int32_t fm_w = conf.image_width() / fm_stride;   // W
   CHECK_GE(fm_h, 0);
   CHECK_GE(fm_w, 0);
+  const int32_t max_per_img_gt_boxes_num = 256;
 
   // in blobs
   // image_info: (N, 3)
@@ -52,7 +51,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   CHECK_GE(image_num, 0);
   CHECK_EQ(image_info_blob_desc->shape().At(1), 3);
 
-  // gt_boxes: (N, 1) 
+  // gt_boxes: (N, 1)
   // todo: fix ??
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
   CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 2);
@@ -70,8 +69,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
 
   BlobDesc* rpn_bbox_targets_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_targets");
   rpn_bbox_targets_blob_desc->set_data_type(DataType::kFloat);
-  rpn_bbox_targets_blob_desc->mut_shape() =
-      Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
+  rpn_bbox_targets_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   BlobDesc* rpn_bbox_inside_weights_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_inside_weights");
   rpn_bbox_inside_weights_blob_desc->set_data_type(DataType::kFloat);
@@ -84,21 +82,21 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
   // const blob
-  // anchors: (H, W, 4*A)
+  // anchors: (H, W, 4*A) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
   anchors_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
   anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, 4 * base_anchors_num});
 
   // data tmp blobs
-  // inside_anchors_inds: (H*W*A)
-  // fg_inds: (H*W*A)
-  // bg_inds: (H*W*A)
-  // max_overlaps: (H*W*A)
-  // max_overlaps_inds: (H*W*A)
-  // gt_max_overlaps_inds: (256,H*W*A)
-  // gt_max_overlaps_num: (256)
-  // inds_mask: (H*W*A)
-  // gt_boxes_tmp: (256,4)
+  // inside_anchors_inds: (H*W*A) int
+  // fg_inds: (H*W*A) int
+  // bg_inds: (H*W*A) int
+  // max_overlaps: (H*W*A) float
+  // max_overlaps_inds: (H*W*A) int
+  // gt_max_overlaps_inds: (256,H*W*A) int
+  // gt_max_overlaps_num: (256) int
+  // inds_mask: (H*W*A) int
+  // gt_boxes_tmp: (256,4) T
   BlobDesc* inside_anchors_inds_blob_desc = GetBlobDesc4BnInOp("inside_anchors_inds");
   inside_anchors_inds_blob_desc->set_data_type(DataType::kInt32);
   inside_anchors_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
@@ -133,14 +131,14 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   inds_mask_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
   BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
-  gt_boxex_tmp_blob_desc->set_data_type(DataType::kFloat);
+  gt_boxex_tmp_blob_desc->set_data_type(gt_boxes_blob_desc->data_type());
   gt_boxex_tmp_blob_desc->mut_shape() = Shape({256, 4});
 }
 
 void AnchorTargetOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-    kernel_conf->set_data_type(GetBlobDesc4BnInOp("gt_boxes")->data_type());  
+  kernel_conf->set_data_type(GetBlobDesc4BnInOp("gt_boxes")->data_type());
 }
 
 REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);
