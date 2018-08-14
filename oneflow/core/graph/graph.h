@@ -186,8 +186,8 @@ void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
 template<typename NodeType, typename EdgeType>
 void Graph<NodeType, EdgeType>::ToDotWithFilePath(const std::string& file_path) {
   std::string dir_name = Dirname(file_path);
-  if (!LocalFS()->IsDirectory(dir_name)) { LocalFS()->RecursivelyCreateDir(dir_name); }
-  PersistentOutStream out_stream(LocalFS(), file_path);
+  if (!LogFS()->IsDirectory(dir_name)) { LogFS()->RecursivelyCreateDir(dir_name); }
+  PersistentOutStream out_stream(LogFS(), file_path);
   ToDotWithStream(out_stream);
 }
 

@@ -5,7 +5,7 @@ namespace oneflow {
 namespace {
 
 void ToDotFile(const Plan& plan, const std::string& filepath) {
-  PersistentOutStream out_stream(LocalFS(), filepath);
+  PersistentOutStream out_stream(LogFS(), filepath);
   out_stream << "digraph {\n";
   HashSet<int64_t> regst_desc_ids;
   for (const TaskProto& task_proto : plan.task()) {

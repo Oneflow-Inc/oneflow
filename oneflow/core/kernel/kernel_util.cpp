@@ -260,14 +260,15 @@ KU_IF_METHOD InitializeWithDir(DeviceCtx* ctx, int32_t part_id, int32_t part_num
                                const std::string& model_dir, Blob* blob,
                                const std::string& bn_in_op, int32_t dim_num,
                                int64_t num_in_each_dim) {
+  fs::FileSystem* persistence_fs = GetFS(Global<JobDesc>::Get()->persistence_path_conf());
   int64_t blob_size = blob->ByteSizeOfDataContentField();
   int64_t byte_size_of_each_dim = num_in_each_dim * sizeof(T);
   std::string file_path = JoinPath(model_dir, bn_in_op);
-  uint64_t file_size = GlobalFS()->GetFileSize(file_path);
+  uint64_t file_size = persistence_fs->GetFileSize(file_path);
   CHECK_EQ(file_size, dim_num * byte_size_of_each_dim);
   BalancedSplitter splitter = BalancedSplitter(dim_num, part_num);
   int64_t begin_pos = splitter.At(part_id).begin() * byte_size_of_each_dim;
-  PersistentInStream in_stream(GlobalFS(), file_path, begin_pos);
+  PersistentInStream in_stream(persistence_fs, file_path, begin_pos);
   in_stream.Read(blob->mut_dptr<char>(), blob_size);
 }
 

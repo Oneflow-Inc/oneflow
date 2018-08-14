@@ -84,7 +84,7 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
             [](const ProfileInfoPair& lhs, const ProfileInfoPair& rhs) {
               return lhs.second.CalcBottleNeckScore() > rhs.second.CalcBottleNeckScore();
             });
-  PersistentOutStream out_stream(LocalFS(), JoinPath(LogDir(), "oneflow.profile"));
+  PersistentOutStream out_stream(LogFS(), JoinPath(LogDir(), "oneflow.profile"));
   double mdupdt_act_interval = 0.0;
   int32_t mdupdt_task_num = 0;
   for (const ProfileInfoPair& pair : profile_info_vec) {

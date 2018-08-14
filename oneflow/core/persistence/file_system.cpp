@@ -116,9 +116,38 @@ fs::FileSystem* LocalFS() {
   return fs;
 }
 
-fs::FileSystem* GlobalFS() {
-  static fs::GlobalFSConstructor gfs_constructor;
-  return gfs_constructor.gfs;
+fs::FileSystem* NetworkFS() {
+#ifdef PLATFORM_POSIX
+  static fs::FileSystem* fs = new fs::PosixFileSystem;
+#elif PLATFORM_WINDOWS
+  UNIMPLEMENTED();
+#endif
+  return fs;
 }
+
+fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
+  static fs::FileSystem* fs = new fs::HadoopFileSystem(hdfs_conf);
+  return fs;
+}
+
+fs::FileSystem* GetFS(const FilePathConf& file_path_conf) {
+  if (file_path_conf.has_localfs_conf()) {
+    return LocalFS();
+  } else if (file_path_conf.has_networkfs_conf()) {
+    return NetworkFS();
+  } else if (file_path_conf.has_hdfs_conf()) {
+    return HadoopFS(file_path_conf.hdfs_conf());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_path_conf()); }
+
+fs::FileSystem* PersistenceFS() { return GetFS(Global<JobDesc>::Get()->persistence_path_conf()); }
+
+fs::FileSystem* CacheFS() { return GetFS(Global<JobDesc>::Get()->cache_path_conf()); }
+
+fs::FileSystem* LogFS() { return GetFS(Global<JobDesc>::Get()->log_path_conf()); }
 
 }  // namespace oneflow

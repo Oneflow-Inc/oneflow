@@ -21,14 +21,15 @@ void RecordLoadKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
     int32_t zero_count = std::max(part_name_suffix_length - static_cast<int32_t>(num.length()), 0);
     data_paths.push_back(JoinPath(data_dir, part_name_prefix + std::string(zero_count, '0') + num));
   }
+  fs::FileSystem* data_fs = GetFS(Global<JobDesc>::Get()->data_path_conf());
   if (Global<JobDesc>::Get()->IsTrain()) {
-    if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs() && GlobalFS() != LocalFS()) {
-      in_stream_.reset(new PersistentInStream(GlobalFS(), data_paths, true, true));
+    if (Global<JobDesc>::Get()->save_downloaded_file_to_local_fs()) {
+      in_stream_.reset(new PersistentInStream(data_fs, data_paths, true, true));
     } else {
-      in_stream_.reset(new PersistentInStream(GlobalFS(), data_paths, true, false));
+      in_stream_.reset(new PersistentInStream(data_fs, data_paths, true, false));
     }
   } else {
-    in_stream_.reset(new PersistentInStream(GlobalFS(), data_paths, false, false));
+    in_stream_.reset(new PersistentInStream(data_fs, data_paths, false, false));
   }
   int64_t global_piece_size = Global<JobDesc>::Get()->PieceSize();
   CHECK_EQ(global_piece_size % parallel_ctx->parallel_num(), 0);

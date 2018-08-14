@@ -9,7 +9,7 @@ BinaryInStreamWithLocalCopy::BinaryInStreamWithLocalCopy(fs::FileSystem* fs,
   LOG(INFO) << "New BinaryInStreamWithLocalCopy " << file_path;
   in_stream_.reset(new BinaryInStreamWithoutLocalCopy(fs, file_path));
   local_copy_path_ = JoinPath(LogDir(), "global_fs_buffer", file_path);
-  out_stream_.reset(new PersistentOutStream(LocalFS(), local_copy_path_));
+  out_stream_.reset(new PersistentOutStream(CacheFS(), local_copy_path_));
   read_mthd_ = &BinaryInStreamWithLocalCopy::ReadAndWriteToLocal;
 }
 
@@ -28,7 +28,7 @@ int32_t BinaryInStreamWithLocalCopy::ReadAndWriteToLocal(char* s, size_t n) {
 
 void BinaryInStreamWithLocalCopy::CopyToLocalFinish() {
   out_stream_.reset();
-  in_stream_.reset(new BinaryInStreamWithoutLocalCopy(LocalFS(), local_copy_path_));
+  in_stream_.reset(new BinaryInStreamWithoutLocalCopy(CacheFS(), local_copy_path_));
   read_mthd_ = &BinaryInStreamWithLocalCopy::ReadFromLocal;
 }
 
