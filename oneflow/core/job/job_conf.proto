@@ -34,24 +34,15 @@ message HdfsConf {
   required string namenode = 1;
 }
 
-message GlobalFSConf {
+message FilePathConf {
   oneof fs_type {
     LocalFsConf localfs_conf = 1;
-    HdfsConf hdfs_conf = 2;
-  }
-}
-
-message FilePathConf {
-  required string path = 1;
-  oneof fs_type {
-    LocalFsConf localfs_conf = 2;
-    NetworkFsConf networkfs_conf = 3;
-    HdfsConf hdfs_conf = 4;
+    NetworkFsConf networkfs_conf = 2;
+    HdfsConf hdfs_conf = 3;
   }
 }
 
 message OtherConf {
-  required GlobalFSConf globalfs_conf = 1;
   required int64 piece_size = 2;
   required int32 data_part_num = 3; // piece_size % data_part_num = 0
 
@@ -73,10 +64,8 @@ message OtherConf {
   optional bool use_ordered_allreduce_in_mdupdt = 115 [default = false];
   optional bool use_synthetic_data =  116 [default = false];
 
-  required FilePathConf work_path_conf = 120;             // localfs, networkfs are valid
   required FilePathConf data_path_conf = 121;             // localfs, networkfs and hdfs are valid
-  required FilePathConf persistence_path_conf = 122;      // localfs, networkfs and hdfs are valid
-  optional FilePathConf cache_path_conf = 123;            // only localfs is valid
+  required FilePathConf snapshot_path_conf = 122;         // localfs, networkfs and hdfs are valid
 
   oneof JobType {
     TrainConf train_conf = 200;

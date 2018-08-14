@@ -90,21 +90,6 @@ void FileSystem::RecursivelyCreateDir(const std::string& dirname) {
   }
 }
 
-struct GlobalFSConstructor {
-  GlobalFSConstructor() {
-    const GlobalFSConf& gfs_conf = Global<JobDesc>::Get()->other_conf().globalfs_conf();
-    if (gfs_conf.has_localfs_conf()) {
-      CHECK_EQ(Global<JobDesc>::Get()->resource().machine().size(), 1);
-      gfs = LocalFS();
-    } else if (gfs_conf.has_hdfs_conf()) {
-      gfs = new HadoopFileSystem(gfs_conf.hdfs_conf());
-    } else {
-      UNIMPLEMENTED();
-    }
-  }
-  FileSystem* gfs;
-};
-
 }  // namespace fs
 
 fs::FileSystem* LocalFS() {
@@ -143,8 +128,5 @@ fs::FileSystem* GetFS(const FilePathConf& file_path_conf) {
 }
 
 fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_path_conf()); }
-fs::FileSystem* PersistenceFS() { return GetFS(Global<JobDesc>::Get()->persistence_path_conf()); }
-fs::FileSystem* CacheFS() { return GetFS(Global<JobDesc>::Get()->cache_path_conf()); }
-fs::FileSystem* LogFS() { return GetFS(Global<JobDesc>::Get()->log_path_conf()); }
-
+fs::FileSystem* SnapshotFS() { return GetFS(Global<JobDesc>::Get()->snapshot_path_conf()); }
 }  // namespace oneflow

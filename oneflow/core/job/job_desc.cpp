@@ -87,21 +87,9 @@ float JobDesc::L2() const {
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
 
-const FilePathConf& JobDesc::work_path_conf() const { return job_conf_.other().work_path_conf(); }
 const FilePathConf& JobDesc::data_path_conf() const { return job_conf_.other().data_path_conf(); }
-const FilePathConf& JobDesc::persistence_path_conf() const {
-  return job_conf_.other().persistence_path_conf();
-}
-const FilePathConf& JobDesc::cache_path_conf() const {
-  CHECK(job_conf_.other().has_cache_path_conf());
-  return job_conf_.other().cache_path_conf();
-}
-const FilePathConf& JobDesc::log_path_conf() const {
-  if (!work_path_conf().has_hdfs_conf()) {
-    return work_path_conf();
-  } else {
-    return cache_path_conf();
-  }
+const FilePathConf& JobDesc::snapshot_path_conf() const {
+  return job_conf_.other().snapshot_path_conf();
 }
 
 JobDesc::JobDesc(const std::string& job_conf_filepath) {
@@ -113,8 +101,6 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.placement(), job_conf_.mutable_placement());
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
-  CheckFilePathValidity();
-
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA
@@ -146,21 +132,6 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     const std::string& machine_name = job_conf_.resource().machine(i).name();
     CHECK(machine_name2machine_id_.emplace(machine_name, i).second);
     CHECK(machine_id2machine_name_.emplace(i, machine_name).second);
-  }
-}
-
-void JobDesc::CheckFilePathValidity() {
-  if (job_conf_.other().work_path_conf().has_hdfs_conf()) {
-    CHECK(job_conf_.other().has_cache_path_conf());
-  }
-  if (save_downloaded_file_to_local_fs()) {
-    PbMd message_diff;
-    CHECK(!message_diff.Equals(job_conf_.other().data_path_conf(),
-                               job_conf_.other().cache_path_conf()));
-    CHECK(job_conf_.other().has_cache_path_conf());
-  }
-  if (job_conf_.other().has_cache_path_conf()) {
-    CHECK(job_conf_.other().cache_path_conf().has_localfs_conf());
   }
 }
 

@@ -17,14 +17,14 @@ void ActEventLogger::PrintActEventToLogDir(const ActEvent& act_event) {
 }
 
 ActEventLogger::ActEventLogger(bool is_experiment)
-    : bin_out_stream_(LogFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
-                                                      + act_event_bin_filename_)),
-      txt_out_stream_(LogFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
-                                                      + act_event_txt_filename_)) {}
+    : bin_out_stream_(LocalFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
+                                                        + act_event_bin_filename_)),
+      txt_out_stream_(LocalFS(), JoinPath(LogDir(), (is_experiment ? experiment_prefix_ : "")
+                                                        + act_event_txt_filename_)) {}
 
 void ParseActEvents(const std::string& act_event_filepath,
                     std::list<std::unique_ptr<ActEvent>>* act_events) {
-  PersistentInStream in_stream(LogFS(), act_event_filepath);
+  PersistentInStream in_stream(LocalFS(), act_event_filepath);
   int64_t act_event_size;
   while (!in_stream.Read(reinterpret_cast<char*>(&act_event_size), sizeof(act_event_size))) {
     std::vector<char> buffer(act_event_size);

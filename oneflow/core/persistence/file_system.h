@@ -157,8 +157,7 @@ fs::FileSystem* LocalFS();
 
 fs::FileSystem* GetFS(const FilePathConf& file_path_conf);
 fs::FileSystem* DataFS();
-fs::FileSystem* PersistenceFS();
-fs::FileSystem* CacheFS();
+fs::FileSystem* SnapshotFS();
 fs::FileSystem* LogFS();
 }  // namespace oneflow
 
