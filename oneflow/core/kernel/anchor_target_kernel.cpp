@@ -73,9 +73,9 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   T* origin_gt_boxes_ptr = BnInOp2Blob("origin_gt_boxes")->mut_dptr<T>();
 
   // useful vars
-  const int32_t image_num = image_info_blob->shape().At(0);  // N
-  const int32_t anchors_num = rpn_labels_blob->Count(1);  // H*W*A
-  const int32_t labels_num = rpn_labels_blob->ElementCnt();  // N*H*W*A
+  const int32_t image_num = image_info_blob->shape().At(0);        // N
+  const int32_t anchors_num = rpn_labels_blob->shape().Count(1);   // H*W*A
+  const int32_t labels_num = rpn_labels_blob->shape().elem_cnt();  // N*H*W*A
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const int32_t image_height = conf.anchors_generator_conf().image_height();
   const int32_t image_width = conf.anchors_generator_conf().image_width();
@@ -98,7 +98,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     }
 
     const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(origin_gt_boxes_ptr);
-    const int32_t current_img_gt_boxes_num = gt_boxes_ptr->value().value_size()/4;
+    const int32_t current_img_gt_boxes_num = gt_boxes_ptr->value().value_size() / 4;
 
     int32_t* current_img_label_ptr = rpn_labels_blob->mut_dptr<int32_t>(image_inds);
     BBoxDelta<T>* current_img_target_bbox_delta =
