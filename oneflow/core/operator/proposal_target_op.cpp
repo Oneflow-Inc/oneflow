@@ -31,8 +31,8 @@ void ProposalTargetOp::InferBlobDescs(
   const BlobDesc* gt_label_blob_desc = GetBlobDesc4BnInOp("gt_label");
   CHECK_EQ(rpn_rois_blob_desc->shape().NumAxes(), 3);
   CHECK_EQ(gt_boxes_blob_desc->shape().At(0), gt_label_blob_desc->shape().At(0));
-  // TODO() check input
-
+  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
+  CHECK_EQ(gt_label_blob_desc->shape().NumAxes(), 1);
   // blob shape: rpn_rois (n,roi_num,4); gt_boxes(n,gt_max_num,4); im_info(n,3);
   // rois(n,roi_sample,4); labels(n*roi_sample); bbox_target(n*roi_sample,4*class);
   // bbox_inside_weights(n,roi_sample,4*class); bbox_outside_weights (n,roi_sample,4*class);
