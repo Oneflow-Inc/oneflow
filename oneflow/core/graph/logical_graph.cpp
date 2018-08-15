@@ -57,6 +57,7 @@ void LogicalGraph::NaiveBuildFwStruct(
 
   HashMap<LogicalBlobId, std::string> lbi2obn;
   HashMap<LogicalBlobId, LogicalNode*> lbi2producer;
+  HashMap<LogicalBlobId, LogicalBlobId> lbi2producer_lbi;
   for (OperatorConf cur_op_conf : dlnet_conf.op()) {
     auto parallel_desc_ptr_it = name2parallel_desc.find(cur_op_conf.name());
     CHECK(parallel_desc_ptr_it != name2parallel_desc.end());
@@ -71,13 +72,16 @@ void LogicalGraph::NaiveBuildFwStruct(
     for (const std::string& obn : cur_node->SoleOp()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(obn);
       CHECK(lbi2producer.emplace(lbi, cur_node).second);
+      CHECK(lbi2producer_lbi.emplace(lbi, lbi).second);
       CHECK(lbi2obn.emplace(lbi, obn).second);
     }
     (*op_name2nodes)[cur_op->op_name()].push_back(cur_node);
   }
   ForEachNode([&](LogicalNode* cur_node) {
     for (const std::string& ibn : cur_node->SoleOp()->input_bns()) {
-      const LogicalBlobId& lbi = cur_node->SoleOp()->BnInOp2Lbi(ibn);
+      const LogicalBlobId& input_lbi = cur_node->SoleOp()->BnInOp2Lbi(ibn);
+      // producer_lbi may be slightly different from input_lbi
+      const LogicalBlobId& lbi = lbi2producer_lbi.at(input_lbi);
       LogicalNode* pred_node = lbi2producer.at(lbi);
       if (pred_node == cur_node) { continue; }
       LogicalEdge* edge = NewEdge();

@@ -1,101 +1,89 @@
-#include "oneflow/core/operator/proposal_op.h"
-#include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/kernel/proposal_kernel.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/kernel/faster_rcnn_util.h"
 
 namespace oneflow {
 
-void ProposalOp::InitFromOpConf() {
-  CHECK(op_conf().has_proposal_conf());
-  EnrollInputBn("class_prob", false);
-  EnrollInputBn("bbox_pred", false);
-  // EnrollInputBn("image_info", false);
-  // EnrollInputBn("height", false);
-  // EnrollInputBn("weight", false);
-  EnrollOutputBn("rois", false);
-  EnrollOutputBn("roi_probs", false);
-  // EnrollDataTmpBn("roi_probs");
-  EnrollConstBufBn("anchors");
-  if (!op_conf().proposal_conf().only_foreground_prob()) { EnrollDataTmpBn("fg_prob"); }
-  EnrollDataTmpBn("proposals");
-  EnrollDataTmpBn("keep");
-  EnrollDataTmpBn("sorted_score_slice");
-  EnrollDataTmpBn("bbox_area");
-  EnrollDataTmpBn("post_nms_slice");
+template<typename T>
+void ProposalKernel<T>::InitConstBufBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  FasterRcnnUtil<T>::GenerateAnchors(op_conf().proposal_conf().anchors_generator_conf(),
+                                     BnInOp2Blob("anchors"));
 }
 
-const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().proposal_conf(); }
+template<typename T>
+void ProposalKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // input blob
+  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
+  const Blob* class_prob_blob = BnInOp2Blob("class_prob");
+  // output blob
+  Blob* rois_blob = BnInOp2Blob("rois");
+  Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
+  Blob* proposals_blob = BnInOp2Blob("proposals");
+  const ProposalOpConf& conf = op_conf().proposal_conf();
+  const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
+  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
+  const int64_t num_images = class_prob_blob->shape().At(0);
+  const int64_t height = class_prob_blob->shape().At(1);
+  const int64_t width = class_prob_blob->shape().At(2);
+  const int64_t num_anchors =
+      anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
+  const int64_t num_proposals = height * width * num_anchors;
 
-void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                                const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(device_type(), DeviceType::kCPU);
-  const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
-  const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
-  const auto& anchor_scales = GetPbRfFromCustomizedConf<int32_t>("anchor_scales");
-  const auto& aspect_ratios = GetPbRfFromCustomizedConf<float>("aspect_ratios");
-  const int32_t num_of_anchors = anchor_scales.size() * aspect_ratios.size();
-  const int32_t feature_map_stride = GetValFromCustomizedConf<int32_t>("feature_map_stride");
-  for (int32_t scale : anchor_scales) {
-    CHECK_GE(scale, feature_map_stride);
-    CHECK_EQ(scale % feature_map_stride, 0);
+  const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>();
+  const T* const_proposals_ptr = proposals_blob->dptr<T>();
+  T* proposals_ptr = proposals_blob->mut_dptr<T>();
+  int32_t* pre_nms_slice_ptr = BnInOp2Blob("pre_nms_slice")->mut_dptr<int32_t>();
+  int32_t* post_nms_slice_ptr = BnInOp2Blob("post_nms_slice")->mut_dptr<int32_t>();
+  FOR_RANGE(int64_t, i, 0, num_images) {
+    const T* bbox_pred_ptr = bbox_pred_blob->dptr<T>(i);
+    const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
+
+    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, bbox_reg_ws,
+                                     proposals_ptr);
+    FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
+                                 anchor_generator_conf.image_width(), proposals_ptr);
+
+    ScoredBBoxSlice<T> pre_nms_slice(num_proposals, const_proposals_ptr, class_prob_ptr,
+                                     pre_nms_slice_ptr);
+    pre_nms_slice.DescSortByScore();
+    pre_nms_slice.Filter([&](const T score, const BBox<T>* bbox) {
+      return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
+    });
+    pre_nms_slice.Truncate(conf.pre_nms_top_n());
+
+    ScoredBBoxSlice<T> post_nms_slice(conf.post_nms_top_n(), const_proposals_ptr, class_prob_ptr,
+                                      post_nms_slice_ptr);
+    post_nms_slice.NmsFrom(conf.nms_threshold(), pre_nms_slice);
+
+    CopyRoI(i, post_nms_slice, rois_blob);
+    FOR_RANGE(int32_t, j, 0, post_nms_slice.available_len()) {
+      roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
+    }
   }
-  int64_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
-  int64_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
-  CHECK_GT(post_nms_top_n, 0);
-  CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
-  CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);
-  if (pre_nms_top_n == -1) { pre_nms_top_n = bbox_pred_blob_desc->shape().Count(1) / 4; }
-  // const BlobDesc* im_info_blob_desc = GetBlobDesc4BnInOp("image_info");
-  // bactch
-  CHECK_EQ(cls_prob_blob_desc->shape().At(0), bbox_pred_blob_desc->shape().At(0));
-  // CHECK_EQ(cls_prob_blob_desc->shape().At(0), im_info_blob_desc->shape().At(0));
-  // H
-  CHECK_EQ(cls_prob_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(1));
-  // W
-  CHECK_EQ(cls_prob_blob_desc->shape().At(2), bbox_pred_blob_desc->shape().At(2));
-  // proposal 4 * 9
-  CHECK_EQ(bbox_pred_blob_desc->shape().At(3), 4 * num_of_anchors);
-  // im_info (n, (origin_height, origin_width, scale))
-  // CHECK_EQ(im_info_blob_desc->shape().At(1), 3);
-  // score 2 * 9
-  if (GetValFromCustomizedConf<bool>("only_foreground_prob")) {
-    CHECK_EQ(cls_prob_blob_desc->shape().At(3), num_of_anchors);
-  } else {
-    CHECK_EQ(cls_prob_blob_desc->shape().At(3), 2 * num_of_anchors);
-    BlobDesc* fg_prob_blob_desc = GetBlobDesc4BnInOp("fg_prob");
-    fg_prob_blob_desc->mut_shape() =
-        Shape({cls_prob_blob_desc->shape().At(0),
-               cls_prob_blob_desc->shape().Count(1, 3) * num_of_anchors, 1});
-    fg_prob_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
-  }
-  // proposals
-  *GetBlobDesc4BnInOp("proposals") = *bbox_pred_blob_desc;
-  // anchors
-  BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
-  anchors_blob_desc->mut_shape() = Shape(
-      {bbox_pred_blob_desc->shape().At(1), bbox_pred_blob_desc->shape().At(2), num_of_anchors * 4});
-  anchors_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
-
-  BlobDesc* sorted_score_slice_blob_desc = GetBlobDesc4BnInOp("sorted_score_slice");
-  sorted_score_slice_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().Count(1) / 4});
-  sorted_score_slice_blob_desc->set_data_type(DataType::kInt32);
-
-  BlobDesc* post_nms_slice_desc = GetBlobDesc4BnInOp("post_nms_slice");
-  post_nms_slice_desc->mut_shape() = Shape({post_nms_top_n});
-  post_nms_slice_desc->set_data_type(DataType::kInt32);
-
-  BlobDesc* bbox_area_blob_desc = GetBlobDesc4BnInOp("bbox_area");
-  bbox_area_blob_desc->mut_shape() = Shape({pre_nms_top_n});
-  bbox_area_blob_desc->set_data_type(DataType::kInt32);
-
-  // rois
-  BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  rois_blob_desc->mut_shape() = Shape({bbox_pred_blob_desc->shape().At(0), post_nms_top_n, 4});
-  rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
-  // roi_probs
-  BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp("roi_probs");
-  roi_probs_blob_desc->mut_shape() = Shape({cls_prob_blob_desc->shape().At(0), post_nms_top_n});
-  roi_probs_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
 }
 
-REGISTER_OP(OperatorConf::kProposalConf, ProposalOp);
+template<typename T>
+void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBBoxSlice<T>& slice,
+                                Blob* rois_blob) const {
+  FOR_RANGE(int32_t, i, 0, slice.available_len()) {
+    BBox<T>* roi_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index, i));
+    const BBox<T>* proposal_bbox = slice.GetBBox(i);
+    roi_bbox->set_x1(proposal_bbox->x1());
+    roi_bbox->set_y1(proposal_bbox->y1());
+    roi_bbox->set_x2(proposal_bbox->x2());
+    roi_bbox->set_y2(proposal_bbox->y2());
+  }
+}
+
+template<typename T>
+void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
+                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
+  BnInOp2Blob("roi_probs")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
+}
+
+ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalConf, ProposalKernel, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

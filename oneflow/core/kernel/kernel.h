@@ -52,6 +52,8 @@ class Kernel {
 
   virtual void Forward(const KernelCtx& ctx,
                        std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+  virtual void ClearPbBlobIfNeed(const KernelCtx& ctx,
+                                 std::function<Blob*(const std::string&)> BnInOp2Blob) const;
   virtual void ForwardDataContent(const KernelCtx& ctx,
                                   std::function<Blob*(const std::string&)> BnInOp2Blob) const {}
   virtual void ForwardDataId(const KernelCtx& ctx,

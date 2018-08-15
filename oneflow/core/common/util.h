@@ -164,9 +164,6 @@ inline uint32_t NewRandomSeed() {
 
 #define BOOL_SEQ (true)(false)
 #define PARALLEL_POLICY_SEQ (ParallelPolicy::kModelParallel)(ParallelPolicy::kDataParallel)
-#define ENCODE_CASE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kRaw) \
-  OF_PP_MAKE_TUPLE_SEQ(EncodeCase::kJpeg)
 
 #define FOR_RANGE(type, i, begin, end) for (type i = (begin), __end = (end); i < __end; ++i)
 #define FOR_EACH(it, container) for (auto it = container.begin(); it != container.end(); ++it)
