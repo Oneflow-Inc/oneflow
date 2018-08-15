@@ -83,16 +83,16 @@ class Oneflow final {
   OF_DISALLOW_COPY_AND_MOVE(Oneflow);
   ~Oneflow() = default;
 
-  Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name);
+  Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id);
 
  private:
   std::unique_ptr<CtrlServer> ctrl_server_;
 };
 
-Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
+Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
-  Global<MachineCtx>::New(this_mchn_name);
+  Global<MachineCtx>::New(this_mchn_id);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
@@ -114,8 +114,10 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
+    PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
+  }
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
   // Improve
@@ -130,7 +132,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
+    PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
+  }
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER();
   // Runtime
@@ -153,16 +157,16 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
 }  // namespace oneflow
 
 DEFINE_string(job_conf, "", "");
-DEFINE_string(this_machine_name, "", "");
 
 int main(int argc, char** argv) {
   using namespace oneflow;
   google::InitGoogleLogging(argv[0]);
   gflags::SetVersionString(BuildVersionString());
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+  CHECK_GE(FLAGS_this_machine_id, 0);
   LocalFS()->RecursivelyCreateDirIfNotExist(LogDir());
   RedirectStdoutAndStderrToGlogDir();
-  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_name); }
+  { Oneflow flow(FLAGS_job_conf, FLAGS_this_machine_id); }
   CloseStdoutAndStderr();
   return 0;
 }

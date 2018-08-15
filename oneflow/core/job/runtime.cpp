@@ -89,7 +89,8 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     }
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
-  if (Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
+      && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
     Global<ActEventLogger>::New(is_experiment_phase);
   }
   if (job_desc->TotalMachineNum() > 1) {
@@ -119,7 +120,10 @@ void Runtime::DeleteAllGlobal() {
   Global<MemoryAllocator>::Delete();
   Global<SnapshotMgr>::Delete();
   Global<CommNet>::Delete();
-  Global<ActEventLogger>::Delete();
+  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
+      && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
+    Global<ActEventLogger>::Delete();
+  }
   Global<RuntimeCtx>::Delete();
 }
 

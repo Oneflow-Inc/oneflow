@@ -3,6 +3,7 @@
 
 #include "oneflow/core/common/platform.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/job_conf.pb.h"
 
 namespace oneflow {
 
@@ -153,8 +154,11 @@ class FileSystem {
 }  // namespace fs
 
 fs::FileSystem* LocalFS();
-fs::FileSystem* GlobalFS();
 
+fs::FileSystem* GetFS(const FilePathConf& file_path_conf);
+fs::FileSystem* DataFS();
+fs::FileSystem* SnapshotFS();
+fs::FileSystem* LogFS();
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_PERSISTENCE_FILE_SYSTEM_H_
