@@ -356,31 +356,6 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
   };
 }
 
-void ForEachMemSharingCriticalSection(
-    const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
-  for (const auto& task : plan.task()) {
-    for (const auto& pair : task.produced_regst_desc()) {
-      int32_t mem_sharing_id = pair.second.mem_shared_id();
-      if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
-        CHECK(pair.second.enable_mem_sharing());
-        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
-      }
-    }
-  }
-  for (auto& pair : mem_sharing_id2regst_descs) {
-    std::sort(pair.second.begin(), pair.second.end(),
-              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-                int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
-                int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
-                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
-                return lhs_order_in_graph < rhs_order_in_graph;
-              });
-    Handler(pair.second);
-  }
-}
-
 void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
                             const std::function<void(int64_t, uint64_t)>& SetRegstNum) {
   for (const auto& task_proto : plan.task()) {
@@ -513,7 +488,33 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& naive_plan) {
+void Improver::ForEachInferredMemSharingCriticalSection(
+    const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
+  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
+  for (const auto& task : plan.task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      int32_t mem_shared_id = pair.second.mem_shared_id();
+      if (mem_shared_id > start_mem_shared_id_ && pair.second.consumer_task_id_size() > 0) {
+        CHECK(pair.second.enable_mem_sharing());
+        mem_sharing_id2regst_descs[mem_shared_id].push_back(&pair.second);
+      }
+    }
+  }
+  for (auto& pair : mem_sharing_id2regst_descs) {
+    std::sort(pair.second.begin(), pair.second.end(),
+              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+                int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
+                int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
+                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
+                return lhs_order_in_graph < rhs_order_in_graph;
+              });
+    Handler(pair.second);
+  }
+}
+
+void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
+  start_mem_shared_id_ = Global<IDMgr>::Get()->NewMemSharedId();
   amd_ = amd;
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -524,7 +525,7 @@ void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& nai
 }
 
 Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
-  InitAvailableMemDesc(amd, naive_plan);
+  Init(amd, naive_plan);
   Plan mem_shared_plan = ImproveMemSharedId(naive_plan);
   // Check if there is any zone out of memory even though all register_num == 1
   MemZoneRegstDescs mz_regst_descs;
@@ -537,7 +538,7 @@ Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& n
 
 Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                        const std::string& act_event_filepath) {
-  InitAvailableMemDesc(amd, naive_plan);
+  Init(amd, naive_plan);
   auto act_events = std::make_unique<std::list<ActEvent>>();
   ParseActEvents(act_event_filepath, act_events.get());
   ActGraph act_graph(naive_plan, std::move(act_events));
@@ -564,8 +565,8 @@ Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
     return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
   };
-  ForEachMemSharingCriticalSection(plan, OrderInGraph4TaskId,
-                                   MakeSetterAddCtrlRegst(&plan, IsReachable));
+  ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
+                                           MakeSetterAddCtrlRegst(&plan, IsReachable));
   return plan;
 }
 
