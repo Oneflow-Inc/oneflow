@@ -37,7 +37,7 @@ void ChainActNode::ForEachActEvent(const std::function<void(const ActEvent*)>& H
 
 void ChainActNode::ForEachProducedRegstActGroup(
     const std::function<void(const std::list<const RegstAct*>&)>& Handler) const {
-  for (const auto& pair : fake_outs_2produced_regst_act_group_) { Handler(pair.second); }
+  for (const auto& pair : fake_outs2produced_regst_act_group_) { Handler(pair.second); }
 }
 
 void ChainActNode::ForEachLastConsumedRegstAct(
@@ -48,7 +48,7 @@ void ChainActNode::ForEachLastConsumedRegstAct(
 }
 
 void ChainActNode::AddProducedRegstAct(std::unique_ptr<RegstAct>&& regst_act) {
-  fake_outs_2produced_regst_act_group_[regst_act->fake_producer_outs].push_back(regst_act.get());
+  fake_outs2produced_regst_act_group_[regst_act->fake_producer_outs].push_back(regst_act.get());
   produced_regst_acts_.push_back(std::move(regst_act));
 }
 

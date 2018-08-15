@@ -78,7 +78,7 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
   std::list<std::unique_ptr<ActEvent>> act_events_;
   std::list<std::unique_ptr<RegstAct>> produced_regst_acts_;
   std::map<std::set<const ChainActNode*>, std::list<const RegstAct*>>
-      fake_outs_2produced_regst_act_group_;
+      fake_outs2produced_regst_act_group_;
   std::list<std::list<const RegstAct*>> last_consumed_regst_act_groups_;
 };
 
