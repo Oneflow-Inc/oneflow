@@ -55,7 +55,7 @@ ParallelDesc::ParallelDesc(const ParallelConf& user_conf) {
     }
   }
   ClearUp();
-  CheckValidity();
+  SanityCheck();
 }
 
 void ParallelDesc::RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num) {
@@ -108,6 +108,12 @@ void ParallelDesc::RandomSelectOneDeviceAndRemoveTheOthers() {
   parallel_num_ = 1;
 }
 
+void ParallelDesc::SelectOneDeviceOnMaster() {
+  sorted_machine_ids_ = {0};
+  machine_id2sorted_dev_phy_ids_ = {{0, {0}}};
+  parallel_num_ = 1;
+}
+
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {
   return device_type_ == rhs.device_type_ && policy_ == rhs.policy_
          && sorted_machine_ids_ == rhs.sorted_machine_ids_
@@ -128,7 +134,7 @@ void ParallelDesc::ClearUp() {
   SortAndRemoveDuplication(&sorted_machine_ids_);
 }
 
-void ParallelDesc::CheckValidity() {
+void ParallelDesc::SanityCheck() {
   device_num_of_each_machine_ = -1;
   for (auto& pair : machine_id2sorted_dev_phy_ids_) {
     if (device_num_of_each_machine_ == -1) {

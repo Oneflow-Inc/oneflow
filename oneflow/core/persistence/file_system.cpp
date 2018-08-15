@@ -121,10 +121,5 @@ fs::FileSystem* GetFS(const FilePathConf& file_path_conf) {
 }
 
 fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_path_conf()); }
-fs::FileSystem* SnapshotFS() {
-  if (Global<JobDesc>::Get()->resource().machine().size() > 1) {
-    CHECK(!Global<JobDesc>::Get()->snapshot_path_conf().has_localfs_conf());
-  }
-  return GetFS(Global<JobDesc>::Get()->snapshot_path_conf());
-}
+fs::FileSystem* SnapshotFS() { return GetFS(Global<JobDesc>::Get()->snapshot_path_conf()); }
 }  // namespace oneflow

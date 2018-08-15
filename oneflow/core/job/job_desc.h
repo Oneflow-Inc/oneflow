@@ -52,6 +52,7 @@ class JobDesc final {
   bool enable_write_snapshot() const {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
+  bool write_snapshot_to_master() const { return snapshot_path_conf().has_localfs_conf(); }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
