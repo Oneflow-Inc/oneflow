@@ -183,6 +183,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   std::vector<int64_t> blob_index2offset(parallel_num, 0);
 
   auto SetMemSharedField4Regst = [&](RegstDesc* regst, int64_t blob_id) {
+    regst->set_enable_mem_sharing(true);
     regst->set_mem_shared_id(mem_shared_id);
     regst->set_mem_shared_offset(blob_index2offset.at(blob_id));
   };
@@ -191,6 +192,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
   {
     std::shared_ptr<RegstDesc> consumed_regst =
         reduce_task_nodes.scatter->GetSoleConsumedRegst("in");
+    consumed_regst->set_enable_mem_sharing(true);
     consumed_regst->set_mem_shared_id(mem_shared_id);
     consumed_regst->set_mem_shared_offset(0);
     int64_t total_model_byte_size =
