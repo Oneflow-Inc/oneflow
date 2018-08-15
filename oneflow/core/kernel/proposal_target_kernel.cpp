@@ -9,8 +9,8 @@ template<typename T>
 void ProposalTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* rpn_rois_blob = BnInOp2Blob("rpn_rois");               //(im_num, roi, 4)
-  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");               // Pb (im_num,n,4)
-  const Blob* gt_label_blob = BnInOp2Blob("gt_label");               // Pb (im_num,n,1)
+  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");               // Pb (im_num)
+  const Blob* gt_label_blob = BnInOp2Blob("gt_label");               // Pb (im_num)
   Blob* rois_blob = BnInOp2Blob("rois");                             //(im_num, sample_num, 4)
   Blob* labels_blob = BnInOp2Blob("labels");                         //(im_num, sample_num, 1)
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");             //(im_num, sample_num, 4*class)
@@ -18,14 +18,15 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   Blob* outside_weights_blob = BnInOp2Blob("bbox_outside_weights");  //(im_num, sample_num, 4*class)
   // tmp blob
   int32_t* roi_nearest_gt_index_ptr =
-      BnInOp2Blob("roi_nearest_gt_index")->mut_dptr<int32_t>();              //(roi)
-  T* roi_max_overlap_ptr = BnInOp2Blob("roi_max_overlap")->mut_dptr<T>();    //(roi)
-  int32_t* rois_index_ptr = BnInOp2Blob("rois_index")->mut_dptr<int32_t>();  //(roi)
+      BnInOp2Blob("roi_nearest_gt_index")->mut_dptr<int32_t>();                          //(roi)
+  T* roi_max_overlap_ptr = BnInOp2Blob("roi_max_overlap")->mut_dptr<T>();                //(roi)
+  int32_t* rois_index_ptr = BnInOp2Blob("rois_index")->mut_dptr<int32_t>();              //(roi)
+  FloatList16* gt_boxes_tmp_ptr = BnInOp2Blob("gt_boxes_tmp")->mut_dptr<FloatList16>();  //(gt_num)
   int64_t im_num = rpn_rois_blob->shape().At(0);
   int64_t roi_num = rpn_rois_blob->shape().At(1);
 
   FOR_RANGE(int64_t, i, 0, im_num) {
-    const T* rpn_rois_ptr = rois_blob->dptr<T>(i);
+    const T* rpn_rois_ptr = rpn_rois_blob->dptr<T>(i);
     const FloatList16* gt_boxes_ptr = gt_boxes_blob->dptr<FloatList16>(i);
     const Int32List16* gt_labels_ptr = gt_label_blob->dptr<Int32List16>(i);
     T* rois_ptr = rois_blob->mut_dptr<T>(i);
@@ -33,8 +34,12 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     T* bbox_targets_ptr = bbox_targets_blob->mut_dptr<T>(i);
     T* inside_weights_ptr = inside_weights_blob->mut_dptr<T>(i);
     T* outside_weights_ptr = outside_weights_blob->mut_dptr<T>(i);
+    FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
+      // gt_boxes_tmp_ptr->mutable_value()->set_value(i, gt_boxes_ptr->value().value(i) * 720);
+      gt_boxes_tmp_ptr->mutable_value()->add_value(gt_boxes_ptr->value().value(i) * 720);
+    }
 
-    RoisNearestGtAndMaxIou(roi_num, rpn_rois_ptr, gt_boxes_ptr, roi_nearest_gt_index_ptr,
+    RoisNearestGtAndMaxIou(roi_num, rpn_rois_ptr, gt_boxes_tmp_ptr, roi_nearest_gt_index_ptr,
                            roi_max_overlap_ptr);
     ScoredBBoxSlice<T> rois_slice(roi_num, rpn_rois_ptr, roi_max_overlap_ptr, rois_index_ptr);
     rois_slice.DescSortByScore();
@@ -48,17 +53,17 @@ void ProposalTargetKernel<T>::ForwardDataContent(
 
 template<typename T>
 void ProposalTargetKernel<T>::RoisNearestGtAndMaxIou(const int64_t rois_num, const T* rpn_rois_ptr,
-                                                     const FloatList16* gt_boxes_ptr,
+                                                     const FloatList16* gt_boxes_tmp_ptr,
                                                      int32_t* roi_nearest_gt_index_ptr,
                                                      T* roi_max_overlap_ptr) const {
   const BBox<T>* roi_box = BBox<T>::Cast(rpn_rois_ptr);
-  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes_ptr->value().value().data());
-  const int64_t gt_num = gt_boxes_ptr->value().value_size();
+  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes_tmp_ptr->value().value().data());
+  const int64_t gt_num = gt_boxes_tmp_ptr->value().value_size() / 4;
   FOR_RANGE(int64_t, i, 0, rois_num) {
     float maxIou = 0;
     int64_t maxIouIdx = 0;
     FOR_RANGE(int64_t, j, 0, gt_num) {
-      float iou = roi_box[j].InterOverUniontmp(&gt_bbox[j]);
+      float iou = roi_box[i].InterOverUniontmp(&gt_bbox[j]);
       if (iou > maxIou) {
         maxIou = iou;
         maxIouIdx = j;

@@ -16,6 +16,7 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("roi_nearest_gt_index");
   EnrollDataTmpBn("roi_max_overlap");
   EnrollDataTmpBn("rois_index");
+  EnrollDataTmpBn("gt_boxes_tmp");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -73,6 +74,10 @@ void ProposalTargetOp::InferBlobDescs(
   BlobDesc* rois_index_blob_desc = GetBlobDesc4BnInOp("rois_index");
   rois_index_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
   rois_index_blob_desc->set_data_type(DataType::kInt32);
+
+  BlobDesc* gt_boxes_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
+  gt_boxes_tmp_blob_desc->mut_shape() = Shape({1});
+  gt_boxes_tmp_blob_desc->set_data_type(DataType::kFloatList16);
 }
 
 REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
