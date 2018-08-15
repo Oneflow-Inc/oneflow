@@ -120,10 +120,7 @@ void Runtime::DeleteAllGlobal() {
   Global<MemoryAllocator>::Delete();
   Global<SnapshotMgr>::Delete();
   Global<CommNet>::Delete();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()
-      && Global<RuntimeCtx>::Get()->NeedCollectActEvent()) {
-    Global<ActEventLogger>::Delete();
-  }
+  Global<ActEventLogger>::Delete();
   Global<RuntimeCtx>::Delete();
 }
 

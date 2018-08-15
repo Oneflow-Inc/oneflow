@@ -34,7 +34,7 @@ message HdfsConf {
   required string namenode = 1;
 }
 
-message FilePathConf {
+message FileSystemConf {
   oneof fs_type {
     LocalFsConf localfs_conf = 1;
     NetworkFsConf networkfs_conf = 2;
@@ -65,8 +65,8 @@ message OtherConf {
   optional bool use_synthetic_data =  116 [default = false];
   optional bool enable_write_snapshot = 130 [default = true];
 
-  required FilePathConf data_path_conf = 121;             // localfs, networkfs and hdfs are valid
-  required FilePathConf snapshot_path_conf = 122;         // localfs, networkfs and hdfs are valid
+  required FileSystemConf data_fs_conf = 121;
+  required FileSystemConf snapshot_fs_conf = 122;
 
   oneof JobType {
     TrainConf train_conf = 200;

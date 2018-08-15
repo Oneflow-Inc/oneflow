@@ -78,9 +78,9 @@ float JobDesc::L2() const {
 
 int32_t JobDesc::DataPartNum() const { return job_conf_.other().data_part_num(); }
 
-const FilePathConf& JobDesc::data_path_conf() const { return job_conf_.other().data_path_conf(); }
-const FilePathConf& JobDesc::snapshot_path_conf() const {
-  return job_conf_.other().snapshot_path_conf();
+const FileSystemConf& JobDesc::data_fs_conf() const { return job_conf_.other().data_fs_conf(); }
+const FileSystemConf& JobDesc::snapshot_fs_conf() const {
+  return job_conf_.other().snapshot_fs_conf();
 }
 
 JobDesc::JobDesc(const std::string& job_conf_filepath) {

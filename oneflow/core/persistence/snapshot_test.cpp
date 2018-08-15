@@ -1,4 +1,4 @@
-#include "oneflow/core/snapshot/snapshot.h"
+#include "oneflow/core/persistence/snapshot.h"
 #include "oneflow/core/common/process_state.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/job_desc.h"

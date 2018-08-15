@@ -108,18 +108,18 @@ fs::FileSystem* HadoopFS(const HdfsConf& hdfs_conf) {
   return fs;
 }
 
-fs::FileSystem* GetFS(const FilePathConf& file_path_conf) {
-  if (file_path_conf.has_localfs_conf()) {
+fs::FileSystem* GetFS(const FileSystemConf& file_system_conf) {
+  if (file_system_conf.has_localfs_conf()) {
     return LocalFS();
-  } else if (file_path_conf.has_networkfs_conf()) {
+  } else if (file_system_conf.has_networkfs_conf()) {
     return NetworkFS();
-  } else if (file_path_conf.has_hdfs_conf()) {
-    return HadoopFS(file_path_conf.hdfs_conf());
+  } else if (file_system_conf.has_hdfs_conf()) {
+    return HadoopFS(file_system_conf.hdfs_conf());
   } else {
     UNIMPLEMENTED();
   }
 }
 
-fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_path_conf()); }
-fs::FileSystem* SnapshotFS() { return GetFS(Global<JobDesc>::Get()->snapshot_path_conf()); }
+fs::FileSystem* DataFS() { return GetFS(Global<JobDesc>::Get()->data_fs_conf()); }
+fs::FileSystem* SnapshotFS() { return GetFS(Global<JobDesc>::Get()->snapshot_fs_conf()); }
 }  // namespace oneflow

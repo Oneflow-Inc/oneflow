@@ -114,10 +114,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
   }
   OF_BARRIER();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-    PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
-  }
+  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
+  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
   // Improve
@@ -132,9 +130,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
   }
   OF_BARRIER();
-  if (Global<MachineCtx>::Get()->IsThisMachineMaster()) {
-    PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
-  }
+  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER();
   // Runtime
@@ -148,7 +144,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
+  Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
   Global<JobDesc>::Delete();

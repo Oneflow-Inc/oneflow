@@ -155,7 +155,7 @@ class FileSystem {
 
 fs::FileSystem* LocalFS();
 
-fs::FileSystem* GetFS(const FilePathConf& file_path_conf);
+fs::FileSystem* GetFS(const FileSystemConf& file_system_conf);
 fs::FileSystem* DataFS();
 fs::FileSystem* SnapshotFS();
 fs::FileSystem* LogFS();
