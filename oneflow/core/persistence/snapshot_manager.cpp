@@ -5,7 +5,7 @@
 namespace oneflow {
 
 SnapshotMgr::SnapshotMgr(const Plan& plan) {
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (Global<JobDesc>::Get()->enable_write_snapshot()) {
     model_save_snapshots_path_ = Global<JobDesc>::Get()->MdSaveSnapshotsPath();
     OfCallOnce(model_save_snapshots_path_, GlobalFS(), &fs::FileSystem::MakeEmptyDir);
   }
@@ -15,6 +15,7 @@ SnapshotMgr::SnapshotMgr(const Plan& plan) {
 }
 
 Snapshot* SnapshotMgr::GetWriteableSnapshot(int64_t snapshot_id) {
+  CHECK(Global<JobDesc>::Get()->enable_write_snapshot());
   std::unique_lock<std::mutex> lck(snapshot_id2writeable_snapshot_mtx_);
   auto it = snapshot_id2writeable_snapshot_.find(snapshot_id);
   if (it == snapshot_id2writeable_snapshot_.end()) {
