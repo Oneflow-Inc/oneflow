@@ -71,15 +71,15 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
   // Adds
   void AddProducedRegstAct(std::unique_ptr<RegstAct>&& regst_act);
   void AddLastConsumedRegstActGroup(const std::list<const RegstAct*>& regst_act_group) {
-    last_consumed_regst_act_group_.push_back(regst_act_group);
+    last_consumed_regst_act_groups_.push_back(regst_act_group);
   }
 
  private:
   std::list<std::unique_ptr<ActEvent>> act_events_;
   std::list<std::unique_ptr<RegstAct>> produced_regst_acts_;
   std::map<std::set<const ChainActNode*>, std::list<const RegstAct*>>
-      produced_regst_act_group_with_same_fake_outs_;
-  std::list<std::list<const RegstAct*>> last_consumed_regst_act_group_;
+      fake_outs_2produced_regst_act_group_;
+  std::list<std::list<const RegstAct*>> last_consumed_regst_act_groups_;
 };
 
 class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge> {
