@@ -3,7 +3,6 @@
 namespace oneflow {
 
 std::string MachineCtx::GetCtrlAddr(int64_t machine_id) const {
-  // TODO(jiyuan): use HashMap
   const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
   return mchn.addr() + ":" + std::to_string(mchn.port());
 }
