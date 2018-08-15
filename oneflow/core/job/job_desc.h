@@ -47,13 +47,12 @@ class JobDesc final {
   size_t rdma_recv_msg_buf_byte() const;
   bool collect_act_event() const { return job_conf_.other().collect_act_event(); }
   bool enable_mem_sharing() const { return job_conf_.other().enable_mem_sharing(); }
+  const FilePathConf& data_path_conf() const;
+  const FilePathConf& snapshot_path_conf() const;
   bool enable_write_snapshot() const {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
-
-  // machine_name <-> machine_id
-  int64_t MachineID4MachineName(const std::string& machine_name) const;
-  const std::string& MachineName4MachineId(int64_t machine_id) const;
+  bool write_snapshot_to_master() const { return snapshot_path_conf().has_localfs_conf(); }
 
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
@@ -75,9 +74,6 @@ class JobDesc final {
   void AddRecordLoadOps();
 
   JobConf1 job_conf_;
-
-  HashMap<std::string, int64_t> machine_name2machine_id_;
-  HashMap<int64_t, std::string> machine_id2machine_name_;
 };
 
 }  // namespace oneflow
