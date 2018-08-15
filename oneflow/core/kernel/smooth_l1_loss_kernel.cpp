@@ -58,7 +58,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
       if (abs_x < beta) {
         in_diff[i] = x / beta;
       } else {
-        in_diff[i] = x > 0 ? 1 : -1;
+        in_diff[i] = (x > PredType(0)) - (x < PredType(0));
       }
       in_diff[i] *= scale;
     }
