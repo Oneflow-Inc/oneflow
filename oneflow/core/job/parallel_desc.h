@@ -32,7 +32,7 @@ class ParallelDesc {
   void RemoveNeedlessDevice(const std::string& op_name, int32_t max_device_num);
   void RemoveNeedlessDevice(int32_t max_device_num) { RemoveNeedlessDevice("", max_device_num); }
   void RandomSelectOneDeviceAndRemoveTheOthers();
-  void SelectOneDeviceOnMaster();
+  void UseCPUDevicesOnMaster();
 
   //
   bool Equal(const ParallelDesc& rhs) const;

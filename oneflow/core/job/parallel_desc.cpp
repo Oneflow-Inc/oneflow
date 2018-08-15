@@ -108,10 +108,11 @@ void ParallelDesc::RandomSelectOneDeviceAndRemoveTheOthers() {
   parallel_num_ = 1;
 }
 
-void ParallelDesc::SelectOneDeviceOnMaster() {
+void ParallelDesc::UseCPUDevicesOnMaster() {
   sorted_machine_ids_ = {0};
-  machine_id2sorted_dev_phy_ids_ = {{0, {0}}};
-  parallel_num_ = 1;
+  std::vector<int64_t> sorted_dev_phy_ids(parallel_num_);
+  std::iota(sorted_dev_phy_ids.begin(), sorted_dev_phy_ids.end(), 0);
+  machine_id2sorted_dev_phy_ids_ = {{0, sorted_dev_phy_ids}};
 }
 
 bool ParallelDesc::Equal(const ParallelDesc& rhs) const {

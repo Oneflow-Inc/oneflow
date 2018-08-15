@@ -544,14 +544,13 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
   md_save_logical->mut_op_vec() = {model_save_op};
   auto md_save_pr_desc = new ParallelDesc(*(fw_logical->parallel_desc()));
-  if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
-    md_save_pr_desc->SelectOneDeviceOnMaster();
-  } else {
-    if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
-      md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
-    }
-  }
   md_save_pr_desc->set_device_type(DeviceType::kCPU);
+  if (fw_logical->parallel_desc()->policy() == ParallelPolicy::kDataParallel) {
+    md_save_pr_desc->RandomSelectOneDeviceAndRemoveTheOthers();
+  }
+  if (Global<JobDesc>::Get()->write_snapshot_to_master()) {
+    md_save_pr_desc->UseCPUDevicesOnMaster();
+  }
   md_save_logical->mut_parallel_desc().reset(md_save_pr_desc);
   Connect<LogicalNode>(need_save_logical, NewEdge(), md_save_logical);
   return md_save_logical;
