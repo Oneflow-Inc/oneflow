@@ -432,7 +432,8 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (is_train && fw_logical->HasOpWithForwardModelBlob()) {
+    if (Global<JobDesc>::Get()->enable_write_snapshot()
+        && fw_logical->HasOpWithForwardModelBlob()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
@@ -557,7 +558,9 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardLogicalNode* fw_logical) {
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
-  if (is_train) { BuildMdSaveStruct(fw_logical, md_updt_logical); }
+  if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+    BuildMdSaveStruct(fw_logical, md_updt_logical);
+  }
   return md_updt_logical;
 }
 
