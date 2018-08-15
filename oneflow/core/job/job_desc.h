@@ -53,10 +53,6 @@ class JobDesc final {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
 
-  // machine_name <-> machine_id
-  int64_t MachineID4MachineName(const std::string& machine_name) const;
-  const std::string& MachineName4MachineId(int64_t machine_id) const;
-
   // Train conf
   const std::string& MdSaveSnapshotsPath() const;
   int32_t NumOfBatchesInSnapshot() const;
@@ -77,9 +73,6 @@ class JobDesc final {
   void AddRecordLoadOps();
 
   JobConf1 job_conf_;
-
-  HashMap<std::string, int64_t> machine_name2machine_id_;
-  HashMap<int64_t, std::string> machine_id2machine_name_;
 };
 
 }  // namespace oneflow
