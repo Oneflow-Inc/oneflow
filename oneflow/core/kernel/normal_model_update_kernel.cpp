@@ -135,7 +135,11 @@ double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr,
   CHECK_GT(conf.warmup_batches(), 0);
   CHECK_GT(conf.multiplier(), 0);
   CHECK_LT(conf.multiplier(), 1);
-  return lr * conf.multiplier();
+  if (now_batch_num < conf.warmup_batches()) {
+    return lr * conf.multiplier();
+  } else {
+    return lr;
+  }
 }
 
 double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t now_batch_num) {
