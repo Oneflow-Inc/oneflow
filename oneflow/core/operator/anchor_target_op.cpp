@@ -3,6 +3,7 @@
 namespace oneflow {
 
 void AnchorTargetOp::InitFromOpConf() {
+  CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_anchor_target_conf());
 
   EnrollInputBn("image_info", false);
@@ -21,8 +22,7 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("max_overlaps_inds");
   EnrollDataTmpBn("gt_max_overlaps_inds");
   EnrollDataTmpBn("gt_max_overlaps_num");
-  EnrollDataTmpBn("inds_mask");
-  EnrollDataTmpBn("gt_boxes_tmp");
+  EnrollDataTmpBn("origin_gt_boxes");
 }
 
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
@@ -31,7 +31,6 @@ const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
 
 void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(this->device_type(), DeviceType::kCPU);
   // useful vars
   const AnchorGeneratorConf& conf = op_conf().anchor_target_conf().anchors_generator_conf();
   const int32_t base_anchors_num = conf.anchor_scales().size() * conf.aspect_ratios().size();  // A
@@ -106,8 +105,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   // max_overlaps_inds: (H*W*A) int
   // gt_max_overlaps_inds: (256,H*W*A) int
   // gt_max_overlaps_num: (256) int
-  // inds_mask: (H*W*A) int
-  // gt_boxes_tmp: (256,4) T
+  // origin_gt_boxes: (256,4) T
   BlobDesc* inside_anchors_inds_blob_desc = GetBlobDesc4BnInOp("inside_anchors_inds");
   inside_anchors_inds_blob_desc->set_data_type(DataType::kInt32);
   inside_anchors_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
@@ -137,12 +135,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   gt_max_overlaps_num_blob_desc->set_data_type(DataType::kInt32);
   gt_max_overlaps_num_blob_desc->mut_shape() = Shape({max_per_img_gt_boxes_num});
 
-  BlobDesc* inds_mask_blob_desc = GetBlobDesc4BnInOp("inds_mask");
-  inds_mask_blob_desc->set_data_type(DataType::kInt32);
-  inds_mask_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
-
-  BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
-
+  BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("origin_gt_boxes");
   if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
       || gt_boxes_type == DataType::kFloatList24) {
     gt_boxex_tmp_blob_desc->set_data_type(DataType::kFloat);

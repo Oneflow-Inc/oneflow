@@ -15,12 +15,10 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ~AnchorTargetKernel() = default;
 
  private:
-  void VirtualKernelInit(const ParallelContext*, DeviceCtx*) override;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  std::unique_ptr<RandomGenerator<DeviceType::kCPU>> random_generator_;
 };
 
 }  // namespace oneflow
