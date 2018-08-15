@@ -14,7 +14,7 @@ void CopyTaskNode::ProduceAllRegstsAndBindEdges() {
         && (dst_node_type == TaskType::kReduceLocalAdd
             || dst_node_type == TaskType::kReduceGlobalAdd
             || dst_node_type == TaskType::kReduceGather)) {
-      out_regst = ProduceRegst(name, true, 1, 1);
+      out_regst = ProduceRegst(name, false, 1, 1);
     }
     TaskType src_node_type = SoleInEdge()->src_node()->GetTaskType();
     if (copy_hd->copy_type() == CopyHdOpConf::D2H

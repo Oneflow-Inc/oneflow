@@ -27,7 +27,7 @@ void ReduceScatterCompTaskNode::ProduceAllRegstsAndBindEdges() {
           edge_index_of_this_dst_dev * dev_num_of_each_machine + dst_dev_index_of_this_machine;
     }
     std::string out_regst_name = "out_" + std::to_string(out_edge_index);
-    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, true, 1, 1);
+    std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
     edge->AddRegst(out_regst_name, out_regst);
   }
 }
