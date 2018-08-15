@@ -4,6 +4,7 @@
 namespace oneflow {
 
 void ProposalOp::InitFromOpConf() {
+  CHECK_EQ(device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_proposal_conf());
   EnrollInputBn("class_prob", false);
   EnrollInputBn("bbox_pred", false);
@@ -19,7 +20,6 @@ const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().propos
 
 void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
-  CHECK_EQ(device_type(), DeviceType::kCPU);
   const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
   const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
   const auto* anchor_generator_conf =
