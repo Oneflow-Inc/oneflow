@@ -32,6 +32,11 @@ class InputWiseCompActor : public CompActor {
     return {false, {}};
   }
   virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
+  void UpdateMemberStatusAfterAct();
+  bool NeedSendRegstMsgToConsumer();
+  void UpdateMemberStatusAfterSendRegstMsgToConsumer();
+  virtual void VirtualUpdateMemberStatusAfterAct() {}
+  virtual void VirtualUpdateMemberStatusAfterSendRegstMsgToConsumer() {}
 
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
   int64_t readable_regst_desc_cnt_;

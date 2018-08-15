@@ -49,10 +49,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void NaiveBuildBwStruct();
   void AddBackwardClone();
   void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
-  void MoveBackwardActivations();
-  void RemoveBackwardAdd();
-  void CollectBackwardB121CloneInfos(HashMap<LogicalNode*, LogicalNode*>* bw_add_node2pre_node);
-  void RemoveOneBackwardAdd(const std::pair<LogicalNode*, LogicalNode*>& bw_add_node_and_pre);
 
   void MergeEdge();
   void SetNodeDataLbi();
@@ -73,7 +69,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;
-  HashMap<LogicalNode*, LogicalNode*> bw_clone2fw_producer_;
 };
 
 }  // namespace oneflow

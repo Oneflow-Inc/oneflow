@@ -114,21 +114,20 @@ template<DeviceType device_type, typename T>
 void ConvKernelImplByIm2Col<device_type, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* fw_col_buf_blob = BnInOp2Blob("fw_col_buf");
   FOR_RANGE(int64_t, i, 0, in_shape_.At(0)) {
     im2col_func_(this->OpKernelDim(), device_ctx, GetImgDptr<T>(in_blob, i), in_shape_,
                  weight_shape_, out_shape_, strides_, dilation_rate_, padding_before_,
-                 static_cast<T*>(device_ctx->buf_ptr()));
+                 fw_col_buf_blob->mut_dptr<T>());
 
-    // col_buf is device_ctx->buf_ptr()
     // channels first: out = weight * col_buf
     // channels last:  out = (weight * col_buf)(T)
     forward_func_(device_ctx, CblasNoTrans, CblasNoTrans,
                   weight_shape_.At(0),                             // filter
                   out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  // od * oh * ow
                   weight_shape_.Count(1),                          // ci * kd * kh * kw
-                  static_cast<T>(1), weight_blob->dptr<T>(),
-                  static_cast<const T*>(device_ctx->buf_ptr()), static_cast<T>(0),
-                  GetImgMutDptr<T>(out_blob, i));
+                  static_cast<T>(1), weight_blob->dptr<T>(), fw_col_buf_blob->dptr<T>(),
+                  static_cast<T>(0), GetImgMutDptr<T>(out_blob, i));
 
     if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
       const Blob* bias_blob = BnInOp2Blob("bias");
@@ -150,6 +149,7 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
     DeviceCtx* ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
+  Blob* bw_col_buf_blob = BnInOp2Blob("bw_col_buf");
   Memset<device_type>(ctx, weight_diff_blob->mut_dptr<T>(), 0,
                       weight_diff_blob->ByteSizeOfDataContentField());
   if (in_diff_blob != nullptr) {
@@ -159,7 +159,7 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
   FOR_RANGE(int64_t, i, 0, out_shape_.At(0)) {
     im2col_func_(this->OpKernelDim(), ctx, GetImgDptr<T>(in_blob, i), in_shape_, weight_shape_,
                  out_shape_, strides_, dilation_rate_, padding_before_,
-                 static_cast<T*>(ctx->buf_ptr()));
+                 bw_col_buf_blob->mut_dptr<T>());
 
     // channels first:  weight' += out[i]' * col_buf(T)
     // channels last :  weight' += out[i]'(T) * col_buf(T)
@@ -168,7 +168,7 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
         weight_shape_.At(0),                             //  filter
         weight_shape_.Count(1),                          //  ci * kd * kh * kw
         out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  //  od * oh * ow
-        static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i), static_cast<const T*>(ctx->buf_ptr()),
+        static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i), bw_col_buf_blob->dptr<T>(),
         static_cast<T>(1), weight_diff_blob->mut_dptr<T>());
 
     if (in_diff_blob != nullptr) {
@@ -180,11 +180,11 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
           out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  //  od * oh * ow
           weight_shape_.At(0),                             //  filter
           static_cast<T>(1), weight_blob->dptr<T>(), GetImgDptr<T>(out_diff_blob, i),
-          static_cast<T>(0), static_cast<T*>(ctx->buf_ptr()));
+          static_cast<T>(0), bw_col_buf_blob->mut_dptr<T>());
 
       // in' = col2im(col_buf')
-      col2im_func_(this->OpKernelDim(), ctx, static_cast<const T*>(ctx->buf_ptr()), in_shape_,
-                   weight_shape_, out_shape_, strides_, dilation_rate_, padding_before_,
+      col2im_func_(this->OpKernelDim(), ctx, bw_col_buf_blob->dptr<T>(), in_shape_, weight_shape_,
+                   out_shape_, strides_, dilation_rate_, padding_before_,
                    GetImgMutDptr<T>(in_diff_blob, i));
     }
   }

@@ -9,6 +9,8 @@
 
 namespace oneflow {
 
+class ReduceTaskNodes;
+
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TaskGraph);
@@ -19,9 +21,18 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   const char* TypeName() const override { return "TaskGraph"; }
   void AddOrderingCtrlEdgeInSameChain();
+
+  void EnableMemSharingInReduceStruct();
+  void CollectReduceTaskNodes(HashMap<CompTaskNode*, ReduceTaskNodes>*) const;
+  void EnableMemSharingInOneReduce(const ReduceTaskNodes&);
+  void AddCtrlEdge4MemSharingInOneReduce(const ReduceTaskNodes&);
+  void BuildCtrlRegstBetweenReduceCopyNodes(const CompTaskNode* src_reduce,
+                                            const CompTaskNode* dst_reduce, int64_t copy_node_num);
+
   void AddCtrlEdgeInReduceStruct();
   void AddMutexCtrlEdgeInSameChain();
   void AddOrderCtrlEdgeBetweenCopyAndMdUpdt();
+  void RmUselessConsumeRelationshipBetweenFwBw();
   void AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const;
 
 #define DECLARE_BLD_SUB_TASK_GRAPH_METHOD(method_name) void method_name BLD_SUB_TSK_GPH_MTHD_ARGS();
@@ -72,6 +83,9 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
 
   template<typename TaskNodeType>
   bool IsEndingTaskType(TaskType type);
+
+  void GeneratePersistenceThrdId(
+      const std::vector<std::pair<int64_t, CompTaskNode*>>& persistence_nodes);
 
   std::unique_ptr<const LogicalGraph> logical_gph_;
   std::vector<TaskNode*> ordered_task_nodes_;

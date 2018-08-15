@@ -14,7 +14,8 @@ namespace oneflow {
 namespace {
 
 bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.consumer_task_id_size() == 0 && regst_desc.enable_mem_sharing();
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() == 0
+         && regst_desc.enable_mem_sharing();
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
@@ -28,8 +29,8 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
                                  const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  return regst_desc.consumer_task_id_size() > 0 && regst_desc.enable_mem_sharing()
-         && regst_desc.register_num() == 1
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
+         && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
          && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
 }
 
@@ -154,10 +155,11 @@ uint64_t CalcMemoryConsumed(
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
-    uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
+    uint64_t total_byte_size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
+      mem_consuming += RoundUp(total_byte_size, kCudaMemAllocAlignSize);
     } else {
+      total_byte_size += regst_desc->mem_shared_offset();
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();
       auto& max_bytes = mem_shared_id2max_regst_desc_mem_bytes[mem_shared_id];
@@ -200,11 +202,12 @@ std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
     regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_offset(0);
   };
 }
 
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4RegstDescId(
-    const ActGraph& graph) {
+    const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2duration =
       std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
   graph.ForEachRegstDescConsumerPathMeanDuration(
@@ -237,12 +240,12 @@ double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
   return duration;
 }
 
-double CalcBaseII(const ActGraph& act_graph) {
+double CalcBaseII(const ChainActGraph& act_graph) {
   int64_t max_act_cnt = 0;
   HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
-  act_graph.ForEachNode([&](const ActNode* act_node) {
-    int64_t actor_id = act_node->actor_id();
-    if (!act_node->out_edges().empty()) {
+  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
+    int64_t actor_id = act_event->actor_id();
+    if (act_graph.IsActEventWithConsumer(act_event)) {
       ++actor_id2outputed_act_cnt[actor_id];
       max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
     }
@@ -252,14 +255,14 @@ double CalcBaseII(const ActGraph& act_graph) {
     actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
   }
   HashMap<int64_t, double> stream_id2total_calc_time;
-  act_graph.ForEachNode([&](const ActNode* act_node) {
-    int64_t actor_id = act_node->actor_id();
+  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
+    int64_t actor_id = act_event->actor_id();
     auto frequence_it = actor_id2act_frequency.find(actor_id);
     if (frequence_it == actor_id2act_frequency.end()) { return; }
-    int64_t stream_id = act_node->act_event().work_stream_id();
+    int64_t stream_id = act_event->work_stream_id();
     TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
-    stream_id2total_calc_time[stream_id] +=
-        FormalDuration4ExperimentalDuration(task_type, act_node->Duration(), frequence_it->second);
+    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
+        task_type, Duration4ActEvent(*act_event), frequence_it->second);
   });
   double base_ii = 0;
   for (const auto& pair : stream_id2total_calc_time) {
@@ -274,7 +277,7 @@ double IIScale4Actor(TaskType task_type, double default_ii_scale) {
 }
 
 std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathIIScales4RegstDescId(
-    const ActGraph& graph) {
+    const ChainActGraph& graph) {
   auto regst_desc_id2consumer_id2ii_scale =
       std::make_shared<HashMap<int64_t, HashMap<int64_t, double>>>();
   graph.ForEachRegstDescConsumerPathIIScale(
@@ -468,7 +471,7 @@ double Improver::BinarySearchII(
 }
 
 void Improver::ForEachImprovedRegstNum(
-    const ActGraph& graph, const Plan& plan, bool is_memory_limited,
+    const ChainActGraph& graph, const Plan& plan, bool is_memory_limited,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
@@ -539,9 +542,10 @@ Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& n
 Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                        const std::string& act_event_filepath) {
   Init(amd, naive_plan);
-  auto act_events = std::make_unique<std::list<ActEvent>>();
-  ParseActEvents(act_event_filepath, act_events.get());
-  ActGraph act_graph(naive_plan, std::move(act_events));
+  std::list<std::unique_ptr<ActEvent>> act_events;
+  ParseActEvents(act_event_filepath, &act_events);
+  ChainActGraph act_graph(naive_plan, std::move(act_events));
+
   auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
   auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
   Plan mem_unlimited_plan(naive_plan);

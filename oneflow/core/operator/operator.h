@@ -30,8 +30,7 @@ class Operator {
   virtual void InitFromOpConf() = 0;
   virtual bool IsElemWiseOp() const { return false; }
 
-  ActivationType GetForwardActivationType() const;
-  void SetBackwardActivation(const ActivationType activation) { backward_activation_ = activation; }
+  ActivationType GetActivationType() const;
 
   virtual LogicalNode* NewProperLogicalNode();
 
@@ -39,6 +38,13 @@ class Operator {
   virtual bool IsDecodeOp() const { return false; }
   virtual bool IsRecurrentOp() const { return false; }
   virtual bool IsEmbeddingLookupOp() const { return false; }
+
+  bool NeedOutBlobWhenBackwardIf() const {
+    return NeedOutBlobWhenBackward() || (GetActivationType() != ActivationType::kNone);
+  }
+  virtual bool NeedOutBlobWhenBackward() const { return true; }
+  bool NeedInBlobWhenBackwardIf() const { return NeedInBlobWhenBackward(); }
+  virtual bool NeedInBlobWhenBackward() const { return true; }
 
   // bn_in_op <-> lbi
   const LogicalBlobId& BnInOp2Lbi(const std::string& bn_in_op) const;
@@ -92,6 +98,8 @@ class Operator {
   PbRpf<std::string>* mut_##getter_name() { return op_attribute_.mutable_##getter_name(); }
 
   DEFINE_BLOB_NAMES_GETTER(data_tmp_bns);
+  DEFINE_BLOB_NAMES_GETTER(fw_buf_bns);
+  DEFINE_BLOB_NAMES_GETTER(bw_buf_bns);
   DEFINE_BLOB_NAMES_GETTER(input_bns);
   DEFINE_BLOB_NAMES_GETTER(input_diff_bns);
   DEFINE_BLOB_NAMES_GETTER(output_bns);
@@ -107,16 +115,18 @@ class Operator {
   // Read: shape of input_blobs
   // Write: shape of output_blobs, model_blobs, data_tmp_blobs, const_model_blobs, const_buf_blobs
   void InferBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                        const ParallelContext*, size_t* buf_size,
-                        std::function<void(OpContext*)> EnrollOpCtx) const;
-  virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-                              const ParallelContext*, size_t* buf_size,
-                              std::function<void(OpContext*)> EnrollOpCtx) const;
+                        const ParallelContext*, std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*,
                               std::function<void(OpContext*)> EnrollOpCtx) const;
   virtual void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                               const ParallelContext*) const;
+  void InferBwBufBlobDescsIf(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                             const ParallelContext*, const OpContext*) const;
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*, const OpContext*) const;
+  virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                   const ParallelContext*) const {}
   virtual void InferDiffBlobDescsWithoutFwBlob(
       std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
       const ParallelContext*) const {
@@ -182,6 +192,8 @@ class Operator {
 
   // enroll data blobs
   void EnrollDataTmpBn(const std::string& dtbn);
+  void EnrollFwBufBn(const std::string& fbbn);
+  void EnrollBwBufBn(const std::string& bbbn);
   void EnrollInputBn(const std::string& ibn, bool has_diff);
   void EnrollInputBn(const std::string& ibn) { EnrollInputBn(ibn, true); }
   void EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff);
@@ -204,13 +216,14 @@ class Operator {
 
  private:
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
+  LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
+  LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
 
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
   }
 
   OpAttribute op_attribute_;
-  ActivationType backward_activation_;
 };
 
 std::string GenDiffBn(const std::string& bn);

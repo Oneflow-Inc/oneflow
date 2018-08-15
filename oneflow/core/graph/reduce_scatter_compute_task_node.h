@@ -19,8 +19,6 @@ class ReduceScatterCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-
-  int64_t min_out_parallel_id_;
 };
 
 }  // namespace oneflow

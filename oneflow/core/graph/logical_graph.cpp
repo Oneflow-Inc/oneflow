@@ -220,8 +220,6 @@ void LogicalGraph::SetMainModelParallel() {
 void LogicalGraph::BuildBwStruct() {
   NaiveBuildBwStruct();
   AddBackwardClone();
-  MoveBackwardActivations();
-  RemoveBackwardAdd();
 }
 
 void LogicalGraph::NaiveBuildBwStruct() {
@@ -297,7 +295,6 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
   LogicalNode* clone_node = NewNode<NormalBackwardLogicalNode>();
   clone_node->mut_op_vec() = {clone_op};
   clone_node->mut_parallel_desc() = clone_info.succ_node->parallel_desc();
-  CHECK(bw_clone2fw_producer_.emplace(clone_node, nullptr).second);
 
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIbn())) = clone_info.lbi;
   *(clone_op->MutBnInOp2Lbi(clone_op->SoleIdbn())) = clone_info.lbi;
@@ -323,78 +320,6 @@ void LogicalGraph::AddOneBackwardClone(const BackwardCloneInfo& clone_info) {
     Connect(src_node, edge, clone_node);
     UpdateEdge2Obn(edge, GenUnDiffBn(odbn));
   }
-}
-
-void LogicalGraph::MoveBackwardActivations() {
-  ForEachNode([&](LogicalNode* cur_node) {
-    BackwardLogicalNode* cur_bw_node = dynamic_cast<BackwardLogicalNode*>(cur_node);
-    ActivationType forward_activation = cur_node->SoleOp()->GetForwardActivationType();
-    if (!cur_bw_node) { return; }
-    if (cur_node->GetAreaId() != kDataBackwardArea) { return; }
-    if (forward_activation == ActivationType::kNone) { return; }
-    auto pre_node = cur_node->SoleInEdge()->src_node();
-    CHECK(pre_node->GetAreaId() == kDataBackwardArea || pre_node->SoleOp()->IsLossOp());
-    pre_node->SoleOp()->SetBackwardActivation(forward_activation);
-    auto bw_clone_it = bw_clone2fw_producer_.find(pre_node);
-    if (bw_clone_it != bw_clone2fw_producer_.end()) {
-      LogicalNode* fw_of_cur_node = cur_bw_node->fw_node();
-      CHECK_NOTNULL(fw_of_cur_node);
-      bw_clone2fw_producer_[pre_node] = fw_of_cur_node;
-    }
-  });
-}
-
-void LogicalGraph::RemoveBackwardAdd() {
-  HashMap<LogicalNode*, LogicalNode*> bw_add_node2pre_node;
-  CollectBackwardB121CloneInfos(&bw_add_node2pre_node);
-  for (const auto& pair : bw_add_node2pre_node) { RemoveOneBackwardAdd(pair); }
-}
-
-void LogicalGraph::CollectBackwardB121CloneInfos(
-    HashMap<LogicalNode*, LogicalNode*>* bw_add_node2pre_node) {
-  ForEachNode([&](LogicalNode* cur_node) {
-    if (cur_node->GetAreaId() != kDataBackwardArea) { return; }
-    if (!cur_node->SoleOp()->op_conf().has_add_conf()) { return; }
-    auto pre_node = cur_node->SoleInEdge()->src_node();
-    if (pre_node->GetAreaId() != kDataBackwardArea) { return; }  // excludes the loss node
-    bool has_boxing_out_edge = false;
-    bool has_121_out_edge = false;
-    for (LogicalEdge* edge : cur_node->out_edges()) {
-      BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(cur_node, edge->dst_node());
-      if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-        has_boxing_out_edge = true;
-      } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-        has_121_out_edge = true;
-      } else {
-        UNIMPLEMENTED();
-      }
-    }
-    CHECK(has_boxing_out_edge || has_121_out_edge);
-    if (has_boxing_out_edge && has_121_out_edge) { return; }
-    CHECK(bw_add_node2pre_node->emplace(cur_node, pre_node).second);
-  });
-}
-
-void LogicalGraph::RemoveOneBackwardAdd(
-    const std::pair<LogicalNode*, LogicalNode*>& bw_add_node_and_pre) {
-  auto bw_add_node = bw_add_node_and_pre.first;
-  auto pre_node = bw_add_node_and_pre.second;
-  auto add_in_edge = bw_add_node->SoleInEdge();
-  LogicalBlobId lbi = add_in_edge->SoleLbi();
-  DisConnect(add_in_edge);
-  std::string old_ibn = edge2ibn_.at(add_in_edge);
-  HashSet<LogicalEdge*> out_edges = bw_add_node->out_edges();
-  for (LogicalEdge* edge : out_edges) {
-    auto dst_node = edge->dst_node();
-    DisConnect(edge);
-    Connect(pre_node, edge, dst_node);
-    edge->mut_lbis() = {lbi};
-    *(edge->dst_node()->SoleOp()->MutBnInOp2Lbi(GenDiffBn(edge2obn_.at(edge)))) = lbi;
-    UpdateEdge2Ibn(edge, old_ibn);
-  }
-  static_cast<BackwardLogicalNode*>(bw_add_node)->fw_node()->SetBwNode(nullptr);
-  DeleteNode(bw_add_node);
-  // TODO: delete add_in_edge ant related edge2ibn, edge2obn
 }
 
 void LogicalGraph::MergeEdge() {
@@ -507,7 +432,8 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
-    if (is_train && fw_logical->HasOpWithForwardModelBlob()) {
+    if (Global<JobDesc>::Get()->enable_write_snapshot()
+        && fw_logical->HasOpWithForwardModelBlob()) {
       BuildMdSaveStruct(fw_logical, fw_logical);
     }
     if (fw_logical->HasOpWithModelOrConstModelBlob()) {
@@ -568,7 +494,7 @@ void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
   LogicalNode* reduce_scatter_node = NewNode<ReduceScatterLogicalNode>();
   reduce_scatter_node->mut_parallel_desc() = src_pd;
   LogicalNode* pred_reduce_global_node = reduce_scatter_node;
-  if (src_pd->sorted_machine_ids().size() > 1) {
+  if (src_pd->sorted_machine_ids().size() > 1 && src_pd->device_num_of_each_machine() > 1) {
     // Reduce Local Add
     LogicalNode* reduce_local_add_node = NewNode<ReduceLocalAddLogicalNode>();
     reduce_local_add_node->mut_parallel_desc() = src_pd;
@@ -613,7 +539,7 @@ MdSaveLogicalNode* LogicalGraph::BuildMdSaveStruct(const ForwardLogicalNode* fw_
                                                    LogicalNode* need_save_logical) {
   OperatorConf md_save_op_conf;
   md_save_op_conf.set_name("md_save_" + NewUniqueId());
-  md_save_op_conf.set_device_type(fw_logical->parallel_desc()->device_type());
+  md_save_op_conf.set_device_type(DeviceType::kCPU);
   md_save_op_conf.mutable_model_save_conf();
   auto model_save_op = ConstructOp(md_save_op_conf);
   auto md_save_logical = NewNode<MdSaveLogicalNode>();
@@ -632,7 +558,9 @@ NormalMdUpdtLogicalNode* LogicalGraph::BuildNormalMdUpdtAndMdSaveStruct(
     bool is_train, ForwardLogicalNode* fw_logical) {
   NormalMdUpdtLogicalNode* md_updt_logical = NewNode<NormalMdUpdtLogicalNode>();
   md_updt_logical->mut_parallel_desc() = fw_logical->parallel_desc();
-  if (is_train) { BuildMdSaveStruct(fw_logical, md_updt_logical); }
+  if (Global<JobDesc>::Get()->enable_write_snapshot()) {
+    BuildMdSaveStruct(fw_logical, md_updt_logical);
+  }
   return md_updt_logical;
 }
 
@@ -641,9 +569,6 @@ void LogicalGraph::ConnectFwToBw() {
     if (bw_node->fw_node() == nullptr) { return; }
     Connect<LogicalNode>(bw_node->fw_node(), NewEdge(), bw_node);
   });
-  for (auto& pair : bw_clone2fw_producer_) {
-    if (pair.second) { Connect<LogicalNode>(pair.second, NewEdge(), pair.first); }
-  }
 }
 
 void LogicalGraph::UpdateEdge2Ibn(const LogicalEdge* edge, const std::string& ibn) {

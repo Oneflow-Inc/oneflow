@@ -13,6 +13,8 @@ class AddOp final : public CWiseOp {
 
   void VirtualInitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
+  bool NeedInBlobWhenBackward() const override { return false; }
+  bool NeedOutBlobWhenBackward() const override { return false; }
 };
 }  // namespace oneflow
 
