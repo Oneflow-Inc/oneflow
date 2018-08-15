@@ -92,6 +92,7 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.placement(), job_conf_.mutable_placement());
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
+  SanityCheck();
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA
@@ -118,6 +119,13 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
 #ifndef WITH_CUDA
   CHECK_EQ(job_conf_.resource().gpu_device_num(), 0);
 #endif
+}
+
+void JobDesc::SanityCheck() {
+  int64_t machine_num = job_conf_.resource().machine_size();
+  FOR_RANGE(int64_t, i, 0, machine_num) { CHECK_EQ(job_conf_.resource().machine(i).id(), i); }
+  CHECK_GE(FLAGS_this_machine_id, 0);
+  CHECK_LT(FLAGS_this_machine_id, machine_num);
 }
 
 void JobDesc::SplitDecodeOps() {
