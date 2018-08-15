@@ -63,6 +63,7 @@ message OtherConf {
   optional bool enable_mem_sharing = 114 [default = true];
   optional bool use_ordered_allreduce_in_mdupdt = 115 [default = false];
   optional bool use_synthetic_data =  116 [default = false];
+  optional bool enable_write_snapshot = 130 [default = true];
 
   required FilePathConf data_path_conf = 121;             // localfs, networkfs and hdfs are valid
   required FilePathConf snapshot_path_conf = 122;         // localfs, networkfs and hdfs are valid
