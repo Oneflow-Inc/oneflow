@@ -160,10 +160,6 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     }
 
     const int32_t fg_conf_size = conf.batchsize() * conf.foreground_fraction();
-
-    // LOG(INFO) << "fg_cnt(1): " << fg_cnt << std::endl;
-    // LOG(INFO) << "bg_cnt(1): " << bg_cnt << std::endl;
-
     if (fg_cnt > fg_conf_size) {
       // subsample fg
       std::random_device rd;
@@ -179,18 +175,6 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       std::mt19937 gen(rd());
       std::shuffle(bg_inds_ptr, bg_inds_ptr + bg_cnt, gen);
       bg_cnt = bg_conf_size;
-    }
-
-    fg_cnt = 0;
-    bg_cnt = 0;
-
-    FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
-      int32_t anchor_idx = inside_anchors_inds_ptr[i];
-      if (current_img_label_ptr[anchor_idx] == 1) {
-        fg_inds_ptr[fg_cnt++] = anchor_idx;
-      } else if (current_img_label_ptr[anchor_idx] == 0) {
-        bg_inds_ptr[bg_cnt++] = anchor_idx;
-      }
     }
     LOG(INFO) << "fg_cnt(2): " << fg_cnt << std::endl;
     LOG(INFO) << "bg_cnt(2): " << bg_cnt << std::endl;
