@@ -19,7 +19,8 @@ class ReduceLocalAddCompActor final : public InputWiseCompActor {
 
   std::vector<bool> out_blob_init_status_;
   int64_t cur_out_blob_id_;
-  std::tuple<int64_t, int64_t, bool> other_val_;
+  HashSet<int64_t> inplace_blob_ids_;
+  std::tuple<int64_t, int64_t, bool, bool> other_val_;
 };
 
 }  // namespace oneflow

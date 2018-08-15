@@ -23,6 +23,8 @@ RegstDesc::RegstDesc() {
   max_register_num_ = kMaxRegisterNum;
   is_locked_ = false;
   enable_mem_sharing_ = false;
+  mem_shared_id_ = -1;
+  mem_shared_offset_ = -1;
 }
 
 void RegstDesc::AddConsumer(const TaskNode* new_consumer) {
@@ -136,7 +138,8 @@ void RegstDesc::ToProto(RegstDescProto* ret) const {
   ret->set_register_num(min_register_num_);
   *(ret->mutable_mem_case()) = mem_case_;
   ret->set_enable_mem_sharing(enable_mem_sharing_);
-  ret->set_mem_shared_id(-1);
+  ret->set_mem_shared_id(mem_shared_id_);
+  ret->set_mem_shared_offset(mem_shared_offset_);
 }
 
 bool RegstDesc::HasSameBlobDescs(const RegstDesc* rhs) {
@@ -160,6 +163,7 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->mutable_mem_case()->mutable_host_mem();
   ctrl_regst_proto->set_enable_mem_sharing(false);
   ctrl_regst_proto->set_mem_shared_id(-1);
+  ctrl_regst_proto->set_mem_shared_offset(-1);
 }
 
 }  // namespace oneflow
