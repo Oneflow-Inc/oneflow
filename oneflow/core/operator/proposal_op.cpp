@@ -1,89 +1,80 @@
-#include "oneflow/core/kernel/proposal_kernel.h"
-#include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/core/kernel/faster_rcnn_util.h"
+#include "oneflow/core/operator/proposal_op.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
-template<typename T>
-void ProposalKernel<T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FasterRcnnUtil<T>::GenerateAnchors(op_conf().proposal_conf().anchors_generator_conf(),
-                                     BnInOp2Blob("anchors"));
+void ProposalOp::InitFromOpConf() {
+  CHECK_EQ(device_type(), DeviceType::kCPU);
+  CHECK(op_conf().has_proposal_conf());
+  EnrollInputBn("class_prob", false);
+  EnrollInputBn("bbox_pred", false);
+  EnrollOutputBn("rois", false);
+  EnrollOutputBn("roi_probs", false);
+  EnrollConstBufBn("anchors");
+  EnrollDataTmpBn("proposals");
+  EnrollDataTmpBn("pre_nms_slice");
+  EnrollDataTmpBn("post_nms_slice");
 }
 
-template<typename T>
-void ProposalKernel<T>::ForwardDataContent(
-    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // input blob
-  const Blob* bbox_pred_blob = BnInOp2Blob("bbox_pred");
-  const Blob* class_prob_blob = BnInOp2Blob("class_prob");
-  // output blob
-  Blob* rois_blob = BnInOp2Blob("rois");
-  Blob* roi_probs_blob = BnInOp2Blob("roi_probs");
-  Blob* proposals_blob = BnInOp2Blob("proposals");
-  const ProposalOpConf& conf = op_conf().proposal_conf();
-  const AnchorGeneratorConf& anchor_generator_conf = conf.anchors_generator_conf();
-  const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
-  const int64_t num_images = class_prob_blob->shape().At(0);
-  const int64_t height = class_prob_blob->shape().At(1);
-  const int64_t width = class_prob_blob->shape().At(2);
-  const int64_t num_anchors =
-      anchor_generator_conf.aspect_ratios_size() * anchor_generator_conf.anchor_scales_size();
-  const int64_t num_proposals = height * width * num_anchors;
+const PbMessage& ProposalOp::GetCustomizedConf() const { return op_conf().proposal_conf(); }
 
-  const T* anchors_ptr = BnInOp2Blob("anchors")->dptr<T>();
-  const T* const_proposals_ptr = proposals_blob->dptr<T>();
-  T* proposals_ptr = proposals_blob->mut_dptr<T>();
-  int32_t* pre_nms_slice_ptr = BnInOp2Blob("pre_nms_slice")->mut_dptr<int32_t>();
-  int32_t* post_nms_slice_ptr = BnInOp2Blob("post_nms_slice")->mut_dptr<int32_t>();
-  FOR_RANGE(int64_t, i, 0, num_images) {
-    const T* bbox_pred_ptr = bbox_pred_blob->dptr<T>(i);
-    const T* class_prob_ptr = class_prob_blob->dptr<T>(i);
-
-    FasterRcnnUtil<T>::BboxTransform(num_proposals, anchors_ptr, bbox_pred_ptr, bbox_reg_ws,
-                                     proposals_ptr);
-    FasterRcnnUtil<T>::ClipBoxes(num_proposals, anchor_generator_conf.image_height(),
-                                 anchor_generator_conf.image_width(), proposals_ptr);
-
-    ScoredBBoxSlice<T> pre_nms_slice(num_proposals, const_proposals_ptr, class_prob_ptr,
-                                     pre_nms_slice_ptr);
-    pre_nms_slice.DescSortByScore();
-    pre_nms_slice.Filter([&](const T score, const BBox<T>* bbox) {
-      return (bbox->width() < conf.min_size()) || (bbox->height() < conf.min_size());
-    });
-    pre_nms_slice.Truncate(conf.pre_nms_top_n());
-
-    ScoredBBoxSlice<T> post_nms_slice(conf.post_nms_top_n(), const_proposals_ptr, class_prob_ptr,
-                                      post_nms_slice_ptr);
-    post_nms_slice.NmsFrom(conf.nms_threshold(), pre_nms_slice);
-
-    CopyRoI(i, post_nms_slice, rois_blob);
-    FOR_RANGE(int32_t, j, 0, post_nms_slice.available_len()) {
-      roi_probs_blob->mut_dptr<T>(i)[j] = post_nms_slice.GetScore(j);
-    }
+void ProposalOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                const ParallelContext* parallel_ctx) const {
+  const BlobDesc* cls_prob_blob_desc = GetBlobDesc4BnInOp("class_prob");
+  const BlobDesc* bbox_pred_blob_desc = GetBlobDesc4BnInOp("bbox_pred");
+  const auto* anchor_generator_conf =
+      GetMsgPtrFromPbMessage<AnchorGeneratorConf>(GetCustomizedConf(), "anchors_generator_conf");
+  const auto& anchor_scales =
+      GetPbRfFromPbMessage<int32_t>(*anchor_generator_conf, "anchor_scales");
+  const auto& aspect_ratios = GetPbRfFromPbMessage<float>(*anchor_generator_conf, "aspect_ratios");
+  const int32_t num_anchors = anchor_scales.size() * aspect_ratios.size();
+  const int32_t fm_stride =
+      GetValFromPbMessage<int32_t>(*anchor_generator_conf, "feature_map_stride");
+  for (int32_t scale : anchor_scales) {
+    CHECK_GE(scale, fm_stride);
+    CHECK_EQ(scale % fm_stride, 0);
   }
-}
-
-template<typename T>
-void ProposalKernel<T>::CopyRoI(const int64_t im_index, const ScoredBBoxSlice<T>& slice,
-                                Blob* rois_blob) const {
-  FOR_RANGE(int32_t, i, 0, slice.available_len()) {
-    BBox<T>* roi_bbox = BBox<T>::MutCast(rois_blob->mut_dptr<T>(im_index, i));
-    const BBox<T>* proposal_bbox = slice.GetBBox(i);
-    roi_bbox->set_x1(proposal_bbox->x1());
-    roi_bbox->set_y1(proposal_bbox->y1());
-    roi_bbox->set_x2(proposal_bbox->x2());
-    roi_bbox->set_y2(proposal_bbox->y2());
+  const int32_t pre_nms_top_n = GetValFromCustomizedConf<int32_t>("pre_nms_top_n");
+  const int32_t post_nms_top_n = GetValFromCustomizedConf<int32_t>("post_nms_top_n");
+  CHECK_GT(post_nms_top_n, 0);
+  CHECK(pre_nms_top_n == -1 || pre_nms_top_n > post_nms_top_n);
+  CHECK_LE(pre_nms_top_n, bbox_pred_blob_desc->shape().Count(1) / 4);
+  // in: class_prob (n, h, w, a)
+  // in: bbox_pred (n, h, w, a * 4)
+  FOR_RANGE(int32_t, i, 0, 3) {
+    CHECK_EQ(cls_prob_blob_desc->shape().At(i), bbox_pred_blob_desc->shape().At(i));
   }
+  CHECK_EQ(cls_prob_blob_desc->shape().At(3), num_anchors);
+  CHECK_EQ(bbox_pred_blob_desc->shape().At(3), cls_prob_blob_desc->shape().At(3) * 4);
+  const int64_t num_images = cls_prob_blob_desc->shape().At(0);
+  const int64_t feature_map_h = cls_prob_blob_desc->shape().At(1);
+  const int64_t feature_map_w = cls_prob_blob_desc->shape().At(2);
+  // datatmp: proposals (h, w, a, 4)
+  BlobDesc* proposal_blob_desc = GetBlobDesc4BnInOp("proposals");
+  proposal_blob_desc->mut_shape() = Shape({feature_map_h, feature_map_w, num_anchors, 4});
+  proposal_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
+  // const buf: anchors (h, w, a, 4)
+  *GetBlobDesc4BnInOp("anchors") = *proposal_blob_desc;
+  // datatmp: pre_nms_slice (h * w * a)
+  BlobDesc* pre_nms_slice_blob_desc = GetBlobDesc4BnInOp("pre_nms_slice");
+  pre_nms_slice_blob_desc->mut_shape() = Shape({feature_map_h * feature_map_w * num_anchors});
+  pre_nms_slice_blob_desc->set_data_type(DataType::kInt32);
+  // datatmp: post_nms_slice
+  BlobDesc* post_nms_slice_blob_desc = GetBlobDesc4BnInOp("post_nms_slice");
+  post_nms_slice_blob_desc->mut_shape() = Shape({post_nms_top_n});
+  post_nms_slice_blob_desc->set_data_type(DataType::kInt32);
+  // out: rois (n, r, 4)
+  BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
+  rois_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n, 4});
+  rois_blob_desc->set_data_type(bbox_pred_blob_desc->data_type());
+  rois_blob_desc->set_has_data_id_field(bbox_pred_blob_desc->has_data_id_field());
+  // out: roi_probs (n, r)
+  BlobDesc* roi_probs_blob_desc = GetBlobDesc4BnInOp("roi_probs");
+  roi_probs_blob_desc->mut_shape() = Shape({num_images, post_nms_top_n});
+  roi_probs_blob_desc->set_data_type(cls_prob_blob_desc->data_type());
+  roi_probs_blob_desc->set_has_data_id_field(cls_prob_blob_desc->has_data_id_field());
 }
 
-template<typename T>
-void ProposalKernel<T>::ForwardDataId(const KernelCtx& ctx,
-                                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
-  BnInOp2Blob("roi_probs")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("bbox_pred"));
-}
-
-ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalConf, ProposalKernel, FLOATING_DATA_TYPE_SEQ);
+REGISTER_OP(OperatorConf::kProposalConf, ProposalOp);
 
 }  // namespace oneflow
