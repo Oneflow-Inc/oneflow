@@ -37,7 +37,7 @@ __global__ void SmoothL1LossBackward(const int64_t instance_num, const int64_t i
     } else {
       in_diff[i] = (x > PredType(0)) - (x < PredType(0));
     }
-    in_diff[i] *= scale;
+    in_diff[i] *= scale * outside_weights[i];
   }
 }
 
