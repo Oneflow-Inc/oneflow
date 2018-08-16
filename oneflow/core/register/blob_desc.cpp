@@ -89,17 +89,6 @@ bool BlobDesc::operator==(const BlobDesc& rhs) const {
          && max_col_num_ == rhs.max_col_num_ && body_field_ == rhs.body_field_;
 }
 
-BlobDesc& BlobDesc::operator=(const BlobDesc& blob_desc) {
-  header_is_opaque_ = blob_desc.header_is_opaque_;
-  opaque_header_ = blob_desc.opaque_header_;
-  has_data_id_ = blob_desc.has_data_id_;
-  has_col_num_ = blob_desc.has_col_num_;
-  max_col_num_ = blob_desc.max_col_num_;
-  body_field_ = blob_desc.body_field_;
-  mem_shared_id_ = -1;
-  return *this;
-}
-
 std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     const HashMap<LogicalBlobId, std::unique_ptr<BlobDesc>>& lbi2blob_desc) {
   int64_t header_byte_size = 0;

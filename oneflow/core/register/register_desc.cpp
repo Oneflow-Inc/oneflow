@@ -69,6 +69,7 @@ void RegstDesc::CopyBlobDescWithoutAddLbi(const RegstDesc* rhs) {
       if (un_clone_it != rhs->lbi2blob_desc_.end()) { *(pair.second) = *(un_clone_it->second); }
     } else {
       *(pair.second) = *(rhs_it->second);
+      pair.second->set_mem_shared_id(-1);  // Do not copy its the mem_shared_id
     }
   }
 }
