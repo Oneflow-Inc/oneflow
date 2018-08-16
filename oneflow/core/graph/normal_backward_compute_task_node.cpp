@@ -47,6 +47,7 @@ void NormalBackwardCompTaskNode::BuildExecGphAndRegst() {
   LinkFwExecNode();
   BuildActivationDiffRegst();
   BuildInDiffRegst();
+  BindInRegst();
   BindModelDiffRegst();
   InferBlobDescsInProducedRegsts();
 }
@@ -136,19 +137,25 @@ void NormalBackwardCompTaskNode::BuildInDiffRegst() {
     }
     for (const std::string& idbn : cur_node->op()->input_diff_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(idbn);
-      CompTaskNode* fw_task = GetRelatedFwTaskNode();
-      if (fw_task) {
+      if (TryAddLbiToB121RegstAndBindIt(cur_node, idbn, "in_diff") == false) {
+        CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
+      }
+    }
+  });
+}
+
+void NormalBackwardCompTaskNode::BindInRegst() {
+  mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
+    for (const std::string& ibn : cur_node->op()->input_bns()) {
+      if (GetRelatedFwTaskNode()) {
         if (IsBwClone()) {
           std::list<std::weak_ptr<RegstDesc>> out_regsts;
           out_regsts.push_back(GetSoleConsumedRegst("boxing_out"));
           out_regsts.push_back(GetSoleConsumedRegst("121_out"));
-          cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), out_regsts);
+          cur_node->BindBnWithOneOfTheRegsts(ibn, out_regsts);
         } else {
-          cur_node->BindBnWithOneOfTheRegsts(GenUnDiffBn(idbn), GetConsumedRegst("in"));
+          cur_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
         }
-      }
-      if (TryAddLbiToB121RegstAndBindIt(cur_node, idbn, "in_diff") == false) {
-        CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
       }
     }
   });

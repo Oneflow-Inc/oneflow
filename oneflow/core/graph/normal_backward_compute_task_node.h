@@ -24,6 +24,7 @@ class NormalBackwardCompTaskNode final : public CompTaskNode {
 
  private:
   void LinkFwExecNode();
+  void BindInRegst();
   void BindModelDiffRegst();
   void InferBlobDescsInProducedRegsts();
   CompTaskNode* GetRelatedFwTaskNode();
