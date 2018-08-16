@@ -1,16 +1,21 @@
-FROM nvidia/cuda:9.1-cudnn7-devel-ubuntu16.04
+FROM nvidia/cuda:9.1-cudnn7-devel-centos7
 LABEL Author="xxmyjk <xxmyj.k@gmail.com>"
 
 USER root
 
-RUN apt update && \
-    apt install -y \
-    libibverbs-dev \
-    git \
+RUN yum install -y epel-release
+RUN yum update -y && yum install -y \
+    cmake3 \
+    make \
+    libibverbs \
+    rdma-core-devel \
+    libgsasl \
     nasm \
-    cmake
+    git
 
-ENV LD_LIBRARY_PATH="/mnt/lib:/usr/lib:/usr/lib/x86_64-linux-gnu:${LD_LIBRARY_PATH}"
+RUN ln -s /usr/bin/cmake3 /usr/bin/cmake
+
+ENV LD_LIBRARY_PATH="/mnt/lib:/usr/lib64:${LD_LIBRARY_PATH}"
 ENV PATH="${LD_LIBRARY_PATH}:${PATH}"
 
 WORKDIR /opt
