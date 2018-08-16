@@ -13,7 +13,7 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
   int64_t cur_batch_num = next_model_vid - 1;
   const NormalModelUpdateOpUserConf& conf = this->op_conf().normal_mdupdt_conf().user_conf();
   double learning_rate = conf.learning_rate();
-  if (WarmupOnset(conf, learning_rate, cur_batch_num)) {
+  if (TriggerWarmup(conf, learning_rate, cur_batch_num)) {
     learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, cur_batch_num);
   } else if (conf.has_learning_rate_decay()) {
     learning_rate =
@@ -157,7 +157,7 @@ double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t
 
 }  // namespace
 
-bool WarmupOnset(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num) {
+bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num) {
   if (!conf.has_warmup_conf()) { return false; }
   const WarmupConf& warmup_conf = conf.warmup_conf();
   if (warmup_conf.has_constant_conf()) {
