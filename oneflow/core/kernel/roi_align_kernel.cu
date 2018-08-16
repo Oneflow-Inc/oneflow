@@ -35,28 +35,16 @@ __device__ T BilinearInterpolate(const T* channel_dptr, const int32_t height, co
 }
 
 template<typename T>
-__device__ T BilinearInterpolateDiff(const T bin_diff_avg, const int32_t height,
-                                     const int32_t width, const T y, const T x, T& diff11,
-                                     T& diff21, T& diff12, T& diff22, int32_t& x_low,
-                                     int32_t& x_high, int32_t& y_low, int32_t& y_high) {
-  if (y < -1.0 || y > height || x < -1.0 || x > width) {
-    diff11 = 0;
-    diff21 = 0;
-    diff12 = 0;
-    diff22 = 0;
-    return;
-  }
+__device__ bool BilinearInterpolateDiff(const T bin_diff_avg, const int64_t height,
+                                        const int64_t width, const T y, const T x, T& diff11,
+                                        T& diff21, T& diff12, T& diff22, int32_t& x_low,
+                                        int32_t& x_high, int32_t& y_low, int32_t& y_high) {
+  if (y < -1.0 || y > height || x < -1.0 || x > width) { return false; }
 
   if (y > 0) { y_low = y; }
   if (x > 0) { x_low = x; }
 
-  if (y_low >= height - 1 || x_low >= width - 1) {
-    diff11 = 0;
-    diff21 = 0;
-    diff12 = 0;
-    diff22 = 0;
-    return;
-  }
+  if (y_low >= height - 1 || x_low >= width - 1) { return false; }
   y_high = y_low + 1;
   x_high = x_low + 1;
 
@@ -69,6 +57,7 @@ __device__ T BilinearInterpolateDiff(const T bin_diff_avg, const int32_t height,
   diff21 = bin_diff_avg * hy * lx;
   diff12 = bin_diff_avg * ly * hx;
   diff22 = bin_diff_avg * ly * lx;
+  return true;
 }
 
 #define LOCATE_BIN                                                                 \
@@ -147,13 +136,14 @@ __global__ void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr,
         int32_t x_high = 0;
         int32_t y_low = 0;
         int32_t y_high = 0;
-        BilinearInterpolateDiff(bin_diff / (bin_grid_height * bin_grid_width), height, width, y, x,
-                                diff11, diff21, diff12, diff22, x_low, x_high, y_low, y_high);
-        const int64_t q11 = y_low * width + x_low;
-        const int64_t q21 = y_low * width + x_high;
-        const int64_t q12 = y_high * width + x_low;
-        const int64_t q22 = y_high * width + x_high;
-        if (x_low >= 0 && x_high >= 0 && y_low >= 0 && y_high >= 0) {
+        bool has_diff = BilinearInterpolateDiff(bin_diff / (bin_grid_height * bin_grid_width),
+                                                height, width, y, x, diff11, diff21, diff12, diff22,
+                                                x_low, x_high, y_low, y_high);
+        if (has_diff) {
+          const int64_t q11 = y_low * width + x_low;
+          const int64_t q21 = y_low * width + x_high;
+          const int64_t q12 = y_high * width + x_low;
+          const int64_t q22 = y_high * width + x_high;
           gpu_atomic_add(in_diff_channel_dptr + q11, diff11);
           gpu_atomic_add(in_diff_channel_dptr + q21, diff21);
           gpu_atomic_add(in_diff_channel_dptr + q12, diff12);
@@ -184,7 +174,7 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
     RoIAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), conf.spatial_scale(), conf.sampling_ratio(),
-        out_diff_blob->shape().At(1), out_diff_blob->shape().At(2), out_diff_blob->shape().At(3),
+        in_diff_blob->shape().At(1), in_diff_blob->shape().At(2), in_diff_blob->shape().At(3),
         rois_blob->shape().At(1), conf.pooled_h(), conf.pooled_w(), rois_blob->dptr<T>(),
         in_diff_blob->mut_dptr<T>());
   }
