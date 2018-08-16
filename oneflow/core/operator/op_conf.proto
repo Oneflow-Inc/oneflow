@@ -294,6 +294,11 @@ message RMSPropModelUpdateConf {
   optional float epsilon = 2 [default = 1e-8];
 }
 
+message LARSModelUpdateConf {
+  optional float momentum = 1 [default = 0.9];
+  // TODO(shiyuan)
+}
+
 message ExponentialDecayConf {
   required int64 decay_batches = 1;
   required double decay_rate = 2;
@@ -355,6 +360,7 @@ message NormalModelUpdateOpUserConf {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
     RMSPropModelUpdateConf rmsprop_conf = 1002;
+    LARSModelUpdateConf lars_conf = 1003;
   }
 }
 
