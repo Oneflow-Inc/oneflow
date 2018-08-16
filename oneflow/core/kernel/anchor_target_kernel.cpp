@@ -168,7 +168,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       std::mt19937 gen(rd());
       std::shuffle(fg_inds_ptr, fg_inds_ptr + fg_cnt, gen);
       // write back
-      FOR_RANGE(int32_t, i, fg_cnt, fg_conf_size) { current_img_label_ptr[fg_inds_ptr[i]] = -1; }
+      FOR_RANGE(int32_t, i, fg_conf_size, fg_cnt) { current_img_label_ptr[fg_inds_ptr[i]] = -1; }
       fg_cnt = fg_conf_size;
     }
     const int32_t bg_conf_size = conf.batchsize() - fg_cnt;
@@ -180,7 +180,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       std::shuffle(bg_inds_ptr, bg_inds_ptr + bg_cnt, gen);
 
       // write back
-      FOR_RANGE(int32_t, i, bg_cnt, bg_conf_size) { current_img_label_ptr[bg_inds_ptr[i]] = -1; }
+      FOR_RANGE(int32_t, i, bg_conf_size, bg_cnt) { current_img_label_ptr[bg_inds_ptr[i]] = -1; }
       bg_cnt = bg_conf_size;
     }
     LOG(INFO) << "fg_cnt(2): " << fg_cnt << std::endl;
