@@ -48,6 +48,7 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     ComputeTargetAndWriteOut(fg_slice, bg_slice, roi_nearest_gt_index_ptr, gt_boxes_ptr,
                              gt_labels_ptr, rois_ptr, labels_ptr, bbox_targets_ptr,
                              inside_weights_ptr, outside_weights_ptr);
+    gt_boxes_tmp_ptr->mutable_value()->clear_value();
   }
 }
 

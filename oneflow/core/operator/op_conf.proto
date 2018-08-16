@@ -650,6 +650,7 @@ message ProposalTargetOpConf
   required string bbox_targets = 6;
   required string bbox_inside_weights = 7;
   required string bbox_outside_weights = 8;
+   required string gt_boxes_tmp = 20;
   required int32 num_roi_per_image = 9 [default = 256];
   required float fg_fraction = 10 [default = 0.5];
   required BboxWeightConf bbox_inside_weight_conf=11;
