@@ -35,21 +35,28 @@ __device__ T BilinearInterpolate(const T* channel_dptr, const int32_t height, co
 }
 
 template<typename T>
-__device__ T BilinearInterpolateDiff(const int32_t height, const int32_t width, const T y,
-                                     const T x, T& w11, T& w21, T& w12, T& w22, int& x_low,
-                                     int& x_high, int& y_low, int& y_high) {
+__device__ T BilinearInterpolateDiff(const T bin_diff_avg, const int32_t height,
+                                     const int32_t width, const T y, const T x, T& diff11,
+                                     T& diff21, T& diff12, T& diff22, int32_t& x_low,
+                                     int32_t& x_high, int32_t& y_low, int32_t& y_high) {
   if (y < -1.0 || y > height || x < -1.0 || x > width) {
-    w11 = 0;
-    w21 = 0;
-    w12 = 0;
-    w22 = 0;
+    diff11 = 0;
+    diff21 = 0;
+    diff12 = 0;
+    diff22 = 0;
     return;
   }
 
-  y_low = (y <= 0) ? 0 : y;
-  x_low = (x <= 0) ? 0 : x;
+  if (y > 0) { y_low = y; }
+  if (x > 0) { x_low = x; }
 
-  if (y_low >= height - 1 || x_low >= width - 1) { return 0; }
+  if (y_low >= height - 1 || x_low >= width - 1) {
+    diff11 = 0;
+    diff21 = 0;
+    diff12 = 0;
+    diff22 = 0;
+    return;
+  }
   y_high = y_low + 1;
   x_high = x_low + 1;
 
@@ -58,10 +65,10 @@ __device__ T BilinearInterpolateDiff(const int32_t height, const int32_t width, 
   const T hy = y_high - y;
   const T hx = x_high - x;
 
-  w11 = hy * hx;
-  w21 = hy * lx;
-  w12 = ly * hx;
-  w22 = ly * lx;
+  diff11 = bin_diff_avg * hy * hx;
+  diff21 = bin_diff_avg * hy * lx;
+  diff12 = bin_diff_avg * ly * hx;
+  diff22 = bin_diff_avg * ly * lx;
 }
 
 #define LOCATE_BIN                                                                 \
@@ -132,30 +139,25 @@ __global__ void RoIAlignBackward(const int64_t nthreads, const T* out_diff_dptr,
       FOR_RANGE(int64_t, grid_j, 0, bin_grid_width) {
         const T x =
             roi_start_w + w * bin_width + static_cast<T>(grid_j + 0.5f) * bin_grid_density_w;
-        T w11;
-        T w21;
-        T w12;
-        T w22;
-        int32_t x_low;
-        int32_t x_high;
-        int32_t y_low;
-        int32_t y_high;
-        BilinearInterpolateDiff(height, width, y, x, w11, w21, w12, w22, x_low, x_high, y_low,
-                                y_high);
+        T diff11 = 0;
+        T diff21 = 0;
+        T diff12 = 0;
+        T diff22 = 0;
+        int32_t x_low = 0;
+        int32_t x_high = 0;
+        int32_t y_low = 0;
+        int32_t y_high = 0;
+        BilinearInterpolateDiff(bin_diff / (bin_grid_height * bin_grid_width), height, width, y, x,
+                                diff11, diff21, diff12, diff22, x_low, x_high, y_low, y_high);
         const int64_t q11 = y_low * width + x_low;
         const int64_t q21 = y_low * width + x_high;
         const int64_t q12 = y_high * width + x_low;
         const int64_t q22 = y_high * width + x_high;
-        const T count = bin_grid_height * bin_grid_width;
-        const T diff_at_q11 = bin_diff * w11 / count;
-        const T diff_at_q21 = bin_diff * w21 / count;
-        const T diff_at_q12 = bin_diff * w12 / count;
-        const T diff_at_q22 = bin_diff * w22 / count;
         if (x_low >= 0 && x_high >= 0 && y_low >= 0 && y_high >= 0) {
-          gpu_atomic_add(in_diff_channel_dptr + q11, diff_at_q11);
-          gpu_atomic_add(in_diff_channel_dptr + q21, diff_at_q21);
-          gpu_atomic_add(in_diff_channel_dptr + q12, diff_at_q12);
-          gpu_atomic_add(in_diff_channel_dptr + q22, diff_at_q22);
+          gpu_atomic_add(in_diff_channel_dptr + q11, diff11);
+          gpu_atomic_add(in_diff_channel_dptr + q21, diff21);
+          gpu_atomic_add(in_diff_channel_dptr + q12, diff12);
+          gpu_atomic_add(in_diff_channel_dptr + q22, diff22);
         }
       }
     }
@@ -178,7 +180,7 @@ struct RoIAlignKernelUtil<DeviceType::kGPU, T> {
 
   static void Backward(const KernelCtx& ctx, const RoIAlignOpConf& conf, const Blob* out_diff_blob,
                        const Blob* rois_blob, Blob* in_diff_blob) {
-    const int64_t elem_cnt = in_diff_blob->shape().elem_cnt();
+    const int64_t elem_cnt = out_diff_blob->shape().elem_cnt();
     RoIAlignBackward<T><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                           ctx.device_ctx->cuda_stream()>>>(
         elem_cnt, out_diff_blob->dptr<T>(), conf.spatial_scale(), conf.sampling_ratio(),
