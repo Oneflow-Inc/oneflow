@@ -5,7 +5,7 @@ namespace oneflow {
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     KernelInitWithCudnn(parallel_ctx);
   } else {
     ConvKernelImplByIm2Col<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
@@ -16,7 +16,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     DoForwardDataContentWithCudnn(device_ctx, in_blob, weight_blob, out_blob, BnInOp2Blob);
   } else {
     ConvKernelImplByIm2Col<DeviceType::kGPU, T>::DoForwardDataContent(
@@ -28,7 +28,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     WeightBackwardWithCudnn(device_ctx, out_diff_blob, in_blob, weight_diff_blob, in_diff_blob,
                             BnInOp2Blob);
   } else {
@@ -41,7 +41,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     BiasBackwardWithCudnn(device_ctx, out_diff_blob, bias_diff_blob, BnInOp2Blob);
   } else {
     ConvKernelImplByIm2Col<DeviceType::kGPU, T>::BiasBackward(device_ctx, out_diff_blob,
