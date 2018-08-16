@@ -348,9 +348,27 @@ message LearningRateDecayConf {
   }
 }
 
+message ConstantWarmupConf {
+  required int64 warmup_batches = 1;
+  required double multiplier = 2;
+}
+
+message LinearWarmupConf {
+  required int64 warmup_batches = 1;
+  required double start_multiplier = 2;
+}
+
+message WarmupConf {
+  oneof type {
+    ConstantWarmupConf constant_conf = 3000;
+    LinearWarmupConf linear_conf = 3001;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional double learning_rate = 1 [default = 0.01];
   optional LearningRateDecayConf learning_rate_decay = 2;
+  optional WarmupConf warmup_conf = 3;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
