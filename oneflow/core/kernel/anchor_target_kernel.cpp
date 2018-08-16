@@ -42,7 +42,7 @@ struct AnchorTargetKernelUtil {
     FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
       int32_t anchor_idx = inside_anchors_inds_ptr[i];
       const float overlap = max_overlaps_ptr[anchor_idx];
-      if (overlap > high_threshold) {
+      if (overlap >= high_threshold) {
         labels_ptr[anchor_idx] = 1;
       } else if (overlap < low_threshold) {
         labels_ptr[anchor_idx] = 0;
@@ -87,6 +87,8 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_outside_weights_blob->mut_dptr(), 0,
                            rpn_bbox_outside_weights_blob->ByteSizeOfDataContentField());
 
+  Memset<DeviceType::kCPU>(ctx.device_ctx, max_overlaps_ptr, 0,
+                           BnInOp2Blob("max_overlaps_inds")->ByteSizeOfDataContentField());
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
 
     const BBox<T>* anchors_bbox = BBox<T>::Cast(anchors_ptr);
@@ -121,7 +123,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       FOR_RANGE(int32_t, j, 0, inside_anchors_num) {  // for each anchor
         int32_t anchor_idx = inside_anchors_inds_ptr[j];
         float overlap = anchors_bbox[anchor_idx].InterOverUnion(current_img_gt_boxes_bbox + i);
-        if (overlap > max_overlaps_ptr[anchor_idx]) {
+        if (overlap >= max_overlaps_ptr[anchor_idx]) {
           max_overlaps_ptr[anchor_idx] = overlap;
           max_overlaps_inds_ptr[anchor_idx] = i;
         }
