@@ -10,14 +10,14 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto tpl = reinterpret_cast<std::tuple<int64_t, const Blob*>*>(ctx.other);
   int64_t next_model_vid = std::get<0>(*tpl);
+  int64_t cur_batch_num = next_model_vid - 1;
   const NormalModelUpdateOpUserConf& conf = this->op_conf().normal_mdupdt_conf().user_conf();
   double learning_rate = conf.learning_rate();
-  if (conf.has_warmup_conf()) {
-    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, next_model_vid - 1);
-  }
-  if (conf.has_learning_rate_decay()) {
+  if (WarmupOnset(conf, learning_rate, cur_batch_num)) {
+    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, cur_batch_num);
+  } else if (conf.has_learning_rate_decay()) {
     learning_rate =
-        GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, next_model_vid - 1);
+        GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, cur_batch_num);
   }
   const OpAttribute& op_attribute = this->kernel_conf().op_attribute();
   Blob* in_0 = BnInOp2Blob(op_attribute.input_bns(0));
@@ -156,6 +156,18 @@ double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t
 }
 
 }  // namespace
+
+bool WarmupOnset(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num) {
+  if (!conf.has_warmup_conf()) { return false; }
+  const WarmupConf& warmup_conf = conf.warmup_conf();
+  if (warmup_conf.has_constant_conf()) {
+    return (cur_batch_num < warmup_conf.constant_conf().warmup_batches());
+  } else if (warmup_conf.has_linear_conf()) {
+    return (cur_batch_num < warmup_conf.linear_conf().warmup_batches());
+  } else {
+    UNIMPLEMENTED();
+  }
+}
 
 double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t cur_batch_num) {
   if (conf.has_constant_conf()) {

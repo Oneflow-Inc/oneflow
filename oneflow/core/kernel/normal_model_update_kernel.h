@@ -22,6 +22,7 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 };
 
+bool WarmupOnset(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num);
 double GetWarmupLearningRate(const WarmupConf&, double lr, int64_t cur_batch_num);
 double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t cur_batch_num);
 
