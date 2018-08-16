@@ -78,8 +78,8 @@ struct hdfsBuilder;
  * Return error information of last failed operation.
  *
  * @return 			A not NULL const string point of last error information.
- * 					Caller can only read this message and keep it unchanged. No need to
- * free it. If last operation finished successfully, the returned message is undefined.
+ * 					Caller can only read this message and keep it unchanged. No
+ * need to free it. If last operation finished successfully, the returned message is undefined.
  */
 const char *hdfsGetLastError();
 
