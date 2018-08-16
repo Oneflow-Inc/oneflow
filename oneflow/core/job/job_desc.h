@@ -50,6 +50,7 @@ class JobDesc final {
   bool enable_write_snapshot() const {
     return IsTrain() && job_conf_.other().enable_write_snapshot();
   }
+  bool enable_blob_mem_sharing() const { return job_conf_.other().enable_blob_mem_sharing(); }
 
   // machine_name <-> machine_id
   int64_t MachineID4MachineName(const std::string& machine_name) const;
