@@ -71,9 +71,7 @@ ls | xargs sed -i "s#http://down.geeek.info/deps/#<local_folder>/#"
 > tree ./docker/bin
 
 ./docker/bin
-├── hadoop-2.8.1.tar.gz
-├── of_submit-1.0-py2-none-any.whl
-└── oneflow
+└── clang-format
 
 0 directories, 3 files
 ```
