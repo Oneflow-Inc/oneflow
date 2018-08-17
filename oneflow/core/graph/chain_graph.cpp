@@ -21,7 +21,6 @@ class ChainMerger final {
   void InitTaskNode2UId();
   void InitChains();
   bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs);
-  bool TryMerge();
   void MergeChains();
   int64_t get_task_uid(TaskNode* task_node) const {
     auto uid_it = task_node2uid_.find(task_node);
@@ -79,26 +78,19 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   return false;
 }
 
-bool ChainMerger::TryMerge() {
+void ChainMerger::MergeChains() {
   HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>> stream_area2chains;
-  bool merge_happened = false;
   for (auto cur_chain_it = chain_list_.begin(); cur_chain_it != chain_list_.end();) {
     std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
     auto stream_area_it = stream_area2chains.find(stream_area_id);
     if (stream_area_it != stream_area2chains.end()
         && DoMerge(stream_area_it->second, cur_chain_it)) {
       cur_chain_it = chain_list_.erase(cur_chain_it);
-      merge_happened = true;
     } else {
       stream_area2chains[stream_area_id].push_back(cur_chain_it);
       ++cur_chain_it;
     }
   }
-  return merge_happened;
-}
-
-void ChainMerger::MergeChains() {
-  while (TryMerge()) {}
 }
 
 }  // namespace
