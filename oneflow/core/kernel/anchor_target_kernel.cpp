@@ -52,15 +52,8 @@ struct AnchorTargetKernelUtil {
 };
 
 template<typename T>
-void AnchorTargetKernel<T>::VirtualKernelInit(const ParallelContext* parallel_ctx,
-                                              DeviceCtx* device_ctx) {
-  int64_t seed = GetCurTime();
-  random_generator_.reset(new RandomGenerator<DeviceType::kCPU>(seed, device_ctx));
-}
-
-template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
-    const KernelCtx&, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* image_info_blob = BnInOp2Blob("image_info");
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
 
@@ -77,20 +70,22 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   int32_t* max_overlaps_inds_ptr = BnInOp2Blob("max_overlaps_inds")->mut_dptr<int32_t>();
   int32_t* gt_max_overlaps_inds_ptr = BnInOp2Blob("gt_max_overlaps_inds")->mut_dptr<int32_t>();
   int32_t* gt_max_overlaps_num_ptr = BnInOp2Blob("gt_max_overlaps_num")->mut_dptr<int32_t>();
-  int32_t* inds_mask_ptr = BnInOp2Blob("inds_mask")->mut_dptr<int32_t>();
-  T* gt_boxes_tmp_ptr = BnInOp2Blob("gt_boxes_tmp")->mut_dptr<T>();
+  T* origin_gt_boxes_ptr = BnInOp2Blob("origin_gt_boxes")->mut_dptr<T>();
 
   // useful vars
-  const int32_t image_num = image_info_blob->shape().At(0);  // N
-  const int32_t anchors_num = rpn_labels_blob->shape().At(1) * rpn_labels_blob->shape().At(2)
-                              * rpn_labels_blob->shape().At(3);  // H*W*A
-  const int32_t labels_num = image_num * anchors_num;            // N*H*W*A
+  const int32_t image_num = image_info_blob->shape().At(0);        // N
+  const int32_t anchors_num = rpn_labels_blob->shape().Count(1);   // H*W*A
+  const int32_t labels_num = rpn_labels_blob->shape().elem_cnt();  // N*H*W*A
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const int32_t image_height = conf.anchors_generator_conf().image_height();
   const int32_t image_width = conf.anchors_generator_conf().image_width();
   const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
 
   AnchorTargetKernelUtil<T>::SetValue(labels_num, rpn_labels_blob->mut_dptr<int32_t>(), -1);
+  Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_inside_weights_blob->mut_dptr(), 0,
+                           rpn_bbox_inside_weights_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_outside_weights_blob->mut_dptr(), 0,
+                           rpn_bbox_outside_weights_blob->ByteSizeOfDataContentField());
 
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
 
@@ -99,11 +94,11 @@ void AnchorTargetKernel<T>::ForwardDataContent(
         gt_boxes_blob->dptr<FloatList16>() + image_inds;  // todo: fix it
 
     FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
-      gt_boxes_tmp_ptr[i] = gt_boxes_ptr->value().value(i) * 720;
+      origin_gt_boxes_ptr[i] = gt_boxes_ptr->value().value(i) * 720;
     }
 
-    const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(gt_boxes_tmp_ptr);
-    const int32_t current_img_gt_boxes_num = image_info_blob->dptr<int32_t>(image_inds)[2];
+    const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(origin_gt_boxes_ptr);
+    const int32_t current_img_gt_boxes_num = gt_boxes_ptr->value().value_size() / 4;
 
     int32_t* current_img_label_ptr = rpn_labels_blob->mut_dptr<int32_t>(image_inds);
     BBoxDelta<T>* current_img_target_bbox_delta =
@@ -165,40 +160,21 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     }
 
     const int32_t fg_conf_size = conf.batchsize() * conf.foreground_fraction();
-
-    LOG(INFO) << "fg_cnt(1): " << fg_cnt << std::endl;
-    LOG(INFO) << "bg_cnt(1): " << bg_cnt << std::endl;
-
     if (fg_cnt > fg_conf_size) {
       // subsample fg
-      const int32_t ignored_num = fg_cnt - fg_conf_size;
-      // random_generator_->Uniform<int32_t>(ignored_num, 0, fg_cnt, inds_mask_ptr);
-      FOR_RANGE(int32_t, i, 0, ignored_num) {
-        current_img_label_ptr[fg_inds_ptr[inds_mask_ptr[i]]] = -1;
-      }
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::shuffle(fg_inds_ptr, fg_inds_ptr + fg_cnt, gen);
       fg_cnt = fg_conf_size;
     }
     const int32_t bg_conf_size = conf.batchsize() - fg_cnt;
 
     if (bg_cnt > bg_conf_size) {
       // subsampel bg
-      const int32_t ignored_num = bg_cnt - bg_conf_size;
-      FOR_RANGE(int32_t, i, 0, ignored_num) {
-        current_img_label_ptr[bg_inds_ptr[inds_mask_ptr[i]]] = -1;
-      }
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::shuffle(bg_inds_ptr, bg_inds_ptr + bg_cnt, gen);
       bg_cnt = bg_conf_size;
-    }
-
-    fg_cnt = 0;
-    bg_cnt = 0;
-
-    FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
-      int32_t anchor_idx = inside_anchors_inds_ptr[i];
-      if (current_img_label_ptr[anchor_idx] == 1) {
-        fg_inds_ptr[fg_cnt++] = anchor_idx;
-      } else if (current_img_label_ptr[anchor_idx] == 0) {
-        bg_inds_ptr[bg_cnt++] = anchor_idx;
-      }
     }
     LOG(INFO) << "fg_cnt(2): " << fg_cnt << std::endl;
     LOG(INFO) << "bg_cnt(2): " << bg_cnt << std::endl;
@@ -234,7 +210,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       current_img_outside_weights_bbox[anchor_idx].set_y2(weight_value);
     }
   }
-}  // namespace oneflow
+}
 
 template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(
