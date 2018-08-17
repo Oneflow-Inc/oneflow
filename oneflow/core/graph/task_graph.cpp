@@ -484,19 +484,14 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
 }
 
 void TaskGraph::CollectAncestorsForEachNode() {
-  std::vector<TaskNode*> ordered_nodes;
-  AcyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
-  for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
-    TaskNode* task_node = *it;
+  AcyclicTopoForEachNode([&](TaskNode* task_node) {
     task_node->mut_ancestors().clear();
-    task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, task_node)) return;
-      task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
-                                        node_on_in_edge->ancestors().end());
-      task_node->mut_ancestors().insert(node_on_in_edge);
-
+    task_node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
+      if (IsBackEdge(in_node, task_node)) return;
+      task_node->mut_ancestors().insert(in_node->ancestors().begin(), in_node->ancestors().end());
+      task_node->mut_ancestors().insert(in_node);
     });
-  }
+  });
 }
 
 void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
