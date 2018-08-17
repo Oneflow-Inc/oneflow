@@ -4,9 +4,21 @@
 
 namespace oneflow {
 
+bool NormalMdUpdtCompTaskNode::IsPredict7NotTrainable() {
+  if (Global<JobDesc>::Get()->IsPredict()) { return true; }
+  for (TaskEdge* out_edge : out_edges()) {
+    TaskNode* dst_node = out_edge->dst_node();
+    if (IsForwardTaskType(dst_node->GetTaskType())) {
+      auto fw_node = static_cast<NormalForwardCompTaskNode*>(dst_node);
+      if (!fw_node->logical_node()->SoleOp()->op_conf().trainable()) { return true; }
+    }
+  }
+  return false;
+}
+
 void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
   int32_t max_model_regst = -1;
-  if (Global<JobDesc>::Get()->IsPredict()) {
+  if (IsPredict7NotTrainable()) {
     max_model_regst = 1;
   } else {
     if (Global<JobDesc>::Get()->Staleness() == -1) {
@@ -36,7 +48,7 @@ void NormalMdUpdtCompTaskNode::ProduceAllRegstsAndBindEdges() {
 }
 
 void NormalMdUpdtCompTaskNode::ConsumeAllRegsts() {
-  if (Global<JobDesc>::Get()->IsPredict()) { return; }
+  if (IsPredict7NotTrainable()) { return; }
   for (TaskEdge* edge : in_edges()) {
     ConsumeRegst("model_diff_acc_" + NewUniqueId(), edge->GetSoleRegst());
   }
@@ -47,7 +59,7 @@ bool NormalMdUpdtCompTaskNode::IsReadyForBuild() {
 }
 
 void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
-  if (Global<JobDesc>::Get()->IsPredict()) { return; }
+  if (IsPredict7NotTrainable()) { return; }
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;
