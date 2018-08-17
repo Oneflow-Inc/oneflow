@@ -86,7 +86,7 @@ void NormalBackwardCompTaskNode::BuildExecGphAndBindOutDiffRegst() {
           std::string obn =
               GenUnDiffBn(odbn);  // the lbis of obn and odbn may be different, use obn directly
           LogicalBlobId obn_lbi = cur_node->op()->BnInOp2Lbi(obn);
-          CHECK(logical_node()->IsDataLbiOnOutEdge(obn_lbi) == true);
+          CHECK(fw_task->logical_node()->IsDataLbiOnOutEdge(obn_lbi) == true);
           cur_node->BindBnWithRegst(GenUnDiffBn(odbn), out_regst);
         }
       }
