@@ -34,8 +34,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // Lbis
   std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
-  const HashSet<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
-  const HashSet<LogicalBlobId>& lbi_121() const { return lbi_121_; }
+  bool IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const;
 
   // util
   virtual std::string TypeName() const = 0;
@@ -68,8 +67,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   LogicalNode* main_model_parallel_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  HashSet<LogicalBlobId> lbi_boxing_;
-  HashSet<LogicalBlobId> lbi_121_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
