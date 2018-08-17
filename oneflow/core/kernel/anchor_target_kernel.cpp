@@ -4,6 +4,86 @@
 
 namespace oneflow {
 
+namespace {
+
+template<typename T>
+void ForEachOverlapBetweenAnchorsAndGtBoxes(const BoxesSlice<T>& gt_boxes_slice, 
+                                            const BoxesSlice<T>& anchor_boxes_slice, 
+                                            const std::function<void(int32_t, int32_t, float)>& Handler) {
+  FOR_RANGE(int32_t, i, 0, gt_boxes_slice.size()) {
+    FOR_RANGE(int32_t, j, 0, anchor_boxes_slice.size()) {
+      float overlap = anchor_boxes_slice.GetBBox(j)->InterOverUnion(gt_boxes_slice.GetBBox(i));
+      Handler(gt_boxes_slice.GetSlice(i), anchor_boxes_slice.GetSlice(j), overlap);
+    }
+  }
+}
+
+void AssignPositiveLabelsToGtBoxesNearestAnchors(const GtBoxesNearestAnchorsInfo& gt_boxes_nearest_anchors,
+                                                 AnchorLabelsAndMaxOverlapsInfo& anchor_labels_info)
+  gt_boxes_nearest_anchors.ForEachNearestAnchor([](int32_t anchor_idx) {
+    anchor_labels_info.TrySetPositiveLabel(anchor_idx);
+  });
+}
+
+}  // namespace
+
+template<typename T>
+void AnchorTargetKernel<T>::InitConstBufBlobs(
+    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  FasterRcnnUtil<T>::GenerateAnchors(op_conf().anchor_target_conf().anchors_generator_conf(),
+                                     BnInOp2Blob("anchors"));
+}
+
+template<typename T>
+void AnchorTargetKernel<T>::ForwardDataContent(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  
+  FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(BnInOp2Blob("gt_boxes"), BnInOp2Blob("ab_gt_boxes"));
+  ScoredBBoxSlice<T> keep_anchors_slice = FilterOutsideAnchors(BnInOp2Blob("anchors"));
+
+  FOR_RANGE(int64_t, i, 0, images_num) { 
+    
+    
+    anchor_label_and_nearest_gt_box = AssignLabels();
+
+
+  }
+}
+
+template<typename T>
+AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(const BoxesSlice<T>& gt_boxes_slice, 
+                                         const BoxesSlice<T>& anchor_boxes_slice, 
+                                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  AnchorLabelsAndMaxOverlapsInfo anchor_labels_info(BnInOp2Blob("anchor_labels")->mut_dptr<T>(),
+                                                    BnInOp2Blob("anchor_max_overlaps")->mut_dptr<T>(),
+                                                    BnInOp2Blob("anchor_max_overlap_gt_boxes")->mut_dptr<T>(),
+                                                    GetCustomizedOpConf().positive_overlap_threshold(),
+                                                    GetCustomizedOpConf().negative_overlap_threshold());
+  GtBoxesNearestAnchorsInfo gt_boxes_nearest_anchors(BnInOp2Blob("gt_boxes_nearest_anchors")->mut_dptr<T>(),, 
+                                                     BnInOp2Blob("gt_max_overlaps")->mut_dptr<T>());
+
+  ForEachOverlapBetweenAnchorsAndGtBoxes(gt_boxes_slice, anchor_boxes_slice
+                                         [&](int32_t gt_box_idx, int32_t anchor_box_idx, float overlap) {
+    anchor_labels_info.AssignLabelByOverlapThreshold(anchor_box_slice_idx, gt_box_slice_idx, overlap);
+    gt_boxes_nearest_anchors.TryRecordAnchorAsNearest(gt_box_slice_idx, anchor_box_slice_idx, overlap);
+  });
+  AssignPositiveLabelsToGtBoxesNearestAnchors(gt_boxes_nearest_anchors, anchor_labels_info);
+
+  return anchor_labels_info;
+}
+
+template<typename T>
+AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::RandomSubsample(const BoxesSlice<T>& gt_boxes_slice, 
+                                         const BoxesSlice<T>& anchor_boxes_slice, 
+                                         const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+  anchor_boxes_slice.Sort([](const BBox<T>) {
+
+  });
+}
+
+
+
+/*
 template<typename T>
 struct AnchorTargetKernelUtil {
   static int32_t FindInsideAnchors(int32_t image_h, int32_t image_w, int32_t anchors_num,
@@ -54,6 +134,8 @@ struct AnchorTargetKernelUtil {
 template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+
+  
   const Blob* image_info_blob = BnInOp2Blob("image_info");
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
 
@@ -211,13 +293,8 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     }
   }
 }
+*/
 
-template<typename T>
-void AnchorTargetKernel<T>::InitConstBufBlobs(
-    DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FasterRcnnUtil<T>::GenerateAnchors(op_conf().anchor_target_conf().anchors_generator_conf(),
-                                     BnInOp2Blob("anchors"));
-}
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kAnchorTargetConf, AnchorTargetKernel,
                                FLOATING_DATA_TYPE_SEQ);

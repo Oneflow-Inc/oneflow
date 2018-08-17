@@ -121,14 +121,45 @@ class BBoxDelta final {
 };
 
 template<typename T>
+class BBoxSlice final {
+public:
+  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = false);
+
+  void Truncate(size_t size);
+  void Filter(const std::function<bool(const BBox<T>*)>& FilterMethod);
+  void Sort(const std::function<bool(size_t, size_t)>& Compare);
+  void Sort(const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare);
+  void Shuffle(size_t begin, size_t end);
+  void Shuffle() { Shuffle(0, size_); }
+  
+  inline int32_t GetIndex(size_t n) const {
+    CHECK_LT(n, size_);
+    return index_ptr_[n];
+  }
+
+  inline const BBox<T>* GetBBox(size_t n) const {
+    CHECK_LT(n, size_);
+    return BBox<T>::Cast(bbox_ptr) + index_ptr_[n];
+  }
+
+  inline size_t capacity() const { return capacity_; }
+  inline size_t size() { return size_ };
+  inline const T* bbox_ptr() const { return bbox_ptr_; }
+  inline const T* score_ptr() const { return score_ptr_; }
+  inline const int32_t* index_ptr() const { return index_ptr_; }
+  inline int32_t* mut_index_ptr() { return index_ptr_; }
+
+private:
+  const T* bbox_ptr_;
+  int32_t* index_ptr_;
+  const size_t capacity_;
+  size_t size_;
+};
+
+template<typename T>
 class ScoredBBoxSlice final {
  public:
-  ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice)
-      : len_(len),
-        bbox_ptr_(bbox_ptr),
-        score_ptr_(score_ptr),
-        index_slice_(index_slice),
-        available_len_(len) {}
+  ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice);
 
   void Sort(const std::function<bool(const T, const T, const BBox<T>&, const BBox<T>&)>& Compare);
   void DescSortByScore(bool init_index);
@@ -182,6 +213,7 @@ struct FasterRcnnUtil final {
                                const BBoxRegressionWeights& bbox_reg_ws, T* deltas);
   static void ClipBoxes(int64_t boxes_num, const int64_t image_height, const int64_t image_width,
                         T* bboxes);
+  static void ConvertGtBoxesToAbsoluteCoord();
 };
 
 }  // namespace oneflow

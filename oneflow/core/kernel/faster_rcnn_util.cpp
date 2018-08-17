@@ -69,8 +69,71 @@ void FasterRcnnUtil<T>::ClipBoxes(int64_t boxes_num, const int64_t image_height,
   FOR_RANGE(int64_t, i, 0, boxes_num) { bbox_ptr[i].Clip(image_height, image_width); }
 }
 
+template<typename T>
+void FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const Blob* gt_boxes, Blob* converted_gt_boxes) {
+
+}
+
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
+
+template<typename T>
+BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = true)
+      , bbox_ptr_(bbox_ptr)
+      , index_ptr_(index_ptr)
+      : capacity_(capacity)
+      , size_(0) {
+  if (init_index) {
+    size_ = capacity;
+    std::iota(index_ptr_, index_ptr_ + size_, 0);
+  }
+}
+
+template<typename T>
+void BBoxSlice<T>::Truncate(size_t size) {
+  CHECK_GE(size, 0);
+  if (size < capacity_) { size_ = size; }
+}
+
+template<typename T>
+void BBoxSlice<T>::Sort(
+    const std::function<bool(size_t, size_t)>& Compare) {
+  std::sort(index_ptr_, index_ptr_ + size_, [&](int32_t index_lhs, int32_t index_rhs) {
+    return Compare(index_lhs, index_rhs);
+  });
+}
+
+template<typename T>
+void BBoxSlice<T>::Sort(
+    const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare) {
+  std::sort(index_ptr_, index_ptr_ + size_, [&](int32_t index_lhs, int32_t index_rhs) {
+    const BBox<T>* bbox = BBox<T>::Cast(bbox_ptr_);
+    return Compare(bbox[index_lhs], bbox[index_rhs]);
+  });
+}
+
+template<typename T>
+void BBoxSlice<T>::Filter(const std::function<bool(const BBox<T>*)>& FilterMethod) {
+  size_t keep_num = 0;
+  FOR_RANGE(size_t, i, 0, size_) {
+    if (!FilterMethod(GetBBox(i))) {
+      // keep_num <= i so index_ptr_ never be written before read
+      index_ptr_[keep_num++] = index_ptr_[i];
+    }
+  }
+  size_ = keep_num;
+}
+
+template<typename T>
+void BBoxSlice<T>::Shuffle(size_t begin, size_t end) {
+  CHECK_LE(end, size_);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::shuffle(index_ptr_ + begin, index_ptr_ + end, gen);
+}
+
+#define INITIATE_BBOX_SLICE(T, type_cpp) template class BBoxSlice<T>;
+OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
 void ScoredBBoxSlice<T>::Truncate(int32_t len) {
