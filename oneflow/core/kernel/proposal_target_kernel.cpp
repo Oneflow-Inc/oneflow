@@ -45,7 +45,7 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     rois_slice.DescSortByScore();
     ScoredBBoxSlice<T> fg_slice = ForegroundChoice(rois_slice);
     ScoredBBoxSlice<T> bg_slice = BackgroundChoice(rois_slice, fg_slice.available_len());
-    ComputeTargetAndWriteOut(fg_slice, bg_slice, roi_nearest_gt_index_ptr, gt_boxes_ptr,
+    ComputeTargetAndWriteOut(fg_slice, bg_slice, roi_nearest_gt_index_ptr, gt_boxes_tmp_ptr,
                              gt_labels_ptr, rois_ptr, labels_ptr, bbox_targets_ptr,
                              inside_weights_ptr, outside_weights_ptr);
     gt_boxes_tmp_ptr->mutable_value()->clear_value();
