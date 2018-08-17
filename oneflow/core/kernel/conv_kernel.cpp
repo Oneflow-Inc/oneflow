@@ -26,7 +26,8 @@ void ConvKernelIf<device_type, T>::BackwardDataContent(
 template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && !this->UseCudnnOnGpu()) {
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")
+      && (device_type == DeviceType::kCPU || this->EnableCudnn() == false)) {
     InitializerConf bias_multiplier_initializer_conf;
     bias_multiplier_initializer_conf.mutable_constant_conf()->set_value(1.0f);
     KernelUtil<device_type, T>::InitializeWithConf(ctx, bias_multiplier_initializer_conf, 0,
