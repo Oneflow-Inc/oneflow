@@ -70,8 +70,17 @@ void FasterRcnnUtil<T>::ClipBoxes(int64_t boxes_num, const int64_t image_height,
 }
 
 template<typename T>
-void FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const Blob* gt_boxes, Blob* converted_gt_boxes) {
-
+int32_t FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_boxes, const int32_t image_height, const int32_t image_width, T* converted_gt_boxes) {
+  int32_t boxes_num = gt_boxes->value().value_size() / 4;
+  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes->value().value().data());
+  BBox<T>* converted_gt_bbox = BBox<T>::MutCast(converted_gt_boxes);
+  FOR_RANGE(int32_t, i, 0, boxes_num) {
+    converted_gt_bbox[i].set_x1(gt_bbox[i].x1() * image_width);
+    converted_gt_bbox[i].set_y1(gt_bbox[i].y1() * image_height);
+    converted_gt_bbox[i].set_x2(gt_bbox[i].x2() * image_width);
+    converted_gt_bbox[i].set_y2(gt_bbox[i].y2() * image_height);
+  }
+  return boxes_num;
 }
 
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;

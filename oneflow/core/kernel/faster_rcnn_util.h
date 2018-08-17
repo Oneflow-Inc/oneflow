@@ -123,7 +123,7 @@ class BBoxDelta final {
 template<typename T>
 class BBoxSlice final {
 public:
-  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = false);
+  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index);
 
   void Truncate(size_t size);
   void Filter(const std::function<bool(const BBox<T>*)>& FilterMethod);

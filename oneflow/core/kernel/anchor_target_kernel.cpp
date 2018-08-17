@@ -19,7 +19,7 @@ void ForEachOverlapBetweenAnchorsAndGtBoxes(const BoxesSlice<T>& gt_boxes_slice,
 }
 
 void AssignPositiveLabelsToGtBoxesNearestAnchors(const GtBoxesNearestAnchorsInfo& gt_boxes_nearest_anchors,
-                                                 AnchorLabelsAndMaxOverlapsInfo& anchor_labels_info)
+                                                 AnchorLabelsAndMaxOverlapsInfo& anchor_labels_info) {
   gt_boxes_nearest_anchors.ForEachNearestAnchor([](int32_t anchor_idx) {
     anchor_labels_info.TrySetPositiveLabel(anchor_idx);
   });
@@ -30,21 +30,32 @@ void AssignPositiveLabelsToGtBoxesNearestAnchors(const GtBoxesNearestAnchorsInfo
 template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  FasterRcnnUtil<T>::GenerateAnchors(op_conf().anchor_target_conf().anchors_generator_conf(),
-                                     BnInOp2Blob("anchors"));
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
+  const AnchorGeneratorConf& anchor_generator_conf = GetCustomizedOpConf().anchors_generator_conf();
+  FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
+  BBoxSlice<T> inside_anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(), BnInOp2Blob("inside_anchor_index")->mut_dptr<T>());
+  inside_anchors_slice.Filter([&](const BBox<T>* anchor_box) {
+    return anchor_box->x1() < 0 || anchor_box->y1() < 0 || anchor_box->x2() >= anchor_generator_conf.image_width || anchor_box->y2() >= anchor_generator_conf.image_height;
+  });
+  *(BnInOp2Blob("inside_anchor_num")->mut_dptr<int32_t>()) = inside_anchors_slice.size();
 }
 
 template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
+  Blob* gt_boxes_absolute_blob = BnInOp2Blob("gt_boxes_absolute");
   
-  FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(BnInOp2Blob("gt_boxes"), BnInOp2Blob("ab_gt_boxes"));
-  ScoredBBoxSlice<T> keep_anchors_slice = FilterOutsideAnchors(BnInOp2Blob("anchors"));
+  BBoxSlice<T> inside_anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(), BnInOp2Blob("inside_anchor_index")->mut_dptr<T>(), false);
+  inside_anchors_slice.Truncate(*(BnInOp2Blob("inside_anchor_num")->dptr<int32_t>()));
 
   FOR_RANGE(int64_t, i, 0, images_num) { 
-    
-    
-    anchor_label_and_nearest_gt_box = AssignLabels();
+    int32_t boxes_num = FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(gt_boxes_blob->dptr<FloatList16>(i), gt_boxes_absolute_blob->mut_dptr<T>());
+    BBoxSlice<T> gt_boxes_slice(gt_boxes_absolute_blob->shape().At(0), gt_boxes_absolute_blob->dptr<T>(), BnInOp2Blob("gt_boxes_index")->mut_dptr<T>());
+    gt_boxes_slice.Truncate(boxes_num);
+
+    anchor_label_and_nearest_gt_box = AssignLabels(gt_boxes_slice, inside_anchors_slice, BnInOp2Blob);
 
 
   }
@@ -262,7 +273,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     LOG(INFO) << "bg_cnt(2): " << bg_cnt << std::endl;
 
     // 5. Compute foreground anchors' bounding box regresion target(i.e. deltas).
-    FOR_RANGE(int32_t, i, 0, fg_cnt) {
+    FOR_RANGE(int32_t, i, 0, fg_cnt) {z
       const int32_t anchor_idx = fg_inds_ptr[i];
       const int32_t gt_boxes_idx = max_overlaps_inds_ptr[anchor_idx];
       current_img_target_bbox_delta[anchor_idx].TransformInverse(
