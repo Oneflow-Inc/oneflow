@@ -231,46 +231,6 @@ uint64_t NumOfPiecesInSnapshot() {
          * Global<JobDesc>::Get()->NumOfPiecesInBatch();
 }
 
-double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
-                                           double act_frequency) {
-  if (task_type == TaskType::kMdSave) {
-    double formal_run_frequency = 1.0 / NumOfPiecesInSnapshot();
-    return (duration / act_frequency) * formal_run_frequency;
-  }
-  return duration;
-}
-
-double CalcBaseII(const ChainActGraph& act_graph) {
-  int64_t max_act_cnt = 0;
-  HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
-  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
-    int64_t actor_id = act_event->actor_id();
-    if (act_graph.IsActEventWithConsumer(act_event)) {
-      ++actor_id2outputed_act_cnt[actor_id];
-      max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
-    }
-  });
-  HashMap<int64_t, double> actor_id2act_frequency;
-  for (const auto& pair : actor_id2outputed_act_cnt) {
-    actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
-  }
-  HashMap<int64_t, double> stream_id2total_calc_time;
-  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
-    int64_t actor_id = act_event->actor_id();
-    auto frequence_it = actor_id2act_frequency.find(actor_id);
-    if (frequence_it == actor_id2act_frequency.end()) { return; }
-    int64_t stream_id = act_event->work_stream_id();
-    TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
-    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
-        task_type, Duration4ActEvent(*act_event), frequence_it->second);
-  });
-  double base_ii = 0;
-  for (const auto& pair : stream_id2total_calc_time) {
-    base_ii = std::max(base_ii, pair.second / max_act_cnt);
-  }
-  return base_ii;
-}
-
 double IIScale4Actor(TaskType task_type, double default_ii_scale) {
   if (task_type == TaskType::kMdSave) { return NumOfPiecesInSnapshot(); }
   return default_ii_scale;
@@ -471,11 +431,10 @@ double Improver::BinarySearchII(
 }
 
 void Improver::ForEachImprovedRegstNum(
-    const ChainActGraph& graph, const Plan& plan, bool is_memory_limited,
+    const Plan& plan, bool is_memory_limited, double ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
-  double ii = CalcBaseII(graph);
   if (is_memory_limited) {
     MemZoneRegstDescs mz_regst_descs;
     MakeMemZoneRegstDescs(plan, &mz_regst_descs);
@@ -544,16 +503,18 @@ Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
   Init(amd, naive_plan);
   std::list<std::unique_ptr<ActEvent>> act_events;
   ParseActEvents(act_event_filepath, &act_events);
-  ChainActGraph act_graph(naive_plan, std::move(act_events));
+  ChainActGraph chain_act_graph(naive_plan, std::move(act_events));
 
-  auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
-  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
+  auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(chain_act_graph);
+  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(chain_act_graph);
+  double base_ii = chain_act_graph.CalcBaseII();
+
   Plan mem_unlimited_plan(naive_plan);
-  ForEachImprovedRegstNum(act_graph, naive_plan, false, PathDurations4RegstDescId,
+  ForEachImprovedRegstNum(naive_plan, false, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
   Plan mem_shared_plan = ImproveMemSharedId(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
-  ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
+  ForEachImprovedRegstNum(mem_shared_plan, true, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   return plan;
