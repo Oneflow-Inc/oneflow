@@ -6,16 +6,23 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_anchor_target_conf());
 
-  EnrollInputBn("image_info", false);
+  // input
   EnrollInputBn("gt_boxes", false);
 
+  // output
   EnrollOutputBn("rpn_labels", false);
   EnrollOutputBn("rpn_bbox_targets", false);
   EnrollOutputBn("rpn_bbox_inside_weights", false);
   EnrollOutputBn("rpn_bbox_outside_weights", false);
 
-  EnrollConstBufBn("anchors");
-  EnrollDataTmpBn("inside_anchors_inds");
+  // Const buf
+  EnrollConstBufBn("anchors");  // (N, H, W, A * 4)
+  EnrollConstBufBn("inside_anchor_index");  // (N, H, W, A)
+  EnrollConstBufBn("inside_anchor_num");    // (1)
+
+  // Data tmp
+  EnrollDataTmpBn("gt_boxes_absolute"); // (max_gt_boxes_num * 4, 1)
+  EnrollDataTmpBn("gt_boxes_index");    // (max_gt_bboxes_num, 1)
   EnrollDataTmpBn("fg_inds");
   EnrollDataTmpBn("bg_inds");
   EnrollDataTmpBn("max_overlaps");

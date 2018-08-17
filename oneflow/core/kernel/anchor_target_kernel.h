@@ -19,12 +19,13 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
                           std::function<Blob*(const std::string&)>) const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  const PbMessage& AnchorTargetKernel<T>::GetCustomizedOpConf() const override;
 };
 
 class AnchorLabelsAndMaxOverlapsInfo final {
 public:
-  AnchorLabelsAndMaxOverlapInfo(int32_t* anchor_labels_ptr, int32_t* max_overlaps_ptr, 
-                                float* max_overlap_gt_boxes_idx_ptr, 
+  AnchorLabelsAndMaxOverlapsInfo(int32_t* anchor_labels_ptr, float* max_overlaps_ptr, 
+                                int32_t* max_overlap_gt_boxes_idx_ptr, 
                                 float positive_threshold, float negative_threshold,
                                 size_t size, bool init_label = true)
       : anchor_labels_ptr_(anchor_labels_ptr)
@@ -104,7 +105,7 @@ private:
   int32_t last_gt_box_idx_;
   int32_t last_gt_box_record_end_;
   int32_t record_anchors_num_;
-}
+};
 
 }  // namespace oneflow
 #endif  // ONEFLOW_CORE_OPERATOR_ANCHOR_TARGET_KERNEL_OP_H_
