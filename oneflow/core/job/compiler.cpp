@@ -60,10 +60,14 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ClearOutOfDateConsumedRegst, _1));
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+    task_gph->EnableMemSharingInReduceStruct();
+  }
   if (job_desc->IsTrain() && job_desc->other_conf().use_ordered_allreduce_in_mdupdt()) {
     task_gph->AddCtrlEdgeInReduceStruct();
   }
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
+  if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }

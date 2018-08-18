@@ -5,7 +5,7 @@
 namespace oneflow {
 
 void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
-  ProduceB121Regst("out");
+  ProduceRegst("out", true);
   ProduceRegst("activation", true);
   ProduceRegst("data_tmp", true);
   ProduceRegst("fw_buf", true, 1, 1);
@@ -16,13 +16,12 @@ void NormalForwardCompTaskNode::ProduceAllRegstsAndBindEdges() {
     if (succ_logical->TypeName() == "MdSave") {
       BindEdgeWithProducedRegst(edge, "forward_model");
     } else if (succ_logical->TypeName() == "NormalBackward") {
-      BindEdgeWithProducedRegst(edge, "boxing_out");
-      BindEdgeWithProducedRegst(edge, "121_out");
+      BindEdgeWithProducedRegst(edge, "out");
       BindEdgeWithProducedRegst(edge, "activation");
       BindEdgeWithProducedRegst(edge, "data_tmp");
       BindEdgeWithProducedRegst(edge, "const_buf");
     } else {
-      BindEdgeWithProducedB121Regst(edge, "out");
+      BindEdgeWithProducedRegst(edge, "out");
     }
   }
 }
@@ -95,13 +94,17 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
 }
 
 void NormalForwardCompTaskNode::BuildOutRegst() {
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
     HashSet<LogicalBlobId> found_lbis;
     for (ExecEdge* out_edge : cur_node->out_edges()) { found_lbis.insert(out_edge->lbi()); }
     for (const std::string& obn : cur_node->op()->output_bns()) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(obn);
-      if (TryAddLbiToB121RegstAndBindIt(cur_node, obn, "out") == false) {
-        CHECK(found_lbis.find(lbi) != found_lbis.end());
+      if (logical_node()->IsDataLbiOnOutEdge(lbi)) {
+        out_regst->AddLbi(lbi);
+        cur_node->BindBnWithRegst(obn, out_regst);
+      } else {
+        CHECK(found_lbis.empty() || found_lbis.find(lbi) != found_lbis.end());
       }
     }
   });

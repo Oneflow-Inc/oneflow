@@ -42,6 +42,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   std::shared_ptr<const Operator> op() const { return op_; }
   std::shared_ptr<const Operator>& mut_op() { return op_; }
+  RegstDesc* RegstDesc4BnInOp(const std::string& bn) { return bn_in_op2regst_.at(bn).lock().get(); }
 
   void BindBnWithRegst(const std::string& bn, std::weak_ptr<RegstDesc>);
   void BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
@@ -59,6 +60,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void InferBlobDescs(const ParallelContext* parallel_ctx);
   void InferBwBufBlobDescs(const ParallelContext* parallel_ctx);
   void InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx);
+  void FixInDiffBlobDescs(const ParallelContext* parallel_ctx);
 
  private:
   const OpContext* op_context() const { return fw_node_ ? fw_node_->op_ctx_.get() : op_ctx_.get(); }
