@@ -76,10 +76,10 @@ void TaskGraph::FindChainsInSameStream() {
   CollectAncestorsForEachNode();
 
   ChainGraph chain_gph(*this);
-  const auto& ordered_chain_nodes = chain_gph.ordered_chain_nodes();
+  const auto& ordered_chain_nodes = chain_gph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
   for (auto& chain_node : ordered_chain_nodes) {
-    auto& ordered_in_chain = chain_node->task_nodes();
+    auto& ordered_in_chain = chain_node->TaskNodes();
     int64_t chain_id = chain_node->chain_id();
     for (auto& task_node : ordered_in_chain) {
       task_node->set_chain_id(chain_id);
