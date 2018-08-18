@@ -153,7 +153,7 @@ void ChainGraph::GroupTaskNodesByMachine(
 }
 
 void ChainGraph::MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
-                                std::vector<std::vector<TaskNode*>>* chains) {
+                                std::vector<std::vector<TaskNode*>>* chains) const {
   int64_t machine_num = machine2tasks.size();
   int64_t cpu_num = std::thread::hardware_concurrency();
   int64_t thread_pool_size = std::min(machine_num, cpu_num);
@@ -202,9 +202,9 @@ void ChainGraph::InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains
 
 void ChainGraph::SetChainId4ChainNode() {
   TopoForEachNode([&](ChainNode* chain_node) {
-    int64_t stream_id = chain_node->task_nodes().front()->GlobalWorkStreamId();
+    int64_t stream_id = chain_node->TaskNodes().front()->GlobalWorkStreamId();
     int64_t chain_id = Global<IDMgr>::Get()->AllocateChainId(stream_id);
-    chain_node->set_chain_id(chain_id);
+    chain_node->SetChainId(chain_id);
   });
 }
 
