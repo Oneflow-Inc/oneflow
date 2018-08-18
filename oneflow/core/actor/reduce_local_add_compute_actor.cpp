@@ -30,8 +30,12 @@ void ReduceLocalAddCompActor::SetKernelCtxOther(void** other) {
   int64_t dev_num_of_each_machine = parallel_ctx()->parallel_num() / out_blob_init_status_.size();
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
   cur_out_blob_id_ = in_bn_id / dev_num_of_each_machine;
-  bool is_inited = out_blob_init_status_.at(cur_out_blob_id_);
-  bool is_inplace_in_bn_id = inplace_blob_ids_.find(in_bn_id) != inplace_blob_ids_.end();
+  bool is_inited = Global<JobDesc>::Get()->enable_mem_sharing()
+                       ? true
+                       : out_blob_init_status_.at(cur_out_blob_id_);
+  bool is_inplace_in_bn_id = Global<JobDesc>::Get()->enable_mem_sharing()
+                                 ? inplace_blob_ids_.find(in_bn_id) != inplace_blob_ids_.end()
+                                 : false;
 
   other_val_ = std::make_tuple(in_bn_id, cur_out_blob_id_, is_inited, is_inplace_in_bn_id);
   *other = static_cast<void*>(&other_val_);

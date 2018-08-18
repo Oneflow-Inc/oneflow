@@ -11,8 +11,12 @@ void ReduceGlobalAddCompActor::VirtualCompActorInit(const TaskProto& proto) {
 
 void ReduceGlobalAddCompActor::SetKernelCtxOther(void** other) {
   const std::string& ibn = regst_desc_id2bn_in_op_.at(cur_processed_regst_desc_id());
-  bool is_inited = processed_regst_desc_id_cnt() != 0;
-  bool is_inplace_in_blob = oneflow_cast<int64_t>(ibn.substr(3)) == parallel_ctx()->parallel_id();
+  bool is_inited =
+      Global<JobDesc>::Get()->enable_mem_sharing() ? true : processed_regst_desc_id_cnt() != 0;
+  bool is_inplace_in_blob =
+      Global<JobDesc>::Get()->enable_mem_sharing()
+          ? oneflow_cast<int64_t>(ibn.substr(3)) == parallel_ctx()->parallel_id()
+          : false;
 
   other_val_ = std::make_tuple(ibn, is_inited, is_inplace_in_blob);
   *other = static_cast<void*>(&other_val_);
