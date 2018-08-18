@@ -13,6 +13,7 @@ class AccumulateCompActor : public CompActor {
 
  protected:
   void Init(const TaskProto&, int32_t max_acc_cnt, ColIdOrder order);
+  int64_t ActNumForEachOutput() const override;
 
  private:
   void Act() override;

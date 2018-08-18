@@ -29,6 +29,8 @@ void InputWiseCompActor::Init(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&InputWiseCompActor::HandlerNormal);
 }
 
+int64_t InputWiseCompActor::ActNumForEachOutput() const { return regst_desc_id2in_bn_id_.size(); }
+
 void InputWiseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
   Regst* regst = msg.regst();
   int regst_desc_id = regst->regst_desc_id();

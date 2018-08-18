@@ -85,6 +85,8 @@ class Actor {
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
+  virtual int64_t ActNumForEachOutput() const { return 1; }
+  virtual bool CheckOutputActId(int64_t regst_desc_id) const { return true; }
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
@@ -149,7 +151,7 @@ class Actor {
   // Status of Produced Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_data_regsts_;
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_data_regst_;
-  HashMap<int64_t, int64_t> produced_data_regst2max_act_id_;
+  HashMap<int64_t, int64_t> produced_data_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_data_regst2reading_cnt_;
   int64_t actual_writeable_produced_data_regst_desc_num_;
   int64_t writeable_produced_data_regst_desc_cnt_;
@@ -163,7 +165,7 @@ class Actor {
   // Status of Control Registers
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_ctrl_regst_;
   HashMap<int64_t, std::deque<Regst*>> writeable_produced_ctrl_regst_;
-  HashMap<int64_t, int64_t> produced_ctrl_regst2max_act_id_;
+  HashMap<int64_t, int64_t> produced_ctrl_regst2expected_act_id_;
   HashMap<Regst*, int64_t> produced_ctrl_regst2reading_cnt_;
   HashMap<int64_t, std::deque<Regst*>> consumed_ctrl_regst_;
   int64_t total_reading_ctrl_cnt_;
