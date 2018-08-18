@@ -375,10 +375,11 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
       }
       Connect<LogicalNode>(md_updt_logical, NewEdge(), fw_logical);
+      BackwardLogicalNode* bw_logical = fw_logical->bw_node();
+      if (bw_logical) { Connect<LogicalNode>(md_updt_logical, NewEdge(), bw_logical); }
       // Model Diff Accumulate Logical
       if (is_train && fw_logical->HasOpWithModelBlob()) {
-        BackwardLogicalNode* bw_logical = fw_logical->bw_node();
-        Connect<LogicalNode>(md_updt_logical, NewEdge(), bw_logical);
+        CHECK_NOTNULL(bw_logical);
         LogicalNode* md_diff_acc_logical = nullptr;
         if (Global<JobDesc>::Get()->NumOfPiecesInBatch() > 1) {
           OperatorConf md_diff_acc_op_conf;
