@@ -14,7 +14,7 @@ void HingeLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataCo
   const LabelType* label = label_blob->dptr<LabelType>();
   const PredType* pred = prediction_blob->dptr<PredType>();
   PredType* loss = loss_blob->mut_dptr<PredType>();
-  OperatorConf op_conf = this->op_conf();
+  const OperatorConf& op_conf = this->op_conf();
   tmp_diff_blob->CopyDataContentFrom(ctx.device_ctx, prediction_blob);
   PredType* tmp_diff = tmp_diff_blob->mut_dptr<PredType>();
   // forward
@@ -38,7 +38,7 @@ const LossKernelConf& HingeLossKernel<device_type, PredType, LabelType>::GetLoss
 template<typename PredType, typename LabelType>
 struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const int64_t data_num, const int64_t pre_dim,
-                      const PredType* pred, const LabelType* label, const OperatorConf op_conf,
+                      const PredType* pred, const LabelType* label, const OperatorConf& op_conf,
                       PredType* tmp_diff, PredType* loss) {
     // transfor sign of each pred according to label
     for (int64_t i = 0; i < data_num; ++i) {
@@ -50,10 +50,11 @@ struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
     }
     switch (op_conf.hinge_loss_conf().norm()) {
       case L1:
-        for (int64_t i = 0; i < data_num; ++i) {
+        KernelUtil<DeviceType::kCPU, PredType>::RowSum(ctx, data_num, pre_dim, tmp_diff, loss);
+        /*for (int64_t i = 0; i < data_num; ++i) {
           KernelUtil<DeviceType::kCPU, PredType>::Sum(ctx, pre_dim, tmp_diff + i * pre_dim,
                                                       loss + i);
-        }
+        }*/
         break;
       case L2:
         for (int64_t i = 0; i < data_num; ++i) {
