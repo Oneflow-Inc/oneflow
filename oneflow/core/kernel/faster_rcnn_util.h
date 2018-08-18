@@ -139,6 +139,7 @@ public:
   void Shuffle() { Shuffle(0, size_); }
   
   inline int32_t GetIndex(size_t n) const {
+
     CHECK_LT(n, size_);
     return index_ptr_[n];
   }
@@ -157,15 +158,22 @@ public:
 
 private:
   const size_t capacity_;
-  const T* bbox_ptr_; // TODO: change to BBox<T>* type?
-  size_t avaliable_bbox_len_; // old interface: size_
+  const T* bbox_ptr_;
+  size_t size_;
   int32_t* index_ptr_;
 };
 
+struct GroupLabel {
+  int32_t label;
+  size_t  begin;
+  size_t  size;
+}
 template <typename T, int32_t N>
 class LabeledBBoxSlice : BBoxSlice final {
  public:
-  LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, size_t* label_ptr, std::arrcy<int32_t, N>& label_type_, std::arrcy<int32_t, N>& label_cnt_, int32_t* index_ptr, bool init_index);
+  LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, int32_t* index_ptr, bool init_index);
+  LabeledBBoxSlice(const BBoxSlice<T>& bbox_slice, int32_t* label_ptr)
+    : LabeledBBoxSlice(bbox_slice.capacity(), bbox_slice.boxes_ptr(), label_ptr, bbox_slice.index_ptr(), false){}
   void GropuByLabelType();
   int32_t get_label_start_index(int32_t label);
   std::arrcy<int32_t, N> get_label_cnt(int32_t label);
@@ -176,8 +184,7 @@ class LabeledBBoxSlice : BBoxSlice final {
   inline std::arrcy<int32_t, N> label_cnt() { return label_cnt_; }
  private:
   size_t* label_ptr_;
-  std::array<int32_t, N> label_type_;
-  std::array<int32_t, N> label_cnt_;
+  std::array<GroupLabel, N> group_labels_;
 };
 
 template<typename T>
@@ -221,11 +228,11 @@ class ScoredBBoxSlice : BBoxSlice final {
   int32_t* mut_index_slice() { return index_slice_; }
 
  private:
-  const int32_t len_; // TODO: change to capacity_
-  const T* bbox_ptr_; // TODO: change to BBox<T>* type?
+  const int32_t len_;
+  const T* bbox_ptr_;
   const T* score_ptr_;
-  int32_t* index_slice_;  // TODO: change to index_ptr_
-  int32_t available_len_; // TODO: change to avaliable_bbox_size_
+  int32_t* index_slice_;
+  int32_t available_len_;
 };
 
 template<typename T>
