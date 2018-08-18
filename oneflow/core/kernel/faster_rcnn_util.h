@@ -143,21 +143,31 @@ public:
   }
 
   inline size_t capacity() const { return capacity_; }
-  inline size_t size() { return size_ };
+  inline size_t avaliable_bbox_len() { return avaliable_bbox_len_ };
   inline const T* bbox_ptr() const { return bbox_ptr_; }
   inline const T* score_ptr() const { return score_ptr_; }
   inline const int32_t* index_ptr() const { return index_ptr_; }
   inline int32_t* mut_index_ptr() { return index_ptr_; }
 
 private:
-  const T* bbox_ptr_;
-  int32_t* index_ptr_;
   const size_t capacity_;
-  size_t size_;
+  const T* bbox_ptr_; // TODO: change to BBox<T>* type?
+  size_t avaliable_bbox_len_; // old interface: size_
+  int32_t* index_ptr_;
+};
+
+template <typename T, int32_t N>
+class LabeledBBoxSlice : BBoxSlice final {
+ public:
+  void GropuByLabelType();
+ private:
+  const size_t* label_ptr_;
+  std::array<int32_t, N> label_type_;
+  std::array<int32_t, N> label_cnt_;
 };
 
 template<typename T>
-class ScoredBBoxSlice final {
+class ScoredBBoxSlice : BBoxSlice final {
  public:
   ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice);
 
@@ -166,13 +176,13 @@ class ScoredBBoxSlice final {
   void DescSortByScore() { DescSortByScore(true); }
   void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
 
-  void Truncate(int32_t len);
+  // void Truncate(int32_t len);
   void TruncateByThreshold(float thresh);
   int32_t FindByThreshold(const float thresh);
   void Concat(const ScoredBBoxSlice& other);
-  void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
+  // void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
   ScoredBBoxSlice<T> Slice(const int32_t begin, const int32_t end);
-  void Shuffle();
+  // void Shuffle();
 
   inline int32_t GetSlice(int32_t i) const {
     CHECK_LT(i, available_len_);
@@ -197,11 +207,11 @@ class ScoredBBoxSlice final {
   int32_t* mut_index_slice() { return index_slice_; }
 
  private:
-  const int32_t len_;
-  const T* bbox_ptr_;
+  const int32_t len_; // TODO: change to capacity_
+  const T* bbox_ptr_; // TODO: change to BBox<T>* type?
   const T* score_ptr_;
-  int32_t* index_slice_;
-  int32_t available_len_;
+  int32_t* index_slice_;  // TODO: change to index_ptr_
+  int32_t available_len_; // TODO: change to avaliable_bbox_size_
 };
 
 template<typename T>

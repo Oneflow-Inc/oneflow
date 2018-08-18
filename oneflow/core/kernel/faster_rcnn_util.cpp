@@ -86,6 +86,7 @@ int32_t FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_b
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
+/* BBoxSlice */
 template<typename T>
 BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = true)
       , bbox_ptr_(bbox_ptr)
@@ -155,6 +156,28 @@ void ScoredBBoxSlice<T>::TruncateByThreshold(const float thresh) {
   Truncate(FindByThreshold(thresh));
 }
 
+/* LabeledBBoxSlice */
+template<typename T, int32_t N>
+void GroupByLabelType() {
+  FOR_RANGE(size_t, i, 0, available_len_) {
+    FOR_RANGE(int32_t, j, 0, label_type_.size()) {
+      if(label_ptr_[i] == label_type_[j]) {
+        label_cnt_[j]++;
+      }
+    }
+  }
+  size_t* start = label_ptr_;
+  FOR_RANGE(size_t, i, 0, label_cnt_.size()) {
+    label = label_type_[i];
+    count = label_cnt_[i];
+    FOR_RANGE(size_t, j, 0, count) {
+      std::fill(start, start + count, label);
+    }
+    start += count;
+  }
+}
+
+/* ScoredBBoxSlice */
 // Find first index which score less than threshold.
 template<typename T>
 int32_t ScoredBBoxSlice<T>::FindByThreshold(const float thresh) {
