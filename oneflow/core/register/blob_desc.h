@@ -37,8 +37,8 @@ class BlobDesc {
   int32_t max_col_num() const { return max_col_num_; }
   void set_max_col_num(int32_t val) { max_col_num_ = val; }
 
-  int32_t mem_shared_id() const { return mem_shared_id_; }
-  void set_mem_shared_id(int32_t val) { mem_shared_id_ = val; }
+  int32_t blob_mem_id() const { return blob_mem_id_; }
+  void set_blob_mem_id(int32_t val) { blob_mem_id_ = val; }
 
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
@@ -54,7 +54,7 @@ class BlobDesc {
   bool has_data_id_;
   bool has_col_num_;
   int64_t max_col_num_;
-  int32_t mem_shared_id_;
+  int32_t blob_mem_id_;
 
   FieldDesc body_field_;
 };

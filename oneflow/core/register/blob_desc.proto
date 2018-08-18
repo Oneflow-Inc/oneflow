@@ -10,7 +10,7 @@ message FieldHeaderDesc {
 
 message BlobHeaderDescProto {
   required int32 max_col_num = 1;
-  required int32 mem_shared_id = 2;
+  required int32 blob_mem_id = 2;
   oneof header_type {
     FieldDescProto opaque_header = 3;
     FieldHeaderDesc field_header = 4;
