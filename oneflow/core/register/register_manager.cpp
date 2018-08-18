@@ -6,32 +6,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
-namespace std {
-
-template<>
-struct hash<oneflow::MemoryCase> {
-  size_t operator()(const oneflow::MemoryCase& val) const {
-    if (val.has_host_mem()) {
-      return val.host_mem().used_by_device() + 1024;
-    } else {
-      return val.device_cuda_mem().device_id();
-    }
-  }
-};
-
-}  // namespace std
-
 namespace oneflow {
-
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
-  }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
-  }
-  return false;
-}
 
 RegstMgr::RegstMgr(const Plan& plan) {
   std::list<const RegstDescProto*> regst_protos;
