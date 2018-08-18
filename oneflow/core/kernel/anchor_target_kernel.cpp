@@ -123,7 +123,6 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     int32_t train_piece_size = anchor_target_conf.train_piece_size;
     int32_t fg_fraction = anchor_target_conf.fg_ratio;
     int32_t default_fg_cnt = train_piece_size * fg_ratio;
-    int32_t default_bg_cnt = train_piece_size - fg_cnt;
 
     fg_cnt = labeled_anchor_slice.get_label_cnt(1);
     bg_cnt = labeled_anchor_slice.get_label_cnt(0);
@@ -133,13 +132,14 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       FOR_RANGE(int32_t, i, fg_start, fg_cnt - default_fg_cnt) {
         labeled_anchor_slice.label_ptr[i] = -1;
       }
+    } else {
+      int32_t default_bg_cnt = train_piece_size - fg_cnt;
+      bg_cnt <= default_bg_cnt ? bg_cnt : default_bg_cnt;
     }
     // bg subsample
-    if(bg_cnt > default_bg_cnt) {
-      bg_start = labeled_anchor_slice.get_label_start_index(0);
-      FOR_RANGE(int32_t, i, bg_start, bg_cnt - default_bg_cnt) {
-        labeled_anchor_slice.label_ptr[i] = -1;
-      }
+    bg_start = labeled_anchor_slice.get_label_start_index(0);
+    FOR_RANGE(int32_t, i, bg_start, bg_cnt) {
+      labeled_anchor_slice.label_ptr[i] = -1;
     }
   }
 }
