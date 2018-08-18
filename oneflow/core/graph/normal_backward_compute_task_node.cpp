@@ -175,8 +175,10 @@ void NormalBackwardCompTaskNode::InferBlobDescsInProducedRegsts() {
   } else {
     mut_exec_gph().SoleNode()->InferDiffBlobDescsWithoutFwNode(parallel_ctx());
   }
-  mut_exec_gph().TopoForEachNode(
-      [this](ExecNode* node) { node->InferBwBufBlobDescs(parallel_ctx()); });
+  mut_exec_gph().TopoForEachNode([this](ExecNode* node) {
+    node->FixInDiffBlobDescs(parallel_ctx());
+    node->InferBwBufBlobDescs(parallel_ctx());
+  });
 }
 
 CompTaskNode* NormalBackwardCompTaskNode::GetRelatedFwTaskNode() {
