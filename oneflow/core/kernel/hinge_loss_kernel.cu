@@ -44,16 +44,16 @@ template<typename PredType, typename LabelType>
 struct HingeLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const int64_t data_num, const int64_t pre_dim,
                       const PredType* pred, const LabelType* label, const OperatorConf& op_conf,
-                      PredType* tmp_diff, PredType* loss) {
+                      PredType* tmp_diff, PredType* tmp_storage, PredType* loss) {
     HingeLossForwardTransSignGpu<<<BlocksNum4ThreadsNum(data_num), kCudaThreadsNumPerBlock, 0,
                                    ctx->cuda_stream()>>>(data_num, pre_dim, label, tmp_diff);
     HingeLossForwardMaxGpu<<<BlocksNum4ThreadsNum(data_num * pre_dim), kCudaThreadsNumPerBlock, 0,
                              ctx->cuda_stream()>>>(data_num, pre_dim, tmp_diff);
     switch (op_conf.hinge_loss_conf().norm()) {
       case L1:
-        PredType* tmp_storage;
         KernelUtil<DeviceType::kGPU, PredType>::RowSum(ctx, data_num, pre_dim, tmp_diff, loss,
-                                                       tmp_storage, sizeof(PredType));
+                                                       tmp_storage,
+                                                       sizeof(PredType) * data_num * pre_dim);
         /*for (int64_t i = 0; i < data_num; ++i) {
           PredType tmp_storage[pre_dim];
           KernelUtil<DeviceType::kGPU, PredType>::Sum(ctx, pre_dim, tmp_diff + i * pre_dim,

@@ -9,6 +9,7 @@ void HingeLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataCo
   const Blob* label_blob = BnInOp2Blob("label");
   Blob* loss_blob = BnInOp2Blob("loss");
   Blob* tmp_diff_blob = BnInOp2Blob("tmp_diff");
+  Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage");
   const int64_t data_num = prediction_blob->shape().At(0);
   const int64_t pre_dim = prediction_blob->shape().Count(1);
   const LabelType* label = label_blob->dptr<LabelType>();
@@ -17,9 +18,10 @@ void HingeLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataCo
   const OperatorConf& op_conf = this->op_conf();
   tmp_diff_blob->CopyDataContentFrom(ctx.device_ctx, prediction_blob);
   PredType* tmp_diff = tmp_diff_blob->mut_dptr<PredType>();
+  PredType* tmp_storage = tmp_storage_blob->mut_dptr<PredType>();
   // forward
   HingeLossKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, data_num, pre_dim, pred, label, op_conf, tmp_diff, loss);
+      ctx.device_ctx, data_num, pre_dim, pred, label, op_conf, tmp_diff, tmp_storage, loss);
   // if predict_diff_blob is not null, then do backward
   Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff_blob != nullptr) {
@@ -39,7 +41,7 @@ template<typename PredType, typename LabelType>
 struct HingeLossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const int64_t data_num, const int64_t pre_dim,
                       const PredType* pred, const LabelType* label, const OperatorConf& op_conf,
-                      PredType* tmp_diff, PredType* loss) {
+                      PredType* tmp_diff, PredType* tmp_storage, PredType* loss) {
     // transfor sign of each pred according to label
     for (int64_t i = 0; i < data_num; ++i) {
       tmp_diff[i * pre_dim + static_cast<int64_t>(label[i])] *= -1;
