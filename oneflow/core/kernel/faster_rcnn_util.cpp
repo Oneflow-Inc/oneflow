@@ -89,9 +89,9 @@ OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 /* BBoxSlice */
 template<typename T>
 BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = true)
-      , bbox_ptr_(bbox_ptr)
+      : bbox_ptr_(bbox_ptr)
       , index_ptr_(index_ptr)
-      : capacity_(capacity)
+      , capacity_(capacity)
       , size_(0) {
   if (init_index) {
     size_ = capacity;
@@ -158,6 +158,21 @@ void ScoredBBoxSlice<T>::TruncateByThreshold(const float thresh) {
 
 /* LabeledBBoxSlice */
 template<typename T, int32_t N>
+LabeledBBoxSlice<T, N>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, size_t* label_ptr, std::array<int32_t, N>& label_type, std::arrcy<int32_t, N>& label_cnt, int32_t* index_ptr, bool init_index)
+    : capacity_(capacity)
+    , bbox_ptr_(bbox_ptr)
+    , label_ptr_(label_ptr)
+    , label_type_(label_type)
+    , label_cnt_(label_cnt)
+    , index_ptr_(index_ptr) 
+    , avaliable_len_(0) {
+  if (init_index) {
+    avaliable_len_ = capacity;
+    std::iota(index_ptr_, index_ptr_ + avaliable_len_, 0);
+  }
+}
+
+template<typename T, int32_t N>
 void GroupByLabelType() {
   FOR_RANGE(size_t, i, 0, available_len_) {
     FOR_RANGE(int32_t, j, 0, label_type_.size()) {
@@ -166,15 +181,41 @@ void GroupByLabelType() {
       }
     }
   }
-  size_t* start = label_ptr_;
+  size_t* start_ptr = label_ptr_;
   FOR_RANGE(size_t, i, 0, label_cnt_.size()) {
     label = label_type_[i];
     count = label_cnt_[i];
     FOR_RANGE(size_t, j, 0, count) {
-      std::fill(start, start + count, label);
+      std::fill(start_ptr, start_ptr + count, label);
     }
-    start += count;
+    start_ptr += count;
   }
+}
+
+template<typename T, int32_t N>
+int32_t LabeledBBoxSlice::get_label_cnt(int32_t label) {
+  int32_t start_index = 0;
+  FOR_RANGE(int32_t, 0, i, N) {
+    if(label == label_type_[i]) {
+      return label_cnt_[i];
+    }
+  }
+  LOG(FATAL) << "The label type is not found";
+  return -1;
+}
+
+template<typename T, int32_t N>
+int32_t LabeledBBoxSlice::get_label_start_index(int32_t label) {
+  int32_t start_index = 0;
+  FOR_RANGE(int32_t, 0, i, N) {
+    if(label == label_type_[i]) {
+      return start_index;
+    } else {
+      start_index += label_cnt_[i];
+    }
+  }
+  LOG(FATAL) << "The label type is not found";
+  return -1;
 }
 
 /* ScoredBBoxSlice */

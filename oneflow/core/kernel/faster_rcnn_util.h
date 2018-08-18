@@ -120,6 +120,127 @@ class BBoxDelta final {
   std::array<T, 4> delta_;
 };
 
+/*
+  Refine BBoxSlice Hierarchy
+  1. change bbox_ptr type to BBox<T>*？ BBox::Cast工作应该放到BBoxSlice内部来做。
+  2. update some interfaces.
+*/
+
+template<typename T>
+class BBoxSlice final {
+public:
+  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index);
+
+  void Truncate(size_t size);
+  void Filter(const std::function<bool(const BBox<T>*)>& FilterMethod);
+  void Sort(const std::function<bool(size_t, size_t)>& Compare);
+  void Sort(const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare);
+  void Shuffle(size_t begin, size_t end);
+  void Shuffle() { Shuffle(0, size_); }
+  
+  inline int32_t GetIndex(size_t n) const {
+    CHECK_LT(n, size_);
+    return index_ptr_[n];
+  }
+
+  inline const BBox<T>* GetBBox(size_t n) const {
+    CHECK_LT(n, size_);
+    return BBox<T>::Cast(bbox_ptr) + index_ptr_[n];
+  }
+
+  inline size_t capacity() const { return capacity_; }
+  inline size_t avaliable_bbox_len() { return avaliable_bbox_len_ };
+  inline const T* bbox_ptr() const { return bbox_ptr_; }
+  inline const T* score_ptr() const { return score_ptr_; }
+  inline const int32_t* index_ptr() const { return index_ptr_; }
+  inline int32_t* mut_index_ptr() { return index_ptr_; }
+
+private:
+  const size_t capacity_;
+  const T* bbox_ptr_; // TODO: change to BBox<T>* type?
+  size_t avaliable_bbox_len_; // old interface: size_
+  int32_t* index_ptr_;
+};
+
+template <typename T, int32_t N>
+class LabeledBBoxSlice : BBoxSlice final {
+ public:
+  LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, size_t* label_ptr, std::arrcy<int32_t, N>& label_type_, std::arrcy<int32_t, N>& label_cnt_, int32_t* index_ptr, bool init_index);
+  void GropuByLabelType();
+  int32_t get_label_start_index(int32_t label);
+  std::arrcy<int32_t, N> get_label_cnt(int32_t label);
+
+  inline size_t* label_ptr() { return label_ptr_; }
+  inline std::arrcy<int32_t, N> label_type() { return label_type_; }
+  inline int32_t label_type_num() { return N; }
+  inline std::arrcy<int32_t, N> label_cnt() { return label_cnt_; }
+ private:
+  size_t* label_ptr_;
+  std::array<int32_t, N> label_type_;
+  std::array<int32_t, N> label_cnt_;
+};
+
+template<typename T>
+class ScoredBBoxSlice : BBoxSlice final {
+ public:
+  ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice);
+
+  void Sort(const std::function<bool(const T, const T, const BBox<T>&, const BBox<T>&)>& Compare);
+  void DescSortByScore(bool init_index);
+  void DescSortByScore() { DescSortByScore(true); }
+  void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
+
+  // void Truncate(int32_t len);
+  void TruncateByThreshold(float thresh);
+  int32_t FindByThreshold(const float thresh);
+  void Concat(const ScoredBBoxSlice& other);
+  // void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
+  ScoredBBoxSlice<T> Slice(const int32_t begin, const int32_t end);
+  // void Shuffle();
+
+  inline int32_t GetSlice(int32_t i) const {
+    CHECK_LT(i, available_len_);
+    return index_slice_[i];
+  }
+  inline const BBox<T>* GetBBox(int32_t i) const {
+    CHECK_LT(i, available_len_);
+    return BBox<T>::Cast(bbox_ptr_) + index_slice_[i];
+  }
+  inline T GetScore(int32_t i) const {
+    CHECK_LT(i, available_len_);
+    return score_ptr_[index_slice_[i]];
+  }
+
+  // Getters
+  int32_t len() const { return len_; }
+  const T* bbox_ptr() const { return bbox_ptr_; }
+  const T* score_ptr() const { return score_ptr_; }
+  const int32_t* index_slice() const { return index_slice_; }
+  int32_t available_len() const { return available_len_; }
+  // Setters
+  int32_t* mut_index_slice() { return index_slice_; }
+
+ private:
+  const int32_t len_; // TODO: change to capacity_
+  const T* bbox_ptr_; // TODO: change to BBox<T>* type?
+  const T* score_ptr_;
+  int32_t* index_slice_;  // TODO: change to index_ptr_
+  int32_t available_len_; // TODO: change to avaliable_bbox_size_
+};
+
+template<typename T>
+struct FasterRcnnUtil final {
+  static void GenerateAnchors(const AnchorGeneratorConf& conf, Blob* anchors_blob);
+  static void BboxTransform(int64_t boxes_num, const T* bboxes, const T* deltas,
+                            const BBoxRegressionWeights& bbox_reg_ws, T* pred_bboxes);
+  static void BboxTransformInv(int64_t boxes_num, const T* bboxes, const T* target_bboxes,
+                               const BBoxRegressionWeights& bbox_reg_ws, T* deltas);
+  static void ClipBoxes(int64_t boxes_num, const int64_t image_height, const int64_t image_width,
+                        T* bboxes);
+  static void ConvertGtBoxesToAbsoluteCoord();
+};
+
+/*
 template<typename T>
 class BBoxSlice final {
 public:
@@ -225,7 +346,7 @@ struct FasterRcnnUtil final {
                         T* bboxes);
   static void ConvertGtBoxesToAbsoluteCoord();
 };
-
+*/
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_KERNEL_FASTER_RCNN_UTIL_H_

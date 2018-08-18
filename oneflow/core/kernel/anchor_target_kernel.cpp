@@ -106,7 +106,41 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     BBoxSlice<T> gt_boxes_slice(GetCustomizedOpConf().max_gt_boxes_num(), gt_boxes_absolute_blob->dptr<T>(), BnInOp2Blob("gt_boxes_index")->mut_dptr<T>());
     gt_boxes_slice.Truncate(boxes_num);
     // Assign labels (-1, 0, 1) to all anchors
-    anchor_label_and_nearest_gt_box = AssignLabels(gt_boxes_slice, inside_anchors_slice, BnInOp2Blob);
+    AnchorLabelsAndMaxOverlapsInfo anchor_label_and_nearest_gt_box = AssignLabels(gt_boxes_slice, inside_anchors_slice, BnInOp2Blob); // TODO: refine AnchorLabelsAndMaxOverlapsInfo and GtBoxesNearestAnchorsInfo
+    // Subsampe
+    LabeledBBoxSlice<size_t, 3> labeled_anchor_slice();
+    labeled_anchor_slice.GroupByLabelType();  // TODO
+    int64_t start = 0;
+    int64_t end = labeled_anchor_slice.;
+
+    FOR_RANGE(int64_t, i, 0, labeled_anchor_slice.label_type_num()) {
+      label = labeled_anchor_slice.label_ptr()[i];
+      int32_t start_index = labeled_anchor_slice.get_label_start_index(label);
+      int32_t count = labeled_anchor_slice.get_label_cnt(label);
+      labeled_anchor_slice.shuffle(start_index, start_index + count);
+    }
+    const AnchorTargetOpConf& anchor_target_conf = GetCustomizedOpConf().anchors_target_conf();
+    int32_t train_piece_size = anchor_target_conf.train_piece_size;
+    int32_t fg_fraction = anchor_target_conf.fg_ratio;
+    int32_t default_fg_cnt = train_piece_size * fg_ratio;
+    int32_t default_bg_cnt = train_piece_size - fg_cnt;
+
+    fg_cnt = labeled_anchor_slice.get_label_cnt(1);
+    bg_cnt = labeled_anchor_slice.get_label_cnt(0);
+    // fg subsample
+    if(fg_cnt > default_fg_cnt ) {
+      fg_start = labeled_anchor_slice.get_label_start_index(1);
+      FOR_RANGE(int32_t, i, fg_start, fg_cnt - default_fg_cnt) {
+        labeled_anchor_slice.label_ptr[i] = -1;
+      }
+    }
+    // bg subsample
+    if(bg_cnt > default_bg_cnt) {
+      bg_start = labeled_anchor_slice.get_label_start_index(0);
+      FOR_RANGE(int32_t, i, bg_start, bg_cnt - default_bg_cnt) {
+        labeled_anchor_slice.label_ptr[i] = -1;
+      }
+    }
   }
 }
 
