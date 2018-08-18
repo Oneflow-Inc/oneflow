@@ -82,13 +82,15 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   const BBoxRegressionWeights& bbox_reg_ws = conf.bbox_reg_weights();
 
   AnchorTargetKernelUtil<T>::SetValue(labels_num, rpn_labels_blob->mut_dptr<int32_t>(), -1);
+  Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_targets_blob->mut_dptr(), 0,
+                           rpn_bbox_targets_blob->ByteSizeOfDataContentField());
   Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_inside_weights_blob->mut_dptr(), 0,
                            rpn_bbox_inside_weights_blob->ByteSizeOfDataContentField());
   Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_outside_weights_blob->mut_dptr(), 0,
                            rpn_bbox_outside_weights_blob->ByteSizeOfDataContentField());
-
   Memset<DeviceType::kCPU>(ctx.device_ctx, max_overlaps_ptr, 0,
                            BnInOp2Blob("max_overlaps_inds")->ByteSizeOfDataContentField());
+  int32_t debug_img_cnt = 0;
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
 
     const BBox<T>* anchors_bbox = BBox<T>::Cast(anchors_ptr);
@@ -123,7 +125,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       FOR_RANGE(int32_t, j, 0, inside_anchors_num) {  // for each anchor
         int32_t anchor_idx = inside_anchors_inds_ptr[j];
         float overlap = anchors_bbox[anchor_idx].InterOverUnion(current_img_gt_boxes_bbox + i);
-        if (overlap >= max_overlaps_ptr[anchor_idx]) {
+        if (overlap > max_overlaps_ptr[anchor_idx]) {
           max_overlaps_ptr[anchor_idx] = overlap;
           max_overlaps_inds_ptr[anchor_idx] = i;
         }
@@ -164,9 +166,9 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     const int32_t fg_conf_size = conf.batchsize() * conf.foreground_fraction();
     if (fg_cnt > fg_conf_size) {
       // subsample fg
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::shuffle(fg_inds_ptr, fg_inds_ptr + fg_cnt, gen);
+      // std::random_device rd;
+      // std::mt19937 gen(rd());
+      // std::shuffle(fg_inds_ptr, fg_inds_ptr + fg_cnt, gen);
       // write back
       FOR_RANGE(int32_t, i, fg_conf_size, fg_cnt) { current_img_label_ptr[fg_inds_ptr[i]] = -1; }
       fg_cnt = fg_conf_size;
@@ -175,9 +177,9 @@ void AnchorTargetKernel<T>::ForwardDataContent(
 
     if (bg_cnt > bg_conf_size) {
       // subsampel bg
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::shuffle(bg_inds_ptr, bg_inds_ptr + bg_cnt, gen);
+      // std::random_device rd;
+      // std::mt19937 gen(rd());
+      // std::shuffle(bg_inds_ptr, bg_inds_ptr + bg_cnt, gen);
 
       // write back
       FOR_RANGE(int32_t, i, bg_conf_size, bg_cnt) { current_img_label_ptr[bg_inds_ptr[i]] = -1; }
@@ -216,6 +218,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       current_img_outside_weights_bbox[anchor_idx].set_x2(weight_value);
       current_img_outside_weights_bbox[anchor_idx].set_y2(weight_value);
     }
+    debug_img_cnt++;
   }
 }
 
