@@ -42,6 +42,7 @@ class BlobDesc {
 
   bool operator==(const BlobDesc& rhs) const;
   void ToProto(BlobDescProto* proto) const;
+  BlobDesc& operator=(const BlobDesc& blob_desc);
 
  private:
   void HeaderToProto(BlobDescProto* proto) const;
