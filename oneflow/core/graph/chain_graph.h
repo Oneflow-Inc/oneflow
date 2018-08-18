@@ -5,20 +5,20 @@
 #include <bitset>
 
 namespace oneflow {
-const int64_t MAX_ANCESTOR_NUM = 10000;
+// 1KB
+const int64_t BITSET_SIZE = 8 * 1024;
 
 class TaskNode;
-class ChainNode;
 
 struct Chain {
   // nodes belong to this chain
   std::vector<TaskNode*> nodes;
   // ancestors of the nodes in this chain
-  std::bitset<MAX_ANCESTOR_NUM> ancestors;
+  std::vector<std::bitset<BITSET_SIZE>> ancestors;
   // ancestors_and_this = nodes + ancestors
-  std::bitset<MAX_ANCESTOR_NUM> ancestors_and_this;
-  int64_t stream_id;
-  int64_t area_id;
+  std::vector<std::bitset<BITSET_SIZE>> ancestors_and_this;
+
+  std::pair<int64_t, int64_t> stream_area_id;
 };
 
 using ChainIt = std::list<Chain>::iterator;
