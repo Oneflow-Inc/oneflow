@@ -1,3 +1,4 @@
+
 #ifndef ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 #define ONEFLOW_CORE_GRAPH_CHAIN_GRAPH_H_
 
@@ -64,21 +65,25 @@ class ChainGraph final : public Graph<ChainNode, ChainEdge> {
 
   ChainGraph(const TaskGraph& task_gph);
   const char* TypeName() const override { return "ChainGraph"; }
-  const std::vector<ChainNode*>& ordered_chain_nodes() const { return ordered_chain_nodes_; }
-  const std::vector<TaskNode*>& ordered_task_nodes() const { return ordered_task_nodes_; }
+  const std::vector<ChainNode*>& OrderdedChainNodes() const { return ordered_chain_nodes_; }
 
  private:
-  ChainNode* ChainNode4TaskNode(TaskNode* task_node) const;
+  ChainNode* ChainNode4TaskNode(TaskNode* task_node) const {
+    return task_node2chain_node_.at(task_node);
+  }
+
   bool HasChainEdge(ChainNode* src, ChainNode* dst) const;
-  void GroupTaskNodesByMachine(const std::vector<TaskNode*>& ordered_task_nodes,
-                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks);
+  void GroupTaskNodesByMachine(const TaskGraph& task_gph,
+                               HashMap<int64_t, std::vector<TaskNode*>>* machine2tasks) const;
   void MergeTaskNodes(const HashMap<int64_t, std::vector<TaskNode*>>& machine2tasks,
                       std::vector<std::vector<TaskNode*>>* chains);
+  void InitChainNode(const std::vector<std::vector<TaskNode*>>& chains);
+  void InitChainEdge(const std::vector<std::vector<TaskNode*>>& chains);
+  void SetChainId4ChainNode();
 
   const TaskGraph& task_gph_;
   HashMap<TaskNode*, ChainNode*> task_node2chain_node_;
   std::vector<ChainNode*> ordered_chain_nodes_;
-  std::vector<TaskNode*> ordered_task_nodes_;
 };
 
 }  // namespace oneflow
