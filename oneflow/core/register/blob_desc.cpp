@@ -108,8 +108,8 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     if (blob_mem_id == -1) {
       body_byte_size += rt_blob_desc.ByteSizeOfBlobBody();
     } else {
-      auto mem_shared_it = blob_mem_id2blob_desc_mem_bytes.find(blob_mem_id);
-      if (mem_shared_it == blob_mem_id2blob_desc_mem_bytes.end()) {
+      auto mem_bytes_it = blob_mem_id2blob_desc_mem_bytes.find(blob_mem_id);
+      if (mem_bytes_it == blob_mem_id2blob_desc_mem_bytes.end()) {
         CHECK(
             blob_mem_id2blob_desc_mem_bytes.emplace(blob_mem_id, rt_blob_desc.ByteSizeOfBlobBody())
                 .second);
