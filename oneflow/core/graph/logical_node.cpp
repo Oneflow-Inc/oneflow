@@ -158,14 +158,15 @@ std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const 
 
 void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
   CHECK(dst2data_lbis_.emplace(dst, lbis).second);
-  BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(this, dst);
-  if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-    lbi_boxing_.insert(lbis.begin(), lbis.end());
-  } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-    lbi_121_.insert(lbis.begin(), lbis.end());
-  } else {
-    UNIMPLEMENTED();
+}
+
+bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
+  for (const auto& pair : dst2data_lbis_) {
+    if (std::find(pair.second.begin(), pair.second.end(), lbi) != pair.second.end()) {
+      return true;
+    }
   }
+  return false;
 }
 
 std::string LogicalNode::VisualStr() const {

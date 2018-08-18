@@ -6,32 +6,7 @@
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 
-namespace std {
-
-template<>
-struct hash<oneflow::MemoryCase> {
-  size_t operator()(const oneflow::MemoryCase& val) const {
-    if (val.has_host_mem()) {
-      return val.host_mem().used_by_device() + 1024;
-    } else {
-      return val.device_cuda_mem().device_id();
-    }
-  }
-};
-
-}  // namespace std
-
 namespace oneflow {
-
-inline bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
-  if (lhs.has_host_mem() && rhs.has_host_mem()) {
-    return lhs.host_mem().used_by_device() == rhs.host_mem().used_by_device();
-  }
-  if (lhs.has_device_cuda_mem() && rhs.has_device_cuda_mem()) {
-    return lhs.device_cuda_mem().device_id() == rhs.device_cuda_mem().device_id();
-  }
-  return false;
-}
 
 RegstMgr::RegstMgr(const Plan& plan) {
   std::list<const RegstDescProto*> regst_protos;
@@ -95,13 +70,18 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   if (regst_desc_id2main_mem_ptr_.find(regst_desc_id) != regst_desc_id2main_mem_ptr_.end()) {
     main_mem_ptr = regst_desc_id2main_mem_ptr_.at(regst_desc_id);
   }
-  std::vector<LogicalBlobId> lbis;
+  std::vector<LbiBlobDescPair> lbi_pairs;
   if (regst_desc_type.has_data_regst_desc()) {
     for (const LbiBlobDescPair& pair : regst_desc_type.data_regst_desc().lbi2blob_desc()) {
-      lbis.push_back(pair.lbi());
+      lbi_pairs.push_back(pair);
     }
-    std::sort(lbis.begin(), lbis.end());
-    CHECK(!lbis.empty());
+    std::sort(lbi_pairs.begin(), lbi_pairs.end(),
+              [&](const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs) {
+                return lhs.blob_desc().header().blob_mem_id()
+                           < rhs.blob_desc().header().blob_mem_id()
+                       || lhs.lbi() < rhs.lbi();
+              });
+    CHECK(!lbi_pairs.empty());
     CHECK(main_mem_ptr != nullptr);
   }
   if (regst_desc_proto.mem_shared_id() != -1) {
@@ -111,7 +91,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
     Regst* regst = new Regst;
     regst->set_regst_desc(rt_regst_desc);
     if (regst_desc_type.has_data_regst_desc()) {
-      NewBlobsInOneRegst(lbis, regst, rt_regst_desc, main_mem_ptr);
+      NewBlobsInOneRegst(lbi_pairs, regst, rt_regst_desc, main_mem_ptr);
       if (rt_regst_desc->mem_case().has_host_mem()
           && rt_regst_desc->mem_case().host_mem().used_by_network()) {
         regst->comm_net_token_ = Global<CommNet>::Get()->RegisterMemory(
@@ -127,7 +107,7 @@ void RegstMgr::NewRegsts(const RegstDescProto& regst_desc_proto,
   }
 }
 
-void RegstMgr::NewBlobsInOneRegst(const std::vector<LogicalBlobId>& lbis, Regst* regst,
+void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regst* regst,
                                   const RtRegstDesc* rt_regst_desc, char* main_mem_ptr) {
   size_t separated_mem_size = rt_regst_desc->SeparatedByteSize4OneRegst();
   const RtBlobDesc* packed_blob_desc = rt_regst_desc->packed_blob_desc();
@@ -146,14 +126,20 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LogicalBlobId>& lbis, Regst*
     cur_header_pointer = main_mem_ptr;
     cur_body_pointer = main_mem_ptr + packed_blob_desc->ByteSizeOfBlobHeader();
   }
-  for (const LogicalBlobId& lbi : lbis) {
-    const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi);
+  int32_t last_blob_mem_id = -1;
+  for (const LbiBlobDescPair& lbi : lbis) {
+    const RtBlobDesc* blob_desc = rt_regst_desc->GetRtBlobDescFromLbi(lbi.lbi());
     std::unique_ptr<Blob> blob_ptr(
         new Blob(regst, blob_desc, cur_header_pointer, cur_body_pointer));
     InitOFRecordBlobIfNeed(blob_ptr.get());
-    CHECK(regst->lbi2blob_.emplace(lbi, std::move(blob_ptr)).second);
+    CHECK(regst->lbi2blob_.emplace(lbi.lbi(), std::move(blob_ptr)).second);
+
     cur_header_pointer += blob_desc->ByteSizeOfBlobHeader();
-    cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
+    int32_t cur_blob_mem_id = lbi.blob_desc().header().blob_mem_id();
+    if (cur_blob_mem_id == -1 || cur_blob_mem_id != last_blob_mem_id) {
+      cur_body_pointer += blob_desc->ByteSizeOfBlobBody();
+    }
+    last_blob_mem_id = cur_blob_mem_id;
   }
 }
 

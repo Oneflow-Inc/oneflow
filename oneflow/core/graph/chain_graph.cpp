@@ -20,47 +20,60 @@ class ChainMerger final {
  private:
   void InitTaskNode2UId();
   void InitChains();
-  bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs);
-  bool TryMerge();
   void MergeChains();
-  int64_t get_task_uid(TaskNode* task_node) const {
-    auto uid_it = task_node2uid_.find(task_node);
-    CHECK(uid_it != task_node2uid_.end());
-    return uid_it->second;
-  }
-  void update_task_uid(TaskNode* task_node) {
-    auto uid_it = task_node2uid_.find(task_node);
-    if (uid_it == task_node2uid_.end()) {
-      int64_t new_id = task_node2uid_.size();
-      CHECK(task_node2uid_.emplace(task_node, new_id).second);
-    }
-  }
+  bool DoMerge(std::list<ChainIt>& chains, ChainIt rhs);
+
+  bool IsSubset(const ChainIt& lhs, const ChainIt& rhs) const;
+  void CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bitset_vec, int64_t pos);
+
+  int64_t GetTaskUid(TaskNode* task_node) const;
+  void UpdateTaskUid(TaskNode* task_node);
 
   const std::vector<TaskNode*>& task_nodes_;
   std::list<Chain> chain_list_;
   HashMap<TaskNode*, int64_t> task_node2uid_;
 };
 
+int64_t ChainMerger::GetTaskUid(TaskNode* task_node) const {
+  auto uid_it = task_node2uid_.find(task_node);
+  CHECK(uid_it != task_node2uid_.end());
+  return uid_it->second;
+}
+
+void ChainMerger::UpdateTaskUid(TaskNode* task_node) {
+  auto uid_it = task_node2uid_.find(task_node);
+  if (uid_it == task_node2uid_.end()) {
+    int64_t new_id = task_node2uid_.size();
+    CHECK(task_node2uid_.emplace(task_node, new_id).second);
+  }
+}
+
 void ChainMerger::InitTaskNode2UId() {
   for (auto& task_node : task_nodes_) {
-    update_task_uid(task_node);
-    for (auto& ancestor : task_node->ancestors()) { update_task_uid(ancestor); }
+    UpdateTaskUid(task_node);
+    for (auto& ancestor : task_node->ancestors()) { UpdateTaskUid(ancestor); }
   }
-  CHECK_LT(task_node2uid_.size(), MAX_ANCESTOR_NUM);
 }
 
 void ChainMerger::InitChains() {
   chain_list_.clear();
+  int64_t bitset_num = std::ceil(static_cast<double>(task_node2uid_.size()) / BITSET_SIZE);
   for (const auto& task_node : task_nodes_) {
     chain_list_.emplace_back();
     Chain& cur_chain = chain_list_.back();
     cur_chain.nodes = {task_node};
-    cur_chain.area_id = task_node->area_id();
-    cur_chain.stream_id = task_node->GlobalWorkStreamId();
-    for (auto& node : cur_chain.nodes) { cur_chain.ancestors_and_this.set(get_task_uid(node)); }
-    for (auto& node : task_node->ancestors()) {
-      cur_chain.ancestors.set(get_task_uid(node));
-      cur_chain.ancestors_and_this.set(get_task_uid(node));
+    cur_chain.stream_area_id =
+        std::make_pair(task_node->area_id(), task_node->GlobalWorkStreamId());
+    for (int64_t i = 0; i < bitset_num; ++i) {
+      std::bitset<BITSET_SIZE> b;
+      cur_chain.ancestors.push_back(b);
+      cur_chain.ancestors_and_this.push_back(b);
+    }
+    CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
+    for (auto& ancestor : task_node->ancestors()) {
+      int64_t ancestor_uid = GetTaskUid(ancestor);
+      CarefullySetBitset(&(cur_chain.ancestors), ancestor_uid);
+      CarefullySetBitset(&(cur_chain.ancestors_and_this), ancestor_uid);
     }
   }
 }
@@ -68,10 +81,10 @@ void ChainMerger::InitChains() {
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
-    if (lhs->ancestors_and_this == (lhs->ancestors_and_this | rhs->ancestors)) {
+    if (IsSubset(lhs, rhs)) {
       for (TaskNode* node : rhs->nodes) {
         lhs->nodes.push_back(node);
-        lhs->ancestors_and_this.set(get_task_uid(node));
+        CarefullySetBitset(&(lhs->ancestors_and_this), GetTaskUid(node));
       }
       return true;
     }
@@ -79,26 +92,36 @@ bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
   return false;
 }
 
-bool ChainMerger::TryMerge() {
+void ChainMerger::MergeChains() {
   HashMap<std::pair<int64_t, int64_t>, std::list<ChainIt>> stream_area2chains;
-  bool merge_happened = false;
   for (auto cur_chain_it = chain_list_.begin(); cur_chain_it != chain_list_.end();) {
-    std::pair<int64_t, int64_t> stream_area_id = {cur_chain_it->stream_id, cur_chain_it->area_id};
+    const auto& stream_area_id = cur_chain_it->stream_area_id;
     auto stream_area_it = stream_area2chains.find(stream_area_id);
     if (stream_area_it != stream_area2chains.end()
         && DoMerge(stream_area_it->second, cur_chain_it)) {
       cur_chain_it = chain_list_.erase(cur_chain_it);
-      merge_happened = true;
     } else {
       stream_area2chains[stream_area_id].push_back(cur_chain_it);
       ++cur_chain_it;
     }
   }
-  return merge_happened;
 }
 
-void ChainMerger::MergeChains() {
-  while (TryMerge()) {}
+void ChainMerger::CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bitset_vec,
+                                     int64_t pos) {
+  int64_t index = pos / BITSET_SIZE;
+  int64_t remain = pos % BITSET_SIZE;
+  bitset_vec->at(index).set(remain);
+}
+
+bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
+  int64_t bitset_num = std::ceil(static_cast<double>(task_node2uid_.size()) / BITSET_SIZE);
+  for (int64_t i = 0; i < bitset_num; ++i) {
+    if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))) {
+      return false;
+    }
+  }
+  return true;
 }
 
 }  // namespace

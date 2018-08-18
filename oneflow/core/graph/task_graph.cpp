@@ -484,19 +484,14 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
 }
 
 void TaskGraph::CollectAncestorsForEachNode() {
-  std::vector<TaskNode*> ordered_nodes;
-  AcyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
-  for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
-    TaskNode* task_node = *it;
+  AcyclicTopoForEachNode([&](TaskNode* task_node) {
     task_node->mut_ancestors().clear();
-    task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, task_node)) return;
-      task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
-                                        node_on_in_edge->ancestors().end());
-      task_node->mut_ancestors().insert(node_on_in_edge);
-
+    task_node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
+      if (IsBackEdge(in_node, task_node)) return;
+      task_node->mut_ancestors().insert(in_node->ancestors().begin(), in_node->ancestors().end());
+      task_node->mut_ancestors().insert(in_node);
     });
-  }
+  });
 }
 
 void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
@@ -540,7 +535,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
-                   AllocateCpuThrdIdEvenly);
+                   MutBufTask, AllocateCpuThrdIdEvenly);
   }
   sorted_out_box = &(logical2sorted_out_box->at(src_logical));
 
@@ -721,16 +716,25 @@ TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
   return copy_comm_net_task;
 }
 
-void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
-                               const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                               std::vector<TaskNode*>* sorted_out_box,
-                               std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
+void TaskGraph::BuildOutBoxing(
+    const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+    std::vector<TaskNode*>* sorted_out_box,
+    std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+        MutBufTask,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = comp_task;
     if (task->device_type() == DeviceType::kGPU) {
-      task = AddCopyD2HTaskFrom(comp_task);
-      Connect<TaskNode>(comp_task, NewEdge(), task);
+      TaskNode** buf_task =
+          MutBufTask(comp_task, comp_task->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+      if ((*buf_task) == nullptr) {
+        task = AddCopyD2HTaskFrom(comp_task);
+        Connect<TaskNode>(comp_task, NewEdge(), task);
+        *buf_task = task;
+      } else {
+        task = *buf_task;
+      }
     }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }
