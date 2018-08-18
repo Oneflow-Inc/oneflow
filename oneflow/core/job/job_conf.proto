@@ -46,7 +46,7 @@ message OtherConf {
   optional bool use_rdma = 100 [default = false];
   optional string model_load_snapshot_path = 101 [default = ""];
   optional int32 max_data_id_length = 102 [default = 0];
-  optional bool use_cudnn_on_gpu = 103 [default = true];
+  optional bool enable_cudnn = 103 [default = true];
   optional DataType default_data_type = 104 [default = kFloat]; // kFloat or kDouble
   optional int64 piece_num_of_experiment_phase = 105 [default = -1];
   optional uint64 persistence_buf_mbyte = 106 [default = 64];
