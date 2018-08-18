@@ -15,7 +15,7 @@ void ReduceLocalAddKernel<device_type, T>::ForwardDataContent(
     if (is_inplace_in_bn_id) {
       return;
     } else {
-      CHECK(is_out_blob_inited);
+      // CHECK(is_out_blob_inited);
     }
   }
 
@@ -25,7 +25,7 @@ void ReduceLocalAddKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, out_blob->shape().elem_cnt(), 1.0,
                                      in_blob->dptr<T>(), 1, out_blob->mut_dptr<T>(), 1);
   } else {
-    CHECK(device_type == DeviceType::kCPU);
+    // CHECK(device_type == DeviceType::kCPU);
     Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                              out_blob->ByteSizeOfDataContentField());
   }
