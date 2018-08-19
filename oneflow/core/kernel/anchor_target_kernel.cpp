@@ -18,6 +18,7 @@ void ForEachOverlapBetweenInsideAnchorsAndGtBoxes(
   }
 }
 
+template<typename T>
 void AssignPositiveLabelsToGtBoxesNearestAnchors(
     const GtBoxesNearestAnchorsInfo& gt_boxes_nearest_anchors,
     AnchorLabelsAndMaxOverlapsInfo& anchor_labels_info) {
@@ -32,8 +33,13 @@ void SetValue(int32_t size, T* data_ptr, T value) {
 
 }  // namespace
 
-template<typename T>
-void AnchorTargetKernel<T>::InitConstBufBlobs(
+template<typename T, size_t N>
+const PbMessage& AnchorTargetKernel<T, N>::GetCustomizedOpConf() const {
+  return this->op_conf().anchors_generator_conf();
+}
+
+template<typename T, size_t N>
+void AnchorTargetKernel<T, N>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   const AnchorGeneratorConf& anchor_generator_conf = GetCustomizedOpConf().anchors_generator_conf();
@@ -45,11 +51,11 @@ void AnchorTargetKernel<T>::InitConstBufBlobs(
            || anchor_box->x2() >= anchor_generator_conf.image_width
            || anchor_box->y2() >= anchor_generator_conf.image_height;
   });
-  *(BnInOp2Blob("inside_anchor_num")->mut_dptr<int32_t>()) = inside_anchors_slice.size();
+  *(BnInOp2Blob("inside_anchor_num")->mut_dptr<int32_t>()) = anchors_slice.size();
 }
 
-template<typename T>
-AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
+template<typename T, size_t N>
+AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T, N>::AssignLabels(
     const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
   // From anchor perspective
@@ -80,9 +86,9 @@ AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
   return anchor_labels_info;
 }
 
-template<typename T>
-void AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(LabelBBoxSlice& labeled_anchor_slice,
-                                                               size_t image_index) {
+template<typename T, size_t N>
+void AnchorTargetKernel<T, N>::SubsamplePositiveAndNegativeLabels(
+    LabeledBBoxSlice& labeled_anchor_slice, size_t image_index) {
   labeled_anchor_slice.GroupByLabel();
   size_t batch_size_per_image = GetCustomizedOpConf().batch_size_per_image();
   float foreground_fraction = GetCustomizedOpConf().foreground_fraction();
@@ -92,9 +98,9 @@ void AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(LabelBBoxSlice& l
   labeled_anchor_slice.Subsample(0, bg_cnt);
 }
 
-template<typename T>
-void AnchorTargetKernel<T>::WriteToOutputBlobs(
-    const LabeledBBoxSlice<T>& labeled_anchor_slice, const BBoxSlice<T>& anchor_boxes_slice,
+template<typename T, size_t N>
+void AnchorTargetKernel<T, N>::WriteToOutputBlobs(
+    const LabeledBBoxSlice<T, N>& labeled_anchor_slice, const BBoxSlice<T>& anchor_boxes_slice,
     const AnchorLabelsAndMaxOverlapsInfo& anchor_label_and_nearest_gt_box,
     const BBoxSlice<T>& gt_boxes_slice, int32_t* rpn_labels_ptr, T* rpn_bbox_targets_ptr,
     T* rpn_bbox_inside_weights_ptr, T* rpn_bbox_outside_weights_ptr) {
@@ -150,27 +156,19 @@ void AnchorTargetKernel<T>::WriteToOutputBlobs(
   }
 }
 
-template<typename T>
-const PbMessage& AnchorTargetKernel<T>::GetCustomizedOpConf() const {
-  return this->op_conf().anchors_generator_conf();
-}
-
-template<typename T>
-void AnchorTargetKernel<T>::ForwardDataContent(
+template<typename T, size_t N>
+void AnchorTargetKernel<T, N>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index_blob");
-  anchor_boxes_index_blob->CopyFrom(BnInOp2Blob("anchors_index"));
-  Blob* rpn_labels = BnInOp2Blob("rpn_labels");
-  Blob* rpn_bbox_targets = BnInOp2Blob("rpn_bbox_targets");
-  Blob* rpn_bbox_inside_weights = BnInOp2Blob("rpn_bbox_inside_weights");
-  Blob* rpn_bbox_outside_weights = BnInOp2Blob("rpn_bbox_outside_weights");
+  anchor_boxes_index_blob->CopyFrom(ctx->device_ctx, BnInOp2Blob("anchors_index"));
 
   Blob* gt_boxes_absolute_blob = BnInOp2Blob("gt_boxes_absolute");
   BBoxSlice<T> anchor_boxes_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
                                   anchor_boxes_index_blob->mut_dptr<T>(), false);
   anchor_boxes_slice.Truncate(*(BnInOp2Blob("inside_anchor_num")->dptr<int32_t>()));
+  int64_t images_num = anchors_blob->shape().At(0);
   FOR_RANGE(int64_t, image_index, 0, images_num) {
     int32_t boxes_num = FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(
         gt_boxes_blob->dptr<FloatList16>(image_index), gt_boxes_absolute_blob->mut_dptr<T>());
@@ -180,7 +178,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     gt_boxes_slice.Truncate(boxes_num);
     AnchorLabelsAndMaxOverlapsInfo anchor_label_and_nearest_gt_box =
         AssignLabels(gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
-    LabeledBBoxSlice<size_t, 3> labeled_anchor_slice(
+    LabeledBBoxSlice<int32_t, 3> labeled_anchor_slice(
         anchor_boxes_slice, anchor_label_and_nearest_gt_box.GetAnchorLabels());
   }
   WriteToOutputBlobs(labeled_anchor_slice, anchor_boxes_slice, gt_boxes_slice,

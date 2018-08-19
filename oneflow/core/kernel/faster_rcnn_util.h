@@ -123,7 +123,7 @@ class BBoxDelta final {
 template<typename T>
 class BBoxSlice {
  public:
-  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index);
+  BBoxSlice(size_t capacity, const T* boxes_ptr, size_t* index_ptr, bool init_index);
 
   void Truncate(size_t size);
   void Filter(const std::function<bool(const BBox<T>*)>& FilterMethod);
@@ -139,20 +139,20 @@ class BBoxSlice {
 
   inline const BBox<T>* GetBBox(size_t n) const {
     CHECK_LT(n, size_);
-    return BBox<T>::Cast(bbox_ptr) + index_ptr_[n];
+    return BBox<T>::Cast(bbox_ptr_) + index_ptr_[n];
   }
 
   inline size_t capacity() const { return capacity_; }
   inline size_t size() { return size_; };
   inline const T* bbox_ptr() const { return bbox_ptr_; }
-  inline const int32_t* index_ptr() const { return index_ptr_; }
-  inline int32_t* mut_index_ptr() { return index_ptr_; }
+  inline const size_t* index_ptr() const { return index_ptr_; }
+  inline size_t* mut_index_ptr() { return index_ptr_; }
 
- private:
+ protected:
   const size_t capacity_;
   const T* bbox_ptr_;
   size_t size_;
-  int32_t* index_ptr_;
+  size_t* index_ptr_;
 };
 
 struct GroupLabel {
@@ -161,16 +161,17 @@ struct GroupLabel {
   size_t size;
 };
 
-template<typename T, int32_t N>
+template<typename T, size_t N>
 class LabeledBBoxSlice final : public BBoxSlice<T> {
  public:
-  LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, int32_t* index_ptr,
+  LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, size_t* index_ptr,
                    bool init_index);
   LabeledBBoxSlice(const BBoxSlice<T>& bbox_slice, int32_t* label_ptr)
       : LabeledBBoxSlice(bbox_slice.capacity(), bbox_slice.boxes_ptr(), label_ptr,
                          bbox_slice.index_ptr(), false) {}
-  void GropuByLabelType();
-  inline size_t GetLabelCount(int32_t label);
+  void GroupByLabel();
+  size_t Subsample(int32_t label, size_t sample_num);
+  inline int32_t GetLabelCount(int32_t label);
   inline int32_t GetLabel(size_t index) { return label_ptr_[index]; }
   inline size_t* label_ptr() { return label_ptr_; }
   std::array<GroupLabel, N> group_labels() { return group_labels; }
@@ -181,7 +182,7 @@ class LabeledBBoxSlice final : public BBoxSlice<T> {
 };
 
 template<typename T>
-class ScoredBBoxSlice final : public BBoxSlice<T> {
+class ScoredBBoxSlice final {
  public:
   ScoredBBoxSlice(int32_t len, const T* bbox_ptr, const T* score_ptr, int32_t* index_slice);
 
@@ -190,11 +191,11 @@ class ScoredBBoxSlice final : public BBoxSlice<T> {
   void DescSortByScore() { DescSortByScore(true); }
   void NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice);
 
-  // void Truncate(int32_t len);
+  void Truncate(int32_t len);
   void TruncateByThreshold(float thresh);
   int32_t FindByThreshold(const float thresh);
   void Concat(const ScoredBBoxSlice& other);
-  // void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
+  void Filter(const std::function<bool(const T, const BBox<T>*)>& IsFiltered);
   ScoredBBoxSlice<T> Slice(const int32_t begin, const int32_t end);
   // void Shuffle();
 

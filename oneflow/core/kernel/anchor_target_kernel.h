@@ -4,10 +4,14 @@
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
 #include "oneflow/core/kernel/random_generator.h"
+#include "oneflow/core/kernel/faster_rcnn_util.h"
 
 namespace oneflow {
 
-template<typename T>
+class AnchorLabelsAndMaxOverlapsInfo;
+class GtBoxesNearestAnchorsInfo;
+
+template<typename T, size_t N>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
@@ -20,16 +24,14 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   AnchorLabelsAndMaxOverlapsInfo AssignLabels(
       const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void SubsamplePositiveAndNegativeLabels(
-      LabelBBoxSlice& labeled_anchor_slice,
-      size_t image_index) void WriteToOutputBlobs(const LabeledBBoxSlice<T>& labeled_anchor_slice,
-                                                  const BBoxSlice<T>& anchor_boxes_slice,
-                                                  const AnchorLabelsAndMaxOverlapsInfo&
-                                                      anchor_label_and_nearest_gt_box,
-                                                  const BBoxSlice<T>& gt_boxes_slice,
-                                                  int32_t* rpn_labels_ptr, T* rpn_bbox_targets_ptr,
-                                                  T* rpn_bbox_inside_weights_ptr,
-                                                  T* rpn_bbox_outside_weights_ptr) const;
+  void SubsamplePositiveAndNegativeLabels(LabeledBBoxSlice<T, N>& labeled_anchor_slice,
+                                          size_t image_index);
+  void WriteToOutputBlobs(const LabeledBBoxSlice<T, N>& labeled_anchor_slice,
+                          const BBoxSlice<T>& anchor_boxes_slice,
+                          const AnchorLabelsAndMaxOverlapsInfo& anchor_label_and_nearest_gt_box,
+                          const BBoxSlice<T>& gt_boxes_slice, int32_t* rpn_labels_ptr,
+                          T* rpn_bbox_targets_ptr, T* rpn_bbox_inside_weights_ptr,
+                          T* rpn_bbox_outside_weights_ptr) const;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
   const PbMessage& GetCustomizedOpConf() const override;
@@ -42,7 +44,7 @@ class AnchorLabelsAndMaxOverlapsInfo final {
   // "anchor_max_overlaps" (H, W, A)              overlap
   // "anchor_max_overlap_gt_boxes_index" (H, W, A)      gt_box_index
   AnchorLabelsAndMaxOverlapsInfo(int32_t* anchor_labels_ptr, float* max_overlaps_ptr,
-                                 int32_t* max_overlap_gt_boxes_index_ptr, float positive_threshold,
+                                 size_t* max_overlap_gt_boxes_index_ptr, float positive_threshold,
                                  float negative_threshold, size_t size, bool init_label = true)
       : anchor_labels_ptr_(anchor_labels_ptr),
         max_overlaps_ptr_(max_overlaps_ptr),
@@ -72,16 +74,16 @@ class AnchorLabelsAndMaxOverlapsInfo final {
 
   void TrySetPositiveLabel(int32_t anchor_idx) {
     CHECK_LT(anchor_idx, size_);
-    if (anchor_labels_ptr_[anchor_idx] != 0) { anchor_labels_ptr_[anchor_idx] == 1; }
+    if (anchor_labels_ptr_[anchor_idx] != 0) { anchor_labels_ptr_[anchor_idx] = 1; }
   }
 
   int32_t* GetAnchorLabels() { return anchor_labels_ptr_; }
   size_t* GetNearstGtBoxes() { return max_overlap_gt_boxes_idx_ptr_; }
 
  private:
-  int32_t* anchor_labels_ptr_;             // label
-  float* max_overlaps_ptr_;                // overlap
-  int32_t* max_overlap_gt_boxes_idx_ptr_;  // gt_box_index
+  int32_t* anchor_labels_ptr_;            // label
+  float* max_overlaps_ptr_;               // overlap
+  size_t* max_overlap_gt_boxes_idx_ptr_;  // gt_box_index
   const float positive_threshold_;
   const float negative_threshold_;
   const size_t size_;  // H * W * A
