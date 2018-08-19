@@ -119,7 +119,7 @@ bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
   int64_t bitset_num = std::ceil(static_cast<double>(task_node2uid_.size()) / BITSET_SIZE);
   for (int64_t i = 0; i < bitset_num; ++i) {
     if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))
-        || rhs->nodes.front()->GetTaskType() == kNormalMdUpdt) {
+        || rhs->nodes.front()->area_id() == kMdUpdtArea) {
       return false;
     }
   }
