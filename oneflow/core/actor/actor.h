@@ -85,7 +85,7 @@ class Actor {
   virtual bool IsCustomizedReadAlwaysUnReadyFromNow() { return false; }
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
-  virtual int64_t ActNumForEachOutput() const { return 1; }
+  virtual int64_t ActNumForEachOutput(int64_t regst_desc_id) const { return 1; }
   virtual bool CheckOutputActId(int64_t regst_desc_id) const {
     return true;  // TODO(jiyuan): figure out the ActNumForEachOutput of the model regsts to MdSave
                   // area
@@ -117,6 +117,7 @@ class Actor {
   Regst* GetNaiveSoleCurReadable();
   Regst* GetNaiveFirstCurReadable();
   Regst* GetSoleProducedRegst(int64_t regst_desc_id);
+  int64_t GetSoleProducedDataRegstDescId() const;
 
   void DecreaseActualWriteableProducedDataRegstDescNum(int64_t amount) {
     actual_writeable_produced_data_regst_desc_num_ -= amount;
