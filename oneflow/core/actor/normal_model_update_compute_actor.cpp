@@ -75,7 +75,7 @@ int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
     return true;
   });
   next_model_version_id_ += 1;
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (model_regst_desc_id_ != -1) {
     OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgForAllProducedRegstDesc();

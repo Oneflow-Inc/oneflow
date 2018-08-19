@@ -16,7 +16,7 @@ template<DeviceType device_type, typename T>
 void ConvKernelIf<device_type, T>::BackwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* conv_out_diff = BnInOp2Blob("out_diff");
-  if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
+  if (this->template GetValFromCustomizedOpConf<bool>("use_bias") && this->op_conf().trainable()) {
     BiasBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("bias_diff"), BnInOp2Blob);
   }
   WeightBackward(ctx.device_ctx, conv_out_diff, BnInOp2Blob("in"), BnInOp2Blob("weight_diff"),
@@ -162,15 +162,17 @@ void ConvKernelImplByIm2Col<device_type, T>::WeightBackward(
                  out_shape_, strides_, dilation_rate_, padding_before_,
                  bw_col_buf_blob->mut_dptr<T>());
 
-    // channels first:  weight' += out[i]' * col_buf(T)
-    // channels last :  weight' += out[i]'(T) * col_buf(T)
-    KernelUtil<device_type, T>::OFGemm(
-        ctx, is_out_diff_need_trans_, CblasTrans,
-        weight_shape_.At(0),                             //  filter
-        weight_shape_.Count(1),                          //  ci * kd * kh * kw
-        out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  //  od * oh * ow
-        static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i), bw_col_buf_blob->dptr<T>(),
-        static_cast<T>(1), weight_diff_blob->mut_dptr<T>());
+    if (this->op_conf().trainable()) {
+      // channels first:  weight' += out[i]' * col_buf(T)
+      // channels last :  weight' += out[i]'(T) * col_buf(T)
+      KernelUtil<device_type, T>::OFGemm(
+          ctx, is_out_diff_need_trans_, CblasTrans,
+          weight_shape_.At(0),                             //  filter
+          weight_shape_.Count(1),                          //  ci * kd * kh * kw
+          out_shape_.Count(dhw_offset_, dhw_offset_ + 3),  //  od * oh * ow
+          static_cast<T>(1), GetImgDptr<T>(out_diff_blob, i), bw_col_buf_blob->dptr<T>(),
+          static_cast<T>(1), weight_diff_blob->mut_dptr<T>());
+    }
 
     if (in_diff_blob != nullptr) {
       // channels first:  col_buf' = weight(T) * out[i]'
@@ -195,6 +197,7 @@ template<DeviceType device_type, typename T>
 void ConvKernelImplByIm2Col<device_type, T>::BiasBackward(
     DeviceCtx* ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  CHECK(this->op_conf().trainable());
   const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
   Memset<device_type>(ctx, bias_diff_blob->mut_dptr<T>(), 0,
                       bias_diff_blob->ByteSizeOfDataContentField());
