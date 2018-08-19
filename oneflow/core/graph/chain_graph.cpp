@@ -79,6 +79,9 @@ void ChainMerger::InitChains() {
 }
 
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
+  CHECK_EQ(rhs->nodes.size(), 1);
+  // rm kMdUpdtArea chain merge
+  if (rhs->nodes.front()->area_id() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (IsSubset(lhs, rhs)) {
