@@ -25,6 +25,8 @@ void AccumulateCompActor::Init(const TaskProto& task_proto, int32_t max_acc_cnt,
   next_piece_id_ = 0;
 }
 
+int64_t AccumulateCompActor::ActNumForEachOutput() const { return max_acc_cnt_; }
+
 void AccumulateCompActor::Act() {
   Regst* in_regst = GetNaiveSoleCurReadable();
   Regst* out_regst = GetCurSoleWriteableRegst();
