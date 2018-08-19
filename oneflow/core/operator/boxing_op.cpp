@@ -23,7 +23,11 @@ void BoxingOp::InitFromOpConf() {
     EnrollDataTmpBn("middle");
   }
   for (int32_t i = 0; i < boxing_conf.out_num(); ++i) {
-    EnrollOutputBn("out_" + std::to_string(i), false);
+    if (boxing_conf.lbi().is_pb_blob()) {
+      EnrollPbOutputBn("out_" + std::to_string(i));
+    } else {
+      EnrollOutputBn("out_" + std::to_string(i), false);
+    }
   }
 }
 

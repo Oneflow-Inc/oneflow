@@ -13,7 +13,7 @@ class CopyCommNetActor::CommNetDeviceCtx final : public DeviceCtx {
   CommNetDeviceCtx() = delete;
   ~CommNetDeviceCtx() = default;
 
-  CommNetDeviceCtx(void* actor_read_id) : DeviceCtx(nullptr, 0), actor_read_id_(actor_read_id) {}
+  CommNetDeviceCtx(void* actor_read_id) : actor_read_id_(actor_read_id) {}
   std::unique_ptr<DeviceCtx> Copy() const { UNIMPLEMENTED(); }
 
   void AddCallBack(std::function<void()> callback) const override {

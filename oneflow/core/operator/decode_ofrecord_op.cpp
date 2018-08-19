@@ -8,7 +8,7 @@ void DecodeOFRecordOp::InitFromOpConf() {
   const DecodeOFRecordOpConf& conf = op_conf().decode_ofrecord_conf();
   for (int32_t i = 0; i < conf.blob_size(); ++i) {
     if (IsRecordDataType(conf.blob(i).data_type())) {
-      EnrollFwPbOutputBn("out_" + std::to_string(i));
+      EnrollPbOutputBn("out_" + std::to_string(i));
     } else {
       EnrollOutputBn("out_" + std::to_string(i), false);
     }

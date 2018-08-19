@@ -33,13 +33,10 @@ void ReduceLocalAddOp::InferBlobDescs(
   FOR_RANGE(int32_t, i, 1, in_num) {
     CHECK(*first_in_blob == *GetBlobDesc4BnInOp(input_bns().Get(i)));
   }
-  BalancedSplitter splitter(op_conf().reduce_local_add_conf().model_elem_cnt(),
-                            parallel_ctx->parallel_num());
-  int32_t min_out_parallel_id = op_conf().reduce_local_add_conf().min_out_parallel_id();
+
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
     BlobDesc* out_blob_i = GetBlobDesc4BnInOp("out_" + std::to_string(i));
     *out_blob_i = *first_in_blob;
-    out_blob_i->mut_shape() = Shape({splitter.At(min_out_parallel_id + i).size()});
   }
 }
 

@@ -5,7 +5,7 @@ namespace oneflow {
 
 template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::VirtualKernelInit(const ParallelContext* parallel_ctx) {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     KernelInitWithCudnn(parallel_ctx);
   } else {
     ConvKernelImplByIm2Col<DeviceType::kGPU, T>::VirtualKernelInit(parallel_ctx);
@@ -16,7 +16,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContent(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     DoForwardDataContentWithCudnn(device_ctx, in_blob, weight_blob, out_blob, BnInOp2Blob);
   } else {
     ConvKernelImplByIm2Col<DeviceType::kGPU, T>::DoForwardDataContent(
@@ -28,7 +28,7 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::WeightBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->UseCudnnOnGpu()) {
+  if (this->EnableCudnn()) {
     WeightBackwardWithCudnn(device_ctx, out_diff_blob, in_blob, weight_diff_blob, in_diff_blob,
                             BnInOp2Blob);
   } else {
@@ -41,7 +41,8 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::BiasBackward(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, Blob* bias_diff_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  if (this->UseCudnnOnGpu()) {
+  CHECK(this->op_conf().trainable());
+  if (this->EnableCudnn()) {
     BiasBackwardWithCudnn(device_ctx, out_diff_blob, bias_diff_blob, BnInOp2Blob);
   } else {
     ConvKernelImplByIm2Col<DeviceType::kGPU, T>::BiasBackward(device_ctx, out_diff_blob,
@@ -97,11 +98,14 @@ template<typename T>
 void ConvKernel<DeviceType::kGPU, T>::DoForwardDataContentWithCudnn(
     DeviceCtx* device_ctx, const Blob* in_blob, const Blob* weight_blob, Blob* out_blob,
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  Blob* fw_cudnn_buf = BnInOp2Blob("fw_cudnn_buf");
+  void* fw_cudnn_buf_ptr = fw_cudnn_buf ? fw_cudnn_buf->mut_dptr() : nullptr;
+  size_t fw_cudnn_buf_size = fw_cudnn_buf ? fw_cudnn_buf->ByteSizeOfDataContentField() : 0;
   CudaCheck(cudnnConvolutionForward(
       device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
       this->filter_desc_->Get(), weight_blob->dptr<T>(), this->conv_desc_->Get(),
       static_cast<cudnnConvolutionFwdAlgo_t>(this->GetConvKernelConf().cudnn_fwd_algo()),
-      device_ctx->buf_ptr(), device_ctx->buf_size(), ZeroPtr<T>::value, this->out_desc_->Get(),
+      fw_cudnn_buf_ptr, fw_cudnn_buf_size, ZeroPtr<T>::value, this->out_desc_->Get(),
       out_blob->mut_dptr<T>()));
 
   if (this->template GetValFromCustomizedOpConf<bool>("use_bias")) {
@@ -117,21 +121,25 @@ void ConvKernel<DeviceType::kGPU, T>::WeightBackwardWithCudnn(
     DeviceCtx* device_ctx, const Blob* out_diff_blob, const Blob* in_blob, Blob* weight_diff_blob,
     Blob* in_diff_blob, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* weight_blob = BnInOp2Blob("weight");
-  CudaCheck(cudnnConvolutionBackwardFilter(
-      device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
-      this->out_desc_->Get(), out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
-      static_cast<cudnnConvolutionBwdFilterAlgo_t>(
-          this->GetConvKernelConf().cudnn_bwd_filter_algo()),
-      device_ctx->buf_ptr(), device_ctx->buf_size(), ZeroPtr<T>::value, this->filter_desc_->Get(),
-      weight_diff_blob->mut_dptr<T>()));
-
+  Blob* bw_cudnn_buf = BnInOp2Blob("bw_cudnn_buf");
+  void* bw_cudnn_buf_ptr = bw_cudnn_buf ? bw_cudnn_buf->mut_dptr() : nullptr;
+  size_t bw_cudnn_buf_size = bw_cudnn_buf ? bw_cudnn_buf->ByteSizeOfDataContentField() : 0;
+  if (this->op_conf().trainable()) {
+    CudaCheck(cudnnConvolutionBackwardFilter(
+        device_ctx->cudnn_handle(), OnePtr<T>::value, this->in_desc_->Get(), in_blob->dptr<T>(),
+        this->out_desc_->Get(), out_diff_blob->dptr<T>(), this->conv_desc_->Get(),
+        static_cast<cudnnConvolutionBwdFilterAlgo_t>(
+            this->GetConvKernelConf().cudnn_bwd_filter_algo()),
+        bw_cudnn_buf_ptr, bw_cudnn_buf_size, ZeroPtr<T>::value, this->filter_desc_->Get(),
+        weight_diff_blob->mut_dptr<T>()));
+  }
   if (in_diff_blob != nullptr) {
     CudaCheck(cudnnConvolutionBackwardData(
         device_ctx->cudnn_handle(), OnePtr<T>::value, this->filter_desc_->Get(),
         weight_blob->dptr<T>(), this->out_desc_->Get(), out_diff_blob->dptr<T>(),
         this->conv_desc_->Get(),
         static_cast<cudnnConvolutionBwdDataAlgo_t>(this->GetConvKernelConf().cudnn_bwd_data_algo()),
-        device_ctx->buf_ptr(), device_ctx->buf_size(), ZeroPtr<T>::value, this->in_desc_->Get(),
+        bw_cudnn_buf_ptr, bw_cudnn_buf_size, ZeroPtr<T>::value, this->in_desc_->Get(),
         in_diff_blob->mut_dptr<T>()));
   }
 }

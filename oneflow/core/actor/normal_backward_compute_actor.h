@@ -21,22 +21,19 @@ class NormalBackwardCompActor final : public CompActor {
   bool IsCustomizedReadReady() override;
   void AsyncReturnAllCustomizedReadableRegst() override;
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
-    return {false, {"activation", "data_tmp", "boxing_out", "121_out", "out_diff", "in"}};
+    return {false, {"activation", "data_tmp", "out", "out_diff", "in"}};
   }
 
   void AsyncReturnModelRegstUntilModelVersionIdEqual(int64_t model_version_id);
   void AsyncReturnModelRegstUntilLastPieceIdGreaterThan(int64_t piece_id);
 
-  int64_t b121_out_regst_desc_id_;
-
+  int64_t any_out_diff_regst_desc_id_;
   int64_t model_regst_desc_id_;
   int64_t const_buf_regst_desc_id_;
   int64_t const_model_regst_desc_id_;
   std::queue<Regst*> model_regst_queue_;
   Regst* const_model_regst_;
   Regst* const_buf_regst_;
-
-  int32_t staleness_;
 };
 
 }  // namespace oneflow

@@ -19,7 +19,7 @@ LossKernelConf* SmoothL1LossOp::GetMutLossKernelConf(KernelConf* kernel_conf) co
 
 void SmoothL1LossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, size_t* buf_size) const {
+    const ParallelContext* parallel_ctx) const {
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   const BlobDesc* inside_weights_blob_desc = GetBlobDesc4BnInOp("inside_weights");

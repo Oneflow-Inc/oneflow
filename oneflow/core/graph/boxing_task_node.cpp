@@ -12,8 +12,8 @@ void BoxingTaskNode::ProduceAllRegstsAndBindEdges() {
     auto out_regst = ProduceRegst(name, true);
     out_edge->AddRegst(name, out_regst);
 
-    name = "boxing_out_fw_pb_" + std::to_string(out_edge->edge_id());
-    auto fw_pb_out_regst = ProduceRegst(name, true);
+    name = "boxing_fw_pb_out_" + std::to_string(out_edge->edge_id());
+    auto fw_pb_out_regst = ProduceRegst(name, false);
     if (out_edge->dst_node()->GetTaskType() != TaskType::kCopyHd) {
       out_edge->AddRegst(name, fw_pb_out_regst);
     }
@@ -171,6 +171,16 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
                                           const std::vector<EdgeInfo>& sorted_out_edges) {
   std::vector<LogicalBlobId> lbis = in_logical->GetLbisTo(out_logical);
   auto middle_regst = GetProducedRegst("middle");
+  auto BindOutBnWithRegst = [&](ExecNode* node, const LogicalBlobId& lbi,
+                                const PbRpf<std::string>& (Operator::*bns_getter)() const,
+                                const std::string& out_regst_prefix) {
+    for (size_t i = 0; i < (node->op().get()->*bns_getter)().size(); ++i) {
+      const TaskEdge* out_edge = sorted_out_edges[i].edge;
+      auto regst = out_edge->GetRegst(out_regst_prefix + std::to_string(out_edge->edge_id()));
+      regst->AddLbi(lbi);
+      node->BindBnWithRegst((node->op().get()->*bns_getter)().Get(i), regst);
+    }
+  };
   for (const LogicalBlobId& lbi : lbis) {
     CHECK_EQ(lbi.is_packed_id(), false);
     ExecNode* node = mut_exec_gph().NewNode();
@@ -180,12 +190,10 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
       const std::string& ibn = node->op()->input_bns().Get(i);
       node->BindBnWithOneOfTheRegsts(ibn, regsts);
     }
-    for (size_t i = 0; i < node->op()->output_bns().size(); ++i) {
-      const TaskEdge* out_edge = sorted_out_edges[i].edge;
-      auto regst = out_edge->GetRegst("boxing_out_" + std::string(lbi.is_fw_pb() ? "fw_pb_" : "")
-                                      + std::to_string(out_edge->edge_id()));
-      regst->AddLbi(lbi);
-      node->BindBnWithRegst(node->op()->output_bns().Get(i), regst);
+    if (lbi.is_pb_blob()) {
+      BindOutBnWithRegst(node, lbi, &Operator::pb_output_bns, "boxing_fw_pb_out_");
+    } else {
+      BindOutBnWithRegst(node, lbi, &Operator::output_bns, "boxing_out_");
     }
     for (const std::string& dtbn : node->op()->data_tmp_bns()) {
       middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
