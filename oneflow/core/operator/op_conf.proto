@@ -754,7 +754,7 @@ message AnchorTargetOpConf{
     required string rpn_bbox_outside_weights = 6;
 
     required AnchorGeneratorConf anchors_generator_conf = 7;
-    optional int32 max_gt_boxes_num = 8 [default];
+    optional int32 max_gt_boxes_num = 8 [default = 256];
     optional float positive_overlap_threshold = 9 [default = 0.7];
     optional float negative_overlap_threshold = 10 [default = 0.3];
     optional int32 batch_size_per_image = 11 [default = 256];
