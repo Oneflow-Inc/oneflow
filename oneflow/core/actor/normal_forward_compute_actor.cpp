@@ -34,6 +34,10 @@ void NormalForwardCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   }
 }
 
+bool NormalForwardCompActor::CheckOutputActId(int64_t regst_desc_id) const {
+  return regst_desc_id != forward_model_regst_desc_id_;
+}
+
 void NormalForwardCompActor::ForEachCurCustomizedReadableRegst(
     std::function<void(const Regst*)> handler) const {
   if (model_regst_desc_id_ != -1) { handler(model_regst_); }
