@@ -86,7 +86,10 @@ class Actor {
   bool IsWriteReady();
   virtual void AsyncReturnAllCustomizedReadableRegst() {}
   virtual int64_t ActNumForEachOutput() const { return 1; }
-  virtual bool CheckOutputActId(int64_t regst_desc_id) const { return true; }
+  virtual bool CheckOutputActId(int64_t regst_desc_id) const {
+    return true;  // TODO(jiyuan): figure out the ActNumForEachOutput of the model regsts to MdSave
+                  // area
+  }
 
   // Async Do on device_ctx_
   void AsyncLaunchKernel(const KernelCtx&, std::function<Regst*(int64_t)> Regst4RegstDescId);
