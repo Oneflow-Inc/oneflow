@@ -79,6 +79,9 @@ void ChainMerger::InitChains() {
 }
 
 bool ChainMerger::DoMerge(std::list<ChainIt>& chains, ChainIt rhs) {
+  CHECK_EQ(rhs->nodes.size(), 1);
+  // rm kMdUpdtArea chain merge
+  if (rhs->nodes.front()->area_id() == kMdUpdtArea) { return false; }
   for (auto chains_it = chains.rbegin(); chains_it != chains.rend(); ++chains_it) {
     ChainIt lhs = *chains_it;
     if (IsSubset(lhs, rhs)) {
@@ -115,11 +118,9 @@ void ChainMerger::CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bits
 }
 
 bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
-  CHECK_EQ(rhs->nodes.size(), 1);
   int64_t bitset_num = std::ceil(static_cast<double>(task_node2uid_.size()) / BITSET_SIZE);
   for (int64_t i = 0; i < bitset_num; ++i) {
-    if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))
-        || rhs->nodes.front()->area_id() == kMdUpdtArea) {
+    if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))) {
       return false;
     }
   }
