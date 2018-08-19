@@ -144,7 +144,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   // Delete All Global
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::Delete(); }
+  Global<Profiler>::Delete();
   Global<MachineCtx>::Delete();
   Global<IDMgr>::Delete();
   Global<JobDesc>::Delete();
