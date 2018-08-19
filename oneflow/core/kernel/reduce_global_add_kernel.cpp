@@ -10,7 +10,7 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
   bool is_out_blob_inited = std::get<1>(*other_val);
   bool is_inplace_in_blob = std::get<2>(*other_val);
 
-  if (device_type == DeviceType::kGPU && is_inplace_in_blob) { return; }
+  if (is_inplace_in_blob) { return; }
 
   Blob* out_blob = BnInOp2Blob("out");
   Blob* in_blob = BnInOp2Blob(ibn);

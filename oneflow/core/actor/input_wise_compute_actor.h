@@ -17,6 +17,9 @@ class InputWiseCompActor : public CompActor {
   int64_t processed_regst_desc_id_cnt() const { return processed_regst_desc_id_cnt_; }
   int64_t RegstDescNum() const { return readable_regsts_.size(); }
   int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
+  bool EnableInplace() const {
+    return GetDeviceType() == DeviceType::kGPU && Global<JobDesc>::Get()->enable_mem_sharing();
+  }
 
  private:
   void Act() override;
