@@ -10,13 +10,7 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
   bool is_out_blob_inited = std::get<1>(*other_val);
   bool is_inplace_in_blob = std::get<2>(*other_val);
 
-  if (device_type == DeviceType::kGPU) {
-    if (is_inplace_in_blob) {
-      return;
-    } else {
-      CHECK(is_out_blob_inited);
-    }
-  }
+  if (is_inplace_in_blob) { return; }
 
   Blob* out_blob = BnInOp2Blob("out");
   Blob* in_blob = BnInOp2Blob(ibn);
@@ -25,7 +19,6 @@ void ReduceGlobalAddKernel<device_type, T>::ForwardDataContent(
     KernelUtil<device_type, T>::Axpy(ctx.device_ctx, elem_cnt, 1.0, in_blob->dptr<T>(), 1,
                                      out_blob->mut_dptr<T>(), 1);
   } else {
-    CHECK(device_type == DeviceType::kCPU);
     Memcpy<device_type>(ctx.device_ctx, out_blob->mut_dptr<char>(), in_blob->dptr<char>(),
                         out_blob->ByteSizeOfDataContentField());
   }
