@@ -112,8 +112,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
   const BlobDesc* last_blob_desc = nullptr;
   HashMap<int32_t, size_t> blob_mem_id2size;
 
-  int32_t last_blob_mem_id = -1;
-  int64_t last_body_byte_size = 0;
   for (auto& pair : lbi2blob_desc) {
     BlobDesc* blob_desc = pair.second.get();
     RtBlobDesc rt_blob_desc(*blob_desc);
@@ -138,8 +136,6 @@ std::unique_ptr<BlobDesc> ComputePackedBlobDesc(
     }
     blob_desc_cnt += 1;
     last_blob_desc = blob_desc;
-    last_blob_mem_id = blob_mem_id;
-    last_body_byte_size = cur_body_byte_size;
   }
   for (auto& pair : blob_mem_id2size) { body_byte_size += pair.second; }
   if (blob_desc_cnt == 0) {
