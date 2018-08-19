@@ -485,6 +485,8 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
 
 void TaskGraph::CollectAncestorsForEachNode() {
   AcyclicTopoForEachNode([&](TaskNode* task_node) {
+    // to reduce memory consumption
+    if (task_node->area_id() == kMdUpdtArea) { return; }
     task_node->mut_ancestors().clear();
     task_node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, task_node)) return;
