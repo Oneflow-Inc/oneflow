@@ -417,6 +417,11 @@ Regst* Actor::GetSoleProducedRegst(int64_t regst_desc_id) {
   return it->second.front().get();
 }
 
+int64_t Actor::GetSoleProducedDataRegstDescId() const {
+  CHECK_EQ(produced_data_regsts_.size(), 1);
+  return produced_data_regsts_.begin()->first;
+}
+
 bool Actor::IsReadReady() {
   return naive_readable_data_regst_.size() == naive_readable_data_regst_cnt_
          && IsCustomizedReadReady();
@@ -443,7 +448,7 @@ int Actor::ProcessWriteableCtrlRegstMsg(const ActorMsg& msg) {
   if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
     CHECK_EQ(regst->act_id(), expected_act_id);
   }
-  expected_act_id = regst->act_id() + ActNumForEachOutput();
+  expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   writeable_it->second.push_back(regst);
   return 0;
 }
@@ -524,7 +529,7 @@ int Actor::TryUpdtStateAsProducedRegst(Regst* regst) {
   if (expected_act_id >= 0 && CheckOutputActId(regst->regst_desc_id())) {
     CHECK_EQ(regst->act_id(), expected_act_id);
   }
-  expected_act_id = regst->act_id() + ActNumForEachOutput();
+  expected_act_id = regst->act_id() + ActNumForEachOutput(regst->regst_desc_id());
   writeable_it->second.push_back(regst);
   return 0;
 }
