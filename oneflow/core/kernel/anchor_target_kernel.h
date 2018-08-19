@@ -11,7 +11,7 @@ namespace oneflow {
 class AnchorLabelsAndMaxOverlapsInfo;
 class GtBoxesNearestAnchorsInfo;
 
-template<typename T, size_t N>
+template<typename T>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
@@ -19,22 +19,23 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   ~AnchorTargetKernel() = default;
 
  private:
+  const PbMessage& GetCustomizedOpConf() const override;
   void InitConstBufBlobs(DeviceCtx*,
                          std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
   AnchorLabelsAndMaxOverlapsInfo AssignLabels(
       const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  void SubsamplePositiveAndNegativeLabels(LabeledBBoxSlice<T, N>& labeled_anchor_slice,
-                                          size_t image_index);
-  void WriteToOutputBlobs(const LabeledBBoxSlice<T, N>& labeled_anchor_slice,
+  void SubsamplePositiveAndNegativeLabels(LabeledBBoxSlice<int32_t, 3>& labeled_anchor_slice,
+                                          size_t image_index) const;
+  void WriteToOutputBlobs(const KernelCtx& ctx, size_t image_index,
+                          const LabeledBBoxSlice<int32_t, 3>& labeled_anchor_slice,
                           const BBoxSlice<T>& anchor_boxes_slice,
                           const AnchorLabelsAndMaxOverlapsInfo& anchor_label_and_nearest_gt_box,
-                          const BBoxSlice<T>& gt_boxes_slice, int32_t* rpn_labels_ptr,
-                          T* rpn_bbox_targets_ptr, T* rpn_bbox_inside_weights_ptr,
-                          T* rpn_bbox_outside_weights_ptr) const;
+                          const BBoxSlice<T>& gt_boxes_slice, Blob* rpn_labels_blob,
+                          Blob* rpn_bbox_targets_blob, Blob* rpn_bbox_inside_weights_blob,
+                          Blob* rpn_bbox_outside_weights_blob) const;
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  const PbMessage& GetCustomizedOpConf() const override;
 };
 
 class AnchorLabelsAndMaxOverlapsInfo final {
@@ -77,8 +78,8 @@ class AnchorLabelsAndMaxOverlapsInfo final {
     if (anchor_labels_ptr_[anchor_idx] != 0) { anchor_labels_ptr_[anchor_idx] = 1; }
   }
 
-  int32_t* GetAnchorLabels() { return anchor_labels_ptr_; }
-  size_t* GetNearstGtBoxes() { return max_overlap_gt_boxes_idx_ptr_; }
+  inline int32_t* GetAnchorLabels() { return anchor_labels_ptr_; }
+  inline size_t* GetNearstGtBoxes() { return max_overlap_gt_boxes_idx_ptr_; }
 
  private:
   int32_t* anchor_labels_ptr_;            // label

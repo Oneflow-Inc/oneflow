@@ -171,9 +171,10 @@ class LabeledBBoxSlice final : public BBoxSlice<T> {
                          bbox_slice.index_ptr(), false) {}
   void GroupByLabel();
   size_t Subsample(int32_t label, size_t sample_num);
-  inline int32_t GetLabelCount(int32_t label);
-  inline int32_t GetLabel(size_t index) { return label_ptr_[index]; }
+  inline size_t GetLabelCount(int32_t label) const;
+  inline int32_t GetLabel(size_t index) const { return label_ptr_[index]; }
   inline size_t* label_ptr() { return label_ptr_; }
+  inline size_t size() { return BBoxSlice<T>::size_; }  // TODO: fix it
   std::array<GroupLabel, N> group_labels() { return group_labels; }
 
  private:

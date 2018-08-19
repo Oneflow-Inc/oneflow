@@ -33,19 +33,19 @@ void SetValue(int32_t size, T* data_ptr, T value) {
 
 }  // namespace
 
-template<typename T, size_t N>
-const PbMessage& AnchorTargetKernel<T, N>::GetCustomizedOpConf() const {
+template<typename T>
+const PbMessage& AnchorTargetKernel<T>::GetCustomizedOpConf() const {
   return this->op_conf().anchors_generator_conf();
 }
 
-template<typename T, size_t N>
-void AnchorTargetKernel<T, N>::InitConstBufBlobs(
+template<typename T>
+void AnchorTargetKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   const AnchorGeneratorConf& anchor_generator_conf = GetCustomizedOpConf().anchors_generator_conf();
   FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
   BBoxSlice<T> anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
-                             BnInOp2Blob("anchors_index")->mut_dptr<T>());
+                             BnInOp2Blob("anchors_index")->mut_dptr<size_t>());
   anchors_slice.Filter([&](const BBox<T>* anchor_box) {
     return anchor_box->x1() < 0 || anchor_box->y1() < 0
            || anchor_box->x2() >= anchor_generator_conf.image_width
@@ -54,10 +54,10 @@ void AnchorTargetKernel<T, N>::InitConstBufBlobs(
   *(BnInOp2Blob("inside_anchor_num")->mut_dptr<int32_t>()) = anchors_slice.size();
 }
 
-template<typename T, size_t N>
-AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T, N>::AssignLabels(
+template<typename T>
+AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
     const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob) {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   // From anchor perspective
   // "anchor_label" (H, W, A)                           label
   // "anchor_max_overlaps" (H, W, A)                    overlap
@@ -79,90 +79,97 @@ AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T, N>::AssignLabels(
       gt_boxes_slice, anchor_boxes_slice,
       [&](int32_t gt_box_idx, int32_t anchor_box_idx, float overlap) {
         anchor_labels_info.AssignLabelByOverlapThreshold(anchor_box_idx, gt_box_idx, overlap);
-        gt_boxes_nearest_anchors.TryRecordAnchorAsNearest(gt_box_idx, anchor_box_idx, overlap, );
+        gt_boxes_nearest_anchors.TryRecordAnchorAsNearest(gt_box_idx, anchor_box_idx, overlap);
       });
-  AssignPositiveLabelsToGtBoxesNearestAnchors(gt_boxes_nearest_anchors, anchor_labels_info);
+  AssignPositiveLabelsToGtBoxesNearestAnchors<T>(gt_boxes_nearest_anchors, anchor_labels_info);
 
   return anchor_labels_info;
 }
 
-template<typename T, size_t N>
-void AnchorTargetKernel<T, N>::SubsamplePositiveAndNegativeLabels(
-    LabeledBBoxSlice& labeled_anchor_slice, size_t image_index) {
+template<typename T>
+void AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(
+    LabeledBBoxSlice<int32_t, 3>& labeled_anchor_slice, size_t image_index) const {
   labeled_anchor_slice.GroupByLabel();
   size_t batch_size_per_image = GetCustomizedOpConf().batch_size_per_image();
   float foreground_fraction = GetCustomizedOpConf().foreground_fraction();
-  size_t fg_cnt = batch_size_per_image * fg_ratio;
+  size_t fg_cnt = batch_size_per_image * foreground_fraction;
   fg_cnt = labeled_anchor_slice.Subsample(1, fg_cnt);
   size_t bg_cnt = batch_size_per_image - fg_cnt;
   labeled_anchor_slice.Subsample(0, bg_cnt);
 }
 
-template<typename T, size_t N>
-void AnchorTargetKernel<T, N>::WriteToOutputBlobs(
-    const LabeledBBoxSlice<T, N>& labeled_anchor_slice, const BBoxSlice<T>& anchor_boxes_slice,
+template<typename T>
+void AnchorTargetKernel<T>::WriteToOutputBlobs(
+    const KernelCtx& ctx, size_t image_index,
+    const LabeledBBoxSlice<int32_t, 3>& labeled_anchor_slice,
+    const BBoxSlice<T>& anchor_boxes_slice,
     const AnchorLabelsAndMaxOverlapsInfo& anchor_label_and_nearest_gt_box,
-    const BBoxSlice<T>& gt_boxes_slice, int32_t* rpn_labels_ptr, T* rpn_bbox_targets_ptr,
-    T* rpn_bbox_inside_weights_ptr, T* rpn_bbox_outside_weights_ptr) {
+    const BBoxSlice<T>& gt_boxes_slice, Blob* rpn_labels_blob, Blob* rpn_bbox_targets_blob,
+    Blob* rpn_bbox_inside_weights_blob, Blob* rpn_bbox_outside_weights_blob) const {
+  int32_t* rpn_labels_ptr = rpn_labels_blob->mut_dptr<int32_t>(image_index);
+  T* rpn_bbox_targets_ptr = rpn_bbox_targets_blob->mut_dptr<T>(image_index);
+  T* rpn_bbox_inside_weights_ptr = rpn_bbox_inside_weights_blob->mut_dptr<T>(image_index);
+  T* rpn_bbox_outside_weights_ptr = rpn_bbox_outside_weights_blob->mut_dptr<T>(image_index);
+
   // 初始化“rpn_labels”, "rpn_bbox_inside_weights", "rpn_bbox_outside_weights"
   // 不用初始化"rpn_bbox_targets"，结果的正确性可由inside_weights和outside_weights保证
   size_t anchors_num = anchor_boxes_slice.capacity();
   SetValue(anchors_num, rpn_labels_ptr, -1);
-  Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_inside_weights_blob->mut_dptr(), 0,
-                           rpn_bbox_inside_weights_blob->ByteSizeOfDataContentField());
-  Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_outside_weights_blob->mut_dptr(), 0,
-                           rpn_bbox_outside_weights_blob->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(
+      ctx.device_ctx, rpn_bbox_inside_weights_ptr, 0,
+      rpn_bbox_inside_weights_blob->ByteSizeOfDataContentField());  // TODO: optimize it
+  Memset<DeviceType::kCPU>(
+      ctx.device_ctx, rpn_bbox_outside_weights_ptr, 0,
+      rpn_bbox_outside_weights_blob->ByteSizeOfDataContentField());  // TODO: optimize it
 
   const BBoxRegressionWeights& bbox_reg_ws = GetCustomizedOpConf().bbox_reg_weights();
-  BBox<T>* rpn_bbox_inside_weights_ptr =
-      BBox<T>::MutCast(rpn_bbox_inside_weights_ptr->mut_dptr<T>());
-  BBox<T>* rpn_bbox_outside_weights_ptr =
-      BBox<T>::MutCast(rpn_bbox_outside_weights_ptr->mut_dptr<T>());
+  BBox<T>* rpn_inside_weight_boxes = BBox<T>::MutCast(rpn_bbox_inside_weights_ptr);
+  BBox<T>* rpn_outside_weight_boxes = BBox<T>::MutCast(rpn_bbox_outside_weights_ptr);
   const size_t fg_cnt = labeled_anchor_slice.GetLabelCount(1);
   const size_t bg_cnt = labeled_anchor_slice.GetLabelCount(0);
   const float reduction_coefficient = 1 / (fg_cnt + bg_cnt);
-  FOR_RANGE(size_t, i, 0, labeled_anchor_slice->size()) {
-    size_t anchor_index = labeled_anchor_slice->GetIndex(i);
-    int32_t label = labeled_anchor_slice->GetLabel(i);
+  FOR_RANGE(size_t, i, 0, labeled_anchor_slice.size()) {
+    size_t anchor_index = labeled_anchor_slice.GetIndex(i);
+    int32_t label = labeled_anchor_slice.GetLabel(i);
     rpn_labels_ptr[anchor_index] = label;
     switch (label) {
       case 1:
         // rpn_bbox_targets
-        size_t gt_box_index = anchor_label_and_nearest_gt_box->GetNearstGtBoxes()[i];
+        size_t gt_box_index = anchor_label_and_nearest_gt_box.GetNearstGtBoxes()[i];
         BBox<T>* gt_box = gt_boxes_slice->GetBBox(gt_box_index);
-        BBox<T>* anchor_box = anchor_boxes_slice->GetBBox(anchor_index);
-        BBoxDelta<T>* bbox_target = BBoxDelta::Cast(rpn_bbox_targets_ptr + anchor_index);
+        BBox<T>* anchor_box = anchor_boxes_slice.GetBBox(anchor_index);
+        BBoxDelta<T>* bbox_target = BBoxDelta<T>::Cast(rpn_bbox_targets_ptr + anchor_index);
         bbox_target->TransformInverse(anchor_box, gt_box, bbox_reg_ws);
         // rpn_bbox_inside_weights
-        rpn_bbox_inside_weights_ptr[anchor_index].set_x1(1.0);
-        rpn_bbox_inside_weights_ptr[anchor_index].set_y1(1.0);
-        rpn_bbox_inside_weights_ptr[anchor_index].set_x2(1.0);
-        rpn_bbox_inside_weights_ptr[anchor_index].set_y2(1.0);
+        rpn_inside_weight_boxes[anchor_index].set_x1(1.0);
+        rpn_inside_weight_boxes[anchor_index].set_y1(1.0);
+        rpn_inside_weight_boxes[anchor_index].set_x2(1.0);
+        rpn_inside_weight_boxes[anchor_index].set_y2(1.0);
         // rpn_bbox_outside_weights
-        rpn_bbox_outside_weights_ptr[anchor_index].set_x1(reduction_coefficient);
-        rpn_bbox_outside_weights_ptr[anchor_index].set_y1(reduction_coefficient);
-        rpn_bbox_outside_weights_ptr[anchor_index].set_x2(reduction_coefficient);
-        rpn_bbox_outside_weights_ptr[anchor_index].set_y2(reduction_coefficient);
+        rpn_outside_weight_boxes[anchor_index].set_x1(reduction_coefficient);
+        rpn_outside_weight_boxes[anchor_index].set_y1(reduction_coefficient);
+        rpn_outside_weight_boxes[anchor_index].set_x2(reduction_coefficient);
+        rpn_outside_weight_boxes[anchor_index].set_y2(reduction_coefficient);
         break;
       case 0:
         // rpn_bbox_inside_weights
-        rpn_bbox_inside_weights_ptr[anchor_index].set_x1(0.0);
-        rpn_bbox_inside_weights_ptr[anchor_index].set_y1(0.0);
-        rpn_bbox_inside_weights_ptr[anchor_index].set_x2(0.0);
-        rpn_bbox_inside_weights_ptr[anchor_index].set_y2(0.0);
+        rpn_inside_weight_boxes[anchor_index].set_x1(0.0);
+        rpn_inside_weight_boxes[anchor_index].set_y1(0.0);
+        rpn_inside_weight_boxes[anchor_index].set_x2(0.0);
+        rpn_inside_weight_boxes[anchor_index].set_y2(0.0);
         break;
-      default:
+      default:;
     }
   }
 }
 
-template<typename T, size_t N>
-void AnchorTargetKernel<T, N>::ForwardDataContent(
+template<typename T>
+void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index_blob");
-  anchor_boxes_index_blob->CopyFrom(ctx->device_ctx, BnInOp2Blob("anchors_index"));
+  anchor_boxes_index_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("anchors_index"));
 
   Blob* gt_boxes_absolute_blob = BnInOp2Blob("gt_boxes_absolute");
   BBoxSlice<T> anchor_boxes_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
@@ -180,12 +187,11 @@ void AnchorTargetKernel<T, N>::ForwardDataContent(
         AssignLabels(gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
     LabeledBBoxSlice<int32_t, 3> labeled_anchor_slice(
         anchor_boxes_slice, anchor_label_and_nearest_gt_box.GetAnchorLabels());
+    WriteToOutputBlobs(ctx, image_index, labeled_anchor_slice, anchor_boxes_slice, gt_boxes_slice,
+                       BnInOp2Blob("rpn_labels"), BnInOp2Blob("rpn_bbox_targets"),
+                       BnInOp2Blob("rpn_bbox_inside_weights"),
+                       BnInOp2Blob("rpn_bbox_outside_weights"));
   }
-  WriteToOutputBlobs(labeled_anchor_slice, anchor_boxes_slice, gt_boxes_slice,
-                     BnInOp2Blob("rpn_labels")->mut_dptr<int32_t>(image_index),
-                     BnInOp2Blob("rpn_bbox_targets")->mut_dptr<T>(image_index),
-                     BnInOp2Blob("rpn_bbox_inside_weights")->mut_dptr<T>(image_index),
-                     BnInOp2Blob("rpn_bbox_outside_weights")->mut_dptr<T>(image_index) s);
 }
 
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kAnchorTargetConf, AnchorTargetKernel,

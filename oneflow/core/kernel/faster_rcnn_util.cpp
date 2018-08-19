@@ -189,7 +189,7 @@ size_t LabeledBBoxSlice<T, N>::Subsample(int32_t label, size_t sample_num) {
 }
 
 template<typename T, size_t N>
-int32_t LabeledBBoxSlice<T, N>::GetLabelCount(int32_t label) {
+size_t LabeledBBoxSlice<T, N>::GetLabelCount(int32_t label) const {
   for (auto it : group_labels_) {
     if (it->label == label) { return it->size; }
   }
