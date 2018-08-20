@@ -21,6 +21,8 @@ class PrintOp final : public Operator {
 
  private:
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
+  LogicalBlobId pibn2lbi(const std::string& pb_input_bn) const override;
+  LogicalBlobId Lbi4InputBn(const std::string& input_bn) const;
 };
 
 }  // namespace oneflow

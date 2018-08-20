@@ -35,9 +35,9 @@ void LossCompTaskNode::BuildExecGphAndRegst() {
   std::shared_ptr<const Operator> loss_op = op_vec[0];
   ExecNode* loss_node = mut_exec_gph().NewNode();
   loss_node->mut_op() = loss_op;
-  for (const std::string& ibn : loss_op->input_bns()) {
+  loss_op->ForEachInputBn([&](const std::string& ibn) {
     loss_node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
-  }
+  });
   std::shared_ptr<RegstDesc> data_tmp_regst = GetProducedRegst("data_tmp");
   loss_node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, data_tmp_regst);
 

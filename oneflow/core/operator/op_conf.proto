@@ -295,6 +295,14 @@ message BoxingOpConf {
   }
 }
 
+message PodBoxingOpConf {
+  required BoxingOpConf boxing_conf = 1;
+}
+
+message PbBoxingOpConf {
+  required BoxingOpConf boxing_conf = 1;
+}
+
 message NaiveModelUpdateConf {
 }
 
@@ -763,7 +771,6 @@ message OperatorConf {
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
-    BoxingOpConf boxing_conf = 109;
     NormalModelUpdateOpConf normal_mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
     AccumulateOpConf accumulate_conf = 112;
@@ -781,6 +788,8 @@ message OperatorConf {
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
     TransposeOpConf transpose_conf = 128;
+    PodBoxingOpConf pod_boxing_conf = 129;
+    PbBoxingOpConf pb_boxing_conf = 130;
     DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;

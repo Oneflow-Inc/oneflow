@@ -5,7 +5,7 @@ namespace oneflow {
 void ProposalTargetOp::InitFromOpConf() {
   CHECK(op_conf().has_proposal_target_conf());
   EnrollInputBn("rpn_rois", false);
-  EnrollInputBn("gt_boxes", false);
+  EnrollPbInputBn("gt_boxes");
   EnrollOutputBn("rois", false);
   EnrollOutputBn("labels", false);
   EnrollOutputBn("bbox_targets", false);

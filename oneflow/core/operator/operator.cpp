@@ -47,6 +47,10 @@ const std::string& Operator::SoleIbn() const {
   CHECK_EQ(input_bns().size(), 1);
   return input_bns().Get(0);
 }
+const std::string& Operator::SolePibn() const {
+  CHECK_EQ(pb_input_bns().size(), 1);
+  return pb_input_bns().Get(0);
+}
 const std::string& Operator::SoleIdbn() const {
   CHECK_EQ(input_diff_bns().size(), 1);
   return input_diff_bns().Get(0);
@@ -152,16 +156,22 @@ ActivationType Operator::GetActivationType() const {
 void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                              bool is_forward, const ParallelContext* parallel_ctx,
                              KernelConf* kernel_conf, const OpContext* op_ctx) const {
+  auto HasBnWithField = [&](const PbRpf<std::string>& bns, bool (BlobDesc::*has_field)() const) {
+    return HasBlobDescWithField(GetBlobDesc4BnInOp, bns, has_field);
+  };
   *(kernel_conf->mutable_op_attribute()) = op_attribute_;
-  if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::header_is_opaque)) {
+  CHECK(!HasBnWithField(pb_output_bns(), &BlobDesc::header_is_opaque));
+  if (HasBnWithField(output_bns(), &BlobDesc::header_is_opaque)) {
     kernel_conf->set_need_do_opaque_header(true);
   } else {
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, output_bns(), &BlobDesc::has_data_id_field)) {
+    if (HasBnWithField(output_bns(), &BlobDesc::has_data_id_field)
+        || HasBnWithField(pb_output_bns(), &BlobDesc::has_data_id_field)) {
       kernel_conf->set_need_do_data_id(true);
     }
-    const PbRpf<std::string>* bns = &output_bns();
-    if (IsLossOp()) { bns = &input_bns(); }
-    if (HasBlobDescWithField(GetBlobDesc4BnInOp, *bns, &BlobDesc::has_col_num_field)) {
+    const PbRpf<std::string>& obns = IsLossOp() ? input_bns() : output_bns();
+    const PbRpf<std::string>& pobns = IsLossOp() ? pb_input_bns() : pb_output_bns();
+    if (HasBnWithField(obns, &BlobDesc::has_col_num_field)
+        || HasBnWithField(pobns, &BlobDesc::has_col_num_field)) {
       kernel_conf->set_need_do_col_num(true);
     }
   }
@@ -173,6 +183,12 @@ void Operator::GenKernelConf(std::function<const BlobDesc*(const std::string&)> 
   }
   if (data_type == DataType::kInvalidDataType) {
     data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, output_diff_bns());
+  }
+  if (data_type == DataType::kInvalidDataType) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, pb_input_bns());
+  }
+  if (data_type == DataType::kInvalidDataType) {
+    data_type = GetDataTypeFromBnInOpVec(GetBlobDesc4BnInOp, pb_output_bns());
   }
   kernel_conf->set_data_type(data_type);
 
@@ -200,6 +216,11 @@ LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
   }
   return GenLogicalBlobId(name);
 }
+LogicalBlobId Operator::pibn2lbi(const std::string& pb_input_bn) const {
+  LogicalBlobId lbi = ibn2lbi(pb_input_bn);
+  lbi.set_is_pb_blob(true);
+  return lbi;
+}
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;
   ret.set_op_name(op_name());
@@ -207,10 +228,9 @@ LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
   return ret;
 }
 LogicalBlobId Operator::pobn2lbi(const std::string& pb_output_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(GetValFromCustomizedConf<std::string>(pb_output_bn));
-  return ret;
+  LogicalBlobId lbi = obn2lbi(pb_output_bn);
+  lbi.set_is_pb_blob(true);
+  return lbi;
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
   LogicalBlobId ret;
@@ -283,9 +303,16 @@ void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix) {
   EnrollRepeatedInputBn(ibn_prefix, true);
 }
 
+void Operator::EnrollPbInputBn(const std::string& pibn) {
+  LogicalBlobId lbi = pibn2lbi(pibn);
+  CHECK(lbi.is_pb_blob());
+  *(mut_pb_input_bns()->Add()) = pibn;
+  CHECK(mut_bn_in_op2lbi()->insert({pibn, lbi}).second);
+}
+
 void Operator::EnrollPbOutputBn(const std::string& pobn) {
-  LogicalBlobId lbi = obn2lbi(pobn);
-  lbi.set_is_pb_blob(true);
+  LogicalBlobId lbi = pobn2lbi(pobn);
+  CHECK(lbi.is_pb_blob());
   *(mut_pb_output_bns()->Add()) = pobn;
   CHECK(mut_bn_in_op2lbi()->insert({pobn, lbi}).second);
 }
@@ -342,6 +369,16 @@ LogicalBlobId Operator::dtbn2lbi(const std::string& data_tmp_bn) const {
   lbi.set_op_name(op_name());
   lbi.set_blob_name(data_tmp_bn);
   return lbi;
+}
+
+void Operator::ForEachInputBn(const std::function<void(const std::string&)>& Handler) const {
+  for (const std::string& ibn : input_bns()) { Handler(ibn); }
+  for (const std::string& pibn : pb_input_bns()) { Handler(pibn); }
+}
+
+void Operator::ForEachOutputBn(const std::function<void(const std::string&)>& Handler) const {
+  for (const std::string& obn : output_bns()) { Handler(obn); }
+  for (const std::string& pobn : pb_output_bns()) { Handler(pobn); }
 }
 
 std::string GenDiffBn(const std::string& bn) { return bn + "_diff"; }

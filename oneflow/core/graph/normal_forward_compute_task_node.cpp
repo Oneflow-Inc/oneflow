@@ -75,14 +75,14 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
   for (std::shared_ptr<const Operator> op : logical_node()->op_vec()) {
     ExecNode* cur_node = mut_exec_gph().NewNode();
     cur_node->mut_op() = op;
-    for (const std::string& obn : op->output_bns()) {
+    op->ForEachOutputBn([&](const std::string& obn) {
       const LogicalBlobId& lbi = op->BnInOp2Lbi(obn);
       CHECK(lbi2producer.insert({lbi, {cur_node, obn}}).second);
-    }
+    });
   }
   const std::list<std::weak_ptr<RegstDesc>>& in_regsts = GetConsumedRegst("in");
   mut_exec_gph().ForEachNode([&](ExecNode* cur_node) {
-    for (const std::string& ibn : cur_node->op()->input_bns()) {
+    cur_node->op()->ForEachInputBn([&](const std::string& ibn) {
       const LogicalBlobId& lbi = cur_node->op()->BnInOp2Lbi(ibn);
       auto producer_it = lbi2producer.find(lbi);
       if (producer_it != lbi2producer.end()) {
@@ -94,7 +94,7 @@ void NormalForwardCompTaskNode::BuildExecGphStructAndBindInRegst() {
       } else {
         cur_node->BindBnWithOneOfTheRegsts(ibn, in_regsts);
       }
-    }
+    });
   });
 }
 

@@ -171,6 +171,14 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
                                           const std::vector<EdgeInfo>& sorted_out_edges) {
   std::vector<LogicalBlobId> lbis = in_logical->GetLbisTo(out_logical);
   auto middle_regst = GetProducedRegst("middle");
+  auto BindInBnWithRegst = [&](ExecNode* node, const LogicalBlobId& lbi,
+                               const PbRpf<std::string>& (Operator::*bns_getter)() const) {
+    for (size_t i = 0; i < (node->op().get()->*bns_getter)().size(); ++i) {
+      auto regsts = sorted_in_edges[i].edge->GetAllRegsts();
+      const std::string& ibn = (node->op().get()->*bns_getter)().Get(i);
+      node->BindBnWithOneOfTheRegsts(ibn, regsts);
+    }
+  };
   auto BindOutBnWithRegst = [&](ExecNode* node, const LogicalBlobId& lbi,
                                 const PbRpf<std::string>& (Operator::*bns_getter)() const,
                                 const std::string& out_regst_prefix) {
@@ -185,23 +193,32 @@ void BoxingTaskNode::BuildWithLogicalPair(const LogicalNode* in_logical,
     CHECK_EQ(lbi.is_packed_id(), false);
     ExecNode* node = mut_exec_gph().NewNode();
     node->mut_op() = NewBoxingOp(lbi, in_logical, out_logical, sorted_in_edges, sorted_out_edges);
-    for (size_t i = 0; i < node->op()->input_bns().size(); ++i) {
-      auto regsts = sorted_in_edges[i].edge->GetAllRegsts();
-      const std::string& ibn = node->op()->input_bns().Get(i);
-      node->BindBnWithOneOfTheRegsts(ibn, regsts);
-    }
     if (lbi.is_pb_blob()) {
+      BindInBnWithRegst(node, lbi, &Operator::pb_input_bns);
       BindOutBnWithRegst(node, lbi, &Operator::pb_output_bns, "boxing_fw_pb_out_");
     } else {
+      BindInBnWithRegst(node, lbi, &Operator::input_bns);
       BindOutBnWithRegst(node, lbi, &Operator::output_bns, "boxing_out_");
-    }
-    for (const std::string& dtbn : node->op()->data_tmp_bns()) {
-      middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
-      node->BindBnWithRegst(dtbn, middle_regst);
+      for (const std::string& dtbn : node->op()->data_tmp_bns()) {
+        middle_regst->AddLbi(node->op()->BnInOp2Lbi(dtbn));
+        node->BindBnWithRegst(dtbn, middle_regst);
+      }
     }
     node->InferBlobDescs(nullptr);
   }
 }
+
+namespace {
+
+BoxingOpConf* GetMutBoxingOpConf(OperatorConf* op_conf, const LogicalBlobId& lbi) {
+  if (lbi.is_pb_blob()) {
+    return op_conf->mutable_pb_boxing_conf()->mutable_boxing_conf();
+  } else {
+    return op_conf->mutable_pod_boxing_conf()->mutable_boxing_conf();
+  }
+}
+
+}  // namespace
 
 std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
     const LogicalBlobId& lbi, const LogicalNode* in_logical, const LogicalNode* out_logical,
@@ -210,7 +227,7 @@ std::shared_ptr<Operator> BoxingTaskNode::NewBoxingOp(
   OperatorConf op_conf;
   op_conf.set_name("boxing_op_" + NewUniqueId());
   op_conf.set_device_type(device_type());
-  BoxingOpConf* boxing_conf = op_conf.mutable_boxing_conf();
+  BoxingOpConf* boxing_conf = GetMutBoxingOpConf(&op_conf, lbi);
   *(boxing_conf->mutable_lbi()) = lbi;
   boxing_conf->set_in_num(sorted_in_edges.size());
   boxing_conf->set_out_num(sorted_out_edges.size());

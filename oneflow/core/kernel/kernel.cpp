@@ -60,7 +60,7 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ClearPbBlobIfNeed(ctx, BnInOp2Blob);
+  ClearPbBlobs(ctx, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
   if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
@@ -77,11 +77,13 @@ void Kernel::Forward(const KernelCtx& ctx,
   }
 }
 
-void Kernel::ClearPbBlobIfNeed(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const auto& out_bn : op_attribute().output_bns()) {
+void Kernel::ClearPbBlobs(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const auto& out_bn : op_attribute().pb_output_bns()) {
     Blob* out_blob = BnInOp2Blob(out_bn);
-    if (out_blob && IsRecordDataType(out_blob->data_type())) { ClearPbBlob(out_blob); }
+    CHECK_NOTNULL(out_blob);
+    CHECK(IsRecordDataType(out_blob->data_type()));
+    ClearPbBlob(out_blob);
   }
 }
 
@@ -118,15 +120,23 @@ bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0;
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyDataIdFrom);
+  ForwardField(ctx.device_ctx, BnInOp2Blob, &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyColNumFrom);
+  ForwardField(ctx.device_ctx, BnInOp2Blob, &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardField(DeviceCtx* ctx,
+                                         std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                         void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+  const PbRpf<std::string>* input_bn = &op_attribute().input_bns();
+  if (input_bn->empty()) { input_bn = &op_attribute().pb_input_bns(); }
+  CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().output_bns(), Copy);
+  CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().pb_output_bns(), Copy);
 }
 
 template<DeviceType device_type>
@@ -171,12 +181,7 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
     Blob* out_blob = BnInOp2Blob(to_bns[0]);
     (out_blob->*Copy)(ctx, in_blob);
   } else {
-    CHECK_EQ(from_bns.size(), to_bns.size());
-    FOR_RANGE(size_t, i, 0, from_bns.size()) {
-      Blob* in_blob = BnInOp2Blob(from_bns[i]);
-      Blob* out_blob = BnInOp2Blob(to_bns[i]);
-      (out_blob->*Copy)(ctx, in_blob);
-    }
+    CHECK(from_bns.size() == 0 || to_bns.size() == 0);
   }
 }
 
