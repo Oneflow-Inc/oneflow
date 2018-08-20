@@ -150,7 +150,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<JobDesc>::New(job_conf_filepath);
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
+  bool DoProfile =
+      machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
+  if (DoProfile) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
@@ -181,10 +183,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   if (machine_ctx->IsThisMachineMaster()) {
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     CHECK_GT(amd.machine_amd_size(), 0);
-    improved_plan =
-        Improver().Improve(amd, naive_plan,
-                           JoinPath(LogDir(), ActEventLogger::experiment_prefix_
-                                                  + ActEventLogger::act_event_bin_filename_));
+    improved_plan = Improver().Improve(
+        amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
     PushPlan("improved_plan", improved_plan);
   } else {
     PullPlan("improved_plan", &improved_plan);
@@ -195,11 +195,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   // Runtime
   { Runtime run(improved_plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) {
-    if (Global<JobDesc>::Get()->collect_act_event()) {
-      Global<Profiler>::Get()->Profile(improved_plan,
-                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
-    }
+  if (DoProfile) {
+    Global<Profiler>::Get()->Profile(improved_plan,
+                                     JoinPath(LogDir(), ActEventLogger::act_event_bin_filename()));
   }
   // Delete All Global
   Global<CtrlClient>::Delete();
