@@ -30,7 +30,6 @@ const BoxingOpConf& PbBoxingOp::boxing_conf() const {
 
 void PbBoxingOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                 const ParallelContext* parallel_ctx) const {
-  BlobDesc* first_in_blob = GetBlobDesc4BnInOp(pb_input_bns().Get(0));
   std::vector<int64_t> fake_data_tmp_blob_shape_vec = CalcDataTmpBlobShapeVec(GetBlobDesc4BnInOp);
   InferOutBlobDescs(GetBlobDesc4BnInOp, fake_data_tmp_blob_shape_vec);
 }
