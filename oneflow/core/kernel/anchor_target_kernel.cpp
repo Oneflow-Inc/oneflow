@@ -7,7 +7,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-void ForEachOverlapBetweenInsideAnchorsAndGtBoxes(
+void ForEachOverlapBetweenAnchorsAndGtBoxes(
     const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
     const std::function<void(int32_t, int32_t, float)>& Handler) {
   FOR_RANGE(int32_t, i, 0, gt_boxes_slice.size()) {
@@ -137,7 +137,7 @@ AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
       BnInOp2Blob("gt_boxes_nearest_anchors_index")->mut_dptr<int32_t>(),
       BnInOp2Blob("gt_max_overlaps")->mut_dptr<float>());
 
-  ForEachOverlapBetweenInsideAnchorsAndGtBoxes(
+  ForEachOverlapBetweenAnchorsAndGtBoxes(
       gt_boxes_slice, anchor_boxes_slice,
       [&](int32_t gt_box_idx, int32_t anchor_box_idx, float overlap) {
         anchor_labels_info.AssignLabelByOverlapThreshold(anchor_box_idx, gt_box_idx, overlap);
@@ -173,7 +173,7 @@ void AnchorTargetKernel<T>::AssignOutputByLabels(
     const std::function<void(int32_t, BBoxWeights<T>*, float)>& AssignOutsideWeights) const {
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   const BBox<T>* anchor_boxes = BBox<T>::Cast(anchors_blob->dptr<T>());
-  const BBox<T>* gt_boxes = BBox<T>::Cast(BnInOp2Blob("gt_boxes_absolute")->dptr<T>(image_index));
+  const BBox<T>* gt_boxes = BBox<T>::Cast(BnInOp2Blob("gt_boxes_absolute")->dptr<T>());
   BBoxDelta<T>* bbox_target =
       BBoxDelta<T>::MutCast(BnInOp2Blob("rpn_bbox_targets")->mut_dptr<T>(image_index));
   const int32_t* anchor_labels_ptr = anchor_label_and_nearest_gt_box.GetAnchorLabels();
