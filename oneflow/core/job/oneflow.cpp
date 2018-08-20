@@ -122,7 +122,6 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     for (auto thrd_id : thrd_id_vec) {
       SubPlan sub_plan;
       Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
-      std::vector<TaskProto> tasks = PbRpf2StdVec(sub_plan.task());
       plan->mutable_task()->MergeFrom(sub_plan.task());
     }
   }
