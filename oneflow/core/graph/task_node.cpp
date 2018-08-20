@@ -142,8 +142,9 @@ int64_t TaskNode::MemZoneId121() const {
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
-  const auto& dst_ancestors = dst_node->ancestors();
-  if (dst_ancestors.find(this) != dst_ancestors.end()) return;
+  for (const TaskEdge* in_edge : dst_node->in_edges()) {
+    if (in_edge->src_node() == this) { return; }
+  }
   BuildCtrlRegstDesc(dst_node);
 }
 
