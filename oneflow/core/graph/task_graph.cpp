@@ -72,25 +72,6 @@ void TaskGraph::GeneratePersistenceThrdId(
   }
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
-  CollectAncestorsForEachNode();
-  SetChainIdAndOrderInGraphForEachNode();
-  BuildCtrlRegstDescInSameChain();
-}
-
-void TaskGraph::CollectAncestorsForEachNode() {
-  AcyclicTopoForEachNode([&](TaskNode* task_node) {
-    // to reduce memory consumption
-    if (task_node->area_id() == kMdUpdtArea) { return; }
-    task_node->mut_ancestors().clear();
-    task_node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
-      if (IsBackEdge(in_node, task_node)) return;
-      task_node->mut_ancestors().insert(in_node->ancestors().begin(), in_node->ancestors().end());
-      task_node->mut_ancestors().insert(in_node);
-    });
-  });
-}
-
 void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
   std::list<TaskNode*> starts;
   ForEachNode([&](TaskNode* node) {
@@ -112,7 +93,12 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
-void TaskGraph::SetChainIdAndOrderInGraphForEachNode() {
+void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
+  MergeChainAndSetOrderInGraphForEachNode();
+  BuildCtrlRegstDescInSameChain();
+}
+
+void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
   ChainGraph chain_graph(*this);
   const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
