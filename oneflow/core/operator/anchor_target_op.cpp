@@ -39,7 +39,7 @@ const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
 void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
   // useful vars
-  const AnchorGeneratorConf& conf = op_conf().anchor_target_conf().anchors_generator_conf();
+  const AnchorGeneratorConf& conf = op_conf().anchor_target_conf().anchor_generator_conf();
   const int32_t base_anchors_num = conf.anchor_scales().size() * conf.aspect_ratios().size();  // A
   const int32_t fm_stride = conf.feature_map_stride();
   CHECK_GE(fm_stride, 0);

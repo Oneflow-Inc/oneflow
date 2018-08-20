@@ -90,9 +90,9 @@ size_t FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_bo
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
-BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, size_t* index_ptr,
+BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr,
                         bool init_index = true)
-    : bbox_ptr_(boxes_ptr), index_ptr_(index_ptr), capacity_(capacity), size_(0) {
+    : capacity_(capacity), bbox_ptr_(boxes_ptr), index_ptr_(index_ptr), size_(0) {
   if (init_index) {
     size_ = capacity;
     std::iota(index_ptr_, index_ptr_ + size_, 0);
@@ -106,7 +106,7 @@ void BBoxSlice<T>::Truncate(size_t size) {
 }
 
 template<typename T>
-void BBoxSlice<T>::Sort(const std::function<bool(size_t, size_t)>& Compare) {
+void BBoxSlice<T>::Sort(const std::function<bool(int32_t, int32_t)>& Compare) {
   std::sort(index_ptr_, index_ptr_ + size_,
             [&](int32_t index_lhs, int32_t index_rhs) { return Compare(index_lhs, index_rhs); });
 }
@@ -142,27 +142,29 @@ void BBoxSlice<T>::Shuffle(size_t begin, size_t end) {
 #define INITIATE_BBOX_SLICE(T, type_cpp) template class BBoxSlice<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
 
-template<typename T, size_t N>
-LabeledBBoxSlice<T, N>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr,
-                                         size_t* index_ptr, bool init_index)
-    : label_ptr_(label_ptr) {
-  BBoxSlice<T>(capacity, boxes_ptr, index_ptr, init_index);
-  std::fill(group_labels_.begin(), group_labels_.end(), {0, 0, 0});
+template<typename T>
+LabeledBBoxSlice<T>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr,
+                                      int32_t* index_ptr, bool init_index)
+    : BBoxSlice<T>(capacity, boxes_ptr, index_ptr, init_index), label_ptr_(label_ptr) {
+  // BBoxSlice<T>(capacity, boxes_ptr, index_ptr, init_index);
+  GroupLabel group_label{0, 0, 0};
+  std::fill(group_labels_.begin(), group_labels_.end(), group_label);
 }
 
-template<typename T, size_t N>
-void LabeledBBoxSlice<T, N>::GroupByLabel() {
-  std::sort(BBoxSlice<T>::capacity_, BBoxSlice<T>::index_ptr_ + BBoxSlice<T>::size_,
-            [&](int32_t index_lhs, int32_t index_rhs) {
-              return label_ptr_[index_lhs] > label_ptr_[index_rhs];
-            });
-  int32_t last_label = label_ptr_[BBoxSlice<T>::index_ptr_[0]]
-                       + 1;  // init last_label to one more than biggest label
+template<typename T>
+void LabeledBBoxSlice<T>::GroupByLabel() {
+  int32_t* index_ptr = this->mut_index_ptr();
+  size_t size = this->size();
+  std::sort(index_ptr, index_ptr + size, [&](int32_t index_lhs, int32_t index_rhs) {
+    return label_ptr_[index_lhs] > label_ptr_[index_rhs];
+  });
+  int32_t last_label =
+      label_ptr_[index_ptr[0]] + 1;  // init last_label to one more than biggest label
   int32_t group_index = -1;
-  FOR_RANGE(int32_t, i, 0, BBoxSlice<T>::size_) {
-    int32_t cur_label = label_ptr_[BBoxSlice<T>::index_ptr_[i]];
+  FOR_RANGE(int32_t, i, 0, size) {
+    int32_t cur_label = label_ptr_[index_ptr[i]];
     if (cur_label != last_label) {
-      const GroupLabel& cur_group_label = group_labels_[++group_index];
+      GroupLabel& cur_group_label = group_labels_[++group_index];
       cur_group_label.label = cur_label;
       cur_group_label.begin = i;
       cur_group_label.size = 1;
@@ -173,53 +175,37 @@ void LabeledBBoxSlice<T, N>::GroupByLabel() {
   }
 }
 
-template<typename T, size_t N>
-size_t LabeledBBoxSlice<T, N>::Subsample(int32_t label, size_t sample_num) {
+template<typename T>
+size_t LabeledBBoxSlice<T>::Subsample(int32_t label, size_t sample_num) {
   auto group_label_it =
       std::find_if(group_labels_.begin(), group_labels_.end(),
                    [label](const GroupLabel& group_label) { return group_label.label == label; });
   size_t begin = group_label_it->begin;
   size_t size = group_label_it->size;
   if (size < sample_num) { return size; }
-  BBoxSlice<T>::Shuffle(begin, begin + size);
-  FOR_RANGE(size_t, i, begin + sample_num, begin + size) {
-    label_ptr_[BBoxSlice<T>::index_ptr_[i]] = -1;
-  }
+  this->Shuffle(begin, begin + size);
+  FOR_RANGE(size_t, i, begin + sample_num, begin + size) { label_ptr_[this->index_ptr()[i]] = -1; }
   return sample_num;
 }
 
-template<typename T, size_t N>
-size_t LabeledBBoxSlice<T, N>::GetLabelCount(int32_t label) const {
-  for (auto it : group_labels_) {
-    if (it->label == label) { return it->size; }
+template<typename T>
+size_t LabeledBBoxSlice<T>::GetLabelCount(int32_t label) const {
+  for (auto group_label : group_labels_) {
+    if (group_label.label == label) { return group_label.size; }
   }
   LOG(FATAL) << "The label type is not found";
   return -1;
 }
 
-// template<typename T, int32_t N>
-// int32_t LabeledBBoxSlice::get_label_start_index(int32_t label) {
-//   int32_t start_index = 0;
-//   FOR_RANGE(int32_t, 0, i, N) {
-//     if(label == label_type_[i]) {
-//       return start_index;
-//     } else {
-//       start_index += label_cnt_[i];
-//     }
-//   }
-//   LOG(FATAL) << "The label type is not found";
-//   return -1;
-// }
+// TODO: add template parameter size_t N
+#define INITIATE_LABELED_BBOX_SLICE(T, type_cpp) template class LabeledBBoxSlice<T>;
+OF_PP_FOR_EACH_TUPLE(INITIATE_LABELED_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
 
-// fix this macro
-// #define INITIATE_LABELED_BBOX_SLICE(T, N, type_cpp) template class LabeledBBoxSlice<T, N>;
-// OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
-
-// template<typename T>
-// void ScoredBBoxSlice<T>::Truncate(int32_t len) {
-//   CHECK_GE(len, 0);
-//   if (len < available_len_) { available_len_ = len; }
-// }
+template<typename T>
+void ScoredBBoxSlice<T>::Truncate(int32_t len) {
+  CHECK_GE(len, 0);
+  if (len < available_len_) { available_len_ = len; }
+}
 
 template<typename T>
 void ScoredBBoxSlice<T>::TruncateByThreshold(const float thresh) {
@@ -280,12 +266,12 @@ ScoredBBoxSlice<T> ScoredBBoxSlice<T>::Slice(const int32_t begin, const int32_t 
   return ScoredBBoxSlice(end - begin, bbox_ptr_, score_ptr_, index_slice_ + begin);
 }
 
-// template<typename T>
-// void ScoredBBoxSlice<T>::Shuffle() {
-//   std::random_device rd;
-//   std::mt19937 gen(rd());
-//   std::shuffle(index_slice_, index_slice_ + available_len_, gen);
-// }
+template<typename T>
+void ScoredBBoxSlice<T>::Shuffle() {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::shuffle(index_slice_, index_slice_ + available_len_, gen);
+}
 
 template<typename T>
 void ScoredBBoxSlice<T>::NmsFrom(float nms_threshold, const ScoredBBoxSlice<T>& pre_nms_slice) {
