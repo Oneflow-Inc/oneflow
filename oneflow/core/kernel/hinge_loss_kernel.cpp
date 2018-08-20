@@ -12,22 +12,19 @@ void HingeLossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataCo
   Blob* tmp_storage_blob = BnInOp2Blob("tmp_storage");
   const int64_t data_num = prediction_blob->shape().At(0);
   const int64_t pre_dim = prediction_blob->shape().Count(1);
-  const LabelType* label = label_blob->dptr<LabelType>();
-  const PredType* pred = prediction_blob->dptr<PredType>();
-  PredType* loss = loss_blob->mut_dptr<PredType>();
   const OperatorConf& op_conf = this->op_conf();
   tmp_diff_blob->CopyDataContentFrom(ctx.device_ctx, prediction_blob);
-  PredType* tmp_diff = tmp_diff_blob->mut_dptr<PredType>();
-  PredType* tmp_storage = tmp_storage_blob->mut_dptr<PredType>();
   // forward
   HingeLossKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, data_num, pre_dim, pred, label, op_conf, tmp_diff, tmp_storage, loss);
+      ctx.device_ctx, data_num, pre_dim, prediction_blob->dptr<PredType>(),
+      label_blob->dptr<LabelType>(), op_conf, tmp_diff_blob->mut_dptr<PredType>(),
+      tmp_storage_blob->mut_dptr<PredType>(), loss_blob->mut_dptr<PredType>());
   // if predict_diff_blob is not null, then do backward
   Blob* prediction_diff_blob = BnInOp2Blob(GenDiffBn("prediction"));
   if (prediction_diff_blob != nullptr) {
-    PredType* pred_diff = prediction_diff_blob->mut_dptr<PredType>();
     HingeLossKernelUtil<device_type, PredType, LabelType>::Backward(
-        ctx.device_ctx, data_num, pre_dim, tmp_diff, label, op_conf, pred_diff);
+        ctx.device_ctx, data_num, pre_dim, tmp_diff_blob->mut_dptr<PredType>(),
+        label_blob->dptr<LabelType>(), op_conf, prediction_diff_blob->mut_dptr<PredType>());
   }
 }
 
