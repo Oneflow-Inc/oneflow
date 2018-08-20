@@ -159,7 +159,6 @@ void ChainGraph::GroupTaskNodesByMachineAndCollectAncestors(
   task_gph.AcyclicTopoForEachNode([&](TaskNode* node) {
     (*machine2tasks)[node->machine_id()].emplace_back(node);
     // to reduce memory consumption
-    (*node2ancestors)[node].emplace();
     if (node->area_id() == kMdUpdtArea) { return; }
     node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
       if (IsBackEdge(in_node, node)) { return; }
