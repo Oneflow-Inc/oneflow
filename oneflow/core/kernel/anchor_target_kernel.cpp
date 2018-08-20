@@ -80,14 +80,8 @@ void AnchorTargetKernel<T>::InitConstBufBlobs(
 template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  const Blob* gt_boxes_blob = BnInOp2Blob("gt_boxes");
-  const Blob* anchors_blob = BnInOp2Blob("anchors");
-  Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index_blob");
-  anchor_boxes_index_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("inside_anchors_index"));
-  BBoxSlice<T> anchor_boxes_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
-                                  anchor_boxes_index_blob->mut_dptr<int32_t>(), false);
-  anchor_boxes_slice.Truncate(*(BnInOp2Blob("inside_anchor_num")->dptr<int32_t>()));
-  int64_t images_num = gt_boxes_blob->shape().At(0);
+  BBoxSlice<T> anchor_boxes_slice = GetAnchorBoxesSlice(ctx, BnInOp2Blob);
+  int64_t images_num = BnInOp2Blob("gt_boxes")->shape().At(0);
   FOR_RANGE(size_t, image_index, 0, images_num) {
     auto gt_boxes_slice = GetImageGtBoxesSlice(image_index, BnInOp2Blob);
     auto anchor_label_and_nearest_gt_box =
@@ -98,6 +92,18 @@ void AnchorTargetKernel<T>::ForwardDataContent(
                          BnInOp2Blob, AssignBBoxTargets<T>, AssignInsideWeights<T>,
                          AssignOutsideWeights<T>);
   }
+}
+
+template<typename T>
+BBoxSlice<T> AnchorTargetKernel<T>::GetAnchorBoxesSlice(
+    const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  const Blob* anchors_blob = BnInOp2Blob("anchors");
+  Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index_blob");
+  anchor_boxes_index_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("inside_anchors_index"));
+  BBoxSlice<T> anchor_boxes_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
+                                  anchor_boxes_index_blob->mut_dptr<int32_t>(), false);
+  anchor_boxes_slice.Truncate(*(BnInOp2Blob("inside_anchor_num")->dptr<int32_t>()));
+  return anchor_boxes_slice;
 }
 
 template<typename T>

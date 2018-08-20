@@ -24,6 +24,8 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
+  BBoxSlice<T> GetAnchorBoxesSlice(
+      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   BBoxSlice<T> GetImageGtBoxesSlice(
       size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   AnchorLabelsAndMaxOverlapsInfo AssignLabels(
