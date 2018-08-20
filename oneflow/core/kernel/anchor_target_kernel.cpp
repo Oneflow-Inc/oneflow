@@ -66,9 +66,9 @@ void AnchorTargetKernel<T>::InitConstBufBlobs(
   const AnchorGeneratorConf& anchor_generator_conf =
       op_conf().anchor_target_conf().anchor_generator_conf();
   FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
-  BBoxSlice<T> anchors_slice(static_cast<size_t>(anchors_blob->shape().elem_cnt()),
-                             anchors_blob->dptr<T>(),
+  BBoxSlice<T> anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
                              BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>(), true);
+  // TODO: add tolerance to the filter condition (Detectron)
   anchors_slice.Filter([&](const BBox<T>* anchor_box) {
     return anchor_box->x1() < 0 || anchor_box->y1() < 0
            || anchor_box->x2() >= anchor_generator_conf.image_width()
@@ -98,7 +98,7 @@ template<typename T>
 BBoxSlice<T> AnchorTargetKernel<T>::GetAnchorBoxesSlice(
     const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* anchors_blob = BnInOp2Blob("anchors");
-  Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index_blob");
+  Blob* anchor_boxes_index_blob = BnInOp2Blob("anchor_boxes_index");
   anchor_boxes_index_blob->CopyFrom(ctx.device_ctx, BnInOp2Blob("inside_anchors_index"));
   BBoxSlice<T> anchor_boxes_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
                                   anchor_boxes_index_blob->mut_dptr<int32_t>(), false);
@@ -111,10 +111,11 @@ BBoxSlice<T> AnchorTargetKernel<T>::GetImageGtBoxesSlice(
     size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const AnchorTargetOpConf& conf = op_conf().anchor_target_conf();
   const AnchorGeneratorConf& anchor_generator_conf = conf.anchor_generator_conf();
+  Blob* gt_boxes_absolute_blob = BnInOp2Blob("gt_boxes_absolute");
   int32_t boxes_num = FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(
       BnInOp2Blob("gt_boxes")->dptr<FloatList16>(image_index), anchor_generator_conf.image_height(),
-      anchor_generator_conf.image_width(), BnInOp2Blob("gt_boxes_absolute")->mut_dptr<T>());
-  BBoxSlice<T> gt_boxes_slice(conf.max_gt_boxes_num(), BnInOp2Blob("gt_boxes_absolute")->dptr<T>(),
+      anchor_generator_conf.image_width(), gt_boxes_absolute_blob->mut_dptr<T>());
+  BBoxSlice<T> gt_boxes_slice(conf.max_gt_boxes_num(), gt_boxes_absolute_blob->dptr<T>(),
                               BnInOp2Blob("gt_boxes_index")->mut_dptr<int32_t>(), true);
   gt_boxes_slice.Truncate(boxes_num);
   return gt_boxes_slice;
@@ -124,10 +125,6 @@ template<typename T>
 AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
     size_t image_index, const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
-  // From anchor perspective
-  // "anchor_label" (H, W, A)                           label
-  // "anchor_max_overlaps" (H, W, A)                    overlap
-  // "anchor_max_overlap_gt_boxes_index" (H, W, A)      gt_box_index
   Blob* labels_blob = BnInOp2Blob("rpn_labels");
   AnchorLabelsAndMaxOverlapsInfo anchor_labels_info(
       labels_blob->mut_dptr<int32_t>(image_index),
@@ -136,9 +133,6 @@ AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
       op_conf().anchor_target_conf().positive_overlap_threshold(),
       op_conf().anchor_target_conf().negative_overlap_threshold(), labels_blob->shape().Count(1),
       true);
-  // From gt_box perspective
-  // "gt_boxes_nearest_anchors_index" (max_gt_boxes_num * H * W * A)
-  // "gt_max_overlaps" (max_gt_boxes_num, 1)
   GtBoxesNearestAnchorsInfo gt_boxes_nearest_anchors(
       BnInOp2Blob("gt_boxes_nearest_anchors_index")->mut_dptr<int32_t>(),
       BnInOp2Blob("gt_max_overlaps")->mut_dptr<float>());

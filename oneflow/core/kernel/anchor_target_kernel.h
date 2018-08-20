@@ -46,10 +46,6 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
 
 class AnchorLabelsAndMaxOverlapsInfo final {
  public:
-  // From anchor perspective
-  // "anchor_label" (H, W, A)                     label
-  // "anchor_max_overlaps" (H, W, A)              overlap
-  // "anchor_max_overlap_gt_boxes_index" (H, W, A)      gt_box_index
   AnchorLabelsAndMaxOverlapsInfo(int32_t* anchor_labels_ptr, float* max_overlaps_ptr,
                                  int32_t* max_overlap_gt_boxes_index_ptr, float positive_threshold,
                                  float negative_threshold, size_t size, bool init_label = true)
@@ -88,12 +84,12 @@ class AnchorLabelsAndMaxOverlapsInfo final {
   inline int32_t* GetNearstGtBoxes() const { return max_overlap_gt_boxes_idx_ptr_; }
 
  private:
-  int32_t* anchor_labels_ptr_;             // label
-  float* max_overlaps_ptr_;                // overlap
-  int32_t* max_overlap_gt_boxes_idx_ptr_;  // gt_box_index
+  int32_t* anchor_labels_ptr_;             // (H * W * A)
+  float* max_overlaps_ptr_;                // (H * W * A)
+  int32_t* max_overlap_gt_boxes_idx_ptr_;  // (H * W * A)
   const float positive_threshold_;
   const float negative_threshold_;
-  const size_t size_;  // H * W * A
+  const size_t size_;
 };
 
 class GtBoxesNearestAnchorsInfo final {
