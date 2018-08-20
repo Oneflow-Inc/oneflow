@@ -101,43 +101,47 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<IDMgr>::New();
   // Compile
   Plan naive_plan;
-  Plan plan;
+  Plan mem_shared_plan;
+  Plan improved_plan;
   PushAvailableMemDescOfThisMachine();
   AvailableMemDesc amd;
 
   if (machine_ctx->IsThisMachineMaster()) {
     naive_plan = Compiler().Compile();
     amd = PullAvailableMemDesc();
-    plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
-    Global<CtrlClient>::Get()->PushKV("mem_shared_plan", plan);
+    mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
+    Global<CtrlClient>::Get()->PushKV("naive_plan", naive_plan);
+    Global<CtrlClient>::Get()->PushKV("mem_shared_plan", mem_shared_plan);
   } else {
-    Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
+    Global<CtrlClient>::Get()->PullKV("naive_plan", &naive_plan);
+    Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &mem_shared_plan);
   }
   OF_BARRIER();
   PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
+  PrintProtoToTextFile(mem_shared_plan, JoinPath(LogDir(), "mem_shared_plan"));
   // Experiment Runtime
-  { Runtime experiment_run(plan, true); }
+  { Runtime experiment_run(mem_shared_plan, true); }
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     CHECK_GT(amd.machine_amd_size(), 0);
-    plan = Improver().Improve(amd, naive_plan,
-                              JoinPath(LogDir(), ActEventLogger::experiment_prefix_
-                                                     + ActEventLogger::act_event_bin_filename_));
-    Global<CtrlClient>::Get()->PushKV("improved_plan", plan);
+    improved_plan =
+        Improver().Improve(amd, naive_plan,
+                           JoinPath(LogDir(), ActEventLogger::experiment_prefix_
+                                                  + ActEventLogger::act_event_bin_filename_));
+    Global<CtrlClient>::Get()->PushKV("improved_plan", improved_plan);
   } else {
-    Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
+    Global<CtrlClient>::Get()->PullKV("improved_plan", &improved_plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
+  PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER();
   // Runtime
-  { Runtime run(plan, false); }
+  { Runtime run(improved_plan, false); }
   if (machine_ctx->IsThisMachineMaster()) {
     if (Global<JobDesc>::Get()->collect_act_event()) {
-      Global<Profiler>::Get()->Profile(plan,
+      Global<Profiler>::Get()->Profile(improved_plan,
                                        JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
     }
   }
