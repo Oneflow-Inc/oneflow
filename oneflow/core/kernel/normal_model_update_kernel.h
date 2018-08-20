@@ -22,7 +22,9 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 };
 
-double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t now_batch_num);
+bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num);
+double GetWarmupLearningRate(const WarmupConf&, double lr, int64_t cur_batch_num);
+double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t cur_batch_num);
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 

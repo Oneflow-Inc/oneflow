@@ -13,7 +13,7 @@ void ReduceGatherKernel<device_type>::ForwardDataContent(
   dst_cur_dptr += this->kernel_conf().reduce_gather_conf().data_offset().Get(in_bn_id);
   Blob* in_blob = BnInOp2Blob(this->op_attribute().input_bns().Get(in_bn_id));
   size_t in_byte_size = in_blob->ByteSizeOfDataContentField();
-  Memcpy<DeviceType::kGPU>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
+  Memcpy<DeviceType::kCPU>(ctx.device_ctx, dst_cur_dptr, in_blob->dptr<char>(), in_byte_size);
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceGatherConf, ReduceGatherKernel);
