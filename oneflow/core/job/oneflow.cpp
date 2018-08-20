@@ -6,6 +6,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/machine_context.h"
 #include "oneflow/core/job/profiler.h"
+#include "oneflow/core/job/sub_plan.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
@@ -76,12 +77,61 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
+std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
+  return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
+}
+
 void PushPlan(const std::string& plan_name, const Plan& plan) {
-  Global<CtrlClient>::Get()->PushKV(plan_name, plan);
+  HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
+  HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
+  for (const auto& task : plan.task()) {
+    machine_id2thrd_id_set[task.machine_id()].insert(task.thrd_id());
+    mchn_thrd_id2task_protos[std::make_pair(task.machine_id(), task.thrd_id())].emplace_back(task);
+  }
+
+  HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
+  for (const auto& pair : machine_id2thrd_id_set) {
+    CHECK(machine_id2thrd_ids.emplace(pair.first, ThrdIds()).second);
+    std::vector<int64_t> thrd_id_vec(pair.second.begin(), pair.second.end());
+    *(machine_id2thrd_ids.at(pair.first).mutable_thrd_id()) = StdVec2PbRf(thrd_id_vec);
+  }
+
+  ClusterThrdIds cluster_thrd_ids;
+  *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
+  Global<CtrlClient>::Get()->PushKV(plan_name + "_cluster_thrd_ids", cluster_thrd_ids);
+
+  for (const auto& pair : mchn_thrd_id2task_protos) {
+    SubPlan sub_plan;
+    *(sub_plan.mutable_task()) = StdVec2PbRpf(pair.second);
+    Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
+                                      sub_plan);
+  }
+  Global<CtrlClient>::Get()->PushKV(plan_name + "_total_mbn_num",
+                                    std::to_string(plan.total_mbn_num()));
+
+  // Global<CtrlClient>::Get()->PushKV(plan_name, plan);
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
-  Global<CtrlClient>::Get()->PullKV(plan_name, plan);
+  ClusterThrdIds cluster_thrd_ids;
+  Global<CtrlClient>::Get()->PullKV(plan_name + "_cluster_thrd_ids", &cluster_thrd_ids);
+  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), plan_name + "_cluster_thrd_ids"));
+  // int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
+  HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
+  machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
+  for (const auto& pair : machine_id2thrd_ids) {
+    int64_t machine_id = pair.first;
+    std::vector<int64_t> thrd_id_vec = PbRf2StdVec(pair.second.thrd_id());
+    for (auto thrd_id : thrd_id_vec) {
+      SubPlan sub_plan;
+      Global<CtrlClient>::Get()->PullKV(sub_plan_key(plan_name, machine_id, thrd_id), &sub_plan);
+      std::vector<TaskProto> tasks = PbRpf2StdVec(sub_plan.task());
+      plan->mutable_task()->MergeFrom(sub_plan.task());
+    }
+  }
+  std::string total_mbn_num;
+  Global<CtrlClient>::Get()->PullKV(plan_name + "_total_mbn_num", &total_mbn_num);
+  plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
 }
 
 }  // namespace
