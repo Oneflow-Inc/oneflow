@@ -77,6 +77,10 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
+std::string cluster_thrd_ids_key(const std::string& plan_name) {
+  return plan_name + "_cluster_thrd_ids";
+}
+
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
@@ -100,7 +104,7 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 
   ClusterThrdIds cluster_thrd_ids;
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
-  Global<CtrlClient>::Get()->PushKV(plan_name + "_cluster_thrd_ids", cluster_thrd_ids);
+  Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
   for (const auto& pair : mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
@@ -114,8 +118,8 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
   ClusterThrdIds cluster_thrd_ids;
-  Global<CtrlClient>::Get()->PullKV(plan_name + "_cluster_thrd_ids", &cluster_thrd_ids);
-  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), plan_name + "_cluster_thrd_ids"));
+  Global<CtrlClient>::Get()->PullKV(cluster_thrd_ids_key(plan_name), &cluster_thrd_ids);
+  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), cluster_thrd_ids_key(plan_name)));
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
   for (const auto& pair : machine_id2thrd_ids) {
