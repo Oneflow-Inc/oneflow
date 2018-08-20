@@ -72,11 +72,35 @@ void TaskGraph::GeneratePersistenceThrdId(
   }
 }
 
-void TaskGraph::FindChainsInSameStream() {
-  CollectAncestorsForEachNode();
+void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
+  std::list<TaskNode*> starts;
+  ForEachNode([&](TaskNode* node) {
+    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
+  });
+  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+      if (IsBackEdge(node_on_in_edge, node)) return;
+      handler(const_cast<TaskNode*>(node_on_in_edge));
+    });
+  };
+  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      if (IsBackEdge(node, node_on_out_edge)) return;
+      handler(const_cast<TaskNode*>(node_on_out_edge));
+    });
+  };
+  // DfsTopo will cause inappropriate chain graph
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
+}
 
-  ChainGraph chain_gph(*this);
-  const auto& ordered_chain_nodes = chain_gph.OrderdedChainNodes();
+void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
+  MergeChainAndSetOrderInGraphForEachNode();
+  BuildCtrlRegstDescInSameChain();
+}
+
+void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
+  ChainGraph chain_graph(*this);
+  const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
   for (auto& chain_node : ordered_chain_nodes) {
     auto& ordered_in_chain = chain_node->TaskNodes();
@@ -90,9 +114,7 @@ void TaskGraph::FindChainsInSameStream() {
   }
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
-  FindChainsInSameStream();
-
+void TaskGraph::BuildCtrlRegstDescInSameChain() {
   HashMap<int64_t, TaskNode*> chain_id2node;
   for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
@@ -481,38 +503,6 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
       }
     }
   }
-}
-
-void TaskGraph::CollectAncestorsForEachNode() {
-  AcyclicTopoForEachNode([&](TaskNode* task_node) {
-    task_node->mut_ancestors().clear();
-    task_node->ForEachNodeOnInEdge([&](TaskNode* in_node) {
-      if (IsBackEdge(in_node, task_node)) return;
-      task_node->mut_ancestors().insert(in_node->ancestors().begin(), in_node->ancestors().end());
-      task_node->mut_ancestors().insert(in_node);
-    });
-  });
-}
-
-void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
-  std::list<TaskNode*> starts;
-  ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
-  });
-  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, node)) return;
-      handler(const_cast<TaskNode*>(node_on_in_edge));
-    });
-  };
-  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (IsBackEdge(node, node_on_out_edge)) return;
-      handler(const_cast<TaskNode*>(node_on_out_edge));
-    });
-  };
-  // DfsTopo will cause inappropriate chain graph
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
