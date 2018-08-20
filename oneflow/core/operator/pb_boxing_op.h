@@ -13,6 +13,8 @@ class PbBoxingOp final : public BoxingOp {
 
   void InitFromOpConf() override;
   const BoxingOpConf& boxing_conf() const override;
+  const PbRpf<std::string>& InputBns() const override { return pb_input_bns(); }
+  const PbRpf<std::string>& OutputBns() const override { return pb_output_bns(); }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

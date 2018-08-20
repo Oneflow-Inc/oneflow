@@ -13,12 +13,15 @@ class BoxingOp : public Operator {
 
  protected:
   virtual const BoxingOpConf& boxing_conf() const = 0;
+  virtual const PbRpf<std::string>& InputBns() const = 0;
+  virtual const PbRpf<std::string>& OutputBns() const = 0;
   const PbMessage& GetCustomizedConf() const { return boxing_conf(); }
   LogicalBlobId ibn2lbi(const std::string& input_bn) const override;
   LogicalBlobId obn2lbi(const std::string& output_bn) const override;
   std::vector<int64_t> CalcDataTmpBlobShapeVec(
-      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
-      const PbRpf<std::string>& input_bns) const;
+      const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp) const;
+  void InferOutBlobDescs(const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
+                         const std::vector<int64_t>& data_tmp_blob_shape_vec) const;
 };
 
 }  // namespace oneflow
