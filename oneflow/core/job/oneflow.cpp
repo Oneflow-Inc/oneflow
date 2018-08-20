@@ -108,15 +108,12 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
   }
   Global<CtrlClient>::Get()->PushKV(plan_name + "_total_mbn_num",
                                     std::to_string(plan.total_mbn_num()));
-
-  // Global<CtrlClient>::Get()->PushKV(plan_name, plan);
 }
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
   ClusterThrdIds cluster_thrd_ids;
   Global<CtrlClient>::Get()->PullKV(plan_name + "_cluster_thrd_ids", &cluster_thrd_ids);
   PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), plan_name + "_cluster_thrd_ids"));
-  // int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
   for (const auto& pair : machine_id2thrd_ids) {
