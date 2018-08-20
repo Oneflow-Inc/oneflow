@@ -9,7 +9,6 @@
 
 namespace oneflow {
 
-class ChainNode;
 class ReduceTaskNodes;
 
 class TaskGraph final : public Graph<TaskNode, TaskEdge> {
@@ -73,8 +72,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void SetChainIdAndOrderInGraphForEachNode(const std::vector<ChainNode*>& ordered_chain_nodes);
   void CollectAncestorsForEachNode();
+  void SetChainIdAndOrderInGraphForEachNode();
   void BuildCtrlRegstDescInSameChain();
 
   template<typename LogicalNodeType, typename TaskNodeType>

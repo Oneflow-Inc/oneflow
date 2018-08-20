@@ -74,8 +74,7 @@ void TaskGraph::GeneratePersistenceThrdId(
 
 void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
   CollectAncestorsForEachNode();
-  ChainGraph chain_graph(*this);
-  SetChainIdAndOrderInGraphForEachNode(chain_graph.OrderdedChainNodes());
+  SetChainIdAndOrderInGraphForEachNode();
   BuildCtrlRegstDescInSameChain();
 }
 
@@ -113,8 +112,9 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
-void TaskGraph::SetChainIdAndOrderInGraphForEachNode(
-    const std::vector<ChainNode*>& ordered_chain_nodes) {
+void TaskGraph::SetChainIdAndOrderInGraphForEachNode() {
+  ChainGraph chain_graph(*this);
+  const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
   for (auto& chain_node : ordered_chain_nodes) {
     auto& ordered_in_chain = chain_node->TaskNodes();
