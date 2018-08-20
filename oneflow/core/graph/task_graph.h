@@ -72,8 +72,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void CollectAncestorsForEachNode();
-  void FindChainsInSameStream();
+  void MergeChainAndSetOrderInGraphForEachNode();
+  void BuildCtrlRegstDescInSameChain();
 
   template<typename LogicalNodeType, typename TaskNodeType>
   void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);
