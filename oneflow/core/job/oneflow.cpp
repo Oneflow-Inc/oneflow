@@ -81,6 +81,8 @@ std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
 
+std::string total_mbn_num_key(const std::string& plan_name) { return plan_name + "_total_mbn_num"; }
+
 void PushPlan(const std::string& plan_name, const Plan& plan) {
   HashMap<int64_t, std::set<int64_t>> machine_id2thrd_id_set;
   HashMap<std::pair<int64_t, int64_t>, std::vector<TaskProto>> mchn_thrd_id2task_protos;
@@ -106,7 +108,7 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
     Global<CtrlClient>::Get()->PushKV(sub_plan_key(plan_name, pair.first.first, pair.first.second),
                                       sub_plan);
   }
-  Global<CtrlClient>::Get()->PushKV(plan_name + "_total_mbn_num",
+  Global<CtrlClient>::Get()->PushKV(total_mbn_num_key(plan_name),
                                     std::to_string(plan.total_mbn_num()));
 }
 
@@ -126,7 +128,7 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
     }
   }
   std::string total_mbn_num;
-  Global<CtrlClient>::Get()->PullKV(plan_name + "_total_mbn_num", &total_mbn_num);
+  Global<CtrlClient>::Get()->PullKV(total_mbn_num_key(plan_name), &total_mbn_num);
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
 }
 
