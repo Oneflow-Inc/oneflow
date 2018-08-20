@@ -1,4 +1,4 @@
-#include "oneflow/core/common/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 #ifdef WITH_CUDA
 

@@ -4,7 +4,7 @@
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/operator_util.h"
 #include "oneflow/core/device/cudnn_util.h"
-#include "oneflow/core/common/cudnn_conv_ctx_cache.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
