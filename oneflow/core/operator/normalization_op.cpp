@@ -14,12 +14,12 @@ void NormalizationOp::InitFromOpConf() {
   EnrollDataTmpBn("new_variance");
   EnrollForwardModelBn("moving_mean");
   EnrollForwardModelBn("moving_variance");
-  if (conf.center() && op_conf().trainable()) {
+  if (conf.center()) {
     EnrollModelBn("beta");
   } else {
     EnrollDataTmpBn("beta_diff");
   }
-  if (conf.scale() && op_conf().trainable()) {
+  if (conf.scale()) {
     EnrollModelBn("gamma");
   } else {
     EnrollDataTmpBn("gamma_diff");
@@ -88,12 +88,12 @@ void NormalizationOp::InferParamBlobDescs(
   std::list<std::string> bns_needless_in_predict_or_cudnn = {"new_mean", "new_variance"};
   std::list<std::string> bns_need_in_cudnn = {"cache_mean_for_cudnn_bw",
                                               "cache_inv_variance_for_cudnn_bw"};
-  if (conf.center() && op_conf().trainable()) {
+  if (conf.center()) {
     blob_names.push_back("beta");
   } else {
     blob_names.push_back("beta_diff");
   }
-  if (conf.scale() && op_conf().trainable()) {
+  if (conf.scale()) {
     blob_names.push_back("gamma");
   } else {
     blob_names.push_back("gamma_diff");
