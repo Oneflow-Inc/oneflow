@@ -21,7 +21,7 @@ class CudnnConvCtxCache final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CudnnConvCtxCache);
   CudnnConvCtxCache() = default;
-  ~CudnnConvCtxCache();
+  ~CudnnConvCtxCache() = default;
 
   bool FindCudnnConvAlgoCtxWithConfig(const BlobDesc& in_desc, const BlobDesc& out_desc,
                                       const BlobDesc& filter_desc, const std::string& format,
