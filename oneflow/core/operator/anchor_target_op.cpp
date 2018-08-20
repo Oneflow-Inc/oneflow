@@ -6,170 +6,126 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_anchor_target_conf());
 
-  // input
   EnrollInputBn("gt_boxes", false);
 
-  // output
   EnrollOutputBn("rpn_labels", false);
   EnrollOutputBn("rpn_bbox_targets", false);
   EnrollOutputBn("rpn_bbox_inside_weights", false);
   EnrollOutputBn("rpn_bbox_outside_weights", false);
 
-  // Const buf
-  EnrollConstBufBn("anchors");              // (N, H, W, A * 4)
-  EnrollConstBufBn("inside_anchor_index");  // (N, H, W, A)
-  EnrollConstBufBn("inside_anchor_num");    // (1)
+  EnrollConstBufBn("anchors");
+  EnrollConstBufBn("inside_anchor_index");
+  EnrollConstBufBn("inside_anchor_num");
 
-  // Data tmp
-  EnrollDataTmpBn("gt_boxes_absolute");  // (max_gt_boxes_num * 4, 1)
-  EnrollDataTmpBn("gt_boxes_index");     // (max_gt_bboxes_num, 1)
-  EnrollDataTmpBn("fg_inds");
-  EnrollDataTmpBn("bg_inds");
-  EnrollDataTmpBn("max_overlaps");
-  EnrollDataTmpBn("max_overlaps_inds");
-  EnrollDataTmpBn("gt_max_overlaps_inds");
-  EnrollDataTmpBn("gt_max_overlaps_num");
-  EnrollDataTmpBn("origin_gt_boxes");
+  EnrollDataTmpBn("gt_boxes_absolute");
+  EnrollDataTmpBn("gt_boxes_index");
+  EnrollDataTmpBn("anchor_max_overlaps");
+  EnrollDataTmpBn("anchor_nearest_gt_box_index");
+  EnrollDataTmpBn("gt_boxes_nearest_anchors_index");
 }
 
-const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
-  return op_conf().anchor_target_conf();
+DataType AnchorTargetOp::GetTemplateParameterDataType(const BlobDesc* gt_boxes_blob_desc) const {
+  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
+  int64_t image_num = gt_boxes_blob_desc->shape().At(0);
+  const auto gt_boxes_type = gt_boxes_blob_desc->data_type();
+  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
+      || gt_boxes_type == DataType::kFloatList24) {
+    return DataType::kFloat;
+  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
+             || gt_boxes_type == DataType::kDoubleList24) {
+    return DataType::kDouble;
+  } else {
+    UNIMPLEMENTED();
+  }
 }
 
 void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                     const ParallelContext* parallel_ctx) const {
-  // useful vars
-  const AnchorGeneratorConf& conf = op_conf().anchor_target_conf().anchor_generator_conf();
-  const int32_t base_anchors_num = conf.anchor_scales().size() * conf.aspect_ratios().size();  // A
-  const int32_t fm_stride = conf.feature_map_stride();
-  CHECK_GE(fm_stride, 0);
-  const int32_t fm_h = conf.image_height() / fm_stride;  // H
-  const int32_t fm_w = conf.image_width() / fm_stride;   // W
-  CHECK_GE(fm_h, 0);
-  CHECK_GE(fm_w, 0);
-  const int32_t max_per_img_gt_boxes_num = 256;
+  const AnchorGeneratorConf& anchor_generator_conf =
+      op_conf().anchor_target_conf().anchor_generator_conf();
+  const int32_t base_anchors_num =
+      anchor_generator_conf.anchor_scales().size() * anchor_generator_conf.aspect_ratios().size();
+  const int32_t fm_stride = anchor_generator_conf.feature_map_stride();
+  CHECK_GT(fm_stride, 0);
+  const int32_t fm_h = anchor_generator_conf.image_height() / fm_stride;
+  const int32_t fm_w = anchor_generator_conf.image_width() / fm_stride;
+  CHECK_GT(fm_h, 0);
+  CHECK_GT(fm_w, 0);
+  const AnchorTargetOpConf& anchor_target_conf = op_conf().anchor_target_conf();
+  const int32_t max_gt_boxes_num = anchor_target_conf.max_gt_boxes_num();
 
-  // in blobs
-  // image_info: (N, 3)
-  const BlobDesc* image_info_blob_desc = GetBlobDesc4BnInOp("image_info");
-  CHECK_EQ(image_info_blob_desc->shape().NumAxes(), 2);
-  int32_t image_num = image_info_blob_desc->shape().At(0);
-  CHECK_GE(image_num, 0);
-  CHECK_EQ(image_info_blob_desc->shape().At(1), 3);
-
-  // gt_boxes: (N)
+  // in: gt_boxes: (N) FloatList16
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
   CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
-  CHECK_EQ(gt_boxes_blob_desc->shape().At(0), image_num);
+  int64_t image_num = gt_boxes_blob_desc->shape().At(0);
+  const auto bbox_data_type = GetTemplateParameterDataType(gt_boxes_blob_desc);
 
-  // out blobs
-  // rpn_labels: (N, H, W, A)
-  // rpn_bbox_targets: (N, H, W, 4*A)
-  // rpn_bbox_inside_weights: (N, H, W, 4*A)
-  // rpn_bbox_outside_weights: (N, H, W, 4*A)
+  // out1: rpn_labels: (N, H, W, A) int32_t
   BlobDesc* rpn_labels_blob_desc = GetBlobDesc4BnInOp("rpn_labels");
   rpn_labels_blob_desc->set_data_type(DataType::kInt32);
   rpn_labels_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, base_anchors_num});
 
+  // out2: rpn_bbox_targets: (N, H, W, 4 * A) T
   BlobDesc* rpn_bbox_targets_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_targets");
-  rpn_bbox_targets_blob_desc->set_data_type(DataType::kFloat);  // should be int
+  rpn_bbox_targets_blob_desc->set_data_type(bbox_data_type);
   rpn_bbox_targets_blob_desc->mut_shape() = Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
 
-  BlobDesc* rpn_bbox_inside_weights_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_inside_weights");
-  rpn_bbox_inside_weights_blob_desc->set_data_type(DataType::kFloat);
-  rpn_bbox_inside_weights_blob_desc->mut_shape() =
-      Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
+  // out3: rpn_bbox_inside_weights: (N, H, W, 4 * A) T
+  *GetBlobDesc4BnInOp("rpn_bbox_inside_weights") = *rpn_bbox_targets_blob_desc;
 
-  BlobDesc* rpn_bbox_outside_weights_blob_desc = GetBlobDesc4BnInOp("rpn_bbox_outside_weights");
-  rpn_bbox_outside_weights_blob_desc->set_data_type(DataType::kFloat);
-  rpn_bbox_outside_weights_blob_desc->mut_shape() =
-      Shape({image_num, fm_h, fm_w, 4 * base_anchors_num});
+  // out4: rpn_bbox_outside_weights: (N, H, 4 * A) T
+  *GetBlobDesc4BnInOp("rpn_bbox_outside_weights") = *rpn_bbox_targets_blob_desc;
 
-  // const blob
-  // anchors: (H, W, A, 4) T
+  // const buf1: anchors: (H * W * A, 4) T
   BlobDesc* anchors_blob_desc = GetBlobDesc4BnInOp("anchors");
+  anchors_blob_desc->set_data_type(bbox_data_type);
+  anchors_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num, 4});
 
-  const auto gt_boxes_type = GetBlobDesc4BnInOp("gt_boxes")->data_type();
-  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
-      || gt_boxes_type == DataType::kFloatList24) {
-    anchors_blob_desc->set_data_type(DataType::kFloat);
+  // const buf2: inside_anchors_index (H * W * A) int32_t
+  BlobDesc* inside_anchors_index_blob_desc = GetBlobDesc4BnInOp("inside_anchors_index");
+  inside_anchors_index_blob_desc->set_data_type(DataType::kInt32);
+  inside_anchors_index_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
-  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
-             || gt_boxes_type == DataType::kDoubleList24) {
-    anchors_blob_desc->set_data_type(DataType::kDouble);
+  // const buf3: inside_anchor_num (1) int32_t
+  BlobDesc* inside_anchors_num_blob_desc = GetBlobDesc4BnInOp("inside_anchor_num");
+  inside_anchors_num_blob_desc->set_data_type(DataType::kInt32);
+  inside_anchors_num_blob_desc->mut_shape() = Shape({1});
 
-  } else {
-    UNIMPLEMENTED();
-  }
+  // data tmp1: gt_boxes_absolute (max_gt_boxes_num, 4) T
+  BlobDesc* gt_boxes_absolute_blob_desc = GetBlobDesc4BnInOp("gt_boxes_absolute");
+  gt_boxes_absolute_blob_desc->set_data_type(bbox_data_type);
+  gt_boxes_absolute_blob_desc->mut_shape() = Shape({max_gt_boxes_num, 4});
 
-  anchors_blob_desc->mut_shape() = Shape({fm_h, fm_w, base_anchors_num, 4});
+  // data tmp2: gt_boxes_index (max_gt_boxes_num) int32_t
+  BlobDesc* gt_boxes_index_blob_desc = GetBlobDesc4BnInOp("gt_boxes_index");
+  gt_boxes_index_blob_desc->set_data_type(DataType::kInt32);
+  gt_boxes_index_blob_desc->mut_shape() = Shape({max_gt_boxes_num});
 
-  // data tmp blobs
-  // inside_anchors_inds: (H*W*A) int
-  // fg_inds: (H*W*A) int
-  // bg_inds: (H*W*A) int
-  // max_overlaps: (H*W*A) float
-  // max_overlaps_inds: (H*W*A) int
-  // gt_max_overlaps_inds: (256,H*W*A) int
-  // gt_max_overlaps_num: (256) int
-  // origin_gt_boxes: (256,4) T
-  BlobDesc* inside_anchors_inds_blob_desc = GetBlobDesc4BnInOp("inside_anchors_inds");
-  inside_anchors_inds_blob_desc->set_data_type(DataType::kInt32);
-  inside_anchors_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
+  // data tmp3: anchor_max_overlaps (H * W * A) float
+  BlobDesc* anchor_max_overlaps_blob_desc = GetBlobDesc4BnInOp("anchor_max_overlaps");
+  anchor_max_overlaps_blob_desc->set_data_type(DataType::kFloat);
+  anchor_max_overlaps_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
-  BlobDesc* fg_inds_blob_desc = GetBlobDesc4BnInOp("fg_inds");
-  fg_inds_blob_desc->set_data_type(DataType::kInt32);
-  fg_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
+  // data tmp4: anchor_nearest_gt_box_index (H * W * A) int32_t
+  BlobDesc* anchor_nearest_gt_box_index_blob_desc =
+      GetBlobDesc4BnInOp("anchor_nearest_gt_box_index");
+  anchor_nearest_gt_box_index_blob_desc->set_data_type(DataType::kInt32);
+  anchor_nearest_gt_box_index_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
 
-  BlobDesc* bg_inds_blob_desc = GetBlobDesc4BnInOp("bg_inds");
-  bg_inds_blob_desc->set_data_type(DataType::kInt32);
-  bg_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
-
-  BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
-  max_overlaps_blob_desc->set_data_type(DataType::kFloat);
-  max_overlaps_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
-
-  BlobDesc* max_overlaps_inds_blob_desc = GetBlobDesc4BnInOp("max_overlaps_inds");
-  max_overlaps_inds_blob_desc->set_data_type(DataType::kInt32);
-  max_overlaps_inds_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
-
-  BlobDesc* gt_max_overlaps_inds_blob_desc = GetBlobDesc4BnInOp("gt_max_overlaps_inds");
-  gt_max_overlaps_inds_blob_desc->set_data_type(DataType::kInt32);
-  gt_max_overlaps_inds_blob_desc->mut_shape() =
-      Shape({max_per_img_gt_boxes_num, fm_h * fm_w * base_anchors_num});
-
-  BlobDesc* gt_max_overlaps_num_blob_desc = GetBlobDesc4BnInOp("gt_max_overlaps_num");
-  gt_max_overlaps_num_blob_desc->set_data_type(DataType::kInt32);
-  gt_max_overlaps_num_blob_desc->mut_shape() = Shape({max_per_img_gt_boxes_num});
-
-  BlobDesc* gt_boxex_tmp_blob_desc = GetBlobDesc4BnInOp("origin_gt_boxes");
-  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
-      || gt_boxes_type == DataType::kFloatList24) {
-    gt_boxex_tmp_blob_desc->set_data_type(DataType::kFloat);
-
-  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
-             || gt_boxes_type == DataType::kDoubleList24) {
-    gt_boxex_tmp_blob_desc->set_data_type(DataType::kDouble);
-
-  } else {
-    UNIMPLEMENTED();
-  }
-  gt_boxex_tmp_blob_desc->mut_shape() = Shape({256, 4});
+  // data tmp5: gt_boxes_nearest_anchors_index (max_gt_boxes_num, H * W * A) int32_t
+  BlobDesc* gt_boxes_nearest_anchors_index_blob_desc =
+      GetBlobDesc4BnInOp("gt_boxes_nearest_anchors_index");
+  gt_boxes_nearest_anchors_index_blob_desc->set_data_type(DataType::kInt32);
+  gt_boxes_nearest_anchors_index_blob_desc->mut_shape() =
+      Shape({max_gt_boxes_num, fm_h * fm_w * base_anchors_num});
 }
 
 void AnchorTargetOp::VirtualGenKernelConf(
     std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf) const {
-  const auto gt_boxes_type = GetBlobDesc4BnInOp("gt_boxes")->data_type();
-  if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
-      || gt_boxes_type == DataType::kFloatList24) {
-    kernel_conf->set_data_type(DataType::kFloat);
-  } else if (gt_boxes_type == DataType::kDoubleList8 || gt_boxes_type == DataType::kDoubleList16
-             || gt_boxes_type == DataType::kDoubleList24) {
-    kernel_conf->set_data_type(DataType::kDouble);
-  } else {
-    UNIMPLEMENTED();
-  }
+  const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
+  const auto bbox_data_type = GetTemplateParameterDataType(gt_boxes_blob_desc);
+  kernel_conf->set_data_type(bbox_data_type);
 }
 
 REGISTER_OP(OperatorConf::kAnchorTargetConf, AnchorTargetOp);

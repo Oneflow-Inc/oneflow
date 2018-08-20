@@ -12,12 +12,14 @@ class AnchorTargetOp final : public Operator {
   ~AnchorTargetOp() = default;
 
   void InitFromOpConf() override;
-  const PbMessage& GetCustomizedConf() const override;
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;
+
+ private:
+  DataType GetTemplateParameterDataType(const BlobDesc* gt_boxes_blob_desc) const;
 };
 
 }  // namespace oneflow
