@@ -76,6 +76,14 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
+void PushPlan(const std::string& plan_name, const Plan& plan) {
+  Global<CtrlClient>::Get()->PushKV(plan_name, plan);
+}
+
+void PullPlan(const std::string& plan_name, Plan* plan) {
+  Global<CtrlClient>::Get()->PullKV(plan_name, plan);
+}
+
 }  // namespace
 
 class Oneflow final {
@@ -110,11 +118,11 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
     naive_plan = Compiler().Compile();
     amd = PullAvailableMemDesc();
     mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
-    Global<CtrlClient>::Get()->PushKV("naive_plan", naive_plan);
-    Global<CtrlClient>::Get()->PushKV("mem_shared_plan", mem_shared_plan);
+    PushPlan("naive_plan", naive_plan);
+    PushPlan("mem_shared_plan", mem_shared_plan);
   } else {
-    Global<CtrlClient>::Get()->PullKV("naive_plan", &naive_plan);
-    Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &mem_shared_plan);
+    PullPlan("naive_plan", &naive_plan);
+    PullPlan("mem_shared_plan", &mem_shared_plan);
   }
   OF_BARRIER();
   PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
@@ -129,9 +137,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
         Improver().Improve(amd, naive_plan,
                            JoinPath(LogDir(), ActEventLogger::experiment_prefix_
                                                   + ActEventLogger::act_event_bin_filename_));
-    Global<CtrlClient>::Get()->PushKV("improved_plan", improved_plan);
+    PushPlan("improved_plan", improved_plan);
   } else {
-    Global<CtrlClient>::Get()->PullKV("improved_plan", &improved_plan);
+    PullPlan("improved_plan", &improved_plan);
   }
   OF_BARRIER();
   PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
