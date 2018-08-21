@@ -6,7 +6,7 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_anchor_target_conf());
 
-  EnrollInputBn("gt_boxes", false);
+  EnrollPbInputBn("gt_boxes", false);
 
   EnrollOutputBn("rpn_labels", false);
   EnrollOutputBn("rpn_bbox_targets", false);
