@@ -39,7 +39,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
     logical_node->GenSortedCompTaskNodes(
-        &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
+        AllocateCpuThrdIdEvenly, &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
           comp_task_node->set_area_id(logical_node->GetAreaId());

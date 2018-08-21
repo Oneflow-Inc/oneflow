@@ -77,6 +77,10 @@ void FixCpuDeviceNum() {
   Global<JobDesc>::Get()->SetCpuDeviceNum(cpu_device_num);
 }
 
+std::string cluster_thrd_ids_key(const std::string& plan_name) {
+  return plan_name + "_cluster_thrd_ids";
+}
+
 std::string sub_plan_key(const std::string& plan_name, int64_t machine_id, int64_t thrd_id) {
   return plan_name + "_" + std::to_string(machine_id) + "_" + std::to_string(thrd_id);
 }
@@ -100,7 +104,7 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 
   ClusterThrdIds cluster_thrd_ids;
   *(cluster_thrd_ids.mutable_machine_id2thrd_ids()) = HashMap2PbMap(machine_id2thrd_ids);
-  Global<CtrlClient>::Get()->PushKV(plan_name + "_cluster_thrd_ids", cluster_thrd_ids);
+  Global<CtrlClient>::Get()->PushKV(cluster_thrd_ids_key(plan_name), cluster_thrd_ids);
 
   for (const auto& pair : mchn_thrd_id2task_protos) {
     SubPlan sub_plan;
@@ -114,8 +118,8 @@ void PushPlan(const std::string& plan_name, const Plan& plan) {
 
 void PullPlan(const std::string& plan_name, Plan* plan) {
   ClusterThrdIds cluster_thrd_ids;
-  Global<CtrlClient>::Get()->PullKV(plan_name + "_cluster_thrd_ids", &cluster_thrd_ids);
-  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), plan_name + "_cluster_thrd_ids"));
+  Global<CtrlClient>::Get()->PullKV(cluster_thrd_ids_key(plan_name), &cluster_thrd_ids);
+  PrintProtoToTextFile(cluster_thrd_ids, JoinPath(LogDir(), cluster_thrd_ids_key(plan_name)));
   HashMap<int64_t, ThrdIds> machine_id2thrd_ids;
   machine_id2thrd_ids = PbMap2HashMap(cluster_thrd_ids.machine_id2thrd_ids());
   for (const auto& pair : machine_id2thrd_ids) {
@@ -150,7 +154,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<JobDesc>::New(job_conf_filepath);
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
-  if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
+  bool DoProfile =
+      machine_ctx->IsThisMachineMaster() && Global<JobDesc>::Get()->collect_act_event();
+  if (DoProfile) { Global<Profiler>::New(); }
   ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
@@ -181,10 +187,8 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   if (machine_ctx->IsThisMachineMaster()) {
     PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
     CHECK_GT(amd.machine_amd_size(), 0);
-    improved_plan =
-        Improver().Improve(amd, naive_plan,
-                           JoinPath(LogDir(), ActEventLogger::experiment_prefix_
-                                                  + ActEventLogger::act_event_bin_filename_));
+    improved_plan = Improver().Improve(
+        amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
     PushPlan("improved_plan", improved_plan);
   } else {
     PullPlan("improved_plan", &improved_plan);
@@ -195,11 +199,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   // Runtime
   { Runtime run(improved_plan, false); }
-  if (machine_ctx->IsThisMachineMaster()) {
-    if (Global<JobDesc>::Get()->collect_act_event()) {
-      Global<Profiler>::Get()->Profile(improved_plan,
-                                       JoinPath(LogDir(), ActEventLogger::act_event_bin_filename_));
-    }
+  if (DoProfile) {
+    Global<Profiler>::Get()->Profile(improved_plan,
+                                     JoinPath(LogDir(), ActEventLogger::act_event_bin_filename()));
   }
   // Delete All Global
   Global<CtrlClient>::Delete();
