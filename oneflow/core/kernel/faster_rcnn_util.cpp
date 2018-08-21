@@ -152,6 +152,13 @@ LabeledBBoxSlice<T, N>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, in
 }
 
 template<typename T, size_t N>
+LabeledBBoxSlice<T, N>::LabeledBBoxSlice(BBoxSlice<T>& bbox_slice, int32_t* label_ptr)
+    : LabeledBBoxSlice(bbox_slice.capacity(), bbox_slice.bbox_ptr(), label_ptr,
+                       bbox_slice.mut_index_ptr(), false) {
+  this->Truncate(bbox_slice.size());
+}
+
+template<typename T, size_t N>
 void LabeledBBoxSlice<T, N>::GroupByLabel() {
   int32_t* index_ptr = this->mut_index_ptr();
   size_t size = this->size();
@@ -193,11 +200,9 @@ size_t LabeledBBoxSlice<T, N>::GetLabelCount(int32_t label) const {
   for (auto group_label : group_labels_) {
     if (group_label.label == label) { return group_label.size; }
   }
-  LOG(FATAL) << "The label type is not found";
-  return -1;
+  return 0;
 }
 
-// TODO: add template parameter size_t N
 #define INITIATE_LABELED_BBOX_SLICE(data_type_pair, label_type_num) \
   template class LabeledBBoxSlice<OF_PP_PAIR_FIRST(data_type_pair), label_type_num>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_LABELED_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ, (3));

@@ -208,9 +208,8 @@ class LabeledBBoxSlice final : public BBoxSlice<T> {
  public:
   LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, int32_t* index_ptr,
                    bool init_index = true);
-  LabeledBBoxSlice(BBoxSlice<T>& bbox_slice, int32_t* label_ptr)
-      : LabeledBBoxSlice(bbox_slice.capacity(), bbox_slice.bbox_ptr(), label_ptr,
-                         bbox_slice.mut_index_ptr(), false) {}
+  LabeledBBoxSlice(BBoxSlice<T>& bbox_slice, int32_t* label_ptr);
+
   void GroupByLabel();
   size_t Subsample(int32_t label, size_t sample_num);
   size_t GetLabelCount(int32_t label) const;

@@ -24,18 +24,16 @@ class AnchorLabelsAndNearestGtBoxesInfo final {
 
   void AssignLabelByOverlapThreshold(int32_t anchor_idx, int32_t gt_box_idx, float overlap) {
     CHECK_LT(anchor_idx, size_);
-    int32_t cand_label = -1;
-    if (overlap >= positive_threshold_) {
-      cand_label = 1;
-    } else if (overlap < negative_threshold_) {
-      cand_label = 0;
-    }
-    if (cand_label >= anchor_labels_ptr_[anchor_idx]) {
-      anchor_labels_ptr_[anchor_idx] = cand_label;
-      if (overlap >= max_overlaps_ptr_[anchor_idx]) {
-        max_overlaps_ptr_[anchor_idx] = overlap;
-        nearest_gt_boxes_index_ptr_[anchor_idx] = gt_box_idx;
+    if (overlap >= max_overlaps_ptr_[anchor_idx]) {
+      if (overlap >= positive_threshold_) {
+        anchor_labels_ptr_[anchor_idx] = 1;
+      } else if (overlap < negative_threshold_) {
+        anchor_labels_ptr_[anchor_idx] = 0;
+      } else {
+        anchor_labels_ptr_[anchor_idx] = -1;
       }
+      max_overlaps_ptr_[anchor_idx] = overlap;
+      nearest_gt_boxes_index_ptr_[anchor_idx] = gt_box_idx;
     }
   }
 
@@ -78,10 +76,10 @@ class GtBoxesNearestAnchorsInfo final {
     if (overlap >= gt_max_overlaps_ptr_[gt_box_idx]) {
       if (overlap > gt_max_overlaps_ptr_[gt_box_idx]) {
         record_anchors_num_ = last_gt_box_record_end_;
+        gt_max_overlaps_ptr_[gt_box_idx] = overlap;
       }
       ++record_anchors_num_;
       nearest_anchors_index_ptr_[record_anchors_num_] = anchor_idx;
-      gt_max_overlaps_ptr_[record_anchors_num_] = overlap;
     }
   }
   void ForEachNearestAnchor(const std::function<void(int32_t)>& Handler) const {
