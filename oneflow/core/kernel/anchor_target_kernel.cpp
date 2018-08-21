@@ -63,13 +63,12 @@ template<typename T>
 void AnchorTargetKernel<T>::InitConstBufBlobs(
     DeviceCtx* ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* anchors_blob = BnInOp2Blob("anchors");
-  const AnchorGeneratorConf& anchor_generator_conf =
-      op_conf().anchor_target_conf().anchor_generator_conf();
+  const AnchorTargetOpConf& anchor_target_conf = op_conf().anchor_target_conf();
+  const AnchorGeneratorConf& anchor_generator_conf = anchor_target_conf.anchor_generator_conf();
+  float straddle_thresh = anchor_target_conf.straddle_thresh();
   FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
   BBoxSlice<T> anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
                              BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>());
-  // TODO: add tolerance to the filter condition (Detectron)
-  float straddle_thresh = op_conf().anchor_target_conf().straddle_thresh();
   anchors_slice.Filter([&](const BBox<T>* anchor_box) {
     return anchor_box->x1() < -straddle_thresh || anchor_box->y1() < -straddle_thresh
            || anchor_box->x2() >= anchor_generator_conf.image_width() + straddle_thresh
