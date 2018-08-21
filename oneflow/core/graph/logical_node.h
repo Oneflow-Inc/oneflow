@@ -34,8 +34,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   // Lbis
   std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
-  const HashSet<LogicalBlobId>& lbi_boxing() const { return lbi_boxing_; }
-  const HashSet<LogicalBlobId>& lbi_121() const { return lbi_121_; }
+  bool IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const;
 
   // util
   virtual std::string TypeName() const = 0;
@@ -43,7 +42,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   bool HasOpWithModelOrConstModelBlob() const;
   bool HasOpWithModelBlob() const;
   bool HasOpWithForwardModelBlob() const;
-  void GenSortedCompTaskNodes(std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
+  void GenSortedCompTaskNodes(std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
                               std::function<void(CompTaskNode*)>) const;
 
   // model split
@@ -68,8 +67,6 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   LogicalNode* main_model_parallel_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
-  HashSet<LogicalBlobId> lbi_boxing_;
-  HashSet<LogicalBlobId> lbi_121_;
 };
 
 #define BLD_SUB_TSK_GPH_MTHD_ARGS()                                                       \
@@ -133,8 +130,6 @@ class ForwardLogicalNode : public LogicalNode {
   BackwardLogicalNode* bw_node() const { return bw_node_; }
 
   BackwardLogicalNode* NewBackwardNode();
-
-  void SetBwNode(BackwardLogicalNode* bw_node) { bw_node_ = bw_node; }
 
  protected:
   virtual BackwardLogicalNode* NewCorrectBackwardNode() = 0;

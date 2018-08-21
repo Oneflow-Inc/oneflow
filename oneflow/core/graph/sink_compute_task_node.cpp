@@ -15,11 +15,11 @@ void SinkCompTaskNode::ConsumeAllRegsts() {
 void SinkCompTaskNode::BuildExecGphAndRegst() {
   ExecNode* node = mut_exec_gph().NewNode();
   node->mut_op() = logical_node()->SoleOp();
-  for (const std::string& ibn : node->op()->input_bns()) {
-    node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in"));
-  }
+  node->op()->ForEachInputBn(
+      [&](const std::string& ibn) { node->BindBnWithOneOfTheRegsts(ibn, GetConsumedRegst("in")); });
   CHECK(node->op()->data_tmp_bns().empty());
   CHECK(node->op()->output_bns().empty());
+  CHECK(node->op()->pb_output_bns().empty());
 }
 
 }  // namespace oneflow

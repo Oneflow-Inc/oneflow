@@ -36,25 +36,27 @@ void FullyConnectedKernel<device_type, T>::BackwardDataContent(
   const Blob* weight_blob = BnInOp2Blob("weight");
   Blob* weight_diff_blob = BnInOp2Blob("weight_diff");
 
-  // weight_diff = out_diff * in
-  KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                       ZeroVal<T>::value, out_diff_blob, in_blob, weight_diff_blob);
-
-  // in_diff = out_diff * weight
   if (in_diff_blob != nullptr) {
+    // in_diff = out_diff * weight
     KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasNoTrans, CblasNoTrans,
                                          OneVal<T>::value, ZeroVal<T>::value, out_diff_blob,
                                          weight_blob, in_diff_blob);
   }
-
-  if (this->op_conf().fully_connected_conf().use_bias()) {
-    const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
-    Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
-
-    // bias_diff = bias_multiplier * out_diff
+  if (this->op_conf().trainable()) {
+    // weight_diff = out_diff * in
     KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans, OneVal<T>::value,
-                                         ZeroVal<T>::value, bias_mul_blob, out_diff_blob,
-                                         bias_diff_blob);
+                                         ZeroVal<T>::value, out_diff_blob, in_blob,
+                                         weight_diff_blob);
+
+    if (this->op_conf().fully_connected_conf().use_bias()) {
+      const Blob* bias_mul_blob = BnInOp2Blob("bias_multiplier");
+      Blob* bias_diff_blob = BnInOp2Blob("bias_diff");
+
+      // bias_diff = bias_multiplier * out_diff
+      KernelUtil<device_type, T>::BlobGemm(ctx.device_ctx, CblasTrans, CblasNoTrans,
+                                           OneVal<T>::value, ZeroVal<T>::value, bias_mul_blob,
+                                           out_diff_blob, bias_diff_blob);
+    }
   }
 }
 
