@@ -766,7 +766,7 @@ message RoIAlignOpConf {
   optional string data_format = 8 [default = "channels_first"];
 }
 
-message AnchorTargetOpConf{
+message AnchorTargetOpConf {
   required string gt_boxes = 1;
   required string rpn_labels = 2;
   required string rpn_bbox_targets = 3;

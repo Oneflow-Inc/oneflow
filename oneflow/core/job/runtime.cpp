@@ -85,7 +85,7 @@ void Runtime::NewAllGlobal(const Plan& plan, bool is_experiment_phase) {
     if (job_desc->IsTrain()) {
       piece_num = job_desc->NumOfPiecesInBatch() * job_desc->TotalBatchNum();
     } else {
-      piece_num = 10;  // MaxVal<int64_t>();
+      piece_num = MaxVal<int64_t>();
     }
   }
   Global<RuntimeCtx>::New(piece_num, is_experiment_phase);
