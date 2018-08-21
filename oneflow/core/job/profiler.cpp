@@ -40,14 +40,14 @@ void Profiler::Profile(const Plan& plan, const std::string& act_event_filepath) 
     CHECK(task_id2task_type.emplace(task.task_id(), task.task_type()).second);
   }
 
-  std::list<ActEvent> act_events;
+  std::list<std::unique_ptr<ActEvent>> act_events;
   ParseActEvents(act_event_filepath, &act_events);
 
   HashMap<int64_t, std::vector<ActTimeInfo>> actor_id2act_time_info;
-  for (auto& act_event : act_events) {
-    int64_t actor_id = act_event.actor_id();
+  for (const auto& act_event : act_events) {
+    int64_t actor_id = act_event->actor_id();
     ActTimeInfo act_time_info(
-        {act_event.ready_time(), act_event.start_time(), act_event.stop_time()});
+        {act_event->ready_time(), act_event->start_time(), act_event->stop_time()});
     actor_id2act_time_info[actor_id].emplace_back(act_time_info);
   }
 

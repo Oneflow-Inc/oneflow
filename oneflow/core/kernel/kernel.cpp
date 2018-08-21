@@ -60,106 +60,59 @@ const LogicalBlobId& Kernel::BnInOp2Lbi(const std::string& bn_in_op) const {
 
 void Kernel::Forward(const KernelCtx& ctx,
                      std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  ClearPbBlobIfNeed(ctx, BnInOp2Blob);
+  ClearPbBlobs(ctx, BnInOp2Blob);
   ForwardDataContent(ctx, BnInOp2Blob);
-  if (this->GetForwardActivationType() != ActivationType::kNone) {
+  if (GetActivationType() != ActivationType::kNone) {
     const PbRpf<std::string> obns = this->op_attribute().output_bns();
     CHECK_EQ(obns.size(), 1);
 
     Blob* out_blob = BnInOp2Blob(obns[0]);
-    PostForwardActivation(ctx, out_blob);
+    ForwardActivation(ctx, out_blob);
   }
-  if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
-  if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+  if (kernel_conf_.need_do_opaque_header()) {
+    ForwardPackedHeader(ctx, BnInOp2Blob);
+  } else {
+    if (kernel_conf_.need_do_data_id()) { ForwardDataId(ctx, BnInOp2Blob); }
+    if (kernel_conf_.need_do_col_num()) { ForwardColNum(ctx, BnInOp2Blob); }
+  }
 }
 
-void Kernel::ClearPbBlobIfNeed(const KernelCtx& ctx,
-                               std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  for (const auto& out_bn : op_attribute().output_bns()) {
+void Kernel::ClearPbBlobs(const KernelCtx& ctx,
+                          std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  for (const auto& out_bn : op_attribute().pb_output_bns()) {
     Blob* out_blob = BnInOp2Blob(out_bn);
-    if (out_blob && IsRecordDataType(out_blob->data_type())) { ClearPbBlob(out_blob); }
+    CHECK_NOTNULL(out_blob);
+    CHECK(IsRecordDataType(out_blob->data_type()));
+    ClearPbBlob(out_blob);
   }
 }
 
 void Kernel::Backward(const KernelCtx& ctx,
                       std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  BackwardDataContent(ctx, BnInOp2Blob);
-  ActivationType activation = this->GetBackwardActivationType();
+  ActivationType activation = GetActivationType();
   if (activation != ActivationType::kNone) {
-    const PbRpf<std::string> ibns = this->op_attribute().input_bns();
-    const PbRpf<std::string> idbns = this->op_attribute().input_diff_bns();
-    CHECK_EQ(ibns.size(), 1);
-    CHECK_EQ(idbns.size(), 1);
+    const PbRpf<std::string> obns = this->op_attribute().output_bns();
+    const PbRpf<std::string> odbns = this->op_attribute().output_diff_bns();
+    CHECK_EQ(obns.size(), 1);
+    CHECK_EQ(odbns.size(), 1);
 
-    const Blob* in_blob = BnInOp2Blob(ibns[0]);
-    Blob* in_diff_blob = BnInOp2Blob(idbns[0]);
-    PostBackwardActivation(ctx, in_blob, in_diff_blob);
+    const Blob* out_blob = BnInOp2Blob(obns[0]);
+    const Blob* out_diff_blob = BnInOp2Blob(odbns[0]);
+    Blob* bw_activation_blob = BnInOp2Blob("bw_activation");
+    CHECK(bw_activation_blob != nullptr);
+    BackwardActivation(ctx, out_blob, out_diff_blob, bw_activation_blob);
+    BackwardDataContent(ctx, [&](const std::string& bn) -> Blob* {
+      if (bn == odbns[0]) {
+        return bw_activation_blob;
+      } else {
+        return BnInOp2Blob(bn);
+      }
+    });
+  } else {
+    BackwardDataContent(ctx, BnInOp2Blob);
   }
-
   if (kernel_conf_.need_do_data_id()) { BackwardDataId(ctx, BnInOp2Blob); }
   if (kernel_conf_.need_do_col_num()) { BackwardColNum(ctx, BnInOp2Blob); }
-}
-
-template<DeviceType device_type, typename T>
-void ActivationForward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
-                       const T* x, T* y) {
-  switch (activation_type) {
-#define DEFINE_ONE_CASE(activation)                                     \
-  case ActivationType::k##activation:                                   \
-    KernelUtil<device_type, T>::activation(device_ctx, elem_cnt, x, y); \
-    break;
-    DEFINE_ONE_CASE(TanH);
-    DEFINE_ONE_CASE(Sigmoid);
-    DEFINE_ONE_CASE(Relu);
-#undef DEFINE_ONE_CASE
-    default: UNIMPLEMENTED();
-  }
-}
-
-template<DeviceType device_type, typename T>
-void ActivationBackward(ActivationType activation_type, DeviceCtx* device_ctx, int64_t elem_cnt,
-                        const T* x, const T* y, const T* dy, T* dx) {
-  switch (activation_type) {
-#define DEFINE_ONE_CASE(activation)                                                       \
-  case ActivationType::k##activation:                                                     \
-    KernelUtil<device_type, T>::activation##Backward(device_ctx, elem_cnt, x, y, dy, dx); \
-    break;
-    DEFINE_ONE_CASE(TanH);
-    DEFINE_ONE_CASE(Sigmoid);
-    DEFINE_ONE_CASE(Relu);
-#undef DEFINE_ONE_CASE
-    default: UNIMPLEMENTED();
-  }
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::PostForwardActivation(const KernelCtx& ctx, Blob* out_blob) const {
-  int64_t elem_cnt = out_blob->shape().elem_cnt();
-  switch (out_blob->data_type()) {
-#define FORWARD_ACTIVATION_ENTRY(T, type_proto)                                                   \
-  case type_proto:                                                                                \
-    ActivationForward<device_type, T>(this->GetForwardActivationType(), ctx.device_ctx, elem_cnt, \
-                                      out_blob->dptr<T>(), out_blob->mut_dptr<T>());              \
-    break;
-    OF_PP_FOR_EACH_TUPLE(FORWARD_ACTIVATION_ENTRY, FLOATING_DATA_TYPE_SEQ);
-    default: UNIMPLEMENTED();
-  }
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::PostBackwardActivation(const KernelCtx& ctx, const Blob* in_blob,
-                                                   Blob* in_diff_blob) const {
-  int64_t elem_cnt = in_blob->shape().elem_cnt();
-  switch (in_blob->data_type()) {
-#define BACKWARD_ACTIVATION_ENTRY(T, type_proto)                                              \
-  case type_proto:                                                                            \
-    ActivationBackward<device_type, T>(this->GetBackwardActivationType(), ctx.device_ctx,     \
-                                       elem_cnt, in_blob->dptr<T>(), in_blob->dptr<T>(),      \
-                                       in_diff_blob->dptr<T>(), in_diff_blob->mut_dptr<T>()); \
-    break;
-    OF_PP_FOR_EACH_TUPLE(BACKWARD_ACTIVATION_ENTRY, FLOATING_DATA_TYPE_SEQ);
-    default: UNIMPLEMENTED();
-  }
 }
 
 bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0; }
@@ -167,15 +120,30 @@ bool Kernel::HasModelBns() const { return op_attribute().model_bns().size() > 0;
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyDataIdFrom);
+  ForwardField(ctx.device_ctx, BnInOp2Blob, &Blob::CopyDataIdFrom);
 }
 
 template<DeviceType device_type>
 void KernelIf<device_type>::ForwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  ForwardField(ctx.device_ctx, BnInOp2Blob, &Blob::CopyColNumFrom);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardField(DeviceCtx* ctx,
+                                         std::function<Blob*(const std::string&)> BnInOp2Blob,
+                                         void (Blob::*Copy)(DeviceCtx*, const Blob*)) const {
+  const PbRpf<std::string>* input_bn = &op_attribute().input_bns();
+  if (input_bn->empty()) { input_bn = &op_attribute().pb_input_bns(); }
+  CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().output_bns(), Copy);
+  CopyField(ctx, BnInOp2Blob, *input_bn, op_attribute().pb_output_bns(), Copy);
+}
+
+template<DeviceType device_type>
+void KernelIf<device_type>::ForwardPackedHeader(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().input_bns(), op_attribute().output_bns(),
-            &Blob::CopyColNumFrom);
+            &Blob::CopyHeaderFrom);
 }
 
 template<DeviceType device_type>
@@ -189,22 +157,6 @@ void KernelIf<device_type>::BackwardColNum(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   CopyField(ctx.device_ctx, BnInOp2Blob, op_attribute().output_diff_bns(),
             op_attribute().input_diff_bns(), &Blob::CopyColNumFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyDataId(DeviceCtx* ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                       const Blob* from_blob,
-                                       const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyDataIdFrom);
-}
-
-template<DeviceType device_type>
-void KernelIf<device_type>::CopyColNum(DeviceCtx* ctx,
-                                       std::function<Blob*(const std::string&)> BnInOp2Blob,
-                                       const Blob* from_blob,
-                                       const PbRpf<std::string>& to_bns) const {
-  CopyField(ctx, BnInOp2Blob, from_blob, to_bns, &Blob::CopyColNumFrom);
 }
 
 template<DeviceType device_type>
@@ -229,12 +181,7 @@ void KernelIf<device_type>::CopyField(DeviceCtx* ctx,
     Blob* out_blob = BnInOp2Blob(to_bns[0]);
     (out_blob->*Copy)(ctx, in_blob);
   } else {
-    CHECK_EQ(from_bns.size(), to_bns.size());
-    FOR_RANGE(size_t, i, 0, from_bns.size()) {
-      Blob* in_blob = BnInOp2Blob(from_bns[i]);
-      Blob* out_blob = BnInOp2Blob(to_bns[i]);
-      (out_blob->*Copy)(ctx, in_blob);
-    }
+    CHECK(from_bns.size() == 0 || to_bns.size() == 0);
   }
 }
 
@@ -245,12 +192,58 @@ std::unique_ptr<const Kernel> ConstructKernel(const ParallelContext* parallel_ct
   return std::unique_ptr<const Kernel>(rptr);
 }
 
+template<DeviceType device_type, typename T>
+ActivationType KernelIfWithActivation<device_type, T>::GetActivationType() const {
+  return static_cast<ActivationType>(this->GetEnumFromCustomizedOpConf("activation"));
+}
+
+template<DeviceType device_type, typename T>
+void KernelIfWithActivation<device_type, T>::ForwardActivation(const KernelCtx& ctx,
+                                                               Blob* out_blob) const {
+  T* out_dptr = out_blob->mut_dptr<T>();
+  int64_t elem_cnt = out_blob->shape().elem_cnt();
+
+  switch (GetActivationType()) {
+#define DEFINE_ONE_CASE(activation_type)                                                       \
+  case ActivationType::k##activation_type:                                                     \
+    KernelUtil<device_type, T>::activation_type(ctx.device_ctx, elem_cnt, out_dptr, out_dptr); \
+    break;
+    DEFINE_ONE_CASE(TanH)
+    DEFINE_ONE_CASE(Sigmoid)
+    DEFINE_ONE_CASE(Relu)
+#undef DEFINE_ONE_CASE
+    default: UNIMPLEMENTED();
+  }
+}
+
+template<DeviceType device_type, typename T>
+void KernelIfWithActivation<device_type, T>::BackwardActivation(const KernelCtx& ctx,
+                                                                const Blob* out_blob,
+                                                                const Blob* out_diff_blob,
+                                                                Blob* bw_activation_blob) const {
+  int64_t elem_cnt = out_blob->shape().elem_cnt();
+  switch (GetActivationType()) {
+#define DEFINE_ONE_CASE(activation_type)                                    \
+  case ActivationType::k##activation_type:                                  \
+    KernelUtil<device_type, T>::activation_type##Backward(                  \
+        ctx.device_ctx, elem_cnt, out_blob->dptr<T>(), out_blob->dptr<T>(), \
+        out_diff_blob->dptr<T>(), bw_activation_blob->mut_dptr<T>());       \
+    break
+    DEFINE_ONE_CASE(TanH);
+    DEFINE_ONE_CASE(Sigmoid);
+    DEFINE_ONE_CASE(Relu);
+#undef DEFINE_ONE_CASE
+    default: UNIMPLEMENTED();
+  }
+}
+
 #define INSTANTIATE_KERNEL_IF(device_type) template class KernelIf<device_type>;
 
 OF_PP_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF, DEVICE_TYPE_SEQ);
 
-#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair) \
-  template class KernelIfWithModel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
+#define INSTANTIATE_KERNEL_IF_SUBCLASS(device_type, data_type_pair)                \
+  template class KernelIfWithModel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>; \
+  template class KernelIfWithActivation<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_IF_SUBCLASS, DEVICE_TYPE_SEQ,
                                  FLOATING_DATA_TYPE_SEQ);

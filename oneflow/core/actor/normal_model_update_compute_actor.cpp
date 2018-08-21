@@ -19,6 +19,10 @@ void NormalMdUpdtCompActor::VirtualCompActorInit(const TaskProto& task_proto) {
   OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerInitModelAndConstModel);
 }
 
+bool NormalMdUpdtCompActor::CheckOutputActId(int64_t regst_desc_id) const {
+  return regst_desc_id != model_regst_desc_id_ && regst_desc_id != const_model_regst_desc_id_;
+}
+
 void NormalMdUpdtCompActor::Act() {
   Regst* cur_model_regst = GetCurWriteableRegst(model_regst_desc_id_);
   cur_model_regst->set_model_version_id(next_model_version_id_);
@@ -71,7 +75,7 @@ int NormalMdUpdtCompActor::HandlerSendInitialModel(const ActorMsg& actor_msg) {
     return true;
   });
   next_model_version_id_ += 1;
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (model_regst_desc_id_ != -1) {
     OF_SET_MSG_HANDLER(&NormalMdUpdtCompActor::HandlerNormal);
   } else {
     AsyncSendEORDMsgForAllProducedRegstDesc();

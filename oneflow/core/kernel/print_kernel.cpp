@@ -19,10 +19,10 @@ void PrintKernel::VirtualKernelInit(const ParallelContext* parallel_ctx) {
 void PrintKernel::Forward(const KernelCtx& ctx,
                           std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   auto GetBlob = [&](int64_t blob_id) -> Blob* {
-    return BnInOp2Blob(this->op_attribute().input_bns(blob_id));
+    return BnInOp2Blob("in_" + std::to_string(blob_id));
   };
   const auto& conf = op_conf().print_conf();
-  int32_t total_blob_num = op_attribute().input_bns().size();
+  int32_t total_blob_num = op_attribute().input_bns_size() + op_attribute().pb_input_bns_size();
   int64_t min_record_num = MaxVal<int64_t>();
   bool has_data_id_field = false;
   bool has_col_num_field = false;

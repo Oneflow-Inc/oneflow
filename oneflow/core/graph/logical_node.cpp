@@ -158,14 +158,15 @@ std::vector<LogicalBlobId> LogicalNode::GetLbisTo(const LogicalNode* dst) const 
 
 void LogicalNode::SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>& lbis) {
   CHECK(dst2data_lbis_.emplace(dst, lbis).second);
-  BldSubTskGphMthd mthd = GetMthdForBldSubTskGph(this, dst);
-  if (mthd == &TaskGraph::BldSubTskGphByBoxing) {
-    lbi_boxing_.insert(lbis.begin(), lbis.end());
-  } else if (mthd == &TaskGraph::BldSubTskGphByOneToOne) {
-    lbi_121_.insert(lbis.begin(), lbis.end());
-  } else {
-    UNIMPLEMENTED();
+}
+
+bool LogicalNode::IsDataLbiOnOutEdge(const LogicalBlobId& lbi) const {
+  for (const auto& pair : dst2data_lbis_) {
+    if (std::find(pair.second.begin(), pair.second.end(), lbi) != pair.second.end()) {
+      return true;
+    }
   }
+  return false;
 }
 
 std::string LogicalNode::VisualStr() const {
@@ -190,9 +191,8 @@ bool LogicalNode::HasOpWithForwardModelBlob() const {
       [](const Operator* op) { return op->forward_model_bns().empty() == false; });
 }
 
-void LogicalNode::GenSortedCompTaskNodes(
-    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly,
-    std::function<void(CompTaskNode*)> Handler) const {
+void LogicalNode::GenSortedCompTaskNodes(std::vector<std::pair<int64_t, CompTaskNode*>>* nodes,
+                                         std::function<void(CompTaskNode*)> Handler) const {
   int64_t parallel_idx = 0;
   int64_t parallel_num = parallel_desc_->parallel_num();
   for (int64_t machine_id : parallel_desc_->sorted_machine_ids()) {
@@ -226,7 +226,7 @@ void LogicalNode::GenSortedCompTaskNodes(
         }
       } else if (parallel_desc_->device_type() == DeviceType::kCPU) {
         if (comp_task_node->IsPersistence()) {
-          comp_task_node->set_thrd_id(AllocateCpuThrdIdEvenly(comp_task_node));
+          nodes->push_back({machine_id, comp_task_node});
         } else {
           comp_task_node->set_thrd_id(
               id_mgr->GetCpuDeviceThrdId(dev_phy_id % Global<JobDesc>::Get()->CpuDeviceNum()));
