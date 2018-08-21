@@ -50,10 +50,6 @@ int32_t JobDesc::NumOfBatchesInSnapshot() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().num_of_batches_in_snapshot();
 }
-int32_t JobDesc::Staleness() const {
-  CHECK(IsTrain());
-  return job_conf_.other().train_conf().staleness();
-}
 int64_t JobDesc::TotalBatchNum() const {
   CHECK(IsTrain());
   return job_conf_.other().train_conf().total_batch_num();

@@ -68,10 +68,10 @@ class BBox final {
   }
 
   void Clip(const int64_t height, const int64_t width) {
-    set_x1(std::max<T>(std::min<T>(x1(), width), 0));
-    set_y1(std::max<T>(std::min<T>(y1(), height), 0));
-    set_x2(std::max<T>(std::min<T>(x2(), width), 0));
-    set_y2(std::max<T>(std::min<T>(y2(), height), 0));
+    set_x1(std::max<T>(std::min<T>(x1(), width - 1), 0));
+    set_y1(std::max<T>(std::min<T>(y1(), height - 1), 0));
+    set_x2(std::max<T>(std::min<T>(x2(), width - 1), 0));
+    set_y2(std::max<T>(std::min<T>(y2(), height - 1), 0));
   }
 
  private:

@@ -207,6 +207,7 @@ struct OpKernelTestUtil final {
   static void CheckInitializeResult(const Blob* blob, const InitializerConf& initializer_conf);
 
   static Blob* CreateBlob(const BlobDesc*, Regst* regst);
+  static Blob* CreateBlob(const RtBlobDesc*, Regst* regst);
   static void BuildKernelCtx(KernelCtx* ctx);
   static void SyncStream(KernelCtx* ctx);
 

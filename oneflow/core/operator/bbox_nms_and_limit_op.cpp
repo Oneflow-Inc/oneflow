@@ -7,8 +7,8 @@ void BboxNmsAndLimitOp::InitFromOpConf() {
   EnrollInputBn("rois", false);
   EnrollInputBn("bbox_delta", false);
   EnrollInputBn("scores", false);
-  EnrollFwPbOutputBn("labeled_bbox");
-  EnrollFwPbOutputBn("bbox_score");
+  EnrollPbOutputBn("labeled_bbox");
+  EnrollPbOutputBn("bbox_score");
   EnrollDataTmpBn("bbox");
   EnrollDataTmpBn("voting_score");
   EnrollDataTmpBn("pre_nms_index_slice");

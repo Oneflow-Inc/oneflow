@@ -18,15 +18,17 @@ void FasterRcnnUtil<T>::GenerateAnchors(const AnchorGeneratorConf& conf, Blob* a
   std::vector<T> base_anchors(num_anchors * 4);
   BBox<T>* base_anchor_bbox = BBox<T>::MutCast(base_anchors.data());
   FOR_RANGE(int32_t, i, 0, ratios_size) {
+    const int32_t wr = std::round(std::sqrt(fm_stride * fm_stride / conf.aspect_ratios(i)));
+    const int32_t hr = std::round(wr * conf.aspect_ratios(i));
     FOR_RANGE(int32_t, j, 0, scales_size) {
-      const int32_t size = conf.anchor_scales(j) * conf.anchor_scales(j);
-      const int32_t w = std::round(std::sqrt(size / conf.aspect_ratios(i)));
-      const int32_t h = std::round(w * conf.aspect_ratios(i));
+      const float scale = conf.anchor_scales(j) / fm_stride;
+      const int32_t ws = wr * scale;
+      const int32_t hs = hr * scale;
       BBox<T>* cur_anchor_bbox = base_anchor_bbox + i * scales_size + j;
-      cur_anchor_bbox->set_x1(std::round(base_ctr - 0.5 * (w - 1)));
-      cur_anchor_bbox->set_y1(std::round(base_ctr - 0.5 * (h - 1)));
-      cur_anchor_bbox->set_x2(std::round(base_ctr + 0.5 * (w - 1)));
-      cur_anchor_bbox->set_y2(std::round(base_ctr + 0.5 * (h - 1)));
+      cur_anchor_bbox->set_x1(base_ctr - 0.5 * (ws - 1));
+      cur_anchor_bbox->set_y1(base_ctr - 0.5 * (hs - 1));
+      cur_anchor_bbox->set_x2(base_ctr + 0.5 * (ws - 1));
+      cur_anchor_bbox->set_y2(base_ctr + 0.5 * (hs - 1));
     }
   }
 

@@ -17,6 +17,10 @@ class InputWiseCompActor : public CompActor {
   int64_t processed_regst_desc_id_cnt() const { return processed_regst_desc_id_cnt_; }
   int64_t RegstDescNum() const { return readable_regsts_.size(); }
   int64_t InBnId4RegstDescId(int64_t id) const { return regst_desc_id2in_bn_id_.at(id); }
+  int64_t ActNumForEachOutput(int64_t regst_desc_id) const override;
+  bool EnableInplace() const {
+    return GetDeviceType() == DeviceType::kGPU && Global<JobDesc>::Get()->enable_mem_sharing();
+  }
 
  private:
   void Act() override;
@@ -32,6 +36,11 @@ class InputWiseCompActor : public CompActor {
     return {false, {}};
   }
   virtual void SetKernelCtxOther(void** other) { *other = nullptr; }
+  void UpdateMemberStatusAfterAct();
+  bool NeedSendRegstMsgToConsumer();
+  void UpdateMemberStatusAfterSendRegstMsgToConsumer();
+  virtual void VirtualUpdateMemberStatusAfterAct() {}
+  virtual void VirtualUpdateMemberStatusAfterSendRegstMsgToConsumer() {}
 
   HashMap<int64_t, std::queue<Regst*>> readable_regsts_;
   int64_t readable_regst_desc_cnt_;

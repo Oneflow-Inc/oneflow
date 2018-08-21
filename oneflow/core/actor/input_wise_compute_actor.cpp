@@ -18,15 +18,19 @@ void InputWiseCompActor::Init(const TaskProto& task_proto) {
   }
 
   for (const auto& pair : task_proto.consumed_regst_desc_id()) {
-    CHECK_EQ(1, pair.second.regst_desc_id_size());
-    int64_t regst_desc_id = pair.second.regst_desc_id().Get(0);
-    CHECK(readable_regsts_.emplace(regst_desc_id, std::queue<Regst*>()).second);
-    CHECK(regst_desc_id2is_processed_.emplace(regst_desc_id, false).second);
+    for (int64_t regst_desc_id : pair.second.regst_desc_id()) {
+      CHECK(readable_regsts_.emplace(regst_desc_id, std::queue<Regst*>()).second);
+      CHECK(regst_desc_id2is_processed_.emplace(regst_desc_id, false).second);
+    }
   }
   cur_processed_regst_desc_id_ = -1;
   readable_regst_desc_cnt_ = 0;
   processed_regst_desc_id_cnt_ = 0;
   OF_SET_MSG_HANDLER(&InputWiseCompActor::HandlerNormal);
+}
+
+int64_t InputWiseCompActor::ActNumForEachOutput(int64_t regst_desc_id) const {
+  return regst_desc_id2in_bn_id_.size();
 }
 
 void InputWiseCompActor::NormalProcessCustomizedReadableRegstMsg(const ActorMsg& msg) {
@@ -58,31 +62,46 @@ void InputWiseCompActor::ForEachCurCustomizedReadableRegst(
 void InputWiseCompActor::Act() {
   std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
   Regst* cur_regst = regst_q.front();
-  KernelCtx kernel_ctx = GenDefaultKernelCtx();
 
+  KernelCtx kernel_ctx = GenDefaultKernelCtx();
   SetKernelCtxOther(&(kernel_ctx.other));
   AsyncLaunchKernel(kernel_ctx, [&](int64_t regst_desc_id) -> Regst* {
     CHECK_EQ(cur_processed_regst_desc_id_, regst_desc_id);
     return cur_regst;
   });
 
+  UpdateMemberStatusAfterAct();
+  if (NeedSendRegstMsgToConsumer()) {
+    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
+      regst->set_piece_id(cur_regst->piece_id());
+      return true;
+    });
+    UpdateMemberStatusAfterSendRegstMsgToConsumer();
+  }
+  AsyncSendRegstMsgToProducer(cur_regst);
+}
+
+void InputWiseCompActor::UpdateMemberStatusAfterAct() {
+  std::queue<Regst*>& regst_q = readable_regsts_.at(cur_processed_regst_desc_id_);
   regst_q.pop();
   if (regst_q.empty()) { readable_regst_desc_cnt_ -= 1; }
   regst_desc_id2is_processed_.at(cur_processed_regst_desc_id_) = true;
   processed_regst_desc_id_cnt_ += 1;
   cur_processed_regst_desc_id_ = -1;
-  if (processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size()) {
-    AsyncSendRegstMsgToConsumer([&](Regst* regst) {
-      regst->set_piece_id(cur_regst->piece_id());
-      return true;
-    });
-    for (auto& pair : regst_desc_id2is_processed_) {
-      CHECK(pair.second);
-      pair.second = false;
-    }
-    processed_regst_desc_id_cnt_ = 0;
+  VirtualUpdateMemberStatusAfterAct();
+}
+
+bool InputWiseCompActor::NeedSendRegstMsgToConsumer() {
+  return processed_regst_desc_id_cnt_ == regst_desc_id2is_processed_.size();
+}
+
+void InputWiseCompActor::UpdateMemberStatusAfterSendRegstMsgToConsumer() {
+  for (auto& pair : regst_desc_id2is_processed_) {
+    CHECK(pair.second);
+    pair.second = false;
   }
-  AsyncSendRegstMsgToProducer(cur_regst);
+  processed_regst_desc_id_cnt_ = 0;
+  VirtualUpdateMemberStatusAfterSendRegstMsgToConsumer();
 }
 
 void InputWiseCompActor::AsyncReturnAllCustomizedReadableRegst() {
