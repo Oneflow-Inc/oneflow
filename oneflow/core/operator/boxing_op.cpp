@@ -35,6 +35,8 @@ void BoxingOp::InferOutBlobDescs(
     const std::vector<int64_t>& data_tmp_blob_shape_vec) const {
   const BoxingOpConf& conf = boxing_conf();
   const BlobDesc* first_in_blob = GetBlobDesc4BnInOp(InputBns().Get(0));
+  CHECK_EQ(data_tmp_blob_shape_vec.at(0) % Global<JobDesc>::Get()->PieceSize(), 0);
+  const size_t scale = data_tmp_blob_shape_vec.at(0) / Global<JobDesc>::Get()->PieceSize();
   if (conf.out_box_case() == BoxingOpConf::kSplitBox) {
     const BoxSplitConf& split_conf = conf.split_box();
     CHECK_GE(split_conf.axis(), 0);
@@ -43,7 +45,7 @@ void BoxingOp::InferOutBlobDescs(
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(OutputBns().Get(i));
       *out_blob_desc = *first_in_blob;
       std::vector<int64_t> out_blob_shape_vec(data_tmp_blob_shape_vec);
-      out_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i);
+      out_blob_shape_vec[split_conf.axis()] = split_conf.part_num(i) * scale;
       out_blob_desc->mut_shape() = Shape(out_blob_shape_vec);
     }
   } else if (conf.out_box_case() == BoxingOpConf::kCloneBox) {
