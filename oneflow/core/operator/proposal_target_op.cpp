@@ -17,7 +17,7 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("roi_max_overlap");
   EnrollDataTmpBn("rois_index");
   // EnrollDataTmpBn("gt_boxes_tmp");
-  EnrollFwPbOutputBn("gt_boxes_tmp");
+  EnrollPbOutputBn("gt_boxes_tmp");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
