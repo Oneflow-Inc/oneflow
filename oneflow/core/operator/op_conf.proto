@@ -674,18 +674,18 @@ message ProposalTargetOpConf
 }
 
 enum ScoringMethod {
- kId = 0;
- kTempAvg = 1;
- kAvg = 2;
- kIouAvg = 3;
- kGeneralizedAvg = 4;
- kQuasiSum = 5;
+  kId = 0;
+  kTempAvg = 1;
+  kAvg = 2;
+  kIouAvg = 3;
+  kGeneralizedAvg = 4;
+  kQuasiSum = 5;
 }
 
 message BboxVoteConf {
- required float beta = 1 [default = 1.0];
- required float threshold = 2 [default = 1];
- required ScoringMethod scoring_method = 3 [default = kId];
+  required float beta = 1 [default = 1.0];
+  required float threshold = 2 [default = 1];
+  required ScoringMethod scoring_method = 3 [default = kId];
 }
 
 message BboxNmsAndLimitOpConf {
