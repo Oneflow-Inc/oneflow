@@ -157,6 +157,14 @@ void ProposalTargetKernel<T>::ComputeTargetAndWriteOut(
   }
 }
 
+template<typename T>
+void ProposalTargetKernel<T>::ForwardDataId(
+    const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rpn_rois"));
+  BnInOp2Blob("labels")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rpn_rois"));
+  BnInOp2Blob("bbox_targets")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rpn_rois"));
+}
+
 ADD_CPU_DEFAULT_KERNEL_CREATOR(OperatorConf::kProposalTargetConf, ProposalTargetKernel,
                                FLOATING_DATA_TYPE_SEQ);
 }  // namespace oneflow

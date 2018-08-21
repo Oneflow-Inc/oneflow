@@ -29,6 +29,8 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
                                 const FloatList16* gt_boxes_ptr, const Int32List16* gt_labels_ptr,
                                 T* rois_ptr, int32_t* labels_ptr, T* bbox_targets_ptr,
                                 T* inside_weights_ptr, T* outside_weights_ptr) const;
+  void ForwardDataId(const KernelCtx& ctx,
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

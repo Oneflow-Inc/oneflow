@@ -45,15 +45,18 @@ void ProposalTargetOp::InferBlobDescs(
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
   rois_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 4});
   rois_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
+  rois_blob_desc->set_has_data_id_field(rpn_rois_blob_desc->has_data_id_field());
 
   BlobDesc* labels_blob_desc = GetBlobDesc4BnInOp("labels");
   labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image});
   labels_blob_desc->set_data_type(DataType::kInt32);
+  labels_blob_desc->set_has_data_id_field(rpn_rois_blob_desc->has_data_id_field());
 
   BlobDesc* target_blob_desc = GetBlobDesc4BnInOp("bbox_targets");
   target_blob_desc->mut_shape() =
       Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image, 4 * class_num});
   target_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
+  target_blob_desc->set_has_data_id_field(rpn_rois_blob_desc->has_data_id_field());
 
   BlobDesc* inside_weights_blob_desc = GetBlobDesc4BnInOp("bbox_inside_weights");
   inside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
