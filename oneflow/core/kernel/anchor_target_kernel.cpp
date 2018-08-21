@@ -69,10 +69,11 @@ void AnchorTargetKernel<T>::InitConstBufBlobs(
   BBoxSlice<T> anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
                              BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>());
   // TODO: add tolerance to the filter condition (Detectron)
+  float straddle_thresh = op_conf().anchor_target_conf().straddle_thresh();
   anchors_slice.Filter([&](const BBox<T>* anchor_box) {
-    return anchor_box->x1() < 0 || anchor_box->y1() < 0
-           || anchor_box->x2() >= anchor_generator_conf.image_width()
-           || anchor_box->y2() >= anchor_generator_conf.image_height();
+    return anchor_box->x1() < -straddle_thresh || anchor_box->y1() < -straddle_thresh
+           || anchor_box->x2() >= anchor_generator_conf.image_width() + straddle_thresh
+           || anchor_box->y2() >= anchor_generator_conf.image_height() + straddle_thresh;
   });
   *(BnInOp2Blob("inside_anchor_num")->mut_dptr<int32_t>()) = anchors_slice.size();
 }
