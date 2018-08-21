@@ -41,8 +41,9 @@ struct RegstActGroupCtx {
 class ChainActEdge final : public Edge<ChainActNode, ChainActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainActEdge);
-  ChainActEdge(double duration) : duration_(duration) {}
+  ChainActEdge() = delete;
   ~ChainActEdge() = default;
+  ChainActEdge(double duration) : duration_(duration) {}
 
   // Getters
   const double duration() const { return duration_; }
@@ -54,8 +55,12 @@ class ChainActEdge final : public Edge<ChainActNode, ChainActEdge> {
 class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainActNode);
-  explicit ChainActNode(std::list<std::unique_ptr<ActEvent>>&& act_events);
+  ChainActNode() = delete;
   ~ChainActNode() = default;
+  explicit ChainActNode(std::pair<int64_t, int64_t> chain_act_id_pair,
+                        std::list<std::unique_ptr<ActEvent>>&& act_events);
+
+  std::string VisualStr() const override;
 
   // ForEach
   void ForEachInEdge(const std::function<void(const ChainActEdge*)>& Handler) const;
@@ -66,7 +71,8 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
       const std::function<void(const std::list<const RegstAct*>&)>& Handler) const;
 
   // Getters
-  int64_t act_id() const { return act_events_.front()->act_id(); }
+  int64_t act_id() const { return chain_act_id_pair_.second; }
+  int64_t chain_id() const { return chain_act_id_pair_.first; }
 
   // Adds
   void AddProducedRegstAct(std::unique_ptr<RegstAct>&& regst_act);
@@ -75,6 +81,7 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
   }
 
  private:
+  std::pair<int64_t, int64_t> chain_act_id_pair_;
   std::list<std::unique_ptr<ActEvent>> act_events_;
   std::list<std::unique_ptr<RegstAct>> produced_regst_acts_;
   std::map<std::set<const ChainActNode*>, std::list<const RegstAct*>>
@@ -85,12 +92,14 @@ class ChainActNode final : public Node<ChainActNode, ChainActEdge> {
 class ChainActGraph final : public Graph<const ChainActNode, const ChainActEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ChainActGraph);
-  ChainActGraph(const Plan& plan, std::list<std::unique_ptr<ActEvent>>&& act_events);
+  ChainActGraph() = delete;
   ~ChainActGraph() = default;
+  ChainActGraph(const Plan& plan, std::list<std::unique_ptr<ActEvent>>&& act_events);
+  const char* TypeName() const override { return "ChainActGraph"; }
 
   // Getters
   const TaskProto& GetTaskProto(int64_t actor_id) const {
-    return *task_id2task_proto_.at(actor_id);
+    return *(task_id2task_proto_.at(actor_id));
   }
 
   // ForEach

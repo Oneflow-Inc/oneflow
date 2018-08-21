@@ -9,8 +9,17 @@ inline double Duration4RegstActConsumerPath(const ActEvent* producer_act_event,
   return path_duration + consumer_act_event->stop_time() - producer_act_event->start_time();
 }
 
-ChainActNode::ChainActNode(std::list<std::unique_ptr<ActEvent>>&& act_events)
-    : act_events_(std::move(act_events)) {
+std::string ChainActNode::VisualStr() const {
+  std::stringstream ss;
+  ss << "chain_id:" << chain_id() << "\\n";
+  ss << "act_id:" << act_id() << "\\n";
+  ForEachActEvent([&](const ActEvent* act_event) { ss << act_event->actor_id() << "\\n"; });
+  return ss.str();
+}
+
+ChainActNode::ChainActNode(std::pair<int64_t, int64_t> chain_act_id_pair,
+                           std::list<std::unique_ptr<ActEvent>>&& act_events)
+    : chain_act_id_pair_(chain_act_id_pair), act_events_(std::move(act_events)) {
   act_events_.sort([](const std::unique_ptr<ActEvent>& lhs, const std::unique_ptr<ActEvent>& rhs) {
     return lhs->start_time() < rhs->start_time();
   });
@@ -175,20 +184,18 @@ void ChainActGraph::InitNodes(
   HashMap<std::pair<int64_t, int64_t>, std::list<std::unique_ptr<ActEvent>>>
       chain_id_with_act_id2act_events;
   for (auto& act_event : act_events) {
-    int64_t actor_id = act_event->actor_id();
     int64_t act_id = act_event->act_id();
-    const TaskProto& task_proto = GetTaskProto(actor_id);
+    const TaskProto& task_proto = GetTaskProto(act_event->actor_id());
     int64_t chain_id = task_proto.task_set_info().chain_id();
     std::pair<int64_t, int64_t> chain_act_id_pair(chain_id, act_id);
     chain_id_with_act_id2act_events[chain_act_id_pair].push_back(std::move(act_event));
   }
   for (auto& pair : chain_id_with_act_id2act_events) {
-    ChainActNode* chain_act_node = new ChainActNode(std::move(pair.second));
+    ChainActNode* chain_act_node = new ChainActNode(pair.first, std::move(pair.second));
     AddAllocatedNode(chain_act_node);
     chain_act_node->ForEachActEvent([&](const ActEvent* act_event) {
-      int64_t actor_id = act_event->actor_id();
       int64_t act_id = act_event->act_id();
-      const TaskProto& task_proto = GetTaskProto(actor_id);
+      const TaskProto& task_proto = GetTaskProto(act_event->actor_id());
       CHECK(act_event2chain_node_.emplace(act_event, chain_act_node).second);
       for (const auto& produced_regst_desc : task_proto.produced_regst_desc()) {
         int64_t regst_desc_id = produced_regst_desc.second.regst_desc_id();
@@ -234,6 +241,11 @@ void ChainActGraph::InitNodeProducedRegstAct(
     const HashMap<std::pair<int64_t, int64_t>, std::list<const ActEvent*>>&
         regst_uid2consumer_act_events) const {
   for (const auto& pair : regst_uid2producer_act_event) {
+    const TaskProto& producer_task_proto = GetTaskProto(pair.second->actor_id());
+    if (producer_task_proto.task_type() == TaskType::kCopyHd
+        || producer_task_proto.task_set_info().area_id() == kMdUpdtArea) {
+      continue;
+    }
     const auto& consumers_act_event_it = regst_uid2consumer_act_events.find(pair.first);
     if (consumers_act_event_it == regst_uid2consumer_act_events.end()) { continue; }
     ChainActNode* producer = act_event2chain_node_.at(pair.second);
@@ -316,6 +328,7 @@ ChainActGraph::ChainActGraph(const Plan& plan, std::list<std::unique_ptr<ActEven
   InitEdges(regst_uid2producer_act_event, &regst_uid2consumer_act_events);
   InitNodeProducedRegstAct(regst_uid2producer_act_event, regst_uid2consumer_act_events);
   InitNodeLastConsumedRegstActGroup();
+  // ToDotWithAutoFilePath();
 }
 
 }  // namespace oneflow
