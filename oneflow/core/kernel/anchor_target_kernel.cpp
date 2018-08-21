@@ -29,25 +29,33 @@ struct AnchorTargetKernelUtil {
                                                int32_t* labels_ptr) {
     FOR_RANGE(int32_t, i, 0, gt_boxes_num) {
       FOR_RANGE(int32_t, j, 0, gt_max_overlaps_num_ptr[i]) {
-        int32_t anchor_idx = gt_max_overlaps_inds_ptr[i * anchors_num + j];  // fix it
+        int32_t anchor_idx = gt_max_overlaps_inds_ptr[i * anchors_num + j];
         labels_ptr[anchor_idx] = 1;
       }
     }
   }
 
-  static void AssignLableByThreshold(int32_t inside_anchors_num,
-                                     const int32_t* inside_anchors_inds_ptr,
-                                     const float* max_overlaps_ptr, float high_threshold,
-                                     float low_threshold, int32_t* labels_ptr) {
+  static void AssignLableByHighThreshold(int32_t inside_anchors_num,
+                                         const int32_t* inside_anchors_inds_ptr,
+                                         const float* max_overlaps_ptr, float high_threshold,
+                                         int32_t* labels_ptr) {
     FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
       int32_t anchor_idx = inside_anchors_inds_ptr[i];
       const float overlap = max_overlaps_ptr[anchor_idx];
-      if (overlap >= high_threshold) {
-        labels_ptr[anchor_idx] = 1;
-      } else if (overlap < low_threshold) {
-        labels_ptr[anchor_idx] = 0;
-      }
+      if (overlap >= high_threshold) { labels_ptr[anchor_idx] = 1; }
     }
+  }
+  static int32_t FindLableByLowThreshold(int32_t inside_anchors_num,
+                                         const int32_t* inside_anchors_inds_ptr,
+                                         const float* max_overlaps_ptr, float low_threshold,
+                                         int32_t* bg_inds_ptr) {
+    int32_t bg_cnt = 0;
+    FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
+      int32_t anchor_idx = inside_anchors_inds_ptr[i];
+      const float overlap = max_overlaps_ptr[anchor_idx];
+      if (overlap < low_threshold) { bg_inds_ptr[bg_cnt++] = anchor_idx; }
+    }
+    return bg_cnt;
   }
 };
 
@@ -89,6 +97,8 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   Memset<DeviceType::kCPU>(ctx.device_ctx, rpn_bbox_outside_weights_blob->mut_dptr(), 0,
                            rpn_bbox_outside_weights_blob->ByteSizeOfDataContentField());
   Memset<DeviceType::kCPU>(ctx.device_ctx, max_overlaps_ptr, 0,
+                           BnInOp2Blob("max_overlaps")->ByteSizeOfDataContentField());
+  Memset<DeviceType::kCPU>(ctx.device_ctx, max_overlaps_inds_ptr, 0,
                            BnInOp2Blob("max_overlaps_inds")->ByteSizeOfDataContentField());
   int32_t debug_img_cnt = 0;
   FOR_RANGE(int32_t, image_inds, 0, image_num) {  // for each image
@@ -99,6 +109,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
 
     FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
       origin_gt_boxes_ptr[i] = gt_boxes_ptr->value().value(i) * 720;
+      if (i % 4 == 2 || i % 4 == 3) { origin_gt_boxes_ptr[i]--; }
     }
 
     const BBox<T>* current_img_gt_boxes_bbox = BBox<T>::Cast(origin_gt_boxes_ptr);
@@ -129,12 +140,11 @@ void AnchorTargetKernel<T>::ForwardDataContent(
           max_overlaps_ptr[anchor_idx] = overlap;
           max_overlaps_inds_ptr[anchor_idx] = i;
         }
-
         if (overlap > gt_max_overlap) {
           gt_max_overlap = overlap;
           gt_max_overlaps_inds_ptr[i * anchors_num] = anchor_idx;
           gt_max_overlap_anchor_cnt = 1;
-        } else if (overlap && overlap == gt_max_overlap) {
+        } else if (std::abs(overlap - gt_max_overlap) <= std::numeric_limits<float>::epsilon()) {
           gt_max_overlaps_inds_ptr[i * anchors_num + gt_max_overlap_anchor_cnt] = anchor_idx;
           gt_max_overlap_anchor_cnt++;
         }
@@ -146,26 +156,19 @@ void AnchorTargetKernel<T>::ForwardDataContent(
     AnchorTargetKernelUtil<T>::AssignPositiveLabel4GtMaxOverlap(
         anchors_num, current_img_gt_boxes_num, gt_max_overlaps_inds_ptr, gt_max_overlaps_num_ptr,
         current_img_label_ptr);
-    AnchorTargetKernelUtil<T>::AssignLableByThreshold(
+    AnchorTargetKernelUtil<T>::AssignLableByHighThreshold(
         inside_anchors_num, inside_anchors_inds_ptr, max_overlaps_ptr,
-        conf.positive_overlap_threshold(), conf.negative_overlap_threshold(),
-        current_img_label_ptr);
+        conf.positive_overlap_threshold(), current_img_label_ptr);
 
-    // 4. Subsample if needed.
+    // Subsample fg if needed.
     int32_t fg_cnt = 0;
-    int32_t bg_cnt = 0;
     FOR_RANGE(int32_t, i, 0, inside_anchors_num) {
       int32_t anchor_idx = inside_anchors_inds_ptr[i];
-      if (current_img_label_ptr[anchor_idx] == 1) {
-        fg_inds_ptr[fg_cnt++] = anchor_idx;
-      } else if (current_img_label_ptr[anchor_idx] == 0) {
-        bg_inds_ptr[bg_cnt++] = anchor_idx;
-      }
+      if (current_img_label_ptr[anchor_idx] == 1) { fg_inds_ptr[fg_cnt++] = anchor_idx; }
     }
 
     const int32_t fg_conf_size = conf.batchsize() * conf.foreground_fraction();
     if (fg_cnt > fg_conf_size) {
-      // subsample fg
       // std::random_device rd;
       // std::mt19937 gen(rd());
       // std::shuffle(fg_inds_ptr, fg_inds_ptr + fg_cnt, gen);
@@ -174,6 +177,9 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       fg_cnt = fg_conf_size;
     }
     const int32_t bg_conf_size = conf.batchsize() - fg_cnt;
+    int32_t bg_cnt = AnchorTargetKernelUtil<T>::FindLableByLowThreshold(
+        inside_anchors_num, inside_anchors_inds_ptr, max_overlaps_ptr,
+        conf.negative_overlap_threshold(), bg_inds_ptr);
 
     if (bg_cnt > bg_conf_size) {
       // subsampel bg
@@ -182,7 +188,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
       // std::shuffle(bg_inds_ptr, bg_inds_ptr + bg_cnt, gen);
 
       // write back
-      FOR_RANGE(int32_t, i, bg_conf_size, bg_cnt) { current_img_label_ptr[bg_inds_ptr[i]] = -1; }
+      FOR_RANGE(int32_t, i, 0, bg_conf_size) { current_img_label_ptr[bg_inds_ptr[i]] = 0; }
       bg_cnt = bg_conf_size;
     }
     LOG(INFO) << "fg_cnt(2): " << fg_cnt << std::endl;
