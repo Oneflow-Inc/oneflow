@@ -275,10 +275,9 @@ message BoxCloneConf {
 message LogicalBlobId {
   optional string op_name = 1;
   optional string blob_name = 2;
-  optional int32 b121_id = 3 [default = -1]; // [0, boxing], [1, 121]
-  optional int32 clone_id = 4 [default = -1];
-  optional bool is_packed_id = 5 [default = false];
-  optional bool is_fw_pb = 6 [default = false];
+  optional int32 clone_id = 3 [default = -1];
+  optional bool is_packed_id = 4 [default = false];
+  optional bool is_pb_blob = 5 [default = false];
 }
 
 message BoxingOpConf {
@@ -294,6 +293,14 @@ message BoxingOpConf {
     BoxSplitConf split_box = 6;
     BoxCloneConf clone_box = 7;
   }
+}
+
+message PodBoxingOpConf {
+  required BoxingOpConf boxing_conf = 1;
+}
+
+message PbBoxingOpConf {
+  required BoxingOpConf boxing_conf = 1;
 }
 
 message NaiveModelUpdateConf {
@@ -362,9 +369,27 @@ message LearningRateDecayConf {
   }
 }
 
+message ConstantWarmupConf {
+  required int64 warmup_batches = 1;
+  required double multiplier = 2;
+}
+
+message LinearWarmupConf {
+  required int64 warmup_batches = 1;
+  required double start_multiplier = 2;
+}
+
+message WarmupConf {
+  oneof type {
+    ConstantWarmupConf constant_conf = 3000;
+    LinearWarmupConf linear_conf = 3001;
+  }
+}
+
 message NormalModelUpdateOpUserConf {
   optional double learning_rate = 1 [default = 0.01];
   optional LearningRateDecayConf learning_rate_decay = 2;
+  optional WarmupConf warmup_conf = 3;
   oneof normal_mdupdt {
     NaiveModelUpdateConf naive_conf = 1000;
     MomentumModelUpdateConf momentum_conf = 1001;
@@ -585,9 +610,6 @@ message ReduceScatterOpConf {
 message ReduceLocalAddOpConf {
   required int32 in_num = 1;
   required int32 out_num = 2;
-  required int64 min_in_parallel_id = 3;
-  required int64 min_out_parallel_id = 4;
-  required int64 model_elem_cnt = 5;
 };
 
 message ReduceGlobalAddOpConf {
@@ -652,18 +674,18 @@ message ProposalTargetOpConf
 }
 
 enum ScoringMethod {
- kId = 0;
- kTempAvg = 1;
- kAvg = 2;
- kIouAvg = 3;
- kGeneralizedAvg = 4;
- kQuasiSum = 5;
+  kId = 0;
+  kTempAvg = 1;
+  kAvg = 2;
+  kIouAvg = 3;
+  kGeneralizedAvg = 4;
+  kQuasiSum = 5;
 }
 
 message BboxVoteConf {
- required float beta = 1 [default = 1.0];
- required float threshold = 2 [default = 1];
- required ScoringMethod scoring_method = 3 [default = kId];
+  required float beta = 1 [default = 1.0];
+  required float threshold = 2 [default = 1];
+  required ScoringMethod scoring_method = 3 [default = kId];
 }
 
 message BboxNmsAndLimitOpConf {
@@ -738,8 +760,8 @@ message OperatorConf {
   optional string model_load_dir = 2;
   optional bool trainable = 3 [default = true];
   optional DeviceType device_type = 4 [default = kInvalidDevice];
-  optional bool use_cudnn_on_gpu = 5;
-  optional int64 cudnn_buf_limit_mbyte = 6 [default = 131072]; // 128GByte
+  optional bool enable_cudnn = 5;
+  optional int64 cudnn_buf_limit_mbyte = 6 [default = 1024]; // 1GByte
   oneof op_type {
     FullyConnectedOpConf fully_connected_conf = 101;
     DecodeOFRecordOpConf decode_ofrecord_conf = 102;
@@ -749,7 +771,6 @@ message OperatorConf {
     SparseCrossEntropyLossOpConf sparse_cross_entropy_loss_conf = 106;
     CopyHdOpConf copy_hd_conf = 107;
     CloneOpConf clone_conf = 108;
-    BoxingOpConf boxing_conf = 109;
     NormalModelUpdateOpConf normal_mdupdt_conf = 110;
     ModelSaveOpConf model_save_conf = 111;
     AccumulateOpConf accumulate_conf = 112;
@@ -767,6 +788,8 @@ message OperatorConf {
     Conv2DOpConf conv_2d_conf = 126;
     Conv3DOpConf conv_3d_conf = 127;
     TransposeOpConf transpose_conf = 128;
+    PodBoxingOpConf pod_boxing_conf = 129;
+    PbBoxingOpConf pb_boxing_conf = 130;
     DropoutOpConf dropout_conf = 140;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;

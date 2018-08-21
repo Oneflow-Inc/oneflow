@@ -21,6 +21,7 @@ class NormalForwardCompActor final : public CompActor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {"in"}};
   }
+  bool CheckOutputActId(int64_t regst_desc_id) const override;
 
   int HandlerInitModelAndConstBuf(const ActorMsg&);
   void UpdateModelRegstPtr(Regst* regst);
@@ -41,7 +42,6 @@ class NormalForwardCompActor final : public CompActor {
   Regst* const_model_regst_;
   Regst* const_buf_regst_;
   Regst* pre_forward_model_regst_;
-  int32_t staleness_;
 };
 
 }  // namespace oneflow

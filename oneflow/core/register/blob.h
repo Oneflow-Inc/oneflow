@@ -4,7 +4,7 @@
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/register/runtime_blob_desc.h"
 #include "oneflow/core/common/range.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
 #include "oneflow/core/record/record.pb.h"
@@ -18,7 +18,8 @@ class Regst;
 class Blob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Blob);
-  Blob(Regst* regst, const BlobDesc* blob_desc, char* mem_ptr);
+  Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr);
+  Blob(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
   virtual ~Blob() = default;
 
   const char* data_id(int32_t no) const;
@@ -33,8 +34,8 @@ class Blob final {
   const int32_t* col_num() const { return col_num_ptr_; }
   int32_t* mut_col_num() { return col_num_ptr_; }
 
-  const void* memory_ptr() const { return mem_ptr_; }
-  void* mut_memory_ptr() { return mem_ptr_; }
+  const void* header_ptr() const { return header_ptr_; }
+  void* mut_header_ptr() { return header_ptr_; }
 
   template<typename T = void>
   const T* dptr() const {
@@ -96,19 +97,22 @@ class Blob final {
     return mut_dptr<T>(dim0, dim1) + dim2 * shape().Count(3);
   }
 
-  const BlobDesc& blob_desc() const { return *blob_desc_; }
-  const BlobDesc* blob_desc_ptr() const { return blob_desc_; }
+  const RtBlobDesc& blob_desc() const { return *blob_desc_; }
+  const RtBlobDesc* blob_desc_ptr() const { return blob_desc_; }
   const Shape& shape() const { return blob_desc_->shape(); }
   DataType data_type() const { return blob_desc_->data_type(); }
   bool has_data_id_field() const { return blob_desc_->has_data_id_field(); }
   bool has_col_num_field() const { return blob_desc_->has_col_num_field(); }
   int32_t max_col_num() const { return blob_desc_->max_col_num(); }
+  size_t ByteSizeOfBlobHeader() const { return blob_desc_->ByteSizeOfBlobHeader(); }
   size_t ByteSizeOfDataIdField() const { return blob_desc_->ByteSizeOfDataIdField(); }
   size_t ByteSizeOfColNumField() const { return blob_desc_->ByteSizeOfColNumField(); }
   size_t ByteSizeOfDataContentField() const { return blob_desc_->ByteSizeOfDataContentField(); }
   size_t TotalByteSize() const { return blob_desc_->TotalByteSize(); }
 
+  bool IsContiguous() const { return is_contiguous_; }
   void CopyDataContentFrom(DeviceCtx* device_ctx, const Blob* rhs);
+  void CopyHeaderFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyDataIdFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyColNumFrom(DeviceCtx* device_ctx, const Blob* rhs);
   void CopyFrom(DeviceCtx* device_ctx, const Blob* rhs);
@@ -128,12 +132,14 @@ class Blob final {
                    && blob_desc_->data_type() != GetDataType<T>::value))
         << blob_desc_->data_type() << " " << GetDataType<T>::value;
   }
+  void Init(Regst* regst, const RtBlobDesc* blob_desc, char* header_ptr, char* body_ptr);
 
-  void* mem_ptr_;
+  bool is_contiguous_;
+  void* header_ptr_;
   char* data_id_ptr_;
   int32_t* col_num_ptr_;
   void* dptr_;
-  const BlobDesc* blob_desc_;
+  const RtBlobDesc* blob_desc_;
   Regst* regst_;
 };
 

@@ -84,6 +84,7 @@ void TaskNode::Build() {
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
+  FixPackedBlobDescOfProducedRegst();
 }
 
 void TaskNode::EraseEmptyProducedRegst() {
@@ -120,7 +121,6 @@ void TaskNode::ToProto(TaskProto* task_proto) {
     pair.second->ToProto(&regst_desc_proto);
     CHECK(produced_regst_proto->insert({pair.first, regst_desc_proto}).second);
   }
-  ClearOutOfDateConsumedRegst();
   auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
@@ -142,10 +142,6 @@ int64_t TaskNode::MemZoneId121() const {
 
 void TaskNode::BuildCtrlRegstDescIfNeed(TaskNode* dst_node) {
   if (IsMeaningLess() || dst_node->IsMeaningLess()) { return; }
-  if (!Global<JobDesc>::Get()->IsTrain() && GetTaskType() == kNormalMdUpdt
-      && dst_node->GetTaskType() == kNormalMdUpdt) {
-    return;
-  }
   const auto& dst_ancestors = dst_node->ancestors();
   if (dst_ancestors.find(this) != dst_ancestors.end()) return;
   BuildCtrlRegstDesc(dst_node);
@@ -262,8 +258,8 @@ void TaskNode::FixRegisterNumRange() {
         break;
       }
     }
-    if (in_same_stream == false
-        && area_id_ != static_cast<int64_t>(kMdUpdtArea)) {  // TODO: delete this hack
+    if (in_same_stream == false && area_id_ != static_cast<int64_t>(kMdUpdtArea)
+        && GetTaskType() == TaskType::kCopyHd) {  // TODO: delete this hack
       if (produced_regst->max_register_num() >= 2) { produced_regst->UpdtMinRegstNumIfNeed(2); }
     }
   }
@@ -306,6 +302,13 @@ void TaskNode::ClearOutOfDateConsumedRegst() {
       [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
         return it->second.empty();
       });
+}
+
+void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
+  if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
+    for (auto& regst : consumed_regsts_[name]) { regst.lock()->DeleteConsumer(this); }
+    CHECK_EQ(consumed_regsts_.erase(name), 1);
+  }
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {

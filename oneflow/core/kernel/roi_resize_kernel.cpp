@@ -13,8 +13,7 @@ void RoIResizeKernel<device_type>::ForwardDataId(
   FOR_RANGE(int64_t, n, 0, in_blob->shape().At(0)) {
     const int32_t n_roi_offset = n * roi_num;
     FOR_RANGE(int64_t, r, 0, roi_num) {
-      Memcpy<device_type>(ctx.device_ctx, out_blob->mut_data_id(n_roi_offset + r),
-                          in_blob->data_id(n), size_of_one_data_id);
+      memcpy(out_blob->mut_data_id(n_roi_offset + r), in_blob->data_id(n), size_of_one_data_id);
     }
   }
 }
