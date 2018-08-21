@@ -19,7 +19,7 @@ class AnchorTargetOp final : public Operator {
                             KernelConf* kernel_conf) const override;
 
  private:
-  const DataType GetTemplateParameterDataType(const BlobDesc* gt_boxes_blob_desc) const;
+  const DataType GetDataTypeFromInputPb(const BlobDesc* gt_boxes_blob_desc) const;
 };
 
 }  // namespace oneflow

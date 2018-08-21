@@ -8,50 +8,14 @@
 
 namespace oneflow {
 
-class AnchorLabelsAndMaxOverlapsInfo;
-class GtBoxesNearestAnchorsInfo;
-
-template<typename T>
-class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
+class AnchorLabelsAndNearestGtBoxesInfo final {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
-  AnchorTargetKernel() = default;
-  ~AnchorTargetKernel() = default;
-
- private:
-  void InitConstBufBlobs(DeviceCtx*,
-                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
-  void ForwardDataContent(const KernelCtx&,
-                          std::function<Blob*(const std::string&)>) const override;
-
-  BBoxSlice<T> GetAnchorBoxesSlice(
-      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  BBoxSlice<T> GetImageGtBoxesSlice(
-      size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  AnchorLabelsAndMaxOverlapsInfo AssignLabels(
-      size_t image_index, const BBoxSlice<T>& gt_boxes_slice,
-      const BBoxSlice<T>& anchor_boxes_slice,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  LabeledBBoxSlice<T> SubsamplePositiveAndNegativeLabels(BBoxSlice<T>& anchor_boxes_slice,
-                                                         int32_t* anchor_labels_ptr) const;
-  void AssignOutputByLabels(
-      size_t image_index, const AnchorLabelsAndMaxOverlapsInfo& anchor_label_and_nearest_gt_box,
-      const LabeledBBoxSlice<T>& labeled_anchor_slice,
-      const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-      const std::function<void(int32_t, const BBox<T>*, const BBox<T>*,
-                               const BBoxRegressionWeights&, BBoxDelta<T>*)>& AssignBBoxTargets,
-      const std::function<void(int32_t, BBoxWeights<T>*)>& AssignInsideWeights,
-      const std::function<void(int32_t, BBoxWeights<T>*, float)>& AssignOutsideWeights) const;
-};
-
-class AnchorLabelsAndMaxOverlapsInfo final {
- public:
-  AnchorLabelsAndMaxOverlapsInfo(int32_t* anchor_labels_ptr, float* max_overlaps_ptr,
-                                 int32_t* max_overlap_gt_boxes_index_ptr, float positive_threshold,
-                                 float negative_threshold, size_t size, bool init_label = true)
+  AnchorLabelsAndNearestGtBoxesInfo(int32_t* anchor_labels_ptr, float* max_overlaps_ptr,
+                                    int32_t* nearest_gt_boxes_index_ptr, float positive_threshold,
+                                    float negative_threshold, size_t size, bool init_label = true)
       : anchor_labels_ptr_(anchor_labels_ptr),
         max_overlaps_ptr_(max_overlaps_ptr),
-        max_overlap_gt_boxes_idx_ptr_(max_overlap_gt_boxes_index_ptr),
+        nearest_gt_boxes_index_ptr_(nearest_gt_boxes_index_ptr),
         positive_threshold_(positive_threshold),
         negative_threshold_(negative_threshold),
         size_(size) {
@@ -70,7 +34,7 @@ class AnchorLabelsAndMaxOverlapsInfo final {
       anchor_labels_ptr_[anchor_idx] = cand_label;
       if (overlap >= max_overlaps_ptr_[anchor_idx]) {
         max_overlaps_ptr_[anchor_idx] = overlap;
-        max_overlap_gt_boxes_idx_ptr_[anchor_idx] = gt_box_idx;
+        nearest_gt_boxes_index_ptr_[anchor_idx] = gt_box_idx;
       }
     }
   }
@@ -80,13 +44,18 @@ class AnchorLabelsAndMaxOverlapsInfo final {
     if (anchor_labels_ptr_[anchor_idx] != 0) { anchor_labels_ptr_[anchor_idx] = 1; }
   }
 
-  inline int32_t* GetAnchorLabels() const { return anchor_labels_ptr_; }
-  inline int32_t* GetNearstGtBoxes() const { return max_overlap_gt_boxes_idx_ptr_; }
+  void SetPositiveLabel(int32_t anchor_idx) {
+    CHECK_LT(anchor_idx, size_);
+    anchor_labels_ptr_[anchor_idx] = 1;
+  }
+
+  inline int32_t* GetLabelsPtr() const { return anchor_labels_ptr_; }
+  inline int32_t* GetNearestGtBoxesPtr() const { return nearest_gt_boxes_index_ptr_; }
 
  private:
-  int32_t* anchor_labels_ptr_;             // (H * W * A)
-  float* max_overlaps_ptr_;                // (H * W * A)
-  int32_t* max_overlap_gt_boxes_idx_ptr_;  // (H * W * A)
+  int32_t* anchor_labels_ptr_;
+  float* max_overlaps_ptr_;
+  int32_t* nearest_gt_boxes_index_ptr_;
   const float positive_threshold_;
   const float negative_threshold_;
   const size_t size_;
@@ -96,7 +65,7 @@ class GtBoxesNearestAnchorsInfo final {
  public:
   GtBoxesNearestAnchorsInfo(int32_t* anchors_idx_ptr, float* overlap_ptr)
       : gt_max_overlaps_ptr_(overlap_ptr),
-        nearest_anchors_idx_ptr_(anchors_idx_ptr),
+        nearest_anchors_index_ptr_(anchors_idx_ptr),
         last_gt_box_idx_(-1),
         last_gt_box_record_end_(0),
         record_anchors_num_(0) {}
@@ -111,20 +80,49 @@ class GtBoxesNearestAnchorsInfo final {
         record_anchors_num_ = last_gt_box_record_end_;
       }
       ++record_anchors_num_;
-      nearest_anchors_idx_ptr_[record_anchors_num_] = anchor_idx;
+      nearest_anchors_index_ptr_[record_anchors_num_] = anchor_idx;
       gt_max_overlaps_ptr_[record_anchors_num_] = overlap;
     }
   }
   void ForEachNearestAnchor(const std::function<void(int32_t)>& Handler) const {
-    FOR_RANGE(int32_t, i, 0, record_anchors_num_) { Handler(nearest_anchors_idx_ptr_[i]); }
+    FOR_RANGE(int32_t, i, 0, record_anchors_num_) { Handler(nearest_anchors_index_ptr_[i]); }
   }
 
  private:
   float* gt_max_overlaps_ptr_;
-  int32_t* nearest_anchors_idx_ptr_;
+  int32_t* nearest_anchors_index_ptr_;
   int32_t last_gt_box_idx_;
   int32_t last_gt_box_record_end_;
   int32_t record_anchors_num_;
+};
+
+template<typename T>
+class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
+  AnchorTargetKernel() = default;
+  ~AnchorTargetKernel() = default;
+
+ private:
+  void InitConstBufBlobs(DeviceCtx*,
+                         std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+  void ForwardDataContent(const KernelCtx&,
+                          std::function<Blob*(const std::string&)>) const override;
+
+  BBoxSlice<T> GetAnchorBoxesSlice(
+      const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  BBoxSlice<T> GetImageGtBoxesSlice(
+      size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  AnchorLabelsAndNearestGtBoxesInfo AssignLabels(
+      size_t image_index, const BBoxSlice<T>& gt_boxes_slice,
+      const BBoxSlice<T>& anchor_boxes_slice,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  LabeledBBoxSlice<T> SubsamplePositiveAndNegativeLabels(BBoxSlice<T>& anchor_boxes_slice,
+                                                         int32_t* anchor_labels_ptr) const;
+  void AssignOutputByLabels(size_t image_index,
+                            const AnchorLabelsAndNearestGtBoxesInfo& labels_and_nearest_gt_boxes,
+                            const LabeledBBoxSlice<T>& labeled_anchor_slice,
+                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

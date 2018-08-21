@@ -21,9 +21,9 @@ void ForEachOverlapBetweenAnchorsAndGtBoxes(
 template<typename T>
 void AssignPositiveLabelsToGtBoxesNearestAnchors(
     const GtBoxesNearestAnchorsInfo& gt_boxes_nearest_anchors,
-    AnchorLabelsAndMaxOverlapsInfo& anchor_labels_info) {
+    AnchorLabelsAndNearestGtBoxesInfo& anchor_labels_info) {
   gt_boxes_nearest_anchors.ForEachNearestAnchor(
-      [&](int32_t anchor_idx) { anchor_labels_info.TrySetPositiveLabel(anchor_idx); });
+      [&](int32_t anchor_idx) { anchor_labels_info.SetPositiveLabel(anchor_idx); });
 }
 
 template<typename T>
@@ -67,7 +67,7 @@ void AnchorTargetKernel<T>::InitConstBufBlobs(
       op_conf().anchor_target_conf().anchor_generator_conf();
   FasterRcnnUtil<T>::GenerateAnchors(anchor_generator_conf, anchors_blob);
   BBoxSlice<T> anchors_slice(anchors_blob->shape().elem_cnt(), anchors_blob->dptr<T>(),
-                             BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>(), true);
+                             BnInOp2Blob("inside_anchors_index")->mut_dptr<int32_t>());
   // TODO: add tolerance to the filter condition (Detectron)
   anchors_slice.Filter([&](const BBox<T>* anchor_box) {
     return anchor_box->x1() < 0 || anchor_box->y1() < 0
@@ -81,16 +81,14 @@ template<typename T>
 void AnchorTargetKernel<T>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BBoxSlice<T> anchor_boxes_slice = GetAnchorBoxesSlice(ctx, BnInOp2Blob);
-  int64_t images_num = BnInOp2Blob("gt_boxes")->shape().At(0);
-  FOR_RANGE(size_t, image_index, 0, images_num) {
-    auto gt_boxes_slice = GetImageGtBoxesSlice(image_index, BnInOp2Blob);
-    auto anchor_label_and_nearest_gt_box =
+  FOR_RANGE(size_t, image_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
+    BBoxSlice<T> gt_boxes_slice = GetImageGtBoxesSlice(image_index, BnInOp2Blob);
+    AnchorLabelsAndNearestGtBoxesInfo labels_and_nearest_gt_boxes =
         AssignLabels(image_index, gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
     auto labeled_anchor_slice = SubsamplePositiveAndNegativeLabels(
-        anchor_boxes_slice, anchor_label_and_nearest_gt_box.GetAnchorLabels());
-    AssignOutputByLabels(image_index, anchor_label_and_nearest_gt_box, labeled_anchor_slice,
-                         BnInOp2Blob, AssignBBoxTargets<T>, AssignInsideWeights<T>,
-                         AssignOutsideWeights<T>);
+        anchor_boxes_slice, labels_and_nearest_gt_boxes.GetLabelsPtr());
+    AssignOutputByLabels(image_index, labels_and_nearest_gt_boxes, labeled_anchor_slice,
+                         BnInOp2Blob);
   }
 }
 
@@ -116,23 +114,22 @@ BBoxSlice<T> AnchorTargetKernel<T>::GetImageGtBoxesSlice(
       BnInOp2Blob("gt_boxes")->dptr<FloatList16>(image_index), anchor_generator_conf.image_height(),
       anchor_generator_conf.image_width(), gt_boxes_absolute_blob->mut_dptr<T>());
   BBoxSlice<T> gt_boxes_slice(conf.max_gt_boxes_num(), gt_boxes_absolute_blob->dptr<T>(),
-                              BnInOp2Blob("gt_boxes_index")->mut_dptr<int32_t>(), true);
+                              BnInOp2Blob("gt_boxes_index")->mut_dptr<int32_t>());
   gt_boxes_slice.Truncate(boxes_num);
   return gt_boxes_slice;
 }
 
 template<typename T>
-AnchorLabelsAndMaxOverlapsInfo AnchorTargetKernel<T>::AssignLabels(
+AnchorLabelsAndNearestGtBoxesInfo AnchorTargetKernel<T>::AssignLabels(
     size_t image_index, const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* labels_blob = BnInOp2Blob("rpn_labels");
-  AnchorLabelsAndMaxOverlapsInfo anchor_labels_info(
+  AnchorLabelsAndNearestGtBoxesInfo anchor_labels_info(
       labels_blob->mut_dptr<int32_t>(image_index),
       BnInOp2Blob("anchor_max_overlaps")->mut_dptr<float>(),
       BnInOp2Blob("anchor_nearest_gt_box_index")->mut_dptr<int32_t>(),
       op_conf().anchor_target_conf().positive_overlap_threshold(),
-      op_conf().anchor_target_conf().negative_overlap_threshold(), labels_blob->shape().Count(1),
-      true);
+      op_conf().anchor_target_conf().negative_overlap_threshold(), labels_blob->shape().Count(1));
   GtBoxesNearestAnchorsInfo gt_boxes_nearest_anchors(
       BnInOp2Blob("gt_boxes_nearest_anchors_index")->mut_dptr<int32_t>(),
       BnInOp2Blob("gt_max_overlaps")->mut_dptr<float>());
@@ -164,19 +161,15 @@ LabeledBBoxSlice<T> AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(
 
 template<typename T>
 void AnchorTargetKernel<T>::AssignOutputByLabels(
-    size_t image_index, const AnchorLabelsAndMaxOverlapsInfo& anchor_label_and_nearest_gt_box,
+    size_t image_index, const AnchorLabelsAndNearestGtBoxesInfo& labels_and_nearest_gt_boxes,
     const LabeledBBoxSlice<T>& labeled_anchor_slice,
-    const std::function<Blob*(const std::string&)>& BnInOp2Blob,
-    const std::function<void(int32_t, const BBox<T>*, const BBox<T>*, const BBoxRegressionWeights&,
-                             BBoxDelta<T>*)>& AssignBBoxTargets,
-    const std::function<void(int32_t, BBoxWeights<T>*)>& AssignInsideWeights,
-    const std::function<void(int32_t, BBoxWeights<T>*, float)>& AssignOutsideWeights) const {
+    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   const BBox<T>* anchor_boxes = BBox<T>::Cast(anchors_blob->dptr<T>());
   const BBox<T>* gt_boxes = BBox<T>::Cast(BnInOp2Blob("gt_boxes_absolute")->dptr<T>());
   BBoxDelta<T>* bbox_target =
       BBoxDelta<T>::MutCast(BnInOp2Blob("rpn_bbox_targets")->mut_dptr<T>(image_index));
-  const int32_t* anchor_labels_ptr = anchor_label_and_nearest_gt_box.GetAnchorLabels();
+  const int32_t* anchor_labels_ptr = labels_and_nearest_gt_boxes.GetLabelsPtr();
   BBoxWeights<T>* inside_weights =
       BBoxWeights<T>::MutCast(BnInOp2Blob("rpn_bbox_inside_weights")->mut_dptr<T>(image_index));
   BBoxWeights<T>* outside_weights =
@@ -188,11 +181,12 @@ void AnchorTargetKernel<T>::AssignOutputByLabels(
 
   int64_t anchors_num = anchors_blob->shape().elem_cnt();
   FOR_RANGE(size_t, i, 0, anchors_num) {
-    int32_t nearest_gt_box_index = anchor_label_and_nearest_gt_box.GetNearstGtBoxes()[i];
-    AssignBBoxTargets(anchor_labels_ptr[i], &anchor_boxes[i], &gt_boxes[nearest_gt_box_index],
-                      bbox_reg_ws, &bbox_target[i]);
-    AssignInsideWeights(anchor_labels_ptr[i], &inside_weights[i]);
-    AssignOutsideWeights(anchor_labels_ptr[i], &outside_weights[i], reduction_coefficient);
+    int32_t label = anchor_labels_ptr[i];
+    int32_t nearest_gt_box_index = labels_and_nearest_gt_boxes.GetNearestGtBoxesPtr()[i];
+    AssignBBoxTargets(label, &anchor_boxes[i], &gt_boxes[nearest_gt_box_index], bbox_reg_ws,
+                      &bbox_target[i]);
+    AssignInsideWeights(label, &inside_weights[i]);
+    AssignOutsideWeights(label, &outside_weights[i], reduction_coefficient);
   }
 }
 

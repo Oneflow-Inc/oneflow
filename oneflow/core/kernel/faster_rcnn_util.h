@@ -165,7 +165,7 @@ class BBoxDelta final {
 template<typename T>
 class BBoxSlice {
  public:
-  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index);
+  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = true);
 
   void Truncate(size_t size);
   void Filter(const std::function<bool(const BBox<T>*)>& FilterMethod);
@@ -207,7 +207,7 @@ template<typename T>
 class LabeledBBoxSlice final : public BBoxSlice<T> {
  public:
   LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, int32_t* index_ptr,
-                   bool init_index);
+                   bool init_index = true);
   LabeledBBoxSlice(BBoxSlice<T>& bbox_slice, int32_t* label_ptr)
       : LabeledBBoxSlice(bbox_slice.capacity(), bbox_slice.bbox_ptr(), label_ptr,
                          bbox_slice.mut_index_ptr(), false) {}

@@ -90,8 +90,7 @@ size_t FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_bo
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
 template<typename T>
-BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr,
-                        bool init_index = true)
+BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index)
     : capacity_(capacity), bbox_ptr_(boxes_ptr), index_ptr_(index_ptr), size_(0) {
   if (init_index) {
     size_ = capacity;
@@ -146,7 +145,6 @@ template<typename T>
 LabeledBBoxSlice<T>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr,
                                       int32_t* index_ptr, bool init_index)
     : BBoxSlice<T>(capacity, boxes_ptr, index_ptr, init_index), label_ptr_(label_ptr) {
-  // BBoxSlice<T>(capacity, boxes_ptr, index_ptr, init_index);
   GroupLabel group_label{0, 0, 0};
   std::fill(group_labels_.begin(), group_labels_.end(), group_label);
 }
@@ -158,8 +156,8 @@ void LabeledBBoxSlice<T>::GroupByLabel() {
   std::sort(index_ptr, index_ptr + size, [&](int32_t index_lhs, int32_t index_rhs) {
     return label_ptr_[index_lhs] > label_ptr_[index_rhs];
   });
-  int32_t last_label =
-      label_ptr_[index_ptr[0]] + 1;  // init last_label to one more than biggest label
+  // init last_label to one more than biggest label
+  int32_t last_label = label_ptr_[index_ptr[0]] + 1;
   int32_t group_index = -1;
   FOR_RANGE(int32_t, i, 0, size) {
     int32_t cur_label = label_ptr_[index_ptr[i]];
