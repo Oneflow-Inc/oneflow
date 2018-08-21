@@ -18,6 +18,10 @@ void SmoothL1LossKernel<device_type, PredType, LabelType>::VirtualLossForwardDat
   int64_t instance_num = BnInOp2Blob("prediction")->shape().At(0);
   int64_t instance_dim = BnInOp2Blob("prediction")->shape().Count(1);
 
+  Memset<device_type>(ctx.device_ctx, loss->mut_dptr(), 0, loss->ByteSizeOfDataContentField());
+  Memset<device_type>(ctx.device_ctx, pred_diff_blob->mut_dptr(), 0,
+                      pred_diff_blob->ByteSizeOfDataContentField());
+
   SmoothL1LossKernelUtil<device_type, PredType, LabelType>::Forward(
       ctx.device_ctx, instance_num, instance_dim, prediction->dptr<PredType>(),
       label->dptr<LabelType>(), inside_weights->dptr<PredType>(), outside_weights->dptr<PredType>(),

@@ -42,15 +42,16 @@ template<typename PredType, typename LabelType>
 struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
   static void Forward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                       const PredType* prediction, const LabelType* label, PredType* loss_buf,
-                      PredType* count, PredType* label_num, PredType* loss) {
+                      PredType* tmp_storage, const size_t tmp_storage_byte_size, PredType* count,
+                      PredType* label_num, PredType* loss) {
     SigmoidCrossEntropyLossForward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, prediction, label, loss_buf, count);
-    KernelUtil<DeviceType::kGPU, PredType>::Sum(
-        ctx, n, loss_buf, loss, static_cast<PredType*>(ctx->buf_ptr()), ctx->buf_size());
+    KernelUtil<DeviceType::kGPU, PredType>::Sum(ctx, n, loss_buf, loss, tmp_storage,
+                                                tmp_storage_byte_size);
     if (conf.normalize()) {
-      KernelUtil<DeviceType::kGPU, PredType>::Sum(
-          ctx, n, count, label_num, static_cast<PredType*>(ctx->buf_ptr()), ctx->buf_size());
+      KernelUtil<DeviceType::kGPU, PredType>::Sum(ctx, n, count, label_num, tmp_storage,
+                                                  tmp_storage_byte_size);
       NoSmallerThan<PredType>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
               1, label_num, 1e-5);
