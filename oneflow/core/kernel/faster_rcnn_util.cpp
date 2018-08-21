@@ -189,7 +189,7 @@ size_t LabeledBBoxSlice<T, N>::Subsample(int32_t label, size_t sample_num) {
                    [label](const GroupLabel& group_label) { return group_label.label == label; });
   size_t begin = group_label_it->begin;
   size_t size = group_label_it->size;
-  if (size < sample_num) { return size; }
+  if (size <= sample_num) { return size; }
   this->Shuffle(begin, begin + size);
   FOR_RANGE(size_t, i, begin + sample_num, begin + size) { label_ptr_[this->index_ptr()[i]] = -1; }
   return sample_num;
