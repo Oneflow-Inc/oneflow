@@ -117,11 +117,11 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
       size_t image_index, const BBoxSlice<T>& gt_boxes_slice,
       const BBoxSlice<T>& anchor_boxes_slice,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  LabeledBBoxSlice<T> SubsamplePositiveAndNegativeLabels(BBoxSlice<T>& anchor_boxes_slice,
-                                                         int32_t* anchor_labels_ptr) const;
+  LabeledBBoxSlice<T, 3> SubsamplePositiveAndNegativeLabels(BBoxSlice<T>& anchor_boxes_slice,
+                                                            int32_t* anchor_labels_ptr) const;
   void AssignOutputByLabels(size_t image_index,
                             const AnchorLabelsAndNearestGtBoxesInfo& labels_and_nearest_gt_boxes,
-                            const LabeledBBoxSlice<T>& labeled_anchor_slice,
+                            const LabeledBBoxSlice<T, 3>& labeled_anchor_slice,
                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 

@@ -143,16 +143,16 @@ void BBoxSlice<T>::Shuffle(size_t begin, size_t end) {
 #define INITIATE_BBOX_SLICE(T, type_cpp) template class BBoxSlice<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
 
-template<typename T>
-LabeledBBoxSlice<T>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr,
-                                      int32_t* index_ptr, bool init_index)
+template<typename T, size_t N>
+LabeledBBoxSlice<T, N>::LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr,
+                                         int32_t* index_ptr, bool init_index)
     : BBoxSlice<T>(capacity, boxes_ptr, index_ptr, init_index), label_ptr_(label_ptr) {
   GroupLabel group_label{0, 0, 0};
   std::fill(group_labels_.begin(), group_labels_.end(), group_label);
 }
 
-template<typename T>
-void LabeledBBoxSlice<T>::GroupByLabel() {
+template<typename T, size_t N>
+void LabeledBBoxSlice<T, N>::GroupByLabel() {
   int32_t* index_ptr = this->mut_index_ptr();
   size_t size = this->size();
   std::sort(index_ptr, index_ptr + size, [&](int32_t index_lhs, int32_t index_rhs) {
@@ -175,8 +175,8 @@ void LabeledBBoxSlice<T>::GroupByLabel() {
   }
 }
 
-template<typename T>
-size_t LabeledBBoxSlice<T>::Subsample(int32_t label, size_t sample_num) {
+template<typename T, size_t N>
+size_t LabeledBBoxSlice<T, N>::Subsample(int32_t label, size_t sample_num) {
   auto group_label_it =
       std::find_if(group_labels_.begin(), group_labels_.end(),
                    [label](const GroupLabel& group_label) { return group_label.label == label; });
@@ -188,8 +188,8 @@ size_t LabeledBBoxSlice<T>::Subsample(int32_t label, size_t sample_num) {
   return sample_num;
 }
 
-template<typename T>
-size_t LabeledBBoxSlice<T>::GetLabelCount(int32_t label) const {
+template<typename T, size_t N>
+size_t LabeledBBoxSlice<T, N>::GetLabelCount(int32_t label) const {
   for (auto group_label : group_labels_) {
     if (group_label.label == label) { return group_label.size; }
   }
@@ -198,8 +198,9 @@ size_t LabeledBBoxSlice<T>::GetLabelCount(int32_t label) const {
 }
 
 // TODO: add template parameter size_t N
-#define INITIATE_LABELED_BBOX_SLICE(T, type_cpp) template class LabeledBBoxSlice<T>;
-OF_PP_FOR_EACH_TUPLE(INITIATE_LABELED_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ);
+#define INITIATE_LABELED_BBOX_SLICE(data_type_pair, label_type_num) \
+  template class LabeledBBoxSlice<OF_PP_PAIR_FIRST(data_type_pair), label_type_num>;
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_LABELED_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ, (3));
 
 template<typename T>
 void ScoredBBoxSlice<T>::Truncate(int32_t len) {

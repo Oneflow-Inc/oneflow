@@ -6,7 +6,7 @@ void AnchorTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_anchor_target_conf());
 
-  EnrollPbInputBn("gt_boxes", false);
+  EnrollPbInputBn("gt_boxes");
 
   EnrollOutputBn("rpn_labels", false);
   EnrollOutputBn("rpn_bbox_targets", false);
@@ -27,7 +27,6 @@ void AnchorTargetOp::InitFromOpConf() {
 
 const DataType AnchorTargetOp::GetDataTypeFromInputPb(const BlobDesc* gt_boxes_blob_desc) const {
   CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
-  int64_t image_num = gt_boxes_blob_desc->shape().At(0);
   const auto gt_boxes_type = gt_boxes_blob_desc->data_type();
   if (gt_boxes_type == DataType::kFloatList8 || gt_boxes_type == DataType::kFloatList16
       || gt_boxes_type == DataType::kFloatList24) {
