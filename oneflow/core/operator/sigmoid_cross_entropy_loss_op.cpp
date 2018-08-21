@@ -47,8 +47,9 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
   // sum buf
   BlobDesc* sum_buf_blob_desc = GetBlobDesc4BnInOp("sum_buf");
-  sum_buf_blob_desc->mut_shape() = Shape(
-      {GetTmpSizeForReduceSum(pred_blob_desc->data_type(), pred_blob_desc->shape().elem_cnt())});
+  const int64_t sum_buf_size =
+      GetTmpSizeForReduceSum(pred_blob_desc->data_type(), pred_blob_desc->shape().elem_cnt());
+  sum_buf_blob_desc->mut_shape() = Shape({sum_buf_size});
   sum_buf_blob_desc->set_data_type(DataType::kChar);
 }
 
