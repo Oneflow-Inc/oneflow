@@ -188,6 +188,8 @@ void ChainActGraph::InitNodes(
     const TaskProto& task_proto = GetTaskProto(act_event->actor_id());
     int64_t chain_id = task_proto.task_set_info().chain_id();
     std::pair<int64_t, int64_t> chain_act_id_pair(chain_id, act_id);
+    // kMdUpdtArea regst num will always be 1
+    if (task_proto.task_set_info().area_id() == kMdUpdtArea) { continue; }
     chain_id_with_act_id2act_events[chain_act_id_pair].push_back(std::move(act_event));
   }
   for (auto& pair : chain_id_with_act_id2act_events) {
@@ -241,11 +243,6 @@ void ChainActGraph::InitNodeProducedRegstAct(
     const HashMap<std::pair<int64_t, int64_t>, std::list<const ActEvent*>>&
         regst_uid2consumer_act_events) const {
   for (const auto& pair : regst_uid2producer_act_event) {
-    const TaskProto& producer_task_proto = GetTaskProto(pair.second->actor_id());
-    if (producer_task_proto.task_type() == TaskType::kCopyHd
-        || producer_task_proto.task_set_info().area_id() == kMdUpdtArea) {
-      continue;
-    }
     const auto& consumers_act_event_it = regst_uid2consumer_act_events.find(pair.first);
     if (consumers_act_event_it == regst_uid2consumer_act_events.end()) { continue; }
     ChainActNode* producer = act_event2chain_node_.at(pair.second);
