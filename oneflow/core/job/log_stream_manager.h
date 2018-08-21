@@ -12,17 +12,17 @@ class LogStreamMgr final {
   std::unique_ptr<LogStream> Create(const std::string& path) const;
 
  private:
-  class LogStreamMgrSink final {
+  class LogStreamDestination final {
    public:
-    LogStreamMgrSink(fs::FileSystem* file_system, const std::string& prefix)
-        : file_system_(file_system), prefix_(prefix) {}
-    ~LogStreamMgrSink() = default;
+    LogStreamDestination(fs::FileSystem* file_system, const std::string& base_dir)
+        : file_system_(file_system), base_dir_(base_dir) {}
+    ~LogStreamDestination() = default;
     fs::FileSystem* mut_file_system() const { return file_system_; };
-    const std::string& prefix() const { return prefix_; };
+    const std::string& base_dir() const { return base_dir_; };
 
    private:
     fs::FileSystem* file_system_;
-    std::string prefix_;
+    std::string base_dir_;
   };
 
  private:
@@ -31,7 +31,7 @@ class LogStreamMgr final {
   ~LogStreamMgr() = default;
   const std::string GenerateLogDirNameFromContext() const;
 
-  std::vector<LogStreamMgrSink> sinks_;
+  std::vector<LogStreamDestination> destinations_;
 };
 
 }  // namespace oneflow

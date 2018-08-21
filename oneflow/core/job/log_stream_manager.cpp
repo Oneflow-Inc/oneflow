@@ -8,20 +8,20 @@
 namespace oneflow {
 
 LogStreamMgr::LogStreamMgr() {
-  sinks_.emplace_back(LocalFS(), LogDir());
+  destinations_.emplace_back(LocalFS(), LogDir());
   if (SnapshotFS() == LocalFS()) {
   } else {
-    sinks_.emplace_back(SnapshotFS(),
-                        JoinPath(JoinPath(Global<JobDesc>::Get()->MdSaveSnapshotsPath()),
-                                 GenerateLogDirNameFromContext()));
+    destinations_.emplace_back(SnapshotFS(),
+                               JoinPath(JoinPath(Global<JobDesc>::Get()->MdSaveSnapshotsPath()),
+                                        GenerateLogDirNameFromContext()));
   }
 }
 
 std::unique_ptr<LogStream> LogStreamMgr::Create(const std::string& path) const {
   std::vector<std::unique_ptr<PersistentOutStream>> streams;
-  for (auto& sink : sinks_) {
-    streams.emplace_back(std::make_unique<PersistentOutStream>(sink.mut_file_system(),
-                                                               JoinPath(sink.prefix(), path)));
+  for (const auto& destination : destinations_) {
+    streams.emplace_back(std::make_unique<PersistentOutStream>(
+        destination.mut_file_system(), JoinPath(destination.base_dir(), path)));
   }
 
   return std::unique_ptr<LogStream>(new TeePersistentLogStream(std::move(streams)));

@@ -9,7 +9,6 @@ namespace oneflow {
 class TeePersistentLogStream final : public LogStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TeePersistentLogStream);
-  TeePersistentLogStream() = delete;
   explicit TeePersistentLogStream(std::vector<std::unique_ptr<PersistentOutStream>>&& branches);
   ~TeePersistentLogStream();
 
