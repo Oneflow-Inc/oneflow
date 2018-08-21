@@ -7,6 +7,7 @@ void SigmoidCrossEntropyLossOp::VirtualInitFromOpConf() {
   EnrollDataTmpBn("count");
   EnrollDataTmpBn("label_num");
   EnrollDataTmpBn("loss_buf");
+  EnrollDataTmpBn("sum_buf");
 }
 
 const PbMessage& SigmoidCrossEntropyLossOp::GetCustomizedConf() const {
@@ -19,7 +20,7 @@ LossKernelConf* SigmoidCrossEntropyLossOp::GetMutLossKernelConf(KernelConf* kern
 
 void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-    const ParallelContext* parallel_ctx, size_t* buf_size) const {
+    const ParallelContext* parallel_ctx) const {
   // label
   const BlobDesc* label_blob_desc = GetBlobDesc4BnInOp("label");
   // a label must be in {-1, 0, 1} while -1 indicates ignorance
@@ -44,8 +45,11 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
   loss_blob_desc->mut_shape() = Shape({1});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
-  *buf_size =
-      GetTmpSizeForReduceSum(pred_blob_desc->data_type(), pred_blob_desc->shape().elem_cnt());
+  // sum buf
+  BlobDesc* sum_buf_blob_desc = GetBlobDesc4BnInOp("sum_buf");
+  sum_buf_blob_desc->mut_shape() = Shape(
+      {GetTmpSizeForReduceSum(pred_blob_desc->data_type(), pred_blob_desc->shape().elem_cnt())});
+  sum_buf_blob_desc->set_data_type(DataType::kChar);
 }
 
 REGISTER_OP(OperatorConf::kSigmoidCrossEntropyLossConf, SigmoidCrossEntropyLossOp);
