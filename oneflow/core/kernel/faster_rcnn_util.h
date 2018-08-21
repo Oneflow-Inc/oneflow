@@ -203,7 +203,7 @@ struct GroupLabel {
   size_t size;
 };
 
-template<typename T>
+template<typename T, size_t N>
 class LabeledBBoxSlice final : public BBoxSlice<T> {
  public:
   LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, int32_t* index_ptr,
@@ -221,7 +221,7 @@ class LabeledBBoxSlice final : public BBoxSlice<T> {
 
  private:
   int32_t* label_ptr_;
-  std::array<GroupLabel, 3> group_labels_;
+  std::array<GroupLabel, N> group_labels_;
 };
 
 template<typename T>

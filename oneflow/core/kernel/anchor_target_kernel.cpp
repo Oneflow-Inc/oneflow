@@ -83,7 +83,7 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   BBoxSlice<T> anchor_boxes_slice = GetAnchorBoxesSlice(ctx, BnInOp2Blob);
   FOR_RANGE(size_t, image_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
     BBoxSlice<T> gt_boxes_slice = GetImageGtBoxesSlice(image_index, BnInOp2Blob);
-    AnchorLabelsAndNearestGtBoxesInfo labels_and_nearest_gt_boxes =
+    auto labels_and_nearest_gt_boxes =
         AssignLabels(image_index, gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
     auto labeled_anchor_slice = SubsamplePositiveAndNegativeLabels(
         anchor_boxes_slice, labels_and_nearest_gt_boxes.GetLabelsPtr());
@@ -146,9 +146,9 @@ AnchorLabelsAndNearestGtBoxesInfo AnchorTargetKernel<T>::AssignLabels(
 }
 
 template<typename T>
-LabeledBBoxSlice<T> AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(
+LabeledBBoxSlice<T, 3> AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(
     BBoxSlice<T>& anchor_boxes_slice, int32_t* anchor_labels_ptr) const {
-  LabeledBBoxSlice<T> labeled_anchor_slice(anchor_boxes_slice, anchor_labels_ptr);
+  LabeledBBoxSlice<T, 3> labeled_anchor_slice(anchor_boxes_slice, anchor_labels_ptr);
   labeled_anchor_slice.GroupByLabel();
   size_t batch_size_per_image = op_conf().anchor_target_conf().batch_size_per_image();
   float foreground_fraction = op_conf().anchor_target_conf().foreground_fraction();
@@ -162,7 +162,7 @@ LabeledBBoxSlice<T> AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(
 template<typename T>
 void AnchorTargetKernel<T>::AssignOutputByLabels(
     size_t image_index, const AnchorLabelsAndNearestGtBoxesInfo& labels_and_nearest_gt_boxes,
-    const LabeledBBoxSlice<T>& labeled_anchor_slice,
+    const LabeledBBoxSlice<T, 3>& labeled_anchor_slice,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   const Blob* anchors_blob = BnInOp2Blob("anchors");
   const BBox<T>* anchor_boxes = BBox<T>::Cast(anchors_blob->dptr<T>());
