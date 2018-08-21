@@ -44,6 +44,10 @@ message SmoothL1LossKernelConf {
   required LossKernelConf loss_conf = 1;
 }
 
+message SigmoidCrossEntropyLossKernelConf {
+  required LossKernelConf loss_conf = 1;
+}
+
 message PoolingKernelConf {
   required ShapeProto in = 1;
   required ShapeProto out = 2;
@@ -162,5 +166,6 @@ message KernelConf {
     ReduceGatherKernelConf reduce_gather_conf = 350;
     AccuracyKernelConf accuracy_conf = 401;
     SmoothL1LossKernelConf smooth_l1_loss_conf = 402;
+    SigmoidCrossEntropyLossKernelConf sigmoid_cross_entropy_loss_conf = 403;
   }
 }
