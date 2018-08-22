@@ -10,7 +10,7 @@ class TeePersistentLogStream final : public LogStream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(TeePersistentLogStream);
   explicit TeePersistentLogStream(std::vector<std::unique_ptr<PersistentOutStream>>&& branches);
-  ~TeePersistentLogStream();
+  ~TeePersistentLogStream() override;
 
   void Flush() override;
   LogStream& Write(const char* s, size_t n) override;

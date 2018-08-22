@@ -8,12 +8,11 @@
 
 namespace oneflow {
 
-LogStreamMgr::LogStreamMgr() {
-  destinations_.emplace_back(LocalFS(), LogDir());
-}
+LogStreamMgr::LogStreamMgr() { destinations_.emplace_back(LocalFS(), LogDir()); }
 
 std::unique_ptr<LogStream> LogStreamMgr::Create(const std::string& path) const {
   std::vector<std::unique_ptr<PersistentOutStream>> streams;
+  streams.reserve(destinations_.size());
   for (const auto& destination : destinations_) {
     streams.emplace_back(std::make_unique<PersistentOutStream>(
         destination.mut_file_system(), JoinPath(destination.base_dir(), path)));
