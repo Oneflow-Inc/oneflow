@@ -136,8 +136,13 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
 }
 
-bool UseRelayPlacement() {
-  HashMap<std::string, HashSet<std::string>> mchn_name2device_id_str;
+inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
+  PbMd message_diff;
+  return message_diff.Equivalent(lhs, rhs);
+}
+
+bool HasRelayPlacement() {
+  const ParallelConf* last_gpu_conf_ptr = nullptr;
   const Placement& placement = Global<JobDesc>::Get()->placement();
   for (const PlacementGroup& p_group : placement.placement_group()) {
     const ParallelConf& p_conf = p_group.parallel_conf();
@@ -146,14 +151,16 @@ bool UseRelayPlacement() {
       std::string device_tag;
       std::string device_id_str;
       ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
-      if (device_tag == "gpu") {
-        CHECK_STREQ(device_tag.c_str(), "gpu");
-        mchn_name2device_id_str[mchn_name].insert(device_name);
+      if (device_tag == "cpu") {
+        break;
+      } else if (device_tag == "gpu") {
+        if (!(last_gpu_conf_ptr == nullptr || (*last_gpu_conf_ptr) == p_conf)) { return true; }
+        last_gpu_conf_ptr = &p_conf;
+        break;
+      } else {
+        UNIMPLEMENTED();
       }
     }
-  }
-  for (const auto& pair : mchn_name2device_id_str) {
-    if (pair.second.size() > 1) { return true; }
   }
   return false;
 }
@@ -203,7 +210,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
   PrintProtoToTextFile(mem_shared_plan, JoinPath(LogDir(), "mem_shared_plan"));
-  if (UseRelayPlacement()) {
+  if (HasRelayPlacement()) {
     // Experiment Runtime
     { Runtime experiment_run(mem_shared_plan, true); }
     // Improve
