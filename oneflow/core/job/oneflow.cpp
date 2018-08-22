@@ -152,6 +152,7 @@ class Oneflow final {
 Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_mchn_name) {
   // New All Global
   Global<JobDesc>::New(job_conf_filepath);
+  return;
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   bool DoProfile =

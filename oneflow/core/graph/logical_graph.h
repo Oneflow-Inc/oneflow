@@ -36,8 +36,8 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void SetMainModelParallel();
   void BuildBwStruct();
   void NaiveBuildBwStruct();
-  void AddForwardClone();
-  void AddOneForwardClone(const ForwardCloneInfo& clone_info);
+  // void AddForwardClone();
+  // void AddOneForwardClone(const ForwardCloneInfo& clone_info);
 
   void MergeEdge();
   void SetNodeDataLbi();

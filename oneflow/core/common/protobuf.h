@@ -25,6 +25,7 @@ using PbMapPair = google::protobuf::MapPair<T1, T2>;
 template<typename K, typename V>
 using PbMap = google::protobuf::Map<K, V>;
 using PbFd = google::protobuf::FieldDescriptor;
+using PbOfd = google::protobuf::OneofDescriptor;
 using PbMd = google::protobuf::util::MessageDifferencer;
 
 #define PROTOBUF_BASIC_DATA_TYPE_SEQ        \
@@ -41,6 +42,10 @@ using PbMd = google::protobuf::util::MessageDifferencer;
   auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
   auto fd = const_cast<PbFd*>(d->FindFieldByName(field_name));
 
+#define PROTOBUF_GET_ONEOF(msg, field_name)                                \
+  auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
+  auto ofd = const_cast<PbOfd*>(d->FindOneofByName(field_name));
+
 #define PROTOBUF_REFLECTION(msg, field_name) \
   PROTOBUF_GET_FIELDDESC(msg, field_name)    \
   CHECK_NOTNULL(fd);                         \
@@ -53,6 +58,10 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 
 // Does PbMessage have the field_name
 bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
+
+bool FieldIsSetInPbMessage(const PbMessage&, const std::string& field_name);
+
+bool HasOneofInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
 
@@ -81,6 +90,8 @@ template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
+
+const PbMessage& OneofMessageInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Add In PbMessage RepeatedField
 
@@ -159,6 +170,29 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 // Persistent
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
+
+inline LogicalBlobId GenPackedLbi() {
+  LogicalBlobId lbi;
+  lbi.set_is_packed_id(true);
+  return lbi;
+}
+
+inline LogicalBlobId GenLogicalBlobId(const std::string& op_name,
+                                      const std::string& val_in_op_conf) {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name);
+  ret.set_blob_name(val_in_op_conf);
+  return ret;
+}
+
+inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
+  LogicalBlobId lbi;
+  size_t pos = lbn.find('/');
+  CHECK_NE(pos, std::string::npos) << lbn;
+  lbi.set_op_name(lbn.substr(0, pos));
+  lbi.set_blob_name(lbn.substr(pos + 1));
+  return lbi;
+}
 
 }  // namespace oneflow
 

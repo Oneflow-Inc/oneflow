@@ -97,6 +97,7 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
 
+  AddFwCloneIfNeed();
   SplitDecodeOps();
   AddRecordLoadOps();
 #ifndef WITH_RDMA
@@ -221,6 +222,71 @@ void JobDesc::AddRecordLoadOps() {
         if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
         op->mutable_decode_ofrecord_conf()->set_in(record_load_lbi_name);
       }
+    }
+  }
+}
+
+void GetBlobNamesFromPbMessage(const OperatorConf& op_conf, const std::string& key,
+                               std::map<std::string, std::string>* dict) {
+  CHECK(HasOneofInPbMessage(op_conf, "op_type"));
+  const PbMessage& op_type = OneofMessageInPbMessage(op_conf, "op_type");
+  if (HasFieldInPbMessage(op_type, key)) {
+    auto in_fd = GetPbFdFromPbMessage(op_type, key);
+    if (in_fd->is_repeated()) {
+      std::vector<std::string> blob_names =
+          PbRpf2StdVec(GetPbRpfFromPbMessage<std::string>(op_type, key));
+      FOR_RANGE(size_t, idx, 0, blob_names.size()) {
+        CHECK(dict->emplace(key + "_" + std::to_string(idx), blob_names[idx]).second);
+      }
+    } else if (FieldIsSetInPbMessage(op_type, key)) {
+      CHECK(dict->emplace(key, GetValFromPbMessage<std::string>(op_type, key)).second);
+    }
+  }
+}
+
+void JobDesc::AddFwCloneIfNeed() {
+  struct OpIODict {
+    std::map<std::string, std::string> in_dict;
+    std::map<std::string, std::string> out_dict;
+  };
+  HashMap<std::string, OperatorConf*> op_name2op_conf;
+  HashMap<std::string, OpIODict> op_name2io_dict;
+  HashMap<LogicalBlobId, std::string> lbi2producer;
+  HashMap<LogicalBlobId, std::vector<std::string>> lbi2consumers;
+  size_t op_num = job_conf_.net().op_size();
+  FOR_RANGE(size_t, idx, 0, op_num) {
+    OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
+    CHECK(op_name2op_conf.emplace(op_conf->name(), op_conf).second);
+    CHECK(op_name2io_dict.emplace(op_conf->name(), OpIODict()).second);
+    GetBlobNamesFromPbMessage(*op_conf, "in", &(op_name2io_dict.at(op_conf->name()).in_dict));
+    GetBlobNamesFromPbMessage(*op_conf, "out", &(op_name2io_dict.at(op_conf->name()).out_dict));
+    auto& in_dict = op_name2io_dict.at(op_conf->name()).in_dict;
+    for (auto& pair : in_dict) {
+      lbi2consumers[GenLogicalBlobId(pair.second)].push_back(op_conf->name());
+    }
+    auto& out_dict = op_name2io_dict.at(op_conf->name()).out_dict;
+    for (auto& pair : out_dict) {
+      CHECK(lbi2producer
+                .emplace(GenLogicalBlobId(op_conf->name() + "/" + pair.second), op_conf->name())
+                .second);
+    }
+  }
+  /*
+  for (auto& pair : op_name2io_dict) {
+    LOG(INFO) << "op_name: " << pair.first;
+    for (auto& in_pair : pair.second.in_dict) {
+      LOG(INFO) << in_pair.first << "," << in_pair.second;
+    }
+    for (auto& out_pair : pair.second.out_dict) {
+      LOG(INFO) << out_pair.first << "," << out_pair.second;
+    }
+  }
+  */
+  LOG(INFO) << "lbi";
+  for (auto& pair : lbi2producer) {
+    LOG(INFO) << pair.first.blob_name() << ":" << pair.second;
+    if (lbi2consumers.count(pair.first)) {
+      for (auto& consumer : lbi2consumers[pair.first]) { LOG(INFO) << "consumers:" << consumer; }
     }
   }
 }

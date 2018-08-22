@@ -34,7 +34,7 @@ void LogicalGraph::BuildFwStruct() {
   HashMap<std::string, std::vector<LogicalNode*>> op_name2nodes;
   NaiveBuildFwStruct(&op_name2nodes);
   FixSharedModelNodes(op_name2nodes);
-  AddForwardClone();
+  // AddForwardClone();
   total_mbn_num_ = 0;
   ForEachNode([&](LogicalNode* node) {
     total_mbn_num_ +=
@@ -125,6 +125,7 @@ void LogicalGraph::FixSharedModelNodes(
   });
 }
 
+/*
 void LogicalGraph::AddForwardClone() {
   std::vector<ForwardCloneInfo> clone_infos;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_node) {
@@ -181,6 +182,8 @@ void LogicalGraph::AddOneForwardClone(const ForwardCloneInfo& clone_info) {
     UpdateEdge2Obn(edge, obn);
   }
 }
+*/
+
 void LogicalGraph::SetMainModelParallel() {
   ForEachNode([](LogicalNode* node) {
     if (node->parallel_desc()->policy() == kModelParallel) { node->set_main_model_parallel(node); }

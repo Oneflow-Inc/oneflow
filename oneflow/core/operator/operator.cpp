@@ -197,34 +197,19 @@ LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
   return GenLogicalBlobId(name);
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
-  return ret;
+  return GenLogicalBlobId(op_name(), GetValFromCustomizedConf<std::string>(output_bn));
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), const_model_bn);
 }
 LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_buf_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), const_buf_bn);
 }
 LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), model_bn);
 }
 LogicalBlobId Operator::fwmbn2lbi(const std::string& forward_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(forward_model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), forward_model_bn);
 }
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
