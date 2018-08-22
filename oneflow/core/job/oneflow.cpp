@@ -9,6 +9,7 @@
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
 #include "oneflow/core/job/available_memory_desc.pb.h"
+#include "oneflow/core/job/log_stream_manager.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/actor/act_event_logger.h"
 
@@ -99,6 +100,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
   Global<IDMgr>::New();
+  Global<LogStreamMgr>::New();
   // Compile
   Plan naive_plan;
   Plan plan;
@@ -114,13 +116,13 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     Global<CtrlClient>::Get()->PullKV("mem_shared_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "mem_shared_plan"));
+  Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(naive_plan, "naive_plan");
+  Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(plan, "mem_shared_plan");
   // Experiment Runtime
   { Runtime experiment_run(plan, true); }
   // Improve
   if (machine_ctx->IsThisMachineMaster()) {
-    PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+    Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(amd, "available_memory_desc");
     CHECK_GT(amd.machine_amd_size(), 0);
     plan = Improver().Improve(amd, naive_plan,
                               JoinPath(LogDir(), ActEventLogger::experiment_prefix_
@@ -130,7 +132,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     Global<CtrlClient>::Get()->PullKV("improved_plan", &plan);
   }
   OF_BARRIER();
-  PrintProtoToTextFile(plan, JoinPath(LogDir(), "improved_plan"));
+  Global<LogStreamMgr>::Get()->SaveProtoAsTextFile(plan, "improved_plan");
   Global<CtrlClient>::Get()->Clear();
   OF_BARRIER();
   // Runtime
@@ -142,6 +144,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, int64_t this_mchn_id) {
     }
   }
   // Delete All Global
+  Global<LogStreamMgr>::Delete();
   Global<CtrlClient>::Delete();
   ctrl_server_.reset();
   Global<Profiler>::Delete();

@@ -3,13 +3,16 @@
 
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/persistence/log_stream.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
 class LogStreamMgr final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(LogStreamMgr);
+
   std::unique_ptr<LogStream> Create(const std::string& path) const;
+  void SaveProtoAsTextFile(const PbMessage& proto, const std::string& path) const;
 
  private:
   class LogStreamDestination final {
