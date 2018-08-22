@@ -27,8 +27,6 @@ class AnchorLabelsAndNearestGtBoxesInfo final {
     if (overlap >= max_overlaps_ptr_[anchor_idx]) {
       if (overlap >= positive_threshold_) {
         labels_ptr_[anchor_idx] = 1;
-      } else if (overlap < negative_threshold_) {
-        labels_ptr_[anchor_idx] = 0;
       } else {
         labels_ptr_[anchor_idx] = -1;
       }
@@ -48,6 +46,7 @@ class AnchorLabelsAndNearestGtBoxesInfo final {
   }
 
   inline int32_t* GetLabelsPtr() const { return labels_ptr_; }
+  inline float* GetMaxOverlapsPtr() const { return max_overlaps_ptr_; }
   inline int32_t* GetNearestGtBoxesPtr() const { return nearest_gt_boxes_index_ptr_; }
 
  private:
@@ -110,12 +109,13 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
       const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
   BBoxSlice<T> GetImageGtBoxesSlice(
       size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  AnchorLabelsAndNearestGtBoxesInfo AssignLabels(
+  AnchorLabelsAndNearestGtBoxesInfo ComputeOverlapsAndAssignLabels(
       size_t image_index, const BBoxSlice<T>& gt_boxes_slice,
       const BBoxSlice<T>& anchor_boxes_slice,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  LabeledBBoxSlice<T, 3> SubsamplePositiveAndNegativeLabels(BBoxSlice<T>& anchor_boxes_slice,
-                                                            int32_t* anchor_labels_ptr) const;
+  LabeledBBoxSlice<T, 3> SubsampleBackgroundsAndForegrounds(BBoxSlice<T>& anchor_boxes_slice,
+                                                            int32_t* anchor_labels_ptr,
+                                                            const float* max_overlaps_ptr) const;
   void AssignOutputByLabels(size_t image_index,
                             const AnchorLabelsAndNearestGtBoxesInfo& labels_and_nearest_gt_boxes,
                             const LabeledBBoxSlice<T, 3>& labeled_anchor_slice,

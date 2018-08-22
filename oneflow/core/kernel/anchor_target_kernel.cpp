@@ -83,10 +83,11 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   BBoxSlice<T> anchor_boxes_slice = GetAnchorBoxesSlice(ctx, BnInOp2Blob);
   FOR_RANGE(size_t, image_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
     BBoxSlice<T> gt_boxes_slice = GetImageGtBoxesSlice(image_index, BnInOp2Blob);
-    auto labels_and_nearest_gt_boxes =
-        AssignLabels(image_index, gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
-    auto labeled_anchor_slice = SubsamplePositiveAndNegativeLabels(
-        anchor_boxes_slice, labels_and_nearest_gt_boxes.GetLabelsPtr());
+    auto labels_and_nearest_gt_boxes = ComputeOverlapsAndAssignLabels(
+        image_index, gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
+    auto labeled_anchor_slice = SubsampleBackgroundsAndForegrounds(
+        anchor_boxes_slice, labels_and_nearest_gt_boxes.GetLabelsPtr(),
+        labels_and_nearest_gt_boxes.GetMaxOverlapsPtr());
     AssignOutputByLabels(image_index, labels_and_nearest_gt_boxes, labeled_anchor_slice,
                          BnInOp2Blob);
   }
@@ -120,7 +121,7 @@ BBoxSlice<T> AnchorTargetKernel<T>::GetImageGtBoxesSlice(
 }
 
 template<typename T>
-AnchorLabelsAndNearestGtBoxesInfo AnchorTargetKernel<T>::AssignLabels(
+AnchorLabelsAndNearestGtBoxesInfo AnchorTargetKernel<T>::ComputeOverlapsAndAssignLabels(
     size_t image_index, const BBoxSlice<T>& gt_boxes_slice, const BBoxSlice<T>& anchor_boxes_slice,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   Blob* labels_blob = BnInOp2Blob("rpn_labels");
@@ -151,16 +152,21 @@ AnchorLabelsAndNearestGtBoxesInfo AnchorTargetKernel<T>::AssignLabels(
 }
 
 template<typename T>
-LabeledBBoxSlice<T, 3> AnchorTargetKernel<T>::SubsamplePositiveAndNegativeLabels(
-    BBoxSlice<T>& anchor_boxes_slice, int32_t* anchor_labels_ptr) const {
+LabeledBBoxSlice<T, 3> AnchorTargetKernel<T>::SubsampleBackgroundsAndForegrounds(
+    BBoxSlice<T>& anchor_boxes_slice, int32_t* anchor_labels_ptr,
+    const float* max_overlaps_ptr) const {
   LabeledBBoxSlice<T, 3> labeled_anchor_slice(anchor_boxes_slice, anchor_labels_ptr);
-  labeled_anchor_slice.GroupByLabel();
   size_t batch_size_per_image = op_conf().anchor_target_conf().batch_size_per_image();
   float foreground_fraction = op_conf().anchor_target_conf().foreground_fraction();
+  // subsample foregrounds by labels
+  labeled_anchor_slice.GroupByLabel();
   size_t fg_cnt = batch_size_per_image * foreground_fraction;
-  fg_cnt = labeled_anchor_slice.Subsample(1, fg_cnt);
+  fg_cnt = labeled_anchor_slice.SubsampleByLabel(1, fg_cnt);
+  // subsample backgrounds by overlaps
+  float negative_threshold = op_conf().anchor_target_conf().negative_overlap_threshold();
   size_t bg_cnt = batch_size_per_image - fg_cnt;
-  labeled_anchor_slice.Subsample(0, bg_cnt);
+  labeled_anchor_slice.SubsampleByOverlap(max_overlaps_ptr, negative_threshold, bg_cnt);
+
   return labeled_anchor_slice;
 }
 

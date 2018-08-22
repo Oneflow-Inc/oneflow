@@ -211,7 +211,9 @@ class LabeledBBoxSlice final : public BBoxSlice<T> {
   LabeledBBoxSlice(BBoxSlice<T>& bbox_slice, int32_t* label_ptr);
 
   void GroupByLabel();
-  size_t Subsample(int32_t label, size_t sample_num);
+  size_t SubsampleByLabel(int32_t label, size_t sample_num);
+  size_t SubsampleByOverlap(const float* max_overlaps_ptr, const float threshold,
+                            size_t sample_num);
   size_t GetLabelCount(int32_t label) const;
   inline int32_t GetLabel(size_t index) const { return label_ptr_[index]; }
 

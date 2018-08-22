@@ -183,7 +183,7 @@ void LabeledBBoxSlice<T, N>::GroupByLabel() {
 }
 
 template<typename T, size_t N>
-size_t LabeledBBoxSlice<T, N>::Subsample(int32_t label, size_t sample_num) {
+size_t LabeledBBoxSlice<T, N>::SubsampleByLabel(int32_t label, size_t sample_num) {
   auto group_label_it =
       std::find_if(group_labels_.begin(), group_labels_.end(),
                    [label](const GroupLabel& group_label) { return group_label.label == label; });
@@ -193,6 +193,40 @@ size_t LabeledBBoxSlice<T, N>::Subsample(int32_t label, size_t sample_num) {
   this->Shuffle(begin, begin + size);
   FOR_RANGE(size_t, i, begin + sample_num, begin + size) { label_ptr_[this->index_ptr()[i]] = -1; }
   return sample_num;
+}
+
+template<typename T, size_t N>
+size_t LabeledBBoxSlice<T, N>::SubsampleByOverlap(const float* max_overlaps_ptr,
+                                                  const float threshold, size_t sample_num) {
+  int32_t* index_ptr = this->mut_index_ptr();
+  size_t size = this->size();
+  std::sort(index_ptr, index_ptr + size, [&](int32_t index_lhs, int32_t index_rhs) {
+    return max_overlaps_ptr[index_lhs] < max_overlaps_ptr[index_rhs];
+  });
+  size_t begin = -1;
+  size_t count = 0;
+  FOR_RANGE(int32_t, i, 0, size) {
+    float overlap = max_overlaps_ptr[index_ptr[i]];
+    if (overlap < threshold) {
+      if (i == 0) { begin = 0; }
+      ++count;
+    } else {
+      break;
+    }
+  }
+  if (begin != -1) {
+    if (count <= sample_num) { sample_num = count; }
+    this->Shuffle(begin, begin + count);
+    FOR_RANGE(size_t, i, begin, begin + sample_num) { label_ptr_[this->index_ptr()[i]] = 0; }
+    auto group_label_it =
+        std::find_if(group_labels_.begin(), group_labels_.end(),
+                     [](const GroupLabel& group_label) { return group_label.label == 0; });
+    group_label_it->begin = begin;
+    group_label_it->size = count;
+    return sample_num;
+  } else {
+    return 0;
+  }
 }
 
 template<typename T, size_t N>
