@@ -150,7 +150,7 @@ bool HasRelayPlacement() {
       if (device_tag == "cpu") {
         break;
       } else if (device_tag == "gpu") {
-        if (!last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
+        if (last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
           return true;
         }
         last_gpu_conf_ptr = &p_conf;
