@@ -89,9 +89,15 @@ const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg, const std::string& f
 template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
+template<typename T>
+void SetRepeatedValInPbMessage(PbMessage* msg, const std::string& field_name, int32_t idx,
+                               const T& val);
+
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 
 const PbMessage& OneofMessageInPbMessage(const PbMessage&, const std::string& field_name);
+
+PbMessage* MutableOneofMessageInPbMessage(PbMessage*, const std::string& field_name);
 
 // Add In PbMessage RepeatedField
 

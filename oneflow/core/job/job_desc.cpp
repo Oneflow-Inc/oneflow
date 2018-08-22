@@ -96,6 +96,12 @@ JobDesc::JobDesc(const std::string& job_conf_filepath) {
     ParseProtoFromTextFile(job_conf.placement(), job_conf_.mutable_placement());
     ParseProtoFromTextFile(job_conf.other(), job_conf_.mutable_other());
   }
+  for (const PlacementGroup& p_group : job_conf_.placement().placement_group()) {
+    for (const std::string& op_name : p_group.op_set().op_name()) {
+      CHECK(name2parallel_conf_.emplace(op_name, &p_group.parallel_conf()).second);
+    }
+  }
+  // TODO(jiyuan): check each op belongs to one placement group
 
   AddFwCloneIfNeed();
   SplitDecodeOps();
@@ -177,18 +183,11 @@ void JobDesc::AddRecordLoadOps() {
     }
   }
 
-  HashMap<std::string, const ParallelConf*> name2parallel_conf;
-  for (const PlacementGroup& p_group : job_conf_.placement().placement_group()) {
-    for (const std::string& op_name : p_group.op_set().op_name()) {
-      CHECK(name2parallel_conf.emplace(op_name, &p_group.parallel_conf()).second);
-    }
-  }
-
   for (const auto& pair : data_info2decode_ops) {
     std::vector<const ParallelConf*> parallel_confs;
     for (const OperatorConf* op_conf : pair.second) {
-      auto op_parallel_conf_it = name2parallel_conf.find(op_conf->name());
-      CHECK(op_parallel_conf_it != name2parallel_conf.end());
+      auto op_parallel_conf_it = name2parallel_conf_.find(op_conf->name());
+      CHECK(op_parallel_conf_it != name2parallel_conf_.end());
       auto iter = std::find_if(
           parallel_confs.begin(), parallel_confs.end(), [&](const ParallelConf* parallel_conf) {
             PbMd message_diff;
@@ -216,8 +215,8 @@ void JobDesc::AddRecordLoadOps() {
       *(p_group->mutable_parallel_conf()) = *parallel_conf;
       for (OperatorConf* op : pair.second) {
         std::string op_name = op->name();
-        auto op_parallel_conf_it = name2parallel_conf.find(op_name);
-        CHECK(op_parallel_conf_it != name2parallel_conf.end());
+        auto op_parallel_conf_it = name2parallel_conf_.find(op_name);
+        CHECK(op_parallel_conf_it != name2parallel_conf_.end());
         PbMd message_diff;
         if (!message_diff.Equivalent(*parallel_conf, *(op_parallel_conf_it->second))) { continue; }
         op->mutable_decode_ofrecord_conf()->set_in(record_load_lbi_name);
@@ -226,8 +225,10 @@ void JobDesc::AddRecordLoadOps() {
   }
 }
 
-void GetBlobNamesFromPbMessage(const OperatorConf& op_conf, const std::string& key,
-                               std::map<std::string, std::string>* dict) {
+namespace {
+
+void GetBlobNamesFromOpConf(const OperatorConf& op_conf, const std::string& key,
+                            std::map<std::string, std::string>* dict) {
   CHECK(HasOneofInPbMessage(op_conf, "op_type"));
   const PbMessage& op_type = OneofMessageInPbMessage(op_conf, "op_type");
   if (HasFieldInPbMessage(op_type, key)) {
@@ -244,10 +245,27 @@ void GetBlobNamesFromPbMessage(const OperatorConf& op_conf, const std::string& k
   }
 }
 
+void SetBlobNameToOpConf(const std::string& key, const std::string& val, OperatorConf* op_conf) {
+  CHECK(HasOneofInPbMessage(*op_conf, "op_type"));
+  PbMessage* op_type = MutableOneofMessageInPbMessage(op_conf, "op_type");
+  if (HasFieldInPbMessage(*op_type, key)) {
+    SetValInPbMessage(op_type, key, val);
+  } else {
+    size_t underline_pos = key.rfind('_');
+    CHECK_NE(underline_pos, std::string::npos);
+    std::string ibn_prefix = key.substr(0, underline_pos);
+    int32_t ibn_idx = oneflow_cast<int32_t>(key.substr(underline_pos + 1));
+    SetRepeatedValInPbMessage(op_type, ibn_prefix, ibn_idx, val);
+  }
+}
+
+}  // namespace
+
 void JobDesc::AddFwCloneIfNeed() {
   struct OpIODict {
     std::map<std::string, std::string> in_dict;
     std::map<std::string, std::string> out_dict;
+    std::map<std::string, std::string> val2key;
   };
   HashMap<std::string, OperatorConf*> op_name2op_conf;
   HashMap<std::string, OpIODict> op_name2io_dict;
@@ -258,11 +276,12 @@ void JobDesc::AddFwCloneIfNeed() {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
     CHECK(op_name2op_conf.emplace(op_conf->name(), op_conf).second);
     CHECK(op_name2io_dict.emplace(op_conf->name(), OpIODict()).second);
-    GetBlobNamesFromPbMessage(*op_conf, "in", &(op_name2io_dict.at(op_conf->name()).in_dict));
-    GetBlobNamesFromPbMessage(*op_conf, "out", &(op_name2io_dict.at(op_conf->name()).out_dict));
+    GetBlobNamesFromOpConf(*op_conf, "in", &(op_name2io_dict.at(op_conf->name()).in_dict));
+    GetBlobNamesFromOpConf(*op_conf, "out", &(op_name2io_dict.at(op_conf->name()).out_dict));
     auto& in_dict = op_name2io_dict.at(op_conf->name()).in_dict;
     for (auto& pair : in_dict) {
       lbi2consumers[GenLogicalBlobId(pair.second)].push_back(op_conf->name());
+      CHECK(op_name2io_dict.at(op_conf->name()).val2key.emplace(pair.second, pair.first).second);
     }
     auto& out_dict = op_name2io_dict.at(op_conf->name()).out_dict;
     for (auto& pair : out_dict) {
@@ -271,22 +290,27 @@ void JobDesc::AddFwCloneIfNeed() {
                 .second);
     }
   }
-  /*
-  for (auto& pair : op_name2io_dict) {
-    LOG(INFO) << "op_name: " << pair.first;
-    for (auto& in_pair : pair.second.in_dict) {
-      LOG(INFO) << in_pair.first << "," << in_pair.second;
-    }
-    for (auto& out_pair : pair.second.out_dict) {
-      LOG(INFO) << out_pair.first << "," << out_pair.second;
-    }
-  }
-  */
-  LOG(INFO) << "lbi";
-  for (auto& pair : lbi2producer) {
-    LOG(INFO) << pair.first.blob_name() << ":" << pair.second;
-    if (lbi2consumers.count(pair.first)) {
-      for (auto& consumer : lbi2consumers[pair.first]) { LOG(INFO) << "consumers:" << consumer; }
+  for (auto& pair : lbi2consumers) {
+    auto producer_it = lbi2producer.find(pair.first);
+    std::string lbn = pair.first.op_name() + "/" + pair.first.blob_name();
+    if (producer_it == lbi2producer.end()) { continue; }  // ignore decoder
+    CHECK_GE(pair.second.size(), 1);
+    if (pair.second.size() == 1) { continue; }
+    std::string producer_name = producer_it->second;
+    OperatorConf* clone_op_conf = job_conf_.mutable_net()->add_op();
+    clone_op_conf->set_name("fw_clone_" + NewUniqueId());
+    clone_op_conf->mutable_clone_conf()->set_in(lbn);
+    PlacementGroup* p_group = job_conf_.mutable_placement()->add_placement_group();
+    *(p_group->mutable_op_set()->add_op_name()) = clone_op_conf->name();
+    *(p_group->mutable_parallel_conf()) = *(name2parallel_conf_.at(producer_name));
+    FOR_RANGE(size_t, idx, 0, pair.second.size()) {
+      clone_op_conf->mutable_clone_conf()->add_out("out_" + std::to_string(idx));
+      std::string new_val_in_op_conf =
+          clone_op_conf->name() + "/" + clone_op_conf->mutable_clone_conf()->out(idx);
+      std::string consumer_name = pair.second[idx];
+      OperatorConf* consumer_op_conf = op_name2op_conf.at(consumer_name);
+      std::string key_in_op_conf = op_name2io_dict.at(consumer_name).val2key.at(lbn);
+      SetBlobNameToOpConf(key_in_op_conf, new_val_in_op_conf, consumer_op_conf);
     }
   }
 }
