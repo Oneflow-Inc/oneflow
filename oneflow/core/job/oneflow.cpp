@@ -136,12 +136,8 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
 }
 
-inline bool operator==(const ParallelConf& lhs, const ParallelConf& rhs) {
-  PbMd message_diff;
-  return message_diff.Equivalent(lhs, rhs);
-}
-
 bool HasRelayPlacement() {
+  PbMd message_diff;
   const ParallelConf* last_gpu_conf_ptr = nullptr;
   const Placement& placement = Global<JobDesc>::Get()->placement();
   for (const PlacementGroup& p_group : placement.placement_group()) {
@@ -154,7 +150,9 @@ bool HasRelayPlacement() {
       if (device_tag == "cpu") {
         break;
       } else if (device_tag == "gpu") {
-        if (!(last_gpu_conf_ptr == nullptr || (*last_gpu_conf_ptr) == p_conf)) { return true; }
+        if (!last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
+          return true;
+        }
         last_gpu_conf_ptr = &p_conf;
         break;
       } else {
