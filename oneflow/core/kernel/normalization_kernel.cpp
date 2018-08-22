@@ -92,7 +92,7 @@ void NormalizationKernel<DeviceType::kGPU, float>::NormalizationCudnnForward(
   float* moving_mean = BnInOp2Blob("moving_mean")->mut_dptr<float>();
   float* moving_variance = BnInOp2Blob("moving_variance")->mut_dptr<float>();
   double epsilon = this->op_conf().normalization_conf().epsilon();
-  if (Global<JobDesc>::Get()->IsTrain()) {
+  if (this->op_conf().trainable()) {
     InitMovingMeanAndMovingVariance(ctx, BnInOp2Blob, false);
     double momentum = this->op_conf().normalization_conf().momentum();
     CudaCheck(cudnnBatchNormalizationForwardTraining(
