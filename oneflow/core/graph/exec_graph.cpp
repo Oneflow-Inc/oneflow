@@ -52,9 +52,6 @@ void ExecNode::InferBwBufBlobDescs(const ParallelContext* parallel_ctx) {
   op_->InferBwBufBlobDescsIf(GetBlobDesc4BnInOpFunc(), parallel_ctx, op_context());
 }
 
-void ExecNode::InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx) {
-  op_->InferDiffBlobDescsWithoutFwBlob(GetBlobDesc4BnInOpFunc(), parallel_ctx);
-}
 void ExecNode::FixInDiffBlobDescs(const ParallelContext* parallel_ctx) {
   op_->FixInDiffBlobDescs(GetBlobDesc4BnInOpFunc(), parallel_ctx);
 }
