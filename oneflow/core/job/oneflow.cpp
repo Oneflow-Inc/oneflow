@@ -95,7 +95,7 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   Global<MachineCtx>::New(this_mchn_name);
   const MachineCtx* machine_ctx = Global<MachineCtx>::Get();
   if (machine_ctx->IsThisMachineMaster()) { Global<Profiler>::New(); }
-  ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlAddr()));
+  ctrl_server_.reset(new CtrlServer(machine_ctx->GetThisCtrlServerAddr()));
   Global<CtrlClient>::New();
   FixCpuDeviceNum();
   Global<IDMgr>::New();
