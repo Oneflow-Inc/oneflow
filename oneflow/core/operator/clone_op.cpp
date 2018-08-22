@@ -4,8 +4,8 @@ namespace oneflow {
 
 void CloneOp::InitFromOpConf() {
   EnrollInputBn("in");
-  for (int64_t i = 0; i < op_conf().clone_conf().out_num(); ++i) {
-    EnrollOutputBn("out_" + std::to_string(i));
+  for (int64_t i = 0; i < op_conf().clone_conf().out_size(); ++i) {
+    EnrollOutputBn(op_conf().clone_conf().out(i));
   }
 }
 

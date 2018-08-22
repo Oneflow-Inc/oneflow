@@ -241,7 +241,8 @@ message CopyHdOpConf {
 }
 
 message CloneOpConf {
-  required int32 out_num = 1;
+  required string in = 1;
+  repeated string out = 2;
 }
 
 message BoxConcatConf {

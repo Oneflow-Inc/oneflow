@@ -197,34 +197,31 @@ LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
   return GenLogicalBlobId(name);
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
-  return ret;
+  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
+  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
+  std::string name;
+  if (fd) {
+    name = GetValFromCustomizedConf<std::string>(output_bn);
+  } else {
+    size_t underline_pos = output_bn.rfind('_');
+    CHECK_NE(underline_pos, std::string::npos);
+    std::string obn_prefix = output_bn.substr(0, underline_pos);
+    int32_t obn_idx = oneflow_cast<int32_t>(output_bn.substr(underline_pos + 1));
+    name = GetPbRpfFromCustomizedConf<std::string>(obn_prefix).Get(obn_idx);
+  }
+  return GenLogicalBlobId(op_name(), name);
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), const_model_bn);
 }
 LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_buf_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), const_buf_bn);
 }
 LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), model_bn);
 }
 LogicalBlobId Operator::fwmbn2lbi(const std::string& forward_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(forward_model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), forward_model_bn);
 }
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {

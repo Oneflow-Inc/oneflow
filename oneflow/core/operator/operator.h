@@ -237,21 +237,6 @@ std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);
 
-inline LogicalBlobId GenPackedLbi() {
-  LogicalBlobId lbi;
-  lbi.set_is_packed_id(true);
-  return lbi;
-}
-
-inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
-  LogicalBlobId lbi;
-  size_t pos = lbn.find('/');
-  CHECK_NE(pos, std::string::npos);
-  lbi.set_op_name(lbn.substr(0, pos));
-  lbi.set_blob_name(lbn.substr(pos + 1));
-  return lbi;
-}
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_OPERATOR_OPERATOR_H_
