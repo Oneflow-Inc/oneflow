@@ -136,6 +136,33 @@ void PullPlan(const std::string& plan_name, Plan* plan) {
   plan->set_total_mbn_num(oneflow_cast<int64_t>(total_mbn_num));
 }
 
+bool HasRelayPlacement() {
+  PbMd message_diff;
+  const ParallelConf* last_gpu_conf_ptr = nullptr;
+  const Placement& placement = Global<JobDesc>::Get()->placement();
+  for (const PlacementGroup& p_group : placement.placement_group()) {
+    const ParallelConf& p_conf = p_group.parallel_conf();
+    for (const std::string& device_name : p_conf.device_name()) {
+      std::string mchn_name;
+      std::string device_tag;
+      std::string device_id_str;
+      ParseDeviceNameConf(device_name, &mchn_name, &device_tag, &device_id_str);
+      if (device_tag == "cpu") {
+        break;
+      } else if (device_tag == "gpu") {
+        if (last_gpu_conf_ptr && !message_diff.Equivalent(*last_gpu_conf_ptr, p_conf)) {
+          return true;
+        }
+        last_gpu_conf_ptr = &p_conf;
+        break;
+      } else {
+        UNIMPLEMENTED();
+      }
+    }
+  }
+  return false;
+}
+
 }  // namespace
 
 class Oneflow final {
@@ -181,22 +208,26 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   OF_BARRIER();
   PrintProtoToTextFile(naive_plan, JoinPath(LogDir(), "naive_plan"));
   PrintProtoToTextFile(mem_shared_plan, JoinPath(LogDir(), "mem_shared_plan"));
-  // Experiment Runtime
-  { Runtime experiment_run(mem_shared_plan, true); }
-  // Improve
-  if (machine_ctx->IsThisMachineMaster()) {
-    PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
-    CHECK_GT(amd.machine_amd_size(), 0);
-    improved_plan = Improver().Improve(
-        amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
-    PushPlan("improved_plan", improved_plan);
+  if (HasRelayPlacement()) {
+    // Experiment Runtime
+    { Runtime experiment_run(mem_shared_plan, true); }
+    // Improve
+    if (machine_ctx->IsThisMachineMaster()) {
+      PrintProtoToTextFile(amd, JoinPath(LogDir(), "available_mem_desc"));
+      CHECK_GT(amd.machine_amd_size(), 0);
+      improved_plan = Improver().Improve(
+          amd, naive_plan, JoinPath(LogDir(), ActEventLogger::experiment_act_event_bin_filename()));
+      PushPlan("improved_plan", improved_plan);
+    } else {
+      PullPlan("improved_plan", &improved_plan);
+    }
+    OF_BARRIER();
+    PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
+    Global<CtrlClient>::Get()->Clear();
+    OF_BARRIER();
   } else {
-    PullPlan("improved_plan", &improved_plan);
+    improved_plan = mem_shared_plan;
   }
-  OF_BARRIER();
-  PrintProtoToTextFile(improved_plan, JoinPath(LogDir(), "improved_plan"));
-  Global<CtrlClient>::Get()->Clear();
-  OF_BARRIER();
   // Runtime
   { Runtime run(improved_plan, false); }
   if (DoProfile) {
