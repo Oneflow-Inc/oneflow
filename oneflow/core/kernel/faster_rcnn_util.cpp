@@ -82,8 +82,8 @@ size_t FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_bo
   FOR_RANGE(int32_t, i, 0, boxes_num) {
     converted_gt_bbox[i].set_x1(gt_bbox[i].x1() * image_width);
     converted_gt_bbox[i].set_y1(gt_bbox[i].y1() * image_height);
-    converted_gt_bbox[i].set_x2(gt_bbox[i].x2() * image_width);
-    converted_gt_bbox[i].set_y2(gt_bbox[i].y2() * image_height);
+    converted_gt_bbox[i].set_x2(gt_bbox[i].x2() * image_width - 1);
+    converted_gt_bbox[i].set_y2(gt_bbox[i].y2() * image_height - 1);
   }
   return boxes_num;
 }
