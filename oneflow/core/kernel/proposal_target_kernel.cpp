@@ -16,6 +16,12 @@ void ProposalTargetKernel<T>::ForwardDataContent(
   Blob* bbox_targets_blob = BnInOp2Blob("bbox_targets");             //(im_num, sample_num, 4*class)
   Blob* inside_weights_blob = BnInOp2Blob("bbox_inside_weights");    //(im_num, sample_num, 4*class)
   Blob* outside_weights_blob = BnInOp2Blob("bbox_outside_weights");  //(im_num, sample_num, 4*class)
+  std::memset(labels_blob->mut_dptr(), 0, labels_blob->shape().elem_cnt() * sizeof(int32_t));
+  std::memset(bbox_targets_blob->mut_dptr(), 0, bbox_targets_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(inside_weights_blob->mut_dptr(), 0,
+              inside_weights_blob->shape().elem_cnt() * sizeof(T));
+  std::memset(outside_weights_blob->mut_dptr(), 0,
+              outside_weights_blob->shape().elem_cnt() * sizeof(T));
   // tmp blob
   int32_t* roi_nearest_gt_index_ptr =
       BnInOp2Blob("roi_nearest_gt_index")->mut_dptr<int32_t>();                          //(roi)
@@ -34,9 +40,15 @@ void ProposalTargetKernel<T>::ForwardDataContent(
     T* bbox_targets_ptr = bbox_targets_blob->mut_dptr<T>(i);
     T* inside_weights_ptr = inside_weights_blob->mut_dptr<T>(i);
     T* outside_weights_ptr = outside_weights_blob->mut_dptr<T>(i);
-    FOR_RANGE(int32_t, i, 0, gt_boxes_ptr->value().value_size()) {
+
+    int gt_num = gt_boxes_ptr->value().value_size() / 4;
+    FOR_RANGE(int32_t, i, 0, gt_num) {
       // gt_boxes_tmp_ptr->mutable_value()->set_value(i, gt_boxes_ptr->value().value(i) * 720);
-      gt_boxes_tmp_ptr->mutable_value()->add_value(gt_boxes_ptr->value().value(i) * 720);
+      // x2-1,y2-1
+      gt_boxes_tmp_ptr->mutable_value()->add_value(gt_boxes_ptr->value().value(i * 4 + 0));
+      gt_boxes_tmp_ptr->mutable_value()->add_value(gt_boxes_ptr->value().value(i * 4 + 1));
+      gt_boxes_tmp_ptr->mutable_value()->add_value(gt_boxes_ptr->value().value(i * 4 + 2) - 1);
+      gt_boxes_tmp_ptr->mutable_value()->add_value(gt_boxes_ptr->value().value(i * 4 + 3) - 1);
     }
 
     RoisNearestGtAndMaxIou(roi_num, rpn_rois_ptr, gt_boxes_tmp_ptr, roi_nearest_gt_index_ptr,
@@ -54,18 +66,18 @@ void ProposalTargetKernel<T>::ForwardDataContent(
 
 template<typename T>
 void ProposalTargetKernel<T>::RoisNearestGtAndMaxIou(const int64_t rois_num, const T* rpn_rois_ptr,
-                                                     const FloatList16* gt_boxes_tmp_ptr,
+                                                     const FloatList16* gt_boxes_ptr,
                                                      int32_t* roi_nearest_gt_index_ptr,
                                                      T* roi_max_overlap_ptr) const {
   const BBox<T>* roi_box = BBox<T>::Cast(rpn_rois_ptr);
-  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes_tmp_ptr->value().value().data());
-  const int64_t gt_num = gt_boxes_tmp_ptr->value().value_size() / 4;
+  const BBox<float>* gt_bbox = BBox<float>::Cast(gt_boxes_ptr->value().value().data());
+  const int64_t gt_num = gt_boxes_ptr->value().value_size() / 4;
   FOR_RANGE(int64_t, i, 0, rois_num) {
     float maxIou = 0;
     int64_t maxIouIdx = 0;
     FOR_RANGE(int64_t, j, 0, gt_num) {
       float iou = roi_box[i].InterOverUniontmp(&gt_bbox[j]);
-      if (iou > maxIou) {
+      if (iou >= maxIou) {
         maxIou = iou;
         maxIouIdx = j;
       }
@@ -83,9 +95,9 @@ ScoredBBoxSlice<T> ProposalTargetKernel<T>::ForegroundChoice(ScoredBBoxSlice<T>&
   const int64_t num_roi_per_image = conf.num_roi_per_image();
   const float fg_fraction = conf.fg_fraction();
   const int64_t fg_sample_size =
-      std::min(fg_end_index + 1, (int64_t)std::round(num_roi_per_image * fg_fraction));
+      std::min(fg_end_index + 1, static_cast<int64_t>(std::round(num_roi_per_image * fg_fraction)));
   if (fg_sample_size < fg_end_index + 1) {
-    fg_rois_slice.Shuffle();
+    // fg_rois_slice.Shuffle();
     fg_rois_slice.Truncate(fg_sample_size);
   }
   return fg_rois_slice;
@@ -103,7 +115,7 @@ ScoredBBoxSlice<T> ProposalTargetKernel<T>::BackgroundChoice(ScoredBBoxSlice<T>&
   const int64_t bg_sample_size =
       std::min(bg_end_index - bg_start_index + 1, num_roi_per_image - fg_sample_size);
   if (bg_sample_size < bg_end_index - bg_start_index + 1) {
-    bg_rois_slice.Shuffle();
+    // bg_rois_slice.Shuffle();
     bg_rois_slice.Truncate(bg_sample_size);
   }
   return bg_rois_slice;
@@ -161,7 +173,6 @@ template<typename T>
 void ProposalTargetKernel<T>::ForwardDataId(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   BnInOp2Blob("rois")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rpn_rois"));
-  BnInOp2Blob("labels")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rpn_rois"));
   BnInOp2Blob("bbox_targets")->CopyDataIdFrom(ctx.device_ctx, BnInOp2Blob("rpn_rois"));
 }
 

@@ -6,8 +6,8 @@ void ProposalTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_proposal_target_conf());
   EnrollInputBn("rpn_rois", false);
-  EnrollInputBn("gt_boxes", false);
-  EnrollInputBn("gt_label", false);
+  EnrollPbInputBn("gt_boxes");
+  EnrollPbInputBn("gt_label");
   EnrollOutputBn("rois", false);
   EnrollOutputBn("labels", false);
   EnrollOutputBn("bbox_targets", false);
@@ -16,7 +16,6 @@ void ProposalTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("roi_nearest_gt_index");
   EnrollDataTmpBn("roi_max_overlap");
   EnrollDataTmpBn("rois_index");
-  // EnrollDataTmpBn("gt_boxes_tmp");
   EnrollPbOutputBn("gt_boxes_tmp");
 }
 
