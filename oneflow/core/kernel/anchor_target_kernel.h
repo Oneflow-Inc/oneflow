@@ -8,6 +8,7 @@
 
 namespace oneflow {
 
+/*
 class AnchorLabelsAndNearestGtBoxesInfo final {
  public:
   AnchorLabelsAndNearestGtBoxesInfo(int32_t* labels_ptr, float* max_overlaps_ptr,
@@ -91,10 +92,14 @@ class GtBoxesNearestAnchorsInfo final {
   int32_t last_gt_box_record_end_;
   int32_t record_anchors_num_;
 };
+*/
 
 template<typename T>
 class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
+  using BoxesLabelsAndNearestGtBoxes =
+      LabeledBoxesSlice<BoxesToNearestGtBoxesSlice<BoxesSlice<T>>, 3>;
+
   OF_DISALLOW_COPY_AND_MOVE(AnchorTargetKernel);
   AnchorTargetKernel() = default;
   ~AnchorTargetKernel() = default;
@@ -105,21 +110,20 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
 
-  BBoxSlice<T> GetAnchorBoxesSlice(
+  BoxesSlice<T> GetAnchorBoxesSlice(
       const KernelCtx& ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  BBoxSlice<T> GetImageGtBoxesSlice(
+  BoxesSlice<T> GetImageGtBoxesSlice(
       size_t image_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  AnchorLabelsAndNearestGtBoxesInfo ComputeOverlapsAndAssignLabels(
-      size_t image_index, const BBoxSlice<T>& gt_boxes_slice,
-      const BBoxSlice<T>& anchor_boxes_slice,
+  BoxesLabelsAndNearestGtBoxes ComputeOverlapsAndSetLabels(
+      size_t image_index, const BoxesSlice<T>& gt_boxes_slice,
+      const BoxesSlice<T>& anchor_boxes_slice,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  LabeledBBoxSlice<T, 3> SubsampleBackgroundsAndForegrounds(BBoxSlice<T>& anchor_boxes_slice,
-                                                            int32_t* anchor_labels_ptr,
-                                                            const float* max_overlaps_ptr) const;
-  void AssignOutputByLabels(size_t image_index,
-                            const AnchorLabelsAndNearestGtBoxesInfo& labels_and_nearest_gt_boxes,
-                            const LabeledBBoxSlice<T, 3>& labeled_anchor_slice,
-                            const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  size_t SubsampleForeground(BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes) const;
+  size_t SubsampleBackground(size_t fg_cnt,
+                             BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes) const;
+  void WriteOutput(size_t image_index, size_t total_sample_count,
+                   const BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes,
+                   const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

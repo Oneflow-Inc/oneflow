@@ -88,9 +88,22 @@ size_t FasterRcnnUtil<T>::ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_bo
   return boxes_num;
 }
 
+template<typename T>
+void FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
+    const BoxesSlice<T>& boxes_slice, const BoxesSlice<T>& gt_boxes_slice,
+    const std::function<void(int32_t, int32_t, float)>& Handler) {
+  FOR_RANGE(int32_t, i, 0, gt_boxes_slice.size()) {
+    FOR_RANGE(int32_t, j, 0, boxes_slice.size()) {
+      float overlap = boxes_slice.GetBBox(j)->InterOverUnion(gt_boxes_slice.GetBBox(i));
+      Handler(boxes_slice.GetIndex(i), gt_boxes_slice.GetIndex(j), overlap);
+    }
+  }
+}
+
 #define INITIATE_FASTER_RCNN_UTIL(T, type_cpp) template struct FasterRcnnUtil<T>;
 OF_PP_FOR_EACH_TUPLE(INITIATE_FASTER_RCNN_UTIL, FLOATING_DATA_TYPE_SEQ);
 
+/*
 template<typename T>
 BBoxSlice<T>::BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index)
     : capacity_(capacity), bbox_ptr_(boxes_ptr), index_ptr_(index_ptr), size_(0) {
@@ -240,6 +253,7 @@ size_t LabeledBBoxSlice<T, N>::GetLabelCount(int32_t label) const {
 #define INITIATE_LABELED_BBOX_SLICE(data_type_pair, label_type_num) \
   template class LabeledBBoxSlice<OF_PP_PAIR_FIRST(data_type_pair), label_type_num>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_LABELED_BBOX_SLICE, FLOATING_DATA_TYPE_SEQ, (3));
+*/
 
 template<typename T>
 void ScoredBBoxSlice<T>::Truncate(int32_t len) {

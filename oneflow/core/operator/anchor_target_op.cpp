@@ -20,10 +20,10 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("anchor_boxes_index");
   EnrollDataTmpBn("gt_boxes_absolute");
   EnrollDataTmpBn("gt_boxes_index");
-  EnrollDataTmpBn("anchor_max_overlaps");
-  EnrollDataTmpBn("anchor_nearest_gt_box_index");
-  EnrollDataTmpBn("gt_boxes_nearest_anchors_index");
+  EnrollDataTmpBn("max_oåverlaps");
   EnrollDataTmpBn("gt_max_overlaps");
+  EnrollDataTmpBn("anchor_nearest_gt_box_index");
+  EnrollDataTmpBn("gt_box_nearest_anchor_index");
 }
 
 const PbMessage& AnchorTargetOp::GetCustomizedConf() const {
@@ -99,7 +99,7 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
   gt_boxes_index_blob_desc->set_data_type(DataType::kInt32);
   gt_boxes_index_blob_desc->mut_shape() = Shape({max_gt_boxes_num});
   // data_tmp: anchor_max_overlaps (H * W * A) float
-  BlobDesc* anchor_max_overlaps_blob_desc = GetBlobDesc4BnInOp("anchor_max_overlaps");
+  BlobDesc* anchor_max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
   anchor_max_overlaps_blob_desc->set_data_type(DataType::kFloat);
   anchor_max_overlaps_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
   // data_tmp: anchor_nearest_gt_box_index (H * W * A) int32_t
@@ -107,11 +107,11 @@ void AnchorTargetOp::InferBlobDescs(std::function<BlobDesc*(const std::string&)>
       GetBlobDesc4BnInOp("anchor_nearest_gt_box_index");
   anchor_nearest_gt_box_index_blob_desc->set_data_type(DataType::kInt32);
   anchor_nearest_gt_box_index_blob_desc->mut_shape() = Shape({fm_h * fm_w * base_anchors_num});
-  // data_tmp: gt_boxes_nearest_anchors_index (max_gt_boxes_num, H * W * A) int32_t
-  BlobDesc* gt_boxes_nearest_anchors_index_blob_desc =
-      GetBlobDesc4BnInOp("gt_boxes_nearest_anchors_index");
-  gt_boxes_nearest_anchors_index_blob_desc->set_data_type(DataType::kInt32);
-  gt_boxes_nearest_anchors_index_blob_desc->mut_shape() =
+  // data_tmp: gt_box_nearest_anchor_index (max_gt_boxes_num, H * W * A) int32_t
+  BlobDesc* gt_box_nearest_anchor_index_blob_desc =
+      GetBlobDesc4BnInOp("gt_box_nearest_anchor_index");
+  gt_box_nearest_anchor_index_blob_desc->set_data_type(DataType::kInt32);
+  gt_box_nearest_anchor_index_blob_desc->mut_shape() =
       Shape({max_gt_boxes_num, fm_h * fm_w * base_anchors_num});
   // data_tmp: gt_max_overlaps (max_gt_boxes_num) float
   BlobDesc* gt_max_overlaps_blob_desc = GetBlobDesc4BnInOp("gt_max_overlaps");
