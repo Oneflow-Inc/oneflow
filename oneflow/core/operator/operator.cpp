@@ -188,10 +188,9 @@ std::string Operator::GetValOrRepeatedValFromOpConf(const std::string& key) cons
   if (fd) {
     name = GetValFromCustomizedConf<std::string>(key);
   } else {
-    size_t underline_pos = key.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string prefix = key.substr(0, underline_pos);
-    int32_t idx = oneflow_cast<int32_t>(key.substr(underline_pos + 1));
+    std::string prefix;
+    int32_t idx;
+    ParseRepeatedBlobName(key, &prefix, &idx);
     name = GetPbRpfFromCustomizedConf<std::string>(prefix).Get(idx);
   }
   return name;

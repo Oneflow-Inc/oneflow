@@ -176,6 +176,13 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 
+inline void ParseRepeatedBlobName(const std::string& bn, std::string* prefix, int32_t* idx) {
+  size_t underline_pos = bn.rfind('_');
+  CHECK_NE(underline_pos, std::string::npos);
+  *prefix = bn.substr(0, underline_pos);
+  *idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
+}
+
 inline LogicalBlobId GenPackedLbi() {
   LogicalBlobId lbi;
   lbi.set_is_packed_id(true);

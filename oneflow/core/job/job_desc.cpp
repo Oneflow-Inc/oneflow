@@ -251,11 +251,10 @@ void SetBlobNameToOpConf(const std::string& key, const std::string& val, Operato
   if (HasFieldInPbMessage(*op_type, key)) {
     SetValInPbMessage(op_type, key, val);
   } else {
-    size_t underline_pos = key.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string ibn_prefix = key.substr(0, underline_pos);
-    int32_t ibn_idx = oneflow_cast<int32_t>(key.substr(underline_pos + 1));
-    SetRepeatedValInPbMessage(op_type, ibn_prefix, ibn_idx, val);
+    std::string prefix;
+    int32_t idx;
+    ParseRepeatedBlobName(key, &prefix, &idx);
+    SetRepeatedValInPbMessage(op_type, prefix, idx, val);
   }
 }
 
