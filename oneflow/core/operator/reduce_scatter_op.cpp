@@ -7,7 +7,7 @@ void ReduceScatterOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_scatter_conf());
   EnrollInputBn("in", false);
   for (int32_t i = 0; i < op_conf().reduce_scatter_conf().out_num(); ++i) {
-    EnrollOutputBn("out_" + std::to_string(i), false);
+    EnrollOutputBn(GenRepeatedBlobName("out", i), false);
   }
 }
 

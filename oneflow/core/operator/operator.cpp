@@ -181,50 +181,40 @@ void Operator::VirtualGenKernelConf(
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
-LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+std::string Operator::GetValOrRepeatedValFromOpConf(const std::string& key) const {
   const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
+  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(key);
   std::string name;
   if (fd) {
-    name = GetValFromCustomizedConf<std::string>(input_bn);
+    name = GetValFromCustomizedConf<std::string>(key);
   } else {
-    size_t underline_pos = input_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string ibn_prefix = input_bn.substr(0, underline_pos);
-    int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+    std::string prefix;
+    int32_t idx;
+    ParseRepeatedBlobName(key, &prefix, &idx);
+    name = GetPbRpfFromCustomizedConf<std::string>(prefix).Get(idx);
   }
+  return name;
+}
+
+LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+  std::string name = GetValOrRepeatedValFromOpConf(input_bn);
   return GenLogicalBlobId(name);
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(GetValFromCustomizedConf<std::string>(output_bn));
-  return ret;
+  std::string name = GetValOrRepeatedValFromOpConf(output_bn);
+  return GenLogicalBlobId(op_name(), name);
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), const_model_bn);
 }
 LogicalBlobId Operator::cbbn2lbi(const std::string& const_buf_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(const_buf_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), const_buf_bn);
 }
 LogicalBlobId Operator::mbn2lbi(const std::string& model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), model_bn);
 }
 LogicalBlobId Operator::fwmbn2lbi(const std::string& forward_model_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(forward_model_bn);
-  return ret;
+  return GenLogicalBlobId(op_name(), forward_model_bn);
 }
 
 void Operator::EnrollDataTmpBn(const std::string& dtbn) {
@@ -255,7 +245,7 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
   FOR_RANGE(int32_t, i, 0, num) {
-    std::string ibn = ibn_prefix + "_" + std::to_string(i);
+    std::string ibn = GenRepeatedBlobName(ibn_prefix, i);
     EnrollInputBn(ibn, has_diff);
   }
 }

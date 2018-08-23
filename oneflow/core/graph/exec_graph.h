@@ -59,7 +59,6 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
 
   void InferBlobDescs(const ParallelContext* parallel_ctx);
   void InferBwBufBlobDescs(const ParallelContext* parallel_ctx);
-  void InferDiffBlobDescsWithoutFwNode(const ParallelContext* parallel_ctx);
   void FixInDiffBlobDescs(const ParallelContext* parallel_ctx);
 
  private:

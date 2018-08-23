@@ -127,11 +127,6 @@ class Operator {
                                    const ParallelContext*, const OpContext*) const;
   virtual void InferBwBufBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                    const ParallelContext*) const {}
-  virtual void InferDiffBlobDescsWithoutFwBlob(
-      std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
-      const ParallelContext*) const {
-    UNIMPLEMENTED();
-  }
   virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                                   const ParallelContext*) const {}
 
@@ -220,6 +215,7 @@ class Operator {
   LogicalBlobId dtbn2lbi(const std::string& data_tmp_bn) const;
   LogicalBlobId fbbn2lbi(const std::string& fw_buf_bn) const { return dtbn2lbi(fw_buf_bn); }
   LogicalBlobId bbbn2lbi(const std::string& bw_buf_bn) const { return dtbn2lbi(bw_buf_bn); }
+  std::string GetValOrRepeatedValFromOpConf(const std::string& key) const;
 
   PbMap<std::string, LogicalBlobId>* mut_bn_in_op2lbi() {
     return op_attribute_.mutable_bn_in_op2lbi();
@@ -242,16 +238,35 @@ std::shared_ptr<Operator> ConstructOp(const OperatorConf& op_conf);
 void EraseEmptyBnInVec(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                        PbRpf<std::string>* bns);
 
+inline std::string GenRepeatedBlobName(const std::string& prefix, int32_t idx) {
+  return prefix + "_" + std::to_string(idx);
+}
+
+inline void ParseRepeatedBlobName(const std::string& bn, std::string* prefix, int32_t* idx) {
+  size_t underline_pos = bn.rfind('_');
+  CHECK_NE(underline_pos, std::string::npos);
+  *prefix = bn.substr(0, underline_pos);
+  *idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
+}
+
 inline LogicalBlobId GenPackedLbi() {
   LogicalBlobId lbi;
   lbi.set_is_packed_id(true);
   return lbi;
 }
 
+inline LogicalBlobId GenLogicalBlobId(const std::string& op_name,
+                                      const std::string& val_in_op_conf) {
+  LogicalBlobId ret;
+  ret.set_op_name(op_name);
+  ret.set_blob_name(val_in_op_conf);
+  return ret;
+}
+
 inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
   LogicalBlobId lbi;
   size_t pos = lbn.find('/');
-  CHECK_NE(pos, std::string::npos);
+  CHECK_NE(pos, std::string::npos) << lbn;
   lbi.set_op_name(lbn.substr(0, pos));
   lbi.set_blob_name(lbn.substr(pos + 1));
   return lbi;
