@@ -32,8 +32,8 @@ class BBox final {
   inline void set_x2(T x2) { bbox_[2] = x2; }
   inline void set_y2(T y2) { bbox_[3] = y2; }
 
-  inline T width() const { return (x2() - x1() + 1); }
-  inline T height() const { return (y2() - y1() + 1); }
+  inline T width() const { return x2() - x1() + static_cast<T>(1); }
+  inline T height() const { return y2() - y1() + static_cast<T>(1); }
   inline T Area() const { return width() * height(); }
   inline float InterOverUnion(const BBox* other) const {
     const float iw = std::min<float>(x2(), other->x2()) - std::max<float>(x1(), other->x1()) + 1.f;
