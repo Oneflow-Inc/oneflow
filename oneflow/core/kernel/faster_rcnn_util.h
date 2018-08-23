@@ -251,8 +251,12 @@ struct GroupLabel {
 template<typename SliceType, size_t N>
 class LabeledBoxesSlice : public SliceType {
  public:
-  LabeledBoxesSlice(const SliceType& slice, int32_t* label_ptr)
-      : SliceType(slice), label_ptr_(label_ptr) {}
+  LabeledBoxesSlice(const SliceType& slice, int32_t* label_ptr, bool init_label = true)
+      : SliceType(slice), label_ptr_(label_ptr) {
+    GroupLabel group_label{0, 0, 0};
+    std::fill(group_labels_.begin(), group_labels_.end(), group_label);
+    if (init_label) { std::fill(label_ptr_, label_ptr_ + this->capacity(), -1); }
+  }
 
   void GroupByLabel() {
     int32_t* index_ptr = this->mut_index_ptr();
@@ -329,11 +333,11 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
 
   float GetNearestGtBoxIndex(size_t n) { return max_overlap_gt_box_index_ptr_[this->GetIndex(n)]; }
 
-  void UpdateMaxOverlapGtBox(int32_t bbox_index, int32_t gt_box_index, float overlap,
+  void UpdateMaxOverlapGtBox(int32_t box_index, int32_t gt_box_index, float overlap,
                              const std::function<void()>& DoUpdateHandle) {
-    if (overlap >= max_overlap_ptr_[bbox_index]) {
-      max_overlap_ptr_[bbox_index] = overlap;
-      max_overlap_gt_box_index_ptr_[bbox_index] = gt_box_index;
+    if (overlap >= max_overlap_ptr_[box_index]) {
+      max_overlap_ptr_[box_index] = overlap;
+      max_overlap_gt_box_index_ptr_[box_index] = gt_box_index;
       DoUpdateHandle();
     }
   }
@@ -375,7 +379,10 @@ class GtBoxesToNearestBoxesSlice : public SliceType {
                              int32_t* nearest_boxes_index_ptr)
       : SliceType(slice),
         gt_max_overlaps_ptr_(gt_max_overlaps_ptr),
-        nearest_boxes_index_ptr_(nearest_boxes_index_ptr) {}
+        nearest_boxes_index_ptr_(nearest_boxes_index_ptr),
+        last_gt_box_index_(-1),
+        last_gt_box_nearest_boxes_index_end_(0),
+        nearest_boxes_count_(0) {}
 
   void UpdateNearestBox(int32_t gt_box_index, int32_t box_index, float overlap) {
     if (gt_box_index != last_gt_box_index_) {
@@ -385,9 +392,9 @@ class GtBoxesToNearestBoxesSlice : public SliceType {
     if (overlap >= gt_max_overlaps_ptr_[gt_box_index]) {
       if (overlap > gt_max_overlaps_ptr_[gt_box_index]) {
         nearest_boxes_count_ = last_gt_box_nearest_boxes_index_end_;
-        gt_max_overlaps_ptr_[gt_box_index] = overlap;
       }
       nearest_boxes_index_ptr_[nearest_boxes_count_++] = box_index;
+      gt_max_overlaps_ptr_[gt_box_index] = overlap;
     }
   }
 
@@ -408,71 +415,6 @@ GtBoxesToNearestBoxesSlice<SliceType> GenGtBoxesToNearestBoxesSlice(
     const SliceType& slice, float* gt_max_overlaps_ptr, int32_t* nearest_boxes_index_ptr) {
   return GtBoxesToNearestBoxesSlice<SliceType>(slice, gt_max_overlaps_ptr, nearest_boxes_index_ptr);
 }
-
-/*
-template<typename T>
-class BBoxSlice {
- public:
-  BBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* index_ptr, bool init_index = true);
-
-  void Truncate(size_t size);
-  void Filter(const std::function<bool(const BBox<T>*)>& FilterMethod);
-  void Sort(const std::function<bool(int32_t, int32_t)>& Compare);
-  void Sort(const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare);
-  void Shuffle(size_t begin, size_t end);
-  void Shuffle() { Shuffle(0, size_); }
-
-  inline int32_t GetIndex(size_t n) const {
-    CHECK_LT(n, size_);
-    return index_ptr_[n];
-  }
-
-  inline const BBox<T>* GetBBox(size_t n) const {
-    CHECK_LT(n, size_);
-    return BBox<T>::Cast(bbox_ptr_) + index_ptr_[n];
-  }
-
-  inline size_t capacity() const { return capacity_; }
-  inline size_t size() const { return size_; };
-  inline const T* bbox_ptr() const { return bbox_ptr_; }
-  inline const int32_t* index_ptr() const { return index_ptr_; }
-  inline int32_t* mut_index_ptr() { return index_ptr_; }
-
- private:
-  const size_t capacity_;
-  const T* bbox_ptr_;
-  int32_t* index_ptr_;
-  size_t size_;
-};
-
-struct GroupLabel {
-  int32_t label;
-  size_t begin;
-  size_t size;
-};
-
-template<typename T, size_t N>
-class LabeledBBoxSlice final : public BBoxSlice<T> {
- public:
-  LabeledBBoxSlice(size_t capacity, const T* boxes_ptr, int32_t* label_ptr, int32_t* index_ptr,
-                   bool init_index = true);
-  LabeledBBoxSlice(BBoxSlice<T>& bbox_slice, int32_t* label_ptr);
-
-  void GroupByLabel();
-  size_t SubsampleByLabel(int32_t label, size_t sample_num);
-  size_t SubsampleByOverlap(const float* max_overlaps_ptr, const float threshold,
-                            size_t sample_num);
-  size_t GetLabelCount(int32_t label) const;
-  inline int32_t GetLabel(size_t index) const { return label_ptr_[index]; }
-
-  inline const int32_t* label_ptr() const { return label_ptr_; }
-  inline int32_t* mut_label_ptr() { return label_ptr_; }
-
- private:
-  int32_t* label_ptr_;
-  std::array<GroupLabel, N> group_labels_;
-};
-*/
 
 template<typename T>
 class ScoredBBoxSlice final {

@@ -20,7 +20,7 @@ void AnchorTargetOp::InitFromOpConf() {
   EnrollDataTmpBn("anchor_boxes_index");
   EnrollDataTmpBn("gt_boxes_absolute");
   EnrollDataTmpBn("gt_boxes_index");
-  EnrollDataTmpBn("max_oåverlaps");
+  EnrollDataTmpBn("max_overlaps");
   EnrollDataTmpBn("gt_max_overlaps");
   EnrollDataTmpBn("anchor_nearest_gt_box_index");
   EnrollDataTmpBn("gt_box_nearest_anchor_index");
