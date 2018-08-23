@@ -22,24 +22,14 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
-  struct BackwardCloneInfo {
-    LogicalNode* succ_node;
-    LogicalBlobId lbi;
-    std::vector<LogicalEdge*> edges;
-  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
-  void ReConnectToFwClone(LogicalNode* clone_node, const LogicalBlobId& lbi,
-                          const std::vector<LogicalEdge*>& edges, const std::string& obn);
   void SetMainModelParallel();
   void BuildBwStruct();
-  void NaiveBuildBwStruct();
-  void AddBackwardClone();
-  void AddOneBackwardClone(const BackwardCloneInfo& clone_info);
 
   void MergeEdge();
   void SetNodeDataLbi();

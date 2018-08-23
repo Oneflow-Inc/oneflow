@@ -25,6 +25,7 @@ using PbMapPair = google::protobuf::MapPair<T1, T2>;
 template<typename K, typename V>
 using PbMap = google::protobuf::Map<K, V>;
 using PbFd = google::protobuf::FieldDescriptor;
+using PbOfd = google::protobuf::OneofDescriptor;
 using PbMd = google::protobuf::util::MessageDifferencer;
 
 #define PROTOBUF_BASIC_DATA_TYPE_SEQ        \
@@ -41,6 +42,10 @@ using PbMd = google::protobuf::util::MessageDifferencer;
   auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
   auto fd = const_cast<PbFd*>(d->FindFieldByName(field_name));
 
+#define PROTOBUF_GET_ONEOF(msg, field_name)                                \
+  auto d = const_cast<google::protobuf::Descriptor*>(msg.GetDescriptor()); \
+  auto ofd = const_cast<PbOfd*>(d->FindOneofByName(field_name));
+
 #define PROTOBUF_REFLECTION(msg, field_name) \
   PROTOBUF_GET_FIELDDESC(msg, field_name)    \
   CHECK_NOTNULL(fd);                         \
@@ -53,6 +58,10 @@ void PrintProtoToTextFile(const PbMessage& proto, const std::string& file_path);
 
 // Does PbMessage have the field_name
 bool HasFieldInPbMessage(const PbMessage&, const std::string& field_name);
+
+bool FieldIsSetInPbMessage(const PbMessage&, const std::string& field_name);
+
+bool HasOneofInPbMessage(const PbMessage&, const std::string& field_name);
 
 // Get From PbMessage
 
@@ -80,7 +89,13 @@ const PbRpf<T>& GetPbRpfFromPbMessage(const PbMessage& msg, const std::string& f
 template<typename T>
 void SetValInPbMessage(PbMessage* msg, const std::string& field_name, const T& val);
 
+template<typename T>
+void SetRepeatedValInPbMessage(PbMessage* msg, const std::string& field_name, int32_t idx,
+                               const T& val);
+
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
+
+PbMessage* MutableOneofMessageInPbMessage(PbMessage*, const std::string& field_name);
 
 // Add In PbMessage RepeatedField
 
@@ -146,7 +161,6 @@ bool IsInRepeatedField(const PbRf<T>& repeated_field, const T& value) {
 inline bool operator<(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
   if (lhs.op_name() != rhs.op_name()) { return lhs.op_name() < rhs.op_name(); }
   if (lhs.blob_name() != rhs.blob_name()) { return lhs.blob_name() < rhs.blob_name(); }
-  if (lhs.clone_id() != rhs.clone_id()) { return lhs.clone_id() < rhs.clone_id(); }
   if (lhs.is_packed_id() != rhs.is_packed_id()) { return lhs.is_packed_id() < rhs.is_packed_id(); }
   return false;
 }
@@ -167,7 +181,7 @@ namespace std {
 template<>
 struct hash<oneflow::LogicalBlobId> {
   size_t operator()(const oneflow::LogicalBlobId& lbi) const {
-    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name() + std::to_string(lbi.clone_id())
+    return std::hash<std::string>()(lbi.op_name() + lbi.blob_name()
                                     + std::to_string(lbi.is_packed_id()));
   }
 };

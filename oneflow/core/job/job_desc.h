@@ -72,6 +72,7 @@ class JobDesc final {
  private:
   friend class Global<JobDesc>;
   JobDesc(const std::string& job_conf_filepath);
+  void AddFwCloneIfNeed();
   void SplitDecodeOps();
   void AddRecordLoadOps();
 
@@ -79,6 +80,7 @@ class JobDesc final {
 
   HashMap<std::string, int64_t> machine_name2machine_id_;
   HashMap<int64_t, std::string> machine_id2machine_name_;
+  HashMap<std::string, const ParallelConf*> name2parallel_conf_;
 };
 
 }  // namespace oneflow
