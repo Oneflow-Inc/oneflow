@@ -10,7 +10,8 @@ std::string MachineCtx::GetCtrlAddr(int64_t machine_id) const {
 
 std::string MachineCtx::GetCtrlServerAddr(int64_t machine_id) const {
   const Machine& mchn = Global<JobDesc>::Get()->resource().machine(machine_id);
-  return mchn.addr() + ":" + std::to_string(mchn.port());
+  return "0.0.0.0:" + std::to_string(mchn.port());
+  // return mchn.addr() + ":" + std::to_string(mchn.port());
 }
 
 MachineCtx::MachineCtx(const std::string& this_mchn_name) {
