@@ -3,6 +3,8 @@
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/common/preprocessor.h"
+#include "oneflow/core/device/cuda_stream_handle.h"
+#include "oneflow/core/device/cuda_device_context.h"
 
 namespace oneflow {
 
@@ -97,5 +99,18 @@ void Blob::CopyFrom(DeviceCtx* device_ctx, const Blob* rhs) {
     CopyDataContentFrom(device_ctx, rhs);
   }
 }
+
+namespace gdb {
+
+const Blob* CpuBlobCopyFromGpuBlobPtr(uint64_t gpu_blob_ptr) {
+  Blob* gpu_blob = reinterpret_cast<Blob*>(gpu_blob_ptr);
+  char* cpu_body_ptr = reinterpret_cast<char*>(malloc(gpu_blob->ByteSizeOfDataContentField()));
+  cudaMemcpy(cpu_body_ptr, gpu_blob->dptr(), gpu_blob->ByteSizeOfDataContentField(),
+             cudaMemcpyDeviceToHost);
+  return new Blob(const_cast<Regst*>(gpu_blob->regst()), gpu_blob->blob_desc_ptr(),
+                  reinterpret_cast<char*>(gpu_blob->mut_header_ptr()), cpu_body_ptr);
+}
+
+}  // namespace gdb
 
 }  // namespace oneflow
