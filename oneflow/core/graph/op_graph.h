@@ -11,16 +11,16 @@ class OpEdge;
 class OpNode final : public Node<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpNode);
-  virtual ~OpNode() = default;
+  OpNode() = default;
+  ~OpNode() override = default;
 
-  // op_vec_
-  // std::shared_ptr<Op> SoleOp() const;
   const std::vector<std::shared_ptr<Operator>>& op_vec() const { return op_vec_; }
   std::vector<std::shared_ptr<Operator>>& mut_op_vec() { return op_vec_; }
 
-  // parallel_desc_
   std::shared_ptr<const ParallelDesc> parallel_desc() const { return parallel_desc_; }
   std::shared_ptr<const ParallelDesc>& mut_parallel_desc() { return parallel_desc_; }
+
+  std::string VisualStr() const override;
 
  private:
   std::vector<std::shared_ptr<Operator>> op_vec_;
@@ -31,19 +31,26 @@ class OpEdge final : public Edge<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpEdge);
   OpEdge() = default;
-  ~OpEdge() = default;
+  ~OpEdge() override = default;
+
+  const std::vector<LogicalBlobId>& lbi_vec() const { return lbi_vec_; };
+  std::vector<LogicalBlobId>& mut_lbi_vec() { return lbi_vec_; }
 
  private:
+  std::vector<LogicalBlobId> lbi_vec_;
 };
 
 class OpGraph final : public Graph<OpNode, OpEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OpGraph);
   OpGraph();
-  ~OpGraph() = default;
+  OpGraph(const DLNetConf& net_conf, const Placement& placement);
+  ~OpGraph() override = default;
+
+  const char* TypeName() const override { return "OpGraph"; }
 
  private:
-  void BuildFwStruct();
+  void BuildFwStruct(const DLNetConf& net_conf, const Placement& placement);
 };
 
 }  // namespace oneflow
