@@ -1,6 +1,7 @@
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/hadoop/hadoop_file_system.h"
 
 namespace oneflow {
@@ -237,7 +238,7 @@ void GetBlobNamesFromOpConf(OperatorConf* op_conf, const std::string& key,
       std::vector<std::string> blob_names =
           PbRpf2StdVec(GetPbRpfFromPbMessage<std::string>(op_type, key));
       FOR_RANGE(size_t, idx, 0, blob_names.size()) {
-        CHECK(dict->emplace(key + "_" + std::to_string(idx), blob_names[idx]).second);
+        CHECK(dict->emplace(GenRepeatedBlobName(key, idx), blob_names[idx]).second);
       }
     } else if (FieldIsSetInPbMessage(op_type, key)) {
       CHECK(dict->emplace(key, GetValFromPbMessage<std::string>(op_type, key)).second);
@@ -303,7 +304,7 @@ void JobDesc::AddFwCloneIfNeed() {
     *(p_group->mutable_op_set()->add_op_name()) = clone_op_conf->name();
     *(p_group->mutable_parallel_conf()) = *(name2parallel_conf_.at(producer_name));
     FOR_RANGE(size_t, idx, 0, pair.second.size()) {
-      clone_op_conf->mutable_clone_conf()->add_out("out_" + std::to_string(idx));
+      clone_op_conf->mutable_clone_conf()->add_out(GenRepeatedBlobName("out", idx));
       std::string new_val_in_op_conf =
           clone_op_conf->name() + "/" + clone_op_conf->mutable_clone_conf()->out(idx);
       std::string consumer_name = pair.second[idx];

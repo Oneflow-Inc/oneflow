@@ -6,10 +6,10 @@ namespace oneflow {
 void ReduceLocalAddOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_local_add_conf());
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().in_num()) {
-    EnrollInputBn("in_" + std::to_string(i), false);
+    EnrollInputBn(GenRepeatedBlobName("in", i), false);
   }
   FOR_RANGE(int32_t, i, 0, op_conf().reduce_local_add_conf().out_num()) {
-    EnrollOutputBn("out_" + std::to_string(i), false);
+    EnrollOutputBn(GenRepeatedBlobName("out", i), false);
   }
 }
 

@@ -245,7 +245,7 @@ void Operator::EnrollInputBn(const std::string& ibn, bool has_diff) {
 
 void Operator::EnrollRepeatedInputBn(const std::string& ibn_prefix, int32_t num, bool has_diff) {
   FOR_RANGE(int32_t, i, 0, num) {
-    std::string ibn = ibn_prefix + "_" + std::to_string(i);
+    std::string ibn = GenRepeatedBlobName(ibn_prefix, i);
     EnrollInputBn(ibn, has_diff);
   }
 }

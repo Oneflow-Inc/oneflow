@@ -174,36 +174,6 @@ inline bool operator==(const LogicalBlobId& lhs, const LogicalBlobId& rhs) {
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 
-inline void ParseRepeatedBlobName(const std::string& bn, std::string* prefix, int32_t* idx) {
-  size_t underline_pos = bn.rfind('_');
-  CHECK_NE(underline_pos, std::string::npos);
-  *prefix = bn.substr(0, underline_pos);
-  *idx = oneflow_cast<int32_t>(bn.substr(underline_pos + 1));
-}
-
-inline LogicalBlobId GenPackedLbi() {
-  LogicalBlobId lbi;
-  lbi.set_is_packed_id(true);
-  return lbi;
-}
-
-inline LogicalBlobId GenLogicalBlobId(const std::string& op_name,
-                                      const std::string& val_in_op_conf) {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name);
-  ret.set_blob_name(val_in_op_conf);
-  return ret;
-}
-
-inline LogicalBlobId GenLogicalBlobId(const std::string& lbn) {
-  LogicalBlobId lbi;
-  size_t pos = lbn.find('/');
-  CHECK_NE(pos, std::string::npos) << lbn;
-  lbi.set_op_name(lbn.substr(0, pos));
-  lbi.set_blob_name(lbn.substr(pos + 1));
-  return lbi;
-}
-
 }  // namespace oneflow
 
 namespace std {

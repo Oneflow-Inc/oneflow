@@ -5,7 +5,7 @@ namespace oneflow {
 void ReduceGlobalAddOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_global_add_conf());
   for (int64_t parallel_id : op_conf().reduce_global_add_conf().in_parallel_ids()) {
-    EnrollInputBn("in_" + std::to_string(parallel_id), false);
+    EnrollInputBn(GenRepeatedBlobName("in", parallel_id), false);
   }
   EnrollOutputBn("out", false);
 }
