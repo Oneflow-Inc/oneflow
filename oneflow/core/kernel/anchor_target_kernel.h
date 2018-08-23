@@ -32,11 +32,11 @@ class AnchorTargetKernel final : public KernelIf<DeviceType::kCPU> {
       size_t image_index, const BoxesSlice<T>& gt_boxes_slice,
       const BoxesSlice<T>& anchor_boxes_slice,
       const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
-  size_t SubsampleForeground(BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes) const;
+  size_t SubsampleForeground(BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes) const;
   size_t SubsampleBackground(size_t fg_cnt,
-                             BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes) const;
+                             BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes) const;
   void WriteOutput(size_t image_index, size_t total_sample_count,
-                   const BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes,
+                   const BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes,
                    const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 

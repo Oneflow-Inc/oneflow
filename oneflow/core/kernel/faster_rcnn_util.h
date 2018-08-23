@@ -140,24 +140,6 @@ class BBoxDelta final {
     set_dh(bbox_reg_ws.weight_h() * std::log(t_h / h));
   }
 
-  void TransformInverse(const BBox<T>* bbox, const BBox<T>* target_bbox,
-                        const BBoxWeights<T>* bbox_reg_ws) {
-    float w = bbox->x2() - bbox->x1() + 1.0f;
-    float h = bbox->y2() - bbox->y1() + 1.0f;
-    float ctr_x = bbox->x1() + 0.5f * w;
-    float ctr_y = bbox->y1() + 0.5f * h;
-
-    float t_w = target_bbox->x2() - target_bbox->x1() + 1.0f;
-    float t_h = target_bbox->y2() - target_bbox->y1() + 1.0f;
-    float t_ctr_x = target_bbox->x1() + 0.5f * t_w;
-    float t_ctr_y = target_bbox->y1() + 0.5f * t_h;
-
-    set_dx(bbox_reg_ws->weight_x() * (t_ctr_x - ctr_x) / w);
-    set_dy(bbox_reg_ws->weight_y() * (t_ctr_y - ctr_y) / h);
-    set_dw(bbox_reg_ws->weight_w() * std::log(t_w / w));
-    set_dh(bbox_reg_ws->weight_h() * std::log(t_h / h));
-  }
-
  private:
   std::array<T, 4> delta_;
 };

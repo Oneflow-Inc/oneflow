@@ -29,11 +29,11 @@ void AnchorTargetKernel<T>::ForwardDataContent(
   auto anchor_boxes_slice = GetAnchorBoxesSlice(ctx, BnInOp2Blob);
   FOR_RANGE(size_t, image_index, 0, BnInOp2Blob("gt_boxes")->shape().At(0)) {
     auto gt_boxes_slice = GetImageGtBoxesSlice(image_index, BnInOp2Blob);
-    auto labels_and_nearest_gt_boxes =
+    auto boxes_labels_and_nearest_gt_boxes =
         ComputeOverlapsAndSetLabels(image_index, gt_boxes_slice, anchor_boxes_slice, BnInOp2Blob);
-    size_t fg_cnt = SubsampleForeground(labels_and_nearest_gt_boxes);
-    size_t bg_cnt = SubsampleBackground(fg_cnt, labels_and_nearest_gt_boxes);
-    WriteOutput(image_index, fg_cnt + bg_cnt, labels_and_nearest_gt_boxes, BnInOp2Blob);
+    size_t fg_cnt = SubsampleForeground(boxes_labels_and_nearest_gt_boxes);
+    size_t bg_cnt = SubsampleBackground(fg_cnt, boxes_labels_and_nearest_gt_boxes);
+    WriteOutput(image_index, fg_cnt + bg_cnt, boxes_labels_and_nearest_gt_boxes, BnInOp2Blob);
   }
 }
 
@@ -143,7 +143,7 @@ size_t AnchorTargetKernel<T>::SubsampleBackground(
 template<typename T>
 void AnchorTargetKernel<T>::WriteOutput(
     size_t image_index, size_t total_sample_count,
-    const BoxesLabelsAndNearestGtBoxes& labels_and_nearest_gt_boxes,
+    const BoxesLabelsAndNearestGtBoxes& boxes_labels_and_nearest_gt_boxes,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
   CHECK_GT(total_sample_count, 0);
   const BBox<T>* gt_boxes = BBox<T>::Cast(BnInOp2Blob("gt_boxes_absolute")->dptr<T>());
@@ -157,9 +157,10 @@ void AnchorTargetKernel<T>::WriteOutput(
   const float reduction_coefficient = 1.f / total_sample_count;
 
   FOR_RANGE(size_t, i, 0, BnInOp2Blob("anchors")->shape().Count(0, 3)) {
-    const BBox<T>* anchor_box = labels_and_nearest_gt_boxes.bbox(i);
-    const BBox<T>* gt_box = gt_boxes + labels_and_nearest_gt_boxes.max_overlap_gt_box_index(i);
-    int32_t label = labels_and_nearest_gt_boxes.label(i);
+    const BBox<T>* anchor_box = boxes_labels_and_nearest_gt_boxes.bbox(i);
+    const BBox<T>* gt_box =
+        gt_boxes + boxes_labels_and_nearest_gt_boxes.max_overlap_gt_box_index(i);
+    int32_t label = boxes_labels_and_nearest_gt_boxes.label(i);
 
     if (label == 1) {
       bbox_target[i].TransformInverse(anchor_box, gt_box, bbox_reg_ws);
