@@ -181,34 +181,28 @@ void Operator::VirtualGenKernelConf(
   VirtualGenKernelConf(GetBlobDesc4BnInOp, parallel_ctx, kernel_conf);
 }
 
-LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+std::string Operator::GetValOrRepeatedValFromOpConf(const std::string& key) const {
   const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(input_bn);
+  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(key);
   std::string name;
   if (fd) {
-    name = GetValFromCustomizedConf<std::string>(input_bn);
+    name = GetValFromCustomizedConf<std::string>(key);
   } else {
-    size_t underline_pos = input_bn.rfind('_');
+    size_t underline_pos = key.rfind('_');
     CHECK_NE(underline_pos, std::string::npos);
-    std::string ibn_prefix = input_bn.substr(0, underline_pos);
-    int32_t ibn_idx = oneflow_cast<int32_t>(input_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(ibn_prefix).Get(ibn_idx);
+    std::string prefix = key.substr(0, underline_pos);
+    int32_t idx = oneflow_cast<int32_t>(key.substr(underline_pos + 1));
+    name = GetPbRpfFromCustomizedConf<std::string>(prefix).Get(idx);
   }
+  return name;
+}
+
+LogicalBlobId Operator::ibn2lbi(const std::string& input_bn) const {
+  std::string name = GetValOrRepeatedValFromOpConf(input_bn);
   return GenLogicalBlobId(name);
 }
 LogicalBlobId Operator::obn2lbi(const std::string& output_bn) const {
-  const google::protobuf::Descriptor* desc = GetCustomizedConf().GetDescriptor();
-  const google::protobuf::FieldDescriptor* fd = desc->FindFieldByName(output_bn);
-  std::string name;
-  if (fd) {
-    name = GetValFromCustomizedConf<std::string>(output_bn);
-  } else {
-    size_t underline_pos = output_bn.rfind('_');
-    CHECK_NE(underline_pos, std::string::npos);
-    std::string obn_prefix = output_bn.substr(0, underline_pos);
-    int32_t obn_idx = oneflow_cast<int32_t>(output_bn.substr(underline_pos + 1));
-    name = GetPbRpfFromCustomizedConf<std::string>(obn_prefix).Get(obn_idx);
-  }
+  std::string name = GetValOrRepeatedValFromOpConf(output_bn);
   return GenLogicalBlobId(op_name(), name);
 }
 LogicalBlobId Operator::cmbn2lbi(const std::string& const_model_bn) const {
