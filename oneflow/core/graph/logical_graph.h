@@ -22,11 +22,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   int64_t total_mbn_num() const { return total_mbn_num_; }
 
  private:
-  struct ForwardCloneInfo {
-    LogicalNode* pred_node;
-    LogicalBlobId lbi;
-    std::vector<LogicalEdge*> edges;
-  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
@@ -35,7 +30,6 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void FixSharedModelNodes(const HashMap<std::string, std::vector<LogicalNode*>>& op_name2nodes);
   void SetMainModelParallel();
   void BuildBwStruct();
-  void NaiveBuildBwStruct();
 
   void MergeEdge();
   void SetNodeDataLbi();

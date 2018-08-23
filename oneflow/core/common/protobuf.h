@@ -95,8 +95,6 @@ void SetRepeatedValInPbMessage(PbMessage* msg, const std::string& field_name, in
 
 PbMessage* MutableMessageInPbMessage(PbMessage*, const std::string& field_name);
 
-const PbMessage& OneofMessageInPbMessage(const PbMessage&, const std::string& field_name);
-
 PbMessage* MutableOneofMessageInPbMessage(PbMessage*, const std::string& field_name);
 
 // Add In PbMessage RepeatedField

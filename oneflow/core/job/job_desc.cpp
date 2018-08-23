@@ -227,10 +227,10 @@ void JobDesc::AddRecordLoadOps() {
 
 namespace {
 
-void GetBlobNamesFromOpConf(const OperatorConf& op_conf, const std::string& key,
+void GetBlobNamesFromOpConf(OperatorConf* op_conf, const std::string& key,
                             std::map<std::string, std::string>* dict) {
-  CHECK(HasOneofInPbMessage(op_conf, "op_type"));
-  const PbMessage& op_type = OneofMessageInPbMessage(op_conf, "op_type");
+  CHECK(HasOneofInPbMessage(*op_conf, "op_type"));
+  const PbMessage& op_type = *MutableOneofMessageInPbMessage(op_conf, "op_type");
   if (HasFieldInPbMessage(op_type, key)) {
     auto in_fd = GetPbFdFromPbMessage(op_type, key);
     if (in_fd->is_repeated()) {
@@ -275,8 +275,8 @@ void JobDesc::AddFwCloneIfNeed() {
     OperatorConf* op_conf = job_conf_.mutable_net()->mutable_op(idx);
     CHECK(op_name2op_conf.emplace(op_conf->name(), op_conf).second);
     CHECK(op_name2io_dict.emplace(op_conf->name(), OpIODict()).second);
-    GetBlobNamesFromOpConf(*op_conf, "in", &(op_name2io_dict.at(op_conf->name()).in_dict));
-    GetBlobNamesFromOpConf(*op_conf, "out", &(op_name2io_dict.at(op_conf->name()).out_dict));
+    GetBlobNamesFromOpConf(op_conf, "in", &(op_name2io_dict.at(op_conf->name()).in_dict));
+    GetBlobNamesFromOpConf(op_conf, "out", &(op_name2io_dict.at(op_conf->name()).out_dict));
     auto& in_dict = op_name2io_dict.at(op_conf->name()).in_dict;
     for (auto& pair : in_dict) {
       lbi2consumers[GenLogicalBlobId(pair.second)].push_back(op_conf->name());

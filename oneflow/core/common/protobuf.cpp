@@ -80,13 +80,6 @@ PbMessage* MutableMessageInPbMessage(PbMessage* msg, const std::string& field_na
   return r->MutableMessage(msg, fd);
 }
 
-const PbMessage& OneofMessageInPbMessage(const PbMessage& msg, const std::string& field_name) {
-  PROTOBUF_GET_ONEOF(msg, field_name);
-  auto r = const_cast<google::protobuf::Reflection*>(msg.GetReflection());
-  auto fd = r->GetOneofFieldDescriptor(msg, ofd);
-  return r->GetMessage(msg, fd);
-}
-
 PbMessage* MutableOneofMessageInPbMessage(PbMessage* msg, const std::string& field_name) {
   PROTOBUF_GET_ONEOF((*msg), field_name);
   auto r = const_cast<google::protobuf::Reflection*>(msg->GetReflection());

@@ -138,9 +138,7 @@ void LogicalGraph::SetMainModelParallel() {
   });
 }
 
-void LogicalGraph::BuildBwStruct() { NaiveBuildBwStruct(); }
-
-void LogicalGraph::NaiveBuildBwStruct() {
+void LogicalGraph::BuildBwStruct() {
   HashSet<LogicalNode*> nodes_need_bw;
   TopoForEachNode([&](LogicalNode* logical_node) {
     auto fw_node = dynamic_cast<ForwardLogicalNode*>(logical_node);
