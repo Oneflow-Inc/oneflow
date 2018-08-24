@@ -73,7 +73,8 @@ def generate():
             render(machine_tpl, {
                 "addr": "127.0.0.1",
                 "port": int(open_port),
-                "name": host_list.index(m)
+                "port_map": int(open_port),
+                "name": 0
             })
         )
     else:
