@@ -53,8 +53,8 @@ class Operator {
   // Getters
   const std::string& op_name() const { return op_conf().name(); }
   DeviceType device_type() const { return op_attribute_.op_conf().device_type(); }
-  bool UseCudnn() const { return device_type() == DeviceType::kGPU && UseCudnnOnGpu(); }
-  bool UseCudnnOnGpu() const { return op_conf().use_cudnn_on_gpu(); }
+  bool EnableCudnn() const { return op_conf().enable_cudnn(); }
+  bool DevIsGpuAndEnableCudnn() const { return device_type() == DeviceType::kGPU && EnableCudnn(); }
   const OperatorConf& op_conf() const { return op_attribute_.op_conf(); }
   virtual const PbMessage& GetCustomizedConf() const { UNIMPLEMENTED(); }
 
@@ -132,6 +132,8 @@ class Operator {
       const ParallelContext*) const {
     UNIMPLEMENTED();
   }
+  virtual void FixInDiffBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
+                                  const ParallelContext*) const {}
 
   void FixParallelDesc(ParallelDesc* pr_desc) const;
   void FixLbiWhenShareModel(const std::string& shared_op_name);

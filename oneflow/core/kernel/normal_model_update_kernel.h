@@ -2,6 +2,7 @@
 #define ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -46,7 +47,9 @@ class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
                           T* momentum, T* model);
 };
 
-double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t now_batch_num);
+bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num);
+double GetWarmupLearningRate(const WarmupConf&, double lr, int64_t cur_batch_num);
+double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t cur_batch_num);
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);
 

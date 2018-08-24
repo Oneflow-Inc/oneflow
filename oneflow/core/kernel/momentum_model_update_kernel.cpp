@@ -1,5 +1,4 @@
 #include "oneflow/core/kernel/momentum_model_update_kernel.h"
-#include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
 

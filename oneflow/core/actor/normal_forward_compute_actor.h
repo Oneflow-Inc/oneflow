@@ -21,6 +21,7 @@ class NormalForwardCompActor final : public CompActor {
   std::pair<bool, std::vector<std::string>> GetNaiveConsumedRegstDescName() override {
     return {false, {"in"}};
   }
+  bool CheckOutputActId(int64_t regst_desc_id) const override;
 
   int HandlerInitModelAndConstBuf(const ActorMsg&);
   void UpdateModelRegstPtr(Regst* regst);

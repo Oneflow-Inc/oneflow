@@ -39,7 +39,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
   std::vector<std::pair<int64_t, CompTaskNode*>> machine_persistence_task_vec;
   logical_gph_->ForEachNode([&](const LogicalNode* logical_node) {
     logical_node->GenSortedCompTaskNodes(
-        &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
+        AllocateCpuThrdIdEvenly, &machine_persistence_task_vec, [&](CompTaskNode* comp_task_node) {
           AddAllocatedNode(comp_task_node);
           logical2sorted_comp_tasks[logical_node].push_back(comp_task_node);
           comp_task_node->set_area_id(logical_node->GetAreaId());
@@ -72,14 +72,38 @@ void TaskGraph::GeneratePersistenceThrdId(
   }
 }
 
-void TaskGraph::FindChainsInSameStream() {
-  CollectAncestorsForEachNode();
+void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
+  std::list<TaskNode*> starts;
+  ForEachNode([&](TaskNode* node) {
+    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
+  });
+  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
+      if (IsBackEdge(node_on_in_edge, node)) return;
+      handler(const_cast<TaskNode*>(node_on_in_edge));
+    });
+  };
+  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
+    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
+      if (IsBackEdge(node, node_on_out_edge)) return;
+      handler(const_cast<TaskNode*>(node_on_out_edge));
+    });
+  };
+  // DfsTopo will cause inappropriate chain graph
+  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
+}
 
-  ChainGraph chain_gph(*this);
-  const auto& ordered_chain_nodes = chain_gph.ordered_chain_nodes();
+void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
+  MergeChainAndSetOrderInGraphForEachNode();
+  BuildCtrlRegstDescInSameChain();
+}
+
+void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
+  ChainGraph chain_graph(*this);
+  const auto& ordered_chain_nodes = chain_graph.OrderdedChainNodes();
   int64_t order_in_graph = 0;
   for (auto& chain_node : ordered_chain_nodes) {
-    auto& ordered_in_chain = chain_node->task_nodes();
+    auto& ordered_in_chain = chain_node->TaskNodes();
     int64_t chain_id = chain_node->chain_id();
     for (auto& task_node : ordered_in_chain) {
       task_node->set_chain_id(chain_id);
@@ -90,9 +114,7 @@ void TaskGraph::FindChainsInSameStream() {
   }
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
-  FindChainsInSameStream();
-
+void TaskGraph::BuildCtrlRegstDescInSameChain() {
   HashMap<int64_t, TaskNode*> chain_id2node;
   for (auto node : ordered_task_nodes_) {
     int64_t chain_id = node->chain_id();
@@ -483,43 +505,6 @@ void TaskGraph::AddOrderCtrlEdgeBetweenCopyAndMdUpdt() {
   }
 }
 
-void TaskGraph::CollectAncestorsForEachNode() {
-  std::vector<TaskNode*> ordered_nodes;
-  AcyclicTopoForEachNode([&](TaskNode* node) { ordered_nodes.emplace_back(node); });
-  for (auto it = ordered_nodes.begin(); it != ordered_nodes.end(); ++it) {
-    TaskNode* task_node = *it;
-    task_node->mut_ancestors().clear();
-    task_node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, task_node)) return;
-      task_node->mut_ancestors().insert(node_on_in_edge->ancestors().begin(),
-                                        node_on_in_edge->ancestors().end());
-      task_node->mut_ancestors().insert(node_on_in_edge);
-
-    });
-  }
-}
-
-void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handler) const {
-  std::list<TaskNode*> starts;
-  ForEachNode([&](TaskNode* node) {
-    if (node->consumed_regsts().empty() && !node->IsMeaningLess()) { starts.push_back(node); }
-  });
-  auto ForEachInNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    node->ForEachNodeOnInEdge([&](TaskNode* node_on_in_edge) {
-      if (IsBackEdge(node_on_in_edge, node)) return;
-      handler(const_cast<TaskNode*>(node_on_in_edge));
-    });
-  };
-  auto ForEachOutNode = [&](TaskNode* node, const std::function<void(TaskNode*)>& handler) {
-    node->ForEachNodeOnOutEdge([&](TaskNode* node_on_out_edge) {
-      if (IsBackEdge(node, node_on_out_edge)) return;
-      handler(const_cast<TaskNode*>(node_on_out_edge));
-    });
-  };
-  // DfsTopo will cause inappropriate chain graph
-  TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
-}
-
 void TaskGraph::SetAreaIdForNewNodes(const LogicalNode* src_logical,
                                      const LogicalNode* dst_logical) {
   CHECK(src_logical != nullptr && dst_logical != nullptr);
@@ -540,7 +525,7 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
   std::vector<TaskNode*>* sorted_out_box = nullptr;
   if (logical2sorted_out_box->find(src_logical) == logical2sorted_out_box->end()) {
     BuildOutBoxing(src_logical, sorted_src_comp_tasks, &((*logical2sorted_out_box)[src_logical]),
-                   AllocateCpuThrdIdEvenly);
+                   MutBufTask, AllocateCpuThrdIdEvenly);
   }
   sorted_out_box = &(logical2sorted_out_box->at(src_logical));
 
@@ -721,16 +706,25 @@ TaskNode* TaskGraph::AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst) {
   return copy_comm_net_task;
 }
 
-void TaskGraph::BuildOutBoxing(const LogicalNode* logical,
-                               const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                               std::vector<TaskNode*>* sorted_out_box,
-                               std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
+void TaskGraph::BuildOutBoxing(
+    const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+    std::vector<TaskNode*>* sorted_out_box,
+    std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+        MutBufTask,
+    std::function<int64_t(const TaskNode*)> AllocateCpuThrdIdEvenly) {
   std::map<int64_t, std::vector<TaskNode*>> machine_id2bound_task;
   for (CompTaskNode* comp_task : sorted_comp_tasks) {
     TaskNode* task = comp_task;
     if (task->device_type() == DeviceType::kGPU) {
-      task = AddCopyD2HTaskFrom(comp_task);
-      Connect<TaskNode>(comp_task, NewEdge(), task);
+      TaskNode** buf_task =
+          MutBufTask(comp_task, comp_task->machine_id(), Global<IDMgr>::Get()->CpuMemZoneId());
+      if ((*buf_task) == nullptr) {
+        task = AddCopyD2HTaskFrom(comp_task);
+        Connect<TaskNode>(comp_task, NewEdge(), task);
+        *buf_task = task;
+      } else {
+        task = *buf_task;
+      }
     }
     machine_id2bound_task[task->machine_id()].push_back(task);
   }

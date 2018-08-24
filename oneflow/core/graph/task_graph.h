@@ -59,10 +59,12 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   TaskNode* AddCopyH2DTaskTo(TaskNode*);
   TaskNode* AddCopyD2HTaskFrom(TaskNode*);
   TaskNode* AddCopyCommNetTaskBetween(TaskNode* src, TaskNode* dst);
-  void BuildOutBoxing(const LogicalNode* logical,
-                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
-                      std::vector<TaskNode*>* sorted_out_box,
-                      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
+  void BuildOutBoxing(
+      const LogicalNode* logical, const std::vector<CompTaskNode*>& sorted_comp_tasks,
+      std::vector<TaskNode*>* sorted_out_box,
+      std::function<TaskNode**(CompTaskNode* src, int64_t machine_id, int32_t mem_zone_id)>
+          MutBufTask,
+      std::function<int64_t(const TaskNode*)> AllocateCpuThrdId);
   void BuildInBoxing(const LogicalNode* logical,
                      const std::vector<CompTaskNode*>& sorted_comp_tasks,
                      std::vector<TaskNode*>* sorted_in_box,
@@ -70,8 +72,8 @@ class TaskGraph final : public Graph<TaskNode, TaskEdge> {
   void ConnectWithCopyCommNetIfNeed(TaskNode* src, TaskNode* dst);
 
   void SetAreaIdForNewNodes(const LogicalNode* src_logical, const LogicalNode* dst_logical);
-  void CollectAncestorsForEachNode();
-  void FindChainsInSameStream();
+  void MergeChainAndSetOrderInGraphForEachNode();
+  void BuildCtrlRegstDescInSameChain();
 
   template<typename LogicalNodeType, typename TaskNodeType>
   void AddCtrlEdgeForReduceTaskNode(int64_t total_machine_num);

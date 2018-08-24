@@ -136,8 +136,7 @@ class KernelIf : public Kernel {
                  const PbRpf<std::string>& from_bns, const PbRpf<std::string>& to_bns,
                  void (Blob::*Copy)(DeviceCtx*, const Blob*)) const;
 
-  bool UseCudnn() const { return device_type == DeviceType::kGPU && UseCudnnOnGpu(); }
-  bool UseCudnnOnGpu() const { return op_conf().use_cudnn_on_gpu(); }
+  bool EnableCudnn() const { return op_conf().enable_cudnn(); }
 };
 
 template<DeviceType device_type, typename ModelType>

@@ -132,7 +132,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   if (GetValFromCustomizedConf<bool>("use_bias")) {
     // bias and bias_multiplier
     GetBlobDesc4BnInOp("bias")->mut_shape() = Shape({filters, 1});
-    if (!UseCudnnOnGpu()) {
+    if (DevIsGpuAndEnableCudnn() == false) {
       std::vector<int64_t> bias_mul_shape(NDims + 1, 1);
       for (size_t i = 0; i != NDims; ++i) { bias_mul_shape[i + 1] = out_shape[dhw_offset + i]; }
       GetBlobDesc4BnInOp("bias_multiplier")->mut_shape() = Shape(bias_mul_shape);
@@ -142,7 +142,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   ConvOpCtx* conv_op_ctx = new ConvOpCtx();
   EnrollOpCtx(conv_op_ctx);
 
-  if (device_type() == DeviceType::kCPU || !UseCudnnOnGpu()) {
+  if (DevIsGpuAndEnableCudnn() == false) {
     // col_buf
     int64_t col_buf_elem_cnt = 1;
     for (size_t i = 0; i != NDims + 1; ++i) { col_buf_elem_cnt *= weight_shape[i + 1]; }
@@ -154,7 +154,7 @@ void ConvOp<NDims>::InferBlobDescs(std::function<BlobDesc*(const std::string&)> 
   }
 
 #ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU && UseCudnnOnGpu()) {
+  if (DevIsGpuAndEnableCudnn()) {
     // cudnn_buf
     InferCudnnAlgo(GetBlobDesc4BnInOp, &(conv_op_ctx->cudnn_conv_algo_ctx), 0);
     BlobDesc* fw_cudnn_buf = GetBlobDesc4BnInOp("fw_cudnn_buf");
@@ -170,7 +170,7 @@ void ConvOp<NDims>::InferBwBufBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp, const ParallelContext*,
     const OpContext* op_ctx) const {
   const ConvOpCtx* conv_op_ctx = static_cast<const ConvOpCtx*>(op_ctx);
-  if (device_type() == DeviceType::kCPU || !UseCudnnOnGpu()) {
+  if (DevIsGpuAndEnableCudnn() == false) {
     // col_buf
     BlobDesc* bw_col_buf = GetBlobDesc4BnInOp("bw_col_buf");
     bw_col_buf->mut_shape() = Shape({conv_op_ctx->col_buf_size});
@@ -178,7 +178,7 @@ void ConvOp<NDims>::InferBwBufBlobDescs(
   }
 
 #ifdef WITH_CUDA
-  if (device_type() == DeviceType::kGPU && UseCudnnOnGpu()) {
+  if (DevIsGpuAndEnableCudnn()) {
     // cudnn_buf
     BlobDesc* bw_cudnn_buf = GetBlobDesc4BnInOp("bw_cudnn_buf");
     bw_cudnn_buf->mut_shape() =
@@ -275,10 +275,10 @@ void ConvOp<NDims>::VirtualGenKernelConf(
     const ParallelContext* parallel_ctx, KernelConf* kernel_conf, const OpContext* op_ctx) const {
   ConvKernelConf* conv_conf = kernel_conf->mutable_conv_conf();
   conv_conf->set_dim(NDims);
-  if (!UseCudnnOnGpu()) {
-    GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
-  } else {
+  if (DevIsGpuAndEnableCudnn()) {
     GenKernelConfWithCudnn(GetBlobDesc4BnInOp, kernel_conf, conv_conf, op_ctx);
+  } else {
+    GenKernelConfWithoutCudnn(GetBlobDesc4BnInOp, conv_conf);
   }
 }
 
@@ -313,14 +313,17 @@ void ConvOp<NDims>::InferCudnnAlgo(
   const BlobDesc* in_blob_desc = GetBlobDesc4BnInOp("in");
   const BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   const BlobDesc* weight_blob_desc = GetBlobDesc4BnInOp("weight");
+  std::string format = GetValFromCustomizedConf<std::string>("data_format");
+
+  if (Global<CudnnConvCtxCache>::Get()->FindCudnnConvAlgoCtxWithConfig(
+          *in_blob_desc, *out_blob_desc, *weight_blob_desc, format, conv_ctx)) {
+    return;
+  }
 
   DataType data_type = in_blob_desc->data_type();
-  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape(),
-                          GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape(),
-                           GetValFromCustomizedConf<std::string>("data_format"));
-  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(),
-                              GetValFromCustomizedConf<std::string>("data_format"));
+  CudnnTensorDesc in_desc(data_type, in_blob_desc->shape(), format);
+  CudnnTensorDesc out_desc(data_type, out_blob_desc->shape(), format);
+  CudnnFilterDesc filter_desc(data_type, weight_blob_desc->shape(), format);
   CudnnConvDesc conv_desc(in_blob_desc->data_type(), in_blob_desc->shape(), GetCustomizedConf());
 
   size_t avail_ws_sz = cudnn_buf_limit_byte();
@@ -391,6 +394,9 @@ void ConvOp<NDims>::InferCudnnAlgo(
   CudaCheck(cudnnGetConvolutionBackwardDataWorkspaceSize(
       *cuda_handle.cudnn_handle(), filter_desc.Get(), out_desc.Get(), conv_desc.Get(),
       in_desc.Get(), conv_ctx->bwd_data_algo, &conv_ctx->bwd_data_ws_size));
+
+  Global<CudnnConvCtxCache>::Get()->AddCudnnConvAlgoCtxWithConfig(
+      *in_blob_desc, *out_blob_desc, *weight_blob_desc, format, *conv_ctx);
 }
 #endif  // WITH_CUDA
 

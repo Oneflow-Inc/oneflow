@@ -20,8 +20,9 @@ DataType GetDataTypeFromBnInOpVec(
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
   OperatorConf* this_op_conf = op_attribute_.mutable_op_conf();
   *this_op_conf = op_conf;
-  if (this_op_conf->has_use_cudnn_on_gpu() == false) {
-    this_op_conf->set_use_cudnn_on_gpu(Global<JobDesc>::Get()->UseCudnnOnGpu());
+  if (Global<JobDesc>::Get()->IsPredict()) { this_op_conf->set_trainable(false); }
+  if (this_op_conf->has_enable_cudnn() == false) {
+    this_op_conf->set_enable_cudnn(Global<JobDesc>::Get()->EnableCudnn());
   }
   if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
   InitFromOpConf();
