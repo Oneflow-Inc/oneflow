@@ -129,12 +129,20 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
 }
 
 struct ReduceTaskNodes {
+  CompTaskNode* concat;
   CompTaskNode* scatter;
   CompTaskNode* local_add;
   CompTaskNode* global_add;
   CompTaskNode* gather;
+  CompTaskNode* split;
 
-  ReduceTaskNodes() : scatter(nullptr), local_add(nullptr), global_add(nullptr), gather(nullptr) {}
+  ReduceTaskNodes()
+      : concat(nullptr),
+        scatter(nullptr),
+        local_add(nullptr),
+        global_add(nullptr),
+        gather(nullptr),
+        split(nullptr) {}
 };
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
@@ -168,15 +176,29 @@ void TaskGraph::CollectReduceTaskNodes(
     }
 
     ReduceTaskNodes& reduce_task_nodes = (*bw2reduce_tasks)[bw_task_node];
-    CompTaskNode* tmp_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
-    if (tmp_task_node != nullptr) {
-      reduce_task_nodes.scatter = FindSuccReduceTaskNode(tmp_task_node, TaskType::kReduceScatter);
+
+    auto FindConcatAndScatter = [&](CompTaskNode* bw_or_md_diff_acc) {
+      CompTaskNode* concat_task_node =
+          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceConcat);
+      if (concat_task_node != nullptr) {
+        reduce_task_nodes.concat = concat_task_node;
+        reduce_task_nodes.scatter =
+            FindSuccReduceTaskNode(reduce_task_nodes.concat, TaskType::kReduceScatter);
+      } else {
+        reduce_task_nodes.scatter =
+            FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
+      }
+    };
+    CompTaskNode* diff_acc_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
+    if (diff_acc_task_node != nullptr) {
+      FindConcatAndScatter(diff_acc_task_node);
     } else {
-      reduce_task_nodes.scatter = FindSuccReduceTaskNode(bw_task_node, TaskType::kReduceScatter);
+      FindConcatAndScatter(bw_task_node);
     }
-    tmp_task_node = FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
-    if (tmp_task_node != nullptr) {
-      reduce_task_nodes.local_add = tmp_task_node;
+    CompTaskNode* local_add_task_node =
+        FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
+    if (local_add_task_node != nullptr) {
+      reduce_task_nodes.local_add = local_add_task_node;
       reduce_task_nodes.global_add =
           FindSuccReduceTaskNode(reduce_task_nodes.local_add, TaskType::kReduceGlobalAdd);
     } else {
@@ -185,6 +207,8 @@ void TaskGraph::CollectReduceTaskNodes(
     }
     reduce_task_nodes.gather =
         FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather);
+    reduce_task_nodes.split =
+        FindSuccReduceTaskNode(reduce_task_nodes.gather, TaskType::kReduceSplit);
 
     CHECK(reduce_task_nodes.scatter != nullptr);
     CHECK(reduce_task_nodes.global_add != nullptr);
