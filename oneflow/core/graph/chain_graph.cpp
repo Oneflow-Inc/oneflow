@@ -67,11 +67,8 @@ void ChainMerger::InitChains() {
     cur_chain.nodes = {task_node};
     cur_chain.stream_area_id =
         std::make_pair(task_node->area_id(), task_node->GlobalWorkStreamId());
-    for (int64_t i = 0; i < bitset_num; ++i) {
-      std::bitset<BITSET_SIZE> b;
-      cur_chain.ancestors.push_back(b);
-      cur_chain.ancestors_and_this.push_back(b);
-    }
+    cur_chain.ancestors.resize(bitset_num);
+    cur_chain.ancestors_and_this.resize(bitset_num);
     CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
     for (auto& ancestor : node2ancestors_.at(task_node)) {
       int64_t ancestor_uid = GetTaskUid(ancestor);
