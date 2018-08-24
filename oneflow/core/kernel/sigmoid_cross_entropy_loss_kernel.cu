@@ -57,7 +57,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
               1, label_num, 1e-5);
       KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, 1, loss, label_num);
     }
-    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, 1, loss, loss, conf.scale());
+    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, 1, conf.scale(), loss, 1);
   }
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
