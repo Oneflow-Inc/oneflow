@@ -88,30 +88,6 @@ class BBox final {
 };
 
 template<typename T>
-class BBoxWeights final {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(BBoxWeights);
-  BBoxWeights() = delete;
-  ~BBoxWeights() = delete;
-
-  static const BBoxWeights* Cast(const T* ptr) { return reinterpret_cast<const BBoxWeights*>(ptr); }
-  static BBoxWeights* MutCast(T* ptr) { return reinterpret_cast<BBoxWeights*>(ptr); }
-
-  inline T weight_x() const { return weights_[0]; }
-  inline T weight_y() const { return weights_[1]; }
-  inline T weight_w() const { return weights_[2]; }
-  inline T weight_h() const { return weights_[3]; }
-
-  inline void set_weight_x(T weight_x) { weights_[0] = weight_x; }
-  inline void set_weight_y(T weight_y) { weights_[1] = weight_y; }
-  inline void set_weight_w(T weight_w) { weights_[2] = weight_w; }
-  inline void set_weight_h(T weight_h) { weights_[3] = weight_h; }
-
- private:
-  std::array<T, 4> weights_;
-};
-
-template<typename T>
 class BBoxDelta final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BBoxDelta);
