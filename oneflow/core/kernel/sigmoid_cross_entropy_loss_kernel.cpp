@@ -62,6 +62,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
         count[0] += 1;
       }
     }
+    if (count[0] == 0) { count[0] = 1e-5; }
     loss[0] = loss_buf[0] / count[0];
   }
 
