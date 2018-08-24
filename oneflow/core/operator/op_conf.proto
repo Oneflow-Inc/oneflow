@@ -241,7 +241,7 @@ message SigmoidCrossEntropyLossOpConf {
   required string label = 2;
   required string loss = 3;
   optional bool normalize = 4 [default = true];
-  optional int32 scale = 5 [default = 1];
+  optional float scale = 5 [default = 1.0];
   optional LossReductionType reduction = 6 [default = kSumOverN];
   optional float weight_scalar = 7 [default = 1.0];
   optional string weight = 8;
@@ -738,7 +738,7 @@ message ProposalOpConf {
 }
 
 message BBoxRegressionWeights {
-  required float weight_x = 1 [default = 1.0]; 
+  required float weight_x = 1 [default = 1.0];
   required float weight_y = 2 [default = 1.0];
   required float weight_w = 3 [default = 1.0];
   required float weight_h = 4 [default = 1.0];
