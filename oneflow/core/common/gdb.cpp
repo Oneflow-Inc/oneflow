@@ -6,16 +6,32 @@ namespace oneflow {
 // used by gdb only
 namespace gdb {
 
+namespace {
+
+static char* MallocThenCpyD2H(const char* gpu_src, size_t size) {
+  char* cpu_dst = reinterpret_cast<char*>(malloc(size));
+  cudaDeviceSynchronize();
+  cudaMemcpy(cpu_dst, gpu_src, size, cudaMemcpyDeviceToHost);
+  return cpu_dst;
+}
+
+static void CpyH2DThenFree(char* gpu_dst, char* cpu_src, size_t size) {
+  cudaDeviceSynchronize();
+  cudaMemcpy(gpu_dst, cpu_src, size, cudaMemcpyHostToDevice);
+  free(cpu_src);
+}
+
+}  // namespace
+
 // used by passing std::string param
 static std::string param0;
 
-static const Blob* CpuBlobCopiedFromGpuBlobPtr(uint64_t gpu_blob_ptr) {
-  Blob* gpu_blob = reinterpret_cast<Blob*>(gpu_blob_ptr);
-  char* cpu_body_ptr = reinterpret_cast<char*>(malloc(gpu_blob->ByteSizeOfDataContentField()));
-  cudaMemcpy(cpu_body_ptr, gpu_blob->dptr(), gpu_blob->ByteSizeOfDataContentField(),
-             cudaMemcpyDeviceToHost);
-  return new Blob(const_cast<Regst*>(gpu_blob->regst()), gpu_blob->blob_desc_ptr(),
-                  reinterpret_cast<char*>(gpu_blob->mut_header_ptr()), cpu_body_ptr);
+static void CudaMemCpyH2DThenFreeCpuPtr(uint64_t gpu_dst, uint64_t cpu_src, size_t size) {
+  CpyH2DThenFree(reinterpret_cast<char*>(gpu_dst), reinterpret_cast<char*>(cpu_src), size);
+}
+
+static void* MallocCpuBufThenCudaMemCpyD2H(uint64_t gpu_src, size_t size) {
+  return MallocThenCpyD2H(reinterpret_cast<char*>(gpu_src), size);
 }
 
 static Blob* Blob4BnInOp(const std::function<Blob*(const std::string&)>* BnInOp2Blob,
