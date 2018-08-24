@@ -67,11 +67,8 @@ void ChainMerger::InitChains() {
     cur_chain.nodes = {task_node};
     cur_chain.stream_area_id =
         std::make_pair(task_node->area_id(), task_node->GlobalWorkStreamId());
-    for (int64_t i = 0; i < bitset_num; ++i) {
-      std::bitset<BITSET_SIZE> b;
-      cur_chain.ancestors.push_back(b);
-      cur_chain.ancestors_and_this.push_back(b);
-    }
+    cur_chain.ancestors.resize(bitset_num);
+    cur_chain.ancestors_and_this.resize(bitset_num);
     CarefullySetBitset(&(cur_chain.ancestors_and_this), GetTaskUid(task_node));
     for (auto& ancestor : node2ancestors_.at(task_node)) {
       int64_t ancestor_uid = GetTaskUid(ancestor);
@@ -121,7 +118,8 @@ void ChainMerger::CarefullySetBitset(std::vector<std::bitset<BITSET_SIZE>>* bits
 }
 
 bool ChainMerger::IsSubset(const ChainIt& lhs, const ChainIt& rhs) const {
-  int64_t bitset_num = std::ceil(static_cast<double>(task_node2uid_.size()) / BITSET_SIZE);
+  CHECK_EQ(lhs->ancestors_and_this.size(), rhs->ancestors_and_this.size());
+  int64_t bitset_num = lhs->ancestors_and_this.size();
   for (int64_t i = 0; i < bitset_num; ++i) {
     if (lhs->ancestors_and_this.at(i) != (lhs->ancestors_and_this.at(i) | rhs->ancestors.at(i))) {
       return false;
