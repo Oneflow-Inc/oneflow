@@ -57,7 +57,8 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
               1, label_num, 1e-5);
       KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, 1, loss, label_num);
     }
-    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, 1, loss, loss, conf.scale());
+    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, 1, static_cast<PredType>(conf.scale()), loss,
+                                                 1);
   }
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
@@ -66,7 +67,8 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kGPU, PredType, LabelType> 
     SigmoidCrossEntropyLossBackward<PredType>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, prediction, label, pred_diff);
-    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, pred_diff, pred_diff, conf.scale());
+    KernelUtil<DeviceType::kGPU, PredType>::Scal(ctx, n, static_cast<PredType>(conf.scale()),
+                                                 pred_diff, 1);
     if (conf.normalize()) {
       KernelUtil<DeviceType::kGPU, PredType>::Div(ctx, n, pred_diff, label_num);
     }
