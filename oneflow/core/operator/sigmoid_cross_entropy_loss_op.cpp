@@ -29,26 +29,29 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
   CHECK_EQ(pred_blob_desc->shape().elem_cnt(), label_blob_desc->shape().elem_cnt());
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
-  // count
-  BlobDesc* count_blob_desc = GetBlobDesc4BnInOp("count");
-  count_blob_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  count_blob_desc->set_data_type(pred_blob_desc->data_type());
-  // label_num
-  BlobDesc* normalize_blob_desc = GetBlobDesc4BnInOp("label_num");
-  normalize_blob_desc->mut_shape() = Shape({1});
-  normalize_blob_desc->set_data_type(pred_blob_desc->data_type());
-  // loss_buf
-  BlobDesc* loss_buf_desc = GetBlobDesc4BnInOp("loss_buf");
-  loss_buf_desc->mut_shape() = Shape(pred_blob_desc->shape());
-  loss_buf_desc->set_data_type(pred_blob_desc->data_type());
+
+  int64_t data_num = pred_blob_desc->shape().At(0);
+  int64_t data_dim = pred_blob_desc->shape().Count(1);
+
   // loss
   BlobDesc* loss_blob_desc = GetBlobDesc4BnInOp("loss");
-  loss_blob_desc->mut_shape() = Shape({1});
+  loss_blob_desc->mut_shape() = Shape({data_num});
   loss_blob_desc->set_data_type(pred_blob_desc->data_type());
+  // count
+  BlobDesc* count_blob_desc = GetBlobDesc4BnInOp("count");
+  count_blob_desc->mut_shape() = Shape({data_dim});
+  count_blob_desc->set_data_type(pred_blob_desc->data_type());
+  // loss_buf
+  BlobDesc* loss_buf_desc = GetBlobDesc4BnInOp("loss_buf");
+  loss_buf_desc->mut_shape() = Shape({data_dim});
+  loss_buf_desc->set_data_type(pred_blob_desc->data_type());
+  // label_num
+  BlobDesc* label_num_blob_desc = GetBlobDesc4BnInOp("label_num");
+  label_num_blob_desc->mut_shape() = Shape({1});
+  label_num_blob_desc->set_data_type(pred_blob_desc->data_type());
   // sum buf
   BlobDesc* sum_buf_blob_desc = GetBlobDesc4BnInOp("sum_buf");
-  const int64_t sum_buf_size =
-      GetTmpSizeForReduceSum(pred_blob_desc->data_type(), pred_blob_desc->shape().elem_cnt());
+  const int64_t sum_buf_size = GetTmpSizeForReduceSum(pred_blob_desc->data_type(), data_dim);
   sum_buf_blob_desc->mut_shape() = Shape({sum_buf_size});
   sum_buf_blob_desc->set_data_type(DataType::kChar);
 }

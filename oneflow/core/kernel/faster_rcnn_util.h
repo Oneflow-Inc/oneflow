@@ -88,6 +88,30 @@ class BBox final {
 };
 
 template<typename T>
+class BBoxWeights final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BBoxWeights);
+  BBoxWeights() = delete;
+  ~BBoxWeights() = delete;
+
+  static const BBoxWeights* Cast(const T* ptr) { return reinterpret_cast<const BBoxWeights*>(ptr); }
+  static BBoxWeights* MutCast(T* ptr) { return reinterpret_cast<BBoxWeights*>(ptr); }
+
+  inline T weight_x() const { return weights_[0]; }
+  inline T weight_y() const { return weights_[1]; }
+  inline T weight_w() const { return weights_[2]; }
+  inline T weight_h() const { return weights_[3]; }
+
+  inline void set_weight_x(T weight_x) { weights_[0] = weight_x; }
+  inline void set_weight_y(T weight_y) { weights_[1] = weight_y; }
+  inline void set_weight_w(T weight_w) { weights_[2] = weight_w; }
+  inline void set_weight_h(T weight_h) { weights_[3] = weight_h; }
+
+ private:
+  std::array<T, 4> weights_;
+};
+
+template<typename T>
 class BBoxDelta final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(BBoxDelta);
@@ -146,6 +170,260 @@ class BBoxDelta final {
  private:
   std::array<T, 4> delta_;
 };
+
+class Slice {
+ public:
+  Slice(size_t capacity, int32_t* index_ptr, bool init_index = true)
+      : capacity_(capacity), size_(capacity), index_ptr_(index_ptr) {
+    if (init_index) { std::iota(index_ptr_, index_ptr_ + size_, 0); }
+  }
+
+  void Truncate(size_t size) {
+    CHECK_GE(size, 0);
+    if (size < capacity_) { size_ = size; }
+  }
+
+  void Sort(const std::function<bool(int32_t, int32_t)>& Compare) {
+    std::sort(index_ptr_, index_ptr_ + size_,
+              [&](int32_t lhs_index, int32_t rhs_index) { return Compare(lhs_index, rhs_index); });
+  }
+
+  void Shuffle(size_t begin, size_t end) {
+    CHECK_LE(end, size_);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::shuffle(index_ptr_ + begin, index_ptr_ + end, gen);
+  }
+
+  void Shuffle() { Shuffle(0, size_); }
+
+  int32_t GetIndex(size_t n) const {
+    CHECK_LT(n, size_);
+    return index_ptr_[n];
+  }
+
+  size_t capacity() const { return capacity_; }
+  size_t size() const { return size_; };
+  const int32_t* index_ptr() const { return index_ptr_; }
+  int32_t* mut_index_ptr() { return index_ptr_; }
+
+ private:
+  const size_t capacity_;
+  size_t size_;
+  int32_t* index_ptr_;
+};
+
+template<typename T>
+class BoxesSlice : public Slice {
+ public:
+  BoxesSlice(size_t capacity, int32_t* index_ptr, const T* boxes_ptr, bool init_index = true)
+      : Slice(capacity, index_ptr, init_index), boxes_ptr_(boxes_ptr) {}
+  BoxesSlice(const Slice& slice, const T* boxes_ptr) : Slice(slice), boxes_ptr_(boxes_ptr) {}
+
+  void FilterByBox(const std::function<bool(const BBox<T>*)>& FilterBox) {
+    size_t keep_num = 0;
+    FOR_RANGE(size_t, i, 0, this->size()) {
+      if (!FilterBox(GetBBox(i))) {
+        // keep_num <= i so index_ptr_ never be written before read
+        this->mut_index_ptr()[keep_num++] = this->index_ptr()[i];
+      }
+    }
+    this->Truncate(keep_num);
+  }
+
+  void SortByBox(const std::function<bool(const BBox<T>&, const BBox<T>&)>& Compare) {
+    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
+              [&](int32_t lhs_index, int32_t rhs_index) {
+                const BBox<T>* bbox = BBox<T>::Cast(boxes_ptr_);
+                return Compare(bbox[lhs_index], bbox[rhs_index]);
+              });
+  }
+
+  inline const BBox<T>* GetBBox(size_t n) const {
+    CHECK_LT(n, this->size());
+    return BBox<T>::Cast(boxes_ptr_) + this->GetIndex(n);
+  }
+
+  const T* boxes_ptr() const { return boxes_ptr_; }
+  const BBox<T>* bbox(int32_t box_index) const { return BBox<T>::Cast(boxes_ptr_) + box_index; }
+
+ private:
+  const T* boxes_ptr_;
+};
+
+struct GroupLabel {
+  int32_t label;
+  size_t begin;
+  size_t size;
+};
+
+template<typename SliceType, size_t N>
+class LabeledBoxesSlice : public SliceType {
+ public:
+  LabeledBoxesSlice(const SliceType& slice, int32_t* label_ptr, bool init_label = true)
+      : SliceType(slice), label_ptr_(label_ptr) {
+    GroupLabel group_label{0, 0, 0};
+    std::fill(group_labels_.begin(), group_labels_.end(), group_label);
+    if (init_label) { std::fill(label_ptr_, label_ptr_ + this->capacity(), -1); }
+  }
+
+  void GroupByLabel() {
+    int32_t* index_ptr = this->mut_index_ptr();
+    size_t size = this->size();
+    std::sort(index_ptr, index_ptr + size, [&](int32_t index_lhs, int32_t index_rhs) {
+      return label_ptr_[index_lhs] > label_ptr_[index_rhs];
+    });
+    // init last_label to one more than biggest label
+    int32_t last_label = label_ptr_[index_ptr[0]] + 1;
+    int32_t group_index = -1;
+    FOR_RANGE(int32_t, i, 0, size) {
+      int32_t cur_label = label_ptr_[index_ptr[i]];
+      if (cur_label != last_label) {
+        GroupLabel& cur_group_label = group_labels_[++group_index];
+        cur_group_label.label = cur_label;
+        cur_group_label.begin = i;
+        cur_group_label.size = 1;
+        last_label = cur_label;
+      } else {
+        group_labels_[group_index].size += 1;
+      }
+    }
+  }
+
+  size_t Subsample(int32_t label, size_t sample_num,
+                   const std::function<void(int32_t)>& EnableHandler,
+                   const std::function<void(int32_t)>& DisableHandler) {
+    auto group_label_it =
+        std::find_if(group_labels_.begin(), group_labels_.end(),
+                     [label](const GroupLabel& group_label) { return group_label.label == label; });
+    size_t begin = group_label_it->begin;
+    size_t size = group_label_it->size;
+    if (size > sample_num) {
+      this->Shuffle(begin, begin + size);
+    } else {
+      sample_num = size;
+    }
+    FOR_RANGE(size_t, i, begin, begin + size) {
+      int32_t cur_box_index = this->GetIndex(i);
+      if (i < sample_num) {
+        EnableHandler(cur_box_index);
+      } else {
+        DisableHandler(cur_box_index);
+      }
+    }
+    return sample_num;
+  }
+
+  const int32_t* label_ptr() const { return label_ptr_; }
+  int32_t* mut_label_ptr() { return label_ptr_; }
+  int32_t label(int32_t box_index) const { return label_ptr_[box_index]; }
+  void set_label(int32_t box_index, int32_t label) { label_ptr_[box_index] = label; }
+
+ private:
+  int32_t* label_ptr_;
+  std::array<GroupLabel, N> group_labels_;
+};
+
+template<size_t N, typename SliceType>
+LabeledBoxesSlice<SliceType, N> GenLabeledBoxesSlice(const SliceType& slice, int32_t* label_ptr) {
+  return LabeledBoxesSlice<SliceType, N>(slice, label_ptr);
+}
+
+template<typename SliceType>
+class BoxesToNearestGtBoxesSlice : public SliceType {
+ public:
+  BoxesToNearestGtBoxesSlice(const SliceType& slice, float* max_overlap_ptr,
+                             int32_t* gt_box_index_ptr)
+      : SliceType(slice),
+        max_overlap_ptr_(max_overlap_ptr),
+        max_overlap_gt_box_index_ptr_(gt_box_index_ptr) {}
+
+  float GetMaxOverlap(size_t n) { return max_overlap_ptr_[this->GetIndex(n)]; }
+
+  float GetNearestGtBoxIndex(size_t n) { return max_overlap_gt_box_index_ptr_[this->GetIndex(n)]; }
+
+  void UpdateMaxOverlapGtBox(int32_t box_index, int32_t gt_box_index, float overlap,
+                             const std::function<void()>& DoUpdateHandle) {
+    if (overlap >= max_overlap_ptr_[box_index]) {
+      max_overlap_ptr_[box_index] = overlap;
+      max_overlap_gt_box_index_ptr_[box_index] = gt_box_index;
+      DoUpdateHandle();
+    }
+  }
+
+  void SortByOverlap(const std::function<bool(float, float)>& Compare) {
+    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
+              [&](int32_t lhs_index, int32_t rhs_index) {
+                return Compare(max_overlap_ptr_[lhs_index], max_overlap_ptr_[rhs_index]);
+              });
+  }
+
+  int32_t FindByOverlap(const std::function<bool(float)>& Condition) {
+    FOR_RANGE(int32_t, i, 0, this->size()) {
+      if (Condition(max_overlap_ptr_[this->GetIndex(i)])) { return i; }
+    }
+    return -1;
+  }
+
+  int32_t max_overlap_gt_box_index(int32_t box_index) const {
+    return max_overlap_gt_box_index_ptr_[box_index];
+  }
+
+ private:
+  float* max_overlap_ptr_;
+  int32_t* max_overlap_gt_box_index_ptr_;
+};
+
+template<typename SliceType>
+BoxesToNearestGtBoxesSlice<SliceType> GenBoxesToNearestGtBoxesSlice(const SliceType& slice,
+                                                                    float* max_overlap_ptr,
+                                                                    int32_t* gt_box_index_ptr) {
+  return BoxesToNearestGtBoxesSlice<SliceType>(slice, max_overlap_ptr, gt_box_index_ptr);
+}
+
+template<typename SliceType>
+class GtBoxesToNearestBoxesSlice : public SliceType {
+ public:
+  GtBoxesToNearestBoxesSlice(const SliceType& slice, float* gt_max_overlaps_ptr,
+                             int32_t* nearest_boxes_index_ptr)
+      : SliceType(slice),
+        gt_max_overlaps_ptr_(gt_max_overlaps_ptr),
+        nearest_boxes_index_ptr_(nearest_boxes_index_ptr),
+        last_gt_box_index_(-1),
+        last_gt_box_nearest_boxes_index_end_(0),
+        nearest_boxes_count_(0) {}
+
+  void UpdateNearestBox(int32_t gt_box_index, int32_t box_index, float overlap) {
+    if (gt_box_index != last_gt_box_index_) {
+      last_gt_box_nearest_boxes_index_end_ = nearest_boxes_count_;
+      last_gt_box_index_ = gt_box_index;
+    }
+    if (overlap >= gt_max_overlaps_ptr_[gt_box_index]) {
+      if (overlap > gt_max_overlaps_ptr_[gt_box_index]) {
+        nearest_boxes_count_ = last_gt_box_nearest_boxes_index_end_;
+      }
+      nearest_boxes_index_ptr_[nearest_boxes_count_++] = box_index;
+      gt_max_overlaps_ptr_[gt_box_index] = overlap;
+    }
+  }
+
+  void ForEachNearestBox(const std::function<void(int32_t)>& Handler) const {
+    FOR_RANGE(size_t, i, 0, nearest_boxes_count_) { Handler(nearest_boxes_index_ptr_[i]); }
+  }
+
+ private:
+  float* gt_max_overlaps_ptr_;
+  int32_t* nearest_boxes_index_ptr_;
+  int32_t last_gt_box_index_;
+  int32_t last_gt_box_nearest_boxes_index_end_;
+  size_t nearest_boxes_count_;
+};
+
+template<typename SliceType>
+GtBoxesToNearestBoxesSlice<SliceType> GenGtBoxesToNearestBoxesSlice(
+    const SliceType& slice, float* gt_max_overlaps_ptr, int32_t* nearest_boxes_index_ptr) {
+  return GtBoxesToNearestBoxesSlice<SliceType>(slice, gt_max_overlaps_ptr, nearest_boxes_index_ptr);
+}
 
 template<typename T>
 class BBoxWeights final {
@@ -233,6 +511,12 @@ struct FasterRcnnUtil final {
                                const BBoxRegressionWeights& bbox_reg_ws, T* deltas);
   static void ClipBoxes(int64_t boxes_num, const int64_t image_height, const int64_t image_width,
                         T* bboxes);
+  static size_t ConvertGtBoxesToAbsoluteCoord(const FloatList16* gt_boxes,
+                                              const size_t image_height, const size_t image_width,
+                                              T* converted_gt_boxes);
+  static void ForEachOverlapBetweenBoxesAndGtBoxes(
+      const BoxesSlice<T>& boxes_slice, const BoxesSlice<T>& gt_boxes_slice,
+      const std::function<void(int32_t, int32_t, float)>& Handler);
 };
 
 }  // namespace oneflow

@@ -17,20 +17,24 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   Blob* label_num = BnInOp2Blob("label_num");
   Blob* loss = BnInOp2Blob("loss");
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
-
-  SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, conf, prediction->shape().elem_cnt(), prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), loss_buf->mut_dptr<PredType>(), tmp_storage->mut_dptr<PredType>(),
-      tmp_storage_byte_size, count->mut_dptr<PredType>(), label_num->mut_dptr<PredType>(),
-      loss->mut_dptr<PredType>());
-
-  if (prediction_diff != nullptr) {
-    Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(), 0,
-                        prediction_diff->ByteSizeOfDataContentField());
-    SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Backward(
-        ctx.device_ctx, conf, prediction->shape().elem_cnt(), prediction->dptr<PredType>(),
-        label->dptr<LabelType>(), label_num->dptr<PredType>(),
-        prediction_diff->mut_dptr<PredType>());
+  int64_t data_dim = label->shape().Count(1);
+  int64_t data_offset = 0;
+  FOR_RANGE(int64_t, data_index, 0, prediction->shape().At(0)) {
+    data_offset = data_dim * data_index;
+    const PredType* prediction_offset = prediction->dptr<PredType>() + data_offset;
+    const LabelType* label_offset = label->dptr<LabelType>() + data_offset;
+    SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Forward(
+        ctx.device_ctx, conf, data_dim, prediction_offset, label_offset,
+        loss_buf->mut_dptr<PredType>(), tmp_storage->mut_dptr<PredType>(), tmp_storage_byte_size,
+        count->mut_dptr<PredType>(), label_num->mut_dptr<PredType>(),
+        loss->mut_dptr<PredType>() + data_index);
+    if (prediction_diff != nullptr) {
+      Memset<device_type>(ctx.device_ctx, prediction_diff->mut_dptr<PredType>(), 0,
+                          prediction_diff->ByteSizeOfDataContentField());
+      SigmoidCrossEntropyLossKernelUtil<device_type, PredType, LabelType>::Backward(
+          ctx.device_ctx, conf, data_dim, prediction_offset, label_offset,
+          label_num->dptr<PredType>(), prediction_diff->mut_dptr<PredType>() + data_offset);
+    }
   }
 }
 
@@ -47,13 +51,29 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
                       const PredType* prediction, const LabelType* label, PredType* loss_buf,
                       PredType* tmp_storage, const size_t tmp_storage_byte_size, PredType* count,
                       PredType* label_num, PredType* loss) {
-    UNIMPLEMENTED();
+    loss_buf[0] = 0;
+    loss[0] = 0;
+    count[0] = 0;
+    FOR_RANGE(int64_t, index, 0, n) {
+      if (label[index] != -1) {
+        loss_buf[0] +=
+            -1 * prediction[index] * (label[index] - (prediction[index] >= 0))
+            + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
+        count[0] += 1;
+      }
+    }
+    if (count[0] == 0) { count[0] = 1e-5; }
+    loss[0] = loss_buf[0] / count[0];
   }
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label,
                        const PredType* label_num, PredType* pred_diff) {
-    UNIMPLEMENTED();
+    FOR_RANGE(int64_t, index, 0, n) {
+      if (label[index] != -1) {
+        pred_diff[index] = 1.f / (1.f + expf(-prediction[index])) - label[index];
+      }
+    }
   }
 };
 
