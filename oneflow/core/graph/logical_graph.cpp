@@ -352,6 +352,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
+  HashMap<LogicalNode*, std::pair<LogicalNode*, LogicalNode*>> fw_logical2reduce_pair;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot()
         && fw_logical->HasOpWithForwardModelBlob()) {
@@ -397,14 +398,45 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
-          BuildReduceStruct(md_diff_acc_logical, md_updt_logical);
+          CHECK(fw_logical2reduce_pair
+                    .emplace(fw_logical, std::make_pair(md_diff_acc_logical, md_updt_logical))
+                    .second);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
         }
       }
     }
   });
+
+  std::vector<ReduceGroup> reduce_groups;
+  for (auto& pair : fw_logical2reduce_pair) {
+    ReduceGroup reduce_group;
+    reduce_group.fw_logicals.emplace_back(pair.first);
+    reduce_group.md_diff_acc_logicals.emplace_back(pair.second.first);
+    reduce_group.md_updt_logicals.emplace_back(pair.second.second);
+    reduce_groups.emplace_back(reduce_group);
+  }
+  for (auto& reduce_group : reduce_groups) { BuildReduceStruct(reduce_group); }
   SetupNormalMdUpdtOp();
+}
+
+void LogicalGraph::BuildReduceStruct(const ReduceGroup& reduce_group) {
+  if (reduce_group.fw_logicals.size() > 1) {
+    std::shared_ptr<const ParallelDesc> src_pd = reduce_group.fw_logicals[0]->parallel_desc();
+    LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
+    reduce_concat_node->mut_parallel_desc() = src_pd;
+    LogicalNode* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
+    reduce_split_node->mut_parallel_desc() = src_pd;
+    for (auto& md_diff_acc_node : reduce_group.md_diff_acc_logicals) {
+      Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
+    }
+    for (auto& md_updt_node : reduce_group.md_updt_logicals) {
+      Connect(reduce_split_node, NewEdge(), md_updt_node);
+    }
+    BuildReduceStruct(reduce_concat_node, reduce_split_node);
+  } else {
+    BuildReduceStruct(reduce_group.md_diff_acc_logicals[0], reduce_group.md_updt_logicals[0]);
+  }
 }
 
 void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
