@@ -16,8 +16,8 @@ class LARSModelUpdateOp final : public NormalModelUpdtOp {
 
  private:
   void MdUpdtVirtualInitFromOpConf() override;
-  // LogicalBlobId ibn2lbn(const std::string& input_bn) const override { return GenPackedLbi(); }
-  // LogicalBlobId obn2lbn(const std::string& output_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId ibn2lbi(const std::string& input_bn) const override { return GenPackedLbi(); }
+  LogicalBlobId obn2lbi(const std::string& output_bn) const override { return GenPackedLbi(); }
 };
 
 }  // namespace oneflow
