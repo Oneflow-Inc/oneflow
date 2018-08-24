@@ -68,15 +68,24 @@ def generate():
     machine_list=[]
     
     open_port=os.getenv('PAI_PORT_MAP_10001')
-    for m in host_list:
+    if len(host_list)==1:
         machine_list.append(
             render(machine_tpl, {
-                "addr": m,
+                "addr": "127.0.0.1",
                 "port": int(open_port),
-                "port_map": 10001,
                 "name": host_list.index(m)
-                }) 
+            })
         )
+    else:
+        for m in host_list:
+            machine_list.append(
+                render(machine_tpl, {
+                    "addr": m,
+                    "port": int(open_port),
+                    "port_map": 10001,
+                    "name": host_list.index(m)
+                })
+            )
     
     resource_string=render(resource_tpl, {
         "machine_list": '\n'.join(machine_list),
