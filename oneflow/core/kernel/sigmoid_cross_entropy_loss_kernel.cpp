@@ -19,7 +19,7 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   Blob* prediction_diff = BnInOp2Blob(GenDiffBn("prediction"));
   int64_t data_dim = label->shape().Count(1);
   int64_t data_offset = 0;
-  FOR_RANGE(int32_t, data_index, 0, prediction->shape().At(0)) {
+  FOR_RANGE(int64_t, data_index, 0, prediction->shape().At(0)) {
     data_offset = data_dim * data_index;
     const PredType* prediction_offset = prediction->dptr<PredType>() + data_offset;
     const LabelType* label_offset = label->dptr<LabelType>() + data_offset;
@@ -54,7 +54,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
     loss_buf[0] = 0;
     loss[0] = 0;
     count[0] = 0;
-    FOR_RANGE(int32_t, index, 0, n) {
+    FOR_RANGE(int64_t, index, 0, n) {
       if (label[index] != -1) {
         loss_buf[0] +=
             -1 * prediction[index] * (label[index] - (prediction[index] >= 0))
@@ -69,7 +69,7 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
                        const PredType* prediction, const LabelType* label,
                        const PredType* label_num, PredType* pred_diff) {
-    FOR_RANGE(int32_t, index, 0, n) {
+    FOR_RANGE(int64_t, index, 0, n) {
       if (label[index] != -1) {
         pred_diff[index] = 1.f / (1.f + expf(-prediction[index])) - label[index];
       }
