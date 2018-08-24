@@ -22,6 +22,30 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
 };
 
+template<DeviceType device_type, typename T>
+class NormalMdUpdateKernelUtil final {
+ public:
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta,
+                          T learning_rate, T l1, T l2, const T* model_diff, const T* pre_model,
+                          T* momentum, T* model);
+};
+
+template<typename T>
+class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
+ public:
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta,
+                          T learning_rate, T l1, T l2, const T* model_diff, const T* pre_model,
+                          T* momentum, T* model);
+};
+
+template<typename T>
+class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
+ public:
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta,
+                          T learning_rate, T l1, T l2, const T* model_diff, const T* pre_model,
+                          T* momentum, T* model);
+};
+
 double GetDecayedLearningRate(const LearningRateDecayConf&, double lr, int64_t now_batch_num);
 
 #define DECLARE_MDUPDT_KERNEL_CREATOR(x) Kernel* Create##x##MdUpdtKernel(const KernelConf&);

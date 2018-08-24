@@ -295,8 +295,9 @@ message RMSPropModelUpdateConf {
 }
 
 message LARSModelUpdateConf {
-  optional float momentum = 1 [default = 0.9];
-  // TODO(shiyuan)
+  optional float momentum_beta = 1 [default = 0.9];
+  optional float epsilon = 2 [default = 1e-9];
+  optional float lars_coefficient = 3 [default = 0.0001];
 }
 
 message ExponentialDecayConf {
