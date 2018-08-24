@@ -27,8 +27,15 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     LogicalBlobId lbi;
     std::vector<LogicalEdge*> edges;
   };
+  struct ReduceCtx {
+    LogicalNode* fw_logical;
+    LogicalNode* bw_logical;
+    LogicalNode* md_diff_acc_logical;
+    LogicalNode* md_updt_logical;
+  };
   struct ReduceGroup {
     std::vector<LogicalNode*> fw_logicals;
+    std::vector<LogicalNode*> bw_logicals;
     std::vector<LogicalNode*> md_diff_acc_logicals;
     std::vector<LogicalNode*> md_updt_logicals;
   };

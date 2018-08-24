@@ -5,9 +5,7 @@ namespace oneflow {
 
 void ReduceSplitOp::InitFromOpConf() { TODO(); }
 
-const PbMessage& ReduceSplitOp::GetCustomizedConf() const {
-  return op_conf().reduce_scatter_conf();
-}
+const PbMessage& ReduceSplitOp::GetCustomizedConf() const { return op_conf().reduce_split_conf(); }
 
 LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
   LogicalBlobId ret;

@@ -352,7 +352,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
-  HashMap<LogicalNode*, std::pair<LogicalNode*, LogicalNode*>> fw_logical2reduce_pair;
+  std::vector<ReduceCtx> reduce_ctxs;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot()
         && fw_logical->HasOpWithForwardModelBlob()) {
@@ -398,9 +398,8 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
-          CHECK(fw_logical2reduce_pair
-                    .emplace(fw_logical, std::make_pair(md_diff_acc_logical, md_updt_logical))
-                    .second);
+          ReduceCtx reduce_ctx = {fw_logical, bw_logical, md_diff_acc_logical, md_updt_logical};
+          reduce_ctxs.emplace_back(reduce_ctx);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
         }
@@ -408,12 +407,14 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     }
   });
 
+  // TODO: use chain graph to init the reduce group and set reduce_id for fw, bw, md_updt
   std::vector<ReduceGroup> reduce_groups;
-  for (auto& pair : fw_logical2reduce_pair) {
+  for (auto& reduce_ctx : reduce_ctxs) {
     ReduceGroup reduce_group;
-    reduce_group.fw_logicals.emplace_back(pair.first);
-    reduce_group.md_diff_acc_logicals.emplace_back(pair.second.first);
-    reduce_group.md_updt_logicals.emplace_back(pair.second.second);
+    reduce_group.fw_logicals.emplace_back(reduce_ctx.fw_logical);
+    reduce_group.bw_logicals.emplace_back(reduce_ctx.bw_logical);
+    reduce_group.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logical);
+    reduce_group.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logical);
     reduce_groups.emplace_back(reduce_group);
   }
   for (auto& reduce_group : reduce_groups) { BuildReduceStruct(reduce_group); }
@@ -423,10 +424,23 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
 void LogicalGraph::BuildReduceStruct(const ReduceGroup& reduce_group) {
   if (reduce_group.fw_logicals.size() > 1) {
     std::shared_ptr<const ParallelDesc> src_pd = reduce_group.fw_logicals[0]->parallel_desc();
+
+    OperatorConf reduce_concat_op_conf;
+    reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
+    reduce_concat_op_conf.set_device_type(src_pd->device_type());
+    reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_group.fw_logicals.size());
     LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
+    reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
     reduce_concat_node->mut_parallel_desc() = src_pd;
+
+    OperatorConf reduce_split_op_conf;
+    reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
+    reduce_split_op_conf.set_device_type(src_pd->device_type());
+    reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_group.fw_logicals.size());
     LogicalNode* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
+    reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
     reduce_split_node->mut_parallel_desc() = src_pd;
+
     for (auto& md_diff_acc_node : reduce_group.md_diff_acc_logicals) {
       Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
     }

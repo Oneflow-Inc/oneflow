@@ -53,6 +53,8 @@ std::vector<CompTaskNode*> GetCompTaskNodesOnEdge(TaskEdge* edge,
 
 }  // namespace
 
+int32_t CompTaskNode::reduce_id() const { return logical_node_->reduce_id(); }
+
 void CompTaskNode::ToProto(TaskProto* task_proto) {
   TaskNode::ToProto(task_proto);
   *(task_proto->mutable_parallel_ctx()) = parallel_ctx_;

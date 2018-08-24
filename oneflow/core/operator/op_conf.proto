@@ -578,9 +578,11 @@ message TransposeOpConf {
 }
 
 message ReduceConcatOpConf {
+  required int32 in_num = 1;
 }
 
 message ReduceSplitOpConf {
+  required int32 out_num = 1;
 }
 
 message ReduceScatterOpConf {

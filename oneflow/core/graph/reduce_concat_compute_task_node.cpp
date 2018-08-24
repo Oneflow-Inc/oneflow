@@ -3,10 +3,33 @@
 
 namespace oneflow {
 
-void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() { TODO(); }
+void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  this->SoleOutEdge()->AddRegst("out", ProduceRegst("out", false, 1, 1));
+}
 
-void ReduceConcatCompTaskNode::ConsumeAllRegsts() { TODO(); }
+void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
+  for (TaskEdge* edge : in_edges()) {
+    TaskNode* src_node = edge->src_node();
+    while (src_node->GetTaskType() != TaskType::kNormalBackward) {
+      src_node = src_node->SoleInEdge()->src_node();
+    }
+    CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
+    ConsumeRegst("in_" + std::to_string(bw_node->reduce_id()), edge->GetSoleRegst());
+  }
+}
 
-void ReduceConcatCompTaskNode::BuildExecGphAndRegst() { TODO(); }
+void ReduceConcatCompTaskNode::BuildExecGphAndRegst() {
+  ExecNode* node = mut_exec_gph().NewNode();
+  std::shared_ptr<Operator> reduce_concat_op = this->logical_node()->SoleOp();
+  node->mut_op() = reduce_concat_op;
+  FOR_RANGE(size_t, i, 0, reduce_concat_op->input_bns().size()) {
+    node->BindBnWithRegst(reduce_concat_op->input_bns().Get(i),
+                          GetSoleConsumedRegst("in_" + std::to_string(i)));
+  }
+  std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out");
+  out_regst->AddLbi(reduce_concat_op->BnInOp2Lbi(reduce_concat_op->SoleObn()));
+  node->BindBnWithRegst(reduce_concat_op->SoleObn(), out_regst);
+  node->InferBlobDescs(parallel_ctx());
+}
 
 }  // namespace oneflow
