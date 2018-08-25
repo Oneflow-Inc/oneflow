@@ -16,9 +16,9 @@ void MomentumMdUpdateKernel<device_type, T>::UpdateModel(
   float momentum_beta = this->op_conf().normal_mdupdt_conf().user_conf().momentum_conf().beta();
 
   NormalMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), batch_size, static_cast<T>(momentum_beta), learning_rate,
-      l1, l2, model_diff_blob->dptr<T>(), pre_model_blob->dptr<T>(), momentum_blob->mut_dptr<T>(),
-      model_blob->mut_dptr<T>());
+      ctx, model_blob->shape().elem_cnt(), batch_size, learning_rate, l1, l2,
+      static_cast<T>(momentum_beta), pre_model_blob->dptr<T>(), model_diff_blob->dptr<T>(),
+      momentum_blob->mut_dptr<T>(), model_blob->mut_dptr<T>());
 }
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Momentum);

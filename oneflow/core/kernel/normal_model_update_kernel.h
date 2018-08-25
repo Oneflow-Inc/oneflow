@@ -26,25 +26,25 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
 template<DeviceType device_type, typename T>
 class NormalMdUpdateKernelUtil final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta,
-                          T learning_rate, T l1, T l2, const T* model_diff, const T* pre_model,
-                          T* momentum, T* model);
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
+                          T momentum_beta, const T* pre_model, const T* model_diff, T* momentum,
+                          T* model);
 };
 
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta,
-                          T learning_rate, T l1, T l2, const T* model_diff, const T* pre_model,
-                          T* momentum, T* model);
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
+                          T momentum_beta, const T* pre_model, const T* model_diff, T* momentum,
+                          T* model);
 };
 
 template<typename T>
 class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
  public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta,
-                          T learning_rate, T l1, T l2, const T* model_diff, const T* pre_model,
-                          T* momentum, T* model);
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
+                          T momentum_beta, const T* pre_model, const T* model_diff, T* momentum,
+                          T* model);
 };
 
 bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num);

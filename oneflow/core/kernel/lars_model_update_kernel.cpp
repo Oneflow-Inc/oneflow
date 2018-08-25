@@ -9,40 +9,49 @@ void LARSMdUpdateKernel<device_type, T>::UpdateModel(
     std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   Blob* model_blob = BnInOp2Blob("model");
   Blob* momentum_blob = BnInOp2Blob("momentum");
+  Blob* data_tmp_blob = BnInOp2Blob("data_tmp");
+  const LARSModelUpdateConf& lars_conf =
+      this->op_conf().normal_mdupdt_conf().user_conf().lars_conf();
   if (next_model_vid == 1) {
     Memset<device_type>(ctx, momentum_blob->mut_dptr<T>(), 0,
                         momentum_blob->ByteSizeOfDataContentField());
   }
-  const LARSModelUpdateConf& lars_conf =
-      this->op_conf().normal_mdupdt_conf().user_conf().lars_conf();
-  int64_t n = model_blob->shape().elem_cnt();
-  T model_norm = 0;
-  T model_diff_norm = 0;
-  LARSMdUpdateKernelUtil<device_type, T>::SumOfSquare(ctx, n, pre_model_blob->dptr<T>(),
-                                                      &model_norm);
-  LARSMdUpdateKernelUtil<device_type, T>::SumOfSquare(ctx, n, model_diff_blob->dptr<T>(),
-                                                      &model_diff_norm);
-  model_norm = std::sqrt(model_norm / n);
-  model_diff_norm = std::sqrt(model_diff_norm / n);
-  T local_learning_rate = 0;
-  if (next_model_vid == 1) {
-    local_learning_rate = learning_rate * lars_conf.lars_coefficient() * model_norm
-                          / (lars_conf.epsilon() + model_diff_norm);
-  } else {
-    local_learning_rate = learning_rate * lars_conf.lars_coefficient() * model_norm
-                          / (lars_conf.epsilon() + model_diff_norm + l2 * model_norm);
-  }
-  NormalMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, n, batch_size, static_cast<T>(lars_conf.momentum_beta()), local_learning_rate, l1, l2,
-      model_diff_blob->dptr<T>(), pre_model_blob->dptr<T>(), momentum_blob->mut_dptr<T>(),
-      model_blob->mut_dptr<T>());
+  Memset<device_type>(ctx, data_tmp_blob->mut_dptr<T>(), 0,
+                      data_tmp_blob->ByteSizeOfDataContentField());
+  LARSMdUpdateKernelUtil<device_type, T>::UpdateModel(
+      ctx, model_blob->shape().elem_cnt(), batch_size, learning_rate, l1, l2,
+      static_cast<T>(lars_conf.momentum_beta()), static_cast<T>(lars_conf.epsilon()),
+      static_cast<T>(lars_conf.lars_coefficient()), next_model_vid, pre_model_blob->dptr<T>(),
+      model_diff_blob->dptr<T>(), momentum_blob->mut_dptr<T>(), model_blob->mut_dptr<T>(),
+      data_tmp_blob->mut_dptr<T>());
 }
 
 template<typename T>
 class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
  public:
-  static void SumOfSquare(DeviceCtx*, const int64_t n, const T* x, T* result) {
-    FOR_RANGE(int64_t, i, 0, n) { *result += x[i] * x[i]; }
+  static void UpdateModel(DeviceCtx* ctx, int64_t n, int64_t batch_size, T learning_rate, T l1,
+                          T l2, T momentum_beta, T epsilon, T lars_coefficient,
+                          int64_t next_model_vid, const T* pre_model, const T* model_diff,
+                          T* momentum, T* model, T* data_tmp) {
+    T model_norm = 0;
+    T model_diff_norm = 0;
+    FOR_RANGE(int64_t, i, 0, n) {
+      model_norm += pre_model[i] * pre_model[i];
+      model_diff_norm += model_diff[i] * model_diff[i];
+    }
+    model_norm = std::sqrt(model_norm / n);
+    model_diff_norm = std::sqrt(model_diff_norm / n);
+    T local_learning_rate = 0;
+    if (next_model_vid == 1) {
+      local_learning_rate =
+          learning_rate * lars_coefficient * model_norm / (epsilon + model_diff_norm);
+    } else {
+      local_learning_rate = learning_rate * lars_coefficient * model_norm
+                            / (epsilon + model_diff_norm + l2 * model_norm);
+    }
+    NormalMdUpdateKernelUtil<DeviceType::kCPU, T>::UpdateModel(
+        ctx, n, batch_size, local_learning_rate, l1, l2, momentum_beta, pre_model, model_diff,
+        momentum, model);
   }
 };
 

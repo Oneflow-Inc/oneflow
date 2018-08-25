@@ -21,7 +21,10 @@ class LARSMdUpdateKernel final : public NormalMdUpdateKernel<device_type, T> {
 template<DeviceType device_type, typename T>
 class LARSMdUpdateKernelUtil final {
  public:
-  static void SumOfSquare(DeviceCtx*, const int64_t n, const T* x, T* result);
+  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
+                          T momentum_beta, T epsilon, T lars_coefficient, int64_t next_model_vid,
+                          const T* pre_model, const T* model_diff, T* momentum, T* model,
+                          T* data_tmp);
 };
 
 DECLARE_MDUPDT_KERNEL_CREATOR(LARS);

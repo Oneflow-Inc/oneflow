@@ -37,8 +37,8 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
 
 template<typename T>
 void NormalMdUpdateKernelUtil<DeviceType::kCPU, T>::UpdateModel(
-    DeviceCtx*, int64_t n, int64_t batch_size, T momentum_beta, T learning_rate, T l1, T l2,
-    const T* model_diff, const T* pre_model, T* momentum, T* model) {
+    DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2, T momentum_beta,
+    const T* pre_model, const T* model_diff, T* momentum, T* model) {
   FOR_RANGE(int64_t, i, 0, n) {
     T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
     if (momentum_beta) {

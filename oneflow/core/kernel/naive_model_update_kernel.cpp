@@ -11,8 +11,8 @@ void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
   if (pre_model_blob != model_blob) { model_blob->CopyDataContentFrom(ctx, pre_model_blob); }
   // model = model - alpha * model_diff
   NormalMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), batch_size, 0, learning_rate, l1, l2,
-      model_diff_blob->dptr<T>(), pre_model_blob->dptr<T>(), nullptr, model_blob->mut_dptr<T>());
+      ctx, model_blob->shape().elem_cnt(), batch_size, learning_rate, l1, l2, 0,
+      pre_model_blob->dptr<T>(), model_diff_blob->dptr<T>(), nullptr, model_blob->mut_dptr<T>());
 }
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Naive);
