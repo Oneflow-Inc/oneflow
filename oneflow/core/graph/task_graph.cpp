@@ -170,6 +170,20 @@ void TaskGraph::CollectReduceTaskNodes(
     return nullptr;
   };
 
+  auto FindConcatAndScatter = [&](CompTaskNode* bw_or_md_diff_acc,
+                                  ReduceTaskNodes& reduce_task_nodes) {
+    CompTaskNode* concat_task_node =
+        FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceConcat);
+    if (concat_task_node != nullptr) {
+      reduce_task_nodes.concat = concat_task_node;
+      reduce_task_nodes.scatter =
+          FindSuccReduceTaskNode(reduce_task_nodes.concat, TaskType::kReduceScatter);
+    } else {
+      reduce_task_nodes.scatter =
+          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
+    }
+  };
+
   ForEachNode([&](TaskNode* task_node) {
     if (IsBackwardTaskType(task_node->GetTaskType()) == false) { return; }
     if (task_node->device_type() != DeviceType::kGPU) { return; }
@@ -182,24 +196,11 @@ void TaskGraph::CollectReduceTaskNodes(
     }
 
     ReduceTaskNodes& reduce_task_nodes = (*bw2reduce_tasks)[bw_task_node];
-
-    auto FindConcatAndScatter = [&](CompTaskNode* bw_or_md_diff_acc) {
-      CompTaskNode* concat_task_node =
-          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceConcat);
-      if (concat_task_node != nullptr) {
-        reduce_task_nodes.concat = concat_task_node;
-        reduce_task_nodes.scatter =
-            FindSuccReduceTaskNode(reduce_task_nodes.concat, TaskType::kReduceScatter);
-      } else {
-        reduce_task_nodes.scatter =
-            FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
-      }
-    };
     CompTaskNode* diff_acc_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
     if (diff_acc_task_node != nullptr) {
-      FindConcatAndScatter(diff_acc_task_node);
+      FindConcatAndScatter(diff_acc_task_node, reduce_task_nodes);
     } else {
-      FindConcatAndScatter(bw_task_node);
+      FindConcatAndScatter(bw_task_node, reduce_task_nodes);
     }
     CompTaskNode* local_add_task_node =
         FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
