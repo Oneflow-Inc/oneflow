@@ -61,8 +61,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void PinConsumedRegst();
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
-  virtual void EraseEmptyProducedRegst();
-  void ClearOutOfDateConsumedRegst();
+
+  void EraseZeroSizeProducedBlob();
+  void EraseZeroSizeConsumedRegst();
+  void EraseZeroSizeProducedRegst();
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }

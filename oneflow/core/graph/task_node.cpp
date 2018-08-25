@@ -87,8 +87,30 @@ void TaskNode::Build() {
   FixPackedBlobDescOfProducedRegst();
 }
 
-void TaskNode::EraseEmptyProducedRegst() {
+void TaskNode::EraseZeroSizeProducedBlob() {
   for (auto& pair : produced_regsts_) { pair.second->EraseZeroSizeBlob(); }
+}
+
+void TaskNode::EraseZeroSizeConsumedRegst() {
+  for (auto& pair : consumed_regsts_) {
+    for (auto it = pair.second.begin(); it != pair.second.end();) {
+      auto regst_ptr = it->lock();
+      CHECK(regst_ptr);
+      if (regst_ptr->regst_desc_type().has_data_regst_desc() && regst_ptr->NumOfLbi() == 0) {
+        pair.second.erase(it++);
+      } else {
+        ++it;
+      }
+    }
+  }
+  EraseIf<std::string, std::list<std::weak_ptr<RegstDesc>>>(
+      &consumed_regsts_,
+      [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
+        return it->second.empty();
+      });
+}
+
+void TaskNode::EraseZeroSizeProducedRegst() {
   EraseIf<std::string, std::shared_ptr<RegstDesc>>(
       &produced_regsts_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
         return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
@@ -286,23 +308,6 @@ int64_t TaskNode::LocalWorkStreamId() const {
 int64_t TaskNode::GlobalWorkStreamId() const {
   CHECK_NE(task_id_, -1);
   return Global<IDMgr>::Get()->GlobalWorkStreamId4TaskId(task_id_);
-}
-
-void TaskNode::ClearOutOfDateConsumedRegst() {
-  for (auto& pair : consumed_regsts_) {
-    for (auto it = pair.second.begin(); it != pair.second.end();) {
-      if (it->lock() == nullptr) {
-        pair.second.erase(it++);
-      } else {
-        ++it;
-      }
-    }
-  }
-  EraseIf<std::string, std::list<std::weak_ptr<RegstDesc>>>(
-      &consumed_regsts_,
-      [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
-        return it->second.empty();
-      });
 }
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {

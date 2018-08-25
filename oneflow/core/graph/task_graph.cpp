@@ -93,6 +93,12 @@ void TaskGraph::AcyclicTopoForEachNode(std::function<void(TaskNode* node)> handl
   TopoForEachNode(starts, ForEachInNode, ForEachOutNode, handler);
 }
 
+void TaskGraph::RemoveEmptyRegsts() {
+  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedBlob(); });
+  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
+  ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedRegst(); });
+}
+
 void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
   MergeChainAndSetOrderInGraphForEachNode();
   BuildCtrlRegstDescInSameChain();

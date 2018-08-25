@@ -64,7 +64,10 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() 
     auto it = bn_in_op2regst_.find(bn_in_op);
     if (it == bn_in_op2regst_.end()) { return nullptr; }
     std::shared_ptr<RegstDesc> regst = it->second.lock();
-    if (!regst) { return nullptr; }
+    if (!regst) {
+      LOG(FATAL) << "lock failed";
+      return nullptr;
+    }
     return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
   };
 }
