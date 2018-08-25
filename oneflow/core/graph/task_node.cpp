@@ -29,16 +29,16 @@ std::shared_ptr<RegstDesc> TaskNode::GetProducedRegst(const std::string& name) {
   }
 }
 
-const std::list<std::weak_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
+const std::list<std::shared_ptr<RegstDesc>>& TaskNode::GetConsumedRegst(const std::string& name) {
   return consumed_regsts_.at(name);
 }
 
 std::shared_ptr<RegstDesc> TaskNode::GetSoleConsumedRegst(const std::string& name) {
   auto it = consumed_regsts_.find(name);
   if (it == consumed_regsts_.end()) { return nullptr; }
-  const std::list<std::weak_ptr<RegstDesc>>& vec = it->second;
+  const std::list<std::shared_ptr<RegstDesc>>& vec = it->second;
   CHECK_EQ(vec.size(), 1);
-  return vec.front().lock();
+  return vec.front();
 }
 
 DeviceType TaskNode::device_type() const {
@@ -74,8 +74,8 @@ void TaskNode::set_order_in_graph(int64_t val) {
 
 void TaskNode::PinConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
-    for (std::weak_ptr<RegstDesc> regst : pair.second) {
-      PinConsumedRegstMemCase(regst.lock()->mut_mem_case());
+    for (std::shared_ptr<RegstDesc> regst : pair.second) {
+      PinConsumedRegstMemCase(regst->mut_mem_case());
     }
   }
 }
@@ -94,7 +94,7 @@ void TaskNode::EraseZeroSizeProducedBlob() {
 void TaskNode::EraseZeroSizeConsumedRegst() {
   for (auto& pair : consumed_regsts_) {
     for (auto it = pair.second.begin(); it != pair.second.end();) {
-      auto regst_ptr = it->lock();
+      auto regst_ptr = *it;
       CHECK(regst_ptr);
       if (regst_ptr->regst_desc_type().has_data_regst_desc() && regst_ptr->NumOfLbi() == 0) {
         pair.second.erase(it++);
@@ -103,9 +103,9 @@ void TaskNode::EraseZeroSizeConsumedRegst() {
       }
     }
   }
-  EraseIf<std::string, std::list<std::weak_ptr<RegstDesc>>>(
+  EraseIf<std::string, std::list<std::shared_ptr<RegstDesc>>>(
       &consumed_regsts_,
-      [](HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>::iterator it) {
+      [](HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>>::iterator it) {
         return it->second.empty();
       });
 }
@@ -146,8 +146,8 @@ void TaskNode::ToProto(TaskProto* task_proto) {
   auto consumed_regst_proto = task_proto->mutable_consumed_regst_desc_id();
   for (const auto& pair : consumed_regsts_) {
     RegstDescIdSet regst_desc_ids;
-    for (std::weak_ptr<RegstDesc> regst : pair.second) {
-      regst_desc_ids.add_regst_desc_id(regst.lock()->regst_desc_id());
+    for (std::shared_ptr<RegstDesc> regst : pair.second) {
+      regst_desc_ids.add_regst_desc_id(regst->regst_desc_id());
     }
     CHECK(consumed_regst_proto->insert({pair.first, regst_desc_ids}).second);
   }
@@ -250,8 +250,8 @@ void TaskNode::ConsumeRegst(const std::string& name, std::shared_ptr<RegstDesc> 
 
 bool TaskNode::IsAllConsumedRegstLocked() {
   for (const auto& pair : consumed_regsts_) {
-    for (std::weak_ptr<RegstDesc> regst_desc : pair.second) {
-      if (regst_desc.lock()->IsLocked() == false) { return false; }
+    for (std::shared_ptr<RegstDesc> regst_desc : pair.second) {
+      if (regst_desc->IsLocked() == false) { return false; }
     }
   }
   return true;
@@ -260,8 +260,8 @@ bool TaskNode::IsAllConsumedRegstLocked() {
 void TaskNode::TryLockConsumedRegst(const std::string& name) {
   auto consumed_regsts_it = consumed_regsts_.find(name);
   if (consumed_regsts_it == consumed_regsts_.end()) { return; }
-  for (std::weak_ptr<RegstDesc> wrd : consumed_regsts_it->second) {
-    std::shared_ptr<RegstDesc> srd = wrd.lock();
+  for (std::shared_ptr<RegstDesc> wrd : consumed_regsts_it->second) {
+    std::shared_ptr<RegstDesc> srd = wrd;
     if (srd->IsLocked() == false) { srd->Lock(); }
   }
 }
@@ -312,18 +312,18 @@ int64_t TaskNode::GlobalWorkStreamId() const {
 
 void TaskNode::EraseConsumedRegstsByName(const std::string& name) {
   if (consumed_regsts_.find(name) != consumed_regsts_.end()) {
-    for (auto& regst : consumed_regsts_[name]) { regst.lock()->DeleteConsumer(this); }
+    for (auto& regst : consumed_regsts_[name]) { regst->DeleteConsumer(this); }
     CHECK_EQ(consumed_regsts_.erase(name), 1);
   }
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetRegst(const std::string& name_in_producer) const {
-  return name_in_producer2regst_.at(name_in_producer).lock();
+  return name_in_producer2regst_.at(name_in_producer);
 }
 
 std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   CHECK_EQ(name_in_producer2regst_.size(), 1);
-  return name_in_producer2regst_.begin()->second.lock();
+  return name_in_producer2regst_.begin()->second;
 }
 
 void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {

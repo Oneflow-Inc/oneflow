@@ -57,7 +57,7 @@ void NormalMdUpdtCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = logical_node()->SoleOp();
   size_t ibn_idx = 0;
   for (const auto& pair : consumed_regsts()) {
-    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front().lock());
+    node->BindBnWithRegst(node->op()->input_bns().Get(ibn_idx++), pair.second.front());
   }
   node->BindBnWithRegst(node->op()->SoleObn(), GetProducedRegst("model"));
   node->AddBnToRegstAndBindIt(&Operator::data_tmp_bns, GetProducedRegst("data_tmp"));

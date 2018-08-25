@@ -2,12 +2,12 @@
 
 namespace oneflow {
 
-void ExecNode::BindBnWithRegst(const std::string& bn, std::weak_ptr<RegstDesc> regst) {
+void ExecNode::BindBnWithRegst(const std::string& bn, std::shared_ptr<RegstDesc> regst) {
   CHECK(bn_in_op2regst_.emplace(bn, regst).second);
 }
 
 void ExecNode::BindBnsWithRegst(const PbRpf<std::string>& (Operator::*bns_getter)() const,
-                                std::weak_ptr<RegstDesc> regst) {
+                                std::shared_ptr<RegstDesc> regst) {
   for (const std::string& bn : (op_.get()->*bns_getter)()) { BindBnWithRegst(bn, regst); }
 }
 
@@ -18,11 +18,11 @@ void ExecNode::AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_g
 }
 
 void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
-                                        const std::list<std::weak_ptr<RegstDesc>>& regsts) {
+                                        const std::list<std::shared_ptr<RegstDesc>>& regsts) {
   const LogicalBlobId& lbi = op()->BnInOp2Lbi(bn);
   bool has_binded = false;
-  for (std::weak_ptr<RegstDesc> regst : regsts) {
-    if (regst.lock()->GetBlobDesc(lbi) == nullptr) { continue; }
+  for (std::shared_ptr<RegstDesc> regst : regsts) {
+    if (regst->GetBlobDesc(lbi) == nullptr) { continue; }
     BindBnWithRegst(bn, regst);
     has_binded = true;
     break;
@@ -36,8 +36,9 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                      op_context());
   for (const auto& bn_regst : bn_in_op2regst_) {
     const std::string& bn_in_op = bn_regst.first;
-    auto regst = bn_regst.second.lock();
-    if (!regst) { continue; }
+    auto regst = bn_regst.second;
+    CHECK(regst);
+    // if (!regst) { continue; }
     PbMapPair<std::string, int64_t> pair{bn_in_op, regst->regst_desc_id()};
     CHECK(ret->mutable_bn_in_op2regst_desc_id()->insert(pair).second);
   }
@@ -63,11 +64,9 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() 
   return [this](const std::string& bn_in_op) -> BlobDesc* {
     auto it = bn_in_op2regst_.find(bn_in_op);
     if (it == bn_in_op2regst_.end()) { return nullptr; }
-    std::shared_ptr<RegstDesc> regst = it->second.lock();
-    if (!regst) {
-      LOG(FATAL) << "lock failed";
-      return nullptr;
-    }
+    std::shared_ptr<RegstDesc> regst = it->second;
+    CHECK(regst);
+    if (!regst) { return nullptr; }
     return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
   };
 }

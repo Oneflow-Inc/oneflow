@@ -277,7 +277,7 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     for (const auto& kv : consumed_regsts) {
       int64_t in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
       CHECK_EQ(1, kv.second.size());
-      RegstDesc* consumed_regst = kv.second.front().lock().get();
+      RegstDesc* consumed_regst = kv.second.front().get();
       SetOrCheck4ConsumedRegst(consumed_regst, in_parallel_id == parallel_id, in_parallel_id);
     }
   };
