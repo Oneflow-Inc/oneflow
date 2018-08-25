@@ -5,7 +5,17 @@ namespace oneflow {
 template<DeviceType device_type>
 void ReduceSplitKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  TODO();
+  // TODO(jiyuan): use enable inplace
+  if (device_type == DeviceType::kGPU) { return; }
+  const Blob* in_blob = BnInOp2Blob("in");
+  const char* src_cur_dptr = in_blob->dptr<char>();
+  for (const std::string& obn : this->op_attribute().output_bns()) {
+    Blob* out_blob = BnInOp2Blob(obn);
+    size_t out_byte_size = out_blob->ByteSizeOfDataContentField();
+    Memcpy<DeviceType::kCPU>(ctx.device_ctx, out_blob->mut_dptr<char>(), src_cur_dptr,
+                             out_byte_size);
+    src_cur_dptr += out_byte_size;
+  }
 }
 
 ADD_DEVICE_TYPE_KERNEL_CREATOR(OperatorConf::kReduceSplitConf, ReduceSplitKernel);
