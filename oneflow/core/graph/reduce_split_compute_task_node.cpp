@@ -26,15 +26,37 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   node->mut_op() = reduce_split_op;
   node->BindBnWithRegst(reduce_split_op->SoleIbn(), GetSoleConsumedRegst("in"));
 
+  CompTaskNode* reduce_concat_node = FindPeerReduceConcatTaskNode();
+  const auto& reduce_concat_consumed_regsts = reduce_concat_node->consumed_regsts();
+  CHECK_EQ(reduce_concat_consumed_regsts.size(), produced_regsts().size());
+
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     CHECK(out_regst.get() != nullptr);
     const std::string& obn = reduce_split_op->output_bns().Get(i);
     out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(obn));
     node->BindBnWithRegst(obn, out_regst);
+    out_regst->CopyBlobDescFrom(
+        reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
   }
-  // TODO(jiyuan): copy blob desc from bw or fw node
-  // node->InferBlobDescs(parallel_ctx());
+}
+
+CompTaskNode* ReduceSplitCompTaskNode::FindPeerReduceConcatTaskNode() {
+  TaskNode* src_node = this;
+  while (true) {
+    for (TaskEdge* edge : src_node->in_edges()) {
+      CompTaskNode* comp_task_node = dynamic_cast<CompTaskNode*>(edge->src_node());
+      if (comp_task_node == nullptr) { continue; }
+      if (comp_task_node->GetTaskType() == TaskType::kReduceConcat) {
+        return comp_task_node;
+      } else if (comp_task_node->GetTaskType() == TaskType::kNormalBackward) {
+        LOG(FATAL) << "No peer ReduceConcat";
+      } else {
+        src_node = edge->src_node();
+      }
+    }
+  }
+  return nullptr;
 }
 
 }  // namespace oneflow

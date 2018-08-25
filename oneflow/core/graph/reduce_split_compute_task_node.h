@@ -19,6 +19,7 @@ class ReduceSplitCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
+  CompTaskNode* FindPeerReduceConcatTaskNode();
 };
 
 }  // namespace oneflow
