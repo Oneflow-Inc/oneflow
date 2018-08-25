@@ -247,6 +247,7 @@ void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(const ReduceTaskNodes&
     auto split_out_regst = reduce_task_nodes.split->GetProducedRegst("out_" + std::to_string(idx));
     const BlobDesc* concat_in_packed = concat_in_regst->GetBlobDesc(GenPackedLbi());
     const BlobDesc* split_out_packed = split_out_regst->GetBlobDesc(GenPackedLbi());
+    // TODO(jiyuan): use blob_body or data content length ?
     CHECK_EQ(RtBlobDesc(*concat_in_packed).ByteSizeOfBlobBody(),
              RtBlobDesc(*split_out_packed).ByteSizeOfBlobBody());
     SetMemSharedField4Regst(concat_in_regst, offset);
