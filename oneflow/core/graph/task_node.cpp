@@ -81,6 +81,7 @@ void TaskNode::PinConsumedRegst() {
 }
 
 void TaskNode::Build() {
+  CHECK(IsReadyForBuild());
   BuildExecGphAndRegst();
   LockRegsts();
   FixRegisterNumRange();
