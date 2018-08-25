@@ -38,7 +38,6 @@ void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
     const std::string& bn_in_op = bn_regst.first;
     auto regst = bn_regst.second;
     CHECK(regst);
-    // if (!regst) { continue; }
     PbMapPair<std::string, int64_t> pair{bn_in_op, regst->regst_desc_id()};
     CHECK(ret->mutable_bn_in_op2regst_desc_id()->insert(pair).second);
   }
@@ -66,7 +65,6 @@ std::function<BlobDesc*(const std::string&)> ExecNode::GetBlobDesc4BnInOpFunc() 
     if (it == bn_in_op2regst_.end()) { return nullptr; }
     std::shared_ptr<RegstDesc> regst = it->second;
     CHECK(regst);
-    if (!regst) { return nullptr; }
     return regst->MutBlobDesc(op()->BnInOp2Lbi(bn_in_op));
   };
 }
