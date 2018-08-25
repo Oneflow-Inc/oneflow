@@ -5,6 +5,7 @@ namespace oneflow {
 template<DeviceType device_type>
 void ReduceScatterKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
+  // TODO(jiyuan): use enable inplace
   if (device_type == DeviceType::kGPU) { return; }
   const Blob* in_blob = BnInOp2Blob("in");
   const char* src_cur_dptr = in_blob->dptr<char>();

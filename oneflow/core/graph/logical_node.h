@@ -31,6 +31,9 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
     return shared_model_nodes_;
   }
 
+  int32_t reduce_id() const { return reduce_id_; }
+  void set_reduce_id(int32_t val) { reduce_id_ = val; }
+
   // Lbis
   std::vector<LogicalBlobId> GetLbisTo(const LogicalNode* dst) const;
   void SetDataLbisTo(const LogicalNode* dst, const std::vector<LogicalBlobId>&);
@@ -55,7 +58,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   virtual int64_t GetAreaId() const = 0;
 
  protected:
-  LogicalNode() : main_model_parallel_(nullptr) {}
+  LogicalNode() : main_model_parallel_(nullptr), reduce_id_(0) {}
   virtual CompTaskNode* NewCompTaskNode() const = 0;
   virtual void FixCompTaskNode(CompTaskNode*) const {}
 
@@ -66,6 +69,7 @@ class LogicalNode : public Node<LogicalNode, LogicalEdge> {
   std::shared_ptr<const ParallelDesc> parallel_desc_;
   std::shared_ptr<const std::vector<LogicalNode*>> shared_model_nodes_;
   LogicalNode* main_model_parallel_;
+  int32_t reduce_id_;
 
   HashMap<const LogicalNode*, std::vector<LogicalBlobId>> dst2data_lbis_;
 };

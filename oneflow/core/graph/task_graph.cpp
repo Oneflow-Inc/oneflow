@@ -135,12 +135,20 @@ void TaskGraph::BuildCtrlRegstDescInSameChain() {
 }
 
 struct ReduceTaskNodes {
+  CompTaskNode* concat;
   CompTaskNode* scatter;
   CompTaskNode* local_add;
   CompTaskNode* global_add;
   CompTaskNode* gather;
+  CompTaskNode* split;
 
-  ReduceTaskNodes() : scatter(nullptr), local_add(nullptr), global_add(nullptr), gather(nullptr) {}
+  ReduceTaskNodes()
+      : concat(nullptr),
+        scatter(nullptr),
+        local_add(nullptr),
+        global_add(nullptr),
+        gather(nullptr),
+        split(nullptr) {}
 };
 
 void TaskGraph::EnableMemSharingInReduceStruct() {
@@ -162,6 +170,20 @@ void TaskGraph::CollectReduceTaskNodes(
     return nullptr;
   };
 
+  auto FindConcatAndScatter = [&](CompTaskNode* bw_or_md_diff_acc,
+                                  ReduceTaskNodes& reduce_task_nodes) {
+    CompTaskNode* concat_task_node =
+        FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceConcat);
+    if (concat_task_node != nullptr) {
+      reduce_task_nodes.concat = concat_task_node;
+      reduce_task_nodes.scatter =
+          FindSuccReduceTaskNode(reduce_task_nodes.concat, TaskType::kReduceScatter);
+    } else {
+      reduce_task_nodes.scatter =
+          FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
+    }
+  };
+
   ForEachNode([&](TaskNode* task_node) {
     if (IsBackwardTaskType(task_node->GetTaskType()) == false) { return; }
     if (task_node->device_type() != DeviceType::kGPU) { return; }
@@ -174,15 +196,16 @@ void TaskGraph::CollectReduceTaskNodes(
     }
 
     ReduceTaskNodes& reduce_task_nodes = (*bw2reduce_tasks)[bw_task_node];
-    CompTaskNode* tmp_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
-    if (tmp_task_node != nullptr) {
-      reduce_task_nodes.scatter = FindSuccReduceTaskNode(tmp_task_node, TaskType::kReduceScatter);
+    CompTaskNode* diff_acc_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
+    if (diff_acc_task_node != nullptr) {
+      FindConcatAndScatter(diff_acc_task_node, reduce_task_nodes);
     } else {
-      reduce_task_nodes.scatter = FindSuccReduceTaskNode(bw_task_node, TaskType::kReduceScatter);
+      FindConcatAndScatter(bw_task_node, reduce_task_nodes);
     }
-    tmp_task_node = FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
-    if (tmp_task_node != nullptr) {
-      reduce_task_nodes.local_add = tmp_task_node;
+    CompTaskNode* local_add_task_node =
+        FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);
+    if (local_add_task_node != nullptr) {
+      reduce_task_nodes.local_add = local_add_task_node;
       reduce_task_nodes.global_add =
           FindSuccReduceTaskNode(reduce_task_nodes.local_add, TaskType::kReduceGlobalAdd);
     } else {
@@ -191,11 +214,46 @@ void TaskGraph::CollectReduceTaskNodes(
     }
     reduce_task_nodes.gather =
         FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather);
+    reduce_task_nodes.split =
+        FindSuccReduceTaskNode(reduce_task_nodes.gather, TaskType::kReduceSplit);
 
     CHECK(reduce_task_nodes.scatter != nullptr);
     CHECK(reduce_task_nodes.global_add != nullptr);
     CHECK(reduce_task_nodes.gather != nullptr);
   });
+}
+
+void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(const ReduceTaskNodes& reduce_task_nodes,
+                                                          int64_t mem_shared_id) {
+  if (reduce_task_nodes.concat == nullptr) { return; }
+  CHECK(reduce_task_nodes.concat == reduce_task_nodes.split);
+  int32_t reduce_num = reduce_task_nodes.split->produced_regsts().size();
+
+  auto SetMemSharedField4Regst = [&](std::shared_ptr<RegstDesc> regst, int64_t offset) {
+    regst->set_enable_mem_sharing(true);
+    regst->set_mem_shared_id(mem_shared_id);
+    regst->set_mem_shared_offset(offset);
+  };
+
+  std::shared_ptr<RegstDesc> concat_out_regst = reduce_task_nodes.concat->GetProducedRegst("out");
+  std::shared_ptr<RegstDesc> split_in_regst = reduce_task_nodes.split->GetSoleConsumedRegst("in");
+  SetMemSharedField4Regst(concat_out_regst, 0);
+  SetMemSharedField4Regst(split_in_regst, 0);
+
+  int64_t offset = 0;
+  FOR_RANGE(int32_t, idx, 0, reduce_num) {
+    auto concat_in_regst =
+        reduce_task_nodes.concat->GetSoleConsumedRegst("in_" + std::to_string(idx));
+    auto split_out_regst = reduce_task_nodes.split->GetProducedRegst("out_" + std::to_string(idx));
+    const BlobDesc* concat_in_packed = concat_in_regst->GetBlobDesc(GenPackedLbi());
+    const BlobDesc* split_out_packed = split_out_regst->GetBlobDesc(GenPackedLbi());
+    // TODO(jiyuan): use blob_body or data content length ?
+    CHECK_EQ(RtBlobDesc(*concat_in_packed).ByteSizeOfBlobBody(),
+             RtBlobDesc(*split_out_packed).ByteSizeOfBlobBody());
+    SetMemSharedField4Regst(concat_in_regst, offset);
+    SetMemSharedField4Regst(split_out_regst, offset);
+    offset += 0;
+  }
 }
 
 void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_nodes) {
@@ -215,6 +273,8 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     regst->set_mem_shared_id(mem_shared_id);
     regst->set_mem_shared_offset(blob_index2offset.at(blob_id));
   };
+
+  EnableMemSharingInReduceConcatSplitIfNeed(reduce_task_nodes, mem_shared_id);
 
   // scatter
   {

@@ -25,6 +25,7 @@ class CompTaskNode : public TaskNode {
   // logical_node_
   const LogicalNode* logical_node() const { return logical_node_; }
   void set_logical_node(const LogicalNode* val) { logical_node_ = val; }
+  int32_t reduce_id() const;
 
  protected:
   const LogicalNode* GetOneSuccLogicalNodeOnEdge(TaskEdge* edge);

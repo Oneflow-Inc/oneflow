@@ -27,6 +27,18 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
     LogicalBlobId lbi;
     std::vector<LogicalEdge*> edges;
   };
+  struct ReduceCtx {
+    LogicalNode* fw_logical;
+    LogicalNode* bw_logical;
+    LogicalNode* md_diff_acc_logical;
+    LogicalNode* md_updt_logical;
+  };
+  struct ReduceGroup {
+    std::vector<LogicalNode*> fw_logicals;
+    std::vector<LogicalNode*> bw_logicals;
+    std::vector<LogicalNode*> md_diff_acc_logicals;
+    std::vector<LogicalNode*> md_updt_logicals;
+  };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
 
@@ -47,6 +59,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   void BuildAccuracyPrintStruct();
   void BuildModelStruct(bool is_train);
   void BuildReduceStruct(LogicalNode* src, LogicalNode* dst);
+  void BuildReduceStruct(const ReduceGroup& reduce_group);
   void SetupNormalMdUpdtOp();
   MdSaveLogicalNode* BuildMdSaveStruct(const ForwardLogicalNode* fw_logical,
                                        LogicalNode* need_save_logical);
