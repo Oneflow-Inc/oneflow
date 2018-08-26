@@ -5,8 +5,8 @@ namespace oneflow {
 template<DeviceType device_type>
 void ReduceSplitKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
-  // TODO(jiyuan): use enable inplace
-  if (device_type == DeviceType::kGPU) { return; }
+  bool is_inplace = *static_cast<bool*>(ctx.other);
+  if (is_inplace) { return; }
   const Blob* in_blob = BnInOp2Blob("in");
   const char* src_cur_dptr = in_blob->dptr<char>();
   for (const std::string& obn : this->op_attribute().output_bns()) {
