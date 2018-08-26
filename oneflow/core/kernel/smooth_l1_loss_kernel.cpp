@@ -42,7 +42,7 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
       PredType x = inside_weights[i] * (prediction[i] - label[i]);
-      PredType abs_x = x > 0 ? x : -x;
+      PredType abs_x = std::abs(x);
       if (abs_x < beta) {
         loss[i] = 0.5 * x * x / beta;
       } else {
@@ -58,13 +58,13 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
       PredType x = inside_weights[i] * (prediction[i] - label[i]);
-      PredType abs_x = x > 0 ? x : -x;
+      PredType abs_x = std::abs(x);
       if (abs_x < beta) {
         in_diff[i] = x / beta;
       } else {
-        in_diff[i] = x > 0 ? 1 : -1;
+        in_diff[i] = (x > ZeroVal<PredType>::value) - (x < ZeroVal<PredType>::value);
       }
-      in_diff[i] *= scale;
+      in_diff[i] *= scale * inside_weights[i] * outside_weights[i];
     }
   }
 };
