@@ -21,9 +21,9 @@ void ReduceSplitOp::VirtualGenKernelConf(
   int64_t offset = 0;
   for (int32_t i = 0; i < op_conf().reduce_split_conf().out_num(); ++i) {
     reduce_split_conf->mutable_data_offset()->Add(offset);
-    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).ByteSizeOfDataContentField();
+    offset += RtBlobDesc(*(GetBlobDesc4BnInOp(output_bns().Get(i)))).ByteSizeOfBlobBody();
   }
-  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleIbn())).ByteSizeOfDataContentField());
+  CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleIbn())).ByteSizeOfBlobBody());
 }
 
 LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
