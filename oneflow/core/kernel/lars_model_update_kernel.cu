@@ -1,5 +1,6 @@
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/kernel/lars_model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -28,6 +29,17 @@ __global__ void GetLocalLearningRateGpu(int64_t n, int64_t batch_size, T learnin
   }
 }
 
+template<typename T>
+__global__ void UpdateModelGpu(int64_t n, int64_t batch_size, T l1, T l2, T momentum_beta,
+                               const T* pre_model, const T* model_diff, T* momentum, T* model,
+                               T* data_tmp) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+    momentum[i] = momentum_beta * momentum[i] - data_tmp[2] * reg_diff;
+    model[i] = pre_model[i] + momentum[i];
+  }
+}
+
 }  // namespace
 
 template<typename T>
@@ -41,15 +53,10 @@ class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
         n, pre_model, &data_tmp[0]);
     SumOfSquareGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
         n, model_diff, &data_tmp[1]);
-    GetLocalLearningRateGpu<T>
-        <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-            n, batch_size, learning_rate, l2, epsilon, lars_coefficient, next_model_vid, data_tmp);
-    CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
-    T local_learning_rate;
-    CudaCheck(cudaMemcpy(&local_learning_rate, &data_tmp[2], sizeof(T), cudaMemcpyDeviceToHost));
-    NormalMdUpdateKernelUtil<DeviceType::kGPU, T>::UpdateModel(
-        ctx, n, batch_size, local_learning_rate, l1, l2, momentum_beta, pre_model, model_diff,
-        momentum, model);
+    GetLocalLearningRateGpu<T><<<1, 1, 0, ctx->cuda_stream()>>>(
+        n, batch_size, learning_rate, l2, epsilon, lars_coefficient, next_model_vid, data_tmp);
+    UpdateModelGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
+        n, batch_size, l1, l2, momentum_beta, pre_model, model_diff, momentum, model, data_tmp);
   }
 };
 
