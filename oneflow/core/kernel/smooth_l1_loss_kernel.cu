@@ -12,7 +12,7 @@ __global__ void SmoothL1LossForward(const int64_t instance_num, const int64_t in
   int64_t elem_cnt = instance_num * instance_dim;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     PredType x = inside_weights[i] * (prediction[i] - label[i]);
-    PredType abs_x = abs(x);
+    PredType abs_x = x > 0 ? x : -x;
     if (abs_x < beta) {
       loss[i] = 0.5 * x * x / beta;
     } else {
@@ -31,7 +31,7 @@ __global__ void SmoothL1LossBackward(const int64_t instance_num, const int64_t i
   int64_t elem_cnt = instance_num * instance_dim;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     PredType x = inside_weights[i] * (prediction[i] - label[i]);
-    PredType abs_x = abs(x);
+    PredType abs_x = x > 0 ? x : -x;
     if (abs_x < beta) {
       in_diff[i] = x / beta;
     } else {
