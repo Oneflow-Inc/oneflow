@@ -44,9 +44,12 @@ class LARSMdUpdateKernelUtil<DeviceType::kGPU, T> final {
     GetLocalLearningRateGpu<T>
         <<<BlocksNum4ThreadsNum(1), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
             n, batch_size, learning_rate, l2, epsilon, lars_coefficient, next_model_vid, data_tmp);
-    NormalMdUpdateKernelUtil<DeviceType::kGPU, T>::UpdateModel(ctx, n, batch_size, data_tmp[2], l1,
-                                                               l2, momentum_beta, pre_model,
-                                                               model_diff, momentum, model);
+    CudaCheck(cudaStreamSynchronize(ctx->cuda_stream()));
+    T local_learning_rate;
+    CudaCheck(cudaMemcpy(&local_learning_rate, &data_tmp[2], sizeof(T), cudaMemcpyDeviceToHost));
+    NormalMdUpdateKernelUtil<DeviceType::kGPU, T>::UpdateModel(
+        ctx, n, batch_size, local_learning_rate, l1, l2, momentum_beta, pre_model, model_diff,
+        momentum, model);
   }
 };
 
