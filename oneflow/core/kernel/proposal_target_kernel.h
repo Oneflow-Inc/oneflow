@@ -8,6 +8,10 @@ namespace oneflow {
 template<typename T>
 class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
+  using GtBoxesType = GtBoxes<FloatList16>;
+  using GtBoxesWithLabelsType = GtBoxesWithLabels<FloatList16, Int32List16>;
+  using BoxesWithMaxOverlapSlice = MaxOverlapWithGtBoxesSlice<BoxesSlice<T>>;
+
   OF_DISALLOW_COPY_AND_MOVE(ProposalTargetKernel);
   ProposalTargetKernel() = default;
   ~ProposalTargetKernel() = default;
@@ -15,22 +19,21 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  private:
   void ForwardDataContent(const KernelCtx&,
                           std::function<Blob*(const std::string&)>) const override;
-  void RoisNearestGtAndMaxIou(const int64_t rois_num, const T* rpn_rois_ptr,
-                              const FloatList16* gt_boxes_ptr, int32_t* roi_nearest_gt_index_ptr,
-                              T* roi_max_overlap_ptr) const;
-  ScoredBBoxSlice<T> ForegroundChoice(ScoredBBoxSlice<T>& rois_slice) const;
-  ScoredBBoxSlice<T> BackgroundChoice(ScoredBBoxSlice<T>& rois_slice,
-                                      const int64_t fg_sample_size) const;
-  void CopyRoIs(const ScoredBBoxSlice<T>& slice, T* rois_ptr) const;
-
-  void ComputeTargetAndWriteOut(const ScoredBBoxSlice<T>& fg_slice,
-                                const ScoredBBoxSlice<T>& bg_slice,
-                                const int32_t* roi_nearest_gt_index_ptr,
-                                const FloatList16* gt_boxes_ptr, const Int32List16* gt_labels_ptr,
-                                T* rois_ptr, int32_t* labels_ptr, T* bbox_targets_ptr,
-                                T* inside_weights_ptr, T* outside_weights_ptr) const;
   void ForwardDataId(const KernelCtx& ctx,
-                     std::function<Blob*(const std::string&)> BnInOp2Blob) const;
+                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
+
+  GtBoxesWithLabelsType GetImageGtBoxesWithLabels(
+      size_t im_index, const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  BoxesSlice<T> GetRoiBoxesSlice(size_t im_index,
+                                 const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  BoxesWithMaxOverlapSlice ComputeRoiBoxesAndGtBoxesOverlaps(
+      const BoxesSlice<T>& roi_boxes, const GtBoxesType& gt_boxes,
+      const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
+  void ConcatGtBoxesToRoiBoxes(const GtBoxesType& gt_boxes, BoxesSlice<T>& roi_boxes) const;
+  void SubsampleForegroundAndBackground(BoxesWithMaxOverlapSlice& boxes_max_overlap) const;
+  void ComputeAndWriteOutput(size_t im_index, const BoxesWithMaxOverlapSlice& boxes_slice,
+                             const GtBoxesWithLabelsType& gt_boxes,
+                             const std::function<Blob*(const std::string&)>& BnInOp2Blob) const;
 };
 
 }  // namespace oneflow

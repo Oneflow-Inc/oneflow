@@ -638,14 +638,6 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
-message BboxWeightConf
-{
-  optional float weight_x=1 [default = 1.0];
-  optional float weight_y=2 [default = 1.0];
-  optional float weight_w=3 [default = 1.0];
-  optional float weight_h=4 [default = 1.0];
-}
-
 message BboxNormalizeMeansConf
 {
   optional float means_x = 1[default = 0.0];
@@ -666,24 +658,22 @@ message ProposalTargetOpConf
 {
   required string rpn_rois = 1;
   required string gt_boxes = 2;
-  required string gt_label = 3;
+  required string gt_labels = 3;
   required string rois = 4;
   required string labels = 5;
   required string bbox_targets = 6;
   required string bbox_inside_weights = 7;
   required string bbox_outside_weights = 8;
-  required string gt_boxes_tmp = 20;
-  required int32 num_roi_per_image = 9 [default = 256];
-  required float fg_fraction = 10 [default = 0.5];
-  required BboxWeightConf bbox_inside_weight_conf=11;
-  required float fg_thresh = 12;
-  required float bg_thresh_lo = 13;
-  required float bg_thresh_hi = 14;
-  required bool bbox_normalize_targets_precomputed = 15;
-  optional BboxNormalizeMeansConf bbox_normalize_means = 16;
-  optional BboxNormalizeStdsConf bbox_normalize_stds = 17;
-  required int32 class_num = 18;
-  required BBoxRegressionWeights bbox_reg_weights = 19;
+  required float foreground_threshold = 9;
+  required float background_threshold_low = 10;
+  required float background_threshold_high = 11;
+  required float foreground_fraction = 12 [default = 0.5];
+  required BBoxRegressionWeights bbox_reg_weights = 13;
+  required int32 num_classes = 14;
+  required int32 num_rois_per_image = 15 [default = 256];
+  required int32 max_gt_boxes_num = 16 [default = 256];
+  required int32 image_height = 17;
+  required int32 image_width = 18;
 }
 
 enum ScoringMethod {

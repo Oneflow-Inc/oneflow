@@ -5,18 +5,20 @@ namespace oneflow {
 void ProposalTargetOp::InitFromOpConf() {
   CHECK_EQ(this->device_type(), DeviceType::kCPU);
   CHECK(op_conf().has_proposal_target_conf());
+  // Enroll input
   EnrollInputBn("rpn_rois", false);
   EnrollPbInputBn("gt_boxes");
-  EnrollPbInputBn("gt_label");
+  EnrollPbInputBn("gt_labels");
+  // Enroll output
   EnrollOutputBn("rois", false);
   EnrollOutputBn("labels", false);
   EnrollOutputBn("bbox_targets", false);
   EnrollOutputBn("bbox_inside_weights", false);
   EnrollOutputBn("bbox_outside_weights", false);
-  EnrollDataTmpBn("roi_nearest_gt_index");
-  EnrollDataTmpBn("roi_max_overlap");
-  EnrollDataTmpBn("rois_index");
-  EnrollPbOutputBn("gt_boxes_tmp");
+  // Enroll data tmp
+  EnrollDataTmpBn("boxes_index");
+  EnrollDataTmpBn("max_overlaps");
+  EnrollDataTmpBn("max_overlaps_gt_boxes_index");
 }
 
 const PbMessage& ProposalTargetOp::GetCustomizedConf() const {
@@ -27,60 +29,50 @@ void ProposalTargetOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
+  // input: rpn_rois (n, r, 4) T
   const BlobDesc* rpn_rois_blob_desc = GetBlobDesc4BnInOp("rpn_rois");
+  // input: gt_boxes (n) FloatList16 (r * 4)
   const BlobDesc* gt_boxes_blob_desc = GetBlobDesc4BnInOp("gt_boxes");
-  const BlobDesc* gt_label_blob_desc = GetBlobDesc4BnInOp("gt_label");
-  CHECK_EQ(rpn_rois_blob_desc->shape().NumAxes(), 3);
-  CHECK_EQ(gt_boxes_blob_desc->shape().At(0), gt_label_blob_desc->shape().At(0));
-  CHECK_EQ(gt_boxes_blob_desc->shape().NumAxes(), 1);
-  CHECK_EQ(gt_label_blob_desc->shape().NumAxes(), 1);
-  // blob shape: rpn_rois (n,roi_num,4); gt_boxes(n,gt_max_num,4); im_info(n,3);
-  // rois(n,roi_sample,4); labels(n*roi_sample); bbox_target(n*roi_sample,4*class);
-  // bbox_inside_weights(n,roi_sample,4*class); bbox_outside_weights (n,roi_sample,4*class);
-
-  int64_t num_roi_per_image = conf.num_roi_per_image();
-  int64_t class_num = conf.class_num();
-
+  // input: gt_labels (n) Int32List16 (r)
+  const BlobDesc* gt_labels_blob_desc = GetBlobDesc4BnInOp("gt_labels");
+  int64_t image_num = rpn_rois_blob_desc->shape().At(0);
+  CHECK_EQ(image_num, gt_boxes_blob_desc->shape().At(0));
+  CHECK_EQ(image_num, gt_labels_blob_desc->shape().At(0));
+  int64_t rois_num = rpn_rois_blob_desc->shape().At(1);
+  int64_t output_num = conf.num_rois_per_image();
+  int64_t class_num = conf.num_classes();
+  int64_t max_gt_boxes_num = conf.max_gt_boxes_num();
+  DataType data_type = rpn_rois_blob_desc->data_type();
+  // output: rois (n, output_num, 4) T
   BlobDesc* rois_blob_desc = GetBlobDesc4BnInOp("rois");
-  rois_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0), num_roi_per_image, 4});
-  rois_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
+  rois_blob_desc->mut_shape() = Shape({image_num, output_num, 4});
+  rois_blob_desc->set_data_type(data_type);
   rois_blob_desc->set_has_data_id_field(rpn_rois_blob_desc->has_data_id_field());
-
+  // output: labels (n * output_num) int32_t
   BlobDesc* labels_blob_desc = GetBlobDesc4BnInOp("labels");
-  labels_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image});
+  labels_blob_desc->mut_shape() = Shape({image_num * output_num});
   labels_blob_desc->set_data_type(DataType::kInt32);
-  labels_blob_desc->set_has_data_id_field(rpn_rois_blob_desc->has_data_id_field());
-
-  BlobDesc* target_blob_desc = GetBlobDesc4BnInOp("bbox_targets");
-  target_blob_desc->mut_shape() =
-      Shape({rpn_rois_blob_desc->shape().At(0) * num_roi_per_image, 4 * class_num});
-  target_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
-  target_blob_desc->set_has_data_id_field(rpn_rois_blob_desc->has_data_id_field());
-
-  BlobDesc* inside_weights_blob_desc = GetBlobDesc4BnInOp("bbox_inside_weights");
-  inside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
-  inside_weights_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
-
-  BlobDesc* outside_weights_blob_desc = GetBlobDesc4BnInOp("bbox_outside_weights");
-  outside_weights_blob_desc->mut_shape() = Shape(target_blob_desc->shape());
-  outside_weights_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
-
-  // tmp blob shape: roi_nearest_gt_index (roi_num); roi_max_overlap(roi_num) rois_index(roi_num)
-  BlobDesc* roi_nearest_gt_index_blob_desc = GetBlobDesc4BnInOp("roi_nearest_gt_index");
-  roi_nearest_gt_index_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
-  roi_nearest_gt_index_blob_desc->set_data_type(DataType::kInt32);
-
-  BlobDesc* roi_max_overlap_blob_desc = GetBlobDesc4BnInOp("roi_max_overlap");
-  roi_max_overlap_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
-  roi_max_overlap_blob_desc->set_data_type(rpn_rois_blob_desc->data_type());
-
-  BlobDesc* rois_index_blob_desc = GetBlobDesc4BnInOp("rois_index");
-  rois_index_blob_desc->mut_shape() = Shape({rpn_rois_blob_desc->shape().At(1)});
-  rois_index_blob_desc->set_data_type(DataType::kInt32);
-
-  BlobDesc* gt_boxes_tmp_blob_desc = GetBlobDesc4BnInOp("gt_boxes_tmp");
-  gt_boxes_tmp_blob_desc->mut_shape() = Shape({1});
-  gt_boxes_tmp_blob_desc->set_data_type(DataType::kFloatList16);
+  // output: bbox_targets (n * output_num, class_num * 4) T
+  BlobDesc* bbox_targets_blob_desc = GetBlobDesc4BnInOp("bbox_targets");
+  bbox_targets_blob_desc->mut_shape() = Shape({image_num * output_num, class_num * 4});
+  bbox_targets_blob_desc->set_data_type(data_type);
+  // output: bbox_targets (n * output_num, class_num * 4) T
+  *GetBlobDesc4BnInOp("bbox_inside_weights") = *bbox_targets_blob_desc;
+  // output: bbox_targets (n * output_num, class_num * 4) T
+  *GetBlobDesc4BnInOp("bbox_outside_weights") = *bbox_targets_blob_desc;
+  // data tmp: boxes_index (rois_num + max_gt_boxes_num) int32_t
+  BlobDesc* boxes_index_blob_desc = GetBlobDesc4BnInOp("boxes_index");
+  boxes_index_blob_desc->mut_shape() = Shape({rois_num + max_gt_boxes_num});
+  boxes_index_blob_desc->set_data_type(DataType::kInt32);
+  // data tmp: max_overlaps (rois_num + max_gt_boxes_num) float
+  BlobDesc* max_overlaps_blob_desc = GetBlobDesc4BnInOp("max_overlaps");
+  max_overlaps_blob_desc->mut_shape() = Shape({rois_num + max_gt_boxes_num});
+  max_overlaps_blob_desc->set_data_type(DataType::kFloat);
+  // data tmp: max_overlaps_gt_boxes_index (rois_num + max_gt_boxes_num) int32_t
+  BlobDesc* max_overlaps_gt_boxes_index_blob_desc =
+      GetBlobDesc4BnInOp("max_overlaps_gt_boxes_index");
+  max_overlaps_gt_boxes_index_blob_desc->mut_shape() = Shape({rois_num + max_gt_boxes_num});
+  max_overlaps_gt_boxes_index_blob_desc->set_data_type(DataType::kInt32);
 }
 
 REGISTER_OP(OperatorConf::kProposalTargetConf, ProposalTargetOp);
