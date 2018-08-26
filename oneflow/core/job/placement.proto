@@ -12,7 +12,8 @@ enum ParallelPolicy {
 message ParallelContext {
   required int64 parallel_id = 1;
   required int64 parallel_num = 2;
-  required ParallelPolicy policy = 3;
+  required int64 device_num_of_each_machine = 3;
+  required ParallelPolicy policy = 4;
 }
 
 message ParallelConf {

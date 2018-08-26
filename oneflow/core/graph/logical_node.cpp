@@ -238,6 +238,8 @@ void LogicalNode::GenSortedCompTaskNodes(
       comp_task_node->set_logical_node(this);
       comp_task_node->mut_parallel_ctx()->set_parallel_id(parallel_idx++);
       comp_task_node->mut_parallel_ctx()->set_parallel_num(parallel_num);
+      comp_task_node->mut_parallel_ctx()->set_device_num_of_each_machine(
+          parallel_desc_->device_num_of_each_machine());
       comp_task_node->mut_parallel_ctx()->set_policy(parallel_desc_->policy());
       FixCompTaskNode(comp_task_node);
       Handler(comp_task_node);
