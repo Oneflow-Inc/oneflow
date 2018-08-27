@@ -228,7 +228,6 @@ void TaskGraph::CollectReduceTaskNodes(
 void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(const ReduceTaskNodes& reduce_task_nodes,
                                                           int64_t mem_shared_id) {
   if (reduce_task_nodes.concat == nullptr) { return; }
-  CHECK(reduce_task_nodes.concat == reduce_task_nodes.split);
   int32_t reduce_num = reduce_task_nodes.split->produced_regsts().size();
 
   auto SetMemSharedField4Regst = [&](std::shared_ptr<RegstDesc> regst, int64_t offset) {

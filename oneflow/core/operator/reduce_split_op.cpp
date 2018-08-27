@@ -26,13 +26,6 @@ void ReduceSplitOp::VirtualGenKernelConf(
   CHECK_EQ(offset, RtBlobDesc(*GetBlobDesc4BnInOp(SoleIbn())).ByteSizeOfBlobBody());
 }
 
-LogicalBlobId ReduceSplitOp::obn2lbi(const std::string& output_bn) const {
-  LogicalBlobId ret;
-  ret.set_op_name(op_name());
-  ret.set_blob_name(output_bn);
-  return ret;
-}
-
 REGISTER_OP(OperatorConf::kReduceSplitConf, ReduceSplitOp);
 
 }  // namespace oneflow

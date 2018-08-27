@@ -12,6 +12,7 @@ class ReduceConcatCompActor final : public InputWiseCompActor {
   ~ReduceConcatCompActor() = default;
 
  private:
+  void VirtualCompActorInit(const TaskProto& proto) override;
   void SetKernelCtxOther(void** other) override;
 
   std::pair<int64_t, bool> other_val_;

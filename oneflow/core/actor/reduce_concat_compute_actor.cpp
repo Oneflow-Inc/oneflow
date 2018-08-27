@@ -2,6 +2,10 @@
 
 namespace oneflow {
 
+void ReduceConcatCompActor::VirtualCompActorInit(const TaskProto& proto) {
+  InputWiseCompActor::Init(proto);
+}
+
 void ReduceConcatCompActor::SetKernelCtxOther(void** other) {
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
   bool is_inplace_in_blob = EnableInplace() ? true : false;

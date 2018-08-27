@@ -1,5 +1,6 @@
 #include "oneflow/core/graph/reduce_split_compute_task_node.h"
 #include "oneflow/core/graph/logical_node.h"
+#include "oneflow/core/register/register_desc.h"
 
 namespace oneflow {
 
@@ -33,11 +34,9 @@ void ReduceSplitCompTaskNode::BuildExecGphAndRegst() {
   FOR_RANGE(size_t, i, 0, reduce_split_op->output_bns().size()) {
     std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(i));
     CHECK(out_regst.get() != nullptr);
-    const std::string& obn = reduce_split_op->output_bns().Get(i);
-    out_regst->AddLbi(reduce_split_op->BnInOp2Lbi(obn));
-    node->BindBnWithRegst(obn, out_regst);
     out_regst->CopyBlobDescFrom(
         reduce_concat_node->GetSoleConsumedRegst("in_" + std::to_string(i)).get());
+    node->BindBnWithRegst(reduce_split_op->output_bns().Get(i), out_regst);
   }
 }
 

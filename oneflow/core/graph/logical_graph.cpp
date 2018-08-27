@@ -408,6 +408,7 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
   });
 
   // TODO: use chain graph to init the reduce group and set reduce_id for fw, bw, md_updt
+  /*
   std::vector<ReduceGroup> reduce_groups;
   for (auto& reduce_ctx : reduce_ctxs) {
     ReduceGroup reduce_group;
@@ -418,6 +419,21 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
     reduce_groups.emplace_back(reduce_group);
   }
   for (auto& reduce_group : reduce_groups) { BuildReduceStruct(reduce_group); }
+  */
+  ReduceGroup reduce_group;
+  int32_t reduce_id = 0;
+  for (auto& reduce_ctx : reduce_ctxs) {
+    reduce_group.fw_logicals.emplace_back(reduce_ctx.fw_logical);
+    reduce_group.bw_logicals.emplace_back(reduce_ctx.bw_logical);
+    reduce_group.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logical);
+    reduce_group.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logical);
+    reduce_ctx.fw_logical->set_reduce_id(reduce_id);
+    reduce_ctx.bw_logical->set_reduce_id(reduce_id);
+    reduce_ctx.md_diff_acc_logical->set_reduce_id(reduce_id);
+    reduce_ctx.md_updt_logical->set_reduce_id(reduce_id);
+    ++reduce_id;
+  }
+  BuildReduceStruct(reduce_group);
   SetupNormalMdUpdtOp();
 }
 

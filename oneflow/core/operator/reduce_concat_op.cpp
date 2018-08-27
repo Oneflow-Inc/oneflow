@@ -6,7 +6,7 @@ namespace oneflow {
 
 void ReduceConcatOp::InitFromOpConf() {
   CHECK(op_conf().has_reduce_concat_conf());
-  for (int32_t i = 0; i < op_conf().reduce_gather_conf().in_num(); ++i) {
+  for (int32_t i = 0; i < op_conf().reduce_concat_conf().in_num(); ++i) {
     EnrollInputBn("in_" + std::to_string(i), false);
   }
   EnrollOutputBn("out", false);
