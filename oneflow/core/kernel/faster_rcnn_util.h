@@ -339,9 +339,13 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
         max_overlap_ptr_(max_overlap_ptr),
         max_overlap_gt_box_index_ptr_(gt_box_index_ptr) {}
 
-  virtual float GetMaxOverlap(size_t n) const { return max_overlap_ptr_[this->GetIndex(n)]; }
-  virtual int32_t GetMaxOverlapGtBoxIndex(size_t n) const {
-    return max_overlap_gt_box_index_ptr_[this->GetIndex(n)];
+  float GetMaxOverlap(size_t n) const {
+    CHECK_LT(n, this->size());
+    return this->max_overlap(this->GetIndex(n));
+  }
+  int32_t GetMaxOverlapGtBoxIndex(size_t n) const {
+    CHECK_LT(n, this->size());
+    return this->max_overlap_gt_box_index(this->GetIndex(n));
   }
 
   void UpdateMaxOverlapGtBox(int32_t box_index, int32_t gt_box_index, float overlap,
@@ -356,15 +360,15 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
   void SortByOverlap(const std::function<bool(float, float)>& Compare) {
     std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
               [&](int32_t lhs_index, int32_t rhs_index) {
-                return Compare(max_overlap_ptr_[lhs_index], max_overlap_ptr_[rhs_index]);
+                return Compare(this->max_overlap(lhs_index), this->max_overlap(rhs_index));
               });
   }
 
-  int32_t FindByOverlap(const std::function<bool(float)>& Condition) {
-    FOR_RANGE(int32_t, i, 0, this->size()) {
-      if (Condition(max_overlap_ptr_[this->GetIndex(i)])) { return i; }
+  size_t FindByOverlap(const std::function<bool(float)>& Condition) {
+    FOR_RANGE(size_t, i, 0, this->size()) {
+      if (Condition(this->max_overlap(this->GetIndex(i)))) { return i; }
     }
-    return -1;
+    return this->size();
   }
 
   void ForEachOverlap(const std::function<bool(float, size_t, int32_t)>& Hanlder) {
@@ -374,9 +378,16 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
     }
   }
 
-  float max_overlap(int32_t index) const { return max_overlap_ptr_[index]; }
+  float max_overlap(int32_t index) const {
+    if (index < 0) { return 1; }
+    return max_overlap_ptr_[index];
+  }
   int32_t max_overlap_gt_box_index(int32_t index) const {
+    if (index < 0) { return -index - 1; }
     return max_overlap_gt_box_index_ptr_[index];
+  }
+  void set_max_overlap_gt_box_index(int32_t index, int32_t gt_index) {
+    max_overlap_gt_box_index_ptr_[index] = gt_index;
   }
 
  private:
@@ -389,33 +400,6 @@ BoxesToNearestGtBoxesSlice<SliceType> GenBoxesToNearestGtBoxesSlice(const SliceT
                                                                     float* max_overlap_ptr,
                                                                     int32_t* gt_box_index_ptr) {
   return BoxesToNearestGtBoxesSlice<SliceType>(slice, max_overlap_ptr, gt_box_index_ptr);
-}
-
-template<typename SliceType>
-class MaxOverlapWithGtBoxesSlice : public BoxesToNearestGtBoxesSlice<SliceType> {
- public:
-  MaxOverlapWithGtBoxesSlice(const SliceType& slice, float* max_overlap_ptr,
-                             int32_t* gt_box_index_ptr)
-      : BoxesToNearestGtBoxesSlice<SliceType>(slice, max_overlap_ptr, gt_box_index_ptr) {}
-
-  float GetMaxOverlap(size_t n) const override {
-    int32_t index = this->GetIndex(n);
-    if (index < 0) { return 1; }
-    return this->max_overlap(index);
-  }
-
-  int32_t GetMaxOverlapGtBoxIndex(size_t n) const override {
-    int32_t index = this->GetIndex(n);
-    if (this->GetIndex(n) < 0) { return -index - 1; }
-    return this->max_overlap_gt_box_index(index);
-  }
-};
-
-template<typename SliceType>
-MaxOverlapWithGtBoxesSlice<SliceType> GenMaxOverlapWithGtBoxesSlice(const SliceType& slice,
-                                                                    float* max_overlap_ptr,
-                                                                    int32_t* gt_box_index_ptr) {
-  return MaxOverlapWithGtBoxesSlice<SliceType>(slice, max_overlap_ptr, gt_box_index_ptr);
 }
 
 template<typename SliceType>
@@ -528,8 +512,8 @@ class GtBoxes {
     FOR_RANGE(size_t, i, 0, size()) {
       bbox[i].set_x1(bbox[i].x1() * im_w);
       bbox[i].set_y1(bbox[i].y1() * im_h);
-      bbox[i].set_x2(bbox[i].x2() * im_w);
-      bbox[i].set_y2(bbox[i].y2() * im_h);
+      bbox[i].set_x2(bbox[i].x2() * im_w - 1);
+      bbox[i].set_y2(bbox[i].y2() * im_h - 1);
     }
   }
 
@@ -554,7 +538,11 @@ class GtBoxesWithLabels : public GtBoxes<BoxListType> {
     CHECK_EQ(this->size(), size);
   }
 
-  int32_t GetLabel(size_t index) const { return label_list_.value().value(index); }
+  int32_t GetLabel(int32_t index) const {
+    if (index < 0) { return 0; }
+    return label_list_.value().value(index);
+  }
+
   const LabelListType& label_list() const { return label_list_; }
 
  private:

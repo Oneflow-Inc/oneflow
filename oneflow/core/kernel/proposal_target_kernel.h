@@ -10,7 +10,7 @@ class ProposalTargetKernel final : public KernelIf<DeviceType::kCPU> {
  public:
   using GtBoxesType = GtBoxes<FloatList16>;
   using GtBoxesWithLabelsType = GtBoxesWithLabels<FloatList16, Int32List16>;
-  using BoxesWithMaxOverlapSlice = MaxOverlapWithGtBoxesSlice<BoxesSlice<T>>;
+  using BoxesWithMaxOverlapSlice = BoxesToNearestGtBoxesSlice<BoxesSlice<T>>;
 
   OF_DISALLOW_COPY_AND_MOVE(ProposalTargetKernel);
   ProposalTargetKernel() = default;

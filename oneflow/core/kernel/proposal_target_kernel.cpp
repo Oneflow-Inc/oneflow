@@ -28,14 +28,18 @@ void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, int32_t label,
                             BBoxDelta<T>* roi_boxes_target) {
   if (index >= 0) {
     const BBox<T>* box = boxes_slice.bbox(index);
-    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
     CopyBoxes(box, roi_boxes);
-    ComputeBoxesDelta(label, box, gt_box, bbox_reg_ws, roi_boxes_target);
+    if (gt_index >= 0) {
+      const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
+      ComputeBoxesDelta(label, box, gt_box, bbox_reg_ws, roi_boxes_target);
+    }
   } else {
     const BBox<float>* box = gt_boxes.GetBBox<float>(-index - 1);
-    const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
     CopyBoxes(box, roi_boxes);
-    ComputeBoxesDelta(label, box, gt_box, bbox_reg_ws, roi_boxes_target);
+    if (gt_index >= 0) {
+      const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
+      ComputeBoxesDelta(label, box, gt_box, bbox_reg_ws, roi_boxes_target);
+    }
   }
 }
 
@@ -86,7 +90,7 @@ ProposalTargetKernel<T>::ComputeRoiBoxesAndGtBoxesOverlaps(
   Blob* max_overlaps_blob = BnInOp2Blob("max_overlaps");
   std::memset(max_overlaps_blob->mut_dptr(), 0,
               max_overlaps_blob->shape().elem_cnt() * sizeof(float));
-  auto boxes_overlap_slice = GenMaxOverlapWithGtBoxesSlice(
+  BoxesWithMaxOverlapSlice boxes_overlap_slice(
       roi_boxes, max_overlaps_blob->mut_dptr<float>(),
       BnInOp2Blob("max_overlaps_gt_boxes_index")->mut_dptr<int32_t>());
   FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
@@ -112,18 +116,19 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
   boxes_max_overlap.SortByOverlap(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap > rhs_overlap; });
   boxes_max_overlap.ForEachOverlap([&](float overlap, size_t n, int32_t index) {
-    if (overlap < conf.foreground_threshold() && fg_end == -1) {
-      fg_end = n;
-    } else if (overlap < conf.background_threshold_high() && bg_begin == -1) {
-      bg_begin = n;
-    } else if (overlap < conf.background_threshold_low()) {
+    if (overlap < conf.foreground_threshold() && fg_end == -1) { fg_end = n; }
+    if (overlap < conf.background_threshold_high()) {
+      if (bg_begin == -1) { bg_begin = n; }
+      boxes_max_overlap.set_max_overlap_gt_box_index(index, -1);
+    }
+    if (overlap < conf.background_threshold_low()) {
       bg_end = n;
       return false;
     }
     return true;
   });
   CHECK_GT(fg_end, 0);
-  CHECK_GT(bg_begin, fg_end);
+  CHECK_GE(bg_begin, fg_end);
   CHECK_GT(bg_end, bg_begin);
 
   size_t total_sample_cnt = conf.num_rois_per_image();

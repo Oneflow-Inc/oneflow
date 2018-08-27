@@ -29,6 +29,7 @@ void ProposalTargetOp::InferBlobDescs(
     std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
     const ParallelContext* parallel_ctx) const {
   const ProposalTargetOpConf& conf = op_conf().proposal_target_conf();
+  // TODO: Check conf
   // input: rpn_rois (n, r, 4) T
   const BlobDesc* rpn_rois_blob_desc = GetBlobDesc4BnInOp("rpn_rois");
   // input: gt_boxes (n) FloatList16 (r * 4)
