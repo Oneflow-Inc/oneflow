@@ -217,6 +217,7 @@ void TaskGraph::CollectReduceTaskNodes(
         FindSuccReduceTaskNode(reduce_task_nodes.global_add, TaskType::kReduceGather);
     reduce_task_nodes.split =
         FindSuccReduceTaskNode(reduce_task_nodes.gather, TaskType::kReduceSplit);
+    if (reduce_task_nodes.split == nullptr) { CHECK(reduce_task_nodes.concat == nullptr); }
 
     CHECK(reduce_task_nodes.scatter != nullptr);
     CHECK(reduce_task_nodes.global_add != nullptr);
