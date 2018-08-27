@@ -19,8 +19,6 @@ class ReduceGlobalAddCompTaskNode final : public CompTaskNode {
 
  private:
   void BuildExecGphAndRegst() override;
-
-  PbRf<int64_t> in_parallel_ids_;
 };
 
 }  // namespace oneflow

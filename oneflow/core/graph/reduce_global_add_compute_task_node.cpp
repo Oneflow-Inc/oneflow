@@ -12,9 +12,13 @@ void ReduceGlobalAddCompTaskNode::ConsumeAllRegsts() {
   for (TaskEdge* edge : in_edges()) {
     std::vector<CompTaskNode*> pred_comp_task_nodes = GetPredCompTaskNodesOnEdge(edge);
     CHECK_EQ(pred_comp_task_nodes.size(), 1);
-    int64_t parallel_id = pred_comp_task_nodes.front()->parallel_id();
-    ConsumeRegst("in_" + std::to_string(parallel_id), edge->GetSoleRegst());
-    in_parallel_ids_.Add(parallel_id);
+    const ParallelContext* pre_parallel_ctx = pred_comp_task_nodes.front()->parallel_ctx();
+    int64_t pre_parallel_id = pre_parallel_ctx->parallel_id();
+    int64_t device_num_of_each_machine = pre_parallel_ctx->device_num_of_each_machine();
+    CHECK_EQ(pre_parallel_id % device_num_of_each_machine,
+             parallel_id() % device_num_of_each_machine);
+    ConsumeRegst("in_" + std::to_string(pre_parallel_id / device_num_of_each_machine),
+                 edge->GetSoleRegst());
   }
 }
 
@@ -23,8 +27,7 @@ void ReduceGlobalAddCompTaskNode::BuildExecGphAndRegst() {
   OperatorConf reduce_global_add_op_conf;
   reduce_global_add_op_conf.set_name("reduce_global_add_" + NewUniqueId());
   reduce_global_add_op_conf.set_device_type(this->device_type());
-  *reduce_global_add_op_conf.mutable_reduce_global_add_conf()->mutable_in_parallel_ids() =
-      in_parallel_ids_;
+  reduce_global_add_op_conf.mutable_reduce_global_add_conf()->set_in_num(in_edges().size());
   std::shared_ptr<Operator> reduce_global_add_op = ConstructOp(reduce_global_add_op_conf);
   node->mut_op() = reduce_global_add_op;
   for (const std::string& input_bn : reduce_global_add_op->input_bns()) {

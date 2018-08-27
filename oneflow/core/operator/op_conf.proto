@@ -587,7 +587,7 @@ message ReduceLocalAddOpConf {
 };
 
 message ReduceGlobalAddOpConf {
-  repeated int64 in_parallel_ids = 1;
+  required int32 in_num = 1;
 };
 
 message ReduceGatherOpConf {
