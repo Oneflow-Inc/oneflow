@@ -76,19 +76,21 @@ def generate():
         machine_list.append(
             render(machine_tpl, {
                 "addr": "127.0.0.1",
-                "port": int(open_port),
-                "port_map": int(open_port),
+                "port":10001, 
+                "port_map": 10001,
                 "name": 0
             })
         )
     else:
-        for m in host_list:
+        for x in range(0, 2):
+            # PAI_PORT_LIST_oneflow_runner_x2_1=10.11.2.45,10077,10044,10097
+            machine_info = os.getenv('PAI_PORT_LIST_' + role_name + '_' + str(x)).split(',')
             machine_list.append(
                 render(machine_tpl, {
-                    "addr": m,
-                    "port": int(open_port),
-                    "port_map": 10001,
-                    "name": host_list.index(m)
+                    "addr": machine_info[0],
+                    "port": 10001,
+                    "port_map": machine_info[1],
+                    "name": x
                 })
             )
     
