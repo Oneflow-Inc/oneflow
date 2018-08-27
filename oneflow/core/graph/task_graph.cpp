@@ -270,24 +270,28 @@ void TaskGraph::EnableMemSharingInOneReduce(const ReduceTaskNodes& reduce_task_n
     }
   }
 
-  auto HandleMemSharedFieldOfConsumedRegsts = [&](CompTaskNode* task_node,
-                                                  int64_t consumed_regst_num) {
-    auto& consumed_regsts = task_node->consumed_regsts();
-    CHECK_EQ(consumed_regst_num, consumed_regsts.size());
-    for (const auto& kv : consumed_regsts) {
-      int64_t in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
-      CHECK_EQ(1, kv.second.size());
-      RegstDesc* consumed_regst = kv.second.front().get();
-      SetOrCheck4ConsumedRegst(consumed_regst, in_parallel_id == parallel_id, in_parallel_id);
-    }
-  };
   // global add
-  int consumed_regst_num = reduce_task_nodes.local_add ? machine_num : parallel_num;
-  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.global_add, consumed_regst_num);
+  auto& global_add_consumed_regsts = reduce_task_nodes.global_add->consumed_regsts();
+  CHECK_EQ(machine_num, global_add_consumed_regsts.size());
+  for (const auto& kv : global_add_consumed_regsts) {
+    int64_t in_regst_id = oneflow_cast<int64_t>(kv.first.substr(3));
+    int64_t in_parallel_id =
+        in_regst_id * dev_num_of_each_machine + parallel_id % dev_num_of_each_machine;
+    CHECK_EQ(1, kv.second.size());
+    RegstDesc* consumed_regst = kv.second.front().get();
+    SetOrCheck4ConsumedRegst(consumed_regst, in_parallel_id == parallel_id, in_parallel_id);
+  }
   SetMemSharedField4Regst(reduce_task_nodes.global_add->GetProducedRegst("out").get(), parallel_id);
 
   // gather
-  HandleMemSharedFieldOfConsumedRegsts(reduce_task_nodes.gather, parallel_num);
+  auto& gather_consumed_regsts = reduce_task_nodes.gather->consumed_regsts();
+  CHECK_EQ(parallel_num, gather_consumed_regsts.size());
+  for (const auto& kv : gather_consumed_regsts) {
+    int64_t in_parallel_id = oneflow_cast<int64_t>(kv.first.substr(3));
+    CHECK_EQ(1, kv.second.size());
+    RegstDesc* consumed_regst = kv.second.front().get();
+    SetOrCheck4ConsumedRegst(consumed_regst, in_parallel_id == parallel_id, in_parallel_id);
+  }
   SetMemSharedField4Regst(reduce_task_nodes.gather->GetProducedRegst("out").get(), 0);
 }
 
