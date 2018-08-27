@@ -73,7 +73,7 @@ BoxesSlice<T> ProposalTargetKernel<T>::GetRoiBoxesSlice(
   Blob* boxes_index_blob = BnInOp2Blob("boxes_index");
   BoxesSlice<T> roi_boxes_slice(boxes_index_blob->shape().elem_cnt(),
                                 boxes_index_blob->mut_dptr<int32_t>(),
-                                BnInOp2Blob("rois")->dptr<T>(im_index));
+                                BnInOp2Blob("rpn_rois")->dptr<T>(im_index));
   roi_boxes_slice.Truncate(BnInOp2Blob("rpn_rois")->shape().At(1));
   return roi_boxes_slice;
 }
@@ -83,8 +83,11 @@ typename ProposalTargetKernel<T>::BoxesWithMaxOverlapSlice
 ProposalTargetKernel<T>::ComputeRoiBoxesAndGtBoxesOverlaps(
     const BoxesSlice<T>& roi_boxes, const GtBoxesType& gt_boxes,
     const std::function<Blob*(const std::string&)>& BnInOp2Blob) const {
+  Blob* max_overlaps_blob = BnInOp2Blob("max_overlaps");
+  std::memset(max_overlaps_blob->mut_dptr(), 0,
+              max_overlaps_blob->shape().elem_cnt() * sizeof(float));
   auto boxes_overlap_slice = GenMaxOverlapWithGtBoxesSlice(
-      roi_boxes, BnInOp2Blob("max_overlaps")->mut_dptr<float>(),
+      roi_boxes, max_overlaps_blob->mut_dptr<float>(),
       BnInOp2Blob("max_overlaps_gt_boxes_index")->mut_dptr<int32_t>());
   FasterRcnnUtil<T>::ForEachOverlapBetweenBoxesAndGtBoxes(
       roi_boxes, gt_boxes, [&](int32_t index, int32_t gt_index, float overlap) {
@@ -109,9 +112,9 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
   boxes_max_overlap.SortByOverlap(
       [](float lhs_overlap, float rhs_overlap) { return lhs_overlap > rhs_overlap; });
   boxes_max_overlap.ForEachOverlap([&](float overlap, size_t n, int32_t index) {
-    if (overlap < conf.foreground_threshold()) {
+    if (overlap < conf.foreground_threshold() && fg_end == -1) {
       fg_end = n;
-    } else if (overlap < conf.background_threshold_high()) {
+    } else if (overlap < conf.background_threshold_high() && bg_begin == -1) {
       bg_begin = n;
     } else if (overlap < conf.background_threshold_low()) {
       bg_end = n;

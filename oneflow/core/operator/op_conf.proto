@@ -638,24 +638,7 @@ message AccuracyOpConf {
   required string accuracy = 4;
 }
 
-message BboxNormalizeMeansConf
-{
-  optional float means_x = 1[default = 0.0];
-  optional float means_y = 2[default = 0.0];
-  optional float means_w = 3[default = 0.0];
-  optional float means_h = 4[default = 0.0];
-}
-
-message BboxNormalizeStdsConf
-{
-  optional float stds_x = 1[default = 1.0];
-  optional float stds_y = 2[default = 1.0];
-  optional float stds_w = 3[default = 1.0];
-  optional float stds_h = 4[default = 1.0];
-}
-
-message ProposalTargetOpConf
-{
+message ProposalTargetOpConf {
   required string rpn_rois = 1;
   required string gt_boxes = 2;
   required string gt_labels = 3;
