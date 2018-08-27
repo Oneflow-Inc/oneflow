@@ -97,6 +97,7 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedBlob(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeProducedRegst(); });
+  ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
 void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
