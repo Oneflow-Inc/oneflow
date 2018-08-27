@@ -50,6 +50,7 @@ class ExecNode final : public Node<ExecNode, ExecEdge> {
   void AddBnToRegstAndBindIt(const PbRpf<std::string>& (Operator::*bns_getter)() const,
                              std::shared_ptr<RegstDesc>);
   void BindBnWithOneOfTheRegsts(const std::string&, const std::list<std::shared_ptr<RegstDesc>>&);
+  void UnbindBnWithEmptyRegst();
 
   void set_fw_node(ExecNode* val) { fw_node_ = val; }
   ExecNode* fw_node() { return fw_node_; }
