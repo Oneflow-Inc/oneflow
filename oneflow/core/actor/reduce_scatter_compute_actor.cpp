@@ -2,9 +2,13 @@
 
 namespace oneflow {
 
+void ReduceScatterCompActor::VirtualCompActorInit(const TaskProto& proto) {
+  InputWiseCompActor::Init(proto);
+}
+
 void ReduceScatterCompActor::SetKernelCtxOther(void** other) {
-  bool is_inplace_in_blob = EnableInplace() ? true : false;
-  *other = static_cast<void*>(&is_inplace_in_blob);
+  other_val_ = EnableInplace() ? true : false;
+  *other = static_cast<void*>(&other_val_);
 }
 
 REGISTER_ACTOR(TaskType::kReduceScatter, ReduceScatterCompActor);

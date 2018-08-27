@@ -12,6 +12,7 @@ class ReduceScatterCompActor final : public InputWiseCompActor {
   ~ReduceScatterCompActor() = default;
 
  private:
+  void VirtualCompActorInit(const TaskProto& proto) override;
   void SetKernelCtxOther(void** other) override;
 
   bool other_val_;
