@@ -1,23 +1,17 @@
-#include <oneflow/core/operator/fully_connected_op.h>
+#include "oneflow/core/operator/fully_connected_op.h"
 #include "oneflow/core/graph/reduce_graph.h"
-#include "reduce_graph.h"
 
 namespace oneflow {
+
 struct ReduceGraph::Group {
   std::vector<const LogicalNode*> nodes;
   HashSet<const LogicalNode*> ancestors;
   HashSet<const LogicalNode*> ancestors_and_this;
   HashSet<const LogicalNode*> descendants;
   HashSet<const LogicalNode*> descendants_and_this;
+  bool is_mergeable;
 
-  bool IsMergeable() const {
-    CHECK_GT(nodes.size(), 0);
-    const LogicalNode* logical_node = nodes.front();
-    if (logical_node->parallel_desc()->policy() != kDataParallel) { return false; }
-    if (!dynamic_cast<const NormalForwardLogicalNode*>(logical_node)) { return false; }
-    if (dynamic_cast<FullyConnectedOp*>(logical_node->op_vec().front().get())) { return false; }
-    return true;
-  };
+  bool IsMergeable() const { return is_mergeable; };
 
   bool IsParallelDescEqual(const Group& rhs) const {
     CHECK_GT(nodes.size(), 0);
@@ -25,8 +19,8 @@ struct ReduceGraph::Group {
     return nodes.front()->parallel_desc()->Equal(rhs.nodes.front()->parallel_desc().get());
   }
 };
-ReduceGraph::ReduceGraph(const LogicalGraph& logical_graph) : Graph() {
 
+ReduceGraph::ReduceGraph(const LogicalGraph& logical_graph) : Graph() {
   std::list<Group> group_list;
   HashMap<const LogicalNode*, std::list<Group>::iterator> logical2group_it;
 
@@ -43,6 +37,7 @@ void ReduceGraph::InitGroups(
     logical2group_it->insert({node, --group_list->end()});
     Group& group = group_list->back();
     group.nodes = {node};
+    group.is_mergeable = IsLogicalNodeMergeable(node);
   });
 
   logical_graph.TopoForEachNode([&](const LogicalNode* node) {
@@ -149,9 +144,25 @@ void ReduceGraph::BuildGraph(const LogicalGraph& logical_graph, std::list<Group>
   });
 
   for (auto& pair : pred_succ_pairs) {
+    if(pair.first == pair.second) {
+      continue;
+    }
     ReduceEdge* edge = NewEdge();
     Connect(pair.first, edge, pair.second);
   }
+}
+
+bool ReduceGraph::IsLogicalNodeMergeable(const LogicalNode* logical_node) const {
+  if (logical_node->parallel_desc()->policy() != kDataParallel) { return false; }
+
+  if (!dynamic_cast<const NormalForwardLogicalNode*>(logical_node)) { return false; }
+
+  for (const std::shared_ptr<Operator>& op : logical_node->op_vec()) {
+    if (dynamic_cast<FullyConnectedOp*>(op.get())) { return false; }
+    if (op->IsRecurrentOp()) { return false; }
+  }
+
+  return true;
 }
 
 }  // namespace oneflow

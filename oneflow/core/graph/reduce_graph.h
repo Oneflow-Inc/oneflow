@@ -43,6 +43,7 @@ class ReduceGraph final : public Graph<ReduceNode, ReduceEdge> {
   bool TryMergeOneGroup(std::list<Group> *group_list,
                         HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
   void BuildGraph(const LogicalGraph &logical_graph, std::list<Group> *group_list);
+  bool IsLogicalNodeMergeable(const LogicalNode *logical_node) const;
 };
 
 }  // namespace oneflow
