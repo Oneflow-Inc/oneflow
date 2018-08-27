@@ -1,3 +1,4 @@
+#include <oneflow/core/operator/fully_connected_op.h>
 #include "oneflow/core/graph/reduce_graph.h"
 #include "reduce_graph.h"
 
@@ -12,11 +13,9 @@ struct ReduceGraph::Group {
   bool IsMergeable() const {
     CHECK_GT(nodes.size(), 0);
     const LogicalNode* logical_node = nodes.front();
-
     if (logical_node->parallel_desc()->policy() != kDataParallel) { return false; }
-
     if (!dynamic_cast<const NormalForwardLogicalNode*>(logical_node)) { return false; }
-
+    if (dynamic_cast<FullyConnectedOp*>(logical_node->op_vec().front().get())) { return false; }
     return true;
   };
 
@@ -27,6 +26,7 @@ struct ReduceGraph::Group {
   }
 };
 ReduceGraph::ReduceGraph(const LogicalGraph& logical_graph) : Graph() {
+
   std::list<Group> group_list;
   HashMap<const LogicalNode*, std::list<Group>::iterator> logical2group_it;
 
@@ -39,15 +39,10 @@ void ReduceGraph::InitGroups(
     const LogicalGraph& logical_graph, std::list<Group>* group_list,
     HashMap<const LogicalNode*, std::list<Group>::iterator>* logical2group_it) {
   logical_graph.ForEachNode([&](const LogicalNode* node) {
-
     group_list->emplace_back();
-
     logical2group_it->insert({node, --group_list->end()});
-
     Group& group = group_list->back();
-
     group.nodes = {node};
-
   });
 
   logical_graph.TopoForEachNode([&](const LogicalNode* node) {
@@ -87,9 +82,10 @@ void ReduceGraph::MergeGroups(
 bool ReduceGraph::TryMergeOneGroup(
     std::list<Group>* group_list,
     HashMap<const LogicalNode*, std::list<Group>::iterator>* logical2group_it) {
-  for (auto lhs = group_list->begin(); lhs != (--group_list->end()); ++lhs) {
+  for (auto lhs = group_list->begin(); lhs != group_list->end(); ++lhs) {
     if (!lhs->IsMergeable()) { continue; }
-    for (auto rhs = (++lhs); rhs != group_list->end(); ++rhs) {
+    for (auto rhs = lhs; rhs != group_list->end(); ++rhs) {
+      if (lhs == rhs) { continue; }
       if (!rhs->IsMergeable()) { continue; }
       if (!lhs->IsParallelDescEqual(*rhs)) { continue; }
       if (lhs->ancestors != rhs->ancestors || lhs->descendants != rhs->descendants) { continue; }
@@ -108,12 +104,12 @@ bool ReduceGraph::TryMergeOneGroup(
        ++succ_group_it) {
     if (!succ_group_it->IsMergeable()) { continue; }
 
-    for (const LogicalNode* node : succ_group_it->nodes) {
-      for (const LogicalEdge* in_edge : node->in_edges()) {
+    for (const LogicalNode* node_in_succ : succ_group_it->nodes) {
+      for (const LogicalEdge* in_edge : node_in_succ->in_edges()) {
         auto pred_group_it = logical2group_it->at(in_edge->src_node());
+        if (pred_group_it == succ_group_it) { continue; }
         if (!pred_group_it->IsMergeable()) { continue; }
         if (!pred_group_it->IsParallelDescEqual(*succ_group_it)) { continue; }
-
         if (pred_group_it->ancestors_and_this != succ_group_it->ancestors
             || pred_group_it->descendants != succ_group_it->descendants_and_this) {
           continue;
@@ -135,22 +131,24 @@ bool ReduceGraph::TryMergeOneGroup(
 }
 
 void ReduceGraph::BuildGraph(const LogicalGraph& logical_graph, std::list<Group>* group_list) {
-  HashMap<const LogicalNode*, ReduceNode*> logical_node2reduce_node_;
+  HashMap<const LogicalNode*, ReduceNode*> logical_node2reduce_node;
 
-  for (Group& group : *group_list) {
+  for (const Group& group : *group_list) {
     ReduceNode* reduce_node = NewNode();
     reduce_node->mut_logical_nodes() = group.nodes;
-    for (const LogicalNode* node : group.nodes) { logical_node2reduce_node_[node] = reduce_node; }
+    for (const LogicalNode* node : group.nodes) {
+      CHECK(logical_node2reduce_node.emplace(node, reduce_node).second);
+    }
   }
 
-  std::unordered_set<std::pair<ReduceNode*, ReduceNode*>> set;
+  std::unordered_set<std::pair<ReduceNode*, ReduceNode*>> pred_succ_pairs;
 
   logical_graph.ForEachEdge([&](const LogicalEdge* edge) {
-    set.emplace(logical_node2reduce_node_.at(edge->src_node()),
-                logical_node2reduce_node_.at(edge->dst_node()));
+    pred_succ_pairs.emplace(logical_node2reduce_node.at(edge->src_node()),
+                            logical_node2reduce_node.at(edge->dst_node()));
   });
 
-  for (auto& pair : set) {
+  for (auto& pair : pred_succ_pairs) {
     ReduceEdge* edge = NewEdge();
     Connect(pair.first, edge, pair.second);
   }

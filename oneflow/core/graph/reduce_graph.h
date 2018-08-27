@@ -44,6 +44,7 @@ class ReduceGraph final : public Graph<ReduceNode, ReduceEdge> {
                         HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
   void BuildGraph(const LogicalGraph &logical_graph, std::list<Group> *group_list);
 };
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_GRAPH_REDUCE_GRAPH_H_
