@@ -362,5 +362,5 @@ std::map<TaskType, std::string> task_type2color = {
     {kCopyCommNet, "9"},   {kBoxing, "10"},        {kPrint, "1"},
     {kReduceScatter, "2"}, {kReduceLocalAdd, "2"}, {kReduceGlobalAdd, "2"},
     {kReduceGather, "2"},  {kAccuracy, "4"},       {kAccuracyPrint, "1"},
-    {kAccuracyAcc, "5"}};
+    {kAccuracyAcc, "5"},   {kDecodeRandom, "1"}};
 }  // namespace oneflow
