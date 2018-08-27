@@ -30,6 +30,13 @@ void ExecNode::BindBnWithOneOfTheRegsts(const std::string& bn,
   CHECK(has_binded);
 }
 
+void ExecNode::UnbindBnWithEmptyRegst() {
+  EraseIf<std::string, std::shared_ptr<RegstDesc>>(
+      &bn_in_op2regst_, [](HashMap<std::string, std::shared_ptr<RegstDesc>>::iterator it) {
+        return it->second->regst_desc_type().has_data_regst_desc() && it->second->NumOfLbi() == 0;
+      });
+}
+
 void ExecNode::ToProto(bool is_forward, const ParallelContext* parallel_ctx,
                        ExecNodeProto* ret) const {
   op_->GenKernelConf(GetBlobDesc4BnInOpFunc(), is_forward, parallel_ctx, ret->mutable_kernel_conf(),
