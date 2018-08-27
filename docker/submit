@@ -49,7 +49,7 @@ def check():
 def run():
     check()
 
-    cmdTpl=Template('$excutable -job_conf=$job_conf -this_machine_name=$this_machine_name -log_dir=$log_dir-$this_machine_name & tail --retry -f $log_dir/oneflow.INFO')
+    cmdTpl=Template('$excutable -job_conf=$job_conf -this_machine_name=$this_machine_name -log_dir=$log_dir-$this_machine_name & tail --retry -f $log_dir-$this_machine_name/oneflow.INFO')
     cmdValue={
         "excutable": find_executable('oneflow'),
         "job_conf": os.path.join(os.path.join(CONF_PATH, 'job.prototxt')),
