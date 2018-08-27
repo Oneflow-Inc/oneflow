@@ -75,3 +75,9 @@ ls | xargs sed -i "s#http://down.geeek.info/deps/#<local_folder>/#"
 
 0 directories, 3 files
 ```
+
+### submit
+
+```bash
+    PATH=/userhome/bin:$PATH CONF_PATH=/userhome/runner/imagenet_30/ LOG_DIR=/userhome/runner/imagenet_30/log submit
+```
