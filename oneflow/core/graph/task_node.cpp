@@ -118,6 +118,10 @@ void TaskNode::EraseZeroSizeProducedRegst() {
       });
 }
 
+void TaskNode::UnbindBnWithEmptyRegst() {
+  exec_gph_.ForEachNode([&](ExecNode* exec_node) { exec_node->UnbindBnWithEmptyRegst(); });
+}
+
 std::string TaskNode::VisualStr() const {
   std::stringstream ss;
   ss << TaskType_Name(GetTaskType()) << "\\n"
