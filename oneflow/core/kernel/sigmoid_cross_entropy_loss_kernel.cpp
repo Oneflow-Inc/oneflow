@@ -12,7 +12,7 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   const Blob* label = BnInOp2Blob("label");
   Blob* loss_buf = BnInOp2Blob("loss_buf");
   Blob* tmp_storage = BnInOp2Blob("sum_buf");
-  const size_t tmp_storage_byte_size = static_cast<size_t>(tmp_storage->shape().At(0));
+  const size_t tmp_storage_byte_size = static_cast<size_t>(tmp_storage->shape().elem_cnt());
   Blob* count = BnInOp2Blob("count");
   Blob* label_num = BnInOp2Blob("label_num");
   Blob* loss = BnInOp2Blob("loss");
