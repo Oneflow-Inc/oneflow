@@ -9,8 +9,8 @@ void ReduceConcatCompTaskNode::ProduceAllRegstsAndBindEdges() {
 
 void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
   struct EdgeInfo {
-    TaskEdge* edge;
     int64_t bw_node_order;
+    TaskEdge* edge;
   };
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : in_edges()) {
@@ -19,7 +19,8 @@ void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
       src_node = src_node->SoleInEdge()->src_node();
     }
     CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
-    EdgeInfo edge_info{edge, bw_node->order_in_graph()};
+    EdgeInfo edge_info{bw_node->order_in_graph(), edge};
+    // EdgeInfo edge_info{bw_node->reduce_id(), edge};
     edge_infos.emplace_back(edge_info);
   }
   std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {

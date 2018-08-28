@@ -6,8 +6,8 @@ namespace oneflow {
 
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   struct EdgeInfo {
-    TaskEdge* edge;
     int64_t bw_node_order;
+    TaskEdge* edge;
   };
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
@@ -17,10 +17,14 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
     }
     CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
     for (TaskEdge* mdupdt_edge : mdupdt_node->out_edges()) {
-      // TODO
+      if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
+        CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
+        // There may be multiple out_regst on the same edge for shared_model app
+        EdgeInfo edge_info{bw_node->order_in_graph(), edge};
+        // EdgeInfo edge_info{bw_node->reduce_id(), edge};
+        edge_infos.emplace_back(edge_info);
+      }
     }
-    EdgeInfo edge_info;
-    edge_infos.emplace_back(edge_info);
   }
   std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
     return lhs.bw_node_order < rhs.bw_node_order;

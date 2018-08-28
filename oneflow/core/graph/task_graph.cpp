@@ -55,6 +55,7 @@ TaskGraph::TaskGraph(std::unique_ptr<const LogicalGraph>&& logical_gph) {
                     &logical2sorted_out_box, MutBufTask, AllocateCpuThrdIdEvenly);
     SetAreaIdForNewNodes(logical_edge->src_node(), logical_edge->dst_node());
   });
+  MergeChainAndSetOrderInGraphForEachNode();
   ToDotWithAutoFilePath();
 }
 
@@ -100,10 +101,7 @@ void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->UnbindBnWithEmptyRegst(); });
 }
 
-void TaskGraph::AddOrderingCtrlEdgeInSameChain() {
-  MergeChainAndSetOrderInGraphForEachNode();
-  BuildCtrlRegstDescInSameChain();
-}
+void TaskGraph::AddOrderingCtrlEdgeInSameChain() { BuildCtrlRegstDescInSameChain(); }
 
 void TaskGraph::MergeChainAndSetOrderInGraphForEachNode() {
   ChainGraph chain_graph(*this);
