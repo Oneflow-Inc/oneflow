@@ -131,7 +131,7 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
     boxes_max_overlap.Truncate(0);
     return;
   }
-  if (bg_end == -1) { bg_end == boxes_max_overlap.size(); }
+  if (bg_end == -1) { bg_end = boxes_max_overlap.size(); }
   CHECK_GE(bg_begin, fg_end);
   CHECK_GT(bg_end, bg_begin);
 

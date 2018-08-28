@@ -7,41 +7,62 @@
 
 namespace oneflow {
 
+template<typename T, size_t N>
+class Serial;
+
+template<template<typename> class Wrapper, typename ElemType, size_t N>
+class Serial<Wrapper<ElemType>, N> {
+ public:
+  using ElemArray = std::array<ElemType, N>;
+  using WrapperType = Wrapper<ElemType>;
+
+  OF_DISALLOW_COPY_AND_MOVE(Serial);
+  Serial() = delete;
+  ~Serial() = delete;
+
+  static const WrapperType* Cast(const ElemType* ptr) {
+    return reinterpret_cast<const WrapperType*>(ptr);
+  }
+  static WrapperType* MutCast(ElemType* ptr) { return reinterpret_cast<WrapperType*>(ptr); }
+
+  const ElemArray& elem() const { return elem_; }
+  ElemArray& mut_elem() { return elem_; }
+
+ private:
+  ElemArray elem_;
+};
+
 template<typename T>
 class BBoxDelta;
 
 template<typename T>
-class BBox final {
+class BBox final : public Serial<BBox<T>, 4> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBox);
-  BBox() = delete;
-  ~BBox() = delete;
+  using BBoxArray = typename Serial<BBox<T>, 4>::ElemArray;
 
-  static const BBox* Cast(const T* ptr) { return reinterpret_cast<const BBox*>(ptr); }
-  static BBox* MutCast(T* ptr) { return reinterpret_cast<BBox*>(ptr); }
+  inline T x1() const { return this->elem()[0]; }
+  inline T y1() const { return this->elem()[1]; }
+  inline T x2() const { return this->elem()[2]; }
+  inline T y2() const { return this->elem()[3]; }
 
-  const std::array<T, 4>& bbox() const { return bbox_; }
-  std::array<T, 4>& mut_bbox() { return bbox_; }
+  inline void set_x1(T x1) { this->mut_elem()[0] = x1; }
+  inline void set_y1(T y1) { this->mut_elem()[1] = y1; }
+  inline void set_x2(T x2) { this->mut_elem()[2] = x2; }
+  inline void set_y2(T y2) { this->mut_elem()[3] = y2; }
 
-  inline T x1() const { return bbox_[0]; }
-  inline T y1() const { return bbox_[1]; }
-  inline T x2() const { return bbox_[2]; }
-  inline T y2() const { return bbox_[3]; }
-  inline void set_x1(T x1) { bbox_[0] = x1; }
-  inline void set_y1(T y1) { bbox_[1] = y1; }
-  inline void set_x2(T x2) { bbox_[2] = x2; }
-  inline void set_y2(T y2) { bbox_[3] = y2; }
+  const BBoxArray& bbox() const { return this->elem(); }
+  BBoxArray& mut_bbox() { return this->mut_elem(); }
 
-  inline T width() const { return x2() - x1() + static_cast<T>(1); }
-  inline T height() const { return y2() - y1() + static_cast<T>(1); }
+  inline T width() const { return x2() - x1() + OneVal<T>::value; }
+  inline T height() const { return y2() - y1() + OneVal<T>::value; }
   inline T Area() const { return width() * height(); }
 
   template<typename U>
   inline float InterOverUnion(const BBox<U>* other) const {
     const float iw = std::min<float>(x2(), other->x2()) - std::max<float>(x1(), other->x1()) + 1.f;
-    if (iw <= 0) { return 0; }
+    if (iw <= 0) { return 0.f; }
     const float ih = std::min<float>(y2(), other->y2()) - std::max<float>(y1(), other->y1()) + 1.f;
-    if (ih <= 0) { return 0; }
+    if (ih <= 0) { return 0.f; }
     const float inter = iw * ih;
     return inter / (Area() + other->Area() - inter);
   }
@@ -75,41 +96,31 @@ class BBox final {
     set_x2(std::max<T>(std::min<T>(x2(), width - 1), 0));
     set_y2(std::max<T>(std::min<T>(y2(), height - 1), 0));
   }
-
- private:
-  std::array<T, 4> bbox_;
 };
 
 template<typename T>
-class BBoxDelta final {
+class BBoxDelta final : public Serial<BBoxDelta<T>, 4> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBoxDelta);
-  BBoxDelta() = delete;
-  ~BBoxDelta() = delete;
+  inline T dx() const { return this->elem()[0]; }
+  inline T dy() const { return this->elem()[1]; }
+  inline T dw() const { return this->elem()[2]; }
+  inline T dh() const { return this->elem()[3]; }
 
-  static const BBoxDelta* Cast(const T* ptr) { return reinterpret_cast<const BBoxDelta*>(ptr); }
-  static BBoxDelta* MutCast(T* ptr) { return reinterpret_cast<BBoxDelta*>(ptr); }
-
-  inline T dx() const { return delta_[0]; }
-  inline T dy() const { return delta_[1]; }
-  inline T dw() const { return delta_[2]; }
-  inline T dh() const { return delta_[3]; }
-
-  inline void set_dx(T dx) { delta_[0] = dx; }
-  inline void set_dy(T dy) { delta_[1] = dy; }
-  inline void set_dw(T dw) { delta_[2] = dw; }
-  inline void set_dh(T dh) { delta_[3] = dh; }
+  inline void set_dx(T dx) { this->mut_elem()[0] = dx; }
+  inline void set_dy(T dy) { this->mut_elem()[1] = dy; }
+  inline void set_dw(T dw) { this->mut_elem()[2] = dw; }
+  inline void set_dh(T dh) { this->mut_elem()[3] = dh; }
 
   template<typename U, typename K>
   void TransformInverse(const BBox<U>* bbox, const BBox<K>* target_bbox,
                         const BBoxRegressionWeights& bbox_reg_ws) {
-    float w = bbox->x2() - bbox->x1() + 1.0f;
-    float h = bbox->y2() - bbox->y1() + 1.0f;
+    float w = bbox->x2() - bbox->x1() + 1.f;
+    float h = bbox->y2() - bbox->y1() + 1.f;
     float ctr_x = bbox->x1() + 0.5f * w;
     float ctr_y = bbox->y1() + 0.5f * h;
 
-    float t_w = target_bbox->x2() - target_bbox->x1() + 1.0f;
-    float t_h = target_bbox->y2() - target_bbox->y1() + 1.0f;
+    float t_w = target_bbox->x2() - target_bbox->x1() + 1.f;
+    float t_h = target_bbox->y2() - target_bbox->y1() + 1.f;
     float t_ctr_x = target_bbox->x1() + 0.5f * t_w;
     float t_ctr_y = target_bbox->y1() + 0.5f * t_h;
 
@@ -118,33 +129,20 @@ class BBoxDelta final {
     set_dw(bbox_reg_ws.weight_w() * std::log(t_w / w));
     set_dh(bbox_reg_ws.weight_h() * std::log(t_h / h));
   }
-
- private:
-  std::array<T, 4> delta_;
 };
 
 template<typename T>
-class BBoxWeights final {
+class BBoxWeights final : public Serial<BBoxWeights<T>, 4> {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(BBoxWeights);
-  BBoxWeights() = delete;
-  ~BBoxWeights() = delete;
+  inline T weight_x() const { return this->elem()[0]; }
+  inline T weight_y() const { return this->elem()[1]; }
+  inline T weight_w() const { return this->elem()[2]; }
+  inline T weight_h() const { return this->elem()[3]; }
 
-  static const BBoxWeights* Cast(const T* ptr) { return reinterpret_cast<const BBoxWeights*>(ptr); }
-  static BBoxWeights* MutCast(T* ptr) { return reinterpret_cast<BBoxWeights*>(ptr); }
-
-  inline T weight_x() const { return weights_[0]; }
-  inline T weight_y() const { return weights_[1]; }
-  inline T weight_w() const { return weights_[2]; }
-  inline T weight_h() const { return weights_[3]; }
-
-  inline void set_weight_x(T weight_x) { weights_[0] = weight_x; }
-  inline void set_weight_y(T weight_y) { weights_[1] = weight_y; }
-  inline void set_weight_w(T weight_w) { weights_[2] = weight_w; }
-  inline void set_weight_h(T weight_h) { weights_[3] = weight_h; }
-
- private:
-  std::array<T, 4> weights_;
+  inline void set_weight_x(T weight_x) { this->mut_elem()[0] = weight_x; }
+  inline void set_weight_y(T weight_y) { this->mut_elem()[1] = weight_y; }
+  inline void set_weight_w(T weight_w) { this->mut_elem()[2] = weight_w; }
+  inline void set_weight_h(T weight_h) { this->mut_elem()[3] = weight_h; }
 };
 
 class Slice {
