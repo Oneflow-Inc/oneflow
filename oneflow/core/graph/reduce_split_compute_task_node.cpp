@@ -5,15 +5,30 @@
 namespace oneflow {
 
 void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
+  struct EdgeInfo {
+    TaskEdge* edge;
+    int64_t bw_node_order;
+  };
+  std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
     while (dst_node->GetTaskType() != TaskType::kNormalMdUpdt) {
       dst_node = dst_node->SoleOutEdge()->dst_node();
     }
     CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
-    std::string out_regst_name = "out_" + std::to_string(mdupdt_node->reduce_id());
+    for (TaskEdge* mdupdt_edge : mdupdt_node->out_edges()) {
+      // TODO
+    }
+    EdgeInfo edge_info;
+    edge_infos.emplace_back(edge_info);
+  }
+  std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {
+    return lhs.bw_node_order < rhs.bw_node_order;
+  });
+  FOR_RANGE(size_t, idx, 0, edge_infos.size()) {
+    std::string out_regst_name = "out_" + std::to_string(idx);
     std::shared_ptr<RegstDesc> out_regst = ProduceRegst(out_regst_name, false, 1, 1);
-    edge->AddRegst(out_regst_name, out_regst);
+    edge_infos[idx].edge->AddRegst(out_regst_name, out_regst);
   }
 }
 
