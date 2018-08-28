@@ -153,7 +153,8 @@ void LogicalGraph::NaiveBuildBwStruct() {
       return;
     }
     for (LogicalEdge* edge : fw_node->in_edges()) {
-      if (nodes_need_bw.find(edge->src_node()) != nodes_need_bw.end()) {
+      if (nodes_need_bw.find(edge->src_node()) != nodes_need_bw.end()
+          && fw_node->SoleOp()->output_diff_bns().size() > 0) {
         CHECK(nodes_need_bw.insert(fw_node).second);
         return;
       }
