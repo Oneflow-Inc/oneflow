@@ -9,7 +9,7 @@ namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
-  BuildReduceGroup();
+  GroupNodesForReduceStruct();
   SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
@@ -23,7 +23,7 @@ LogicalGraph::LogicalGraph(bool is_train) {
   ToDotWithAutoFilePath();
 }
 
-void LogicalGraph::BuildReduceGroup() {
+void LogicalGraph::GroupNodesForReduceStruct() {
   ReduceGraph reduce_graph(*this);
   std::vector<std::vector<const LogicalNode*>> reduce_groups;
   reduce_graph.ForEachNode(
@@ -379,7 +379,6 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
-  std::vector<ReduceCtx> reduce_ctxs;
   HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot()
@@ -427,7 +426,6 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
           ReduceCtx reduce_ctx = {fw_logical, bw_logical, md_diff_acc_logical, md_updt_logical};
-          reduce_ctxs.emplace_back(reduce_ctx);
           CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
