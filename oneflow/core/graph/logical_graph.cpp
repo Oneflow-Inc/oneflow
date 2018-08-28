@@ -2,7 +2,7 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
-#include "oneflow/core/graph/reduce_graph.h"
+#include "oneflow/core/graph/chain_logical_graph.h"
 #include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
@@ -24,10 +24,10 @@ LogicalGraph::LogicalGraph(bool is_train) {
 }
 
 void LogicalGraph::BuildReduceGroup() {
-  ReduceGraph reduce_graph(*this);
+  ChainLogicalGraph chain_logical_graph(*this);
   std::vector<std::vector<const LogicalNode*>> reduce_groups;
-  reduce_graph.ForEachNode(
-      [&](ReduceNode* node) { reduce_groups.emplace_back(node->logical_nodes()); });
+  chain_logical_graph.ForEachNode(
+      [&](ChainLogicalNode* node) { reduce_groups.emplace_back(node->logical_nodes()); });
   for (auto& reduce_group : reduce_groups) {
     if (reduce_group.size() < 20) {
       reduce_groups_.emplace_back(reduce_group);
