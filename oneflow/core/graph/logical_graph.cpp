@@ -25,23 +25,23 @@ LogicalGraph::LogicalGraph(bool is_train) {
 
 void LogicalGraph::GroupNodesForReduceStruct() {
   ReduceGraph reduce_graph(*this);
-  std::vector<std::vector<const LogicalNode*>> reduce_groups;
+  std::vector<std::vector<const LogicalNode*>> fw_node_groups;
   reduce_graph.ForEachNode(
-      [&](ReduceNode* node) { reduce_groups.emplace_back(node->logical_nodes()); });
-  for (auto& reduce_group : reduce_groups) {
-    if (reduce_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
-      fw_node_groups_.emplace_back(reduce_group);
+      [&](ReduceNode* node) { fw_node_groups.emplace_back(node->logical_nodes()); });
+  for (auto& fw_node_group : fw_node_groups) {
+    if (fw_node_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
+      fw_node_groups_.emplace_back(fw_node_group);
     } else {
-      int64_t reduce_group_size = reduce_group.size();
-      int64_t seg_num = reduce_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
-      BalancedSplitter bs(reduce_group_size, seg_num);
+      int64_t fw_node_group_size = fw_node_group.size();
+      int64_t seg_num = fw_node_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
+      BalancedSplitter bs(fw_node_group_size, seg_num);
       FOR_RANGE(int64_t, idx, 0, seg_num) {
-        std::vector<const LogicalNode*> sub_reduce_group;
+        std::vector<const LogicalNode*> sub_fw_node_group;
         Range range = bs.At(idx);
         FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
-          sub_reduce_group.emplace_back(reduce_group[nid]);
+          sub_fw_node_group.emplace_back(fw_node_group[nid]);
         }
-        fw_node_groups_.emplace_back(sub_reduce_group);
+        fw_node_groups_.emplace_back(sub_fw_node_group);
       }
     }
   }
