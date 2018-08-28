@@ -367,6 +367,9 @@ REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGlobalAdd"
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "NormalMdUpdt",
                               &TaskGraph::BldSubTskGphByOneToOne);
+REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceSplit"
+                              "NormalMdUpdt",
+                              &TaskGraph::BldSubTskGphByOneToOne);
 REGISTER_BLD_SUB_TSK_GPH_MTHD("ReduceGather"
                               "ReduceSplit",
                               &TaskGraph::BldSubTskGphByOneToOne);

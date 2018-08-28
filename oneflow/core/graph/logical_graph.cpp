@@ -29,11 +29,11 @@ void LogicalGraph::GroupNodesForReduceStruct() {
   reduce_graph.ForEachNode(
       [&](ReduceNode* node) { reduce_groups.emplace_back(node->logical_nodes()); });
   for (auto& reduce_group : reduce_groups) {
-    if (reduce_group.size() < 20) {
+    if (reduce_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
       reduce_groups_.emplace_back(reduce_group);
     } else {
       int64_t reduce_group_size = reduce_group.size();
-      int64_t seg_num = reduce_group_size / 20 + 1;
+      int64_t seg_num = reduce_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
       BalancedSplitter bs(reduce_group_size, seg_num);
       FOR_RANGE(int64_t, idx, 0, seg_num) {
         std::vector<const LogicalNode*> sub_reduce_group;
