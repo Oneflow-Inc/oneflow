@@ -14,7 +14,8 @@ namespace oneflow {
 namespace {
 
 bool IsSharableRegstWithoutConsumer(const RegstDescProto& regst_desc) {
-  return regst_desc.consumer_task_id_size() == 0 && regst_desc.enable_mem_sharing();
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() == 0
+         && regst_desc.enable_mem_sharing();
 }
 
 bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
@@ -28,8 +29,8 @@ bool IsConsumersAndProducerInSameChain(const RegstDescProto& regst_desc,
 
 bool IsSharableRegstWithConsumer(const RegstDescProto& regst_desc,
                                  const std::function<int64_t(int64_t)>& ChainId4TaskId) {
-  return regst_desc.consumer_task_id_size() > 0 && regst_desc.enable_mem_sharing()
-         && regst_desc.register_num() == 1
+  return regst_desc.mem_shared_id() == -1 && regst_desc.consumer_task_id_size() > 0
+         && regst_desc.enable_mem_sharing() && regst_desc.register_num() == 1
          && IsConsumersAndProducerInSameChain(regst_desc, ChainId4TaskId);
 }
 
@@ -154,10 +155,11 @@ uint64_t CalcMemoryConsumed(
   for (const RegstDescProto* regst_desc : regst_descs) {
     uint64_t regst_num =
         CalcRegstNum(*regst_desc, PathDurations4RegstDescId, ii, PathIIScales4RegstDescId);
-    uint64_t total_byte_size = RtRegstDesc(*regst_desc).packed_blob_desc()->TotalByteSize();
+    uint64_t total_byte_size = RtRegstDesc(*regst_desc).TotalMainByteSize4AllRegst();
     if (regst_desc->mem_shared_id() == -1) {
-      mem_consuming += RoundUp(regst_num * total_byte_size, kCudaMemAllocAlignSize);
+      mem_consuming += RoundUp(total_byte_size, kCudaMemAllocAlignSize);
     } else {
+      total_byte_size += regst_desc->mem_shared_offset();
       CHECK_EQ(regst_num, 1);
       int32_t mem_shared_id = regst_desc->mem_shared_id();
       auto& max_bytes = mem_shared_id2max_regst_desc_mem_bytes[mem_shared_id];
@@ -200,6 +202,7 @@ std::function<void(int64_t, int64_t)> MakeSetterSetPlanMemSharedId(Plan* plan) {
   auto regst_desc_id2regst_desc = MakeRegstDescId2RegstDesc(plan);
   return [regst_desc_id2regst_desc](int64_t regst_desc_id, int64_t mem_shared_id) {
     regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_id(mem_shared_id);
+    regst_desc_id2regst_desc->at(regst_desc_id)->set_mem_shared_offset(0);
   };
 }
 
@@ -226,46 +229,6 @@ std::function<const HashMap<int64_t, double>&(int64_t)> MakeGetterPathDurations4
 uint64_t NumOfPiecesInSnapshot() {
   return Global<JobDesc>::Get()->NumOfBatchesInSnapshot()
          * Global<JobDesc>::Get()->NumOfPiecesInBatch();
-}
-
-double FormalDuration4ExperimentalDuration(TaskType task_type, double duration,
-                                           double act_frequency) {
-  if (task_type == TaskType::kMdSave) {
-    double formal_run_frequency = 1.0 / NumOfPiecesInSnapshot();
-    return (duration / act_frequency) * formal_run_frequency;
-  }
-  return duration;
-}
-
-double CalcBaseII(const ChainActGraph& act_graph) {
-  int64_t max_act_cnt = 0;
-  HashMap<int64_t, int64_t> actor_id2outputed_act_cnt;
-  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
-    int64_t actor_id = act_event->actor_id();
-    if (act_graph.IsActEventWithConsumer(act_event)) {
-      ++actor_id2outputed_act_cnt[actor_id];
-      max_act_cnt = std::max(max_act_cnt, actor_id2outputed_act_cnt[actor_id]);
-    }
-  });
-  HashMap<int64_t, double> actor_id2act_frequency;
-  for (const auto& pair : actor_id2outputed_act_cnt) {
-    actor_id2act_frequency[pair.first] = 1.0 * pair.second / max_act_cnt;
-  }
-  HashMap<int64_t, double> stream_id2total_calc_time;
-  act_graph.ForEachActEvent([&](const ActEvent* act_event) {
-    int64_t actor_id = act_event->actor_id();
-    auto frequence_it = actor_id2act_frequency.find(actor_id);
-    if (frequence_it == actor_id2act_frequency.end()) { return; }
-    int64_t stream_id = act_event->work_stream_id();
-    TaskType task_type = act_graph.GetTaskProto(actor_id).task_type();
-    stream_id2total_calc_time[stream_id] += FormalDuration4ExperimentalDuration(
-        task_type, Duration4ActEvent(*act_event), frequence_it->second);
-  });
-  double base_ii = 0;
-  for (const auto& pair : stream_id2total_calc_time) {
-    base_ii = std::max(base_ii, pair.second / max_act_cnt);
-  }
-  return base_ii;
 }
 
 double IIScale4Actor(TaskType task_type, double default_ii_scale) {
@@ -320,7 +283,7 @@ void CollectTailRegstConsumerTaskIds(const std::vector<const RegstDescProto*>& s
 void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
                         const std::function<bool(int64_t, int64_t)>& IsReachable,
                         std::list<int64_t>* sink_task_ids) {
-  auto IsReachableToAnyOherTask = [&](int64_t src_task_id) -> bool {
+  auto IsReachableToAnyOtherTask = [&](int64_t src_task_id) -> bool {
     for (int64_t dst_task_id : task_ids) {
       if (src_task_id == dst_task_id) { continue; }
       if (IsReachable(src_task_id, dst_task_id)) { return true; }
@@ -329,7 +292,7 @@ void CollectSinkTaskIds(const HashSet<int64_t>& task_ids,
   };
   sink_task_ids->clear();
   for (int64_t src_task_id : task_ids) {
-    if (!IsReachableToAnyOherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
+    if (!IsReachableToAnyOtherTask(src_task_id)) { sink_task_ids->push_back(src_task_id); }
   }
 }
 
@@ -354,31 +317,6 @@ std::function<void(const std::vector<const RegstDescProto*>&)> MakeSetterAddCtrl
       TryConnectWithMemSafeGuardCtrlRegstDesc(header_task_proto, sink_task_proto);
     }
   };
-}
-
-void ForEachMemSharingCriticalSection(
-    const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
-    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) {
-  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
-  for (const auto& task : plan.task()) {
-    for (const auto& pair : task.produced_regst_desc()) {
-      int32_t mem_sharing_id = pair.second.mem_shared_id();
-      if (mem_sharing_id != -1 && pair.second.consumer_task_id_size() > 0) {
-        CHECK(pair.second.enable_mem_sharing());
-        mem_sharing_id2regst_descs[mem_sharing_id].push_back(&pair.second);
-      }
-    }
-  }
-  for (auto& pair : mem_sharing_id2regst_descs) {
-    std::sort(pair.second.begin(), pair.second.end(),
-              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
-                int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
-                int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
-                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
-                return lhs_order_in_graph < rhs_order_in_graph;
-              });
-    Handler(pair.second);
-  }
 }
 
 void FixReliantCtrlRegstNum(const Plan& plan, const std::function<uint64_t(int64_t)>& GetRegstNum,
@@ -493,11 +431,10 @@ double Improver::BinarySearchII(
 }
 
 void Improver::ForEachImprovedRegstNum(
-    const ChainActGraph& graph, const Plan& plan, bool is_memory_limited,
+    const Plan& plan, bool is_memory_limited, double ii,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathDurations4RegstDescId,
     const std::function<const HashMap<int64_t, double>&(int64_t)>& PathIIScales4RegstDescId,
     const std::function<void(int64_t, uint64_t)>& Handler) const {
-  double ii = CalcBaseII(graph);
   if (is_memory_limited) {
     MemZoneRegstDescs mz_regst_descs;
     MakeMemZoneRegstDescs(plan, &mz_regst_descs);
@@ -513,7 +450,33 @@ void Improver::ForEachImprovedRegstNum(
   }
 }
 
-void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& naive_plan) {
+void Improver::ForEachInferredMemSharingCriticalSection(
+    const Plan& plan, const std::function<int64_t(int64_t)>& OrderInGraph4TaskId,
+    const std::function<void(const std::vector<const RegstDescProto*>&)>& Handler) const {
+  HashMap<int32_t, std::vector<const RegstDescProto*>> mem_sharing_id2regst_descs;
+  for (const auto& task : plan.task()) {
+    for (const auto& pair : task.produced_regst_desc()) {
+      int32_t mem_shared_id = pair.second.mem_shared_id();
+      if (mem_shared_id > start_mem_shared_id_ && pair.second.consumer_task_id_size() > 0) {
+        CHECK(pair.second.enable_mem_sharing());
+        mem_sharing_id2regst_descs[mem_shared_id].push_back(&pair.second);
+      }
+    }
+  }
+  for (auto& pair : mem_sharing_id2regst_descs) {
+    std::sort(pair.second.begin(), pair.second.end(),
+              [&](const RegstDescProto* lhs, const RegstDescProto* rhs) {
+                int64_t lhs_order_in_graph = OrderInGraph4TaskId(lhs->producer_task_id());
+                int64_t rhs_order_in_graph = OrderInGraph4TaskId(rhs->producer_task_id());
+                CHECK_NE(lhs_order_in_graph, rhs_order_in_graph);
+                return lhs_order_in_graph < rhs_order_in_graph;
+              });
+    Handler(pair.second);
+  }
+}
+
+void Improver::Init(const AvailableMemDesc& amd, const Plan& naive_plan) {
+  start_mem_shared_id_ = Global<IDMgr>::Get()->NewMemSharedId();
   amd_ = amd;
   record_load_task_num_.assign(Global<JobDesc>::Get()->TotalMachineNum(), 0);
   for (const TaskProto& task_proto : naive_plan.task()) {
@@ -524,7 +487,7 @@ void Improver::InitAvailableMemDesc(const AvailableMemDesc& amd, const Plan& nai
 }
 
 Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& naive_plan) {
-  InitAvailableMemDesc(amd, naive_plan);
+  Init(amd, naive_plan);
   Plan mem_shared_plan = ImproveMemSharedId(naive_plan);
   // Check if there is any zone out of memory even though all register_num == 1
   MemZoneRegstDescs mz_regst_descs;
@@ -537,19 +500,21 @@ Plan Improver::ImproveMemSharedIdOnly(const AvailableMemDesc& amd, const Plan& n
 
 Plan Improver::Improve(const AvailableMemDesc& amd, const Plan& naive_plan,
                        const std::string& act_event_filepath) {
-  InitAvailableMemDesc(amd, naive_plan);
+  Init(amd, naive_plan);
   std::list<std::unique_ptr<ActEvent>> act_events;
   ParseActEvents(act_event_filepath, &act_events);
-  ChainActGraph act_graph(naive_plan, std::move(act_events));
+  ChainActGraph chain_act_graph(naive_plan, std::move(act_events));
 
-  auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(act_graph);
-  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(act_graph);
+  auto PathDurations4RegstDescId = MakeGetterPathDurations4RegstDescId(chain_act_graph);
+  auto PathIIScales4RegstDescId = MakeGetterPathIIScales4RegstDescId(chain_act_graph);
+  double base_ii = chain_act_graph.CalcBaseII();
+
   Plan mem_unlimited_plan(naive_plan);
-  ForEachImprovedRegstNum(act_graph, naive_plan, false, PathDurations4RegstDescId,
+  ForEachImprovedRegstNum(naive_plan, false, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&mem_unlimited_plan));
   Plan mem_shared_plan = ImproveMemSharedId(mem_unlimited_plan);
   Plan plan(mem_shared_plan);
-  ForEachImprovedRegstNum(act_graph, mem_shared_plan, true, PathDurations4RegstDescId,
+  ForEachImprovedRegstNum(mem_shared_plan, true, base_ii, PathDurations4RegstDescId,
                           PathIIScales4RegstDescId, MakeSetterSetPlanRegstNum(&plan));
   FixReliantCtrlRegstNum(plan, MakeGetterGetPlanRegstNum(&plan), MakeSetterSetPlanRegstNum(&plan));
   return plan;
@@ -565,8 +530,8 @@ Plan Improver::ImproveMemSharedId(const Plan& naive_plan) const {
   auto IsReachable = [&](int64_t src_task_id, int64_t dst_task_id) {
     return plan_task_graph.IsReachableInSameArea(src_task_id, dst_task_id);
   };
-  ForEachMemSharingCriticalSection(plan, OrderInGraph4TaskId,
-                                   MakeSetterAddCtrlRegst(&plan, IsReachable));
+  ForEachInferredMemSharingCriticalSection(plan, OrderInGraph4TaskId,
+                                           MakeSetterAddCtrlRegst(&plan, IsReachable));
   return plan;
 }
 

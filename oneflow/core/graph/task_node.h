@@ -34,16 +34,14 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   int64_t order_in_graph() const { return order_in_graph_; }
   const ExecGraph& exec_gph() const { return exec_gph_; }
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
-  const std::list<std::weak_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
+  const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
   std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
   const HashMap<std::string, std::shared_ptr<RegstDesc>>& produced_regsts() {
     return produced_regsts_;
   }
-  const HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>>& consumed_regsts() {
+  const HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>>& consumed_regsts() {
     return consumed_regsts_;
   }
-  const HashSet<TaskNode*> ancestors() const { return ancestors_; }
-  HashSet<TaskNode*>& mut_ancestors() { return ancestors_; }
   DeviceType device_type() const;
   virtual const ParallelContext* parallel_ctx() const { return nullptr; }
   int64_t LocalWorkStreamId() const;
@@ -63,8 +61,11 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   void PinConsumedRegst();
   void Build();
   virtual bool IsReadyForBuild() { return IsAllConsumedRegstLocked(); }
-  virtual void EraseEmptyProducedRegst();
-  void ClearOutOfDateConsumedRegst();
+
+  void EraseZeroSizeProducedBlob();
+  void EraseZeroSizeConsumedRegst();
+  void EraseZeroSizeProducedRegst();
+  void UnbindBnWithEmptyRegst();
 
   // Others
   virtual TaskType GetTaskType() const { return TaskType::kInvalid; }
@@ -93,10 +94,12 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   bool IsAllConsumedRegstLocked();
   ExecGraph& mut_exec_gph() { return exec_gph_; }
   void TryLockConsumedRegst(const std::string& name);
+  void EraseConsumedRegstsByName(const std::string& name);
 
   virtual void BuildExecGphAndRegst() = 0;
   virtual void LockRegsts();
   void FixRegisterNumRange();
+  virtual void FixPackedBlobDescOfProducedRegst() {}
 
   virtual int64_t AllocateLocalWorkStreamId();
 
@@ -112,9 +115,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
 
   ExecGraph exec_gph_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> produced_regsts_;
-  HashMap<std::string, std::list<std::weak_ptr<RegstDesc>>> consumed_regsts_;
-
-  HashSet<TaskNode*> ancestors_;
+  HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>> consumed_regsts_;
 };
 
 class TaskEdge final : public Edge<TaskNode, TaskEdge> {
@@ -129,7 +130,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   void AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst);
 
  private:
-  HashMap<std::string, std::weak_ptr<RegstDesc>> name_in_producer2regst_;
+  HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
 
 extern std::map<TaskType, std::string> task_type2color;

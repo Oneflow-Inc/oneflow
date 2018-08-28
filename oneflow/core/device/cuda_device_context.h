@@ -15,10 +15,9 @@ class CudaDeviceCtx final : public DeviceCtx {
   CudaDeviceCtx() = delete;
   ~CudaDeviceCtx() = default;
 
-  CudaDeviceCtx(void* buf_ptr, size_t buf_size, CudaStreamHandle* cuda_handler)
-      : DeviceCtx(buf_ptr, buf_size), cuda_handler_(cuda_handler) {}
+  CudaDeviceCtx(CudaStreamHandle* cuda_handler) : cuda_handler_(cuda_handler) {}
   std::unique_ptr<DeviceCtx> Copy() const {
-    return std::unique_ptr<DeviceCtx>(new CudaDeviceCtx(buf_ptr(), buf_size(), cuda_handler_));
+    return std::unique_ptr<DeviceCtx>(new CudaDeviceCtx(cuda_handler_));
   }
 
   const cudaStream_t& cuda_stream() const { return *(cuda_handler_->cuda_stream()); }

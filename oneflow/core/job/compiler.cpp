@@ -1,4 +1,5 @@
 #include "oneflow/core/job/compiler.h"
+#include "oneflow/core/device/cudnn_conv_ctx_cache.h"
 
 namespace oneflow {
 
@@ -48,6 +49,9 @@ Plan Compiler::Compile() {
 }
 
 Plan Compiler::DoCompile() {
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::New();
+#endif
   const JobDesc* job_desc = Global<JobDesc>::Get();
   auto logical_gph = std::make_unique<LogicalGraph>(job_desc->IsTrain());
   int64_t total_mbn_num = logical_gph->total_mbn_num();
@@ -56,37 +60,28 @@ Plan Compiler::DoCompile() {
   task_gph->ForEachNode(std::bind(&TaskNode::ProduceAllRegstsAndBindEdges, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::ConsumeAllRegsts, _1));
   task_gph->ForEachNode(std::bind(&TaskNode::PinConsumedRegst, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::Build, _1), std::bind(&TaskNode::IsReadyForBuild, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::EraseEmptyProducedRegst, _1));
-  task_gph->ForEachNode(std::bind(&TaskNode::ClearOutOfDateConsumedRegst, _1));
+  task_gph->AcyclicTopoForEachNode(
+      [](TaskNode* node) { node->Build(); });  // kMdUpdt task will not be built in Prediction mode
+  task_gph->RemoveEmptyRegsts();
   task_gph->AddOrderingCtrlEdgeInSameChain();
+  if (job_desc->IsTrain() && job_desc->enable_mem_sharing()) {
+    task_gph->EnableMemSharingInReduceStruct();
+  }
   if (job_desc->IsTrain() && job_desc->other_conf().use_ordered_allreduce_in_mdupdt()) {
     task_gph->AddCtrlEdgeInReduceStruct();
   }
   if (job_desc->IsTrain()) { task_gph->AddOrderCtrlEdgeBetweenCopyAndMdUpdt(); }
+  if (job_desc->IsTrain()) { task_gph->RmUselessConsumeRelationshipBetweenFwBw(); }
   Plan plan;
   task_gph->ForEachNode([&](TaskNode* task_node) {
     if (task_node->IsMeaningLess()) { return; }
     task_node->ToProto(plan.mutable_task()->Add());
   });
   plan.set_total_mbn_num(total_mbn_num);
-  FOR_RANGE(int64_t, machine_id, 0, job_desc->TotalMachineNum()) {
-    plan.mutable_buf_info()->Add()->mutable_buf_size()->Resize(
-        job_desc->GpuDeviceNum() * GetCudaWorkTypeSize() + job_desc->CpuDeviceNum(), 0);
-  }
-  task_gph->ForEachNode([&](TaskNode* task_node) {
-    if (task_node->IsMeaningLess()) { return; }
-    task_node->exec_gph().ForEachNode([&](ExecNode* exec_node) {
-      if (exec_node->buf_size() == 0) { return; }
-      CHECK_EQ(task_node->LocalWorkStreamId(), 0);
-      uint64_t* sz = plan.mutable_buf_info()
-                         ->Mutable(task_node->machine_id())
-                         ->mutable_buf_size()
-                         ->Mutable(task_node->thrd_id());
-      *sz = std::max<uint64_t>(*sz, exec_node->buf_size());
-    });
-  });
   ToDotFile(plan, JoinPath(LogDir(), "/dot/plan.dot"));
+#ifdef WITH_CUDA
+  Global<CudnnConvCtxCache>::Delete();
+#endif
   return plan;
 }
 
