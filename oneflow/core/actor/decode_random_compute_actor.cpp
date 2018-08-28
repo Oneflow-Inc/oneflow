@@ -13,6 +13,7 @@ void DecodeRandomActor::Act() {
   regst->set_piece_id(piece_id_++);
 
   AsyncLaunchKernel(GenDefaultKernelCtx());
+  AsyncSendRegstMsgToConsumer();
 }
 
 bool DecodeRandomActor::IsCustomizedReadReady() {
