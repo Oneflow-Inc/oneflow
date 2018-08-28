@@ -24,6 +24,7 @@ void SmoothL1LossOp::VirtualInferBlobDescs(
   const BlobDesc* outside_weights_blob_desc = GetBlobDesc4BnInOp("outside_weights");
 
   CHECK_EQ(pred_blob_desc->shape(), label_blob_desc->shape());
+  CHECK_EQ(pred_blob_desc->data_type(), label_blob_desc->data_type());
   CHECK_EQ(pred_blob_desc->shape(), inside_weights_blob_desc->shape());
   CHECK_EQ(pred_blob_desc->shape(), outside_weights_blob_desc->shape());
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
