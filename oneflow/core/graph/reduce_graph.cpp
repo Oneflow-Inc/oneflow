@@ -20,7 +20,7 @@ struct ReduceGraph::Group {
   }
 };
 
-ReduceGraph::ReduceGraph(const LogicalGraph& logical_graph) : Graph() {
+ReduceGraph::ReduceGraph(const LogicalGraph& logical_graph) {
   std::list<Group> group_list;
   HashMap<const LogicalNode*, std::list<Group>::iterator> logical2group_it;
 
@@ -42,7 +42,6 @@ void ReduceGraph::InitGroups(
 
   logical_graph.TopoForEachNode([&](const LogicalNode* node) {
     auto cur_group = logical2group_it->at(node);
-    cur_group->ancestors_and_this.insert(cur_group->nodes.begin(), cur_group->nodes.end());
 
     for (const LogicalEdge* edge : node->in_edges()) {
       LogicalNode* pred_node = edge->src_node();
@@ -51,11 +50,11 @@ void ReduceGraph::InitGroups(
       cur_group->ancestors.insert(pred_node);
     }
     cur_group->ancestors_and_this.insert(cur_group->ancestors.begin(), cur_group->ancestors.end());
+    cur_group->ancestors_and_this.insert(cur_group->nodes.begin(), cur_group->nodes.end());
   });
 
   logical_graph.ReverseTopoForEachNode([&](const LogicalNode* node) {
     auto cur_group = logical2group_it->at(node);
-    cur_group->descendants_and_this.insert(cur_group->nodes.begin(), cur_group->nodes.end());
 
     for (const LogicalEdge* edge : node->out_edges()) {
       LogicalNode* succ_node = edge->dst_node();
@@ -63,8 +62,10 @@ void ReduceGraph::InitGroups(
       cur_group->descendants.insert(succ_group->descendants.begin(), succ_group->descendants.end());
       cur_group->descendants.insert(succ_node);
     }
+
     cur_group->descendants_and_this.insert(cur_group->descendants.begin(),
                                            cur_group->descendants.end());
+    cur_group->descendants_and_this.insert(cur_group->nodes.begin(), cur_group->nodes.end());
   });
 }
 
@@ -144,9 +145,7 @@ void ReduceGraph::BuildGraph(const LogicalGraph& logical_graph, std::list<Group>
   });
 
   for (auto& pair : pred_succ_pairs) {
-    if(pair.first == pair.second) {
-      continue;
-    }
+    if (pair.first == pair.second) { continue; }
     ReduceEdge* edge = NewEdge();
     Connect(pair.first, edge, pair.second);
   }

@@ -11,7 +11,7 @@ class ReduceEdge;
 class ReduceNode final : public Node<ReduceNode, ReduceEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceNode);
-  ReduceNode() : Node(){};
+  ReduceNode() = default;
   ~ReduceNode() override = default;
 
   const std::vector<const LogicalNode *> &logical_nodes() const { return logical_nodes_; }
@@ -24,7 +24,7 @@ class ReduceNode final : public Node<ReduceNode, ReduceEdge> {
 class ReduceEdge final : public Edge<ReduceNode, ReduceEdge> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ReduceEdge);
-  ReduceEdge() : Edge(){};
+  ReduceEdge() = default;
   ~ReduceEdge() override = default;
 };
 
