@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/naive_model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -10,10 +11,22 @@ void NaiveMdUpdateKernel<device_type, T>::UpdateModel(
   Blob* model_blob = BnInOp2Blob("model");
   if (pre_model_blob != model_blob) { model_blob->CopyDataContentFrom(ctx, pre_model_blob); }
   // model = model - alpha * model_diff
-  NormalMdUpdateKernelUtil<device_type, T>::UpdateModel(
-      ctx, model_blob->shape().elem_cnt(), batch_size, learning_rate, l1, l2, 0,
-      pre_model_blob->dptr<T>(), model_diff_blob->dptr<T>(), nullptr, model_blob->mut_dptr<T>());
+  NaiveMdUpdateKernelUtil<device_type, T>::UpdateModel(
+      ctx, model_blob->shape().elem_cnt(), batch_size, learning_rate, l1, l2,
+      model_diff_blob->dptr<T>(), pre_model_blob->dptr<T>(), model_blob->mut_dptr<T>());
 }
+
+template<typename T>
+class NaiveMdUpdateKernelUtil<DeviceType::kCPU, T> final {
+ public:
+  static void UpdateModel(DeviceCtx*, const int64_t n, int64_t batch_size, T learning_rate, T l1,
+                          T l2, const T* model_diff, const T* pre_model, T* model) {
+    for (int64_t i = 0; i != n; ++i) {
+      T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+      model[i] = pre_model[i] - learning_rate * reg_diff;
+    }
+  }
+};
 
 DEFINE_MDUPDT_KERNEL_CREATOR(Naive);
 

@@ -2,7 +2,6 @@
 #define ONEFLOW_CORE_KERNEL_NORMAL_MODEL_UPDATE_KERNEL_H_
 
 #include "oneflow/core/kernel/kernel.h"
-#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -21,30 +20,6 @@ class NormalMdUpdateKernel : public KernelIf<device_type> {
                            const Blob* pre_model_blob, const Blob* model_diff_blob,
                            int64_t next_model_vid,
                            std::function<Blob*(const std::string&)> BnInOp2Blob) const = 0;
-};
-
-template<DeviceType device_type, typename T>
-class NormalMdUpdateKernelUtil final {
- public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
-                          T momentum_beta, const T* pre_model, const T* model_diff, T* momentum,
-                          T* model);
-};
-
-template<typename T>
-class NormalMdUpdateKernelUtil<DeviceType::kCPU, T> final {
- public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
-                          T momentum_beta, const T* pre_model, const T* model_diff, T* momentum,
-                          T* model);
-};
-
-template<typename T>
-class NormalMdUpdateKernelUtil<DeviceType::kGPU, T> final {
- public:
-  static void UpdateModel(DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2,
-                          T momentum_beta, const T* pre_model, const T* model_diff, T* momentum,
-                          T* model);
 };
 
 bool TriggerWarmup(const NormalModelUpdateOpUserConf& conf, double lr, int64_t cur_batch_num);

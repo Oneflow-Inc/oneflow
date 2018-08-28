@@ -1,4 +1,5 @@
 #include "oneflow/core/kernel/lars_model_update_kernel.h"
+#include "oneflow/core/kernel/normal_model_update_kernel.cuh"
 
 namespace oneflow {
 
@@ -49,9 +50,11 @@ class LARSMdUpdateKernelUtil<DeviceType::kCPU, T> final {
       local_learning_rate = learning_rate * lars_coefficient * model_norm
                             / (epsilon + model_diff_norm + l2 * model_norm);
     }
-    NormalMdUpdateKernelUtil<DeviceType::kCPU, T>::UpdateModel(
-        ctx, n, batch_size, local_learning_rate, l1, l2, momentum_beta, pre_model, model_diff,
-        momentum, model);
+    FOR_RANGE(int64_t, i, 0, n) {
+      T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
+      momentum[i] = momentum_beta * momentum[i] - local_learning_rate * reg_diff;
+      model[i] = pre_model[i] + momentum[i];
+    }
   }
 };
 

@@ -35,28 +35,9 @@ void NormalMdUpdateKernel<device_type, T>::Forward(
               static_cast<T>(l2), std::get<1>(*tpl), in_0, next_model_vid, BnInOp2Blob);
 }
 
-template<typename T>
-void NormalMdUpdateKernelUtil<DeviceType::kCPU, T>::UpdateModel(
-    DeviceCtx*, int64_t n, int64_t batch_size, T learning_rate, T l1, T l2, T momentum_beta,
-    const T* pre_model, const T* model_diff, T* momentum, T* model) {
-  FOR_RANGE(int64_t, i, 0, n) {
-    T reg_diff = RegularizeDiff(model_diff[i], batch_size, l1, l2, pre_model[i]);
-    if (momentum_beta) {
-      momentum[i] = momentum_beta * momentum[i] - learning_rate * reg_diff;
-      model[i] = pre_model[i] + momentum[i];
-    } else {
-      model[i] = pre_model[i] - learning_rate * reg_diff;
-    }
-  }
-}
-
 #define INSTANTIATE_KERNEL(device_type, data_type_pair) \
   template struct NormalMdUpdateKernel<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
-
-#define INSTANTIATE_KERNEL_UTIL(device_type, data_type_pair) \
-  template struct NormalMdUpdateKernelUtil<device_type, OF_PP_PAIR_FIRST(data_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_KERNEL_UTIL, DEVICE_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 namespace {
 
