@@ -9,7 +9,7 @@ namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
-  GroupNodesForReduceStruct();
+  if (is_train) { GroupNodesForReduceStruct(); }
   SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
@@ -30,7 +30,7 @@ void LogicalGraph::GroupNodesForReduceStruct() {
       [&](ReduceNode* node) { reduce_groups.emplace_back(node->logical_nodes()); });
   for (auto& reduce_group : reduce_groups) {
     if (reduce_group.size() < Global<JobDesc>::Get()->reduce_group_size()) {
-      reduce_groups_.emplace_back(reduce_group);
+      fw_node_groups_.emplace_back(reduce_group);
     } else {
       int64_t reduce_group_size = reduce_group.size();
       int64_t seg_num = reduce_group_size / Global<JobDesc>::Get()->reduce_group_size() + 1;
@@ -41,7 +41,7 @@ void LogicalGraph::GroupNodesForReduceStruct() {
         FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
           sub_reduce_group.emplace_back(reduce_group[nid]);
         }
-        reduce_groups_.emplace_back(sub_reduce_group);
+        fw_node_groups_.emplace_back(sub_reduce_group);
       }
     }
   }
@@ -425,7 +425,11 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
         }
         if (md_diff_acc_logical->parallel_desc()->parallel_num() > 1
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
-          ReduceCtx reduce_ctx = {fw_logical, bw_logical, md_diff_acc_logical, md_updt_logical};
+          ReduceCtx reduce_ctx;
+          reduce_ctx.fw_logicals.emplace_back(fw_logical);
+          reduce_ctx.bw_logicals.emplace_back(bw_logical);
+          reduce_ctx.md_diff_acc_logicals.emplace_back(md_diff_acc_logical);
+          reduce_ctx.md_updt_logicals.emplace_back(md_updt_logical);
           CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
@@ -433,31 +437,31 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
       }
     }
   });
-  for (auto& group : reduce_groups_) {
-    ReduceGroup reduce_group;
-    for (auto& fw_node : group) {
+  for (auto& fw_node_group : fw_node_groups_) {
+    ReduceCtx group_reduce_ctx;
+    for (auto& fw_node : fw_node_group) {
       auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
       if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
         auto& reduce_ctx = reduce_ctx_it->second;
-        reduce_group.fw_logicals.emplace_back(reduce_ctx.fw_logical);
-        reduce_group.bw_logicals.emplace_back(reduce_ctx.bw_logical);
-        reduce_group.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logical);
-        reduce_group.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logical);
+        group_reduce_ctx.fw_logicals.emplace_back(reduce_ctx.fw_logicals[0]);
+        group_reduce_ctx.bw_logicals.emplace_back(reduce_ctx.bw_logicals[0]);
+        group_reduce_ctx.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logicals[0]);
+        group_reduce_ctx.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logicals[0]);
       }
     }
-    BuildReduceStruct(reduce_group);
+    BuildReduceStruct(group_reduce_ctx);
   }
   SetupNormalMdUpdtOp();
 }
 
-void LogicalGraph::BuildReduceStruct(const ReduceGroup& reduce_group) {
-  if (reduce_group.fw_logicals.size() > 1) {
-    std::shared_ptr<const ParallelDesc> src_pd = reduce_group.fw_logicals[0]->parallel_desc();
+void LogicalGraph::BuildReduceStruct(const ReduceCtx& reduce_ctx) {
+  if (reduce_ctx.fw_logicals.size() > 1) {
+    std::shared_ptr<const ParallelDesc> src_pd = reduce_ctx.fw_logicals[0]->parallel_desc();
 
     OperatorConf reduce_concat_op_conf;
     reduce_concat_op_conf.set_name("reduce_concat_" + NewUniqueId());
     reduce_concat_op_conf.set_device_type(src_pd->device_type());
-    reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_group.fw_logicals.size());
+    reduce_concat_op_conf.mutable_reduce_concat_conf()->set_in_num(reduce_ctx.fw_logicals.size());
     LogicalNode* reduce_concat_node = NewNode<ReduceConcatLogicalNode>();
     reduce_concat_node->mut_op_vec() = {ConstructOp(reduce_concat_op_conf)};
     reduce_concat_node->mut_parallel_desc() = src_pd;
@@ -465,24 +469,25 @@ void LogicalGraph::BuildReduceStruct(const ReduceGroup& reduce_group) {
     OperatorConf reduce_split_op_conf;
     reduce_split_op_conf.set_name("reduce_split_" + NewUniqueId());
     reduce_split_op_conf.set_device_type(src_pd->device_type());
-    reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_group.fw_logicals.size());
+    reduce_split_op_conf.mutable_reduce_split_conf()->set_out_num(reduce_ctx.fw_logicals.size());
     LogicalNode* reduce_split_node = NewNode<ReduceSplitLogicalNode>();
     reduce_split_node->mut_op_vec() = {ConstructOp(reduce_split_op_conf)};
     reduce_split_node->mut_parallel_desc() = src_pd;
 
-    for (auto& md_diff_acc_node : reduce_group.md_diff_acc_logicals) {
+    for (auto& md_diff_acc_node : reduce_ctx.md_diff_acc_logicals) {
       Connect(md_diff_acc_node, NewEdge(), reduce_concat_node);
     }
-    for (auto& md_updt_node : reduce_group.md_updt_logicals) {
+    for (auto& md_updt_node : reduce_ctx.md_updt_logicals) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
-    BuildReduceStruct(reduce_concat_node, reduce_split_node);
-  } else if (reduce_group.fw_logicals.size() == 1) {
-    BuildReduceStruct(reduce_group.md_diff_acc_logicals[0], reduce_group.md_updt_logicals[0]);
+    AddReduceScatterAddGatherNodes(reduce_concat_node, reduce_split_node);
+  } else if (reduce_ctx.fw_logicals.size() == 1) {
+    AddReduceScatterAddGatherNodes(reduce_ctx.md_diff_acc_logicals[0],
+                                   reduce_ctx.md_updt_logicals[0]);
   }
 }
 
-void LogicalGraph::BuildReduceStruct(LogicalNode* src, LogicalNode* dst) {
+void LogicalGraph::AddReduceScatterAddGatherNodes(LogicalNode* src, LogicalNode* dst) {
   std::shared_ptr<const ParallelDesc> src_pd = src->parallel_desc();
   std::shared_ptr<const ParallelDesc> dst_pd = dst->parallel_desc();
   CHECK_EQ(src_pd->parallel_num(), dst_pd->parallel_num());
