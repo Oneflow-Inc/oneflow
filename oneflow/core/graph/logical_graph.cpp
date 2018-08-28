@@ -2,11 +2,14 @@
 #include "oneflow/core/graph/task_graph.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_conf.pb.h"
+#include "oneflow/core/graph/reduce_graph.h"
+#include "oneflow/core/common/balanced_splitter.h"
 
 namespace oneflow {
 
 LogicalGraph::LogicalGraph(bool is_train) {
   BuildFwStruct();
+  BuildReduceGroup();
   SetMainModelParallel();
   if (is_train) { BuildBwStruct(); }
   MergeEdge();
@@ -18,6 +21,30 @@ LogicalGraph::LogicalGraph(bool is_train) {
   BuildModelStruct(is_train);
   if (is_train) { ConnectFwToBw(); }
   ToDotWithAutoFilePath();
+}
+
+void LogicalGraph::BuildReduceGroup() {
+  ReduceGraph reduce_graph(*this);
+  std::vector<std::vector<const LogicalNode*>> reduce_groups;
+  reduce_graph.ForEachNode(
+      [&](ReduceNode* node) { reduce_groups.emplace_back(node->logical_nodes()); });
+  for (auto& reduce_group : reduce_groups) {
+    if (reduce_group.size() < 20) {
+      reduce_groups_.emplace_back(reduce_group);
+    } else {
+      int64_t reduce_group_size = reduce_group.size();
+      int64_t seg_num = reduce_group_size / 20 + 1;
+      BalancedSplitter bs(reduce_group_size, seg_num);
+      FOR_RANGE(int64_t, idx, 0, seg_num) {
+        std::vector<const LogicalNode*> sub_reduce_group;
+        Range range = bs.At(idx);
+        FOR_RANGE(int64_t, nid, range.begin(), range.end()) {
+          sub_reduce_group.emplace_back(reduce_group[nid]);
+        }
+        reduce_groups_.emplace_back(sub_reduce_group);
+      }
+    }
+  }
 }
 
 template<typename LogicalNodeType>
@@ -353,6 +380,7 @@ void LogicalGraph::BuildAccuracyPrintStruct() {
 void LogicalGraph::BuildModelStruct(bool is_train) {
   HashMap<const LogicalNode*, NormalMdUpdtLogicalNode*> first_shared2mdupdt;
   std::vector<ReduceCtx> reduce_ctxs;
+  HashMap<const LogicalNode*, ReduceCtx> fw_node2reduce_ctx;
   ForEachLogicalNode<ForwardLogicalNode>([&](ForwardLogicalNode* fw_logical) {
     if (Global<JobDesc>::Get()->enable_write_snapshot()
         && fw_logical->HasOpWithForwardModelBlob()) {
@@ -400,33 +428,24 @@ void LogicalGraph::BuildModelStruct(bool is_train) {
             && md_diff_acc_logical->parallel_desc()->policy() == kDataParallel) {
           ReduceCtx reduce_ctx = {fw_logical, bw_logical, md_diff_acc_logical, md_updt_logical};
           reduce_ctxs.emplace_back(reduce_ctx);
+          CHECK(fw_node2reduce_ctx.emplace(fw_logical, reduce_ctx).second);
         } else {
           Connect<LogicalNode>(md_diff_acc_logical, NewEdge(), md_updt_logical);
         }
       }
     }
   });
-
-  // TODO: use chain graph to init the reduce group and set reduce_id for fw, bw, md_updt
-  /*
-  std::vector<ReduceGroup> reduce_groups;
-  for (auto& reduce_ctx : reduce_ctxs) {
+  for (auto& group : reduce_groups_) {
     ReduceGroup reduce_group;
-    reduce_group.fw_logicals.emplace_back(reduce_ctx.fw_logical);
-    reduce_group.bw_logicals.emplace_back(reduce_ctx.bw_logical);
-    reduce_group.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logical);
-    reduce_group.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logical);
-    reduce_groups.emplace_back(reduce_group);
-  }
-  for (auto& reduce_group : reduce_groups) { BuildReduceStruct(reduce_group); }
-  */
-  if (reduce_ctxs.size()) {
-    ReduceGroup reduce_group;
-    for (auto& reduce_ctx : reduce_ctxs) {
-      reduce_group.fw_logicals.emplace_back(reduce_ctx.fw_logical);
-      reduce_group.bw_logicals.emplace_back(reduce_ctx.bw_logical);
-      reduce_group.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logical);
-      reduce_group.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logical);
+    for (auto& fw_node : group) {
+      auto reduce_ctx_it = fw_node2reduce_ctx.find(fw_node);
+      if (reduce_ctx_it != fw_node2reduce_ctx.end()) {
+        auto& reduce_ctx = reduce_ctx_it->second;
+        reduce_group.fw_logicals.emplace_back(reduce_ctx.fw_logical);
+        reduce_group.bw_logicals.emplace_back(reduce_ctx.bw_logical);
+        reduce_group.md_diff_acc_logicals.emplace_back(reduce_ctx.md_diff_acc_logical);
+        reduce_group.md_updt_logicals.emplace_back(reduce_ctx.md_updt_logical);
+      }
     }
     BuildReduceStruct(reduce_group);
   }
@@ -460,7 +479,7 @@ void LogicalGraph::BuildReduceStruct(const ReduceGroup& reduce_group) {
       Connect(reduce_split_node, NewEdge(), md_updt_node);
     }
     BuildReduceStruct(reduce_concat_node, reduce_split_node);
-  } else {
+  } else if (reduce_group.fw_logicals.size() == 1) {
     BuildReduceStruct(reduce_group.md_diff_acc_logicals[0], reduce_group.md_updt_logicals[0]);
   }
 }

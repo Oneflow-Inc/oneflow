@@ -2,11 +2,12 @@
 #define ONEFLOW_CORE_GRAPH_REDUCE_GRAPH_H_
 
 #include "oneflow/core/graph/graph.h"
-#include "oneflow/core/graph/logical_graph.h"
 
 namespace oneflow {
 
 class ReduceEdge;
+class LogicalNode;
+class LogicalGraph;
 
 class ReduceNode final : public Node<ReduceNode, ReduceEdge> {
  public:

@@ -41,6 +41,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
   };
   template<typename LogicalNodeType>
   void ForEachLogicalNode(std::function<void(LogicalNodeType*)> Handler);
+  void BuildReduceGroup();
 
   void BuildFwStruct();
   void NaiveBuildFwStruct(HashMap<std::string, std::vector<LogicalNode*>>* op_name2nodes);
@@ -71,6 +72,7 @@ class LogicalGraph final : public Graph<LogicalNode, LogicalEdge> {
 
   int64_t total_mbn_num_;
 
+  std::vector<std::vector<const LogicalNode*>> reduce_groups_;
   HashMap<const LogicalEdge*, std::string> edge2ibn_;
   HashMap<const LogicalEdge*, std::string> edge2obn_;
 };

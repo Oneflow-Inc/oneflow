@@ -1,5 +1,6 @@
 #include "oneflow/core/operator/fully_connected_op.h"
 #include "oneflow/core/graph/reduce_graph.h"
+#include "oneflow/core/graph/logical_graph.h"
 
 namespace oneflow {
 
