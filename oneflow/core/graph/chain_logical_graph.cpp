@@ -28,7 +28,7 @@ ChainLogicalGraph::ChainLogicalGraph(const LogicalGraph& logical_graph) {
 
   InitChains(logical_graph, &chain_list, &logical2chain_it, &logical2order_in_topo);
   MergeChains(&chain_list, &logical2chain_it);
-  SortNodesInChains(&chain_list, &logical2order_in_topo);
+  SortNodesInChains(&chain_list, logical2order_in_topo);
   BuildGraph(logical_graph, &chain_list);
 }
 
@@ -134,11 +134,12 @@ bool ChainLogicalGraph::TryMergeOneChain(
 }
 
 void ChainLogicalGraph::SortNodesInChains(
-    std::list<Chain>* chain_list, HashMap<const LogicalNode*, size_t>* logical2order_in_topo) {
+    std::list<Chain>* chain_list,
+    const HashMap<const LogicalNode*, size_t>& logical2order_in_topo) {
   for (Chain& chain : *chain_list) {
     std::sort(chain.nodes.begin(), chain.nodes.end(),
               [&](const LogicalNode* a, const LogicalNode* b) {
-                return logical2order_in_topo->at(a) < logical2order_in_topo->at(b);
+                return logical2order_in_topo.at(a) < logical2order_in_topo.at(b);
               });
   }
 }
