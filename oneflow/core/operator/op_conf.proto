@@ -587,7 +587,7 @@ message DecodeRandomOpConf {
   required InitializerConf initializer = 7;
 }
 
-message DefineBlobConf {
+message DefineTestBlobConf {
   required string name = 1;
   required ShapeProto shape = 2;
   required DataType data_type = 3;
@@ -827,7 +827,7 @@ message OperatorConf {
     PodBoxingOpConf pod_boxing_conf = 129;
     PbBoxingOpConf pb_boxing_conf = 130;
     DropoutOpConf dropout_conf = 140;
-    DefineBlobConf define_blob_conf = 141;
+    DefineTestBlobConf define_test_blob_conf = 141;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;

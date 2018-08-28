@@ -1,16 +1,16 @@
-#ifndef ONEFLOW_CORE_OPERATOR_DEFINE_BLOB_OP_H_
-#define ONEFLOW_CORE_OPERATOR_DEFINE_BLOB_OP_H_
+#ifndef ONEFLOW_CORE_OPERATOR_DEFINE_TEST_BLOB_OP_H_
+#define ONEFLOW_CORE_OPERATOR_DEFINE_TEST_BLOB_OP_H_
 
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/graph/logical_node.h"
 
 namespace oneflow {
 
-class DefineBlobOp final : public Operator {
+class DefineTestBlobOp final : public Operator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(DefineBlobOp);
-  DefineBlobOp() = default;
-  ~DefineBlobOp() = default;
+  OF_DISALLOW_COPY_AND_MOVE(DefineTestBlobOp);
+  DefineTestBlobOp() = default;
+  ~DefineTestBlobOp() = default;
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
@@ -22,4 +22,4 @@ class DefineBlobOp final : public Operator {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_OPERATOR_DEFINE_BLOB_OP_H_
+#endif  // ONEFLOW_CORE_OPERATOR_DEFINE_TEST_BLOB_OP_H_
