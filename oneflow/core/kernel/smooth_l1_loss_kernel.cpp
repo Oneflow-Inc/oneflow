@@ -3,8 +3,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-void SmoothL1LossKernel<device_type, PredType, LabelType>::VirtualLossForwardDataContent(
+template<DeviceType device_type, typename T>
+void SmoothL1LossKernel<device_type, T>::VirtualLossForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const Blob* prediction = BnInOp2Blob("prediction");
   const Blob* label = BnInOp2Blob("label");
@@ -22,27 +22,25 @@ void SmoothL1LossKernel<device_type, PredType, LabelType>::VirtualLossForwardDat
   Memset<device_type>(ctx.device_ctx, pred_diff_blob->mut_dptr(), 0,
                       pred_diff_blob->ByteSizeOfDataContentField());
 
-  SmoothL1LossKernelUtil<device_type, PredType, LabelType>::Forward(
-      ctx.device_ctx, instance_num, instance_dim, prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), inside_weights->dptr<PredType>(), outside_weights->dptr<PredType>(),
-      beta, scale, loss->mut_dptr<PredType>());
+  SmoothL1LossKernelUtil<device_type, T>::Forward(
+      ctx.device_ctx, instance_num, instance_dim, prediction->dptr<T>(), label->dptr<T>(),
+      inside_weights->dptr<T>(), outside_weights->dptr<T>(), beta, scale, loss->mut_dptr<T>());
 
-  SmoothL1LossKernelUtil<device_type, PredType, LabelType>::Backward(
-      ctx.device_ctx, instance_num, instance_dim, prediction->dptr<PredType>(),
-      label->dptr<LabelType>(), inside_weights->dptr<PredType>(), outside_weights->dptr<PredType>(),
-      beta, scale, pred_diff_blob->mut_dptr<PredType>());
+  SmoothL1LossKernelUtil<device_type, T>::Backward(
+      ctx.device_ctx, instance_num, instance_dim, prediction->dptr<T>(), label->dptr<T>(),
+      inside_weights->dptr<T>(), outside_weights->dptr<T>(), beta, scale,
+      pred_diff_blob->mut_dptr<T>());
 }
 
-template<typename PredType, typename LabelType>
-struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
+template<typename T>
+struct SmoothL1LossKernelUtil<DeviceType::kCPU, T> {
   static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                      const PredType* prediction, const LabelType* label,
-                      const PredType* inside_weights, const PredType* outside_weights,
-                      const float beta, const float scale, PredType* loss) {
+                      const T* prediction, const T* label, const T* inside_weights,
+                      const T* outside_weights, const float beta, const float scale, T* loss) {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
-      PredType x = inside_weights[i] * (prediction[i] - label[i]);
-      PredType abs_x = x > 0 ? x : -x;
+      T x = inside_weights[i] * (prediction[i] - label[i]);
+      T abs_x = std::abs(x);
       if (abs_x < beta) {
         loss[i] = 0.5 * x * x / beta;
       } else {
@@ -52,25 +50,24 @@ struct SmoothL1LossKernelUtil<DeviceType::kCPU, PredType, LabelType> {
     }
   }
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                       const PredType* prediction, const LabelType* label,
-                       const PredType* inside_weights, const PredType* outside_weights,
-                       const float beta, const float scale, PredType* in_diff) {
+                       const T* prediction, const T* label, const T* inside_weights,
+                       const T* outside_weights, const float beta, const float scale, T* in_diff) {
     int64_t elem_cnt = instance_num * instance_dim;
     for (int i = 0; i < elem_cnt; i++) {
-      PredType x = inside_weights[i] * (prediction[i] - label[i]);
-      PredType abs_x = x > 0 ? x : -x;
+      T x = inside_weights[i] * (prediction[i] - label[i]);
+      T abs_x = std::abs(x);
       if (abs_x < beta) {
         in_diff[i] = x / beta;
       } else {
-        in_diff[i] = x > 0 ? 1 : -1;
+        in_diff[i] = (x > ZeroVal<T>::value) - (x < ZeroVal<T>::value);
       }
-      in_diff[i] *= scale;
+      in_diff[i] *= scale * inside_weights[i] * outside_weights[i];
     }
   }
 };
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-const LossKernelConf& SmoothL1LossKernel<device_type, PredType, LabelType>::GetLossKernelConf(
+template<DeviceType device_type, typename T>
+const LossKernelConf& SmoothL1LossKernel<device_type, T>::GetLossKernelConf(
     const KernelConf& kernel_conf) const {
   return kernel_conf.smooth_l1_loss_conf().loss_conf();
 }
@@ -79,17 +76,13 @@ namespace {
 
 Kernel* CreateSmoothL1LossKernel(const KernelConf& kernel_conf) {
   static const HashMap<std::string, std::function<Kernel*()>> creators = {
-#define SMOOTH_L1_LOSS_KERNEL_ENTRY(device_type, pred_type_pair, label_type_pair)                  \
-  {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair), OF_PP_PAIR_SECOND(label_type_pair)), \
-   []() {                                                                                          \
-     return new SmoothL1LossKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair),                  \
-                                   OF_PP_PAIR_FIRST(label_type_pair)>();                           \
-   }},
+#define SMOOTH_L1_LOSS_KERNEL_ENTRY(device_type, pred_type_pair) \
+  {GetHashKey(device_type, OF_PP_PAIR_SECOND(pred_type_pair)),   \
+   []() { return new SmoothL1LossKernel<device_type, OF_PP_PAIR_FIRST(pred_type_pair)>(); }},
       OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(SMOOTH_L1_LOSS_KERNEL_ENTRY, DEVICE_TYPE_SEQ,
-                                       FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)};
+                                       FLOATING_DATA_TYPE_SEQ)};
   return creators.at(GetHashKey(kernel_conf.op_attribute().op_conf().device_type(),
-                                kernel_conf.smooth_l1_loss_conf().loss_conf().prediction_type(),
-                                kernel_conf.smooth_l1_loss_conf().loss_conf().label_type()))();
+                                kernel_conf.smooth_l1_loss_conf().loss_conf().prediction_type()))();
 }
 
 }  // namespace

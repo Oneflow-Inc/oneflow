@@ -27,7 +27,7 @@ void SigmoidCrossEntropyLossOp::VirtualInferBlobDescs(
   CHECK_GE(label_blob_desc->shape().NumAxes(), 2);
   // prediction
   const BlobDesc* pred_blob_desc = GetBlobDesc4BnInOp("prediction");
-  CHECK_EQ(pred_blob_desc->shape().elem_cnt(), label_blob_desc->shape().elem_cnt());
+  CHECK_EQ(pred_blob_desc->shape(), label_blob_desc->shape());
   CHECK_GE(pred_blob_desc->shape().NumAxes(), 2);
 
   int64_t data_num = pred_blob_desc->shape().At(0);
