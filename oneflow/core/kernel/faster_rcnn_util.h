@@ -350,6 +350,7 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
 
   void UpdateMaxOverlapGtBox(int32_t box_index, int32_t gt_box_index, float overlap,
                              const std::function<void()>& DoUpdateHandle = []() {}) {
+    CHECK_GE(box_index, 0);
     if (overlap >= max_overlap_ptr_[box_index]) {
       max_overlap_ptr_[box_index] = overlap;
       max_overlap_gt_box_index_ptr_[box_index] = gt_box_index;
@@ -374,7 +375,7 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
   void ForEachOverlap(const std::function<bool(float, size_t, int32_t)>& Hanlder) {
     FOR_RANGE(size_t, i, 0, this->size()) {
       int32_t index = this->GetIndex(i);
-      if (!Hanlder(max_overlap_ptr_[index], i, index)) { break; }
+      if (!Hanlder(max_overlap(index), i, index)) { break; }
     }
   }
 

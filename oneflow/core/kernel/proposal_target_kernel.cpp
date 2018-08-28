@@ -16,14 +16,14 @@ void CopyBoxes(const BBox<T2>* input, BBox<T1>* output) {
 }
 
 template<typename T1, typename T2, typename T3>
-void ComputeBoxesDelta(int32_t label, const BBox<T2>* box, const BBox<T3>* target_box,
+void ComputeBoxesDelta(const BBox<T2>* box, const BBox<T3>* target_box,
                        const BBoxRegressionWeights& bbox_reg_ws, BBoxDelta<T1>* delta) {
-  delta[label].TransformInverse(box, target_box, bbox_reg_ws);
+  delta->TransformInverse(box, target_box, bbox_reg_ws);
 }
 
 template<typename T>
-void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, int32_t label,
-                            const BoxesSlice<T>& boxes_slice, const GtBoxes<FloatList16>& gt_boxes,
+void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, const BoxesSlice<T>& boxes_slice,
+                            const GtBoxes<FloatList16>& gt_boxes,
                             const BBoxRegressionWeights& bbox_reg_ws, BBox<T>* roi_boxes,
                             BBoxDelta<T>* roi_boxes_target) {
   if (index >= 0) {
@@ -31,14 +31,14 @@ void SetBoxesAndBoxesTarget(int32_t index, int32_t gt_index, int32_t label,
     CopyBoxes(box, roi_boxes);
     if (gt_index >= 0) {
       const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
-      ComputeBoxesDelta(label, box, gt_box, bbox_reg_ws, roi_boxes_target);
+      ComputeBoxesDelta(box, gt_box, bbox_reg_ws, roi_boxes_target);
     }
   } else {
     const BBox<float>* box = gt_boxes.GetBBox<float>(-index - 1);
     CopyBoxes(box, roi_boxes);
     if (gt_index >= 0) {
       const BBox<float>* gt_box = gt_boxes.GetBBox<float>(gt_index);
-      ComputeBoxesDelta(label, box, gt_box, bbox_reg_ws, roi_boxes_target);
+      ComputeBoxesDelta(box, gt_box, bbox_reg_ws, roi_boxes_target);
     }
   }
 }
@@ -182,8 +182,8 @@ void ProposalTargetKernel<T>::ComputeAndWriteOutput(
     labels_blob->mut_dptr<int32_t>(im_index)[i] = label;
     int64_t bbox_offset = im_index * output_num + i;
     BBoxDelta<T>* bbox_targets = BBoxDelta<T>::MutCast(bbox_targets_blob->mut_dptr<T>(bbox_offset));
-    SetBoxesAndBoxesTarget(index, gt_index, label, boxes_slice, gt_boxes, bbox_reg_ws,
-                           &rois_bbox[i], &bbox_targets[label]);
+    SetBoxesAndBoxesTarget(index, gt_index, boxes_slice, gt_boxes, bbox_reg_ws, &rois_bbox[i],
+                           &bbox_targets[label]);
     BBoxWeights<T>* inside_weights =
         BBoxWeights<T>::MutCast(bbox_inside_weights_blob->mut_dptr<T>(bbox_offset));
     BBoxWeights<T>* outside_weights =
