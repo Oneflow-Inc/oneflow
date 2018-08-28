@@ -38,11 +38,14 @@ class ReduceGraph final : public Graph<ReduceNode, ReduceEdge> {
  private:
   struct Group;
   void InitGroups(const LogicalGraph &logical_graph, std::list<Group> *group_list,
-                  HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
+                  HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it,
+                  HashMap<const LogicalNode *, size_t> *logical2order_in_topo);
   void MergeGroups(std::list<Group> *group_list,
                    HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
   bool TryMergeOneGroup(std::list<Group> *group_list,
                         HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
+  void SortNodesInGroups(std::list<Group> *group_list,
+                         HashMap<const LogicalNode *, size_t> *logical2order_in_topo);
   void BuildGraph(const LogicalGraph &logical_graph, std::list<Group> *group_list);
   bool IsLogicalNodeMergeable(const LogicalNode *logical_node) const;
 };
