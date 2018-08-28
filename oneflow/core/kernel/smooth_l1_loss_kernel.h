@@ -5,8 +5,8 @@
 
 namespace oneflow {
 
-template<DeviceType device_type, typename PredType, typename LabelType>
-class SmoothL1LossKernel final : public LossKernel<device_type, PredType, LabelType> {
+template<DeviceType device_type, typename T>
+class SmoothL1LossKernel final : public LossKernel<device_type, T, T> {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SmoothL1LossKernel);
   SmoothL1LossKernel() = default;
@@ -18,16 +18,14 @@ class SmoothL1LossKernel final : public LossKernel<device_type, PredType, LabelT
   const LossKernelConf& GetLossKernelConf(const KernelConf& kernel_conf) const override;
 };
 
-template<DeviceType device_type, typename PredType, typename LabelType>
+template<DeviceType device_type, typename T>
 struct SmoothL1LossKernelUtil {
   static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                      const PredType* prediction, const LabelType* label,
-                      const PredType* inside_weights, const PredType* outside_weights,
-                      const float beta, const float scale, PredType* loss);
+                      const T* prediction, const T* label, const T* inside_weights,
+                      const T* outside_weights, const float beta, const float scale, T* loss);
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                       const PredType* predict, const LabelType* target,
-                       const PredType* inside_weights, const PredType* outside_weights,
-                       const float beta, const float scale, PredType* in_diff);
+                       const T* predict, const T* target, const T* inside_weights,
+                       const T* outside_weights, const float beta, const float scale, T* in_diff);
 };
 
 }  // namespace oneflow
