@@ -12,14 +12,12 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
   std::vector<EdgeInfo> edge_infos;
   for (TaskEdge* edge : out_edges()) {
     TaskNode* dst_node = edge->dst_node();
-    while (dst_node->GetTaskType() != TaskType::kNormalMdUpdt) {
-      dst_node = dst_node->SoleOutEdge()->dst_node();
-    }
+    CHECK(dst_node->GetTaskType() == TaskType::kNormalMdUpdt);
     CompTaskNode* mdupdt_node = dynamic_cast<CompTaskNode*>(dst_node);
     for (TaskEdge* mdupdt_edge : mdupdt_node->out_edges()) {
       if (IsBackwardTaskType(mdupdt_edge->dst_node()->GetTaskType())) {
         CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
-        // There may be multiple out_regst on the same edge for shared_model app
+        // There may be multiple out_regsts on the same edge for shared_model app
         EdgeInfo edge_info{bw_node->order_in_graph(), edge};
         edge_infos.emplace_back(edge_info);
       }
