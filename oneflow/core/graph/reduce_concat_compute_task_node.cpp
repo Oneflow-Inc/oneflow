@@ -20,7 +20,6 @@ void ReduceConcatCompTaskNode::ConsumeAllRegsts() {
     }
     CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(src_node);
     EdgeInfo edge_info{bw_node->order_in_graph(), edge};
-    // EdgeInfo edge_info{bw_node->reduce_id(), edge};
     edge_infos.emplace_back(edge_info);
   }
   std::sort(edge_infos.begin(), edge_infos.end(), [](const EdgeInfo& lhs, const EdgeInfo& rhs) {

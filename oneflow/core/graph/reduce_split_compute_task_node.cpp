@@ -21,7 +21,6 @@ void ReduceSplitCompTaskNode::ProduceAllRegstsAndBindEdges() {
         CompTaskNode* bw_node = dynamic_cast<CompTaskNode*>(mdupdt_edge->dst_node());
         // There may be multiple out_regst on the same edge for shared_model app
         EdgeInfo edge_info{bw_node->order_in_graph(), edge};
-        // EdgeInfo edge_info{bw_node->reduce_id(), edge};
         edge_infos.emplace_back(edge_info);
       }
     }
