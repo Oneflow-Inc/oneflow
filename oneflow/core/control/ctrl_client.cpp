@@ -160,13 +160,7 @@ CtrlClient::CtrlClient() {
         if (need_heartbeat_thread_stop_) { break; }
       }
 
-      int64_t this_machine_id = Global<MachineCtx>::Get()->this_machine_id();
       for (int64_t i = 0; i < stubs_.size(); ++i) {
-        if (i == this_machine_id) {
-          LOG(INFO) << "Ignore self to self heartbeat check:"
-                    << "this_machine_id -> " << this_machine_id << ", stub index -> " << i;
-          continue;
-        };
         grpc::ClientContext client_ctx;
         GRPC_CHECK(stubs_[i]->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response))
             << "Machine " << i << " lost";
@@ -177,12 +171,6 @@ CtrlClient::CtrlClient() {
 }
 
 void CtrlClient::LoadServer(const std::string& server_addr, CtrlService::Stub* stub) {
-  std::string this_machine_addr = Global<MachineCtx>::Get()->GetThisCtrlAddr();
-  if (server_addr == this_machine_addr) {
-    LOG(INFO) << "Ignore connect self: "
-              << "server_addr -> " << server_addr << ", this_machine_addr -> " << this_machine_addr;
-    return;
-  };
   int32_t retry_idx = 0;
   for (; retry_idx < max_retry_num; ++retry_idx) {
     grpc::ClientContext client_ctx;
