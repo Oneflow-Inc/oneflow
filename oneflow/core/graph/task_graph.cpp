@@ -170,15 +170,15 @@ void TaskGraph::CollectReduceTaskNodes(
   };
 
   auto FindConcatAndScatter = [&](CompTaskNode* bw_or_md_diff_acc,
-                                  ReduceTaskNodes& reduce_task_nodes) {
+                                  ReduceTaskNodes* reduce_task_nodes) {
     CompTaskNode* concat_task_node =
         FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceConcat);
     if (concat_task_node != nullptr) {
-      reduce_task_nodes.concat = concat_task_node;
-      reduce_task_nodes.scatter =
-          FindSuccReduceTaskNode(reduce_task_nodes.concat, TaskType::kReduceScatter);
+      reduce_task_nodes->concat = concat_task_node;
+      reduce_task_nodes->scatter =
+          FindSuccReduceTaskNode(reduce_task_nodes->concat, TaskType::kReduceScatter);
     } else {
-      reduce_task_nodes.scatter =
+      reduce_task_nodes->scatter =
           FindSuccReduceTaskNode(bw_or_md_diff_acc, TaskType::kReduceScatter);
     }
   };
@@ -197,9 +197,9 @@ void TaskGraph::CollectReduceTaskNodes(
     ReduceTaskNodes& reduce_task_nodes = (*bw2reduce_tasks)[bw_task_node];
     CompTaskNode* diff_acc_task_node = FindSuccReduceTaskNode(bw_task_node, TaskType::kMdDiffAcc);
     if (diff_acc_task_node != nullptr) {
-      FindConcatAndScatter(diff_acc_task_node, reduce_task_nodes);
+      FindConcatAndScatter(diff_acc_task_node, &reduce_task_nodes);
     } else {
-      FindConcatAndScatter(bw_task_node, reduce_task_nodes);
+      FindConcatAndScatter(bw_task_node, &reduce_task_nodes);
     }
     CompTaskNode* local_add_task_node =
         FindSuccReduceTaskNode(reduce_task_nodes.scatter, TaskType::kReduceLocalAdd);

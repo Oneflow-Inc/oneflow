@@ -7,10 +7,8 @@ void ReduceConcatKernel<device_type>::ForwardDataContent(
     const KernelCtx& ctx, std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const auto* other_val = static_cast<std::pair<int64_t, bool>*>(ctx.other);
   int64_t in_bn_id = other_val->first;
-  bool is_inplace_in_blob = other_val->second;
-
-  if (is_inplace_in_blob) { return; }
-
+  bool is_inplace = other_val->second;
+  if (is_inplace) { return; }
   Blob* out_blob = BnInOp2Blob("out");
   char* dst_cur_dptr = out_blob->mut_dptr<char>();
   dst_cur_dptr += this->kernel_conf().reduce_concat_conf().data_offset().Get(in_bn_id);
