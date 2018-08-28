@@ -331,6 +331,12 @@ std::shared_ptr<RegstDesc> TaskEdge::GetSoleRegst() const {
   return name_in_producer2regst_.begin()->second;
 }
 
+std::vector<std::shared_ptr<RegstDesc>> TaskEdge::GetRegsts() const {
+  std::vector<std::shared_ptr<RegstDesc>> regst_descs;
+  for (auto& pair : name_in_producer2regst_) { regst_descs.emplace_back(pair.second); }
+  return regst_descs;
+}
+
 void TaskEdge::AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst) {
   CHECK(name_in_producer2regst_.emplace(name_in_producer, regst).second);
 }
