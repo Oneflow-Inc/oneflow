@@ -5,6 +5,11 @@
 
 namespace oneflow {
 
+const std::string& JobDesc::MdLoadSnapshotPath() const {
+  CHECK(job_conf_.other().has_train_conf());
+  return job_conf_.other().train_conf().model_load_snapshot_path();
+}
+
 int64_t JobDesc::MachineID4MachineName(const std::string& machine_name) const {
   auto it = machine_name2machine_id_.find(machine_name);
   CHECK(it != machine_name2machine_id_.end()) << "Undefined machine name: " << machine_name;

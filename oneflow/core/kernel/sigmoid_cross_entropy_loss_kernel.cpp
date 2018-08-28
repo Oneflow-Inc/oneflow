@@ -12,7 +12,7 @@ void SigmoidCrossEntropyLossKernel<device_type, PredType, LabelType>::VirtualLos
   const Blob* label = BnInOp2Blob("label");
   Blob* loss_buf = BnInOp2Blob("loss_buf");
   Blob* tmp_storage = BnInOp2Blob("sum_buf");
-  const size_t tmp_storage_byte_size = static_cast<size_t>(tmp_storage->shape().At(0));
+  const size_t tmp_storage_byte_size = static_cast<size_t>(tmp_storage->shape().elem_cnt());
   Blob* count = BnInOp2Blob("count");
   Blob* label_num = BnInOp2Blob("label_num");
   Blob* loss = BnInOp2Blob("loss");
@@ -53,17 +53,20 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
                       PredType* label_num, PredType* loss) {
     loss_buf[0] = 0;
     loss[0] = 0;
-    count[0] = 0;
+    label_num[0] = 0;
     FOR_RANGE(int64_t, index, 0, n) {
       if (label[index] != -1) {
         loss_buf[0] +=
             -1 * prediction[index] * (label[index] - (prediction[index] >= 0))
             + logf(1 + expf(prediction[index] - 2 * prediction[index] * (prediction[index] >= 0)));
-        count[0] += 1;
+        label_num[0] += 1;
       }
     }
-    if (count[0] == 0) { count[0] = 1e-5; }
-    loss[0] = loss_buf[0] / count[0];
+    loss_buf[0] *= static_cast<PredType>(conf.scale());
+    if (conf.normalize()) {
+      if (label_num[0] == 0) { label_num[0] = 1e-5; }
+      loss[0] = loss_buf[0] / label_num[0];
+    }
   }
 
   static void Backward(DeviceCtx* ctx, const SigmoidCrossEntropyLossOpConf& conf, const int64_t n,
@@ -72,6 +75,8 @@ struct SigmoidCrossEntropyLossKernelUtil<DeviceType::kCPU, PredType, LabelType> 
     FOR_RANGE(int64_t, index, 0, n) {
       if (label[index] != -1) {
         pred_diff[index] = 1.f / (1.f + expf(-prediction[index])) - label[index];
+        pred_diff[index] *= static_cast<PredType>(conf.scale());
+        if (conf.normalize()) { pred_diff[index] /= label_num[0]; }
       }
     }
   }
