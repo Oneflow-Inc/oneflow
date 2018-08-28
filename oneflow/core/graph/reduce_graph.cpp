@@ -23,21 +23,27 @@ struct ReduceGraph::Group {
 ReduceGraph::ReduceGraph(const LogicalGraph& logical_graph) {
   std::list<Group> group_list;
   HashMap<const LogicalNode*, std::list<Group>::iterator> logical2group_it;
+  HashMap<const LogicalNode*, size_t> logical2order_in_topo;
 
-  InitGroups(logical_graph, &group_list, &logical2group_it);
+  InitGroups(logical_graph, &group_list, &logical2group_it, &logical2order_in_topo);
   MergeGroups(&group_list, &logical2group_it);
+  SortNodesInGroups(&group_list, &logical2order_in_topo);
   BuildGraph(logical_graph, &group_list);
 }
 
 void ReduceGraph::InitGroups(
     const LogicalGraph& logical_graph, std::list<Group>* group_list,
-    HashMap<const LogicalNode*, std::list<Group>::iterator>* logical2group_it) {
+    HashMap<const LogicalNode*, std::list<Group>::iterator>* logical2group_it,
+    HashMap<const LogicalNode*, size_t>* logical2order_in_topo) {
   logical_graph.ForEachNode([&](const LogicalNode* node) {
     group_list->emplace_back();
     logical2group_it->insert({node, --group_list->end()});
     Group& group = group_list->back();
     group.nodes = {node};
     group.is_mergeable = IsLogicalNodeMergeable(node);
+
+    size_t order_in_topo = logical2order_in_topo->size();
+    logical2order_in_topo->emplace(node, order_in_topo);
   });
 
   logical_graph.TopoForEachNode([&](const LogicalNode* node) {
@@ -124,6 +130,16 @@ bool ReduceGraph::TryMergeOneGroup(
     }
   }
   return false;
+}
+
+void ReduceGraph::SortNodesInGroups(std::list<Group>* group_list,
+                                    HashMap<const LogicalNode*, size_t>* logical2order_in_topo) {
+  for (Group& group : *group_list) {
+    std::sort(group.nodes.begin(), group.nodes.end(),
+              [&](const LogicalNode* a, const LogicalNode* b) {
+                return logical2order_in_topo->at(a) < logical2order_in_topo->at(b);
+              });
+  }
 }
 
 void ReduceGraph::BuildGraph(const LogicalGraph& logical_graph, std::list<Group>* group_list) {
