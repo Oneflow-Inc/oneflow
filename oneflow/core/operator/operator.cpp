@@ -15,6 +15,13 @@ DataType GetDataTypeFromBnInOpVec(
   return DataType::kInvalidDataType;
 }
 
+bool IsOpWithModel(const OpAttribute& op_attribute) {
+  if (op_attribute.model_bns().empty() == false) { return true; }
+  if (op_attribute.const_model_bns().empty() == false) { return true; }
+  if (op_attribute.forward_model_bns().empty() == false) { return true; }
+  return false;
+}
+
 }  // namespace
 
 void Operator::InitFromOpConf(const OperatorConf& op_conf) {
@@ -25,7 +32,14 @@ void Operator::InitFromOpConf(const OperatorConf& op_conf) {
     this_op_conf->set_enable_cudnn(Global<JobDesc>::Get()->EnableCudnn());
   }
   if (GetActivationType() != ActivationType::kNone) { EnrollBwBufBn("bw_activation"); }
+  std::string md_load_dir = JoinPath(Global<JobDesc>::Get()->ModelLoadPath(), op_conf.name());
+  if (GlobalFS()->FileExists(md_load_dir) && GlobalFS()->IsDirectory(md_load_dir)) {
+    this_op_conf->set_model_load_dir(md_load_dir);
+  }
   InitFromOpConf();
+  if (IsOpWithModel(op_attribute_) && this_op_conf->trainable() == false) {
+    CHECK(this_op_conf->has_model_load_dir());
+  }
 }
 
 LogicalNode* Operator::NewProperLogicalNode() { return new NormalForwardLogicalNode; }

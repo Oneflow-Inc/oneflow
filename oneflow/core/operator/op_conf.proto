@@ -50,6 +50,8 @@ message MsraInitializerConf {
   required VarianceNorm variance_norm = 1;
 }
 
+message NoneInitializerConf {}
+
 message InitializerConf {
   oneof type {
     ConstantInitializerConf constant_conf = 1;
@@ -59,6 +61,7 @@ message InitializerConf {
     RandomNormalInitializerConf random_normal_conf = 5;
     XavierInitializerConf xavier_conf = 6;
     MsraInitializerConf msra_conf = 7;
+    NoneInitializerConf none_conf = 8;
   }
 }
 
@@ -241,7 +244,7 @@ message SigmoidCrossEntropyLossOpConf {
   required string label = 2;
   required string loss = 3;
   optional bool normalize = 4 [default = true];
-  optional int32 scale = 5 [default = 1];
+  optional float scale = 5 [default = 1.0];
   optional LossReductionType reduction = 6 [default = kSumOverN];
   optional float weight_scalar = 7 [default = 1.0];
   optional string weight = 8;
@@ -581,7 +584,13 @@ message DecodeRandomOpConf {
   required ShapeProto shape = 2;
   required DataType data_type = 3;
   optional int32 max_sequence_size = 4 [default = 1];
-  required InitializerConf distribution = 7;
+  required InitializerConf initializer = 7;
+}
+
+message DefineBlobConf {
+  required string name = 1;
+  required ShapeProto shape = 2;
+  required DataType data_type = 3;
 }
 
 message NormalizationOpConf {
@@ -713,7 +722,7 @@ message ProposalOpConf {
 }
 
 message BBoxRegressionWeights {
-  required float weight_x = 1 [default = 1.0]; 
+  required float weight_x = 1 [default = 1.0];
   required float weight_y = 2 [default = 1.0];
   required float weight_w = 3 [default = 1.0];
   required float weight_h = 4 [default = 1.0];
@@ -793,6 +802,7 @@ message OperatorConf {
     PodBoxingOpConf pod_boxing_conf = 129;
     PbBoxingOpConf pb_boxing_conf = 130;
     DropoutOpConf dropout_conf = 140;
+    DefineBlobConf define_blob_conf = 141;
     AveragePooling1DOpConf average_pooling_1d_conf = 200;
     MaxPooling1DOpConf max_pooling_1d_conf = 201;
     AveragePooling2DOpConf average_pooling_2d_conf = 202;

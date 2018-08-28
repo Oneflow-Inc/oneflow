@@ -27,12 +27,7 @@ uint32_t DecodeRandomKernel::GenNextRandomSeed() const { return (*dis_)(*gen_); 
 void DecodeRandomKernel::Forward(const KernelCtx& ctx,
                                  std::function<Blob*(const std::string&)> BnInOp2Blob) const {
   const DecodeRandomOpConf& conf = op_conf().decode_random_conf();
-  CHECK(ctx.other);
-  auto status = static_cast<DecodeStatus*>(ctx.other);
-  if (conf.max_sequence_size() > 1 && status->max_col_id_ == 0 && status->cur_col_id_ == 0) {
-    status->max_col_id_ = GenNextRandomSeed() % conf.max_sequence_size();
-  }
-  RandomFillBlob(ctx.device_ctx, conf.distribution(), GenNextRandomSeed(),
+  RandomFillBlob(ctx.device_ctx, conf.initializer(), GenNextRandomSeed(),
                  BnInOp2Blob(op_attribute().output_bns(0)));
 }
 

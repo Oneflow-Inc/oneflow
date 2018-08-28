@@ -30,6 +30,7 @@ enum TaskType {
   kAccuracy = 21;
   kAccuracyAcc = 22;
   kAccuracyPrint = 23;
+  kDecodeRandom = 24;
 };
 
 enum AreaType {

@@ -14,9 +14,7 @@ class DecodeRandomOp final : public Operator {
 
   void InitFromOpConf() override;
   const PbMessage& GetCustomizedConf() const override;
-  LogicalNode* NewProperLogicalNode() override { return new DecodeLogicalNode; }
-
-  bool IsDecodeOp() const override { return true; }
+  LogicalNode* NewProperLogicalNode() override { return new DecodeRandomLogicalNode; }
 
   void InferBlobDescs(std::function<BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                       const ParallelContext* parallel_ctx) const override;

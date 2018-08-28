@@ -4,15 +4,15 @@ namespace oneflow {
 
 namespace {
 
-template<typename PredType, typename LabelType>
+template<typename T>
 __global__ void SmoothL1LossForward(const int64_t instance_num, const int64_t instance_dim,
-                                    const PredType* prediction, const LabelType* label,
-                                    const PredType* inside_weights, const PredType* outside_weights,
-                                    const float beta, const float scale, PredType* loss) {
+                                    const T* prediction, const T* label, const T* inside_weights,
+                                    const T* outside_weights, const float beta, const float scale,
+                                    T* loss) {
   int64_t elem_cnt = instance_num * instance_dim;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    PredType x = inside_weights[i] * (prediction[i] - label[i]);
-    PredType abs_x = abs(x);
+    T x = inside_weights[i] * (prediction[i] - label[i]);
+    T abs_x = std::abs(x);
     if (abs_x < beta) {
       loss[i] = 0.5 * x * x / beta;
     } else {
@@ -22,51 +22,47 @@ __global__ void SmoothL1LossForward(const int64_t instance_num, const int64_t in
   }
 }
 
-template<typename PredType, typename LabelType>
+template<typename T>
 __global__ void SmoothL1LossBackward(const int64_t instance_num, const int64_t instance_dim,
-                                     const PredType* prediction, const LabelType* label,
-                                     const PredType* inside_weights,
-                                     const PredType* outside_weights, const float beta,
-                                     const float scale, PredType* in_diff) {
+                                     const T* prediction, const T* label, const T* inside_weights,
+                                     const T* outside_weights, const float beta, const float scale,
+                                     T* in_diff) {
   int64_t elem_cnt = instance_num * instance_dim;
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    PredType x = inside_weights[i] * (prediction[i] - label[i]);
-    PredType abs_x = abs(x);
+    T x = inside_weights[i] * (prediction[i] - label[i]);
+    T abs_x = std::abs(x);
     if (abs_x < beta) {
       in_diff[i] = x / beta;
     } else {
-      in_diff[i] = (x > PredType(0)) - (x < PredType(0));
+      in_diff[i] = (x > ZeroVal<T>::value) - (x < ZeroVal<T>::value);
     }
-    in_diff[i] *= scale * outside_weights[i];
+    in_diff[i] *= scale * inside_weights[i] * outside_weights[i];
   }
 }
 
 }  // namespace
 
-template<typename PredType, typename LabelType>
-struct SmoothL1LossKernelUtil<DeviceType::kGPU, PredType, LabelType> {
+template<typename T>
+struct SmoothL1LossKernelUtil<DeviceType::kGPU, T> {
   static void Forward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                      const PredType* prediction, const LabelType* label,
-                      const PredType* inside_weights, const PredType* outside_weights,
-                      const float beta, const float scale, PredType* loss) {
-    SmoothL1LossForward<PredType, LabelType>
+                      const T* prediction, const T* label, const T* inside_weights,
+                      const T* outside_weights, const float beta, const float scale, T* loss) {
+    SmoothL1LossForward<T>
         <<<BlocksNum4ThreadsNum(instance_num * instance_dim), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(instance_num, instance_dim, prediction, label, inside_weights,
                                  outside_weights, beta, scale, loss);
   }
   static void Backward(DeviceCtx* ctx, const int64_t instance_num, const int64_t instance_dim,
-                       const PredType* prediction, const LabelType* label,
-                       const PredType* inside_weights, const PredType* outside_weights,
-                       const float beta, const float scale, PredType* in_diff) {
-    SmoothL1LossBackward<PredType, LabelType>
+                       const T* prediction, const T* label, const T* inside_weights,
+                       const T* outside_weights, const float beta, const float scale, T* in_diff) {
+    SmoothL1LossBackward<T>
         <<<BlocksNum4ThreadsNum(instance_num * instance_dim), kCudaThreadsNumPerBlock, 0,
            ctx->cuda_stream()>>>(instance_num, instance_dim, prediction, label, inside_weights,
                                  outside_weights, beta, scale, in_diff);
   }
 };
 
-#define MAKE_ENTRY(data_type_pair, label_type_pair)                                          \
-  template struct SmoothL1LossKernelUtil<DeviceType::kGPU, OF_PP_PAIR_FIRST(data_type_pair), \
-                                         OF_PP_PAIR_FIRST(label_type_pair)>;
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ, FLOATING_DATA_TYPE_SEQ)
+#define MAKE_ENTRY(data_type_cpp, data_type_proto) \
+  template struct SmoothL1LossKernelUtil<DeviceType::kGPU, data_type_cpp>;
+OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, FLOATING_DATA_TYPE_SEQ)
 }  // namespace oneflow

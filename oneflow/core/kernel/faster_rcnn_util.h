@@ -258,61 +258,36 @@ struct GroupLabel {
   size_t size;
 };
 
-template<typename SliceType, size_t N>
-class LabeledBoxesSlice : public SliceType {
+template<typename SliceType>
+class LabelSlice : public SliceType {
  public:
-  LabeledBoxesSlice(const SliceType& slice, int32_t* label_ptr, bool init_label = true)
+  LabelSlice(const SliceType& slice, int32_t* label_ptr, bool init_label = true)
       : SliceType(slice), label_ptr_(label_ptr) {
-    GroupLabel group_label{0, 0, 0};
-    std::fill(group_labels_.begin(), group_labels_.end(), group_label);
     if (init_label) { std::fill(label_ptr_, label_ptr_ + this->capacity(), -1); }
   }
 
-  void GroupByLabel() {
-    int32_t* index_ptr = this->mut_index_ptr();
-    size_t size = this->size();
-    std::sort(index_ptr, index_ptr + size, [&](int32_t index_lhs, int32_t index_rhs) {
-      return label_ptr_[index_lhs] > label_ptr_[index_rhs];
-    });
-    // init last_label to one more than biggest label
-    int32_t last_label = label_ptr_[index_ptr[0]] + 1;
-    int32_t group_index = -1;
-    FOR_RANGE(int32_t, i, 0, size) {
-      int32_t cur_label = label_ptr_[index_ptr[i]];
-      if (cur_label != last_label) {
-        GroupLabel& cur_group_label = group_labels_[++group_index];
-        cur_group_label.label = cur_label;
-        cur_group_label.begin = i;
-        cur_group_label.size = 1;
-        last_label = cur_label;
-      } else {
-        group_labels_[group_index].size += 1;
-      }
-    }
+  int32_t GetLabel(size_t n) const {
+    CHECK_LT(n, this->size());
+    return label_ptr_[this->GetIndex(n)];
   }
 
-  size_t Subsample(int32_t label, size_t sample_num,
-                   const std::function<void(int32_t)>& EnableHandler,
-                   const std::function<void(int32_t)>& DisableHandler) {
-    auto group_label_it =
-        std::find_if(group_labels_.begin(), group_labels_.end(),
-                     [label](const GroupLabel& group_label) { return group_label.label == label; });
-    size_t begin = group_label_it->begin;
-    size_t size = group_label_it->size;
-    if (size > sample_num) {
-      this->Shuffle(begin, begin + size);
-    } else {
-      sample_num = size;
+  void SetLabel(size_t n, int32_t label) {
+    CHECK_LT(n, this->size());
+    label_ptr_[this->GetIndex(n)] = label;
+  }
+
+  void SortByLabel(const std::function<bool(int32_t, int32_t)>& Compare) {
+    std::sort(this->mut_index_ptr(), this->mut_index_ptr() + this->size(),
+              [&](int32_t lhs_index, int32_t rhs_index) {
+                return Compare(label_ptr_[lhs_index], label_ptr_[rhs_index]);
+              });
+  }
+
+  size_t FindByLabel(const std::function<bool(int32_t)>& Condition) const {
+    FOR_RANGE(size_t, i, 0, this->size()) {
+      if (Condition(label_ptr_[this->GetIndex(i)])) { return i; }
     }
-    FOR_RANGE(size_t, i, begin, begin + size) {
-      int32_t cur_box_index = this->GetIndex(i);
-      if (i < sample_num) {
-        EnableHandler(cur_box_index);
-      } else {
-        DisableHandler(cur_box_index);
-      }
-    }
-    return sample_num;
+    return this->size();
   }
 
   const int32_t* label_ptr() const { return label_ptr_; }
@@ -322,12 +297,12 @@ class LabeledBoxesSlice : public SliceType {
 
  private:
   int32_t* label_ptr_;
-  std::array<GroupLabel, N> group_labels_;
 };
 
-template<size_t N, typename SliceType>
-LabeledBoxesSlice<SliceType, N> GenLabeledBoxesSlice(const SliceType& slice, int32_t* label_ptr) {
-  return LabeledBoxesSlice<SliceType, N>(slice, label_ptr);
+template<typename SliceType>
+LabelSlice<SliceType> GenLabelSlice(const SliceType& slice, int32_t* label_ptr,
+                                    bool init_label = true) {
+  return LabelSlice<SliceType>(slice, label_ptr, init_label);
 }
 
 template<typename SliceType>
@@ -351,7 +326,7 @@ class BoxesToNearestGtBoxesSlice : public SliceType {
   void UpdateMaxOverlapGtBox(int32_t box_index, int32_t gt_box_index, float overlap,
                              const std::function<void()>& DoUpdateHandle = []() {}) {
     CHECK_GE(box_index, 0);
-    if (overlap >= max_overlap_ptr_[box_index]) {
+    if (overlap > max_overlap_ptr_[box_index]) {
       max_overlap_ptr_[box_index] = overlap;
       max_overlap_gt_box_index_ptr_[box_index] = gt_box_index;
       DoUpdateHandle();
