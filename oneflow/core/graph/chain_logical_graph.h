@@ -35,17 +35,17 @@ class ChainLogicalGraph final : public Graph<ChainLogicalNode, ChainLogicalEdge>
   ~ChainLogicalGraph() override = default;
 
  private:
-  struct Group;
-  void InitGroups(const LogicalGraph &logical_graph, std::list<Group> *group_list,
-                  HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it,
+  struct Chain;
+  void InitChains(const LogicalGraph &logical_graph, std::list<Chain> *chain_list,
+                  HashMap<const LogicalNode *, std::list<Chain>::iterator> *logical2chain_it,
                   HashMap<const LogicalNode *, size_t> *logical2order_in_topo);
-  void MergeGroups(std::list<Group> *group_list,
-                   HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
-  bool TryMergeOneGroup(std::list<Group> *group_list,
-                        HashMap<const LogicalNode *, std::list<Group>::iterator> *logical2group_it);
-  void SortNodesInGroups(std::list<Group> *group_list,
+  void MergeChains(std::list<Chain> *chain_list,
+                   HashMap<const LogicalNode *, std::list<Chain>::iterator> *logical2chain_it);
+  bool TryMergeOneChain(std::list<Chain> *chain_list,
+                        HashMap<const LogicalNode *, std::list<Chain>::iterator> *logical2chain_it);
+  void SortNodesInChains(std::list<Chain> *chain_list,
                          HashMap<const LogicalNode *, size_t> *logical2order_in_topo);
-  void BuildGraph(const LogicalGraph &logical_graph, std::list<Group> *group_list);
+  void BuildGraph(const LogicalGraph &logical_graph, std::list<Chain> *chain_list);
   bool IsLogicalNodeMergeable(const LogicalNode *logical_node) const;
 };
 
