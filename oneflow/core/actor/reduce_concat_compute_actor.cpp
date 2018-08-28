@@ -8,9 +8,9 @@ void ReduceConcatCompActor::VirtualCompActorInit(const TaskProto& proto) {
 
 void ReduceConcatCompActor::SetKernelCtxOther(void** other) {
   int64_t in_bn_id = InBnId4RegstDescId(cur_processed_regst_desc_id());
-  bool is_inplace_in_blob = EnableInplace() ? true : false;
+  bool is_inplace = EnableInplace() ? true : false;
 
-  other_val_ = std::make_pair(in_bn_id, is_inplace_in_blob);
+  other_val_ = std::make_pair(in_bn_id, is_inplace);
   *other = static_cast<void*>(&other_val_);
 }
 

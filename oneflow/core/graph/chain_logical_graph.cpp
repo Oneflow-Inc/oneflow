@@ -42,14 +42,12 @@ void ChainLogicalGraph::InitChains(
     Chain& chain = chain_list->back();
     chain.nodes = {node};
     chain.is_mergeable = IsLogicalNodeMergeable(node);
-
     size_t order_in_topo = logical2order_in_topo->size();
     logical2order_in_topo->emplace(node, order_in_topo);
   });
 
   logical_graph.TopoForEachNode([&](const LogicalNode* node) {
     auto cur_chain = logical2chain_it->at(node);
-
     for (const LogicalEdge* edge : node->in_edges()) {
       LogicalNode* pred_node = edge->src_node();
       auto pred_chain = logical2chain_it->at(pred_node);
@@ -62,14 +60,12 @@ void ChainLogicalGraph::InitChains(
 
   logical_graph.ReverseTopoForEachNode([&](const LogicalNode* node) {
     auto cur_chain = logical2chain_it->at(node);
-
     for (const LogicalEdge* edge : node->out_edges()) {
       LogicalNode* succ_node = edge->dst_node();
       auto succ_chain = logical2chain_it->at(succ_node);
       cur_chain->descendants.insert(succ_chain->descendants.begin(), succ_chain->descendants.end());
       cur_chain->descendants.insert(succ_node);
     }
-
     cur_chain->descendants_and_this.insert(cur_chain->descendants.begin(),
                                            cur_chain->descendants.end());
     cur_chain->descendants_and_this.insert(cur_chain->nodes.begin(), cur_chain->nodes.end());
@@ -106,7 +102,6 @@ bool ChainLogicalGraph::TryMergeOneChain(
   for (auto succ_chain_it = chain_list->begin(); succ_chain_it != chain_list->end();
        ++succ_chain_it) {
     if (!succ_chain_it->IsMergeable()) { continue; }
-
     for (const LogicalNode* node_in_succ : succ_chain_it->nodes) {
       for (const LogicalEdge* in_edge : node_in_succ->in_edges()) {
         auto pred_chain_it = logical2chain_it->at(in_edge->src_node());
@@ -117,14 +112,12 @@ bool ChainLogicalGraph::TryMergeOneChain(
             || pred_chain_it->descendants != succ_chain_it->descendants_and_this) {
           continue;
         }
-
         for (const LogicalNode* node : succ_chain_it->nodes) {
           pred_chain_it->nodes.push_back(node);
           pred_chain_it->ancestors_and_this.insert(node);
           pred_chain_it->descendants.erase(node);
           logical2chain_it->at(node) = pred_chain_it;
         }
-
         chain_list->erase(succ_chain_it);
         return true;
       }
@@ -157,7 +150,6 @@ void ChainLogicalGraph::BuildGraph(const LogicalGraph& logical_graph,
   }
 
   std::unordered_set<std::pair<ChainLogicalNode*, ChainLogicalNode*>> pred_succ_pairs;
-
   logical_graph.ForEachEdge([&](const LogicalEdge* edge) {
     pred_succ_pairs.emplace(logical_node2chain_logical_node.at(edge->src_node()),
                             logical_node2chain_logical_node.at(edge->dst_node()));
@@ -172,14 +164,11 @@ void ChainLogicalGraph::BuildGraph(const LogicalGraph& logical_graph,
 
 bool ChainLogicalGraph::IsLogicalNodeMergeable(const LogicalNode* logical_node) const {
   if (logical_node->parallel_desc()->policy() != kDataParallel) { return false; }
-
   if (!dynamic_cast<const NormalForwardLogicalNode*>(logical_node)) { return false; }
-
   for (const std::shared_ptr<Operator>& op : logical_node->op_vec()) {
     if (dynamic_cast<FullyConnectedOp*>(op.get())) { return false; }
     if (op->IsRecurrentOp()) { return false; }
   }
-
   return true;
 }
 
