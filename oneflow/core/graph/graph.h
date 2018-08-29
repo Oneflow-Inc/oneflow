@@ -148,10 +148,12 @@ template<typename NodeType, typename EdgeType>
 template<typename StreamT>
 void Graph<NodeType, EdgeType>::ToDotWithStream(StreamT& out_stream) {
   out_stream << "digraph {\n";
-  this->ForEachNode([&](NodeType* node) { out_stream << "\"" << node->VisualStr() << "\"\n"; });
+  this->ForEachNode([&](NodeType* node) {
+    out_stream << "\"" << node->node_id_str() << "\" [label=\"" << node->VisualStr() << "\"]\n";
+  });
   this->ForEachEdge([&](const EdgeType* edge) {
-    out_stream << "\"" << edge->src_node()->VisualStr() << "\" -> "
-               << "\"" << edge->dst_node()->VisualStr() << "\""
+    out_stream << "\"" << edge->src_node()->node_id_str() << "\" -> "
+               << "\"" << edge->dst_node()->node_id_str() << "\""
                << "[label=\"" << edge->VisualStr() << "\"];\n";
   });
   out_stream << "}\n";

@@ -36,10 +36,10 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<RegstDesc> GetProducedRegst(const std::string& name);
   const std::list<std::shared_ptr<RegstDesc>>& GetConsumedRegst(const std::string& name);
   std::shared_ptr<RegstDesc> GetSoleConsumedRegst(const std::string& name);
-  const HashMap<std::string, std::shared_ptr<RegstDesc>>& produced_regsts() {
+  const HashMap<std::string, std::shared_ptr<RegstDesc>>& produced_regsts() const {
     return produced_regsts_;
   }
-  const HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>>& consumed_regsts() {
+  const HashMap<std::string, std::list<std::shared_ptr<RegstDesc>>>& consumed_regsts() const {
     return consumed_regsts_;
   }
   DeviceType device_type() const;
@@ -126,6 +126,7 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
 
   std::shared_ptr<RegstDesc> GetRegst(const std::string& name_in_producer) const;
   std::shared_ptr<RegstDesc> GetSoleRegst() const;
+  std::vector<std::shared_ptr<RegstDesc>> GetRegsts() const;
 
   void AddRegst(const std::string& name_in_producer, std::shared_ptr<RegstDesc> regst);
 
