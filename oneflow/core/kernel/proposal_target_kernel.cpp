@@ -133,7 +133,7 @@ void ProposalTargetKernel<T>::SubsampleForegroundAndBackground(
   }
   if (bg_end == -1) { bg_end = boxes_max_overlap.size(); }
   CHECK_GE(bg_begin, fg_end);
-  CHECK_GT(bg_end, bg_begin);
+  CHECK_GE(bg_end, bg_begin);
 
   size_t total_sample_cnt = conf.num_rois_per_image();
   size_t fg_cnt = total_sample_cnt * conf.foreground_fraction();

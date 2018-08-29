@@ -21,7 +21,7 @@ class JobDesc final {
   const Resource& resource() const { return job_conf_.resource(); }
   const Placement& placement() const { return job_conf_.placement(); }
   const OtherConf& other_conf() const { return job_conf_.other(); }
-  const std::string& MdLoadSnapshotPath() const;
+  std::string MdLoadSnapshotPath() const;
   const std::string& ModelLoadPath() const { return job_conf_.other().model_load_path(); }
   DataType DefaultDataType() const { return job_conf_.other().default_data_type(); }
   size_t SizeOfOneDataId() const { return job_conf_.other().max_data_id_length() * sizeof(char); }
