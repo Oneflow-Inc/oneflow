@@ -56,8 +56,6 @@ static Blob* Blob4BnInOp(const std::function<Blob*(const std::string&)>* BnInOp2
   return (*BnInOp2Blob)(std::string(bn_in_op));
 }
 
-static std::string OpName(const OpAttribute& op_attribute) { return op_attribute.op_conf().name(); }
-
 static HashMap<std::string, std::vector<std::string>> GetAllBlobNames(
     const OpAttribute& op_attribute) {
   std::list<std::string> attrs{
