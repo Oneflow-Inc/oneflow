@@ -74,4 +74,15 @@ CompTaskNode* ReduceSplitCompTaskNode::FindPeerReduceConcatTaskNode() {
   return nullptr;
 }
 
+void ReduceSplitCompTaskNode::FixPackedBlobDescOfProducedRegst() {
+  int64_t out_regst_num = produced_regsts().size();
+  FOR_RANGE(int64_t, idx, 0, out_regst_num) {
+    std::shared_ptr<RegstDesc> out_regst = GetProducedRegst("out_" + std::to_string(idx));
+    CHECK(out_regst->IsLocked());
+    Shape& shape = out_regst->MutBlobDesc(GenPackedLbi())->mut_shape();
+    shape =
+        Shape({static_cast<int64_t>(RoundUp(shape.elem_cnt(), parallel_ctx()->parallel_num()))});
+  }
+}
+
 }  // namespace oneflow

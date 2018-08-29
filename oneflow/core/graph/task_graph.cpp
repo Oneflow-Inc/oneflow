@@ -228,6 +228,11 @@ void TaskGraph::EnableMemSharingInReduceConcatSplitIfNeed(const ReduceTaskNodes&
 
   std::shared_ptr<RegstDesc> concat_out_regst = reduce_task_nodes.concat->GetProducedRegst("out");
   std::shared_ptr<RegstDesc> split_in_regst = reduce_task_nodes.split->GetSoleConsumedRegst("in");
+  const BlobDesc* concat_out_packed = concat_out_regst->GetBlobDesc(GenPackedLbi());
+  const BlobDesc* split_in_packed = split_in_regst->GetBlobDesc(GenPackedLbi());
+  size_t concat_out_byte_size = RtBlobDesc(*concat_out_packed).ByteSizeOfBlobBody();
+  size_t split_in_byte_size = RtBlobDesc(*split_in_packed).ByteSizeOfBlobBody();
+  CHECK_EQ(concat_out_byte_size, split_in_byte_size);
   SetMemSharedField4Regst(concat_out_regst, 0);
   SetMemSharedField4Regst(split_in_regst, 0);
 
