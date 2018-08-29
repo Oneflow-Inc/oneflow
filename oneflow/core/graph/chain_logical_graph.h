@@ -41,8 +41,14 @@ class ChainLogicalGraph final : public Graph<ChainLogicalNode, ChainLogicalEdge>
                   HashMap<const LogicalNode*, size_t>* logical2order_in_topo);
   void MergeChains(std::list<Chain>* chain_list,
                    HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it);
-  bool TryMergeOneChain(std::list<Chain>* chain_list,
-                        HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it);
+  bool TryMergeTwoChains(std::list<Chain>* chain_list,
+                         HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it);
+  bool TryMergeTwoParallelChains(
+      std::list<Chain>* chain_list,
+      HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it);
+  bool TryMergeTwoConnectedChains(
+      std::list<Chain>* chain_list,
+      HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it);
   void SortNodesInChains(std::list<Chain>* chain_list,
                          const HashMap<const LogicalNode*, size_t>& logical2order_in_topo);
   void BuildGraph(const LogicalGraph& logical_graph, std::list<Chain>* chain_list);

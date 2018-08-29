@@ -73,10 +73,17 @@ void ChainLogicalGraph::InitChains(
 void ChainLogicalGraph::MergeChains(
     std::list<Chain>* chain_list,
     HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it) {
-  while (chain_list->size() > 1 && TryMergeOneChain(chain_list, logical2chain_it)) {};
+  while (chain_list->size() > 1 && TryMergeTwoChains(chain_list, logical2chain_it)) {};
 }
 
-bool ChainLogicalGraph::TryMergeOneChain(
+bool ChainLogicalGraph::TryMergeTwoChains(
+    std::list<Chain>* chain_list,
+    HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it) {
+  return TryMergeTwoParallelChains(chain_list, logical2chain_it)
+         || TryMergeTwoConnectedChains(chain_list, logical2chain_it);
+}
+
+bool ChainLogicalGraph::TryMergeTwoParallelChains(
     std::list<Chain>* chain_list,
     HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it) {
   for (auto lhs = chain_list->begin(); lhs != chain_list->end(); ++lhs) {
@@ -96,7 +103,12 @@ bool ChainLogicalGraph::TryMergeOneChain(
       return true;
     }
   }
+  return false;
+};
 
+bool ChainLogicalGraph::TryMergeTwoConnectedChains(
+    std::list<Chain>* chain_list,
+    HashMap<const LogicalNode*, std::list<Chain>::iterator>* logical2chain_it) {
   for (auto succ_chain_it = chain_list->begin(); succ_chain_it != chain_list->end();
        ++succ_chain_it) {
     if (!succ_chain_it->is_mergeable) { continue; }
@@ -122,7 +134,7 @@ bool ChainLogicalGraph::TryMergeOneChain(
     }
   }
   return false;
-}
+};
 
 void ChainLogicalGraph::SortNodesInChains(
     std::list<Chain>* chain_list,
