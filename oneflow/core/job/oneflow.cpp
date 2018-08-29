@@ -204,7 +204,9 @@ Oneflow::Oneflow(const std::string& job_conf_filepath, const std::string& this_m
   double start = GetCurTime();
 
   if (machine_ctx->IsThisMachineMaster()) {
+    double start = GetCurTime();
     naive_plan = Compiler().Compile();
+    LOG(INFO) << "compile time: " << GetCurTime() - start;
     amd = PullAvailableMemDesc();
     mem_shared_plan = Improver().ImproveMemSharedIdOnly(amd, naive_plan);
     PushPlan("naive_plan", naive_plan);
